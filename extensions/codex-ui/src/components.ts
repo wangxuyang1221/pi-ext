@@ -97,7 +97,8 @@ export class CodexFooter implements Component {
     const thinking = this.options.getThinkingLevel();
     const context = formatContextLeft(this.options.getContextUsage());
     const statuses = [...this.options.getExtensionStatuses().values()]
-      .filter((status) => status.trim().length > 0);
+      .map((status) => stripTerminalSequences(status).trim())
+      .filter((status) => status.length > 0);
 
     const segments: PrioritizedSegment[] = [
       {
@@ -113,7 +114,7 @@ export class CodexFooter implements Component {
       segments.push({ text: theme.fg("warning", context), priority: 60 });
     }
     for (const status of statuses) {
-      segments.push({ text: status, priority: 100 });
+      segments.push({ text: theme.fg("dim", status), priority: 100 });
     }
 
     const leftPadding = safeWidth > 1 ? " " : "";

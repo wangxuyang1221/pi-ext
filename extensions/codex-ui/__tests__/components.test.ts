@@ -15,7 +15,7 @@ function createTheme(): Theme {
   const foreground = (code: number, text: string) => `\x1b[38;5;${code}m${text}\x1b[39m`;
   return {
     name: "codex-pi",
-    fg: (_name: string, text: string) => foreground(81, text),
+    fg: (name: string, text: string) => foreground(name === "dim" ? 244 : 81, text),
     bg: (name: string, text: string) => {
       const code = name === "toolErrorBg" ? 52 : name === "toolSuccessBg" ? 22 : 238;
       return `\x1b[48;5;${code}m${text}\x1b[49m`;
@@ -62,8 +62,9 @@ test("footer keeps extension statuses and omits unavailable quota data", () => {
     getThinkingLevel: () => "medium",
     getContextUsage: () => ({ percent: 28 }),
     getExtensionStatuses: () => new Map([
-      ["mcp", "MCP 2/2 · 14 tools"],
+      ["mcp", "\x1b[38;5;196mMCP 2/2 · 14 tools\x1b[39m"],
       ["permissions", "Default permissions"],
+      ["empty", "\x1b[38;5;196m   \x1b[39m"],
     ]),
     getTheme: () => theme,
   });
@@ -80,6 +81,12 @@ test("footer keeps extension statuses and omits unavailable quota data", () => {
   assert.ok(!wide.includes("fast"));
   assert.ok(narrow.includes("MCP") || narrow.includes("Default permissions"));
   assert.ok(visibleWidth(footer.render(30)[0] ?? "") <= 30);
+
+  const rendered = footer.render(120)[0] ?? "";
+  assert.ok(!rendered.includes("\x1b[38;5;196m"));
+  assert.ok(rendered.includes("\x1b[38;5;244mMCP 2/2 · 14 tools\x1b[39m"));
+  assert.ok(rendered.includes("\x1b[38;5;244mDefault permissions\x1b[39m"));
+  assert.ok(stripTerminalSequences(rendered).trimEnd().endsWith("Default permissions"));
 });
 
 test("editor paints a flat composer while preserving the cursor marker", () => {

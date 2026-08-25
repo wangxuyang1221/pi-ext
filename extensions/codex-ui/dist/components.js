@@ -53,7 +53,8 @@ export class CodexFooter {
         const thinking = this.options.getThinkingLevel();
         const context = formatContextLeft(this.options.getContextUsage());
         const statuses = [...this.options.getExtensionStatuses().values()]
-            .filter((status) => status.trim().length > 0);
+            .map((status) => stripTerminalSequences(status).trim())
+            .filter((status) => status.length > 0);
         const segments = [
             {
                 text: theme.fg("warning", `${modelId} ${thinking}`),
@@ -68,7 +69,7 @@ export class CodexFooter {
             segments.push({ text: theme.fg("warning", context), priority: 60 });
         }
         for (const status of statuses) {
-            segments.push({ text: status, priority: 100 });
+            segments.push({ text: theme.fg("dim", status), priority: 100 });
         }
         const leftPadding = safeWidth > 1 ? " " : "";
         const contentWidth = safeWidth - visibleWidth(leftPadding);

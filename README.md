@@ -42,7 +42,37 @@ Pi package 以当前用户的完整系统权限运行。安装第三方 package 
 - streaming working indicator 和 terminal title
 - `read`、`edit`、`write` 的紧凑 renderer
 
-扩展在每次 TUI session 启动时选择 `codex-pi`，但不会写入全局 Pi settings。之后通过 `/settings` 手动切换的主题不会被持续改回。
+### Theme persistence
+
+Pi 0.84.3 会在 session replacement 和 reload 完成后重新应用 theme setting。`codex-ui` 的裸 `pi` 兼容兜底使用非持久的 `ThemeObject`，它只改变当前内存主题，不会替换保存的 setting。因此，当全局 theme 仍为 `dark` 时，首次启动可以显示 Codex 配色，但 `/new`、`/resume`、`/fork` 或 `/reload` 后会重新变为 `dark`。这不是终端配色漂移。
+
+如果希望所有普通 `pi` 会话默认使用 Codex 配色，请在 `/settings` 中选择 `codex-pi`，或将 `~/.pi/agent/settings.json` 设置为：
+
+```json
+{
+  "theme": "codex-pi"
+}
+```
+
+主题名是 `codex-pi`，不是扩展名 `codex-ui`。采用全局设置后，直接运行 `pi` 即可，并且 session replacement 和 reload 后仍会保持 Codex 配色。
+
+如果需要保留其他全局主题，只覆盖当前 Pi run，请使用：
+
+```bash
+pi --use-theme codex-pi
+```
+
+该参数不会修改保存的全局主题，但同样会在 `/new`、`/resume`、`/fork` 和 `/reload` 后保持 `codex-pi`。之后如果在 `/settings` 中主动选择其他主题，Pi 会立即应用并正常保存该选择。
+
+如需短命令，可以自行在 Shell 配置中添加 function：
+
+```zsh
+pi-codex() {
+  pi --use-theme codex-pi "$@"
+}
+```
+
+仓库不会自动修改 Shell 配置，也不提供一个假定 `pi install` 会加入 `PATH` 的 package bin。
 
 `read`、`edit`、`write` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 根据真实 `EditToolDetails.diff` 绘制整行 added/removed 背景；`write` 只显示路径、行数和字节数，不伪造 old/new diff。使用当前配置中的 `app.tools.expand` 快捷键可以展开工具详情，默认是 `Ctrl+O`。
 

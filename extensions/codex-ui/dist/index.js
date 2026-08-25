@@ -19,14 +19,16 @@ export default function codexUiExtension(pi) {
         if (ctx.mode !== "tui")
             return;
         currentModelId = ctx.model?.id;
-        const profileTheme = ctx.ui.getTheme(CODEX_THEME_NAME);
-        if (!profileTheme) {
-            ctx.ui.notify(`Codex profile theme unavailable: ${CODEX_THEME_NAME}`, "warning");
-        }
-        else {
-            const themeResult = ctx.ui.setTheme(profileTheme);
-            if (!themeResult.success) {
-                ctx.ui.notify(`Codex profile theme unavailable: ${themeResult.error ?? "unknown error"}`, "warning");
+        if (ctx.ui.theme.name !== CODEX_THEME_NAME) {
+            const profileTheme = ctx.ui.getTheme(CODEX_THEME_NAME);
+            if (!profileTheme) {
+                ctx.ui.notify(`Codex profile theme unavailable: ${CODEX_THEME_NAME}`, "warning");
+            }
+            else {
+                const themeResult = ctx.ui.setTheme(profileTheme);
+                if (!themeResult.success) {
+                    ctx.ui.notify(`Codex profile theme unavailable: ${themeResult.error ?? "unknown error"}`, "warning");
+                }
             }
         }
         const getTheme = () => ctx.ui.theme;
