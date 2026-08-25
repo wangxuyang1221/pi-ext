@@ -1,0 +1,10 @@
+import { rm } from "node:fs/promises";
+
+const outputDirectories = [
+  new URL("../extensions/mcp/dist/", import.meta.url),
+  new URL("../extensions/permissions/dist/", import.meta.url),
+];
+
+await Promise.all(
+  outputDirectories.map((directory) => rm(directory, { recursive: true, force: true })),
+);

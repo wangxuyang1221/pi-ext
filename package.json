@@ -1,0 +1,64 @@
+{
+  "name": "pi-ext",
+  "version": "0.1.0",
+  "description": "MCP and permissions extensions for Pi Coding Agent",
+  "type": "module",
+  "license": "MIT",
+  "author": "Wang Xuyang",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wangxuyang1221/pi-ext.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wangxuyang1221/pi-ext/issues"
+  },
+  "homepage": "https://github.com/wangxuyang1221/pi-ext#readme",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "mcp",
+    "permissions"
+  ],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "files": [
+    "extensions/mcp/dist",
+    "extensions/permissions/dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/mcp/dist/index.js",
+      "./extensions/permissions/dist/index.js"
+    ]
+  },
+  "scripts": {
+    "clean": "node ./scripts/clean.mjs",
+    "build": "npm run clean && tsc -p ./extensions/mcp/tsconfig.json && tsc -p ./extensions/permissions/tsconfig.json",
+    "typecheck": "tsc -p ./extensions/mcp/tsconfig.json --noEmit && tsc -p ./extensions/permissions/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test && npm run build && npm run package:check",
+    "package:check": "node ./scripts/check-package.mjs",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "jsonc-parser": "^3.3.1",
+    "zod": "4.4.3"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "0.84.3",
+    "@earendil-works/pi-tui": "0.84.3",
+    "@types/node": "22.19.19",
+    "typebox": "1.3.7",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}
