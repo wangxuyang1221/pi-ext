@@ -310,9 +310,13 @@ function normalizeToolPath(value: string, cwd?: string): string {
 }
 
 function selectPathApi(value: string, cwd?: string): PlatformPath {
-  return win32.isAbsolute(value) || (cwd !== undefined && win32.isAbsolute(cwd))
+  return hasWindowsAbsoluteSyntax(value) || (cwd !== undefined && hasWindowsAbsoluteSyntax(cwd))
     ? win32
     : posix;
+}
+
+function hasWindowsAbsoluteSyntax(value: string): boolean {
+  return /^[a-zA-Z]:[\\/]/.test(value) || /^(?:\\\\|\/\/)[^\\/]/.test(value);
 }
 
 function stableInputDigest(value: unknown): string {

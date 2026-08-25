@@ -230,9 +230,12 @@ function normalizeToolPath(value, cwd) {
     return normalized.replace(/^([A-Z]):/, (_, drive) => `${drive.toLowerCase()}:`);
 }
 function selectPathApi(value, cwd) {
-    return win32.isAbsolute(value) || (cwd !== undefined && win32.isAbsolute(cwd))
+    return hasWindowsAbsoluteSyntax(value) || (cwd !== undefined && hasWindowsAbsoluteSyntax(cwd))
         ? win32
         : posix;
+}
+function hasWindowsAbsoluteSyntax(value) {
+    return /^[a-zA-Z]:[\\/]/.test(value) || /^(?:\\\\|\/\/)[^\\/]/.test(value);
 }
 function stableInputDigest(value) {
     const hash = createHash("sha256");
