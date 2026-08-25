@@ -41,7 +41,7 @@
     "test": "vitest run",
     "check": "npm run typecheck && npm test && npm run build && npm run package:check",
     "package:check": "node ./scripts/check-package.mjs",
-    "prepare": "npm run build"
+    "prepack": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",

@@ -102,7 +102,7 @@ npm run package:check
 npm pack --dry-run
 ```
 
-The repository commits `dist/` intentionally. This supports direct Git installs and lets reviewers compare source changes with published runtime code. The cross-platform `prepare` lifecycle rebuilds both extensions during a Git install, while npm tarballs contain only compiled runtime files, declarations, source maps, the license, and this README.
+The repository commits `dist/` intentionally. Pi installs Git packages with production dependencies only, so Git installs load these prebuilt files without requiring TypeScript. CI rejects stale generated files. The `prepack` lifecycle rebuilds both extensions before creating an npm tarball, which contains only compiled runtime files, declarations, source maps, the license, and this README.
 
 ## Layout
 
