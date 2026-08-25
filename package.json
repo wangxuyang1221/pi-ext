@@ -1,7 +1,7 @@
 {
   "name": "pi-ext",
   "version": "0.1.0",
-  "description": "MCP and permissions extensions for Pi Coding Agent",
+  "description": "MCP, permissions, and Codex-inspired UI extensions for Pi Coding Agent",
   "type": "module",
   "license": "MIT",
   "author": "Wang Xuyang",
@@ -17,30 +17,39 @@
     "pi-package",
     "pi-extension",
     "mcp",
-    "permissions"
+    "permissions",
+    "tui",
+    "theme"
   ],
   "engines": {
     "node": ">=22.19.0"
   },
   "files": [
+    "extensions/codex-ui/dist",
     "extensions/mcp/dist",
     "extensions/permissions/dist",
+    "themes/codex-pi.json",
     "README.md",
     "LICENSE"
   ],
   "pi": {
     "extensions": [
+      "./extensions/codex-ui/dist/index.js",
       "./extensions/mcp/dist/index.js",
       "./extensions/permissions/dist/index.js"
+    ],
+    "themes": [
+      "./themes/codex-pi.json"
     ]
   },
   "scripts": {
     "clean": "node ./scripts/clean.mjs",
-    "build": "npm run clean && tsc -p ./extensions/mcp/tsconfig.json && tsc -p ./extensions/permissions/tsconfig.json",
-    "typecheck": "tsc -p ./extensions/mcp/tsconfig.json --noEmit && tsc -p ./extensions/permissions/tsconfig.json --noEmit",
+    "build": "npm run clean && tsc -p ./extensions/codex-ui/tsconfig.json && tsc -p ./extensions/mcp/tsconfig.json && tsc -p ./extensions/permissions/tsconfig.json",
+    "typecheck": "tsc -p ./extensions/codex-ui/tsconfig.json --noEmit && tsc -p ./extensions/mcp/tsconfig.json --noEmit && tsc -p ./extensions/permissions/tsconfig.json --noEmit",
     "test": "vitest run",
     "check": "npm run typecheck && npm test && npm run build && npm run package:check",
     "package:check": "node ./scripts/check-package.mjs",
+    "prototype:tui": "node ./prototypes/pi-tui-style-prototype/dev.mjs",
     "prepack": "npm run build"
   },
   "dependencies": {

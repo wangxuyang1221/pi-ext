@@ -1,38 +1,67 @@
 # pi-ext
 
-Two extensions for [Pi Coding Agent](https://github.com/earendil-works/pi):
+为 [Pi Coding Agent](https://github.com/earendil-works/pi) 提供三个扩展和一套主题：
 
-- `mcp` connects Pi to Model Context Protocol servers and exposes their tools as `mcp__<server>__<tool>`.
-- `permissions` adds `Default permissions` and `Full access` modes with per-call approval controls.
+- `codex-ui` 使用 Pi 品牌实现 Codex 风格的 TUI profile，并提供 `codex-pi` 主题。
+- `mcp` 连接 Model Context Protocol 服务器，并将工具注册为 `mcp__<server>__<tool>`。
+- `permissions` 提供 `Default permissions` 和 `Full access` 两种模式，以及逐次调用审批。
 
 ## Requirements
 
-- Node.js 22.19 or newer
-- `@earendil-works/pi-coding-agent` 0.84.3 or a compatible release
+- Node.js 22.19 或更高版本
+- `@earendil-works/pi-coding-agent` 0.84.3
+- 支持 24-bit color 的终端可获得最接近设计稿的颜色效果
 
-The repository is tested on Linux, macOS, and Windows. Runtime entry points are compiled ESM files under each extension's `dist/` directory. Pi never needs to transpile the TypeScript source during startup.
+仓库在 Linux、macOS 和 Windows 上运行测试。运行入口是各扩展 `dist/` 目录中的 ESM 文件，Pi 启动时不需要转译 TypeScript 源码。
 
 ## Install
 
-Install both extensions from GitHub:
+从 GitHub 安装整个 package：
 
 ```bash
 pi install git:github.com/wangxuyang1221/pi-ext
 ```
 
-Restart Pi after installation. Use `pi config` to disable either extension without removing the package.
+安装后重启 Pi。使用 `pi config` 可以单独停用任一扩展或主题，而不必删除 package。
 
-To test the package without saving it to settings:
+如需临时测试且不写入 settings：
 
 ```bash
 pi -e git:github.com/wangxuyang1221/pi-ext
 ```
 
-Pi packages execute with your user account's full system permissions. Review the source before installing it.
+Pi package 以当前用户的完整系统权限运行。安装第三方 package 前应检查源码。
+
+## Codex UI profile
+
+`codex-ui` 仅在 Pi 的 TUI 模式中接管以下组件：
+
+- 使用 `pi v0.84.3` 官方 wordmark 的 header
+- 实色背景 composer
+- model、thinking、cwd、context-left 和 extension statuses footer
+- streaming working indicator 和 terminal title
+- `read`、`edit`、`write` 的紧凑 renderer
+
+扩展在每次 TUI session 启动时选择 `codex-pi`，但不会写入全局 Pi settings。之后通过 `/settings` 手动切换的主题不会被持续改回。
+
+`read`、`edit`、`write` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 根据真实 `EditToolDetails.diff` 绘制整行 added/removed 背景；`write` 只显示路径、行数和字节数，不伪造 old/new diff。使用当前配置中的 `app.tools.expand` 快捷键可以展开工具详情，默认是 `Ctrl+O`。
+
+Footer 读取 `FooterDataProvider.getExtensionStatuses()`，因此 MCP 和 permissions 状态仍会显示。`pi-openai-fast-mode` 的 `fast` 保留在它自己的 below-editor widget 中；由于 Pi 0.84.3 没有公开 weekly quota 数据源，本 profile 不显示 weekly quota。
+
+Ghostty 的窗口透明度、blur、字体和 titlebar 仍由 Ghostty 配置负责。Pi cell 只使用不透明 ANSI 颜色。
+
+本地构建后可以直接 smoke test：
+
+```bash
+pi \
+  -e ./extensions/codex-ui/dist/index.js \
+  --theme ./themes/codex-pi.json \
+  --use-theme codex-pi
+```
 
 ## MCP extension
 
-Create a project config at `.pi/mcp.json` or a global config at `~/.pi/agent/mcp.json`:
+在项目中创建 `.pi/mcp.json`，或在全局创建 `~/.pi/agent/mcp.json`：
 
 ```jsonc
 {
@@ -54,9 +83,9 @@ Create a project config at `.pi/mcp.json` or a global config at `~/.pi/agent/mcp
 }
 ```
 
-JSON comments and trailing commas are accepted. Supported transports are `stdio`, `http`, `streamable-http`, and legacy `sse`.
+配置允许 JSON comments 和 trailing commas。支持 `stdio`、`http`、`streamable-http` 和 legacy `sse` transport。
 
-Commands:
+可用命令：
 
 ```text
 /mcp status
@@ -64,11 +93,11 @@ Commands:
 /mcp-init
 ```
 
-`/mcp-init` creates `.pi/mcp.json`. Do not commit credentials stored in MCP headers or environment variables.
+`/mcp-init` 创建 `.pi/mcp.json`。不要提交 MCP headers 或环境变量中的凭据。
 
 ## Permissions extension
 
-The extension starts in `Full access` unless `PI_PERMISSIONS_MODE=default` is set.
+扩展默认以 `Full access` 启动。设置 `PI_PERMISSIONS_MODE=default` 可改为默认权限模式。
 
 ```text
 /permissions
@@ -76,14 +105,14 @@ The extension starts in `Full access` unless `PI_PERMISSIONS_MODE=default` is se
 /permissions full
 ```
 
-In `Default permissions`:
+在 `Default permissions` 模式中：
 
-- `read`, `grep`, `find`, `ls`, and subagent orchestration tools run without prompts.
-- Mutating tools, shell commands, and MCP tools require approval.
-- `Allow this session` grants are process-local, operation-scoped, bounded to 512 entries, and discarded when Pi exits.
-- Non-interactive modes fail closed when approval is required.
+- `read`、`grep`、`find`、`ls` 和 subagent orchestration tools 不弹出确认。
+- 修改型工具、shell commands 和 MCP tools 需要审批。
+- `Allow this session` grant 只在当前进程有效，按操作隔离，最多保存 512 条，Pi 退出后清除。
+- 非交互模式遇到需要审批的操作时 fail closed。
 
-Switching back to `Full access` requires an interactive confirmation.
+切回 `Full access` 需要交互确认。
 
 ## Development
 
@@ -92,7 +121,7 @@ npm ci --ignore-scripts
 npm run check
 ```
 
-Useful commands:
+常用命令：
 
 ```bash
 npm run typecheck
@@ -100,14 +129,21 @@ npm test
 npm run build
 npm run package:check
 npm pack --dry-run
+npm run prototype:tui
 ```
 
-The repository commits `dist/` intentionally. Pi installs Git packages with production dependencies only, so Git installs load these prebuilt files without requiring TypeScript. CI rejects stale generated files. The `prepack` lifecycle rebuilds both extensions before creating an npm tarball, which contains only compiled runtime files, declarations, source maps, the license, and this README.
+仓库有意提交 `dist/`。Pi 从 Git 安装 package 时只安装生产依赖，因此需要预构建文件。CI 会拒绝过期的生成文件。`prepack` 会重建三个扩展，npm tarball 只包含编译产物、theme、README 和 license。
+
+`npm run prototype:tui` 启动 Codex、Claude、Hybrid 三套一次性 HTML 原型。生产 extension 只实现 Codex 方向，另外两套原型保留供后续使用。
 
 ## Layout
 
 ```text
 extensions/
+  codex-ui/
+    src/
+    __tests__/
+    dist/
   mcp/
     src/
     __tests__/
@@ -116,7 +152,10 @@ extensions/
     src/
     __tests__/
     dist/
+themes/
+  codex-pi.json
 scripts/
+prototypes/
 ```
 
 ## License
