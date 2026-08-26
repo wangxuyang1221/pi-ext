@@ -63,30 +63,32 @@ test("footer keeps extension statuses and omits unavailable quota data", () => {
     getContextUsage: () => ({ percent: 28 }),
     getExtensionStatuses: () => new Map([
       ["mcp", "\x1b[38;5;196mMCP 2/2 · 14 tools\x1b[39m"],
-      ["permissions", "Default permissions"],
+      ["permissions", "· full access"],
+      ["health", "● active"],
       ["empty", "\x1b[38;5;196m   \x1b[39m"],
     ]),
     getTheme: () => theme,
   });
 
-  const wide = stripTerminalSequences(footer.render(120)[0] ?? "");
+  const wide = stripTerminalSequences(footer.render(160)[0] ?? "");
   const narrow = stripTerminalSequences(footer.render(30)[0] ?? "");
 
   assert.match(wide, /gpt-test medium/u);
   assert.match(wide, /~\/Code\/app/u);
   assert.match(wide, /Context 72% left/u);
-  assert.match(wide, /MCP 2\/2/u);
-  assert.match(wide, /Default permissions/u);
+  assert.match(wide, /MCP 2\/2 · 14 tools · full access · ● active/u);
+  assert.ok(!wide.includes("· ·"));
   assert.ok(!wide.includes("weekly"));
   assert.ok(!wide.includes("fast"));
-  assert.ok(narrow.includes("MCP") || narrow.includes("Default permissions"));
+  assert.ok(narrow.includes("MCP") || narrow.includes("full access"));
   assert.ok(visibleWidth(footer.render(30)[0] ?? "") <= 30);
 
-  const rendered = footer.render(120)[0] ?? "";
+  const rendered = footer.render(160)[0] ?? "";
   assert.ok(!rendered.includes("\x1b[38;5;196m"));
   assert.ok(rendered.includes("\x1b[38;5;244mMCP 2/2 · 14 tools\x1b[39m"));
-  assert.ok(rendered.includes("\x1b[38;5;244mDefault permissions\x1b[39m"));
-  assert.ok(stripTerminalSequences(rendered).trimEnd().endsWith("Default permissions"));
+  assert.ok(rendered.includes("\x1b[38;5;244mfull access\x1b[39m"));
+  assert.ok(rendered.includes("\x1b[38;5;244m● active\x1b[39m"));
+  assert.ok(stripTerminalSequences(rendered).trimEnd().endsWith("● active"));
 });
 
 test("editor paints a flat composer while preserving the cursor marker", () => {

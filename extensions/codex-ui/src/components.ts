@@ -97,7 +97,7 @@ export class CodexFooter implements Component {
     const thinking = this.options.getThinkingLevel();
     const context = formatContextLeft(this.options.getContextUsage());
     const statuses = [...this.options.getExtensionStatuses().values()]
-      .map((status) => stripTerminalSequences(status).trim())
+      .map((status) => stripTerminalSequences(status).trim().replace(/^·\s*/u, ""))
       .filter((status) => status.length > 0);
 
     const segments: PrioritizedSegment[] = [
