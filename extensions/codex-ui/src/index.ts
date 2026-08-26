@@ -2,6 +2,7 @@ import { basename } from "node:path";
 import {
   VERSION,
   type ExtensionAPI,
+  type KeybindingsManager,
 } from "@earendil-works/pi-coding-agent";
 
 import { CodexEditor, CodexFooter, CodexHeader } from "./components.js";
@@ -10,7 +11,8 @@ import { registerCodexTools } from "./tools.js";
 export const CODEX_THEME_NAME = "codex-pi";
 
 export default function codexUiExtension(pi: ExtensionAPI): void {
-  registerCodexTools(pi);
+  let currentKeybindings: KeybindingsManager | undefined;
+  registerCodexTools(pi, undefined, { getKeybindings: () => currentKeybindings });
 
   let currentModelId: string | undefined;
   pi.on("model_select", (event) => {
@@ -53,9 +55,10 @@ export default function codexUiExtension(pi: ExtensionAPI): void {
       getTheme,
     }));
 
-    ctx.ui.setEditorComponent((tui, editorTheme, keybindings) => (
-      new CodexEditor(tui, editorTheme, keybindings, getTheme)
-    ));
+    ctx.ui.setEditorComponent((tui, editorTheme, keybindings) => {
+      currentKeybindings = keybindings;
+      return new CodexEditor(tui, editorTheme, keybindings, getTheme);
+    });
 
     ctx.ui.setFooter((_tui, _theme, footerData) => new CodexFooter({
       cwd: ctx.cwd,

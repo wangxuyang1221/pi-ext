@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, Theme, ToolDefinition } from "@earendil-works/pi-coding-agent";
 
 import codexUiExtension, { CODEX_THEME_NAME } from "../src/index.js";
 
@@ -37,8 +37,11 @@ test("markdown transformer prefixes only user messages and remains idempotent", 
 
 test("session UI installs only in TUI mode", async () => {
   const handlers = new Map<string, (...args: never[]) => unknown>();
+  const registeredTools: ToolDefinition[] = [];
   const pi = {
-    registerTool() {},
+    registerTool(tool: ToolDefinition) {
+      registeredTools.push(tool);
+    },
     registerMarkdownTransformer() {},
     getThinkingLevel: () => "high",
     on(event: string, handler: (...args: never[]) => unknown) {
@@ -118,6 +121,44 @@ test("session UI installs only in TUI mode", async () => {
   assert.equal(calls[0]?.value, CODEX_THEME_NAME);
   assert.equal(calls[1]?.value, profileTheme);
   assert.match(String(calls.find((call) => call.name === "title")?.value), /^π · app$/u);
+
+  const editorFactory = calls.find((call) => call.name === "editor")?.value as ((
+    tui: never,
+    editorTheme: never,
+    keybindings: never,
+  ) => unknown) | undefined;
+  assert.ok(editorFactory);
+  editorFactory(
+    { requestRender() {} } as never,
+    { borderColor: (text: string) => text } as never,
+    {
+      getKeys: (keybinding: string) => keybinding === "app.tools.expand" ? ["ctrl+shift+o"] : [],
+      matches: () => false,
+    } as never,
+  );
+
+  const bash = registeredTools.find((tool) => tool.name === "bash");
+  assert.ok(bash?.renderResult);
+  const bashResult = bash.renderResult(
+    { content: [{ type: "text", text: "hello" }], details: undefined },
+    { expanded: false, isPartial: false },
+    profileTheme,
+    {
+      args: { command: "echo hello" },
+      state: {},
+      lastComponent: undefined,
+      cwd: "/repo/app",
+      executionStarted: false,
+      argsComplete: true,
+      isPartial: false,
+      expanded: false,
+      showImages: true,
+      isError: false,
+      toolCallId: "tool-1",
+      invalidate() {},
+    } as never,
+  );
+  assert.match(bashResult.render(80).join("\n"), /ctrl\+shift\+o expand/u);
 
   const headerFactory = calls.find((call) => call.name === "header")?.value as (() => {
     render(width: number): string[];
