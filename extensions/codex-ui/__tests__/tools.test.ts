@@ -26,15 +26,19 @@ import {
 } from "../src/tools.js";
 
 function createTheme(): Theme {
+  const getBgCode = (name: string) => name === "toolErrorBg"
+    ? 52
+    : name === "toolPendingBg"
+      ? 236
+      : 22;
+
   return {
     fg: (name: string, text: string) => {
       const code = name === "error" ? 196 : name === "success" ? 82 : 81;
       return `\x1b[38;5;${code}m${text}\x1b[39m`;
     },
-    bg: (name: string, text: string) => {
-      const code = name === "toolErrorBg" ? 52 : name === "toolPendingBg" ? 236 : 22;
-      return `\x1b[48;5;${code}m${text}\x1b[49m`;
-    },
+    bg: (name: string, text: string) => `\x1b[48;5;${getBgCode(name)}m${text}\x1b[49m`,
+    getBgAnsi: (name: string) => `\x1b[48;5;${getBgCode(name)}m`,
     bold: (text: string) => `\x1b[1m${text}\x1b[22m`,
   } as unknown as Theme;
 }
@@ -270,11 +274,13 @@ test("bash renderer shares running and completed state with the command receipt"
     createRenderContext({ args, state, invalidate, isPartial: true }) as never,
   );
 
-  assert.match(stripTerminalSequences(call.render(60).join("\n")), /Bash running/u);
-  assert.match(stripTerminalSequences(call.render(60).join("\n")), /30s limit/u);
-  assert.match(stripTerminalSequences(call.render(60).join("\n")), /▌ \$ printf 'hello\\n'/u);
+  const runningLines = call.render(60);
+  assert.match(stripTerminalSequences(runningLines.join("\n")), /Bash running/u);
+  assert.match(stripTerminalSequences(runningLines.join("\n")), /30s limit/u);
+  assert.equal(stripTerminalSequences(runningLines[1] ?? "").trim(), "");
+  assert.match(stripTerminalSequences(runningLines[2] ?? ""), /▌ \$ printf 'hello\\n'/u);
   assert.match(stripTerminalSequences(partial.render(60).join("\n")), /hello/u);
-  assert.ok(call.render(60).some((line) => line.startsWith("\x1b[48;5;236m")));
+  assert.ok(runningLines.some((line) => line.startsWith("\x1b[48;5;236m")));
 
   vi.advanceTimersByTime(1250);
   assert.ok(invalidate.mock.calls.length >= 1);
@@ -291,10 +297,12 @@ test("bash renderer shares running and completed state with the command receipt"
     theme,
     createRenderContext({ args, state, invalidate, lastComponent: partial }) as never,
   );
-  const summary = stripTerminalSequences(call.render(60).join("\n"));
+  const completedLines = call.render(60);
+  const summary = stripTerminalSequences(completedLines.join("\n"));
 
   assert.match(summary, /✓ Bash completed/u);
   assert.match(summary, /1\.3s · 30s limit/u);
+  assert.ok((completedLines.at(-1) ?? "").endsWith("\x1b[48;5;22m"));
   assert.equal(completed, partial);
   assert.equal(vi.getTimerCount(), 0);
 });
@@ -385,7 +393,11 @@ test("bash result appears once when composed by the host tool component", () => 
     isError: false,
   });
 
-  const output = stripTerminalSequences(component.render(80).join("\n"));
+  const renderedLines = component.render(80);
+  const output = stripTerminalSequences(renderedLines.join("\n"));
+  const commandLine = renderedLines.find((line) => stripTerminalSequences(line).includes("$ echo hello"));
+  assert.ok(commandLine);
+  assert.match(commandLine, /\x1b\[48;[\d;]+m \x1b\[49m$/u);
   assert.equal(output.split("hello").length - 1, 2);
   assert.equal(output.split("1 visual line").length - 1, 1);
 });

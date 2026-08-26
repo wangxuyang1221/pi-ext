@@ -351,10 +351,10 @@ function renderBashCall(args, state, theme, width) {
         metadata.push(`${args.timeout}s limit`);
     }
     const lines = renderAlignedLines(summary, metadata.length > 0 ? theme.fg("dim", metadata.join(" · ")) : "", width);
-    lines.push(...renderBashCommand(args.command, theme, width));
+    lines.push("", ...renderBashCommand(args.command, status, theme, width));
     return lines;
 }
-function renderBashCommand(command, theme, width) {
+function renderBashCommand(command, status, theme, width) {
     const displayCommand = sanitizeBashDisplayText(stripTerminalSequences(typeof command === "string" ? command : "")) || "…";
     const text = theme.fg("toolTitle", theme.bold(`$ ${displayCommand}`));
     const rail = width >= 2 ? theme.fg("success", "▌") : "";
@@ -363,7 +363,12 @@ function renderBashCommand(command, theme, width) {
     const prefix = `${rail}${gap}`;
     const contentWidth = Math.max(1, width - visibleWidth(prefix) - trailingPadding);
     const commandLines = wrapTextWithAnsi(text, contentWidth);
-    return (commandLines.length > 0 ? commandLines : [""]).map((line) => theme.bg("toolPendingBg", fitToWidth(`${prefix}${line}`, width, { pad: true })));
+    const shellBackground = status === "completed"
+        ? "toolSuccessBg"
+        : status === "failed"
+            ? "toolErrorBg"
+            : "toolPendingBg";
+    return (commandLines.length > 0 ? commandLines : [""]).map((line) => (`${theme.getBgAnsi("toolPendingBg")}${fitToWidth(`${prefix}${line}`, width, { pad: true })}${theme.getBgAnsi(shellBackground)}`));
 }
 function renderBashResult(result, options, theme, services, width) {
     let output = extractBashOutput(result.content).trim();

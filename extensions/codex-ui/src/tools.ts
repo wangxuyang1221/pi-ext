@@ -527,11 +527,16 @@ function renderBashCall(
     metadata.length > 0 ? theme.fg("dim", metadata.join(" · ")) : "",
     width,
   );
-  lines.push(...renderBashCommand(args.command, theme, width));
+  lines.push("", ...renderBashCommand(args.command, status, theme, width));
   return lines;
 }
 
-function renderBashCommand(command: string, theme: Theme, width: number): string[] {
+function renderBashCommand(
+  command: string,
+  status: CodexBashStatus,
+  theme: Theme,
+  width: number,
+): string[] {
   const displayCommand = sanitizeBashDisplayText(
     stripTerminalSequences(typeof command === "string" ? command : ""),
   ) || "…";
@@ -543,9 +548,14 @@ function renderBashCommand(command: string, theme: Theme, width: number): string
   const contentWidth = Math.max(1, width - visibleWidth(prefix) - trailingPadding);
   const commandLines = wrapTextWithAnsi(text, contentWidth);
 
-  return (commandLines.length > 0 ? commandLines : [""]).map((line) => theme.bg(
-    "toolPendingBg",
-    fitToWidth(`${prefix}${line}`, width, { pad: true }),
+  const shellBackground = status === "completed"
+    ? "toolSuccessBg"
+    : status === "failed"
+      ? "toolErrorBg"
+      : "toolPendingBg";
+
+  return (commandLines.length > 0 ? commandLines : [""]).map((line) => (
+    `${theme.getBgAnsi("toolPendingBg")}${fitToWidth(`${prefix}${line}`, width, { pad: true })}${theme.getBgAnsi(shellBackground)}`
   ));
 }
 
