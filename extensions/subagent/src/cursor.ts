@@ -1,4 +1,9 @@
-export type ActivityView = "recent_activity" | "turns" | "all_entries";
+export type ActivityView = "recent_activity" | "turns";
+
+export type ActivityDetailSection =
+  | "assistant_text"
+  | "tool_arguments"
+  | "tool_result";
 
 export interface ActivityCursor {
   kind: "activity";
@@ -13,6 +18,23 @@ export interface ActivityCursorBinding {
   agentId: string;
   epoch: string;
   view: ActivityView;
+}
+
+export interface DetailCursor {
+  kind: "detail";
+  version: 1;
+  agentId: string;
+  epoch: string;
+  activityId: string;
+  section: ActivityDetailSection;
+  bytePosition: number;
+}
+
+export interface DetailCursorBinding {
+  agentId: string;
+  epoch: string;
+  activityId: string;
+  section: ActivityDetailSection;
 }
 
 export interface SettledCursor {
@@ -59,6 +81,44 @@ export function decodeActivityCursor(
   }
   if (decoded.agentId !== expected.agentId || decoded.view !== expected.view) {
     throw new CursorError("cursor_mismatch", "Cursor does not match the requested agent and view");
+  }
+  return decoded;
+}
+
+export function encodeDetailCursor(
+  value: Omit<DetailCursor, "kind" | "version">,
+): string {
+  return encodeCursor({ kind: "detail", version: 1, ...value });
+}
+
+export function decodeDetailCursor(
+  cursor: string,
+  expected: DetailCursorBinding,
+): DetailCursor {
+  const value = decodeCursor(cursor);
+  if (
+    value.kind !== "detail"
+    || value.version !== 1
+    || typeof value.agentId !== "string"
+    || typeof value.epoch !== "string"
+    || typeof value.activityId !== "string"
+    || !isActivityDetailSection(value.section)
+    || !Number.isSafeInteger(value.bytePosition)
+    || (value.bytePosition as number) < 0
+  ) {
+    throw new CursorError("invalid_cursor", "Invalid detail cursor");
+  }
+
+  const decoded = value as unknown as DetailCursor;
+  if (decoded.epoch !== expected.epoch) {
+    throw new CursorError("epoch_mismatch", "Cursor epoch does not match the managed subagent");
+  }
+  if (
+    decoded.agentId !== expected.agentId
+    || decoded.activityId !== expected.activityId
+    || decoded.section !== expected.section
+  ) {
+    throw new CursorError("cursor_mismatch", "Cursor does not match the requested activity detail");
   }
   return decoded;
 }
@@ -129,7 +189,11 @@ function decodeCursor(cursor: string): Record<string, unknown> {
 }
 
 function isActivityView(value: unknown): value is ActivityView {
-  return value === "recent_activity" || value === "turns" || value === "all_entries";
+  return value === "recent_activity" || value === "turns";
+}
+
+function isActivityDetailSection(value: unknown): value is ActivityDetailSection {
+  return value === "assistant_text" || value === "tool_arguments" || value === "tool_result";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

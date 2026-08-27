@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { test } from "vitest";
 
 import { SubagentManager } from "../src/manager.js";
@@ -44,12 +45,39 @@ test.skipIf(!runIntegration)(
       sessionName: tmuxSessionName,
       transferDirectory: join(root, "prompt-transfer"),
     });
+    const extensionFile = join(root, "integration-extension.mjs");
+    const subagentExtensionUrl = pathToFileURL(
+      resolve("extensions/subagent/dist/index.js"),
+    ).href;
+    await writeFile(extensionFile, `
+import subagentExtension from ${JSON.stringify(subagentExtensionUrl)};
+import { Type } from "typebox";
+
+export default function integrationExtension(pi) {
+  subagentExtension(pi);
+  pi.registerTool({
+    name: "integration_large_output",
+    label: "Integration large output",
+    description: "Return a large deterministic payload for the subagent integration test.",
+    parameters: Type.Object({ marker: Type.String() }),
+    async execute(_toolCallId, params) {
+      return {
+        content: [{
+          type: "text",
+          text: params.marker + ":" + "x".repeat(1024 * 1024),
+        }],
+        details: {},
+      };
+    },
+  });
+}
+`, "utf8");
     const manager = new SubagentManager({
       store,
       runtime,
       stateRoot: root,
       nativeSessionRoot: join(root, "native-sessions"),
-      extensionPath: resolve("extensions/subagent/dist/index.js"),
+      extensionPath: extensionFile,
       piPath,
       environment: Object.fromEntries(Object.entries({
         PATH: process.env.PATH,
@@ -66,6 +94,8 @@ test.skipIf(!runIntegration)(
     const markerOne = `SUBAGENT_E2E_ONE_${Date.now()}`;
     const markerTwo = `SUBAGENT_E2E_TWO_${Date.now()}`;
     const markerThree = `SUBAGENT_E2E_THREE_${Date.now()}`;
+    const largeResultMarker = `SUBAGENT_E2E_LARGE_RESULT_${Date.now()}`;
+    const markerFour = `SUBAGENT_E2E_FOUR_${Date.now()}`;
     const model = process.env.PI_PROVIDER && process.env.PI_MODEL
       ? `${process.env.PI_PROVIDER}/${process.env.PI_MODEL}`
       : undefined;
@@ -143,6 +173,72 @@ test.skipIf(!runIntegration)(
       assert.ok(second.activity.some(
         (activity) => activity.kind === "assistant" && activity.text.includes(markerThree),
       ));
+      assert.ok(second.activityCursor);
+
+      await manager.prompt(
+        parentId,
+        spawned.agentId,
+        `Call integration_large_output exactly once with marker ${largeResultMarker}. After it succeeds, reply with exactly ${markerFour}.`,
+        "steer",
+      );
+      const third = await manager.wait(parentId, spawned.agentId, {
+        afterSettled: second.settledCursor!,
+        timeoutMs: 120_000,
+        afterActivity: second.activityCursor,
+        assistantLimit: 1,
+        toolLimit: 1,
+      });
+      assert.equal(third.outcome, "settled");
+      assert.equal(third.generation, second.generation + 1);
+      assert.ok(third.activity.some(
+        (activity) => (
+          activity.kind === "tool"
+          && activity.toolName === "integration_large_output"
+          && activity.outcome === "succeeded"
+        ),
+      ));
+      assert.ok(third.activity.some(
+        (activity) => activity.kind === "assistant" && activity.text.includes(markerFour),
+      ));
+      const serializedThird = JSON.stringify(third);
+      assert.equal(serializedThird.includes(largeResultMarker), false);
+      assert.equal(third.returnedBytes, Buffer.byteLength(serializedThird, "utf8"));
+      assert.ok(third.returnedBytes <= 72 * 1024);
+
+      const largeRead = await manager.read(parentId, spawned.agentId, {
+        view: "recent_activity",
+        after: second.activityCursor,
+        assistantLimit: 1,
+        toolLimit: 1,
+      });
+      assert.equal(largeRead.view, "recent_activity");
+      const serializedLargeRead = JSON.stringify(largeRead);
+      assert.equal(serializedLargeRead.includes(largeResultMarker), false);
+      assert.ok(Buffer.byteLength(serializedLargeRead, "utf8") <= 72 * 1024);
+      assert.equal(
+        largeRead.returnedBytes,
+        Buffer.byteLength(serializedLargeRead, "utf8"),
+      );
+      const largeTool = largeRead.activity.find((activity) => (
+        activity.kind === "tool" && activity.toolName === "integration_large_output"
+      ));
+      assert.ok(largeTool);
+      assert.equal(largeTool.outcome, "succeeded");
+      assert.ok(largeRead.activity.some(
+        (activity) => activity.kind === "assistant" && activity.text.includes(markerFour),
+      ));
+
+      const detail = await manager.read(parentId, spawned.agentId, {
+        view: "activity_detail",
+        activityId: largeTool.id,
+        section: "tool_result",
+      });
+      assert.equal(detail.view, "activity_detail");
+      assert.equal(detail.originalBytes, largeResultMarker.length + 1 + 1024 * 1024);
+      assert.equal(detail.returnedBytes, 16 * 1024);
+      assert.ok(detail.content.startsWith(`${largeResultMarker}:`));
+      assert.equal(detail.hasMore, true);
+      assert.ok(detail.nextDetailCursor);
 
       const nativeSessionFile = spawned.sessionFile;
       const affected = await manager.close(parentId, spawned.agentId);
@@ -161,5 +257,5 @@ test.skipIf(!runIntegration)(
       await rm(root, { recursive: true, force: true });
     }
   },
-  180_000,
+  360_000,
 );

@@ -152,21 +152,40 @@ function renderList(details, expanded, theme) {
     return [...(capacity ? [capacity] : []), ...agents.map((agent) => renderAgentLine(agent, theme))];
 }
 function renderRead(details, expanded, theme) {
-    const assistantCount = details.assistantCount ?? countActivity(details.activity, "assistant");
-    const toolCount = details.toolCount ?? countActivity(details.activity, "tool");
-    const cursor = details.cursor ? ` · cursor ${shortCursor(details.cursor)}` : "";
-    const summary = theme.fg("muted", `${assistantCount} assistant · ${toolCount} ${toolCount === 1 ? "tool" : "tools"}${cursor}`);
+    if (details.view === "activity_detail") {
+        const parts = [
+            details.section ?? "activity_detail",
+            details.returnedBytes === undefined
+                ? "empty page"
+                : details.originalBytes === undefined
+                    ? formatBytes(details.returnedBytes)
+                    : `${formatBytes(details.returnedBytes)} of ${formatBytes(details.originalBytes)}`,
+        ];
+        if (details.truncated)
+            parts.push("truncated");
+        if (details.hasMore)
+            parts.push("has more");
+        if (details.nextDetailCursor) {
+            parts.push(`cursor ${shortCursor(details.nextDetailCursor)}`);
+        }
+        return [theme.fg("muted", parts.join(" · "))];
+    }
+    const summary = theme.fg("muted", activitySummaryParts(details, true).join(" · "));
     if (!expanded || !details.activity?.length)
         return [summary];
     return [summary, ...details.activity.map((activity) => renderActivity(activity, theme))];
 }
 function renderWait(details, expanded, theme) {
     const agent = details.agent;
-    const generation = agent ? ` · generation ${agent.generation}` : "";
-    const duration = details.durationMs === undefined ? "" : ` · ${formatDuration(details.durationMs)}`;
     const outcome = details.outcome ?? "settled";
+    const summaryParts = [
+        ...(agent ? [`generation ${agent.generation}`] : []),
+        ...(details.durationMs === undefined ? [] : [formatDuration(details.durationMs)]),
+        ...activitySummaryParts(details, false),
+    ];
+    const suffix = summaryParts.length > 0 ? ` · ${summaryParts.join(" · ")}` : "";
     const lines = [
-        `${renderOutcome(outcome, theme)}${theme.fg("dim", `${generation}${duration}`)}`,
+        `${renderOutcome(outcome, theme)}${theme.fg("dim", suffix)}`,
     ];
     if (expanded && details.activity?.length) {
         lines.push(...details.activity.map((activity) => renderActivity(activity, theme)));
@@ -246,8 +265,11 @@ function renderActivity(activity, theme) {
         return `${theme.fg("muted", "assistant")}  ${theme.fg("toolOutput", preview(activity.text, 120))}`;
     }
     const arrow = theme.fg("dim", " → ");
-    const result = theme.fg(activity.isError ? "error" : "toolOutput", preview(activity.result, 90));
-    return `${theme.fg("muted", activity.toolName)}  ${theme.fg("dim", preview(activity.summary, 48))}${arrow}${result}`;
+    const outcome = activity.outcome === "failed" && activity.errorPreview
+        ? `${activity.outcome}: ${preview(activity.errorPreview, 90)}`
+        : activity.outcome;
+    const color = activity.outcome === "failed" ? "error" : "toolOutput";
+    return `${theme.fg("muted", activity.toolName)}${arrow}${theme.fg(color, outcome)}`;
 }
 function statusColor(status) {
     switch (status) {
@@ -265,6 +287,28 @@ function statusColor(status) {
         case "errored":
             return "error";
     }
+}
+function activitySummaryParts(details, includeCursor) {
+    const assistantCount = details.assistantCount ?? countActivity(details.activity, "assistant");
+    const toolCount = details.toolCount ?? countActivity(details.activity, "tool");
+    const omittedAssistant = details.omittedAssistant ?? 0;
+    const omittedTools = details.omittedTools ?? 0;
+    const parts = [
+        `${assistantCount} assistant`,
+        `${toolCount} ${toolCount === 1 ? "tool" : "tools"}`,
+    ];
+    if (details.returnedBytes !== undefined)
+        parts.push(formatBytes(details.returnedBytes));
+    if (omittedAssistant > 0 || omittedTools > 0) {
+        parts.push(`omitted ${omittedAssistant} assistant/${omittedTools} tools`);
+    }
+    if (details.truncated)
+        parts.push("truncated");
+    if (details.hasMore)
+        parts.push("has more");
+    if (includeCursor && details.cursor)
+        parts.push(`cursor ${shortCursor(details.cursor)}`);
+    return parts;
 }
 function countActivity(activity, kind) {
     return activity?.filter((item) => item.kind === kind).length ?? 0;
@@ -293,6 +337,12 @@ function formatDuration(milliseconds) {
     if (milliseconds < 1000)
         return `${Math.round(milliseconds)}ms`;
     return `${(milliseconds / 1000).toFixed(milliseconds % 1000 === 0 ? 0 : 1)}s`;
+}
+function formatBytes(bytes) {
+    if (bytes < 1024)
+        return `${bytes} B`;
+    const kibibytes = bytes / 1024;
+    return `${kibibytes.toFixed(Number.isInteger(kibibytes) ? 0 : 1)} KiB`;
 }
 function extractResultText(result) {
     const item = result.content.find((content) => content.type === "text");

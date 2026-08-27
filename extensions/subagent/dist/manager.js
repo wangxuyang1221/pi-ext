@@ -8,6 +8,7 @@ export const PI_SUBAGENT_MAX_ACTIVE = "PI_SUBAGENT_MAX_ACTIVE";
 export const PI_SUBAGENT_STATE_ROOT = "PI_SUBAGENT_STATE_ROOT";
 export const PI_SUBAGENT_PARENT = "PI_SUBAGENT_PARENT";
 export const PI_SUBAGENT_LAUNCH = "PI_SUBAGENT_LAUNCH";
+const WAIT_PAYLOAD_MAX_BYTES = 72 * 1024;
 export class SubagentManager {
     store;
     runtime;
@@ -355,29 +356,6 @@ export class SubagentManager {
         if (!currentChild && result.outcome !== "closed") {
             throw new Error(`Subagent state disappeared while waiting: ${agentId}`);
         }
-        let activity = [];
-        let activityCursor;
-        let assistantCount = 0;
-        let toolCount = 0;
-        if (result.outcome === "settled") {
-            const recent = await readSessionView({
-                sessionFile: child.runtime.sessionFile,
-                agentId,
-                epoch: child.epoch,
-                view: "recent_activity",
-                assistantLimit: options.assistantLimit ?? 2,
-                toolLimit: options.toolLimit ?? 3,
-                ...(options.afterActivity ? { after: options.afterActivity } : {}),
-                ...(child.runtime.leafId ? { leafId: child.runtime.leafId } : {}),
-            });
-            if (recent.view !== "recent_activity") {
-                throw new Error("Internal error: wait activity projection returned the wrong view");
-            }
-            activity = recent.activity;
-            activityCursor = recent.cursor;
-            assistantCount = recent.assistantCount;
-            toolCount = recent.toolCount;
-        }
         const status = result.outcome === "settled"
             ? "settled"
             : result.outcome === "closed"
@@ -385,14 +363,52 @@ export class SubagentManager {
                 : result.outcome === "interrupted"
                     ? "interrupted"
                     : child.runtime.status;
-        return {
-            ...result,
-            agent: toManagedAgent(child, status),
-            activity,
-            ...(activityCursor ? { activityCursor } : {}),
-            assistantCount,
-            toolCount,
-        };
+        const agent = toManagedAgent(child, status);
+        if (result.outcome !== "settled") {
+            return finalizeManagedWaitResult({
+                ...result,
+                agent,
+                activity: [],
+                assistantCount: 0,
+                toolCount: 0,
+                omittedAssistant: 0,
+                omittedTools: 0,
+                hasMore: false,
+            });
+        }
+        let maximumBytes = WAIT_PAYLOAD_MAX_BYTES;
+        while (true) {
+            const recent = await readSessionView({
+                sessionFile: child.runtime.sessionFile,
+                agentId,
+                epoch: child.epoch,
+                view: "recent_activity",
+                assistantLimit: options.assistantLimit ?? 2,
+                toolLimit: options.toolLimit ?? 3,
+                maximumBytes,
+                ...(options.afterActivity ? { after: options.afterActivity } : {}),
+                ...(child.runtime.leafId ? { leafId: child.runtime.leafId } : {}),
+            });
+            if (recent.view !== "recent_activity") {
+                throw new Error("Internal error: wait activity projection returned the wrong view");
+            }
+            const managed = finalizeManagedWaitResult({
+                ...result,
+                agent,
+                activity: recent.activity,
+                activityCursor: recent.cursor,
+                assistantCount: recent.assistantCount,
+                toolCount: recent.toolCount,
+                omittedAssistant: recent.omittedAssistant,
+                omittedTools: recent.omittedTools,
+                hasMore: recent.hasMore,
+            });
+            if (managed.returnedBytes <= WAIT_PAYLOAD_MAX_BYTES || maximumBytes === 0) {
+                return managed;
+            }
+            const overflow = managed.returnedBytes - WAIT_PAYLOAD_MAX_BYTES;
+            maximumBytes = Math.max(0, maximumBytes - Math.max(overflow, 1024));
+        }
     }
     async read(parentSessionId, agentId, options) {
         const { child } = await this.requireDirectSession(parentSessionId, agentId);
@@ -687,6 +703,16 @@ export class SubagentManager {
             }
             await this.sleep(this.pollIntervalMs);
         }
+    }
+}
+function finalizeManagedWaitResult(value) {
+    let returnedBytes = 0;
+    while (true) {
+        const result = { ...value, returnedBytes };
+        const serializedBytes = Buffer.byteLength(JSON.stringify(result), "utf8");
+        if (serializedBytes === returnedBytes)
+            return result;
+        returnedBytes = serializedBytes;
     }
 }
 function toManagedAgent(state, status = state.runtime.status) {

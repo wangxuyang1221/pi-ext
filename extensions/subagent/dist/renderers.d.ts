@@ -18,15 +18,15 @@ export interface AssistantActivity {
     timestamp: string;
     text: string;
     stopReason: string;
+    truncated: boolean;
 }
 export interface ToolActivity {
     kind: "tool";
     id: string;
     timestamp: string;
     toolName: string;
-    summary: string;
-    result: string;
-    isError?: boolean;
+    outcome: "pending" | "succeeded" | "failed";
+    errorPreview?: string;
 }
 export type ActivityDisplay = AssistantActivity | ToolActivity;
 export interface SubagentUiDetails {
@@ -38,9 +38,18 @@ export interface SubagentUiDetails {
     task?: string;
     prompt?: string;
     delivery?: "steer" | "follow_up";
-    view?: "recent_activity" | "turns" | "all_entries";
+    view?: "recent_activity" | "turns" | "activity_detail";
+    activityId?: string;
+    section?: "assistant_text" | "tool_arguments" | "tool_result";
+    originalBytes?: number;
+    nextDetailCursor?: string;
     assistantCount?: number;
     toolCount?: number;
+    omittedAssistant?: number;
+    omittedTools?: number;
+    returnedBytes?: number;
+    truncated?: boolean;
+    hasMore?: boolean;
     cursor?: string;
     settledCursor?: string;
     outcome?: "settled" | "interrupted" | "closed" | "timeout";

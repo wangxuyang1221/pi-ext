@@ -256,6 +256,7 @@ test("reads finalized in-flight activity beyond a stale lifecycle leaf", async (
       timestamp: "2026-08-27T02:00:01.000Z",
       text: "Finished",
       stopReason: "stop",
+      truncated: false,
     }]);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -268,6 +269,26 @@ test("returns bounded activity only after a newer settled generation", async () 
   const sessionFile = join(root, "settled-child.jsonl");
 
   try {
+    const assistantText = "A".repeat(64 * 1024);
+    const toolCalls = Array.from({ length: 12 }, (_, index) => ({
+      type: "toolCall",
+      id: `call-${index}`,
+      name: "bash",
+      arguments: { command: `command-${index}` },
+    }));
+    const toolResults = toolCalls.map((toolCall, index) => ({
+      type: "message",
+      id: `result-${index}`,
+      parentId: index === 0 ? "assistant-tools" : `result-${index - 1}`,
+      timestamp: "2026-08-27T02:00:02.000Z",
+      message: {
+        role: "toolResult",
+        toolCallId: toolCall.id,
+        toolName: toolCall.name,
+        content: [{ type: "text", text: "E".repeat(1024) }],
+        isError: true,
+      },
+    }));
     await writeFile(sessionFile, [
       JSON.stringify({
         type: "session",
@@ -278,12 +299,31 @@ test("returns bounded activity only after a newer settled generation", async () 
       }),
       JSON.stringify({
         type: "message",
-        id: "assistant-a",
+        id: "user-a",
         parentId: null,
+        timestamp: "2026-08-27T02:00:00.500Z",
+        message: { role: "user", content: "Run diagnostics" },
+      }),
+      JSON.stringify({
+        type: "message",
+        id: "assistant-tools",
+        parentId: "user-a",
         timestamp: "2026-08-27T02:00:01.000Z",
         message: {
           role: "assistant",
-          content: [{ type: "text", text: "Settled result" }],
+          content: toolCalls,
+          stopReason: "toolUse",
+        },
+      }),
+      ...toolResults.map((entry) => JSON.stringify(entry)),
+      JSON.stringify({
+        type: "message",
+        id: "assistant-a",
+        parentId: `result-${toolResults.length - 1}`,
+        timestamp: "2026-08-27T02:00:03.000Z",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: assistantText }],
           stopReason: "stop",
         },
       }),
@@ -328,7 +368,8 @@ test("returns bounded activity only after a newer settled generation", async () 
       async close() {},
     };
 
-    const result = await createManager(root, store, runtime).wait("parent-a", "child-a", {
+    const manager = createManager(root, store, runtime);
+    const result = await manager.wait("parent-a", "child-a", {
       afterSettled: encodeSettledCursor({
         agentId: "child-a",
         epoch: "child-epoch",
@@ -336,19 +377,31 @@ test("returns bounded activity only after a newer settled generation", async () 
       }),
       timeoutMs: 100,
       assistantLimit: 1,
-      toolLimit: 1,
+      toolLimit: 20,
     });
 
     assert.equal(result.outcome, "settled");
     assert.equal(result.generation, 2);
     assert.match(result.settledCursor ?? "", /^sa1\./u);
-    assert.deepEqual(result.activity, [{
-      kind: "assistant",
-      id: "assistant-a",
-      timestamp: "2026-08-27T02:00:01.000Z",
-      text: "Settled result",
-      stopReason: "stop",
-    }]);
+    const assistant = result.activity.find((activity) => activity.kind === "assistant");
+    assert.ok(assistant);
+    assert.equal(assistant.text, assistantText);
+    assert.equal(assistant.truncated, false);
+    assert.equal(result.assistantCount, 1);
+    assert.ok(result.toolCount > 0);
+    assert.equal(result.omittedAssistant, 0);
+    assert.equal(result.omittedTools, toolCalls.length - result.toolCount);
+    assert.equal(result.hasMore, true);
+    assert.equal(result.returnedBytes, Buffer.byteLength(JSON.stringify(result), "utf8"));
+    assert.ok(result.returnedBytes <= 72 * 1024);
+
+    const recent = await manager.read("parent-a", "child-a", {
+      view: "recent_activity",
+      assistantLimit: 1,
+      toolLimit: 20,
+    });
+    assert.equal(recent.view, "recent_activity");
+    assert.ok(recent.toolCount > result.toolCount);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

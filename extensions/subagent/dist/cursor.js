@@ -22,6 +22,32 @@ export function decodeActivityCursor(cursor, expected) {
     }
     return decoded;
 }
+export function encodeDetailCursor(value) {
+    return encodeCursor({ kind: "detail", version: 1, ...value });
+}
+export function decodeDetailCursor(cursor, expected) {
+    const value = decodeCursor(cursor);
+    if (value.kind !== "detail"
+        || value.version !== 1
+        || typeof value.agentId !== "string"
+        || typeof value.epoch !== "string"
+        || typeof value.activityId !== "string"
+        || !isActivityDetailSection(value.section)
+        || !Number.isSafeInteger(value.bytePosition)
+        || value.bytePosition < 0) {
+        throw new CursorError("invalid_cursor", "Invalid detail cursor");
+    }
+    const decoded = value;
+    if (decoded.epoch !== expected.epoch) {
+        throw new CursorError("epoch_mismatch", "Cursor epoch does not match the managed subagent");
+    }
+    if (decoded.agentId !== expected.agentId
+        || decoded.activityId !== expected.activityId
+        || decoded.section !== expected.section) {
+        throw new CursorError("cursor_mismatch", "Cursor does not match the requested activity detail");
+    }
+    return decoded;
+}
 export function encodeSettledCursor(value) {
     return encodeCursor({ kind: "settled", version: 1, ...value });
 }
@@ -72,7 +98,10 @@ function decodeCursor(cursor) {
     }
 }
 function isActivityView(value) {
-    return value === "recent_activity" || value === "turns" || value === "all_entries";
+    return value === "recent_activity" || value === "turns";
+}
+function isActivityDetailSection(value) {
+    return value === "assistant_text" || value === "tool_arguments" || value === "tool_result";
 }
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);

@@ -46,41 +46,60 @@ const promptParameters = Type.Object({
     })),
 });
 const listParameters = Type.Object({});
-const readParameters = Type.Object({
-    agentId: Type.String({
-        description: "当前 namespace 中的直接 child sessionId。",
-        minLength: 1,
-    }),
-    view: Type.Optional(Type.Union([
-        Type.Literal("recent_activity"),
-        Type.Literal("turns"),
-        Type.Literal("all_entries"),
-    ], {
-        description: "读取视图；默认 recent_activity。",
-        default: "recent_activity",
-    })),
-    assistantLimit: Type.Optional(Type.Integer({
-        description: "recent_activity 中最多返回的 assistant message 数量。",
-        minimum: 1,
-        maximum: 50,
-        default: 3,
-    })),
-    toolLimit: Type.Optional(Type.Integer({
-        description: "recent_activity 中最多返回的 tool activity 数量。",
-        minimum: 1,
-        maximum: 100,
-        default: 5,
-    })),
-    limit: Type.Optional(Type.Integer({
-        description: "turns 或 all_entries 视图的最大条目数。",
-        minimum: 1,
-        maximum: 200,
-    })),
-    after: Type.Optional(Type.String({
-        description: "绑定同一 agent、epoch 和 view 的 opaque activity cursor。",
-        minLength: 1,
-    })),
+const readAgentId = Type.String({
+    description: "当前 namespace 中的直接 child sessionId。",
+    minLength: 1,
 });
+const readAfter = Type.Optional(Type.String({
+    description: "绑定同一 agent、epoch 和 view 的 opaque activity cursor。",
+    minLength: 1,
+}));
+const readParameters = Type.Union([
+    Type.Object({
+        agentId: readAgentId,
+        view: Type.Literal("recent_activity"),
+        assistantLimit: Type.Optional(Type.Integer({
+            description: "最多返回的非空 assistant message 数量。",
+            minimum: 1,
+            maximum: 10,
+            default: 1,
+        })),
+        toolLimit: Type.Optional(Type.Integer({
+            description: "最多返回的 tool activity 数量。",
+            minimum: 1,
+            maximum: 20,
+            default: 1,
+        })),
+        after: readAfter,
+    }, { additionalProperties: false }),
+    Type.Object({
+        agentId: readAgentId,
+        view: Type.Literal("turns"),
+        limit: Type.Optional(Type.Integer({
+            description: "最多返回的 user turn 数量。",
+            minimum: 1,
+            maximum: 200,
+        })),
+        after: readAfter,
+    }, { additionalProperties: false }),
+    Type.Object({
+        agentId: readAgentId,
+        view: Type.Literal("activity_detail"),
+        activityId: Type.String({
+            description: "要读取的 finalized activity id。",
+            minLength: 1,
+        }),
+        section: Type.Union([
+            Type.Literal("assistant_text"),
+            Type.Literal("tool_arguments"),
+            Type.Literal("tool_result"),
+        ]),
+        detailCursor: Type.Optional(Type.String({
+            description: "绑定同一 activity 和 section 的 opaque detail cursor。",
+            minLength: 1,
+        })),
+    }, { additionalProperties: false }),
+]);
 const waitParameters = Type.Object({
     agentId: Type.String({
         description: "当前 namespace 中的直接 child sessionId。",
@@ -185,32 +204,81 @@ export function registerSubagentTools(pi, manager) {
     pi.registerTool(withRenderer("read", {
         name: "subagent_read",
         label: "Read subagent activity",
-        description: "从当前 session 的一个直接 child 的原生 Pi session JSONL 中读取结构化、只读的 finalized 活动。默认返回有界的 recent activity；也可按 user turn 读取，或在诊断时读取原生 all entries。运行中的未完成 token 或工具增量不会返回。",
-        promptSnippet: "低噪声读取 child 的 assistant message 和工具历史。",
-        promptGuidelines: ["常规跟踪优先使用 subagent_read 的 recent_activity 和 cursor，让 main 在 child 工作时继续推进；仅在需要完整请求上下文时使用 turns，需要诊断原生记录时才使用 all_entries。"],
+        description: "从当前 session 的一个直接 child 的原生 Pi session JSONL 中读取结构化、只读的 finalized 活动。默认返回轻量 recent activity；turns 按 user turn 返回同类摘要；activity_detail 每次分页读取一个 activity 的一个原始 section。运行中的未完成 token 或工具增量不会返回。",
+        promptSnippet: "低噪声读取 child 的 assistant message 和工具状态。",
+        promptGuidelines: ["常规跟踪使用 subagent_read 的 recent_activity 和 cursor；只有失败摘要不足、需要精确证据或用户明确要求时才读取 activity_detail。hasMore 不要求自动读取全部历史；如需补取被 count limit 省略的摘要，复用原 after 并提高对应 limit，不要使用本次推进后的 cursor。"],
         parameters: readParameters,
+        prepareArguments(args) {
+            if (!isRecord(args) || args.view !== undefined)
+                return args;
+            return { ...args, view: "recent_activity" };
+        },
         async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-            const result = await manager.read(currentSessionId(ctx), params.agentId, {
-                view: params.view ?? "recent_activity",
-                ...(params.assistantLimit === undefined ? {} : { assistantLimit: params.assistantLimit }),
-                ...(params.toolLimit === undefined ? {} : { toolLimit: params.toolLimit }),
-                ...(params.limit === undefined ? {} : { limit: params.limit }),
-                ...(params.after === undefined ? {} : { after: params.after }),
-            });
+            const readOptions = params.view === "recent_activity"
+                ? {
+                    view: params.view,
+                    ...(params.assistantLimit === undefined ? {} : { assistantLimit: params.assistantLimit }),
+                    ...(params.toolLimit === undefined ? {} : { toolLimit: params.toolLimit }),
+                    ...(params.after === undefined ? {} : { after: params.after }),
+                }
+                : params.view === "turns"
+                    ? {
+                        view: params.view,
+                        ...(params.limit === undefined ? {} : { limit: params.limit }),
+                        ...(params.after === undefined ? {} : { after: params.after }),
+                    }
+                    : {
+                        view: params.view,
+                        activityId: params.activityId,
+                        section: params.section,
+                        ...(params.detailCursor === undefined ? {} : { detailCursor: params.detailCursor }),
+                    };
+            const result = await manager.read(currentSessionId(ctx), params.agentId, readOptions);
+            const summarizedActivity = result.view === "recent_activity"
+                ? result.activity
+                : result.view === "turns"
+                    ? result.turns.flatMap((turn) => turn.activity)
+                    : [];
             const activity = result.view === "recent_activity"
-                ? result.activity.map(toActivityDisplay)
+                ? summarizedActivity.map(toActivityDisplay)
                 : [];
+            const assistantCount = summarizedActivity.filter((item) => item.kind === "assistant").length;
+            const toolCount = summarizedActivity.filter((item) => item.kind === "tool").length;
             const details = {
                 operation: "read",
                 ok: true,
                 agent: { agentId: params.agentId, name: params.agentId, status: "running", generation: 0 },
                 view: result.view,
-                assistantCount: result.view === "recent_activity" ? result.assistantCount : 0,
-                toolCount: result.view === "recent_activity" ? result.toolCount : 0,
-                cursor: result.cursor,
+                assistantCount,
+                toolCount,
+                ...(result.view === "recent_activity"
+                    ? {
+                        omittedAssistant: result.omittedAssistant,
+                        omittedTools: result.omittedTools,
+                        returnedBytes: result.returnedBytes,
+                        truncated: summarizedActivity.some((item) => (item.kind === "assistant" && item.truncated)),
+                        hasMore: result.hasMore,
+                    }
+                    : result.view === "turns"
+                        ? {
+                            returnedBytes: Buffer.byteLength(JSON.stringify(result), "utf8"),
+                            truncated: summarizedActivity.some((item) => (item.kind === "assistant" && item.truncated)),
+                        }
+                        : {
+                            activityId: result.activityId,
+                            section: result.section,
+                            originalBytes: result.originalBytes,
+                            returnedBytes: result.returnedBytes,
+                            truncated: result.truncated,
+                            hasMore: result.hasMore,
+                            ...(result.nextDetailCursor === undefined
+                                ? {}
+                                : { nextDetailCursor: result.nextDetailCursor }),
+                        }),
+                ...(result.view === "activity_detail" ? {} : { cursor: result.cursor }),
                 activity,
             };
-            return toolResult(result, details);
+            return toolResult(result, details, true);
         },
     }));
     pi.registerTool(withRenderer("wait", {
@@ -234,7 +302,7 @@ export function registerSubagentTools(pi, manager) {
                 ...(params.assistantLimit === undefined ? {} : { assistantLimit: params.assistantLimit }),
                 ...(params.toolLimit === undefined ? {} : { toolLimit: params.toolLimit }),
             }, signal);
-            return toolResult(result, waitDetails(result));
+            return toolResult(result, waitDetails(result), true);
         },
     }));
     pi.registerTool(withRenderer("close", {
@@ -283,9 +351,12 @@ function currentSessionId(ctx) {
     }
     return ctx.sessionManager.getSessionId();
 }
-function toolResult(payload, details) {
+function toolResult(payload, details, compact = false) {
     return {
-        content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
+        content: [{
+                type: "text",
+                text: compact ? JSON.stringify(payload) : JSON.stringify(payload, null, 2),
+            }],
         details,
     };
 }
@@ -311,9 +382,8 @@ function toActivityDisplay(activity) {
         id: activity.id,
         timestamp: activity.timestamp,
         toolName: activity.toolName,
-        summary: previewJson(activity.arguments, 80),
-        result: activity.result ?? (activity.complete ? "Completed" : "Result not persisted"),
-        ...(activity.isError === undefined ? {} : { isError: activity.isError }),
+        outcome: activity.outcome,
+        ...(activity.errorPreview === undefined ? {} : { errorPreview: activity.errorPreview }),
     };
 }
 function waitDetails(result) {
@@ -327,11 +397,15 @@ function waitDetails(result) {
         cursor: result.activityCursor,
         assistantCount: result.assistantCount,
         toolCount: result.toolCount,
+        omittedAssistant: result.omittedAssistant,
+        omittedTools: result.omittedTools,
+        returnedBytes: result.returnedBytes,
+        truncated: result.activity.some((item) => item.kind === "assistant" && item.truncated),
+        hasMore: result.hasMore,
         activity: result.activity.map(toActivityDisplay),
     };
 }
-function previewJson(value, maximum) {
-    const text = JSON.stringify(value) ?? "";
-    return text.length > maximum ? `${text.slice(0, maximum - 1)}…` : text;
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 //# sourceMappingURL=tools.js.map

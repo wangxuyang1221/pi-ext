@@ -78,6 +78,10 @@ export interface ManagedWaitResult extends WaitForSettledResult {
     activityCursor?: string;
     assistantCount: number;
     toolCount: number;
+    omittedAssistant: number;
+    omittedTools: number;
+    hasMore: boolean;
+    returnedBytes: number;
 }
 export declare class SubagentManager {
     private readonly store;

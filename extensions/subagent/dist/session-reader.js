@@ -1,5 +1,11 @@
 import { readFile } from "node:fs/promises";
-import { decodeActivityCursor, encodeActivityCursor, } from "./cursor.js";
+import { decodeActivityCursor, decodeDetailCursor, encodeActivityCursor, encodeDetailCursor, } from "./cursor.js";
+const ASSISTANT_TEXT_MAX_BYTES = 64 * 1024;
+const DETAIL_PAGE_MAX_BYTES = 16 * 1024;
+const ERROR_PREVIEW_MAX_BYTES = 512;
+const RECENT_ACTIVITY_MAX_BYTES = 72 * 1024;
+const SUMMARY_WARNING_LIMIT = 20;
+const SUMMARY_WARNING_MAX_BYTES = 512;
 export async function readSessionView(options) {
     const { header, entries, warnings } = await readCompleteEntries(options.sessionFile);
     if (header.version !== 3) {
@@ -7,6 +13,20 @@ export async function readSessionView(options) {
     }
     if (header.id !== options.agentId) {
         throw new Error("Session header id does not match the requested agent");
+    }
+    const activeEntries = selectActiveBranch(entries, options.leafId);
+    if (options.view === "activity_detail") {
+        if (!options.activityId || !options.section) {
+            throw new Error("Activity detail requires activityId and section");
+        }
+        return readActivityDetail({
+            entries: activeEntries,
+            agentId: options.agentId,
+            epoch: options.epoch,
+            activityId: options.activityId,
+            section: options.section,
+            detailCursor: options.detailCursor,
+        });
     }
     const position = entries.length;
     const afterPosition = options.after
@@ -25,34 +45,53 @@ export async function readSessionView(options) {
         view: options.view,
         position,
     });
-    const activeEntries = selectActiveBranch(entries, options.leafId);
     if (options.view === "recent_activity") {
         const activity = projectActivity(activeEntries, afterPosition);
-        const assistantLimit = options.assistantLimit ?? 3;
-        const toolLimit = options.toolLimit ?? 5;
-        const assistantIds = new Set(activity
-            .filter((item) => item.activity.kind === "assistant")
-            .slice(-assistantLimit)
-            .map((item) => item.activity.id));
-        const toolIds = new Set(activity
-            .filter((item) => item.activity.kind === "tool")
-            .slice(-toolLimit)
-            .map((item) => item.activity.id));
-        const selected = activity
-            .filter((item) => item.activity.kind === "assistant"
-            ? assistantIds.has(item.activity.id)
-            : toolIds.has(item.activity.id))
-            .sort((left, right) => left.order - right.order)
-            .map((item) => item.activity);
-        return {
-            view: "recent_activity",
-            activity: selected,
-            assistantCount: selected.filter((item) => item.kind === "assistant").length,
-            toolCount: selected.filter((item) => item.kind === "tool").length,
+        const assistantLimit = options.assistantLimit ?? 1;
+        const toolLimit = options.toolLimit ?? 1;
+        const maximumBytes = Math.min(RECENT_ACTIVITY_MAX_BYTES, Math.max(0, options.maximumBytes ?? RECENT_ACTIVITY_MAX_BYTES));
+        const assistants = activity.filter((item) => (item.activity.kind === "assistant" && item.activity.text.trim().length > 0));
+        const tools = activity.filter((item) => item.activity.kind === "tool");
+        const assistantCandidates = takeLast(assistants, assistantLimit);
+        const toolCandidates = takeLast(tools, toolLimit);
+        const priority = [
+            ...assistantCandidates.slice(-1),
+            ...toolCandidates.slice(-1),
+            ...toolCandidates.slice(0, -1).reverse(),
+            ...assistantCandidates.slice(0, -1).reverse(),
+        ];
+        const selected = [];
+        for (const candidate of priority) {
+            const trialItems = [...selected, candidate].sort((left, right) => left.order - right.order);
+            const trial = finalizeRecentActivityResult({
+                activity: trialItems.flatMap((item) => {
+                    const summary = summarizeActivity(item.activity);
+                    return summary ? [summary] : [];
+                }),
+                totalAssistant: assistants.length,
+                totalTools: tools.length,
+                warnings,
+                cursor,
+                position,
+                maximumBytes,
+            });
+            if (trial.returnedBytes <= maximumBytes)
+                selected.push(candidate);
+        }
+        return finalizeRecentActivityResult({
+            activity: selected
+                .sort((left, right) => left.order - right.order)
+                .flatMap((item) => {
+                const summary = summarizeActivity(item.activity);
+                return summary ? [summary] : [];
+            }),
+            totalAssistant: assistants.length,
+            totalTools: tools.length,
             warnings,
             cursor,
             position,
-        };
+            maximumBytes,
+        });
     }
     if (options.view === "turns") {
         const turns = projectTurns(activeEntries, afterPosition);
@@ -65,14 +104,76 @@ export async function readSessionView(options) {
             position,
         };
     }
-    const allEntries = entries.slice(afterPosition);
-    const limit = options.limit ?? 50;
+    throw new Error(`Unsupported session view: ${String(options.view)}`);
+}
+function readActivityDetail(options) {
+    const activity = projectActivity(options.entries, 0)
+        .find((item) => item.activity.id === options.activityId)
+        ?.activity;
+    if (!activity)
+        throw new Error(`Activity not found: ${options.activityId}`);
+    let detail;
+    if (options.section === "assistant_text") {
+        if (activity.kind !== "assistant") {
+            throw new Error("assistant_text is only available for assistant activity");
+        }
+        detail = activity.text;
+    }
+    else {
+        if (activity.kind !== "tool") {
+            throw new Error(`${options.section} is only available for tool activity`);
+        }
+        if (options.section === "tool_arguments") {
+            detail = JSON.stringify(activity.arguments);
+        }
+        else {
+            if (!activity.complete || activity.result === undefined) {
+                throw new Error("tool_result is not available for pending tool activity");
+            }
+            detail = activity.result;
+        }
+    }
+    const start = options.detailCursor
+        ? decodeDetailCursor(options.detailCursor, {
+            agentId: options.agentId,
+            epoch: options.epoch,
+            activityId: options.activityId,
+            section: options.section,
+        }).bytePosition
+        : 0;
+    const bytes = Buffer.from(detail, "utf8");
+    if (start > bytes.length)
+        throw new Error("Detail cursor points beyond the activity detail");
+    if (start < bytes.length && (bytes[start] & 0xc0) === 0x80) {
+        throw new Error("Detail cursor points inside a UTF-8 sequence");
+    }
+    let end = Math.min(start + DETAIL_PAGE_MAX_BYTES, bytes.length);
+    if (end < bytes.length) {
+        while (end > start && (bytes[end] & 0xc0) === 0x80)
+            end -= 1;
+    }
+    const content = bytes.subarray(start, end).toString("utf8");
+    const hasMore = end < bytes.length;
     return {
-        view: "all_entries",
-        entries: (limit === 0 ? [] : allEntries.slice(-limit)).map((entry) => entry.value),
-        warnings,
-        cursor,
-        position,
+        view: "activity_detail",
+        activityId: options.activityId,
+        section: options.section,
+        content,
+        originalBytes: bytes.length,
+        returnedBytes: end - start,
+        truncated: start > 0 || hasMore,
+        hasMore,
+        ...(hasMore
+            ? {
+                nextDetailCursor: encodeDetailCursor({
+                    agentId: options.agentId,
+                    epoch: options.epoch,
+                    activityId: options.activityId,
+                    section: options.section,
+                    bytePosition: end,
+                }),
+            }
+            : {}),
     };
 }
 async function readCompleteEntries(sessionFile) {
@@ -153,7 +254,10 @@ function projectTurns(entries, afterPosition) {
                 },
                 activity: projectActivity(turnEntries, afterPosition)
                     .sort((left, right) => left.order - right.order)
-                    .map((item) => item.activity),
+                    .flatMap((item) => {
+                    const summary = summarizeActivity(item.activity);
+                    return summary ? [summary] : [];
+                }),
             }];
     });
 }
@@ -248,6 +352,106 @@ function projectActivity(entries, afterPosition) {
         });
     }
     return [...assistants, ...tools];
+}
+function takeLast(items, limit) {
+    return limit <= 0 ? [] : items.slice(-limit);
+}
+function finalizeRecentActivityResult(options) {
+    const maximumWarnings = Math.min(options.warnings.length, SUMMARY_WARNING_LIMIT);
+    for (let count = maximumWarnings; count >= 0; count -= 1) {
+        const warnings = options.warnings
+            .slice(0, count)
+            .map((warning) => truncateUtf8(warning, SUMMARY_WARNING_MAX_BYTES).text);
+        const omittedWarnings = options.warnings.length - count;
+        if (omittedWarnings > 0) {
+            warnings.push(`${omittedWarnings} additional warnings omitted`);
+        }
+        const result = buildRecentActivityResult(options, warnings);
+        if (result.returnedBytes <= options.maximumBytes)
+            return result;
+    }
+    return buildRecentActivityResult(options, []);
+}
+function buildRecentActivityResult(options, warnings) {
+    const assistantCount = options.activity.filter((item) => item.kind === "assistant").length;
+    const toolCount = options.activity.filter((item) => item.kind === "tool").length;
+    let returnedBytes = 0;
+    let result;
+    do {
+        result = {
+            view: "recent_activity",
+            activity: options.activity,
+            assistantCount,
+            toolCount,
+            omittedAssistant: options.totalAssistant - assistantCount,
+            omittedTools: options.totalTools - toolCount,
+            hasMore: assistantCount < options.totalAssistant || toolCount < options.totalTools,
+            returnedBytes,
+            warnings,
+            cursor: options.cursor,
+            position: options.position,
+        };
+        const serializedBytes = Buffer.byteLength(JSON.stringify(result), "utf8");
+        if (serializedBytes === returnedBytes)
+            return result;
+        returnedBytes = serializedBytes;
+    } while (true);
+}
+function summarizeActivity(activity) {
+    if (activity.kind === "assistant") {
+        if (activity.text.trim().length === 0)
+            return undefined;
+        const text = truncateUtf8(activity.text, ASSISTANT_TEXT_MAX_BYTES);
+        return {
+            kind: "assistant",
+            id: activity.id,
+            timestamp: activity.timestamp,
+            text: text.text,
+            stopReason: activity.stopReason,
+            truncated: text.truncated,
+            ...(text.truncated
+                ? {
+                    detailRef: {
+                        activityId: activity.id,
+                        sections: ["assistant_text"],
+                    },
+                }
+                : {}),
+        };
+    }
+    return {
+        kind: "tool",
+        id: activity.id,
+        timestamp: activity.timestamp,
+        toolName: activity.toolName,
+        outcome: activity.complete
+            ? activity.isError ? "failed" : "succeeded"
+            : "pending",
+        detailRef: {
+            activityId: activity.id,
+            sections: [
+                "tool_arguments",
+                ...(activity.complete ? ["tool_result"] : []),
+            ],
+        },
+        ...(activity.complete && activity.isError && activity.result
+            ? { errorPreview: truncateUtf8(activity.result, ERROR_PREVIEW_MAX_BYTES).text }
+            : {}),
+    };
+}
+function truncateUtf8(value, maximumBytes) {
+    const bytes = Buffer.from(value, "utf8");
+    if (bytes.length <= maximumBytes)
+        return { text: value, truncated: false };
+    const suffix = "…";
+    const suffixBytes = Buffer.byteLength(suffix, "utf8");
+    let end = Math.max(0, maximumBytes - suffixBytes);
+    while (end > 0 && (bytes[end] & 0xc0) === 0x80)
+        end -= 1;
+    return {
+        text: `${bytes.subarray(0, end).toString("utf8")}${suffix}`,
+        truncated: true,
+    };
 }
 function extractUserText(content, entryId) {
     if (typeof content === "string")
