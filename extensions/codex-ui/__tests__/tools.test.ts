@@ -50,6 +50,40 @@ afterEach(() => {
   keyHintMock.mockClear();
 });
 
+function createExtensionHarness(registered: ToolDefinition[] = []) {
+  const handlers = new Map<string, Array<(event: Record<string, unknown>) => unknown>>();
+  const pi = {
+    registerTool(tool: ToolDefinition) {
+      registered.push(tool);
+    },
+    on(event: string, handler: unknown) {
+      const listeners = handlers.get(event) ?? [];
+      listeners.push(handler as (event: Record<string, unknown>) => unknown);
+      handlers.set(event, listeners);
+    },
+  } as unknown as ExtensionAPI;
+
+  return {
+    pi,
+    registered,
+    async emit(type: string, event: Record<string, unknown> = {}) {
+      for (const handler of handlers.get(type) ?? []) {
+        await handler({ type, ...event });
+      }
+    },
+  };
+}
+
+function registerToolsForTest(
+  registered: ToolDefinition[],
+  factories?: CodexToolFactories,
+  services?: Parameters<typeof registerCodexTools>[2],
+) {
+  const harness = createExtensionHarness(registered);
+  registerCodexTools(harness.pi, factories, services);
+  return harness;
+}
+
 function createRenderContext(overrides: Record<string, unknown> = {}) {
   return {
     args: {},
@@ -136,13 +170,7 @@ test("tool overrides retain metadata and delegate execution using context cwd", 
     bash: factory("bash"),
   } as unknown as CodexToolFactories;
   const registered: ToolDefinition[] = [];
-  const pi = {
-    registerTool(tool: ToolDefinition) {
-      registered.push(tool);
-    },
-  } as unknown as ExtensionAPI;
-
-  registerCodexTools(pi, factories);
+  registerToolsForTest(registered, factories);
 
   assert.deepEqual(registered.map((tool) => tool.name), ["read", "edit", "write", "bash"]);
   for (const tool of registered) {
@@ -194,7 +222,7 @@ test("tool overrides retain metadata and delegate execution using context cwd", 
 
 test("edit renderer updates its title and renders the real result diff", () => {
   const registered: ToolDefinition[] = [];
-  registerCodexTools({ registerTool: (tool: ToolDefinition) => registered.push(tool) } as ExtensionAPI);
+  registerToolsForTest(registered);
   const edit = registered.find((tool) => tool.name === "edit");
   assert.ok(edit?.renderCall);
   assert.ok(edit.renderResult);
@@ -230,7 +258,7 @@ test("edit renderer updates its title and renders the real result diff", () => {
 
 test("write renderer reports a compact summary without inventing a diff", () => {
   const registered: ToolDefinition[] = [];
-  registerCodexTools({ registerTool: (tool: ToolDefinition) => registered.push(tool) } as ExtensionAPI);
+  registerToolsForTest(registered);
   const write = registered.find((tool) => tool.name === "write");
   assert.ok(write?.renderResult);
 
@@ -253,7 +281,7 @@ test("bash renderer shares running and completed state with the command receipt"
   vi.setSystemTime(new Date(0));
 
   const registered: ToolDefinition[] = [];
-  registerCodexTools({ registerTool: (tool: ToolDefinition) => registered.push(tool) } as ExtensionAPI);
+  registerToolsForTest(registered);
   const bash = registered.find((tool) => tool.name === "bash");
   assert.ok(bash?.renderCall);
   assert.ok(bash.renderResult);
@@ -273,6 +301,7 @@ test("bash renderer shares running and completed state with the command receipt"
     theme,
     createRenderContext({ args, state, invalidate, isPartial: true }) as never,
   );
+  invalidate.mockImplementation(() => call.invalidate());
 
   const runningLines = call.render(60);
   assert.match(stripTerminalSequences(runningLines.join("\n")), /Bash running/u);
@@ -307,9 +336,289 @@ test("bash renderer shares running and completed state with the command receipt"
   assert.equal(vi.getTimerCount(), 0);
 });
 
+test("bash renderer shares one refresh timer across concurrent executions", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(0));
+
+  const harness = createExtensionHarness();
+  registerCodexTools(harness.pi);
+  const bash = harness.registered.find((tool) => tool.name === "bash");
+  assert.ok(bash?.renderCall);
+
+  const firstInvalidate = vi.fn();
+  const secondInvalidate = vi.fn();
+  const firstArgs = { command: "sleep 10" };
+  const secondArgs = { command: "sleep 20" };
+  const firstState = {};
+  const secondState = {};
+
+  bash.renderCall(
+    firstArgs,
+    theme,
+    createRenderContext({
+      args: firstArgs,
+      state: firstState,
+      toolCallId: "bash-1",
+      invalidate: firstInvalidate,
+      executionStarted: true,
+      isPartial: true,
+    }) as never,
+  );
+  bash.renderCall(
+    secondArgs,
+    theme,
+    createRenderContext({
+      args: secondArgs,
+      state: secondState,
+      toolCallId: "bash-2",
+      invalidate: secondInvalidate,
+      executionStarted: true,
+      isPartial: true,
+    }) as never,
+  );
+
+  assert.equal(vi.getTimerCount(), 1);
+  vi.advanceTimersByTime(1000);
+  assert.equal(firstInvalidate.mock.calls.length, 1);
+  assert.equal(secondInvalidate.mock.calls.length, 1);
+
+  bash.renderCall(
+    firstArgs,
+    theme,
+    createRenderContext({
+      args: firstArgs,
+      state: firstState,
+      toolCallId: "bash-1",
+      invalidate: firstInvalidate,
+      executionStarted: true,
+      isPartial: false,
+    }) as never,
+  );
+  assert.equal(vi.getTimerCount(), 1);
+
+  bash.renderCall(
+    secondArgs,
+    theme,
+    createRenderContext({
+      args: secondArgs,
+      state: secondState,
+      toolCallId: "bash-2",
+      invalidate: secondInvalidate,
+      executionStarted: true,
+      isPartial: false,
+    }) as never,
+  );
+  assert.equal(vi.getTimerCount(), 0);
+});
+
+test("bash refresh scheduler cleans up on lifecycle events and ignores restored rows", async () => {
+  vi.useFakeTimers();
+
+  const harness = createExtensionHarness();
+  registerCodexTools(harness.pi);
+  const bash = harness.registered.find((tool) => tool.name === "bash");
+  assert.ok(bash?.renderCall);
+
+  const args = { command: "sleep 10" };
+  bash.renderCall(
+    args,
+    theme,
+    createRenderContext({
+      args,
+      state: {},
+      toolCallId: "bash-active",
+      executionStarted: true,
+      isPartial: true,
+    }) as never,
+  );
+  assert.equal(vi.getTimerCount(), 1);
+
+  await harness.emit("tool_execution_end", {
+    toolCallId: "read-1",
+    toolName: "read",
+    result: {},
+    isError: false,
+  });
+  assert.equal(vi.getTimerCount(), 1);
+
+  await harness.emit("tool_execution_end", {
+    toolCallId: "bash-active",
+    toolName: "bash",
+    result: {},
+    isError: true,
+  });
+  assert.equal(vi.getTimerCount(), 0);
+
+  bash.renderCall(
+    args,
+    theme,
+    createRenderContext({
+      args,
+      state: {},
+      toolCallId: "bash-next",
+      executionStarted: true,
+      isPartial: true,
+    }) as never,
+  );
+  assert.equal(vi.getTimerCount(), 1);
+
+  await harness.emit("session_shutdown", { reason: "reload" });
+  assert.equal(vi.getTimerCount(), 0);
+
+  bash.renderCall(
+    args,
+    theme,
+    createRenderContext({
+      args,
+      state: {},
+      toolCallId: "bash-restored",
+      executionStarted: false,
+      isPartial: true,
+    }) as never,
+  );
+  assert.equal(vi.getTimerCount(), 0);
+});
+
+test("bash renderer reuses prepared output until the result revision changes", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const bash = registered.find((tool) => tool.name === "bash");
+  assert.ok(bash?.renderResult);
+
+  let textReads = 0;
+  const content = [{
+    type: "text",
+    get text() {
+      textReads += 1;
+      return "first\nsecond";
+    },
+  }];
+  const result = { content, details: undefined };
+  const state = {};
+  const context = createRenderContext({ args: { command: "printf test" }, state });
+  const component = bash.renderResult(
+    result,
+    { expanded: false, isPartial: true },
+    theme,
+    context as never,
+  );
+  component.render(80);
+  const readsAfterFirstRender = textReads;
+  assert.ok(readsAfterFirstRender > 0);
+
+  component.invalidate();
+  const rerendered = bash.renderResult(
+    result,
+    { expanded: true, isPartial: true },
+    theme,
+    createRenderContext({
+      args: { command: "printf test" },
+      state,
+      lastComponent: component,
+      isPartial: true,
+    }) as never,
+  );
+  rerendered.render(60);
+
+  assert.equal(rerendered, component);
+  assert.equal(textReads, readsAfterFirstRender);
+
+  bash.renderResult(
+    result,
+    { expanded: true, isPartial: false },
+    theme,
+    createRenderContext({
+      args: { command: "printf test" },
+      state,
+      lastComponent: component,
+      isPartial: false,
+    }) as never,
+  ).render(60);
+  assert.ok(textReads > readsAfterFirstRender);
+
+  let updatedTextReads = 0;
+  const updatedResult = {
+    content: [{
+      type: "text",
+      get text() {
+        updatedTextReads += 1;
+        return "first\nsecond\nthird";
+      },
+    }],
+    details: undefined,
+  };
+  bash.renderResult(
+    updatedResult,
+    { expanded: true, isPartial: true },
+    theme,
+    createRenderContext({
+      args: { command: "printf test" },
+      state,
+      lastComponent: component,
+      isPartial: true,
+    }) as never,
+  ).render(60);
+
+  assert.ok(updatedTextReads > 0);
+});
+
+test("settled bash history avoids output preprocessing on hot frames", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const bash = registered.find((tool) => tool.name === "bash");
+  assert.ok(bash?.renderResult);
+
+  let textReads = 0;
+  const largeOutput = `${"x".repeat(50 * 1024 - 20)}\ncomplete`;
+  const rows = Array.from({ length: 100 }, (_, index) => {
+    const content = [{
+      type: "text",
+      get text() {
+        textReads += 1;
+        return largeOutput;
+      },
+    }];
+    const result = { content, details: undefined };
+    const state = {};
+    const component = bash.renderResult(
+      result,
+      { expanded: false, isPartial: false },
+      theme,
+      createRenderContext({
+        args: { command: `printf row-${index}` },
+        state,
+        toolCallId: `bash-history-${index}`,
+        executionStarted: false,
+      }) as never,
+    );
+    component.render(120);
+    return { component, result, state, index };
+  });
+  const readsAfterColdFrame = textReads;
+  assert.ok(readsAfterColdFrame > 0);
+
+  for (const row of rows) {
+    row.component.invalidate();
+    bash.renderResult(
+      row.result,
+      { expanded: false, isPartial: false },
+      theme,
+      createRenderContext({
+        args: { command: `printf row-${row.index}` },
+        state: row.state,
+        lastComponent: row.component,
+        toolCallId: `bash-history-${row.index}`,
+        executionStarted: false,
+      }) as never,
+    ).render(120);
+  }
+
+  assert.equal(textReads, readsAfterColdFrame);
+});
+
 test("bash renderer keeps a five visual-line tail and falls back to the global expand hint", () => {
   const registered: ToolDefinition[] = [];
-  registerCodexTools({ registerTool: (tool: ToolDefinition) => registered.push(tool) } as ExtensionAPI);
+  registerToolsForTest(registered);
   const bash = registered.find((tool) => tool.name === "bash");
   assert.ok(bash?.renderResult);
 
@@ -348,8 +657,8 @@ test("bash renderer keeps a five visual-line tail and falls back to the global e
 test("bash renderer uses keybindings injected by the host editor", () => {
   const registered: ToolDefinition[] = [];
   const getKeys = vi.fn(() => ["alt+x"]);
-  registerCodexTools(
-    { registerTool: (tool: ToolDefinition) => registered.push(tool) } as ExtensionAPI,
+  registerToolsForTest(
+    registered,
     undefined,
     { getKeybindings: () => ({ getKeys } as never) },
   );
@@ -373,7 +682,7 @@ test("bash renderer uses keybindings injected by the host editor", () => {
 test("bash result appears once when composed by the host tool component", () => {
   initTheme("dark");
   const registered: ToolDefinition[] = [];
-  registerCodexTools({ registerTool: (tool: ToolDefinition) => registered.push(tool) } as ExtensionAPI);
+  registerToolsForTest(registered);
   const bash = registered.find((tool) => tool.name === "bash");
   assert.ok(bash);
 
@@ -405,7 +714,7 @@ test("bash result appears once when composed by the host tool component", () => 
 test("edit result appears once when composed by the host tool component", () => {
   initTheme("dark");
   const registered: ToolDefinition[] = [];
-  registerCodexTools({ registerTool: (tool: ToolDefinition) => registered.push(tool) } as ExtensionAPI);
+  registerToolsForTest(registered);
   const edit = registered.find((tool) => tool.name === "edit");
   assert.ok(edit);
 
@@ -432,7 +741,7 @@ test("edit result appears once when composed by the host tool component", () => 
 
 test("bash renderer preserves truncation details without duplicating the execution footer", () => {
   const registered: ToolDefinition[] = [];
-  registerCodexTools({ registerTool: (tool: ToolDefinition) => registered.push(tool) } as ExtensionAPI);
+  registerToolsForTest(registered);
   const bash = registered.find((tool) => tool.name === "bash");
   assert.ok(bash?.renderResult);
 
@@ -472,7 +781,7 @@ test("bash renderer preserves truncation details without duplicating the executi
 
 test("bash renderer reports errors and omits invented duration for restored rows", () => {
   const registered: ToolDefinition[] = [];
-  registerCodexTools({ registerTool: (tool: ToolDefinition) => registered.push(tool) } as ExtensionAPI);
+  registerToolsForTest(registered);
   const bash = registered.find((tool) => tool.name === "bash");
   assert.ok(bash?.renderCall);
   assert.ok(bash.renderResult);
@@ -514,7 +823,7 @@ test("bash renderer reports errors and omits invented duration for restored rows
 
 test("bash renderer strips terminal controls and never exceeds narrow widths", () => {
   const registered: ToolDefinition[] = [];
-  registerCodexTools({ registerTool: (tool: ToolDefinition) => registered.push(tool) } as ExtensionAPI);
+  registerToolsForTest(registered);
   const bash = registered.find((tool) => tool.name === "bash");
   assert.ok(bash?.renderCall);
   assert.ok(bash.renderResult);

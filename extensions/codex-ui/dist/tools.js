@@ -1,7 +1,9 @@
 import { isAbsolute, relative, sep } from "node:path";
 import { createBashToolDefinition, createEditToolDefinition, createReadToolDefinition, createWriteToolDefinition, DEFAULT_MAX_BYTES, formatSize, keyHint, truncateToVisualLines, } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, wrapTextWithAnsi, } from "@earendil-works/pi-tui";
+import { BashRefreshScheduler } from "./bash-refresh-scheduler.js";
 import { fitToWidth, formatHomePath, normalizeWidth, } from "./layout.js";
+import { ResponsiveLinesComponent } from "./responsive-lines.js";
 const COLLAPSED_BASH_LINES = 5;
 const COLLAPSED_DIFF_LINES = 12;
 const EXPANDED_READ_LINES = 40;
@@ -18,25 +20,20 @@ const DEFAULT_FACTORIES = {
     write: createWriteToolDefinition,
     bash: createBashToolDefinition,
 };
-class ResponsiveLinesComponent {
-    renderer = () => [];
-    setRenderer(renderer) {
-        this.renderer = renderer;
-    }
-    render(width) {
-        const safeWidth = normalizeWidth(width);
-        if (safeWidth === 0)
-            return [];
-        return this.renderer(safeWidth)
-            .map((line) => fitToWidth(line, safeWidth));
-    }
-    invalidate() { }
-}
 export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services = {}) {
     const getReadDefinition = createDefinitionCache(factories.read);
     const getEditDefinition = createDefinitionCache(factories.edit);
     const getWriteDefinition = createDefinitionCache(factories.write);
     const getBashDefinition = createDefinitionCache(factories.bash);
+    const bashRefreshScheduler = new BashRefreshScheduler(BASH_DURATION_REFRESH_MS);
+    pi.on("tool_execution_end", (event) => {
+        if (event.toolName === "bash") {
+            bashRefreshScheduler.untrack(event.toolCallId);
+        }
+    });
+    pi.on("session_shutdown", () => {
+        bashRefreshScheduler.dispose();
+    });
     const baseRead = getReadDefinition(process.cwd());
     const readTool = {
         ...baseRead,
@@ -132,14 +129,16 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
         },
         renderCall(args, theme, context) {
             const state = context.state;
-            updateBashLifecycle(state, context);
+            updateBashLifecycle(state, context, bashRefreshScheduler);
             const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
             state.callComponent = component;
             component.setRenderer((width) => renderBashCall(args, state, theme, width));
             return component;
         },
         renderResult(result, options, theme, context) {
-            return updateComponent(context.lastComponent, (width) => renderBashResult(result, options, theme, services, width));
+            const state = context.state;
+            const prepared = getPreparedBashResult(state, result, options.isPartial);
+            return updateComponent(context.lastComponent, (width) => layoutBashResult(prepared, options, theme, services, width));
         },
     };
     pi.registerTool(bashTool);
@@ -306,7 +305,7 @@ function renderWriteResult(result, content, isPartial, theme, isError, width) {
     const summary = `  └ Written · ${formatLineCount(countLines(content))} · ${formatBytes(Buffer.byteLength(content, "utf8"))}`;
     return [fitToWidth(theme.fg("success", summary), width)];
 }
-function updateBashLifecycle(state, context) {
+function updateBashLifecycle(state, context, scheduler) {
     const nextStatus = context.isError
         ? "failed"
         : !context.isPartial
@@ -319,18 +318,15 @@ function updateBashLifecycle(state, context) {
             state.startedAt = Date.now();
             state.endedAt = undefined;
         }
-        if (state.interval === undefined) {
-            state.interval = setInterval(() => context.invalidate(), BASH_DURATION_REFRESH_MS);
-        }
+        scheduler.track(context.toolCallId, context.invalidate);
     }
-    else if (nextStatus === "completed" || nextStatus === "failed") {
-        if (state.startedAt !== undefined && state.endedAt === undefined) {
+    else {
+        if ((nextStatus === "completed" || nextStatus === "failed")
+            && state.startedAt !== undefined
+            && state.endedAt === undefined) {
             state.endedAt = Date.now();
         }
-        if (state.interval !== undefined) {
-            clearInterval(state.interval);
-            state.interval = undefined;
-        }
+        scheduler.untrack(context.toolCallId);
     }
     state.status = nextStatus;
 }
@@ -370,14 +366,33 @@ function renderBashCommand(command, status, theme, width) {
             : "toolPendingBg";
     return (commandLines.length > 0 ? commandLines : [""]).map((line) => (`${theme.getBgAnsi("toolPendingBg")}${fitToWidth(`${prefix}${line}`, width, { pad: true })}${theme.getBgAnsi(shellBackground)}`));
 }
-function renderBashResult(result, options, theme, services, width) {
-    let output = extractBashOutput(result.content).trim();
-    output = removeBashExecutionFooter(output, result.details, options.isPartial);
+function getPreparedBashResult(state, result, isPartial) {
+    if (state.preparedResult !== undefined
+        && state.preparedContent === result.content
+        && state.preparedDetails === result.details
+        && state.preparedIsPartial === isPartial) {
+        return state.preparedResult;
+    }
+    const prepared = prepareBashResult(result, isPartial);
+    state.preparedContent = result.content;
+    state.preparedDetails = result.details;
+    state.preparedIsPartial = isPartial;
+    state.preparedResult = prepared;
+    return prepared;
+}
+function prepareBashResult(result, isPartial) {
+    const extracted = extractBashOutput(result.content).trim();
+    const output = removeBashExecutionFooter(extracted, result.details, isPartial);
+    return {
+        outputLines: output ? output.split("\n") : [],
+        warning: formatBashTruncationWarning(result.details),
+    };
+}
+function layoutBashResult(prepared, options, theme, services, width) {
     let visualLines = [];
     let skippedCount = 0;
-    if (output) {
-        const styledOutput = output
-            .split("\n")
+    if (prepared.outputLines.length > 0) {
+        const styledOutput = prepared.outputLines
             .map((line) => theme.fg("toolOutput", line))
             .join("\n");
         const preview = truncateToVisualLines(styledOutput, options.expanded ? Number.MAX_SAFE_INTEGER : COLLAPSED_BASH_LINES, width);
@@ -385,9 +400,8 @@ function renderBashResult(result, options, theme, services, width) {
         skippedCount = preview.skippedCount;
     }
     const lines = ["", ...visualLines];
-    const warning = formatBashTruncationWarning(result.details);
-    if (warning) {
-        lines.push("", ...wrapTextWithAnsi(theme.fg("warning", `[${warning}]`), width));
+    if (prepared.warning) {
+        lines.push("", ...wrapTextWithAnsi(theme.fg("warning", `[${prepared.warning}]`), width));
     }
     const totalVisualLines = visualLines.length + skippedCount;
     const lineLabel = `${totalVisualLines} visual ${totalVisualLines === 1 ? "line" : "lines"}`;

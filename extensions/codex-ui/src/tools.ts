@@ -22,11 +22,13 @@ import {
   type Component,
 } from "@earendil-works/pi-tui";
 
+import { BashRefreshScheduler } from "./bash-refresh-scheduler.js";
 import {
   fitToWidth,
   formatHomePath,
   normalizeWidth,
 } from "./layout.js";
+import { ResponsiveLinesComponent } from "./responsive-lines.js";
 
 const COLLAPSED_BASH_LINES = 5;
 const COLLAPSED_DIFF_LINES = 12;
@@ -65,12 +67,20 @@ interface CodexEditState {
 
 type CodexBashStatus = "pending" | "running" | "completed" | "failed";
 
+interface PreparedBashResult {
+  outputLines: string[];
+  warning: string;
+}
+
 interface CodexBashState {
   startedAt?: number;
   endedAt?: number;
-  interval?: ReturnType<typeof setInterval>;
   status?: CodexBashStatus;
   callComponent?: ResponsiveLinesComponent;
+  preparedContent?: Array<{ type: string; text?: string }>;
+  preparedDetails?: BashToolDetails;
+  preparedIsPartial?: boolean;
+  preparedResult?: PreparedBashResult;
 }
 
 const DEFAULT_FACTORIES: CodexToolFactories = {
@@ -79,23 +89,6 @@ const DEFAULT_FACTORIES: CodexToolFactories = {
   write: createWriteToolDefinition,
   bash: createBashToolDefinition,
 };
-
-class ResponsiveLinesComponent implements Component {
-  private renderer: (width: number) => string[] = () => [];
-
-  setRenderer(renderer: (width: number) => string[]): void {
-    this.renderer = renderer;
-  }
-
-  render(width: number): string[] {
-    const safeWidth = normalizeWidth(width);
-    if (safeWidth === 0) return [];
-    return this.renderer(safeWidth)
-      .map((line) => fitToWidth(line, safeWidth));
-  }
-
-  invalidate(): void {}
-}
 
 export function registerCodexTools(
   pi: ExtensionAPI,
@@ -106,6 +99,16 @@ export function registerCodexTools(
   const getEditDefinition = createDefinitionCache(factories.edit);
   const getWriteDefinition = createDefinitionCache(factories.write);
   const getBashDefinition = createDefinitionCache(factories.bash);
+  const bashRefreshScheduler = new BashRefreshScheduler(BASH_DURATION_REFRESH_MS);
+
+  pi.on("tool_execution_end", (event) => {
+    if (event.toolName === "bash") {
+      bashRefreshScheduler.untrack(event.toolCallId);
+    }
+  });
+  pi.on("session_shutdown", () => {
+    bashRefreshScheduler.dispose();
+  });
 
   const baseRead = getReadDefinition(process.cwd());
   const readTool: typeof baseRead = {
@@ -226,7 +229,7 @@ export function registerCodexTools(
     },
     renderCall(args, theme, context) {
       const state = context.state as unknown as CodexBashState;
-      updateBashLifecycle(state, context);
+      updateBashLifecycle(state, context, bashRefreshScheduler);
 
       const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
       state.callComponent = component;
@@ -234,8 +237,10 @@ export function registerCodexTools(
       return component;
     },
     renderResult(result, options, theme, context) {
-      return updateComponent(context.lastComponent, (width) => renderBashResult(
-        result,
+      const state = context.state as unknown as CodexBashState;
+      const prepared = getPreparedBashResult(state, result, options.isPartial);
+      return updateComponent(context.lastComponent, (width) => layoutBashResult(
+        prepared,
         options,
         theme,
         services,
@@ -464,11 +469,13 @@ function renderWriteResult(
 function updateBashLifecycle(
   state: CodexBashState,
   context: {
+    toolCallId: string;
     executionStarted: boolean;
     isPartial: boolean;
     isError: boolean;
     invalidate(): void;
   },
+  scheduler: BashRefreshScheduler,
 ): void {
   const nextStatus: CodexBashStatus = context.isError
     ? "failed"
@@ -483,17 +490,16 @@ function updateBashLifecycle(
       state.startedAt = Date.now();
       state.endedAt = undefined;
     }
-    if (state.interval === undefined) {
-      state.interval = setInterval(() => context.invalidate(), BASH_DURATION_REFRESH_MS);
-    }
-  } else if (nextStatus === "completed" || nextStatus === "failed") {
-    if (state.startedAt !== undefined && state.endedAt === undefined) {
+    scheduler.track(context.toolCallId, context.invalidate);
+  } else {
+    if (
+      (nextStatus === "completed" || nextStatus === "failed")
+      && state.startedAt !== undefined
+      && state.endedAt === undefined
+    ) {
       state.endedAt = Date.now();
     }
-    if (state.interval !== undefined) {
-      clearInterval(state.interval);
-      state.interval = undefined;
-    }
+    scheduler.untrack(context.toolCallId);
   }
 
   state.status = nextStatus;
@@ -559,21 +565,51 @@ function renderBashCommand(
   ));
 }
 
-function renderBashResult(
+function getPreparedBashResult(
+  state: CodexBashState,
   result: { content: Array<{ type: string; text?: string }>; details?: BashToolDetails },
-  options: { expanded: boolean; isPartial: boolean },
+  isPartial: boolean,
+): PreparedBashResult {
+  if (
+    state.preparedResult !== undefined
+    && state.preparedContent === result.content
+    && state.preparedDetails === result.details
+    && state.preparedIsPartial === isPartial
+  ) {
+    return state.preparedResult;
+  }
+
+  const prepared = prepareBashResult(result, isPartial);
+  state.preparedContent = result.content;
+  state.preparedDetails = result.details;
+  state.preparedIsPartial = isPartial;
+  state.preparedResult = prepared;
+  return prepared;
+}
+
+function prepareBashResult(
+  result: { content: Array<{ type: string; text?: string }>; details?: BashToolDetails },
+  isPartial: boolean,
+): PreparedBashResult {
+  const extracted = extractBashOutput(result.content).trim();
+  const output = removeBashExecutionFooter(extracted, result.details, isPartial);
+  return {
+    outputLines: output ? output.split("\n") : [],
+    warning: formatBashTruncationWarning(result.details),
+  };
+}
+
+function layoutBashResult(
+  prepared: PreparedBashResult,
+  options: { expanded: boolean },
   theme: Theme,
   services: CodexToolRenderServices,
   width: number,
 ): string[] {
-  let output = extractBashOutput(result.content).trim();
-  output = removeBashExecutionFooter(output, result.details, options.isPartial);
-
   let visualLines: string[] = [];
   let skippedCount = 0;
-  if (output) {
-    const styledOutput = output
-      .split("\n")
+  if (prepared.outputLines.length > 0) {
+    const styledOutput = prepared.outputLines
       .map((line) => theme.fg("toolOutput", line))
       .join("\n");
     const preview = truncateToVisualLines(
@@ -586,9 +622,8 @@ function renderBashResult(
   }
 
   const lines = ["", ...visualLines];
-  const warning = formatBashTruncationWarning(result.details);
-  if (warning) {
-    lines.push("", ...wrapTextWithAnsi(theme.fg("warning", `[${warning}]`), width));
+  if (prepared.warning) {
+    lines.push("", ...wrapTextWithAnsi(theme.fg("warning", `[${prepared.warning}]`), width));
   }
 
   const totalVisualLines = visualLines.length + skippedCount;
