@@ -1,18 +1,20 @@
 # pi-ext
 
-为 [Pi Coding Agent](https://github.com/earendil-works/pi) 提供三个扩展和一套主题：
+为 [Pi Coding Agent](https://github.com/earendil-works/pi) 提供四个扩展和一套主题：
 
 - `codex-ui` 使用 Pi 品牌实现 Codex 风格的 TUI profile，并提供 `codex-pi` 主题。
 - `mcp` 连接 Model Context Protocol 服务器，并将工具注册为 `mcp__<server>__<tool>`。
 - `permissions` 提供 `Default permissions` 和 `Full access` 两种模式，以及逐次调用审批。
+- `subagent` 通过 tmux 管理普通 TUI Pi child，并从 Pi 原生 session JSONL 读取活动与完成状态。
 
 ## Requirements
 
 - Node.js 22.19 或更高版本
 - `@earendil-works/pi-coding-agent` 0.84.3
+- `subagent` 运行时需要 tmux 3.6 或兼容版本
 - 支持 24-bit color 的终端可获得最接近设计稿的颜色效果
 
-仓库在 Linux、macOS 和 Windows 上运行测试。运行入口是各扩展 `dist/` 目录中的 ESM 文件，Pi 启动时不需要转译 TypeScript 源码。
+仓库在 Linux、macOS 和 Windows 上运行通用测试；`subagent` 的真实 child runtime 仅适用于可运行 tmux 的环境。运行入口是各扩展 `dist/` 目录中的 ESM 文件，Pi 启动时不需要转译 TypeScript 源码。
 
 ## Install
 
@@ -125,6 +127,34 @@ pi \
 
 `/mcp-init` 创建 `.pi/mcp.json`。不要提交 MCP headers 或环境变量中的凭据。
 
+## Subagent extension
+
+`subagent` 不依赖额外 skill，也不修改 Pi core。每个 child 都是在独立 tmux window 中运行的普通交互式 TUI Pi；初始任务和后续 prompt 通过 tmux buffer 投递，不进入 shell command line。
+
+扩展注册八个工具：
+
+```text
+subagent_spawn
+subagent_resume
+subagent_prompt
+subagent_list
+subagent_read
+subagent_wait
+subagent_close
+subagent_forget
+```
+
+`subagent_read` 只读取 Pi 原生 session JSONL 中已经持久化的 finalized 数据，支持 `recent_activity`、`turns` 和 `all_entries`。它不解析 tmux pane history，也不复制 transcript。增量 activity cursor 绑定 agent、epoch 和 view；只有 Pi 的 `agent_settled` 会推进 settled cursor。
+
+`subagent_close` 停止进程与 tmux window，但保留管理关系、generation 和 Pi session，因此可以继续使用 `subagent_resume`。`subagent_forget` 会递归关闭并删除 Extension 管理状态，但不会删除或修改 Pi 原生 session JSONL、session 目录或项目文件。
+
+扩展要求当前 parent 使用持久化 Pi session；`--no-session` 模式下工具会明确拒绝。默认管理快照位于 Pi agent directory 的 `subagents/sessions/<sessionId>/state.json`，每个 session 独立原子写入。可用以下环境变量覆盖可执行文件路径：
+
+```text
+PI_SUBAGENT_PI_PATH
+PI_SUBAGENT_TMUX_PATH
+```
+
 ## Permissions extension
 
 扩展默认以 `Full access` 启动。设置 `PI_PERMISSIONS_MODE=default` 可改为默认权限模式。
@@ -162,7 +192,7 @@ npm pack --dry-run
 npm run prototype:tui
 ```
 
-仓库有意提交 `dist/`。Pi 从 Git 安装 package 时只安装生产依赖，因此需要预构建文件。CI 会拒绝过期的生成文件。`prepack` 会重建三个扩展，npm tarball 只包含编译产物、theme、README 和 license。
+仓库有意提交 `dist/`。Pi 从 Git 安装 package 时只安装生产依赖，因此需要预构建文件。CI 会拒绝过期的生成文件。`prepack` 会重建四个扩展，npm tarball 只包含编译产物、theme、README 和 license。
 
 `npm run prototype:tui` 启动 Codex、Claude、Hybrid 三套一次性 HTML 原型。生产 extension 只实现 Codex 方向，另外两套原型保留供后续使用。
 
@@ -179,6 +209,10 @@ extensions/
     __tests__/
     dist/
   permissions/
+    src/
+    __tests__/
+    dist/
+  subagent/
     src/
     __tests__/
     dist/

@@ -4,6 +4,7 @@ const outputDirectories = [
   new URL("../extensions/codex-ui/dist/", import.meta.url),
   new URL("../extensions/mcp/dist/", import.meta.url),
   new URL("../extensions/permissions/dist/", import.meta.url),
+  new URL("../extensions/subagent/dist/", import.meta.url),
 ];
 
 await Promise.all(

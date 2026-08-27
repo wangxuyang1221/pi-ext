@@ -98,8 +98,22 @@ test("MCP 的 session allow 按 server 和 tool 隔离", () => {
   );
 });
 
-test("subagent 编排工具在 Default permissions 下直接放行且不弹审批", async () => {
-  for (const toolName of ["spawn_agent", "check_subagent", "wait_agent", "send_input", "close_agent"]) {
+test("allows subagent orchestration tools without approval in Default mode", async () => {
+  for (const toolName of [
+    "spawn_agent",
+    "check_subagent",
+    "wait_agent",
+    "send_input",
+    "close_agent",
+    "subagent_spawn",
+    "subagent_resume",
+    "subagent_prompt",
+    "subagent_list",
+    "subagent_read",
+    "subagent_wait",
+    "subagent_close",
+    "subagent_forget",
+  ]) {
     const state = createPermissionState({ initialMode: MODES.DEFAULT });
     const ctx = createCtx({
       choices: [APPROVAL_CHOICES.DENY],

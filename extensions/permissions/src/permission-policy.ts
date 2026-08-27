@@ -39,6 +39,14 @@ const ORCHESTRATION_TOOLS = new Set([
   "wait_agent",
   "send_input",
   "close_agent",
+  "subagent_spawn",
+  "subagent_resume",
+  "subagent_prompt",
+  "subagent_list",
+  "subagent_read",
+  "subagent_wait",
+  "subagent_close",
+  "subagent_forget",
 ]);
 const MAX_SESSION_ALLOW_ENTRIES = 512;
 const MAX_DIGEST_NODES = 10_000;

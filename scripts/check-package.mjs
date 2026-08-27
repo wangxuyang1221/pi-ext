@@ -4,8 +4,8 @@ const packageJson = JSON.parse(await readFile(new URL("../package.json", import.
 const extensionEntries = packageJson.pi?.extensions ?? [];
 const themeEntries = packageJson.pi?.themes ?? [];
 
-if (extensionEntries.length !== 3) {
-  throw new Error(`Expected 3 Pi extension entries, found ${extensionEntries.length}`);
+if (extensionEntries.length !== 4) {
+  throw new Error(`Expected 4 Pi extension entries, found ${extensionEntries.length}`);
 }
 if (themeEntries.length !== 1) {
   throw new Error(`Expected 1 Pi theme entry, found ${themeEntries.length}`);
