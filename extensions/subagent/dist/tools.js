@@ -97,9 +97,9 @@ const waitParameters = Type.Object({
         minLength: 1,
     }),
     timeoutMs: Type.Optional(Type.Integer({
-        description: "最长等待时间（毫秒）。",
+        description: "单次最长等待时间（毫秒）；默认 30000，最大 120000。",
         minimum: 1,
-        maximum: 600_000,
+        maximum: 120_000,
         default: 30_000,
     })),
     afterActivity: Type.Optional(Type.String({
@@ -131,7 +131,7 @@ export function registerSubagentTools(pi, manager) {
         label: "Spawn subagent",
         description: "在 tmux 中启动一个普通 TUI Pi child，将其注册为当前 session 的直接 subagent，并提交初始任务。每次调用只创建一个 child；工具在 child runtime 注册成功后返回，不等待任务完成。",
         promptSnippet: "创建持久化 child Pi，异步执行独立任务。",
-        promptGuidelines: ["使用 subagent_spawn 委派边界清晰、可独立执行的任务；工具返回只表示 child 已启动，随后使用 subagent_wait 或 subagent_read 跟踪执行结果。"],
+        promptGuidelines: ["使用 subagent_spawn 委派边界清晰、可独立执行的任务；工具返回只表示 child 已启动。随后优先使用 subagent_read 低噪声跟踪；只有 main 的下一步依赖 child 结果时才使用 subagent_wait。"],
         parameters: spawnParameters,
         async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
             const agent = await manager.spawn(currentSessionId(ctx), params, {
@@ -210,7 +210,7 @@ export function registerSubagentTools(pi, manager) {
         label: "Read subagent activity",
         description: "从当前 session 的一个直接 child 的原生 Pi session JSONL 中读取结构化、只读的 finalized 活动。默认返回有界的 recent activity；也可按 user turn 读取，或在诊断时读取原生 all entries。运行中的未完成 token 或工具增量不会返回。",
         promptSnippet: "低噪声读取 child 的 assistant message 和工具历史。",
-        promptGuidelines: ["优先使用 subagent_read 的 recent_activity 和 cursor 获取少量新增内容；仅在需要完整请求上下文时使用 turns，需要检查分支或原生记录时才使用 all_entries。"],
+        promptGuidelines: ["常规跟踪优先使用 subagent_read 的 recent_activity 和 cursor，让 main 在 child 工作时继续推进；仅在需要完整请求上下文时使用 turns，需要诊断原生记录时才使用 all_entries。"],
         parameters: readParameters,
         async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
             const result = await manager.read(currentSessionId(ctx), params.agentId, {
@@ -239,9 +239,9 @@ export function registerSubagentTools(pi, manager) {
     pi.registerTool(withRenderer("wait", {
         name: "subagent_wait",
         label: "Wait for subagent",
-        description: "阻塞等待当前 session 的一个直接 child 在指定 settled cursor 之后产生新的 agent_settled。成功时返回新的 settled cursor 和有界近期活动；child 被中断、关闭或等待超时时会返回对应 outcome，不会伪造完成。",
-        promptSnippet: "等待 child 稳定完成，并取得低噪声近期结果。",
-        promptGuidelines: ["调用 subagent_wait 时传入任务开始前取得的 afterSettled；只有 outcome: \"settled\" 表示目标工作稳定完成，interrupted、closed 或 timeout 都不得当作成功结果。"],
+        description: "阻塞等待当前 session 的一个直接 child 在指定 settled cursor 之后产生新的 agent_settled。仅当 main 的下一步依赖 child 结果时使用；成功时返回新的 settled cursor 和近期活动，关闭、中断或超时不会伪造完成。",
+        promptSnippet: "等待主线所依赖的 child 稳定完成。",
+        promptGuidelines: ["常规进度跟踪应优先使用 subagent_read；仅当下一步被 child 结果阻塞时调用 subagent_wait。传入任务开始前的 afterSettled，timeout 后可复用同一 afterSettled 再次等待；只有 outcome: \"settled\" 表示成功完成。"],
         parameters: waitParameters,
         async execute(_toolCallId, params, signal, onUpdate, ctx) {
             onUpdate?.(toolResult({ waiting: true }, {

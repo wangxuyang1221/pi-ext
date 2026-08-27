@@ -146,6 +146,8 @@ subagent_forget
 
 `subagent_read` 只读取 Pi 原生 session JSONL 中已经持久化的 finalized 数据，支持 `recent_activity`、`turns` 和 `all_entries`。它不解析 tmux pane history，也不复制 transcript。增量 activity cursor 绑定 agent、epoch 和 view；只有 Pi 的 `agent_settled` 会推进 settled cursor。
 
+常规协作优先使用 `subagent_read` 跟踪 child，让 main 继续推进；只有 main 的下一步依赖 child 结果时才使用阻塞式 `subagent_wait`。单次 wait 默认 30 秒、最长 120 秒；timeout 后可以复用同一 `afterSettled` 再次等待。
+
 `subagent_close` 停止进程与 tmux window，但保留管理关系、generation 和 Pi session，因此可以继续使用 `subagent_resume`。`subagent_forget` 会递归关闭并删除 Extension 管理状态，但不会删除或修改 Pi 原生 session JSONL、session 目录或项目文件。
 
 扩展要求当前 parent 使用持久化 Pi session；`--no-session` 模式下工具会明确拒绝。默认管理快照位于 Pi agent directory 的 `subagents/sessions/<sessionId>/state.json`，每个 session 独立原子写入。可用以下环境变量覆盖可执行文件路径：
