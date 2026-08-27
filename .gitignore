@@ -1,6 +1,10 @@
 node_modules/
 coverage/
 .tmp/
+handoff/
+.scratch/
+prototype/
+DECISIONS.md
 *.tgz
 .DS_Store
 .env

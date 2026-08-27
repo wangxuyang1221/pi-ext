@@ -192,6 +192,7 @@ npm run build
 npm run package:check
 npm pack --dry-run
 npm run prototype:tui
+npm run prototype:subagent-ui
 ```
 
 仓库有意提交 `dist/`。Pi 从 Git 安装 package 时只安装生产依赖，因此需要预构建文件。CI 会拒绝过期的生成文件。`prepack` 会重建四个扩展，npm tarball 只包含编译产物、theme、README 和 license。

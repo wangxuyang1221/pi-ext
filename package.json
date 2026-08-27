@@ -54,6 +54,7 @@
     "check": "npm run typecheck && npm test && npm run build && npm run package:check",
     "package:check": "node ./scripts/check-package.mjs",
     "prototype:tui": "node ./prototypes/pi-tui-style-prototype/dev.mjs",
+    "prototype:subagent-ui": "node ./prototypes/subagent-tool-ui-prototype/demo.mjs",
     "prepack": "npm run build"
   },
   "dependencies": {

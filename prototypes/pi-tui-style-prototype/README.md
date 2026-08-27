@@ -6,6 +6,16 @@
 
 这是一次性视觉原型，不是生产实现。三个版本通过 URL 参数 `?variant=codex|claude|hybrid` 切换。界面文案按用户选择使用 English。Codex 和 Claude 方案分别以用户本机 `codex-cli 0.149.0`、Claude Code `2.1.236` 截图为视觉参考，但主品牌统一使用 Pi 0.84.3 官方 startup wordmark：accent bold `pi` 加 dim `v0.84.3`；`π` 只用于 terminal title 等标题语境。
 
+## Bash block study
+
+`bash.html` 比较三种 Bash tool block：
+
+- `A · Quiet native`：保留 Pi 默认 success shell，收紧 command、fold hint 和 output 的层级。
+- `B · Command receipt`：把状态、命令、输出和折叠信息拆成清晰的内部区域。
+- `C · Inline rail`：使用 `renderShell: "self"` 去掉整块填色，改成 transcript 内联事件。
+
+三个方向通过 `?variant=a|b|c` 切换。点击 Bash block 或底部 `Collapsed` 按钮可以展开输出；`Boundaries` 显示每块设计对应的 Pi renderer 边界。
+
 ## Run
 
 在仓库根目录运行：
@@ -14,7 +24,10 @@
 npm run prototype:tui
 ```
 
-然后访问 `http://localhost:4173/?variant=codex`。页面底部切换器和键盘左右方向键可以切换版本。启用 `Show Pi hooks` 可查看每块界面对应的 Pi extension API。
+Profile study：`http://localhost:4173/?variant=codex`。页面底部切换器和键盘左右方向键可以切换版本；启用 `Show Pi hooks` 可查看每块界面对应的 Pi extension API。
+
+Bash block study：`http://localhost:4173/bash.html?variant=a`。底部切换器和键盘左右方向键可以在 A、B、C 之间切换。
+
 
 ## Ghostty baseline
 

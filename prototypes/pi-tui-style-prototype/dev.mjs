@@ -58,7 +58,10 @@ const server = createServer(async (request, response) => {
 });
 
 server.listen(port, "127.0.0.1", () => {
-  console.log(`Pi TUI prototype: http://127.0.0.1:${port}/?variant=codex`);
+  console.log([
+    `Pi TUI profile prototype: http://127.0.0.1:${port}/?variant=codex`,
+    `Pi Bash block prototype: http://127.0.0.1:${port}/bash.html?variant=a`,
+  ].join("\n"));
 });
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
