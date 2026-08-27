@@ -28,12 +28,6 @@ const spawnParameters = Type.Object({
     })),
     thinkingLevel: Type.Optional(ThinkingLevelSchema),
 });
-const resumeParameters = Type.Object({
-    agentId: Type.String({
-        description: "当前 namespace 中已 close 的直接 child sessionId。",
-        minLength: 1,
-    }),
-});
 const promptParameters = Type.Object({
     agentId: Type.String({
         description: "当前 namespace 中运行中的直接 child sessionId。",
@@ -149,30 +143,12 @@ export function registerSubagentTools(pi, manager) {
             return toolResult({ agent, task: params.task }, details);
         },
     }));
-    pi.registerTool(withRenderer("resume", {
-        name: "subagent_resume",
-        label: "Resume subagent",
-        description: "重新启动当前 session namespace 中一个已 close 的直接 subagent，使用其原有 Pi session 创建新的 tmux window。工具在 child runtime 重新注册后返回，不会自动发送 prompt；已被 forget 的 session 不能通过此工具恢复。",
-        promptSnippet: "重新启动仍受当前 session 管理的 closed child。",
-        promptGuidelines: ["仅使用 subagent_resume 恢复仍属于当前 session 的 closed child；恢复成功后，使用 subagent_prompt 提交新任务或继续指导。"],
-        parameters: resumeParameters,
-        async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-            const agent = await manager.resume(currentSessionId(ctx), params.agentId);
-            const details = {
-                operation: "resume",
-                ok: true,
-                agent: toAgentDisplay(agent),
-                message: "Child runtime registered; no prompt was sent.",
-            };
-            return toolResult({ agent }, details);
-        },
-    }));
     pi.registerTool(withRenderer("prompt", {
         name: "subagent_prompt",
         label: "Prompt subagent",
         description: "通过 tmux 向当前 session 的一个运行中直接 child 投递正常 Pi prompt。默认使用 steer，在当前 assistant turn 的工具调用结束后尽快送达；follow-up 会等待当前工作结束后再送达。返回仅表示投递成功，不表示 child 已处理或 settled。",
         promptSnippet: "向运行中的直接 child 投递 steer 或 follow-up prompt。",
-        promptGuidelines: ["使用 subagent_prompt 的默认 steer 修正或补充当前工作；只有当消息应在现有工作彻底结束后执行时才选择 follow_up。closed child 必须先使用 subagent_resume。"],
+        promptGuidelines: ["使用 subagent_prompt 的默认 steer 修正或补充当前工作；只有当消息应在现有工作彻底结束后执行时才选择 follow_up。已终结清理的 child 不再属于当前 namespace，不能继续投递。"],
         parameters: promptParameters,
         async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
             const delivery = params.delivery ?? "steer";
@@ -191,18 +167,19 @@ export function registerSubagentTools(pi, manager) {
     pi.registerTool(withRenderer("list", {
         name: "subagent_list",
         label: "List subagents",
-        description: "列出当前 Pi session 直接管理的全部 subagent，包括 running、settled 和 closed child 的 agentId、显示名称、状态、generation 及可用的 tmux/session 定位信息。不递归列出后代，也不包含已被 forget 的普通 Pi session。",
+        description: "列出当前 Pi session 直接管理的全部 subagent，包括 agentId、显示名称、状态、generation、可用的 tmux/session 定位信息，以及 active、pending、limit、available 容量信息。仅返回直接 child。",
         promptSnippet: "列出当前 session 的直接 subagent 及其状态。",
         promptGuidelines: ["使用 subagent_list 发现直接 child、取得 agentId 或检查概况；需要证明某轮工作已经完成时使用 subagent_wait，不要只依赖列表中的瞬时状态。"],
         parameters: listParameters,
         async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
-            const agents = await manager.list(currentSessionId(ctx));
+            const { agents, capacity } = await manager.list(currentSessionId(ctx));
             const details = {
                 operation: "list",
                 ok: true,
                 agents: agents.map(toAgentDisplay),
+                capacity,
             };
-            return toolResult({ agents }, details);
+            return toolResult({ agents, capacity }, details);
         },
     }));
     pi.registerTool(withRenderer("read", {
@@ -263,9 +240,9 @@ export function registerSubagentTools(pi, manager) {
     pi.registerTool(withRenderer("close", {
         name: "subagent_close",
         label: "Close subagent",
-        description: "立即中断并关闭一个直接 child 的 Pi 进程和 tmux window，或递归关闭当前 session 的整棵 subagent 树。Close 保留 Pi session、Extension ownership、generation 和其他管理元数据，因此 child 之后仍可通过 subagent_resume 重新使用。",
-        promptSnippet: "停止 child 进程但保留关系，以便以后恢复。",
-        promptGuidelines: ["使用 subagent_close 停止暂时不再运行但仍需保留管理关系的 child；target: \"all\" 会递归中断全部后代。需要永久解除 Extension 管理关系时使用 subagent_forget。"],
+        description: "终结一个直接 child，或当前 root 的全部直接 children：先停止 Pi 进程和 tmux window，再解除管理关系并删除 Extension 状态；保留 Pi 原生 session。",
+        promptSnippet: "终结直接 child 并清理 Extension 管理数据。",
+        promptGuidelines: ["使用 subagent_close 终结不再需要的直接 child；target: \"all\" 只处理当前 root 的直接 children。成功后该 child 不再由当前 namespace 管理。"],
         parameters: targetParameters,
         async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
             const affected = await manager.close(currentSessionId(ctx), params.target);
@@ -275,36 +252,15 @@ export function registerSubagentTools(pi, manager) {
                 ok: true,
                 ...(displays.length === 1 ? { agent: displays[0] } : {}),
                 affected: displays,
-                relationshipRetained: true,
-                piSessionRetained: true,
-            };
-            return toolResult({ affected, relationshipRetained: true, piSessionRetained: true }, details);
-        },
-    }));
-    pi.registerTool(withRenderer("forget", {
-        name: "subagent_forget",
-        label: "Forget subagent",
-        description: "递归立即关闭目标 subagent 子树，并删除 Extension 维护的 ownership、runtime 和临时管理数据。不会删除或修改任何 Pi 原生 session JSONL 或项目文件；被 forget 的 session 仍可通过 Pi 原生方式独立 resume，但当前 main 此后不能再通过 subagent 工具管理它们。",
-        promptSnippet: "关闭并永久解除 Extension 对 subagent 子树的管理关系。",
-        promptGuidelines: ["仅在明确不再需要当前 main 管理或复用目标 subagent 时使用 subagent_forget；如果以后仍可能通过 subagent_resume 使用，应改用 subagent_close。"],
-        parameters: targetParameters,
-        async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-            const affected = await manager.forget(currentSessionId(ctx), params.target);
-            const displays = affected.map(toAgentDisplay);
-            const details = {
-                operation: "forget",
-                ok: true,
-                ...(displays.length === 1 ? { agent: displays[0] } : {}),
-                affected: displays,
+                relationshipRemoved: true,
                 extensionDataRemoved: true,
                 piSessionRetained: true,
-                relationshipRetained: false,
             };
             return toolResult({
                 affected,
+                relationshipRemoved: true,
                 extensionDataRemoved: true,
                 piSessionRetained: true,
-                relationshipRetained: false,
             }, details);
         },
     }));

@@ -16,6 +16,7 @@ export interface SubagentExtensionOptions {
     piPath?: string;
     tmuxPath?: string;
     tmuxSessionName?: string;
+    maxActive?: number;
 }
 export default function subagentExtension(pi: ExtensionAPI, options?: SubagentExtensionOptions): void;
 export {};

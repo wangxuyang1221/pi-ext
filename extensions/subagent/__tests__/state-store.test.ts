@@ -34,6 +34,27 @@ test("writes each session state to its own atomic partition", async () => {
   }
 });
 
+test("rejects the previous Extension state schema", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-state-test-"));
+
+  try {
+    const store = new SessionStateStore(root);
+    const path = store.statePath("session-a");
+    await mkdir(join(root, "sessions", "session-a"), { recursive: true });
+    await writeFile(path, `${JSON.stringify({
+      schemaVersion: 1,
+      sessionId: "session-a",
+      epoch: "epoch-a",
+      runtime: {},
+      children: [],
+    })}\n`, "utf8");
+
+    await assert.rejects(store.load("session-a"), /Unsupported subagent state schema: 1/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("deletes only Extension state while preserving native Pi sessions", async () => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-state-test-"));
   const nativeSession = join(root, "native-sessions", "session-a.jsonl");

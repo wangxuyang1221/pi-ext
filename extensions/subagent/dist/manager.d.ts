@@ -3,6 +3,7 @@ import type { SessionState, TmuxLocator } from "./state-store.js";
 import { SessionStateStore } from "./state-store.js";
 import type { PromptDelivery, TmuxLaunchOptions } from "./tmux-runtime.js";
 import { type WaitForSettledResult } from "./wait.js";
+export declare const PI_SUBAGENT_MAX_ACTIVE = "PI_SUBAGENT_MAX_ACTIVE";
 export declare const PI_SUBAGENT_STATE_ROOT = "PI_SUBAGENT_STATE_ROOT";
 export declare const PI_SUBAGENT_PARENT = "PI_SUBAGENT_PARENT";
 export declare const PI_SUBAGENT_LAUNCH = "PI_SUBAGENT_LAUNCH";
@@ -26,6 +27,9 @@ export interface SubagentManagerOptions {
     registrationTimeoutMs?: number;
     pollIntervalMs?: number;
     closeTimeoutMs?: number;
+    maxActive?: number;
+    reservationTtlMs?: number;
+    nowMs?: () => number;
 }
 export interface SpawnSubagentOptions {
     task: string;
@@ -50,6 +54,16 @@ export interface ManagedAgent {
     thinkingLevel?: string;
     tmux?: TmuxLocator;
     sessionFile: string;
+}
+export interface SubagentCapacity {
+    active: number;
+    pending: number;
+    limit: number;
+    available: number;
+}
+export interface ManagedAgentList {
+    agents: ManagedAgent[];
+    capacity: SubagentCapacity;
 }
 export interface WaitManagedOptions {
     afterSettled: string;
@@ -79,20 +93,33 @@ export declare class SubagentManager {
     private readonly registrationTimeoutMs;
     private readonly pollIntervalMs;
     private readonly closeTimeoutMs;
+    private readonly maxActive;
+    private readonly reservationTtlMs;
+    private readonly nowMs;
+    private readonly inFlightSpawns;
+    private readonly closingNamespaces;
     constructor(options: SubagentManagerOptions);
     spawn(parentSessionId: string, options: SpawnSubagentOptions, defaults: SpawnDefaults): Promise<ManagedAgent>;
+    private spawnInternal;
     close(parentSessionId: string, target: string): Promise<ManagedAgent[]>;
-    forget(parentSessionId: string, target: string): Promise<ManagedAgent[]>;
+    private closeAll;
+    private closeReservations;
+    private closeDirect;
     wait(parentSessionId: string, agentId: string, options: WaitManagedOptions, signal?: AbortSignal): Promise<ManagedWaitResult>;
     read(parentSessionId: string, agentId: string, options: Omit<ReadSessionViewOptions, "sessionFile" | "agentId" | "epoch" | "leafId">): Promise<SessionViewResult>;
-    list(parentSessionId: string): Promise<ManagedAgent[]>;
+    list(parentSessionId: string): Promise<ManagedAgentList>;
     prompt(parentSessionId: string, agentId: string, text: string, delivery: PromptDelivery): Promise<ManagedAgent>;
-    resume(parentSessionId: string, agentId: string): Promise<ManagedAgent>;
-    private collectSubtree;
-    private closeStates;
+    private reserveSpawn;
+    private reapExpiredReservations;
+    private attachReservationLocator;
+    private activeProcessIds;
     private confirmClosed;
     private requireDirectSession;
     private reconcileOwnedSessions;
+    private markInterrupted;
+    private assertRootNamespace;
+    private assertManagedLeaf;
+    private assertDirectOwnership;
     private requireSession;
     private waitForRegistration;
 }

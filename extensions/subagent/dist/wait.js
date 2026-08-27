@@ -4,15 +4,27 @@ export async function waitForSettled(options) {
     const sleep = options.sleep ?? delay;
     const startedAt = now();
     let expectedGeneration;
+    let lastGeneration = 0;
     while (true) {
         options.signal?.throwIfAborted();
         const state = await options.readState();
+        const durationMs = Math.max(0, now() - startedAt);
+        if (!state) {
+            if (await options.wasClosed?.() === true) {
+                return {
+                    outcome: "closed",
+                    generation: lastGeneration,
+                    durationMs,
+                };
+            }
+            throw new Error(`Subagent state disappeared while waiting: ${options.agentId}`);
+        }
+        lastGeneration = state.runtime.generation;
         const decodedCursor = decodeSettledCursor(options.afterSettled, {
             agentId: options.agentId,
             epoch: state.epoch,
         });
         expectedGeneration ??= decodedCursor.generation;
-        const durationMs = Math.max(0, now() - startedAt);
         if (state.runtime.settledGeneration > expectedGeneration) {
             return {
                 outcome: "settled",
@@ -39,7 +51,7 @@ export async function waitForSettled(options) {
                 durationMs,
             };
         }
-        if (!await options.isAlive(state)) {
+        if (state.runtime.status !== "closing" && !await options.isAlive(state)) {
             return {
                 outcome: "interrupted",
                 generation: state.runtime.generation,

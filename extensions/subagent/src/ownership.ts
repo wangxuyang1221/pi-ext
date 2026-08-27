@@ -8,6 +8,9 @@ export function registerDirectChild(
   child: SessionState,
   now: string,
 ): SessionState {
+  if (parent.parent) {
+    throw new Error("Managed sessions cannot register children");
+  }
   if (
     child.parent?.sessionId !== parent.sessionId
     || child.parent.epoch !== parent.epoch
@@ -46,20 +49,6 @@ export function getDirectChild(parent: SessionState, agentId: string): ChildLink
     throw new Error(`Managed session is not a direct child: ${agentId}`);
   }
   return child;
-}
-
-export function markDirectChildClosed(
-  parent: SessionState,
-  agentId: string,
-  now: string,
-): SessionState {
-  getDirectChild(parent, agentId);
-  return {
-    ...parent,
-    children: parent.children.map((child) => child.agentId === agentId
-      ? { ...child, closedAt: now, updatedAt: now }
-      : child),
-  };
 }
 
 export function removeDirectChildren(

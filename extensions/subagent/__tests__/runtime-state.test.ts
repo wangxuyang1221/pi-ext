@@ -16,7 +16,7 @@ const launch: LaunchMetadata = {
   processInstanceId: "process-a",
 };
 
-test("preserves an epoch on resume and creates one after a session switch", () => {
+test("preserves an epoch on reactivation and creates one after a session switch", () => {
   const first = activateSession(undefined, {
     sessionId: "child-a",
     cwd: "/repo",
@@ -30,7 +30,7 @@ test("preserves an epoch on resume and creates one after a session switch", () =
   first.runtime.generation = 3;
   first.runtime.settledGeneration = 2;
 
-  const resumed = activateSession(first, {
+  const reactivated = activateSession(first, {
     sessionId: "child-a",
     cwd: "/repo",
     sessionFile: "/sessions/child-a.jsonl",
@@ -41,13 +41,13 @@ test("preserves an epoch on resume and creates one after a session switch", () =
     createEpoch: () => "must-not-be-used",
   });
 
-  assert.equal(resumed.epoch, "epoch-a");
-  assert.equal(resumed.runtime.generation, 3);
-  assert.equal(resumed.runtime.settledGeneration, 2);
-  assert.equal(resumed.runtime.status, "running");
-  assert.equal(resumed.runtime.busy, false);
-  assert.equal(resumed.parent?.registrationToken, "registration-b");
-  assert.equal(resumed.runtime.pid, 202);
+  assert.equal(reactivated.epoch, "epoch-a");
+  assert.equal(reactivated.runtime.generation, 3);
+  assert.equal(reactivated.runtime.settledGeneration, 2);
+  assert.equal(reactivated.runtime.status, "running");
+  assert.equal(reactivated.runtime.busy, false);
+  assert.equal(reactivated.parent?.registrationToken, "registration-b");
+  assert.equal(reactivated.runtime.pid, 202);
 
   const switched = activateSession(undefined, {
     sessionId: "child-b",

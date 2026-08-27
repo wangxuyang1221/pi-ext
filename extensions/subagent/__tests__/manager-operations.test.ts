@@ -5,10 +5,7 @@ import { test } from "vitest";
 
 import { encodeSettledCursor } from "../src/cursor.js";
 import { SubagentManager, type ManagedTmuxRuntime } from "../src/manager.js";
-import {
-  markDirectChildClosed,
-  registerDirectChild,
-} from "../src/ownership.js";
+import { registerDirectChild } from "../src/ownership.js";
 import {
   SessionStateStore,
   createSessionState,
@@ -87,13 +84,84 @@ test("lists switched sessions as direct children without including descendants",
       },
       async close() {},
     };
-    const agents = await createManager(root, store, runtime).list("parent-a");
+    const result = await createManager(root, store, runtime).list("parent-a");
 
-    assert.deepEqual(agents.map((agent) => agent.agentId), ["child-new", "child-old"]);
+    assert.deepEqual(result.agents.map((agent) => agent.agentId), ["child-new", "child-old"]);
+    assert.deepEqual(result.capacity, {
+      active: 1,
+      pending: 0,
+      limit: 3,
+      available: 2,
+    });
     assert.deepEqual((await store.load("parent-a"))?.children.map((child) => child.agentId), [
       "child-new",
       "child-old",
     ]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("rejects a managed child with nested ownership during list", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-manager-test-"));
+  const store = new SessionStateStore(root);
+
+  try {
+    const child = createSessionState({
+      sessionId: "child-a",
+      epoch: "child-epoch",
+      cwd: "/repo",
+      sessionFile: "/sessions/child-a.jsonl",
+      now: "2026-08-27T02:00:00.000Z",
+      parent: {
+        sessionId: "parent-a",
+        epoch: "parent-epoch",
+        registrationToken: "registration-a",
+      },
+      launch: {
+        cwd: "/repo",
+        sessionDir: "/sessions/child-a",
+        displayName: "Lin",
+        processInstanceId: "process-a",
+      },
+      tmux: locator,
+    });
+    child.children = [{
+      agentId: "grandchild-a",
+      epoch: "grandchild-epoch",
+      name: "Grandchild",
+      cwd: "/repo",
+      sessionFile: "/sessions/grandchild-a.jsonl",
+      launch: {
+        cwd: "/repo",
+        sessionDir: "/sessions/grandchild-a",
+        displayName: "Grandchild",
+        processInstanceId: "process-b",
+      },
+      createdAt: "2026-08-27T02:00:00.000Z",
+      updatedAt: "2026-08-27T02:00:00.000Z",
+    }];
+    let parent = createSessionState({
+      sessionId: "parent-a",
+      epoch: "parent-epoch",
+      cwd: "/repo",
+      sessionFile: "/sessions/parent-a.jsonl",
+      now: "2026-08-27T02:00:00.000Z",
+    });
+    parent = registerDirectChild(parent, child, "2026-08-27T02:00:01.000Z");
+    await store.save(parent);
+    await store.save(child);
+    const runtime: ManagedTmuxRuntime = {
+      async launch() { throw new Error("not used"); },
+      async sendPrompt() {},
+      async isAlive() { return true; },
+      async close() {},
+    };
+
+    await assert.rejects(
+      createManager(root, store, runtime).list("parent-a"),
+      /Subagent topology corruption: managed child has children: child-a/u,
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -286,10 +354,148 @@ test("returns bounded activity only after a newer settled generation", async () 
   }
 });
 
+test("persists an interruption observed while waiting", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-manager-test-"));
+  const store = new SessionStateStore(root);
+
+  try {
+    const child = createSessionState({
+      sessionId: "child-a",
+      epoch: "child-epoch",
+      cwd: "/repo",
+      sessionFile: "/sessions/child-a.jsonl",
+      now: "2026-08-27T02:00:00.000Z",
+      parent: {
+        sessionId: "parent-a",
+        epoch: "parent-epoch",
+        registrationToken: "registration-a",
+      },
+      launch: {
+        cwd: "/repo",
+        sessionDir: "/sessions/managed-a",
+        displayName: "Lin",
+        processInstanceId: "process-a",
+      },
+      processInstanceId: "process-a",
+      tmux: locator,
+    });
+    let parent = createSessionState({
+      sessionId: "parent-a",
+      epoch: "parent-epoch",
+      cwd: "/repo",
+      sessionFile: "/sessions/parent-a.jsonl",
+      now: "2026-08-27T02:00:00.000Z",
+    });
+    parent = registerDirectChild(parent, child, "2026-08-27T02:00:01.000Z");
+    await store.save(parent);
+    await store.save(child);
+    const runtime: ManagedTmuxRuntime = {
+      async launch() { throw new Error("not used"); },
+      async sendPrompt() {},
+      async isAlive() { return false; },
+      async close() {},
+    };
+    const manager = createManager(root, store, runtime);
+
+    const result = await manager.wait("parent-a", "child-a", {
+      afterSettled: encodeSettledCursor({
+        agentId: "child-a",
+        epoch: "child-epoch",
+        generation: 0,
+      }),
+      timeoutMs: 100,
+    });
+
+    assert.equal(result.outcome, "interrupted");
+    assert.equal(result.agent.status, "interrupted");
+    assert.equal((await store.load("child-a"))?.runtime.status, "interrupted");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("returns closed when terminal close deletes state during wait", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-manager-test-"));
+  const store = new SessionStateStore(root);
+  let alive = true;
+  let releaseSleep: (() => void) | undefined;
+  let markSleeping: (() => void) | undefined;
+  const sleeping = new Promise<void>((resolve) => {
+    markSleeping = resolve;
+  });
+
+  try {
+    const child = createSessionState({
+      sessionId: "child-a",
+      epoch: "child-epoch",
+      cwd: "/repo",
+      sessionFile: "/sessions/child-a.jsonl",
+      now: "2026-08-27T02:00:00.000Z",
+      parent: {
+        sessionId: "parent-a",
+        epoch: "parent-epoch",
+        registrationToken: "registration-a",
+      },
+      launch: {
+        cwd: "/repo",
+        sessionDir: "/sessions/managed-a",
+        displayName: "Lin",
+        processInstanceId: "process-a",
+      },
+      processInstanceId: "process-a",
+      tmux: locator,
+    });
+    let parent = createSessionState({
+      sessionId: "parent-a",
+      epoch: "parent-epoch",
+      cwd: "/repo",
+      sessionFile: "/sessions/parent-a.jsonl",
+      now: "2026-08-27T02:00:00.000Z",
+    });
+    parent = registerDirectChild(parent, child, "2026-08-27T02:00:01.000Z");
+    await store.save(parent);
+    await store.save(child);
+    const runtime: ManagedTmuxRuntime = {
+      async launch() { throw new Error("not used"); },
+      async sendPrompt() {},
+      async isAlive() { return alive; },
+      async close() { alive = false; },
+    };
+    const manager = createManager(root, store, runtime, {
+      sleep: async () => {
+        markSleeping?.();
+        await new Promise<void>((resolve) => {
+          releaseSleep = resolve;
+        });
+      },
+    });
+    const waiting = manager.wait("parent-a", "child-a", {
+      afterSettled: encodeSettledCursor({
+        agentId: "child-a",
+        epoch: "child-epoch",
+        generation: 0,
+      }),
+      timeoutMs: 1_000,
+    });
+    await sleeping;
+
+    await manager.close("parent-a", "child-a");
+    releaseSleep?.();
+    const result = await waiting;
+
+    assert.equal(result.outcome, "closed");
+    assert.equal(result.agent.status, "closed");
+  } finally {
+    releaseSleep?.();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("prompts only a live direct child", async () => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-manager-test-"));
   const store = new SessionStateStore(root);
   const delivered: Array<{ text: string; delivery: string }> = [];
+  let alive = true;
 
   try {
     const child = createSessionState({
@@ -331,23 +537,21 @@ test("prompts only a live direct child", async () => {
         delivered.push({ text, delivery });
       },
       async isAlive() {
-        return true;
+        return alive;
       },
-      async close() {},
+      async close() {
+        alive = false;
+      },
     };
     const manager = createManager(root, store, runtime);
 
     await manager.prompt("parent-a", "child-a", "Review the failure", "follow_up");
     assert.deepEqual(delivered, [{ text: "Review the failure", delivery: "follow_up" }]);
 
-    await store.save(markDirectChildClosed(
-      (await store.load("parent-a"))!,
-      "child-a",
-      "2026-08-27T02:00:02.000Z",
-    ));
+    await manager.close("parent-a", "child-a");
     await assert.rejects(
       manager.prompt("parent-a", "child-a", "Too late", "steer"),
-      /closed/u,
+      /not a direct child/u,
     );
     assert.equal(delivered.length, 1);
   } finally {
@@ -359,8 +563,10 @@ function createManager(
   root: string,
   store: SessionStateStore,
   runtime: ManagedTmuxRuntime,
+  options: { sleep?: (milliseconds: number) => Promise<void> } = {},
 ): SubagentManager {
   return new SubagentManager({
+    ...options,
     store,
     runtime,
     stateRoot: root,

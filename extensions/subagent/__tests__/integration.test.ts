@@ -144,16 +144,17 @@ test.skipIf(!runIntegration)(
         (activity) => activity.kind === "assistant" && activity.text.includes(markerThree),
       ));
 
-      await manager.close(parentId, spawned.agentId);
-      const resumed = await manager.resume(parentId, spawned.agentId);
-      assert.equal(resumed.agentId, spawned.agentId);
-      assert.equal(resumed.generation, second.generation);
-      await manager.close(parentId, spawned.agentId);
-
-      const nativeSessionFile = resumed.sessionFile;
-      await manager.forget(parentId, spawned.agentId);
+      const nativeSessionFile = spawned.sessionFile;
+      const affected = await manager.close(parentId, spawned.agentId);
+      assert.deepEqual(affected.map((agent) => agent.agentId), [spawned.agentId]);
       assert.equal(await store.load(spawned.agentId), undefined);
       assert.deepEqual((await store.load(parentId))?.children, []);
+      assert.deepEqual((await manager.list(parentId)).capacity, {
+        active: 0,
+        pending: 0,
+        limit: 3,
+        available: 3,
+      });
       await access(nativeSessionFile);
     } finally {
       await execute(tmuxPath, ["kill-session", "-t", `=${tmuxSessionName}`]);

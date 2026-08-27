@@ -2,12 +2,13 @@ import { randomUUID } from "node:crypto";
 import { readFile, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-export const SESSION_STATE_SCHEMA_VERSION = 1;
+export const SESSION_STATE_SCHEMA_VERSION = 2;
 
 export type RuntimeStatus =
   | "starting"
   | "running"
   | "settled"
+  | "closing"
   | "closed"
   | "interrupted"
   | "errored";
@@ -35,6 +36,14 @@ export interface LaunchMetadata {
   processInstanceId: string;
 }
 
+export interface SpawnReservation {
+  reservationId: string;
+  processInstanceId: string;
+  createdAt: string;
+  expiresAt: string;
+  tmux?: TmuxLocator;
+}
+
 export interface ChildLink {
   agentId: string;
   epoch: string;
@@ -44,7 +53,6 @@ export interface ChildLink {
   launch: LaunchMetadata;
   createdAt: string;
   updatedAt: string;
-  closedAt?: string;
 }
 
 export interface SessionRuntimeState {
@@ -70,6 +78,7 @@ export interface SessionState {
   launch?: LaunchMetadata;
   runtime: SessionRuntimeState;
   children: ChildLink[];
+  reservations: SpawnReservation[];
 }
 
 export interface CreateSessionStateOptions {
@@ -105,6 +114,7 @@ export function createSessionState(options: CreateSessionStateOptions): SessionS
       updatedAt: options.now,
     },
     children: [],
+    reservations: [],
   };
 }
 
@@ -207,7 +217,12 @@ function parseSessionState(value: unknown, expectedSessionId: string): SessionSt
   if (value.sessionId !== expectedSessionId) {
     throw new Error("Invalid subagent state: sessionId does not match its partition");
   }
-  if (typeof value.epoch !== "string" || !isRecord(value.runtime) || !Array.isArray(value.children)) {
+  if (
+    typeof value.epoch !== "string"
+    || !isRecord(value.runtime)
+    || !Array.isArray(value.children)
+    || !Array.isArray(value.reservations)
+  ) {
     throw new Error("Invalid subagent state: missing required fields");
   }
   return value as unknown as SessionState;

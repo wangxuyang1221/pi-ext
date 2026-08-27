@@ -1,7 +1,7 @@
 import type { AgentToolResult, Theme, ToolRenderResultOptions } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
-export type SubagentToolKind = "spawn" | "resume" | "prompt" | "list" | "read" | "wait" | "close" | "forget";
-export type SubagentStatus = "starting" | "running" | "settled" | "closed" | "interrupted" | "errored";
+export type SubagentToolKind = "spawn" | "prompt" | "list" | "read" | "wait" | "close";
+export type SubagentStatus = "starting" | "running" | "settled" | "closing" | "closed" | "interrupted" | "errored";
 export interface AgentDisplay {
     agentId: string;
     name: string;
@@ -46,7 +46,13 @@ export interface SubagentUiDetails {
     outcome?: "settled" | "interrupted" | "closed" | "timeout";
     durationMs?: number;
     activity?: ActivityDisplay[];
-    relationshipRetained?: boolean;
+    capacity?: {
+        active: number;
+        pending: number;
+        limit: number;
+        available: number;
+    };
+    relationshipRemoved?: boolean;
     extensionDataRemoved?: boolean;
     piSessionRetained?: boolean;
     message?: string;

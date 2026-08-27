@@ -1,5 +1,5 @@
-export declare const SESSION_STATE_SCHEMA_VERSION = 1;
-export type RuntimeStatus = "starting" | "running" | "settled" | "closed" | "interrupted" | "errored";
+export declare const SESSION_STATE_SCHEMA_VERSION = 2;
+export type RuntimeStatus = "starting" | "running" | "settled" | "closing" | "closed" | "interrupted" | "errored";
 export interface TmuxLocator {
     sessionName: string;
     windowId: string;
@@ -20,6 +20,13 @@ export interface LaunchMetadata {
     displayName: string;
     processInstanceId: string;
 }
+export interface SpawnReservation {
+    reservationId: string;
+    processInstanceId: string;
+    createdAt: string;
+    expiresAt: string;
+    tmux?: TmuxLocator;
+}
 export interface ChildLink {
     agentId: string;
     epoch: string;
@@ -29,7 +36,6 @@ export interface ChildLink {
     launch: LaunchMetadata;
     createdAt: string;
     updatedAt: string;
-    closedAt?: string;
 }
 export interface SessionRuntimeState {
     status: RuntimeStatus;
@@ -53,6 +59,7 @@ export interface SessionState {
     launch?: LaunchMetadata;
     runtime: SessionRuntimeState;
     children: ChildLink[];
+    reservations: SpawnReservation[];
 }
 export interface CreateSessionStateOptions {
     sessionId: string;

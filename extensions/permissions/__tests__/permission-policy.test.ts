@@ -8,6 +8,7 @@ import {
   formatApprovalPrompt,
   formatStatusTextForTheme,
   handleToolCall,
+  requiresApproval,
   sessionAllowKey,
 } from "../src/permission-policy.js";
 
@@ -106,13 +107,11 @@ test("allows subagent orchestration tools without approval in Default mode", asy
     "send_input",
     "close_agent",
     "subagent_spawn",
-    "subagent_resume",
     "subagent_prompt",
     "subagent_list",
     "subagent_read",
     "subagent_wait",
     "subagent_close",
-    "subagent_forget",
   ]) {
     const state = createPermissionState({ initialMode: MODES.DEFAULT });
     const ctx = createCtx({
@@ -122,6 +121,11 @@ test("allows subagent orchestration tools without approval in Default mode", asy
     assert.equal(await handleToolCall({ toolName, input: {} }, ctx, state), undefined);
     assert.equal(ctx.seenPrompts.length, 0, `${toolName} should not request approval`);
   }
+});
+
+test("requires approval for removed subagent tool names", () => {
+  assert.equal(requiresApproval({ toolName: "subagent_resume" }), true);
+  assert.equal(requiresApproval({ toolName: "subagent_forget" }), true);
 });
 
 test("permissions state 默认初始化为 Full access", async () => {

@@ -5,13 +5,11 @@ import { registerSubagentTools } from "../src/tools.js";
 
 const expectedNames = [
   "subagent_spawn",
-  "subagent_resume",
   "subagent_prompt",
   "subagent_list",
   "subagent_read",
   "subagent_wait",
   "subagent_close",
-  "subagent_forget",
 ];
 
 test("registers the fixed public subagent tool surface", () => {
@@ -26,6 +24,69 @@ test("registers the fixed public subagent tool surface", () => {
     assert.ok(Array.isArray(tool.promptGuidelines));
     assert.equal((tool.promptGuidelines as unknown[]).length, 1);
   }
+});
+
+test("removes resumable and recursive cleanup semantics from the public contract", () => {
+  const registered = registerTools();
+  const contractText = registered.flatMap((tool) => [
+    tool.name,
+    tool.label,
+    tool.description,
+    tool.promptSnippet,
+    ...(Array.isArray(tool.promptGuidelines) ? tool.promptGuidelines : []),
+  ]).join("\n");
+
+  assert.doesNotMatch(contractText, /resume|forget|递归/iu);
+});
+
+test("returns capacity and terminal cleanup boundaries in tool payloads", async () => {
+  const capacity = { active: 1, pending: 1, limit: 3, available: 1 };
+  const agent = {
+    agentId: "child-a",
+    name: "Lin",
+    status: "running",
+    generation: 1,
+    settledGeneration: 0,
+    settledCursor: "cursor-a",
+    sessionFile: "/sessions/child-a.jsonl",
+  };
+  const registered = registerTools({
+    list: vi.fn().mockResolvedValue({ agents: [agent], capacity }),
+    close: vi.fn().mockResolvedValue([{ ...agent, status: "closed" }]),
+  });
+  const tools = new Map(registered.map((tool) => [tool.name, tool]));
+  const ctx = {
+    sessionManager: {
+      getSessionFile: () => "/sessions/parent-a.jsonl",
+      getSessionId: () => "parent-a",
+    },
+  };
+  const execute = async (name: string, params: Record<string, unknown>) => {
+    const tool = tools.get(name);
+    assert.ok(tool);
+    return (tool.execute as (...args: any[]) => Promise<any>)(
+      "call-a",
+      params,
+      new AbortController().signal,
+      undefined,
+      ctx,
+    );
+  };
+
+  const listed = await execute("subagent_list", {});
+  assert.deepEqual(JSON.parse(listed.content[0].text), { agents: [agent], capacity });
+  assert.deepEqual(listed.details.capacity, capacity);
+
+  const closed = await execute("subagent_close", { target: "child-a" });
+  assert.deepEqual(JSON.parse(closed.content[0].text), {
+    affected: [{ ...agent, status: "closed" }],
+    relationshipRemoved: true,
+    extensionDataRemoved: true,
+    piSessionRetained: true,
+  });
+  assert.equal(closed.details.relationshipRemoved, true);
+  assert.equal(closed.details.extensionDataRemoved, true);
+  assert.equal(closed.details.piSessionRetained, true);
 });
 
 test("encourages read-first orchestration and caps each wait at two minutes", () => {
@@ -61,7 +122,9 @@ test("encourages read-first orchestration and caps each wait at two minutes", ()
   assert.equal(timeoutSchema.maximum, 120_000);
 });
 
-function registerTools(): Array<Record<string, unknown>> {
+function registerTools(
+  managerOverrides: Record<string, unknown> = {},
+): Array<Record<string, unknown>> {
   const registered: Array<Record<string, unknown>> = [];
   const pi = {
     registerTool(tool: Record<string, unknown>) {
@@ -70,13 +133,12 @@ function registerTools(): Array<Record<string, unknown>> {
   };
   const manager = {
     spawn: vi.fn(),
-    resume: vi.fn(),
     prompt: vi.fn(),
     list: vi.fn(),
     read: vi.fn(),
     wait: vi.fn(),
     close: vi.fn(),
-    forget: vi.fn(),
+    ...managerOverrides,
   };
 
   registerSubagentTools(pi as never, manager as never);

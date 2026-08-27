@@ -131,28 +131,42 @@ pi \
 
 `subagent` 不依赖额外 skill，也不修改 Pi core。每个 child 都是在独立 tmux window 中运行的普通交互式 TUI Pi；初始任务和后续 prompt 通过 tmux buffer 投递，不进入 shell command line。
 
-扩展注册八个工具：
+扩展只在 root Pi 注册六个工具：
 
 ```text
 subagent_spawn
-subagent_resume
 subagent_prompt
 subagent_list
 subagent_read
 subagent_wait
 subagent_close
-subagent_forget
+```
+
+managed child 仍加载 lifecycle hooks 并写入 runtime state，但不注册 subagent 编排工具。合法管理拓扑只有 root 到 direct child；`target: "all"` 也只处理当前 root 的 direct children。
+
+每个 root namespace 默认最多占用 3 个 slot。`pending`、`starting`、`running`、`settled` 和 `closing` 均占用 slot；已确认进程死亡的 `interrupted` 不占用。并发 spawn 使用持久化 reservation 防止超卖；同一 Pi 进程切换 session 产生的 direct-child aliases 按 `processInstanceId` 去重。可通过正整数环境变量 `PI_SUBAGENT_MAX_ACTIVE` 调整上限。
+
+`subagent_list` 返回 `{ agents, capacity }`，其中容量结构为：
+
+```json
+{
+  "active": 2,
+  "pending": 1,
+  "limit": 3,
+  "available": 0
+}
 ```
 
 `subagent_read` 只读取 Pi 原生 session JSONL 中已经持久化的 finalized 数据，支持 `recent_activity`、`turns` 和 `all_entries`。它不解析 tmux pane history，也不复制 transcript。增量 activity cursor 绑定 agent、epoch 和 view；只有 Pi 的 `agent_settled` 会推进 settled cursor。
 
 常规协作优先使用 `subagent_read` 跟踪 child，让 main 继续推进；只有 main 的下一步依赖 child 结果时才使用阻塞式 `subagent_wait`。单次 wait 默认 30 秒、最长 120 秒；timeout 后可以复用同一 `afterSettled` 再次等待。
 
-`subagent_close` 停止进程与 tmux window，但保留管理关系、generation 和 Pi session，因此可以继续使用 `subagent_resume`。`subagent_forget` 会递归关闭并删除 Extension 管理状态，但不会删除或修改 Pi 原生 session JSONL、session 目录或项目文件。
+`subagent_close` 是终结操作：先停止并确认 Pi 进程与 tmux window 已退出，再解除 direct-child 关系并删除 Extension 状态，从而释放 slot。关闭失败或确认超时时保留关系、状态和 slot，以便重试。成功关闭不会删除或修改 Pi 原生 session JSONL、session 目录或项目文件。
 
-扩展要求当前 parent 使用持久化 Pi session；`--no-session` 模式下工具会明确拒绝。默认管理快照位于 Pi agent directory 的 `subagents/sessions/<sessionId>/state.json`，每个 session 独立原子写入。可用以下环境变量覆盖可执行文件路径：
+扩展要求当前 parent 使用持久化 Pi session；`--no-session` 模式下工具会明确拒绝。默认管理快照位于 Pi agent directory 的 `subagents/sessions/<sessionId>/state.json`，每个 session 独立原子写入。可使用以下环境变量：
 
 ```text
+PI_SUBAGENT_MAX_ACTIVE
 PI_SUBAGENT_PI_PATH
 PI_SUBAGENT_TMUX_PATH
 ```

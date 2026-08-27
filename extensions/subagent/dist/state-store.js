@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFile, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-export const SESSION_STATE_SCHEMA_VERSION = 1;
+export const SESSION_STATE_SCHEMA_VERSION = 2;
 export function createSessionState(options) {
     return {
         schemaVersion: SESSION_STATE_SCHEMA_VERSION,
@@ -22,6 +22,7 @@ export function createSessionState(options) {
             updatedAt: options.now,
         },
         children: [],
+        reservations: [],
     };
 }
 export class SessionStateStore {
@@ -117,7 +118,10 @@ function parseSessionState(value, expectedSessionId) {
     if (value.sessionId !== expectedSessionId) {
         throw new Error("Invalid subagent state: sessionId does not match its partition");
     }
-    if (typeof value.epoch !== "string" || !isRecord(value.runtime) || !Array.isArray(value.children)) {
+    if (typeof value.epoch !== "string"
+        || !isRecord(value.runtime)
+        || !Array.isArray(value.children)
+        || !Array.isArray(value.reservations)) {
         throw new Error("Invalid subagent state: missing required fields");
     }
     return value;

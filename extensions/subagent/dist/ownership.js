@@ -1,4 +1,7 @@
 export function registerDirectChild(parent, child, now) {
+    if (parent.parent) {
+        throw new Error("Managed sessions cannot register children");
+    }
     if (child.parent?.sessionId !== parent.sessionId
         || child.parent.epoch !== parent.epoch) {
         throw new Error("Cannot register a child owned by another session namespace");
@@ -31,15 +34,6 @@ export function getDirectChild(parent, agentId) {
         throw new Error(`Managed session is not a direct child: ${agentId}`);
     }
     return child;
-}
-export function markDirectChildClosed(parent, agentId, now) {
-    getDirectChild(parent, agentId);
-    return {
-        ...parent,
-        children: parent.children.map((child) => child.agentId === agentId
-            ? { ...child, closedAt: now, updatedAt: now }
-            : child),
-    };
 }
 export function removeDirectChildren(parent, agentIds) {
     return {

@@ -12,18 +12,17 @@ import {
 
 export type SubagentToolKind =
   | "spawn"
-  | "resume"
   | "prompt"
   | "list"
   | "read"
   | "wait"
-  | "close"
-  | "forget";
+  | "close";
 
 export type SubagentStatus =
   | "starting"
   | "running"
   | "settled"
+  | "closing"
   | "closed"
   | "interrupted"
   | "errored";
@@ -76,7 +75,13 @@ export interface SubagentUiDetails {
   outcome?: "settled" | "interrupted" | "closed" | "timeout";
   durationMs?: number;
   activity?: ActivityDisplay[];
-  relationshipRetained?: boolean;
+  capacity?: {
+    active: number;
+    pending: number;
+    limit: number;
+    available: number;
+  };
+  relationshipRemoved?: boolean;
   extensionDataRemoved?: boolean;
   piSessionRetained?: boolean;
   message?: string;
@@ -103,13 +108,11 @@ const OPERATION_LABELS: Record<
   { pending: string; complete: string; failed: string }
 > = {
   spawn: { pending: "Spawning", complete: "Spawned", failed: "Spawn failed" },
-  resume: { pending: "Resuming", complete: "Resumed", failed: "Resume failed" },
   prompt: { pending: "Sending input to", complete: "Sent input to", failed: "Send failed" },
   list: { pending: "Listing", complete: "Listed", failed: "List failed" },
   read: { pending: "Reading activity from", complete: "Read activity from", failed: "Read failed" },
   wait: { pending: "Waiting for", complete: "Finished waiting for", failed: "Wait failed" },
   close: { pending: "Closing", complete: "Closed", failed: "Close failed" },
-  forget: { pending: "Forgetting", complete: "Forgot", failed: "Forget failed" },
 };
 
 class ResponsiveLinesComponent implements Component {
@@ -212,7 +215,7 @@ function getTitleTarget(
     return count === undefined ? "subagents" : `${count} ${count === 1 ? "subagent" : "subagents"}`;
   }
 
-  if (kind === "close" || kind === "forget") {
+  if (kind === "close") {
     const target = stringArg(args, "target");
     if (target === "all") return "all subagents";
   }
@@ -269,8 +272,6 @@ function renderResultLines(
     switch (kind) {
       case "spawn":
         return renderSpawn(details, options.expanded, theme);
-      case "resume":
-        return renderResume(details, options.expanded, theme);
       case "prompt":
         return renderPrompt(details, args, options.expanded, theme);
       case "list":
@@ -281,8 +282,6 @@ function renderResultLines(
         return renderWait(details, options.expanded, theme);
       case "close":
         return renderClose(details, options.expanded, theme);
-      case "forget":
-        return renderForget(details, options.expanded, theme);
     }
   })();
 
@@ -298,17 +297,6 @@ function renderSpawn(
   if (expanded && details.agent) {
     lines.push(renderAgentMetadata(details.agent, theme));
   }
-  return lines;
-}
-
-function renderResume(
-  details: SubagentUiDetails,
-  expanded: boolean,
-  theme: Theme,
-): string[] {
-  const agent = details.agent;
-  const lines = [agent ? renderStatus(agent.status, theme) : theme.fg("success", "Running")];
-  if (expanded && agent) lines.push(renderAgentMetadata(agent, theme));
   return lines;
 }
 
@@ -332,9 +320,19 @@ function renderList(
   theme: Theme,
 ): string[] {
   const agents = details.agents ?? [];
-  if (agents.length === 0) return [theme.fg("dim", "No managed subagents")];
-  if (!expanded) return [renderStatusCounts(agents, theme)];
-  return agents.map((agent) => renderAgentLine(agent, theme));
+  const capacity = details.capacity
+    ? theme.fg(
+      "dim",
+      `${details.capacity.active} active · ${details.capacity.pending} pending · limit ${details.capacity.limit} · ${details.capacity.available} available`,
+    )
+    : undefined;
+  if (agents.length === 0) {
+    return [capacity ?? theme.fg("dim", "No managed subagents")];
+  }
+  if (!expanded) {
+    return [[renderStatusCounts(agents, theme), capacity].filter(Boolean).join(theme.fg("dim", " · "))];
+  }
+  return [...(capacity ? [capacity] : []), ...agents.map((agent) => renderAgentLine(agent, theme))];
 }
 
 function renderRead(
@@ -380,30 +378,12 @@ function renderClose(
   theme: Theme,
 ): string[] {
   const count = details.affected?.length ?? (details.agent ? 1 : 0);
-  const subject = count === 1 ? "process" : `${count} processes`;
-  const lines = [
-    `${theme.fg("success", `Stopped ${subject}`)}${theme.fg("dim", " · relationship and Pi session retained")}`,
-  ];
+  const summary = count === 1
+    ? `${theme.fg("success", "Process stopped")}${theme.fg("dim", " · relationship removed · Extension data deleted · Pi session retained")}`
+    : `${theme.fg("success", `${count} processes stopped`)}${theme.fg("dim", " · relationships removed · Extension data deleted · Pi sessions retained")}`;
+  const lines = [summary];
   if (expanded && details.affected?.length) {
     lines.push(...details.affected.map((agent) => renderAgentLine(agent, theme)));
-  }
-  return lines;
-}
-
-function renderForget(
-  details: SubagentUiDetails,
-  expanded: boolean,
-  theme: Theme,
-): string[] {
-  const count = details.affected?.length ?? (details.agent ? 1 : 0);
-  const subject = count === 1 ? "subagent" : `${count} subagents`;
-  const lines = [
-    `${theme.fg("success", `Detached ${subject}`)}${theme.fg("dim", " · Extension data removed · Pi sessions retained")}`,
-  ];
-  if (expanded && details.affected?.length) {
-    lines.push(...details.affected.map((agent) => (
-      `${theme.fg("accent", agent.name)}${theme.fg("dim", ` · ${shortAgentId(agent.agentId)}`)}`
-    )));
   }
   return lines;
 }
@@ -435,7 +415,7 @@ function renderAgentMetadata(agent: AgentDisplay, theme: Theme): string {
 }
 
 function renderStatusCounts(agents: AgentDisplay[], theme: Theme): string {
-  const statuses: SubagentStatus[] = ["starting", "running", "settled", "closed", "interrupted", "errored"];
+  const statuses: SubagentStatus[] = ["starting", "running", "settled", "closing", "closed", "interrupted", "errored"];
   const parts = statuses.flatMap((status) => {
     const count = agents.filter((agent) => agent.status === status).length;
     if (count === 0) return [];
@@ -485,6 +465,8 @@ function statusColor(status: SubagentStatus): "accent" | "success" | "dim" | "wa
       return "accent";
     case "settled":
       return "success";
+    case "closing":
+      return "warning";
     case "closed":
       return "dim";
     case "interrupted":

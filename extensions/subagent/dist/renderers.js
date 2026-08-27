@@ -1,13 +1,11 @@
 import { fitToWidth, normalizeWidth, } from "./layout.js";
 const OPERATION_LABELS = {
     spawn: { pending: "Spawning", complete: "Spawned", failed: "Spawn failed" },
-    resume: { pending: "Resuming", complete: "Resumed", failed: "Resume failed" },
     prompt: { pending: "Sending input to", complete: "Sent input to", failed: "Send failed" },
     list: { pending: "Listing", complete: "Listed", failed: "List failed" },
     read: { pending: "Reading activity from", complete: "Read activity from", failed: "Read failed" },
     wait: { pending: "Waiting for", complete: "Finished waiting for", failed: "Wait failed" },
     close: { pending: "Closing", complete: "Closed", failed: "Close failed" },
-    forget: { pending: "Forgetting", complete: "Forgot", failed: "Forget failed" },
 };
 class ResponsiveLinesComponent {
     renderer = () => [];
@@ -69,7 +67,7 @@ function getTitleTarget(kind, args, details) {
         const count = details?.agents?.length;
         return count === undefined ? "subagents" : `${count} ${count === 1 ? "subagent" : "subagents"}`;
     }
-    if (kind === "close" || kind === "forget") {
+    if (kind === "close") {
         const target = stringArg(args, "target");
         if (target === "all")
             return "all subagents";
@@ -111,8 +109,6 @@ function renderResultLines(kind, args, result, options, theme, state, width) {
         switch (kind) {
             case "spawn":
                 return renderSpawn(details, options.expanded, theme);
-            case "resume":
-                return renderResume(details, options.expanded, theme);
             case "prompt":
                 return renderPrompt(details, args, options.expanded, theme);
             case "list":
@@ -123,8 +119,6 @@ function renderResultLines(kind, args, result, options, theme, state, width) {
                 return renderWait(details, options.expanded, theme);
             case "close":
                 return renderClose(details, options.expanded, theme);
-            case "forget":
-                return renderForget(details, options.expanded, theme);
         }
     })();
     return prefixDetails(lines, theme, width);
@@ -134,13 +128,6 @@ function renderSpawn(details, expanded, theme) {
     if (expanded && details.agent) {
         lines.push(renderAgentMetadata(details.agent, theme));
     }
-    return lines;
-}
-function renderResume(details, expanded, theme) {
-    const agent = details.agent;
-    const lines = [agent ? renderStatus(agent.status, theme) : theme.fg("success", "Running")];
-    if (expanded && agent)
-        lines.push(renderAgentMetadata(agent, theme));
     return lines;
 }
 function renderPrompt(details, args, expanded, theme) {
@@ -153,11 +140,16 @@ function renderPrompt(details, args, expanded, theme) {
 }
 function renderList(details, expanded, theme) {
     const agents = details.agents ?? [];
-    if (agents.length === 0)
-        return [theme.fg("dim", "No managed subagents")];
-    if (!expanded)
-        return [renderStatusCounts(agents, theme)];
-    return agents.map((agent) => renderAgentLine(agent, theme));
+    const capacity = details.capacity
+        ? theme.fg("dim", `${details.capacity.active} active · ${details.capacity.pending} pending · limit ${details.capacity.limit} · ${details.capacity.available} available`)
+        : undefined;
+    if (agents.length === 0) {
+        return [capacity ?? theme.fg("dim", "No managed subagents")];
+    }
+    if (!expanded) {
+        return [[renderStatusCounts(agents, theme), capacity].filter(Boolean).join(theme.fg("dim", " · "))];
+    }
+    return [...(capacity ? [capacity] : []), ...agents.map((agent) => renderAgentLine(agent, theme))];
 }
 function renderRead(details, expanded, theme) {
     const assistantCount = details.assistantCount ?? countActivity(details.activity, "assistant");
@@ -186,23 +178,12 @@ function renderWait(details, expanded, theme) {
 }
 function renderClose(details, expanded, theme) {
     const count = details.affected?.length ?? (details.agent ? 1 : 0);
-    const subject = count === 1 ? "process" : `${count} processes`;
-    const lines = [
-        `${theme.fg("success", `Stopped ${subject}`)}${theme.fg("dim", " · relationship and Pi session retained")}`,
-    ];
+    const summary = count === 1
+        ? `${theme.fg("success", "Process stopped")}${theme.fg("dim", " · relationship removed · Extension data deleted · Pi session retained")}`
+        : `${theme.fg("success", `${count} processes stopped`)}${theme.fg("dim", " · relationships removed · Extension data deleted · Pi sessions retained")}`;
+    const lines = [summary];
     if (expanded && details.affected?.length) {
         lines.push(...details.affected.map((agent) => renderAgentLine(agent, theme)));
-    }
-    return lines;
-}
-function renderForget(details, expanded, theme) {
-    const count = details.affected?.length ?? (details.agent ? 1 : 0);
-    const subject = count === 1 ? "subagent" : `${count} subagents`;
-    const lines = [
-        `${theme.fg("success", `Detached ${subject}`)}${theme.fg("dim", " · Extension data removed · Pi sessions retained")}`,
-    ];
-    if (expanded && details.affected?.length) {
-        lines.push(...details.affected.map((agent) => (`${theme.fg("accent", agent.name)}${theme.fg("dim", ` · ${shortAgentId(agent.agentId)}`)}`)));
     }
     return lines;
 }
@@ -231,7 +212,7 @@ function renderAgentMetadata(agent, theme) {
     return values.join(theme.fg("dim", " · "));
 }
 function renderStatusCounts(agents, theme) {
-    const statuses = ["starting", "running", "settled", "closed", "interrupted", "errored"];
+    const statuses = ["starting", "running", "settled", "closing", "closed", "interrupted", "errored"];
     const parts = statuses.flatMap((status) => {
         const count = agents.filter((agent) => agent.status === status).length;
         if (count === 0)
@@ -275,6 +256,8 @@ function statusColor(status) {
             return "accent";
         case "settled":
             return "success";
+        case "closing":
+            return "warning";
         case "closed":
             return "dim";
         case "interrupted":

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { renderSubagentResult, type SubagentUiDetails } from "../src/renderers.js";
+import {
+  renderSubagentCall,
+  renderSubagentResult,
+  type SubagentUiDetails,
+} from "../src/renderers.js";
 
 const theme = {
   fg: (_color: string, text: string) => text,
@@ -14,41 +18,73 @@ const agent = {
   generation: 2,
 };
 
-test("states the close and forget retention boundaries in text", () => {
-  const close = render("close", {
+test("states the terminal close boundary in text", () => {
+  const details: SubagentUiDetails = {
     operation: "close",
     ok: true,
     agent,
     affected: [agent],
-    relationshipRetained: true,
-    piSessionRetained: true,
-  });
-  const forget = render("forget", {
-    operation: "forget",
-    ok: true,
-    agent,
-    affected: [agent],
-    relationshipRetained: false,
+    relationshipRemoved: true,
     extensionDataRemoved: true,
     piSessionRetained: true,
-  });
+  };
+  const state = {};
+  const call = renderSubagentCall(
+    "close",
+    { target: "child-a" },
+    theme as never,
+    {
+      state,
+      lastComponent: undefined,
+      isPartial: true,
+      isError: false,
+    },
+  );
+  const output = render(details, state);
 
-  assert.match(close, /Stopped process · relationship and Pi session retained/u);
-  assert.match(forget, /Detached subagent · Extension data removed · Pi sessions retained/u);
+  assert.equal(call.render(120).join("\n"), "• Closed Lin");
+  assert.equal(
+    output,
+    "  └ Process stopped · relationship removed · Extension data deleted · Pi session retained",
+  );
 });
 
-function render(
-  kind: "close" | "forget",
-  details: SubagentUiDetails,
-): string {
+test("renders closing status and capacity in list summaries", () => {
+  const details: SubagentUiDetails = {
+    operation: "list",
+    ok: true,
+    agents: [{ ...agent, status: "closing" }],
+    capacity: { active: 1, pending: 1, limit: 3, available: 1 },
+  };
   const component = renderSubagentResult(
-    kind,
-    { target: "child-a" },
+    "list",
+    {},
     { content: [{ type: "text", text: "ok" }], details },
     { isPartial: false, expanded: false },
     theme as never,
     {
       state: {},
+      lastComponent: undefined,
+      isPartial: false,
+      isError: false,
+    },
+  );
+
+  assert.equal(
+    component.render(120).join("\n"),
+    "  └ 1 closing · 1 active · 1 pending · limit 3 · 1 available",
+  );
+});
+
+function render(details: SubagentUiDetails, state: object): string {
+  const component = renderSubagentResult(
+    "close",
+    { target: "child-a" },
+    { content: [{ type: "text", text: "ok" }], details },
+    { isPartial: false, expanded: false },
+    theme as never,
+    {
+      state,
       lastComponent: undefined,
       isPartial: false,
       isError: false,

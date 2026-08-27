@@ -25,6 +25,31 @@ const launch: LaunchMetadata = {
   processInstanceId: "process-a",
 };
 
+test("rejects child registration from a managed parent", () => {
+  const managedParent = childState("child-a");
+  const nestedChild = createSessionState({
+    sessionId: "grandchild-a",
+    epoch: "grandchild-epoch",
+    cwd: "/repo",
+    sessionFile: "/sessions/grandchild-a.jsonl",
+    now: "2026-08-27T02:00:00.000Z",
+    parent: {
+      sessionId: managedParent.sessionId,
+      epoch: managedParent.epoch,
+      registrationToken: "registration-b",
+    },
+    launch: {
+      ...launch,
+      processInstanceId: "process-b",
+    },
+  });
+
+  assert.throws(
+    () => registerDirectChild(managedParent, nestedChild, "2026-08-27T02:00:01.000Z"),
+    /Managed sessions cannot register children/u,
+  );
+});
+
 test("keeps a switched child session as another direct child", () => {
   let parent = createSessionState({
     sessionId: "parent-a",

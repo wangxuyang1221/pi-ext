@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { getAgentDir, } from "@earendil-works/pi-coding-agent";
-import { PI_SUBAGENT_LAUNCH, PI_SUBAGENT_PARENT, PI_SUBAGENT_STATE_ROOT, SubagentManager, } from "./manager.js";
+import { PI_SUBAGENT_LAUNCH, PI_SUBAGENT_MAX_ACTIVE, PI_SUBAGENT_PARENT, PI_SUBAGENT_STATE_ROOT, SubagentManager, } from "./manager.js";
 import { SessionRuntimeHost } from "./runtime-host.js";
 import { SessionStateStore, } from "./state-store.js";
 import { TmuxRuntime } from "./tmux-runtime.js";
@@ -48,10 +48,13 @@ export default function subagentExtension(pi, options = {}) {
         extensionPath,
         piPath,
         environment: childEnvironment(env),
+        maxActive: options.maxActive ?? parseMaxActive(env[PI_SUBAGENT_MAX_ACTIVE]),
         ...(options.createId ? { createId: options.createId } : {}),
         ...(options.now ? { now: options.now } : {}),
     });
-    registerSubagentTools(pi, manager);
+    if (!parent) {
+        registerSubagentTools(pi, manager);
+    }
     pi.on("session_start", async (_event, ctx) => {
         const sessionFile = ctx.sessionManager.getSessionFile();
         if (!sessionFile)
@@ -138,8 +141,20 @@ function parseJsonObject(value, name) {
     }
 }
 function childEnvironment(env) {
-    const allowed = /^(?:PATH|HOME|SHELL|TERM|COLORTERM|LANG|LC_[A-Z_]+|TMPDIR|XDG_[A-Z_]+|PI_PERMISSIONS_MODE)$/u;
+    const allowed = /^(?:PATH|HOME|SHELL|TERM|COLORTERM|LANG|LC_[A-Z_]+|TMPDIR|XDG_[A-Z_]+|PI_PERMISSIONS_MODE|PI_SUBAGENT_MAX_ACTIVE)$/u;
     return Object.fromEntries(Object.entries(env).filter((entry) => entry[1] !== undefined && allowed.test(entry[0])));
+}
+function parseMaxActive(value) {
+    if (value === undefined)
+        return 3;
+    if (!/^[1-9]\d*$/u.test(value)) {
+        throw new Error("Invalid PI_SUBAGENT_MAX_ACTIVE: expected a positive integer");
+    }
+    const parsed = Number(value);
+    if (!Number.isSafeInteger(parsed)) {
+        throw new Error("Invalid PI_SUBAGENT_MAX_ACTIVE: expected a positive integer");
+    }
+    return parsed;
 }
 function defaultTmuxSessionName(stateRoot) {
     const digest = createHash("sha256").update(stateRoot).digest("hex").slice(0, 12);
