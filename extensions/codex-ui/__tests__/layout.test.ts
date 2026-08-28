@@ -20,13 +20,14 @@ test("fitToWidth handles ANSI text and wide graphemes", () => {
   assert.equal(fitToWidth("ignored", 0), "");
 });
 
-test("paintBackground restores the solid background after full SGR resets", () => {
+test("paintBackground restores background and requested modifiers after full SGR resets", () => {
   const background = "\x1b[48;2;72;72;72m";
-  const rendered = paintBackground(`a\x1b[0mb`, 6, background);
+  const modifier = "\x1b[2m";
+  const rendered = paintBackground(`a\x1b[0mb`, 6, background, modifier);
 
   assert.equal(visibleWidth(rendered), 6);
   assert.ok(rendered.startsWith(background));
-  assert.ok(rendered.includes(`\x1b[0m${background}`));
+  assert.ok(rendered.includes(`\x1b[0m${background}${modifier}`));
   assert.ok(rendered.endsWith("\x1b[49m"));
 });
 

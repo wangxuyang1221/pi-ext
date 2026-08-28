@@ -9,17 +9,26 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 
-const { keyHintMock } = vi.hoisted(() => ({
+const { highlightCodeMock, keyHintMock } = vi.hoisted(() => ({
+  highlightCodeMock: vi.fn(),
   keyHintMock: vi.fn((keybinding: string, description: string) => `[${keybinding}] ${description}`),
 }));
 
 vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@earendil-works/pi-coding-agent")>();
-  return { ...actual, keyHint: keyHintMock };
+  return {
+    ...actual,
+    highlightCode(...args: Parameters<typeof actual.highlightCode>) {
+      highlightCodeMock(...args);
+      return actual.highlightCode(...args);
+    },
+    keyHint: keyHintMock,
+  };
 });
 
 import {
   parseDisplayDiff,
+  parseUnifiedPatch,
   registerCodexTools,
   renderDisplayDiff,
   type CodexToolFactories,
@@ -31,13 +40,18 @@ function createTheme(): Theme {
     : name === "toolPendingBg"
       ? 236
       : 22;
+  const getFgCode = (name: string) => name === "error"
+    ? 196
+    : name === "success"
+      ? 82
+      : name === "toolDiffContext"
+        ? 189
+        : 81;
 
   return {
-    fg: (name: string, text: string) => {
-      const code = name === "error" ? 196 : name === "success" ? 82 : 81;
-      return `\x1b[38;5;${code}m${text}\x1b[39m`;
-    },
+    fg: (name: string, text: string) => `\x1b[38;5;${getFgCode(name)}m${text}\x1b[39m`,
     bg: (name: string, text: string) => `\x1b[48;5;${getBgCode(name)}m${text}\x1b[49m`,
+    getFgAnsi: (name: string) => `\x1b[38;5;${getFgCode(name)}m`,
     getBgAnsi: (name: string) => `\x1b[48;5;${getBgCode(name)}m`,
     bold: (text: string) => `\x1b[1m${text}\x1b[22m`,
   } as unknown as Theme;
@@ -47,6 +61,7 @@ const theme = createTheme();
 
 afterEach(() => {
   vi.useRealTimers();
+  highlightCodeMock.mockClear();
   keyHintMock.mockClear();
 });
 
@@ -102,28 +117,61 @@ function createRenderContext(overrides: Record<string, unknown> = {}) {
   };
 }
 
-test("display diff parser preserves markers, padded line numbers, and source indentation", () => {
+test("display diff parser preserves markers, source indentation, and fallback hunk gaps", () => {
   assert.deepEqual(parseDisplayDiff("   9 a\n- 10   old value\n+ 10   new value\n+ 11 extra\n    ..."), [
     { kind: "context", lineNumber: 9, text: "a" },
     { kind: "removed", lineNumber: 10, text: "  old value" },
     { kind: "added", lineNumber: 10, text: "  new value" },
     { kind: "added", lineNumber: 11, text: "extra" },
-    { kind: "context", lineNumber: undefined, text: "..." },
+    { kind: "hunk", lineNumber: undefined, text: "⋮" },
   ]);
 });
 
-test("display diff renderer applies full-cell backgrounds within the width", () => {
+test("unified patch parser uses old and new line numbers across hunks", () => {
+  const parsed = parseUnifiedPatch(`--- a/src/app.ts
++++ b/src/app.ts
+@@ -1,2 +1,2 @@
+ first
+-old second
++new second
+@@ -10,2 +10,2 @@
+ tenth
+-old eleventh
++new eleventh
+`);
+
+  assert.deepEqual(
+    parsed.map(({ kind, lineNumber }) => [kind, lineNumber]),
+    [
+      ["context", 1], ["removed", 2], ["added", 2],
+      ["hunk", undefined],
+      ["context", 10], ["removed", 11], ["added", 11],
+    ],
+  );
+});
+
+test("display diff renderer separates signs, highlights content, and fills changed rows", () => {
   const lines = renderDisplayDiff(
     parseDisplayDiff(" 1 a\n-2 old value\n+2 new value"),
     theme,
     24,
+    "fixture.unknown",
   );
+  const plainLines = lines.map((line) => stripTerminalSequences(line).trimEnd());
 
+  assert.deepEqual(plainLines, [
+    "    1   a",
+    "    2 - old value",
+    "    2 + new value",
+  ]);
   assert.ok(lines.every((line) => visibleWidth(line) <= 24));
   assert.equal(visibleWidth(lines[1] ?? ""), 24);
   assert.equal(visibleWidth(lines[2] ?? ""), 24);
   assert.ok((lines[1] ?? "").startsWith("\x1b[48;5;52m"));
   assert.ok((lines[2] ?? "").startsWith("\x1b[48;5;22m"));
+  assert.ok((lines[1] ?? "").includes("\x1b[31m-\x1b[39m \x1b[2m"));
+  assert.ok((lines[2] ?? "").includes("\x1b[32m+\x1b[39m "));
+  assert.ok((lines[0] ?? "").includes("\x1b[38;5;189m"));
 });
 
 test("tool overrides retain metadata and delegate execution using context cwd", async () => {
@@ -220,7 +268,7 @@ test("tool overrides retain metadata and delegate execution using context cwd", 
   assert.equal(delegated.at(-1)?.context, context);
 });
 
-test("edit renderer updates its title and renders the real result diff", () => {
+test("edit renderer refreshes its title and renders the patch with Codex styling", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
   const edit = registered.find((tool) => tool.name === "edit");
@@ -229,31 +277,97 @@ test("edit renderer updates its title and renders the real result diff", () => {
 
   const args = {
     path: "src/app.ts",
-    edits: [{ oldText: "old", newText: "new" }],
+    edits: [{ oldText: "old", newText: "new\nextra" }],
   };
   const state = {};
   const callContext = createRenderContext({ args, state });
   const call = edit.renderCall(args, theme, callContext as never);
+  assert.equal(stripTerminalSequences(call.render(60).join("\n")), "• Edit src/app.ts");
+
   const resultContext = createRenderContext({ args, state });
   const result = edit.renderResult(
     {
       content: [{ type: "text", text: "Successfully replaced 1 block." }],
-      details: { diff: " 1 before\n-2 old\n+2 new\n+3 extra", patch: "" },
+      details: {
+        diff: " 1 before\n-2 old\n+2 new\n+3 extra",
+        patch: `--- a/src/app.ts
++++ b/src/app.ts
+@@ -1,2 +1,3 @@
+ before
+-old
++new
++extra
+`,
+      },
     },
     { expanded: true, isPartial: false },
     theme,
     resultContext as never,
   );
 
-  const title = stripTerminalSequences(call.render(60).join("\n"));
-  const diffLines = result.render(32);
+  const titleAnsi = call.render(60).join("\n");
+  const title = stripTerminalSequences(titleAnsi);
+  const diffLines = result.render(40);
+  const plainDiff = diffLines.map((line) => stripTerminalSequences(line).trimEnd());
 
-  assert.match(title, /Edited src\/app\.ts/u);
-  assert.match(title, /\+2/u);
-  assert.match(title, /−1/u);
-  assert.ok(diffLines.some((line) => stripTerminalSequences(line).includes("old")));
-  assert.ok(diffLines.some((line) => stripTerminalSequences(line).includes("new")));
-  assert.ok(diffLines.every((line) => visibleWidth(line) <= 32));
+  assert.equal(title, "• Edited src/app.ts (+2 -1)");
+  assert.ok(titleAnsi.includes("\x1b[32m+2\x1b[39m"));
+  assert.ok(titleAnsi.includes("\x1b[31m-1\x1b[39m"));
+  assert.ok(!titleAnsi.includes("\x1b[38;5;81msrc/app.ts"));
+  assert.deepEqual(plainDiff, [
+    "    1   before",
+    "    2 - old",
+    "    2 + new",
+    "    3 + extra",
+  ]);
+  assert.ok(diffLines.every((line) => visibleWidth(line) <= 40));
+});
+
+test("settled edit history reuses prepared syntax highlighting", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const edit = registered.find((tool) => tool.name === "edit");
+  assert.ok(edit?.renderResult);
+
+  const args = { path: "src/app.ts", edits: [{ oldText: "old", newText: "new" }] };
+  const details = {
+    diff: "-1 old\n+1 new",
+    patch: `--- a/src/app.ts
++++ b/src/app.ts
+@@ -1 +1 @@
+-old
++new
+`,
+  };
+  const result = {
+    content: [{ type: "text", text: "Successfully replaced 1 block." }],
+    details,
+  };
+  const state = {};
+  const component = edit.renderResult(
+    result,
+    { expanded: false, isPartial: false },
+    theme,
+    createRenderContext({ args, state, executionStarted: false }) as never,
+  );
+  component.render(80);
+  const callsAfterFirstRender = highlightCodeMock.mock.calls.length;
+  assert.ok(callsAfterFirstRender > 0);
+
+  component.invalidate();
+  edit.renderResult(
+    result,
+    { expanded: false, isPartial: false },
+    theme,
+    createRenderContext({
+      args,
+      state,
+      lastComponent: component,
+      executionStarted: false,
+    }) as never,
+  ).render(80);
+
+  assert.equal(highlightCodeMock.mock.calls.length, callsAfterFirstRender);
 });
 
 test("write renderer reports a compact summary without inventing a diff", () => {

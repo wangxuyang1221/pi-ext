@@ -6,6 +6,8 @@ import {
   createWriteToolDefinition,
   DEFAULT_MAX_BYTES,
   formatSize,
+  getLanguageFromPath,
+  highlightCode,
   keyHint,
   truncateToVisualLines,
   type BashToolDetails,
@@ -27,6 +29,7 @@ import {
   fitToWidth,
   formatHomePath,
   normalizeWidth,
+  paintBackground,
 } from "./layout.js";
 import { ResponsiveLinesComponent } from "./responsive-lines.js";
 
@@ -34,6 +37,14 @@ const COLLAPSED_BASH_LINES = 5;
 const COLLAPSED_DIFF_LINES = 12;
 const EXPANDED_READ_LINES = 40;
 const BASH_DURATION_REFRESH_MS = 1000;
+const DIFF_INDENT = "    ";
+const ANSI_DEFAULT_FOREGROUND = "\x1b[39m";
+const ANSI_DIM = "\x1b[2m";
+const ANSI_INTENSITY_RESET = "\x1b[22m";
+const ANSI_NAMED_GREEN = "\x1b[32m";
+const ANSI_NAMED_RED = "\x1b[31m";
+const ANSI_FOREGROUND_RESET = /\x1b\[39m/gu;
+const ANSI_FULL_SGR_RESET = /\x1b\[(?:0)?m/gu;
 const BASH_STATUS_PRESENTATION = {
   pending: { glyph: "•", color: "dim" },
   running: { glyph: "…", color: "warning" },
@@ -53,9 +64,10 @@ export interface CodexToolRenderServices {
 }
 
 export interface DisplayDiffLine {
-  kind: "context" | "removed" | "added";
+  kind: "context" | "removed" | "added" | "hunk";
   lineNumber: number | undefined;
   text: string;
+  highlightedText?: string;
 }
 
 interface CodexEditState {
@@ -63,6 +75,10 @@ interface CodexEditState {
   initialTitle?: string;
   settledTitle?: string;
   callComponent?: ResponsiveLinesComponent;
+  preparedDetails?: EditToolDetails;
+  preparedPath?: string;
+  preparedTheme?: Theme;
+  preparedDiff?: DisplayDiffLine[];
 }
 
 type CodexBashStatus = "pending" | "running" | "completed" | "failed";
@@ -150,7 +166,7 @@ export function registerCodexTools(
         state.path = path;
         state.settledTitle = undefined;
       }
-      state.initialTitle = formatToolTitle("Edit", path, theme);
+      state.initialTitle = formatEditTitle("Edit", path, theme);
 
       const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
       state.callComponent = component;
@@ -163,28 +179,36 @@ export function registerCodexTools(
       const state = context.state as unknown as CodexEditState;
       const path = state.path ?? formatToolPath(context.args.path, context.cwd);
       const details = result.details as EditToolDetails | undefined;
+      const preparedDiff = !options.isPartial
+        && !context.isError
+        && details
+        && (details.patch || details.diff)
+        ? getPreparedEditDiff(state, details, path, theme)
+        : undefined;
 
       let nextTitle: string;
       if (options.isPartial) {
-        nextTitle = formatToolTitle("Editing", path, theme, theme.fg("warning", "…"));
+        nextTitle = formatEditTitle("Editing", path, theme, `${ANSI_DIM}…${ANSI_INTENSITY_RESET}`);
       } else if (context.isError) {
-        nextTitle = formatToolTitle("Edit failed", path, theme);
-      } else if (details?.diff) {
-        const stats = countDiffStats(parseDisplayDiff(details.diff));
-        const suffix = `(${theme.fg("success", `+${stats.added}`)} ${theme.fg("error", `−${stats.removed}`)})`;
-        nextTitle = formatToolTitle("Edited", path, theme, suffix);
+        nextTitle = formatEditTitle("Edit failed", path, theme);
+      } else if (preparedDiff) {
+        const stats = countDiffStats(preparedDiff);
+        const suffix = `(${namedGreen(`+${stats.added}`)} ${namedRed(`-${stats.removed}`)})`;
+        nextTitle = formatEditTitle("Edited", path, theme, suffix);
       } else {
-        nextTitle = formatToolTitle("Edited", path, theme);
+        nextTitle = formatEditTitle("Edited", path, theme);
       }
 
       if (state.settledTitle !== nextTitle) {
         state.settledTitle = nextTitle;
+        state.callComponent?.invalidate();
       }
 
       return updateComponent(context.lastComponent, (width) => renderEditResult(
         result,
-        details,
+        preparedDiff,
         options,
+        path,
         theme,
         context.isError,
         width,
@@ -266,6 +290,9 @@ export function parseDisplayDiff(diff: string): DisplayDiffLine[] {
       ? line.slice(1)
       : line;
     const match = body.match(/^\s*(\d+)(?:\s(.*))?$/u);
+    if (!match && kind === "context" && body.trim() === "...") {
+      return { kind: "hunk", lineNumber: undefined, text: "⋮" };
+    }
 
     return {
       kind,
@@ -275,10 +302,50 @@ export function parseDisplayDiff(diff: string): DisplayDiffLine[] {
   });
 }
 
+export function parseUnifiedPatch(patch: string): DisplayDiffLine[] {
+  const parsed: DisplayDiffLine[] = [];
+  let oldLine = 0;
+  let newLine = 0;
+  let hunkCount = 0;
+  let inHunk = false;
+
+  for (const line of patch.split("\n")) {
+    const hunk = line.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/u);
+    if (hunk) {
+      if (hunkCount > 0) {
+        parsed.push({ kind: "hunk", lineNumber: undefined, text: "⋮" });
+      }
+      oldLine = Number.parseInt(hunk[1] ?? "0", 10);
+      newLine = Number.parseInt(hunk[2] ?? "0", 10);
+      hunkCount += 1;
+      inHunk = true;
+      continue;
+    }
+    if (!inHunk || line.startsWith("\\ No newline at end of file")) continue;
+
+    const marker = line[0];
+    const text = line.slice(1);
+    if (marker === "-") {
+      parsed.push({ kind: "removed", lineNumber: oldLine, text });
+      oldLine += 1;
+    } else if (marker === "+") {
+      parsed.push({ kind: "added", lineNumber: newLine, text });
+      newLine += 1;
+    } else if (marker === " ") {
+      parsed.push({ kind: "context", lineNumber: newLine, text });
+      oldLine += 1;
+      newLine += 1;
+    }
+  }
+
+  return parsed;
+}
+
 export function renderDisplayDiff(
   lines: readonly DisplayDiffLine[],
   theme: Theme,
   width: number,
+  path = "",
 ): string[] {
   const safeWidth = normalizeWidth(width);
   if (safeWidth === 0) return [];
@@ -287,24 +354,37 @@ export function renderDisplayDiff(
     1,
     ...lines.map((line) => line.lineNumber === undefined ? 0 : String(line.lineNumber).length),
   );
+  const language = getLanguageFromPath(path);
+  const codeForeground = theme.getFgAnsi("toolDiffContext");
 
   return lines.map((line) => {
+    if (line.kind === "hunk") {
+      return fitToWidth(`${DIFF_INDENT}${ANSI_DIM}⋮${ANSI_INTENSITY_RESET}`, safeWidth);
+    }
+
     const lineNumber = line.lineNumber === undefined
       ? " ".repeat(lineNumberWidth)
       : String(line.lineNumber).padStart(lineNumberWidth);
-    const marker = line.kind === "added" ? "+" : line.kind === "removed" ? "-" : " ";
-    const color = line.kind === "added"
-      ? "toolDiffAdded"
+    const gutter = `${ANSI_DIM}${ANSI_DEFAULT_FOREGROUND}${lineNumber}${ANSI_INTENSITY_RESET}`;
+    const sign = line.kind === "added"
+      ? namedGreen("+")
       : line.kind === "removed"
-        ? "toolDiffRemoved"
-        : "toolDiffContext";
-    const content = `${theme.fg("dim", lineNumber)} ${theme.fg(color, marker)} ${theme.fg(color, line.text)}`;
+        ? namedRed("-")
+        : " ";
+    const highlighted = line.highlightedText ?? (language
+      ? (highlightCode(line.text, language)[0] ?? line.text)
+      : line.text);
+    const codeWithDefault = applyCodeForeground(highlighted, codeForeground);
+    const code = line.kind === "removed"
+      ? `${ANSI_DIM}${codeWithDefault}${ANSI_INTENSITY_RESET}`
+      : codeWithDefault;
+    const content = `${DIFF_INDENT}${gutter} ${sign} ${code}`;
 
     if (line.kind === "added") {
-      return theme.bg("toolSuccessBg", fitToWidth(content, safeWidth, { pad: true }));
+      return paintBackground(content, safeWidth, theme.getBgAnsi("toolSuccessBg"));
     }
     if (line.kind === "removed") {
-      return theme.bg("toolErrorBg", fitToWidth(content, safeWidth, { pad: true }));
+      return paintBackground(content, safeWidth, theme.getBgAnsi("toolErrorBg"), ANSI_DIM);
     }
     return fitToWidth(content, safeWidth);
   });
@@ -334,6 +414,21 @@ function updateComponent(
   const component = getResponsiveComponent(previous);
   component.setRenderer(renderer);
   return component;
+}
+
+function formatEditTitle(
+  action: string,
+  path: string,
+  theme: Theme,
+  suffix = "",
+): string {
+  const parts = [
+    `${ANSI_DIM}•${ANSI_INTENSITY_RESET}`,
+    theme.bold(action),
+    path || "(unknown path)",
+  ];
+  if (suffix) parts.push(suffix);
+  return parts.join(" ");
 }
 
 function formatToolTitle(
@@ -418,8 +513,9 @@ function renderReadResult(
 
 function renderEditResult(
   result: { content: Array<{ type: string; text?: string }> },
-  details: EditToolDetails | undefined,
+  diffLines: readonly DisplayDiffLine[] | undefined,
   options: { expanded: boolean; isPartial: boolean },
+  path: string,
   theme: Theme,
   isError: boolean,
   width: number,
@@ -431,15 +527,14 @@ function renderEditResult(
     const error = firstLine(extractText(result.content)) || "Edit failed";
     return [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)];
   }
-  if (!details?.diff) {
+  if (!diffLines) {
     return [fitToWidth(theme.fg("success", "  └ Applied"), width)];
   }
 
-  const parsed = parseDisplayDiff(details.diff);
-  const maximum = options.expanded ? parsed.length : COLLAPSED_DIFF_LINES;
-  const visible = parsed.slice(0, maximum);
-  const lines = renderDisplayDiff(visible, theme, width);
-  const remaining = parsed.length - visible.length;
+  const maximum = options.expanded ? diffLines.length : COLLAPSED_DIFF_LINES;
+  const visible = diffLines.slice(0, maximum);
+  const lines = renderDisplayDiff(visible, theme, width, path);
+  const remaining = diffLines.length - visible.length;
   if (remaining > 0) {
     lines.push(fitToWidth(theme.fg("dim", `… ${remaining} more diff lines`), width));
   }
@@ -738,6 +833,61 @@ function formatBashTruncationWarning(details: BashToolDetails | undefined): stri
 
 function formatDuration(milliseconds: number): string {
   return `${(milliseconds / 1000).toFixed(1)}s`;
+}
+
+function parseEditDiff(details: EditToolDetails): DisplayDiffLine[] {
+  if (details.patch) {
+    const parsed = parseUnifiedPatch(details.patch);
+    if (parsed.length > 0) return parsed;
+  }
+  return parseDisplayDiff(details.diff);
+}
+
+function getPreparedEditDiff(
+  state: CodexEditState,
+  details: EditToolDetails,
+  path: string,
+  theme: Theme,
+): DisplayDiffLine[] {
+  if (
+    state.preparedDiff
+    && state.preparedDetails === details
+    && state.preparedPath === path
+    && state.preparedTheme === theme
+  ) {
+    return state.preparedDiff;
+  }
+
+  const parsed = parseEditDiff(details);
+  const language = getLanguageFromPath(path);
+  const prepared = language
+    ? parsed.map((line) => line.kind === "hunk"
+      ? line
+      : {
+          ...line,
+          highlightedText: highlightCode(line.text, language)[0] ?? line.text,
+        })
+    : parsed;
+  state.preparedDetails = details;
+  state.preparedPath = path;
+  state.preparedTheme = theme;
+  state.preparedDiff = prepared;
+  return prepared;
+}
+
+function namedGreen(text: string): string {
+  return `${ANSI_NAMED_GREEN}${text}${ANSI_DEFAULT_FOREGROUND}`;
+}
+
+function namedRed(text: string): string {
+  return `${ANSI_NAMED_RED}${text}${ANSI_DEFAULT_FOREGROUND}`;
+}
+
+function applyCodeForeground(text: string, foregroundAnsi: string): string {
+  const restored = text
+    .replace(ANSI_FULL_SGR_RESET, (reset) => `${reset}${foregroundAnsi}`)
+    .replace(ANSI_FOREGROUND_RESET, (reset) => `${reset}${foregroundAnsi}`);
+  return `${foregroundAnsi}${restored}${ANSI_DEFAULT_FOREGROUND}`;
 }
 
 function countDiffStats(lines: readonly DisplayDiffLine[]): { added: number; removed: number } {

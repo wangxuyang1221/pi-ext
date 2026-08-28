@@ -36,14 +36,19 @@ export function fitToWidth(
   return `${fitted}${" ".repeat(Math.max(0, safeWidth - visibleWidth(fitted)))}`;
 }
 
-export function paintBackground(line: string, width: number, backgroundAnsi: string): string {
+export function paintBackground(
+  line: string,
+  width: number,
+  backgroundAnsi: string,
+  modifierAfterReset = "",
+): string {
   const safeWidth = normalizeWidth(width);
   if (safeWidth === 0) return "";
 
   const fitted = fitToWidth(line, safeWidth, { pad: true });
   const backgroundSafe = fitted.replace(
     FULL_SGR_RESET,
-    (reset) => `${reset}${backgroundAnsi}`,
+    (reset) => `${reset}${backgroundAnsi}${modifierAfterReset}`,
   );
   return `${backgroundAnsi}${backgroundSafe}${BACKGROUND_RESET}`;
 }

@@ -15,12 +15,12 @@ export function fitToWidth(text, width, options = {}) {
         return fitted;
     return `${fitted}${" ".repeat(Math.max(0, safeWidth - visibleWidth(fitted)))}`;
 }
-export function paintBackground(line, width, backgroundAnsi) {
+export function paintBackground(line, width, backgroundAnsi, modifierAfterReset = "") {
     const safeWidth = normalizeWidth(width);
     if (safeWidth === 0)
         return "";
     const fitted = fitToWidth(line, safeWidth, { pad: true });
-    const backgroundSafe = fitted.replace(FULL_SGR_RESET, (reset) => `${reset}${backgroundAnsi}`);
+    const backgroundSafe = fitted.replace(FULL_SGR_RESET, (reset) => `${reset}${backgroundAnsi}${modifierAfterReset}`);
     return `${backgroundAnsi}${backgroundSafe}${BACKGROUND_RESET}`;
 }
 export function fitSegments(segments, width, separator) {

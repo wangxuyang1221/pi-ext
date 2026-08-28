@@ -9,11 +9,13 @@ export interface CodexToolRenderServices {
     getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
 }
 export interface DisplayDiffLine {
-    kind: "context" | "removed" | "added";
+    kind: "context" | "removed" | "added" | "hunk";
     lineNumber: number | undefined;
     text: string;
+    highlightedText?: string;
 }
 export declare function registerCodexTools(pi: ExtensionAPI, factories?: CodexToolFactories, services?: CodexToolRenderServices): void;
 export declare function parseDisplayDiff(diff: string): DisplayDiffLine[];
-export declare function renderDisplayDiff(lines: readonly DisplayDiffLine[], theme: Theme, width: number): string[];
+export declare function parseUnifiedPatch(patch: string): DisplayDiffLine[];
+export declare function renderDisplayDiff(lines: readonly DisplayDiffLine[], theme: Theme, width: number, path?: string): string[];
 //# sourceMappingURL=tools.d.ts.map

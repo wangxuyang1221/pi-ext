@@ -110,7 +110,7 @@ pi-codex() {
 
 仓库不会自动修改 Shell 配置，也不提供一个假定 `pi install` 会加入 `PATH` 的 package bin。
 
-`read`、`edit`、`write` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 根据真实 `EditToolDetails.diff` 绘制整行 added/removed 背景；`write` 只显示路径、行数和字节数，不伪造 old/new diff。使用当前配置中的 `app.tools.expand` 快捷键可以展开工具详情，默认是 `Ctrl+O`。
+`read`、`edit`、`write` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。`write` 只显示路径、行数和字节数，不伪造 old/new diff。使用当前配置中的 `app.tools.expand` 快捷键可以展开工具详情，默认是 `Ctrl+O`。
 
 Footer 读取 `FooterDataProvider.getExtensionStatuses()`，因此 MCP 和 permissions 状态仍会显示。`pi-openai-fast-mode` 的 `fast` 保留在它自己的 below-editor widget 中；由于 Pi 0.84.3 没有公开 weekly quota 数据源，本 profile 不显示 weekly quota。
 
