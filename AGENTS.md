@@ -2,8 +2,9 @@
 
 - 本仓库专用于开发和维护 Pi extensions 与 skills
 - 修改 `src/` 及对应的 `__tests__/`；`dist/` 是生成产物，不要手动编辑。
-- 使用 Node.js 22.19+，通过 `npm ci --ignore-scripts` 安装依赖。
-- 完成前运行 `npm run check`，执行类型检查、测试、构建并校验发布包。
+- 使用 Node.js 22.19+ 和 `packageManager` 指定的 pnpm 版本，通过 `pnpm install --frozen-lockfile --ignore-scripts` 安装依赖。
+- 仓库基础设施统一使用 pnpm。添加或修改脚本、文档和 CI 时使用 `pnpm` 或 `pnpm exec`。
+- 完成前运行 `pnpm run check`，执行类型检查、测试、构建并校验发布包。
 
 ## Agent skills
 

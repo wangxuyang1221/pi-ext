@@ -229,25 +229,25 @@ PI_SUBAGENT_TMUX_PATH
 ## Development
 
 ```bash
-npm ci --ignore-scripts
-npm run check
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm run check
 ```
 
 常用命令：
 
 ```bash
-npm run typecheck
-npm test
-npm run build
-npm run package:check
-npm pack --dry-run
-npm run prototype:tui
-npm run prototype:subagent-ui
+pnpm run typecheck
+pnpm test
+pnpm run build
+pnpm run package:check
+pnpm pack --dry-run
+pnpm run prototype:tui
+pnpm run prototype:subagent-ui
 ```
 
-仓库有意提交 `dist/`。Pi 从 Git 安装 package 时只安装生产依赖，因此需要预构建文件。CI 会拒绝过期的生成文件。`prepack` 会重建五个扩展，npm tarball 只包含编译产物、theme、README、license 和 Codex Compact attribution。
+仓库有意提交 `dist/`。Pi 从 Git 安装 package 时只安装生产依赖，因此需要预构建文件。CI 会拒绝过期的生成文件。`prepack` 会重建五个扩展，发布包只包含编译产物、theme、README、license 和 Codex Compact attribution。
 
-`npm run prototype:tui` 启动 Codex、Claude、Hybrid 三套一次性 HTML 原型。生产 extension 只实现 Codex 方向，另外两套原型保留供后续使用。
+`pnpm run prototype:tui` 启动 Codex、Claude、Hybrid 三套一次性 HTML 原型。生产 extension 只实现 Codex 方向，另外两套原型保留供后续使用。
 
 ## Layout
 

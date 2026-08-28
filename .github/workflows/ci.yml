@@ -20,19 +20,20 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
+      - uses: pnpm/setup@v1
         with:
-          node-version: 22.19.0
-          cache: npm
+          runtime: node@22.19.0
+          cache: true
+          install: false
 
       - name: Install dependencies
-        run: npm ci --ignore-scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Check source, tests, and build
-        run: npm run check
+        run: pnpm run check
 
       - name: Verify committed build artifacts
         run: git diff --exit-code -- extensions/codex-compact/dist extensions/mcp/dist extensions/permissions/dist
 
       - name: Inspect package contents
-        run: npm pack --dry-run
+        run: pnpm pack --dry-run

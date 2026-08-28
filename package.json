@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Codex compaction, UI, subagent, MCP, and permissions extensions for Pi Coding Agent",
   "type": "module",
+  "packageManager": "pnpm@11.9.0",
   "license": "MIT",
   "author": "Wang Xuyang",
   "repository": {
@@ -55,15 +56,15 @@
   },
   "scripts": {
     "clean": "node ./scripts/clean.mjs",
-    "build": "npm run clean && tsc -p ./extensions/codex-compact/tsconfig.json && tsc -p ./extensions/codex-ui/tsconfig.json && tsc -p ./extensions/mcp/tsconfig.json && tsc -p ./extensions/permissions/tsconfig.json && tsc -p ./extensions/subagent/tsconfig.json",
+    "build": "pnpm run clean && tsc -p ./extensions/codex-compact/tsconfig.json && tsc -p ./extensions/codex-ui/tsconfig.json && tsc -p ./extensions/mcp/tsconfig.json && tsc -p ./extensions/permissions/tsconfig.json && tsc -p ./extensions/subagent/tsconfig.json",
     "typecheck": "tsc -p ./extensions/codex-compact/tsconfig.json --noEmit && tsc -p ./extensions/codex-ui/tsconfig.json --noEmit && tsc -p ./extensions/mcp/tsconfig.json --noEmit && tsc -p ./extensions/permissions/tsconfig.json --noEmit && tsc -p ./extensions/subagent/tsconfig.json --noEmit",
     "test": "vitest run",
-    "check": "npm run typecheck && npm test && npm run build && npm run package:check",
+    "check": "pnpm run typecheck && pnpm test && pnpm run build && pnpm run package:check",
     "package:check": "node ./scripts/check-package.mjs",
     "prototype:tui": "node ./prototypes/pi-tui-style-prototype/dev.mjs",
     "prototype:subagent-ui": "node ./prototypes/subagent-tool-ui-prototype/demo.mjs",
     "prototype:compact-notice": "node ./prototypes/codex-compact-notice-prototype/demo.mjs",
-    "prepack": "npm run build"
+    "prepack": "pnpm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
