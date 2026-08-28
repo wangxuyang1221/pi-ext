@@ -3,7 +3,7 @@ coverage/
 .tmp/
 handoff/
 .scratch/
-prototype/
+prototypes/
 DECISIONS.md
 *.tgz
 .DS_Store

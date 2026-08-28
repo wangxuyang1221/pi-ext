@@ -1,6 +1,7 @@
 import { rm } from "node:fs/promises";
 
 const outputDirectories = [
+  new URL("../extensions/codex-compact/dist/", import.meta.url),
   new URL("../extensions/codex-ui/dist/", import.meta.url),
   new URL("../extensions/mcp/dist/", import.meta.url),
   new URL("../extensions/permissions/dist/", import.meta.url),

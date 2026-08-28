@@ -3,12 +3,36 @@ import { access, readFile } from "node:fs/promises";
 const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 const extensionEntries = packageJson.pi?.extensions ?? [];
 const themeEntries = packageJson.pi?.themes ?? [];
+const publishedEntries = packageJson.files ?? [];
 
-if (extensionEntries.length !== 4) {
-  throw new Error(`Expected 4 Pi extension entries, found ${extensionEntries.length}`);
+const expectedExtensionEntries = [
+  "./extensions/codex-compact/dist/index.js",
+  "./extensions/codex-ui/dist/index.js",
+  "./extensions/mcp/dist/index.js",
+  "./extensions/permissions/dist/index.js",
+  "./extensions/subagent/dist/index.js",
+];
+const expectedThemeEntries = ["./themes/codex-pi.json"];
+const requiredPublishedEntries = [
+  "extensions/codex-compact/dist",
+  "extensions/codex-compact/LICENSE",
+  "extensions/codex-compact/UPSTREAM.md",
+];
+
+function assertExactEntries(actual, expected, label) {
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(`Unexpected ${label}: ${JSON.stringify(actual)}`);
+  }
 }
-if (themeEntries.length !== 1) {
-  throw new Error(`Expected 1 Pi theme entry, found ${themeEntries.length}`);
+
+assertExactEntries(extensionEntries, expectedExtensionEntries, "Pi extension entries");
+assertExactEntries(themeEntries, expectedThemeEntries, "Pi theme entries");
+
+for (const entry of requiredPublishedEntries) {
+  if (!publishedEntries.includes(entry)) {
+    throw new Error(`Required package file is not published: ${entry}`);
+  }
+  await access(new URL(`../${entry}`, import.meta.url));
 }
 
 for (const entry of extensionEntries) {
@@ -26,5 +50,5 @@ for (const entry of themeEntries) {
 }
 
 console.log(
-  `Verified ${extensionEntries.length} compiled Pi extension entries and ${themeEntries.length} theme entry.`,
+  `Verified ${extensionEntries.length} compiled Pi extension entries, ${themeEntries.length} theme entry, and Codex Compact attribution files.`,
 );

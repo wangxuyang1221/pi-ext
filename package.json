@@ -1,7 +1,7 @@
 {
   "name": "pi-ext",
   "version": "0.1.0",
-  "description": "Subagent, MCP, permissions, and Codex-inspired UI extensions for Pi Coding Agent",
+  "description": "Codex compaction, UI, subagent, MCP, and permissions extensions for Pi Coding Agent",
   "type": "module",
   "license": "MIT",
   "author": "Wang Xuyang",
@@ -16,6 +16,9 @@
   "keywords": [
     "pi-package",
     "pi-extension",
+    "codex",
+    "compaction",
+    "openai",
     "mcp",
     "permissions",
     "subagent",
@@ -27,6 +30,9 @@
     "node": ">=22.19.0"
   },
   "files": [
+    "extensions/codex-compact/dist",
+    "extensions/codex-compact/LICENSE",
+    "extensions/codex-compact/UPSTREAM.md",
     "extensions/codex-ui/dist",
     "extensions/mcp/dist",
     "extensions/permissions/dist",
@@ -37,6 +43,7 @@
   ],
   "pi": {
     "extensions": [
+      "./extensions/codex-compact/dist/index.js",
       "./extensions/codex-ui/dist/index.js",
       "./extensions/mcp/dist/index.js",
       "./extensions/permissions/dist/index.js",
@@ -48,13 +55,14 @@
   },
   "scripts": {
     "clean": "node ./scripts/clean.mjs",
-    "build": "npm run clean && tsc -p ./extensions/codex-ui/tsconfig.json && tsc -p ./extensions/mcp/tsconfig.json && tsc -p ./extensions/permissions/tsconfig.json && tsc -p ./extensions/subagent/tsconfig.json",
-    "typecheck": "tsc -p ./extensions/codex-ui/tsconfig.json --noEmit && tsc -p ./extensions/mcp/tsconfig.json --noEmit && tsc -p ./extensions/permissions/tsconfig.json --noEmit && tsc -p ./extensions/subagent/tsconfig.json --noEmit",
+    "build": "npm run clean && tsc -p ./extensions/codex-compact/tsconfig.json && tsc -p ./extensions/codex-ui/tsconfig.json && tsc -p ./extensions/mcp/tsconfig.json && tsc -p ./extensions/permissions/tsconfig.json && tsc -p ./extensions/subagent/tsconfig.json",
+    "typecheck": "tsc -p ./extensions/codex-compact/tsconfig.json --noEmit && tsc -p ./extensions/codex-ui/tsconfig.json --noEmit && tsc -p ./extensions/mcp/tsconfig.json --noEmit && tsc -p ./extensions/permissions/tsconfig.json --noEmit && tsc -p ./extensions/subagent/tsconfig.json --noEmit",
     "test": "vitest run",
     "check": "npm run typecheck && npm test && npm run build && npm run package:check",
     "package:check": "node ./scripts/check-package.mjs",
     "prototype:tui": "node ./prototypes/pi-tui-style-prototype/dev.mjs",
     "prototype:subagent-ui": "node ./prototypes/subagent-tool-ui-prototype/demo.mjs",
+    "prototype:compact-notice": "node ./prototypes/codex-compact-notice-prototype/demo.mjs",
     "prepack": "npm run build"
   },
   "dependencies": {
@@ -63,11 +71,13 @@
     "zod": "4.4.3"
   },
   "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*",
     "typebox": "*"
   },
   "devDependencies": {
+    "@earendil-works/pi-ai": "0.84.3",
     "@earendil-works/pi-coding-agent": "0.84.3",
     "@earendil-works/pi-tui": "0.84.3",
     "@types/node": "22.19.19",

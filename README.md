@@ -1,7 +1,8 @@
 # pi-ext
 
-为 [Pi Coding Agent](https://github.com/earendil-works/pi) 提供四个扩展和一套主题：
+为 [Pi Coding Agent](https://github.com/earendil-works/pi) 提供五个扩展和一套主题：
 
+- `codex-compact` 为支持的 ChatGPT auth 模型提供 Codex Remote Compaction V2。
 - `codex-ui` 使用 Pi 品牌实现 Codex 风格的 TUI profile，并提供 `codex-pi` 主题。
 - `mcp` 连接 Model Context Protocol 服务器，并将工具注册为 `mcp__<server>__<tool>`。
 - `permissions` 提供 `Default permissions` 和 `Full access` 两种模式，以及逐次调用审批。
@@ -33,6 +34,39 @@ pi -e git:github.com/wangxuyang1221/pi-ext
 ```
 
 Pi package 以当前用户的完整系统权限运行。安装第三方 package 前应检查源码。
+
+## Codex Compact extension
+
+`codex-compact` 只接管 provider 为 `openai-codex` 且 API 为 `openai-codex-responses` 的模型。扩展通过 Codex Remote Compaction V2 获取加密 checkpoint，并将 V2 details 写入 Pi 的标准 compaction entry。其他 provider 和 API 继续使用 Pi 原生压缩；如果当前分支已有 V2 checkpoint，切换到非 Codex 模型时会回放原始分支，避免把加密 checkpoint marker 当作可用文本摘要。
+
+Pi 发起的手动 `/compact`、threshold 和 overflow 压缩完全使用 Pi 原生进行中 UI，不叠加扩展 footer。Pi 提交最终 entry 后，扩展重新读取本次新写入记录并校验 hook 来源、V2 details、模型和压缩参数。校验结果会延迟到 Pi 完成 compaction 卡片重建后显示，避免通知被 transcript 重绘清除：
+
+```text
+Codex compaction applied
+```
+
+原生 compaction 卡片展开后还会显示持久化摘要：
+
+```text
+Codex encrypted compaction item.
+```
+
+若远程请求、响应结构或 checkpoint 校验失败，扩展会取消本次 Codex 压缩，不会静默降级为 Pi 本地文本摘要。若最终 entry 无法证明来自本次 V2 attempt，则显示 warning。扩展在 provider request 前自主发起压缩时仍使用自己的短暂 footer 状态，因为此时 Pi 没有启动原生 compaction loader。
+
+可在全局 `~/.pi/agent/pi-codex-compact.json` 配置，也可在受信任项目的 `.pi/pi-codex-compact.json` 覆盖：
+
+```json
+{
+  "autoCompactTokenLimit": 180000,
+  "autoCompactScope": "total"
+}
+```
+
+`autoCompactTokenLimit` 必须为正数，且最多为模型 context window 的 90%。`autoCompactScope` 可设为 `total` 或 `bodyAfterPrefix`；默认使用 `total`。当前 V2 路径不消费 `/compact focus text` 的 focus text。
+
+不要同时加载本扩展和独立的 `npm:@yeungkc/pi-codex-compact@0.0.6`，否则同一组 hooks 会执行两次。迁移现有安装时，应先验证本 package，再从 Pi settings 停用独立 npm entry 并重启或 reload。
+
+本目录基于 `@yeungkc/pi-codex-compact` 0.0.6 导入；精确 commit、同步范围和本地改动记录见 `extensions/codex-compact/UPSTREAM.md`，上游 MIT license 见同目录 `LICENSE`。
 
 ## Codex UI profile
 
@@ -211,7 +245,7 @@ npm run prototype:tui
 npm run prototype:subagent-ui
 ```
 
-仓库有意提交 `dist/`。Pi 从 Git 安装 package 时只安装生产依赖，因此需要预构建文件。CI 会拒绝过期的生成文件。`prepack` 会重建四个扩展，npm tarball 只包含编译产物、theme、README 和 license。
+仓库有意提交 `dist/`。Pi 从 Git 安装 package 时只安装生产依赖，因此需要预构建文件。CI 会拒绝过期的生成文件。`prepack` 会重建五个扩展，npm tarball 只包含编译产物、theme、README、license 和 Codex Compact attribution。
 
 `npm run prototype:tui` 启动 Codex、Claude、Hybrid 三套一次性 HTML 原型。生产 extension 只实现 Codex 方向，另外两套原型保留供后续使用。
 
@@ -219,6 +253,12 @@ npm run prototype:subagent-ui
 
 ```text
 extensions/
+  codex-compact/
+    src/
+    __tests__/
+    dist/
+    LICENSE
+    UPSTREAM.md
   codex-ui/
     src/
     __tests__/
