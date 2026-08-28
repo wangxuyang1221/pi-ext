@@ -23,7 +23,7 @@ test("registers the fixed public subagent tool surface", () => {
     assert.match(String(tool.description), /[\u3400-\u9fff]/u);
     assert.equal(typeof tool.promptSnippet, "string");
     assert.ok(Array.isArray(tool.promptGuidelines));
-    assert.equal((tool.promptGuidelines as unknown[]).length, 1);
+    assert.ok((tool.promptGuidelines as unknown[]).length > 0);
   }
 });
 
@@ -37,7 +37,7 @@ test("removes resumable and recursive cleanup semantics from the public contract
     ...(Array.isArray(tool.promptGuidelines) ? tool.promptGuidelines : []),
   ]).join("\n");
 
-  assert.doesNotMatch(contractText, /resume|forget|递归/iu);
+  assert.doesNotMatch(contractText, /resume|forget|递归|直接 child|直接 subagent|可用容量/iu);
 });
 
 test("uses strict read view variants with lightweight recent defaults", () => {
@@ -379,35 +379,91 @@ test("returns capacity and terminal cleanup boundaries in tool payloads", async 
   assert.equal(closed.details.piSessionRetained, true);
 });
 
-test("encourages read-first orchestration and caps each wait at two minutes", () => {
+test("defaults subagent_prompt execution to follow_up", async () => {
+  const agent = {
+    agentId: "child-a",
+    name: "Lin",
+    status: "settled",
+    generation: 1,
+    settledGeneration: 1,
+    settledCursor: "settled-a",
+    sessionFile: "/sessions/child-a.jsonl",
+  };
+  const promptMock = vi.fn().mockResolvedValue(agent);
+  const registered = registerTools({ prompt: promptMock });
+  const prompt = registered.find((tool) => tool.name === "subagent_prompt");
+  assert.ok(prompt);
+
+  const result = await (prompt.execute as (...args: any[]) => Promise<any>)(
+    "call-a",
+    { agentId: "child-a", text: "Continue" },
+    new AbortController().signal,
+    undefined,
+    {
+      sessionManager: {
+        getSessionFile: () => "/sessions/parent-a.jsonl",
+        getSessionId: () => "parent-a",
+      },
+    },
+  );
+
+  assert.deepEqual(promptMock.mock.calls[0]?.slice(0, 4), [
+    "parent-a",
+    "child-a",
+    "Continue",
+    "follow_up",
+  ]);
+  assert.equal(JSON.parse(result.content[0].text).delivery, "follow_up");
+});
+
+test("encodes reuse, delivery, observation, wait, and close boundaries", () => {
   const registered = registerTools();
   const tools = new Map(registered.map((tool) => [tool.name, tool]));
   const spawn = tools.get("subagent_spawn");
+  const prompt = tools.get("subagent_prompt");
   const read = tools.get("subagent_read");
   const wait = tools.get("subagent_wait");
+  const close = tools.get("subagent_close");
   assert.ok(spawn);
+  assert.ok(prompt);
   assert.ok(read);
   assert.ok(wait);
+  assert.ok(close);
 
   assert.deepEqual(spawn.promptGuidelines, [
-    "使用 subagent_spawn 委派边界清晰、可独立执行的任务；工具返回只表示 child 已启动。随后优先使用 subagent_read 低噪声跟踪；只有 main 的下一步依赖 child 结果时才使用 subagent_wait。",
+    "调用 subagent_spawn 前先检查已有 subagent。若有 subagent 处理过相关代码、文档或决策，使用 subagent_prompt；只有没有可复用对象且任务可独立验收时，才创建新的 subagent。",
   ]);
+  assert.deepEqual(prompt.promptGuidelines, [
+    "新信息使当前路线失效或继续执行有风险时，使用 steer；其余提示使用 follow_up。",
+  ]);
+  const deliverySchema = (prompt.parameters as {
+    properties: { delivery: Record<string, unknown> };
+  }).properties.delivery;
+  assert.equal(deliverySchema.default, "follow_up");
+
   assert.deepEqual(read.promptGuidelines, [
-    "常规跟踪使用 subagent_read 的 recent_activity 和 cursor；只有失败摘要不足、需要精确证据或用户明确要求时才读取 activity_detail。hasMore 不要求自动读取全部历史；如需补取被 count limit 省略的摘要，复用原 after 并提高对应 limit，不要使用本次推进后的 cursor。",
+    "常规跟踪使用 subagent_read 的 recent_activity。接受本次摘要后，把返回的 cursor 作为下次 after。",
+    "需要按 user prompt 重建上下文时使用 turns；摘要不足或需要原始内容时使用 activity_detail。",
+    "hasMore 只表示仍有活动，按任务需要读取。补取 recent_activity 省略的条目时，复用调用前的 after，并提高 assistantLimit 或 toolLimit；返回的 cursor 已越过这些条目。",
   ]);
   assert.equal(
     wait.description,
-    "阻塞等待当前 session 的一个直接 child 在指定 settled cursor 之后产生新的 agent_settled。仅当 main 的下一步依赖 child 结果时使用；成功时返回新的 settled cursor 和近期活动，关闭、中断或超时不会伪造完成。",
+    "阻塞等待当前 session 管理的 subagent 在 afterSettled 之后产生新的 agent_settled。outcome 为 settled 时附带近期活动；timeout、closed 和 interrupted 不表示产生了新的 settled 事件。",
   );
-  assert.equal(wait.promptSnippet, "等待主线所依赖的 child 稳定完成。");
+  assert.equal(wait.promptSnippet, "主任务依赖结果时，等待 subagent 产生新的 settled 事件。");
   assert.deepEqual(wait.promptGuidelines, [
-    "常规进度跟踪应优先使用 subagent_read；仅当下一步被 child 结果阻塞时调用 subagent_wait。传入任务开始前的 afterSettled，timeout 后可复用同一 afterSettled 再次等待；只有 outcome: \"settled\" 表示成功完成。",
+    "主 agent 的下一步依赖 subagent 结果时使用 subagent_wait；常规进度跟踪使用 subagent_read。",
+    "afterSettled 使用启动该轮任务的 subagent_spawn 或 subagent_prompt 返回的 agent.settledCursor。timeout 后复用同一个 afterSettled；只有 outcome 为 settled 才证明产生了新的 settled 事件，任务结果仍以返回的活动为准。",
+  ]);
+  assert.deepEqual(close.promptGuidelines, [
+    "关闭前，将本轮拟关闭的全部 subagent 合并为一次确认，列出 name 和 agentId，并说明关闭后无法继续通过 subagent 工具访问。",
+    "用户的同意仅覆盖确认中列出的 target。当前请求已明确要求关闭这些 target 时，可直接调用 subagent_close。",
   ]);
 
   const timeoutSchema = (wait.parameters as {
     properties: { timeoutMs: Record<string, unknown> };
   }).properties.timeoutMs;
-  assert.equal(timeoutSchema.description, "单次最长等待时间（毫秒）；默认 30000，最大 120000。");
+  assert.equal(timeoutSchema.description, "本次调用最多等待的毫秒数；默认 30000，最大 120000。");
   assert.equal(timeoutSchema.default, 30_000);
   assert.equal(timeoutSchema.maximum, 120_000);
 });

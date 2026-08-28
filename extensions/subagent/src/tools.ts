@@ -32,23 +32,25 @@ const ThinkingLevelSchema = Type.Union([
   Type.Literal("high"),
   Type.Literal("xhigh"),
   Type.Literal("max"),
-]);
+], {
+  description: "subagent 的 thinking level；省略时继承当前设置。",
+});
 
 const spawnParameters = Type.Object({
   task: Type.String({
-    description: "交给 child 的自包含初始任务。",
+    description: "交给 subagent 的自包含初始任务。写明必要上下文和可检查的完成条件。",
     minLength: 1,
   }),
   name: Type.Optional(Type.String({
-    description: "可选显示名称；省略时由 Extension 生成。",
+    description: "subagent 的显示名称；省略时自动生成。",
     minLength: 1,
   })),
   cwd: Type.Optional(Type.String({
-    description: "可选工作目录；默认继承当前环境。",
+    description: "subagent 的工作目录；相对路径按当前工作目录解析，省略时继承当前工作目录。",
     minLength: 1,
   })),
   model: Type.Optional(Type.String({
-    description: "可选模型覆盖；默认继承当前环境。",
+    description: "subagent 使用的 provider/model；省略时继承当前模型。",
     minLength: 1,
   })),
   thinkingLevel: Type.Optional(ThinkingLevelSchema),
@@ -56,46 +58,48 @@ const spawnParameters = Type.Object({
 
 const promptParameters = Type.Object({
   agentId: Type.String({
-    description: "当前 namespace 中运行中的直接 child sessionId。",
+    description: "接收提示的 subagent sessionId。",
     minLength: 1,
   }),
   text: Type.String({
-    description: "要投递的正常 Pi prompt。",
+    description: "发送给 subagent 的任务或修正。",
     minLength: 1,
   }),
   delivery: Type.Optional(Type.Union([
     Type.Literal("steer"),
     Type.Literal("follow_up"),
   ], {
-    description: "投递模式；默认 steer。",
-    default: "steer",
+    description: "投递时机。follow_up 等现有工作结束后送达；steer 在当前 assistant turn 的工具调用结束后送达。默认 follow_up。",
+    default: "follow_up",
   })),
 });
 
 const listParameters = Type.Object({});
 
 const readAgentId = Type.String({
-  description: "当前 namespace 中的直接 child sessionId。",
+  description: "要读取的 subagent sessionId。",
   minLength: 1,
 });
 
 const readAfter = Type.Optional(Type.String({
-  description: "绑定同一 agent、epoch 和 view 的 opaque activity cursor。",
+  description: "上次同一 agent、epoch 和 view 返回的 cursor；本次只读取其后的活动。",
   minLength: 1,
 }));
 
 const readParameters = Type.Union([
   Type.Object({
     agentId: readAgentId,
-    view: Type.Literal("recent_activity"),
+    view: Type.Literal("recent_activity", {
+      description: "返回 after 之后最近的 assistant message 和工具活动摘要。",
+    }),
     assistantLimit: Type.Optional(Type.Integer({
-      description: "最多返回的非空 assistant message 数量。",
+      description: "最多返回的近期非空 assistant message 数；默认 1。",
       minimum: 1,
       maximum: 10,
       default: 1,
     })),
     toolLimit: Type.Optional(Type.Integer({
-      description: "最多返回的 tool activity 数量。",
+      description: "最多返回的近期工具活动数；默认 1。",
       minimum: 1,
       maximum: 20,
       default: 1,
@@ -104,28 +108,35 @@ const readParameters = Type.Union([
   }, { additionalProperties: false }),
   Type.Object({
     agentId: readAgentId,
-    view: Type.Literal("turns"),
+    view: Type.Literal("turns", {
+      description: "按 user prompt 分组返回 after 之后的活动。",
+    }),
     limit: Type.Optional(Type.Integer({
-      description: "最多返回的 user turn 数量。",
+      description: "最多返回的近期 user turn 数；默认 20。",
       minimum: 1,
       maximum: 200,
+      default: 20,
     })),
     after: readAfter,
   }, { additionalProperties: false }),
   Type.Object({
     agentId: readAgentId,
-    view: Type.Literal("activity_detail"),
+    view: Type.Literal("activity_detail", {
+      description: "分页读取单条活动的原始内容。",
+    }),
     activityId: Type.String({
-      description: "要读取的 finalized activity id。",
+      description: "摘要中 detailRef 提供的 activityId。",
       minLength: 1,
     }),
     section: Type.Union([
       Type.Literal("assistant_text"),
       Type.Literal("tool_arguments"),
       Type.Literal("tool_result"),
-    ]),
+    ], {
+      description: "要读取的 section；必须存在于该活动的 detailRef.sections。",
+    }),
     detailCursor: Type.Optional(Type.String({
-      description: "绑定同一 activity 和 section 的 opaque detail cursor。",
+      description: "上一页返回的 nextDetailCursor；省略时从 section 开头读取。",
       minLength: 1,
     })),
   }, { additionalProperties: false }),
@@ -135,31 +146,31 @@ type ReadParameters = Static<typeof readParameters>;
 
 const waitParameters = Type.Object({
   agentId: Type.String({
-    description: "当前 namespace 中的直接 child sessionId。",
+    description: "要等待的 subagent sessionId。",
     minLength: 1,
   }),
   afterSettled: Type.String({
-    description: "任务开始前取得的 opaque settled cursor。",
+    description: "启动该轮任务的 subagent_spawn 或 subagent_prompt 返回的 agent.settledCursor。",
     minLength: 1,
   }),
   timeoutMs: Type.Optional(Type.Integer({
-    description: "单次最长等待时间（毫秒）；默认 30000，最大 120000。",
+    description: "本次调用最多等待的毫秒数；默认 30000，最大 120000。",
     minimum: 1,
     maximum: 120_000,
     default: 30_000,
   })),
   afterActivity: Type.Optional(Type.String({
-    description: "用于附带近期活动的 opaque activity cursor。",
+    description: "附带活动的起点 cursor；只影响返回的活动，不影响 settled 判定。",
     minLength: 1,
   })),
   assistantLimit: Type.Optional(Type.Integer({
-    description: "成功返回时最多附带的 assistant message 数量。",
+    description: "settled 时最多附带的近期 assistant message 数；默认 2。",
     minimum: 1,
     maximum: 50,
     default: 2,
   })),
   toolLimit: Type.Optional(Type.Integer({
-    description: "成功返回时最多附带的 tool activity 数量。",
+    description: "settled 时最多附带的近期工具活动数；默认 3。",
     minimum: 1,
     maximum: 100,
     default: 3,
@@ -168,7 +179,7 @@ const waitParameters = Type.Object({
 
 const targetParameters = Type.Object({
   target: Type.String({
-    description: "一个直接 child agentId，或字符串 all。",
+    description: "要关闭的 subagent agentId；传入 all 时关闭当前 session 管理的全部 subagent。",
     minLength: 1,
   }),
 });
@@ -180,9 +191,9 @@ export function registerSubagentTools(
   pi.registerTool(withRenderer("spawn", {
     name: "subagent_spawn",
     label: "Spawn subagent",
-    description: "在 tmux 中启动一个普通 TUI Pi child，将其注册为当前 session 的直接 subagent，并提交初始任务。每次调用只创建一个 child；工具在 child runtime 注册成功后返回，不等待任务完成。",
-    promptSnippet: "创建持久化 child Pi，异步执行独立任务。",
-    promptGuidelines: ["使用 subagent_spawn 委派边界清晰、可独立执行的任务；工具返回只表示 child 已启动。随后优先使用 subagent_read 低噪声跟踪；只有 main 的下一步依赖 child 结果时才使用 subagent_wait。"],
+    description: "创建一个由当前 session 管理的 subagent，并提交初始任务。工具在 runtime 注册后返回，不等待任务完成；subagent 保留到调用 subagent_close。",
+    promptSnippet: "创建 subagent 异步执行独立任务。",
+    promptGuidelines: ["调用 subagent_spawn 前先检查已有 subagent。若有 subagent 处理过相关代码、文档或决策，使用 subagent_prompt；只有没有可复用对象且任务可独立验收时，才创建新的 subagent。"],
     parameters: spawnParameters,
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const agent = await manager.spawn(currentSessionId(ctx), params, {
@@ -204,12 +215,12 @@ export function registerSubagentTools(
   pi.registerTool(withRenderer("prompt", {
     name: "subagent_prompt",
     label: "Prompt subagent",
-    description: "通过 tmux 向当前 session 的一个运行中直接 child 投递正常 Pi prompt。默认使用 steer，在当前 assistant turn 的工具调用结束后尽快送达；follow-up 会等待当前工作结束后再送达。返回仅表示投递成功，不表示 child 已处理或 settled。",
-    promptSnippet: "向运行中的直接 child 投递 steer 或 follow-up prompt。",
-    promptGuidelines: ["使用 subagent_prompt 的默认 steer 修正或补充当前工作；只有当消息应在现有工作彻底结束后执行时才选择 follow_up。已终结清理的 child 不再属于当前 namespace，不能继续投递。"],
+    description: "向当前 session 管理且 runtime 存活的 subagent 发送任务或修正。返回只表示投递成功，不表示 subagent 已处理或完成。",
+    promptSnippet: "继续或修正已有 subagent 的工作。",
+    promptGuidelines: ["新信息使当前路线失效或继续执行有风险时，使用 steer；其余提示使用 follow_up。"],
     parameters: promptParameters,
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-      const delivery = params.delivery ?? "steer";
+      const delivery = params.delivery ?? "follow_up";
       const agent = await manager.prompt(
         currentSessionId(ctx),
         params.agentId,
@@ -231,9 +242,9 @@ export function registerSubagentTools(
   pi.registerTool(withRenderer("list", {
     name: "subagent_list",
     label: "List subagents",
-    description: "列出当前 Pi session 直接管理的全部 subagent，包括 agentId、显示名称、状态、generation、可用的 tmux/session 定位信息，以及 active、pending、limit、available 容量信息。仅返回直接 child。",
-    promptSnippet: "列出当前 session 的直接 subagent 及其状态。",
-    promptGuidelines: ["使用 subagent_list 发现直接 child、取得 agentId 或检查概况；需要证明某轮工作已经完成时使用 subagent_wait，不要只依赖列表中的瞬时状态。"],
+    description: "列出当前 session 管理的 subagent 及其 agentId、名称、状态、generation、tmux window 和 session 文件路径。capacity.active 是 runtime 存活数，pending 是正在创建数，limit 是 active 与 pending 的总数上限，available 是当前还能创建数。",
+    promptSnippet: "列出 subagent，并查看当前还能创建多少个。",
+    promptGuidelines: ["使用 subagent_list 查找已有 subagent、取得 agentId 或检查当前还能创建多少个。列表只反映调用时刻；确认新一轮 settled 事件时使用 subagent_wait。"],
     parameters: listParameters,
     async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
       const { agents, capacity } = await manager.list(currentSessionId(ctx));
@@ -250,9 +261,13 @@ export function registerSubagentTools(
   pi.registerTool(withRenderer("read", {
     name: "subagent_read",
     label: "Read subagent activity",
-    description: "从当前 session 的一个直接 child 的原生 Pi session JSONL 中读取结构化、只读的 finalized 活动。默认返回轻量 recent activity；turns 按 user turn 返回同类摘要；activity_detail 每次分页读取一个 activity 的一个原始 section。运行中的未完成 token 或工具增量不会返回。",
-    promptSnippet: "低噪声读取 child 的 assistant message 和工具状态。",
-    promptGuidelines: ["常规跟踪使用 subagent_read 的 recent_activity 和 cursor；只有失败摘要不足、需要精确证据或用户明确要求时才读取 activity_detail。hasMore 不要求自动读取全部历史；如需补取被 count limit 省略的摘要，复用原 after 并提高对应 limit，不要使用本次推进后的 cursor。"],
+    description: "读取当前 session 管理的 subagent 已完整写入原生 Pi session 的 assistant message 和工具活动。recent_activity 返回近期摘要；turns 按 user turn 分组；activity_detail 分页返回单条活动的原始 section。生成中的 token 和工具增量不返回。",
+    promptSnippet: "读取 subagent 的活动摘要或原始详情。",
+    promptGuidelines: [
+      "常规跟踪使用 subagent_read 的 recent_activity。接受本次摘要后，把返回的 cursor 作为下次 after。",
+      "需要按 user prompt 重建上下文时使用 turns；摘要不足或需要原始内容时使用 activity_detail。",
+      "hasMore 只表示仍有活动，按任务需要读取。补取 recent_activity 省略的条目时，复用调用前的 after，并提高 assistantLimit 或 toolLimit；返回的 cursor 已越过这些条目。",
+    ],
     parameters: readParameters,
     prepareArguments(args): ReadParameters {
       if (!isRecord(args) || args.view !== undefined) return args as ReadParameters;
@@ -334,9 +349,12 @@ export function registerSubagentTools(
   pi.registerTool(withRenderer("wait", {
     name: "subagent_wait",
     label: "Wait for subagent",
-    description: "阻塞等待当前 session 的一个直接 child 在指定 settled cursor 之后产生新的 agent_settled。仅当 main 的下一步依赖 child 结果时使用；成功时返回新的 settled cursor 和近期活动，关闭、中断或超时不会伪造完成。",
-    promptSnippet: "等待主线所依赖的 child 稳定完成。",
-    promptGuidelines: ["常规进度跟踪应优先使用 subagent_read；仅当下一步被 child 结果阻塞时调用 subagent_wait。传入任务开始前的 afterSettled，timeout 后可复用同一 afterSettled 再次等待；只有 outcome: \"settled\" 表示成功完成。"],
+    description: "阻塞等待当前 session 管理的 subagent 在 afterSettled 之后产生新的 agent_settled。outcome 为 settled 时附带近期活动；timeout、closed 和 interrupted 不表示产生了新的 settled 事件。",
+    promptSnippet: "主任务依赖结果时，等待 subagent 产生新的 settled 事件。",
+    promptGuidelines: [
+      "主 agent 的下一步依赖 subagent 结果时使用 subagent_wait；常规进度跟踪使用 subagent_read。",
+      "afterSettled 使用启动该轮任务的 subagent_spawn 或 subagent_prompt 返回的 agent.settledCursor。timeout 后复用同一个 afterSettled；只有 outcome 为 settled 才证明产生了新的 settled 事件，任务结果仍以返回的活动为准。",
+    ],
     parameters: waitParameters,
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
       onUpdate?.(toolResult({ waiting: true }, {
@@ -359,9 +377,12 @@ export function registerSubagentTools(
   pi.registerTool(withRenderer("close", {
     name: "subagent_close",
     label: "Close subagent",
-    description: "终结一个直接 child，或当前 root 的全部直接 children：先停止 Pi 进程和 tmux window，再解除管理关系并删除 Extension 状态；保留 Pi 原生 session。",
-    promptSnippet: "终结直接 child 并清理 Extension 管理数据。",
-    promptGuidelines: ["使用 subagent_close 终结不再需要的直接 child；target: \"all\" 只处理当前 root 的直接 children。成功后该 child 不再由当前 namespace 管理。"],
+    description: "终止当前 session 管理的一个或全部 subagent，停止其 Pi 进程和 tmux window，并删除 Extension 管理状态。原生 Pi session 文件保留。",
+    promptSnippet: "终止 subagent，并释放其占用的名额。",
+    promptGuidelines: [
+      "关闭前，将本轮拟关闭的全部 subagent 合并为一次确认，列出 name 和 agentId，并说明关闭后无法继续通过 subagent 工具访问。",
+      "用户的同意仅覆盖确认中列出的 target。当前请求已明确要求关闭这些 target 时，可直接调用 subagent_close。",
+    ],
     parameters: targetParameters,
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const affected = await manager.close(currentSessionId(ctx), params.target);
