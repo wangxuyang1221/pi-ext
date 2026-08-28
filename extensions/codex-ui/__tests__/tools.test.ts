@@ -323,6 +323,50 @@ test("edit renderer refreshes its title and renders the patch with Codex styling
   assert.ok(diffLines.every((line) => visibleWidth(line) <= 40));
 });
 
+test("collapsed edit diff separates and fills its hidden-lines footer", () => {
+  for (const [totalLines, hiddenLabel] of [
+    [13, "1 line"],
+    [14, "2 lines"],
+  ] as const) {
+    const registered: ToolDefinition[] = [];
+    registerToolsForTest(registered);
+    const edit = registered.find((tool) => tool.name === "edit");
+    assert.ok(edit?.renderResult);
+
+    const patchLines = Array.from({ length: totalLines }, (_, index) => ` line ${index + 1}`);
+    const component = edit.renderResult(
+      {
+        content: [{ type: "text", text: "Successfully replaced 1 block." }],
+        details: {
+          patch: [
+            "--- a/src/app.ts",
+            "+++ b/src/app.ts",
+            `@@ -1,${totalLines} +1,${totalLines} @@`,
+            ...patchLines,
+            "",
+          ].join("\n"),
+        },
+      },
+      { expanded: false, isPartial: false },
+      theme,
+      createRenderContext({ args: { path: "src/app.ts", edits: [] } }) as never,
+    );
+
+    const lines = component.render(48);
+    const footer = lines.at(-1) ?? "";
+    const plainFooter = stripTerminalSequences(footer);
+
+    assert.equal(stripTerminalSequences(lines.at(-2) ?? ""), "");
+    assert.match(plainFooter, new RegExp(`^    ── ${hiddenLabel} hidden ─+$`, "u"));
+    assert.equal(visibleWidth(footer), 48);
+    assert.ok(footer.startsWith("\x1b[2m"));
+    assert.ok(footer.endsWith("\x1b[22m"));
+
+    const narrowFooter = component.render(10).at(-1) ?? "";
+    assert.equal(visibleWidth(narrowFooter), 10);
+  }
+});
+
 test("settled edit history reuses prepared syntax highlighting", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);

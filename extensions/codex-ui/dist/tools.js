@@ -367,9 +367,17 @@ function renderEditResult(result, diffLines, options, path, theme, isError, widt
     const lines = renderDisplayDiff(visible, theme, width, path);
     const remaining = diffLines.length - visible.length;
     if (remaining > 0) {
-        lines.push(fitToWidth(theme.fg("dim", `… ${remaining} more diff lines`), width));
+        lines.push("", renderDiffTruncationFooter(remaining, width));
     }
     return lines;
+}
+function renderDiffTruncationFooter(remaining, width) {
+    const safeWidth = normalizeWidth(width);
+    if (safeWidth === 0)
+        return "";
+    const label = `${DIFF_INDENT}── ${remaining} ${remaining === 1 ? "line" : "lines"} hidden `;
+    const rule = "─".repeat(Math.max(0, safeWidth - visibleWidth(label)));
+    return fitToWidth(`${ANSI_DIM}${label}${rule}${ANSI_INTENSITY_RESET}`, safeWidth);
 }
 function renderWriteResult(result, content, isPartial, theme, isError, width) {
     if (isPartial) {
