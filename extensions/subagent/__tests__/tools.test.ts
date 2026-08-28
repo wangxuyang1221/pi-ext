@@ -389,7 +389,11 @@ test("defaults subagent_prompt execution to follow_up", async () => {
     settledCursor: "settled-a",
     sessionFile: "/sessions/child-a.jsonl",
   };
-  const promptMock = vi.fn().mockResolvedValue(agent);
+  const promptMock = vi.fn().mockResolvedValue({
+    agent,
+    deliveryId: "123456789abc",
+    confirmation: "follow_up_queue",
+  });
   const registered = registerTools({ prompt: promptMock });
   const prompt = registered.find((tool) => tool.name === "subagent_prompt");
   assert.ok(prompt);
@@ -413,7 +417,14 @@ test("defaults subagent_prompt execution to follow_up", async () => {
     "Continue",
     "follow_up",
   ]);
-  assert.equal(JSON.parse(result.content[0].text).delivery, "follow_up");
+  assert.deepEqual(JSON.parse(result.content[0].text), {
+    agent,
+    delivery: "follow_up",
+    deliveryId: "123456789abc",
+    confirmation: "follow_up_queue",
+  });
+  assert.equal(result.details.prompt, "Continue");
+  assert.equal(result.content[0].text.includes("[subagent:"), false);
 });
 
 test("encodes reuse, delivery, observation, wait, and close boundaries", () => {

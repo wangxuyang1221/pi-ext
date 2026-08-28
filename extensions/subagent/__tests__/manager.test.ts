@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { appendFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "vitest";
 
@@ -79,10 +79,13 @@ test("rejects spawn from a managed session before launching a runtime", async ()
   }
 });
 
-test("removes failed spawn metadata when initial prompt delivery fails", async () => {
+test("removes failed spawn metadata when initial prompt delivery is unconfirmed", async () => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-manager-test-"));
   const store = new SessionStateStore(root);
+  const sessionFile = join(root, "failed-child.jsonl");
   let closes = 0;
+  let alive = true;
+  let now = 0;
 
   try {
     await store.save(createSessionState({
@@ -96,11 +99,18 @@ test("removes failed spawn metadata when initial prompt delivery fails", async (
       async launch(spec) {
         const parent = JSON.parse(spec.environment[PI_SUBAGENT_PARENT]) as ParentOwnership;
         const launch = JSON.parse(spec.environment[PI_SUBAGENT_LAUNCH]) as LaunchMetadata;
+        await writeFile(sessionFile, `${JSON.stringify({
+          type: "session",
+          version: 3,
+          id: "child-a",
+          timestamp: "2026-08-27T02:00:01.000Z",
+          cwd: spec.cwd,
+        })}\n`, "utf8");
         await store.save(createSessionState({
           sessionId: "child-a",
           epoch: "child-epoch",
           cwd: spec.cwd,
-          sessionFile: "/sessions/child-a.jsonl",
+          sessionFile,
           now: "2026-08-27T02:00:01.000Z",
           parent,
           launch,
@@ -110,9 +120,13 @@ test("removes failed spawn metadata when initial prompt delivery fails", async (
         }));
         return locator;
       },
-      async sendPrompt() { throw new Error("prompt delivery failed"); },
-      async isAlive() { return false; },
-      async close() { closes += 1; },
+      async sendPrompt() {},
+      async capturePane() { return ""; },
+      async isAlive() { return alive; },
+      async close() {
+        closes += 1;
+        alive = false;
+      },
     };
     const ids = ["registration-a", "process-a"];
     const manager = new SubagentManager({
@@ -125,12 +139,21 @@ test("removes failed spawn metadata when initial prompt delivery fails", async (
       environment: { PATH: "/usr/local/bin:/usr/bin" },
       createId: () => ids.shift() ?? "unexpected-id",
       now: () => "2026-08-27T02:00:02.000Z",
+      nowMs: () => now,
+      sleep: async (milliseconds) => {
+        now += milliseconds;
+      },
     });
 
     await assert.rejects(
       manager.spawn("parent-a", { task: "Start work" }, { cwd: "/repo" }),
-      /prompt delivery failed/u,
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.equal((error as Error & { code?: string }).code, "delivery_unconfirmed");
+        return true;
+      },
     );
+    assert.equal(now, 1_000);
     assert.equal(closes, 1);
     assert.deepEqual((await store.load("parent-a"))?.children, []);
     assert.deepEqual((await store.load("parent-a"))?.reservations, []);
@@ -204,12 +227,15 @@ test("removes a child that registers while timed-out spawn cleanup is closing it
   }
 });
 
-test("registers a spawned child before delivering its initial task", async () => {
+test("prepares a persisted native session before delivering the initial task", async () => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-manager-test-"));
   const store = new SessionStateStore(root);
+  const sessionDir = join(root, "native-sessions", "parent-a", "process-a");
+  const sessionFile = join(sessionDir, "session.jsonl");
   const task = "Inspect the parser; do not leak this into process arguments.";
   let launchSpec: Parameters<ManagedTmuxRuntime["launch"]>[0] | undefined;
   const prompts: Array<{ text: string; delivery: string }> = [];
+  let alive = true;
 
   try {
     await store.save(createSessionState({
@@ -225,11 +251,25 @@ test("registers a spawned child before delivering its initial task", async () =>
         launchSpec = spec;
         const parent = JSON.parse(spec.environment[PI_SUBAGENT_PARENT]) as ParentOwnership;
         const launch = JSON.parse(spec.environment[PI_SUBAGENT_LAUNCH]) as LaunchMetadata;
+        assert.deepEqual(spec.args.slice(0, 4), [
+          "--session-dir",
+          sessionDir,
+          "--session",
+          sessionFile,
+        ]);
+        assert.equal(await readFile(sessionFile, "utf8"), "");
+        await writeFile(sessionFile, `${JSON.stringify({
+          type: "session",
+          version: 3,
+          id: "child-a",
+          timestamp: "2026-08-27T02:00:01.000Z",
+          cwd: spec.cwd,
+        })}\n`, "utf8");
         await store.save(createSessionState({
           sessionId: "child-a",
           epoch: "child-epoch",
           cwd: spec.cwd,
-          sessionFile: "/sessions/child-a.jsonl",
+          sessionFile,
           now: "2026-08-27T02:00:01.000Z",
           parent,
           launch,
@@ -241,11 +281,28 @@ test("registers a spawned child before delivering its initial task", async () =>
       },
       async sendPrompt(_locator, text, delivery) {
         prompts.push({ text, delivery });
+        assert.equal((await store.load("parent-a"))?.children[0]?.agentId, "child-a");
+        assert.match(
+          text,
+          /^\[subagent:[a-f0-9]{12}\]\nInspect the parser; do not leak this into process arguments\.$/u,
+        );
+        await appendFile(sessionFile, `${JSON.stringify({
+          type: "message",
+          id: "user-initial-task",
+          parentId: null,
+          timestamp: "2026-08-27T02:00:02.000Z",
+          message: { role: "user", content: text },
+        })}\n`, "utf8");
+      },
+      async capturePane() {
+        return "";
       },
       async isAlive() {
-        return true;
+        return alive;
       },
-      async close() {},
+      async close() {
+        alive = false;
+      },
     };
     const ids = ["registration-a", "process-a"];
     const manager = new SubagentManager({
@@ -273,7 +330,9 @@ test("registers a spawned child before delivering its initial task", async () =>
     assert.equal(JSON.stringify(launchSpec).includes(task), false);
     assert.equal(launchSpec?.environment.PI_SUBAGENT, "1");
     assert.equal(launchSpec?.environment.PI_SUBAGENT_ID, "process-a");
-    assert.deepEqual(prompts, [{ text: task, delivery: "steer" }]);
+    assert.equal(prompts.length, 1);
+    assert.equal(prompts[0]?.delivery, "steer");
+    assert.ok(prompts[0]?.text.endsWith(`\n${task}`));
     assert.deepEqual((await store.load("parent-a"))?.children.map((child) => child.agentId), [
       "child-a",
     ]);

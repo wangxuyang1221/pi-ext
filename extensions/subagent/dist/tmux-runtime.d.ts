@@ -14,6 +14,8 @@ export interface TmuxRuntimeOptions {
     tmuxPath: string;
     sessionName: string;
     transferDirectory: string;
+    sleep?: (milliseconds: number) => Promise<void>;
+    nowMs?: () => number;
 }
 export type PromptDelivery = "steer" | "follow_up";
 export interface TmuxLaunchOptions {
@@ -28,12 +30,18 @@ export declare class TmuxRuntime {
     private readonly tmuxPath;
     private readonly sessionName;
     private readonly transferDirectory;
+    private readonly sleep;
+    private readonly nowMs;
+    private readonly lastClearAtByPane;
     constructor(options: TmuxRuntimeOptions);
     launch(options: TmuxLaunchOptions): Promise<TmuxLocator>;
     locatePane(paneId: string): Promise<TmuxLocator>;
+    capturePane(locator: TmuxLocator): Promise<string>;
     isAlive(locator: TmuxLocator): Promise<boolean>;
     close(locator: TmuxLocator): Promise<void>;
     sendPrompt(locator: TmuxLocator, text: string, delivery: PromptDelivery): Promise<void>;
+    private waitForClearCooldown;
+    private assertPromptReady;
     private runRequired;
 }
 //# sourceMappingURL=tmux-runtime.d.ts.map

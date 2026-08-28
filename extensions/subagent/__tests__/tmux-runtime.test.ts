@@ -15,14 +15,53 @@ const locator = {
   panePid: 1234,
 };
 
-test("delivers follow-up prompts through a temporary tmux buffer", async () => {
+test("rejects prompt injection when the registered pane is not ready", async () => {
+  for (const output of [
+    "pi-subagents-test\t@7\t%9\t2\t0\t1234\t0\n",
+    "pi-subagents-test\t@7\t%9\t1\t0\t1234\t1\n",
+  ]) {
+    const calls: string[][] = [];
+    const execute: CommandExecution = async (_command, args) => {
+      calls.push(args);
+      return { code: 0, stdout: output, stderr: "" };
+    };
+    const runtime = new TmuxRuntime({
+      execute,
+      tmuxPath: "/opt/homebrew/bin/tmux",
+      sessionName: locator.sessionName,
+      transferDirectory: "/unused",
+    });
+
+    await assert.rejects(
+      runtime.sendPrompt(locator, "Do not inject this", "steer"),
+      /not ready for prompt delivery/u,
+    );
+    assert.deepEqual(calls, [[
+      "display-message",
+      "-p",
+      "-t",
+      "%9",
+      "#{session_name}\t#{window_id}\t#{pane_id}\t#{window_panes}\t#{pane_dead}\t#{pane_pid}\t#{pane_in_mode}",
+    ]]);
+  }
+});
+
+test("delivers follow-up prompts with raw clear and submit bytes", async () => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-tmux-test-"));
   const calls: Array<{ command: string; args: string[] }> = [];
+  const sleeps: number[] = [];
   const prompt = "Review 'quoted' input\nthen run: $(touch never)";
   let transferred = "";
   let transferMode = 0;
   const execute: CommandExecution = async (command, args) => {
     calls.push({ command, args });
+    if (args[0] === "display-message") {
+      return {
+        code: 0,
+        stdout: "pi-subagents-test\t@7\t%9\t1\t0\t1234\t0\n",
+        stderr: "",
+      };
+    }
     if (args[0] === "load-buffer") {
       const path = args.at(-1);
       assert.ok(path);
@@ -38,30 +77,83 @@ test("delivers follow-up prompts through a temporary tmux buffer", async () => {
       tmuxPath: "/opt/homebrew/bin/tmux",
       sessionName: locator.sessionName,
       transferDirectory: root,
+      sleep: async (milliseconds) => {
+        sleeps.push(milliseconds);
+      },
     });
 
     await runtime.sendPrompt(locator, prompt, "follow_up");
 
-    assert.equal(transferred, prompt);
+    assert.equal(transferred, `${prompt} `);
     assert.equal(transferMode, 0o600);
     assert.equal(calls.some((call) => call.args.includes(prompt)), false);
     assert.deepEqual(calls.map((call) => call.args[0]), [
+      "display-message",
       "load-buffer",
+      "send-keys",
       "paste-buffer",
       "send-keys",
       "delete-buffer",
     ]);
-    assert.deepEqual(calls[1].args.slice(0, 8), [
+    assert.deepEqual(calls[2].args, ["send-keys", "-H", "-t", "%9", "03"]);
+    assert.deepEqual(calls[3].args.slice(0, 8), [
       "paste-buffer",
       "-b",
-      calls[0].args[2],
+      calls[1].args[2],
       "-t",
       "%9",
       "-p",
       "-r",
       "-d",
     ]);
-    assert.deepEqual(calls[2].args, ["send-keys", "-t", "%9", "M-Enter"]);
+    assert.deepEqual(calls[4].args, ["send-keys", "-H", "-t", "%9", "1b", "0d"]);
+    assert.deepEqual(sleeps, [100, 100]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("keeps automatic clears for one pane at least 600ms apart", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-tmux-test-"));
+  const clearTimes: number[] = [];
+  const submitCalls: string[][] = [];
+  const sleeps: number[] = [];
+  let now = 0;
+  const execute: CommandExecution = async (_command, args) => {
+    if (args[0] === "display-message") {
+      return {
+        code: 0,
+        stdout: "pi-subagents-test\t@7\t%9\t1\t0\t1234\t0\n",
+        stderr: "",
+      };
+    }
+    if (args[0] === "send-keys" && args.at(-1) === "03") clearTimes.push(now);
+    if (args[0] === "send-keys" && args.at(-1) === "0d") submitCalls.push(args);
+    return { code: 0, stdout: "", stderr: "" };
+  };
+
+  try {
+    const runtime = new TmuxRuntime({
+      execute,
+      tmuxPath: "/opt/homebrew/bin/tmux",
+      sessionName: locator.sessionName,
+      transferDirectory: root,
+      nowMs: () => now,
+      sleep: async (milliseconds) => {
+        sleeps.push(milliseconds);
+        now += milliseconds;
+      },
+    });
+
+    await runtime.sendPrompt(locator, "First", "steer");
+    await runtime.sendPrompt(locator, "Second", "steer");
+
+    assert.deepEqual(clearTimes, [0, 600]);
+    assert.deepEqual(submitCalls, [
+      ["send-keys", "-H", "-t", "%9", "0d"],
+      ["send-keys", "-H", "-t", "%9", "0d"],
+    ]);
+    assert.deepEqual(sleeps, [100, 100, 400, 100, 100]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -191,6 +283,28 @@ test("locates the current child pane for self-registration", async () => {
   });
 
   assert.deepEqual(await runtime.locatePane("%9"), { ...locator, windowName: "Lin" });
+});
+
+test("captures the registered pane as joined plain text", async () => {
+  const execute: CommandExecution = async (_command, args) => {
+    assert.deepEqual(args, ["capture-pane", "-p", "-J", "-t", "%9"]);
+    return {
+      code: 0,
+      stdout: "Follow-up: [subagent:123456789abc]\n",
+      stderr: "",
+    };
+  };
+  const runtime = new TmuxRuntime({
+    execute,
+    tmuxPath: "/opt/homebrew/bin/tmux",
+    sessionName: locator.sessionName,
+    transferDirectory: "/unused",
+  });
+
+  assert.equal(
+    await runtime.capturePane(locator),
+    "Follow-up: [subagent:123456789abc]\n",
+  );
 });
 
 test("validates locator identity before treating or closing a pane", async () => {

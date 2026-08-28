@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { encodeSettledCursor } from "./cursor.js";
+import { encodeActivityCursor, encodeSettledCursor } from "./cursor.js";
 import { getDirectChild, registerDirectChild, removeDirectChildren, } from "./ownership.js";
 import { readSessionView, } from "./session-reader.js";
 import { waitForSettled, } from "./wait.js";
@@ -9,6 +10,15 @@ export const PI_SUBAGENT_STATE_ROOT = "PI_SUBAGENT_STATE_ROOT";
 export const PI_SUBAGENT_PARENT = "PI_SUBAGENT_PARENT";
 export const PI_SUBAGENT_LAUNCH = "PI_SUBAGENT_LAUNCH";
 const WAIT_PAYLOAD_MAX_BYTES = 72 * 1024;
+export class DeliveryUnconfirmedError extends Error {
+    deliveryId;
+    code = "delivery_unconfirmed";
+    constructor(deliveryId) {
+        super("delivery_unconfirmed: Child Pi may already have accepted the prompt");
+        this.deliveryId = deliveryId;
+        this.name = "DeliveryUnconfirmedError";
+    }
+}
 export class SubagentManager {
     store;
     runtime;
@@ -22,10 +32,12 @@ export class SubagentManager {
     sleep;
     registrationTimeoutMs;
     pollIntervalMs;
+    promptAckTimeoutMs;
     closeTimeoutMs;
     maxActive;
     reservationTtlMs;
     nowMs;
+    promptLocks = new Map();
     inFlightSpawns = new Map();
     closingNamespaces = new Set();
     constructor(options) {
@@ -43,6 +55,7 @@ export class SubagentManager {
         }));
         this.registrationTimeoutMs = options.registrationTimeoutMs ?? 10_000;
         this.pollIntervalMs = options.pollIntervalMs ?? 50;
+        this.promptAckTimeoutMs = options.promptAckTimeoutMs ?? 1_000;
         this.closeTimeoutMs = options.closeTimeoutMs ?? 5_000;
         this.maxActive = options.maxActive ?? 3;
         if (!Number.isSafeInteger(this.maxActive) || this.maxActive <= 0) {
@@ -93,6 +106,7 @@ export class SubagentManager {
         const model = options.model ?? defaults.model;
         const thinkingLevel = options.thinkingLevel ?? defaults.thinkingLevel;
         const sessionDir = join(this.nativeSessionRoot, parent.sessionId, processInstanceId);
+        const sessionFile = join(sessionDir, "session.jsonl");
         const parentOwnership = {
             sessionId: parent.sessionId,
             epoch: parent.epoch,
@@ -109,6 +123,8 @@ export class SubagentManager {
         const args = [
             "--session-dir",
             sessionDir,
+            "--session",
+            sessionFile,
             "--name",
             displayName,
             "--extension",
@@ -119,6 +135,8 @@ export class SubagentManager {
         let locator;
         let registeredChild;
         try {
+            await mkdir(sessionDir, { recursive: true });
+            await writeFile(sessionFile, "", { encoding: "utf8", mode: 0o600, flag: "wx" });
             locator = await this.runtime.launch({
                 cwd,
                 windowName: normalizeWindowName(displayName),
@@ -141,8 +159,8 @@ export class SubagentManager {
                 ...registerDirectChild(latestParent, child, this.now()),
                 reservations: latestParent.reservations.filter((candidate) => candidate.reservationId !== registrationToken),
             }));
-            await this.runtime.sendPrompt(child.runtime.tmux ?? locator, options.task, "steer");
-            return toManagedAgent(child);
+            const initialDelivery = await this.prompt(parent.sessionId, child.sessionId, options.task, "steer");
+            return initialDelivery.agent;
         }
         catch (error) {
             if (locator) {
@@ -471,6 +489,10 @@ export class SubagentManager {
         };
     }
     async prompt(parentSessionId, agentId, text, delivery) {
+        return this.withPromptLock(agentId, () => (this.deliverPrompt(parentSessionId, agentId, text, delivery)));
+    }
+    async deliverPrompt(parentSessionId, agentId, text, delivery) {
+        const { wireText, deliveryId, marker } = createPromptEnvelope(text);
         const { child } = await this.requireDirectSession(parentSessionId, agentId);
         if (child.runtime.status !== "running" && child.runtime.status !== "settled") {
             throw new Error(`Managed child is not running: ${agentId}`);
@@ -481,8 +503,107 @@ export class SubagentManager {
                 await this.markInterrupted(child);
             throw new Error(`Managed child runtime was interrupted: ${agentId}`);
         }
-        await this.runtime.sendPrompt(locator, text, delivery);
-        return toManagedAgent(child);
+        const baselineCursor = await this.readPromptBaseline(child);
+        await this.runtime.sendPrompt(locator, wireText, delivery);
+        const confirmation = await this.waitForPromptConfirmation({
+            child,
+            locator,
+            deliveryId,
+            marker,
+            after: baselineCursor,
+        });
+        return {
+            agent: toManagedAgent(child),
+            deliveryId,
+            confirmation,
+        };
+    }
+    async withPromptLock(agentId, operation) {
+        const previous = this.promptLocks.get(agentId) ?? Promise.resolve();
+        let release;
+        const gate = new Promise((resolveGate) => {
+            release = resolveGate;
+        });
+        const tail = previous.catch(() => undefined).then(() => gate);
+        this.promptLocks.set(agentId, tail);
+        await previous.catch(() => undefined);
+        try {
+            return await operation();
+        }
+        finally {
+            release();
+            if (this.promptLocks.get(agentId) === tail)
+                this.promptLocks.delete(agentId);
+        }
+    }
+    async readPromptBaseline(child) {
+        const deadline = this.nowMs() + this.promptAckTimeoutMs;
+        while (true) {
+            try {
+                const baseline = await readSessionView({
+                    sessionFile: child.runtime.sessionFile,
+                    agentId: child.sessionId,
+                    epoch: child.epoch,
+                    view: "turns",
+                    limit: 0,
+                });
+                if (baseline.view !== "turns") {
+                    throw new Error("Internal error: prompt baseline returned the wrong view");
+                }
+                return baseline.cursor;
+            }
+            catch (error) {
+                if (!isPendingPromptBaseline(error))
+                    throw error;
+                if (child.runtime.generation === 0 && child.runtime.settledGeneration === 0) {
+                    return encodeActivityCursor({
+                        agentId: child.sessionId,
+                        epoch: child.epoch,
+                        view: "turns",
+                        position: 0,
+                    });
+                }
+            }
+            const remaining = deadline - this.nowMs();
+            if (remaining <= 0) {
+                throw new Error("Timed out waiting for child session baseline");
+            }
+            await this.sleep(Math.min(this.pollIntervalMs, remaining));
+        }
+    }
+    async waitForPromptConfirmation(options) {
+        const deadline = this.nowMs() + this.promptAckTimeoutMs;
+        while (true) {
+            const [sessionResult, paneResult] = await Promise.allSettled([
+                readSessionView({
+                    sessionFile: options.child.runtime.sessionFile,
+                    agentId: options.child.sessionId,
+                    epoch: options.child.epoch,
+                    view: "turns",
+                    after: options.after,
+                    limit: 200,
+                }),
+                this.runtime.capturePane(options.locator),
+            ]);
+            if (sessionResult.status === "fulfilled"
+                && sessionResult.value.view === "turns"
+                && sessionResult.value.turns.some((turn) => turn.user.text.includes(options.marker))) {
+                return "session";
+            }
+            if (paneResult.status === "fulfilled") {
+                if (paneResult.value.includes(`Steering: ${options.marker}`)) {
+                    return "steering_queue";
+                }
+                if (paneResult.value.includes(`Follow-up: ${options.marker}`)) {
+                    return "follow_up_queue";
+                }
+            }
+            const remaining = deadline - this.nowMs();
+            if (remaining <= 0) {
+                throw new DeliveryUnconfirmedError(options.deliveryId);
+            }
+            await this.sleep(Math.min(this.pollIntervalMs, remaining));
+        }
     }
     async reserveSpawn(parentSessionId, reservation) {
         await this.store.update(parentSessionId, async (parent) => {
@@ -754,6 +875,30 @@ function managedAgentFromLink(link, status) {
         ...(link.launch.thinkingLevel ? { thinkingLevel: link.launch.thinkingLevel } : {}),
         sessionFile: link.sessionFile,
     };
+}
+function createPromptEnvelope(text) {
+    const normalizedInput = text
+        .replace(/\r\n/gu, "\n")
+        .replace(/\r/gu, "\n")
+        .replace(/\t/gu, "    ");
+    if (/[\u0000-\u0009\u000b-\u001f\u007f]/u.test(normalizedInput)) {
+        throw new Error("Subagent prompt contains an unsafe control character");
+    }
+    const normalized = normalizedInput.trim();
+    if (normalized.length === 0)
+        throw new Error("Cannot deliver an empty subagent prompt");
+    const deliveryId = randomUUID().replaceAll("-", "").slice(0, 12);
+    const marker = `[subagent:${deliveryId}]`;
+    return {
+        wireText: `${marker}\n${normalized}`,
+        deliveryId,
+        marker,
+    };
+}
+function isPendingPromptBaseline(error) {
+    return (error instanceof Error
+        && (("code" in error && error.code === "ENOENT")
+            || error.message === "Pi session has no complete header"));
 }
 function normalizeWindowName(value) {
     const normalized = value.replace(/[\u0000-\u001f\u007f]/gu, " ").trim();

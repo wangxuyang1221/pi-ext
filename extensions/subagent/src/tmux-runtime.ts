@@ -21,6 +21,8 @@ export interface TmuxRuntimeOptions {
   tmuxPath: string;
   sessionName: string;
   transferDirectory: string;
+  sleep?: (milliseconds: number) => Promise<void>;
+  nowMs?: () => number;
 }
 
 export type PromptDelivery = "steer" | "follow_up";
@@ -34,18 +36,26 @@ export interface TmuxLaunchOptions {
 }
 
 const LOCATOR_FORMAT = "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_pid}";
+const PROMPT_READY_FORMAT = "#{session_name}\t#{window_id}\t#{pane_id}\t#{window_panes}\t#{pane_dead}\t#{pane_pid}\t#{pane_in_mode}";
 
 export class TmuxRuntime {
   private readonly execute: CommandExecution;
   private readonly tmuxPath: string;
   private readonly sessionName: string;
   private readonly transferDirectory: string;
+  private readonly sleep: (milliseconds: number) => Promise<void>;
+  private readonly nowMs: () => number;
+  private readonly lastClearAtByPane = new Map<string, number>();
 
   constructor(options: TmuxRuntimeOptions) {
     this.execute = options.execute;
     this.tmuxPath = options.tmuxPath;
     this.sessionName = options.sessionName;
     this.transferDirectory = options.transferDirectory;
+    this.sleep = options.sleep ?? ((milliseconds) => new Promise((resolveDelay) => {
+      setTimeout(resolveDelay, milliseconds);
+    }));
+    this.nowMs = options.nowMs ?? Date.now;
   }
 
   async launch(options: TmuxLaunchOptions): Promise<TmuxLocator> {
@@ -135,6 +145,17 @@ export class TmuxRuntime {
     };
   }
 
+  async capturePane(locator: TmuxLocator): Promise<string> {
+    const result = await this.runRequired([
+      "capture-pane",
+      "-p",
+      "-J",
+      "-t",
+      locator.paneId,
+    ]);
+    return result.stdout;
+  }
+
   async isAlive(locator: TmuxLocator): Promise<boolean> {
     const result = await this.execute(this.tmuxPath, [
       "display-message",
@@ -169,6 +190,8 @@ export class TmuxRuntime {
     delivery: PromptDelivery,
   ): Promise<void> {
     if (text.length === 0) throw new Error("Cannot deliver an empty subagent prompt");
+    await this.waitForClearCooldown(locator.paneId);
+    await this.assertPromptReady(locator);
     await mkdir(this.transferDirectory, { recursive: true });
     const id = randomUUID();
     const path = join(this.transferDirectory, `prompt-${id}.txt`);
@@ -176,9 +199,15 @@ export class TmuxRuntime {
     let loaded = false;
 
     try {
-      await writeFile(path, text, { encoding: "utf8", mode: 0o600 });
+      await writeFile(path, `${text} `, { encoding: "utf8", mode: 0o600 });
       await this.runRequired(["load-buffer", "-b", buffer, path]);
       loaded = true;
+      try {
+        await this.runRequired(["send-keys", "-H", "-t", locator.paneId, "03"]);
+      } finally {
+        this.lastClearAtByPane.set(locator.paneId, this.nowMs());
+      }
+      await this.sleep(100);
       await this.runRequired([
         "paste-buffer",
         "-b",
@@ -189,17 +218,64 @@ export class TmuxRuntime {
         "-r",
         "-d",
       ]);
+      await this.sleep(100);
       await this.runRequired([
         "send-keys",
+        "-H",
         "-t",
         locator.paneId,
-        delivery === "follow_up" ? "M-Enter" : "Enter",
+        ...(delivery === "follow_up" ? ["1b", "0d"] : ["0d"]),
       ]);
     } finally {
       await rm(path, { force: true });
       if (loaded) {
         await this.execute(this.tmuxPath, ["delete-buffer", "-b", buffer]).catch(() => undefined);
       }
+    }
+  }
+
+  private async waitForClearCooldown(paneId: string): Promise<void> {
+    while (true) {
+      const lastClearAt = this.lastClearAtByPane.get(paneId);
+      if (lastClearAt === undefined) return;
+      const remaining = 600 - (this.nowMs() - lastClearAt);
+      if (remaining <= 0) return;
+      await this.sleep(remaining);
+    }
+  }
+
+  private async assertPromptReady(locator: TmuxLocator): Promise<void> {
+    if (locator.panePid === undefined) {
+      throw new Error("tmux pane is not ready for prompt delivery");
+    }
+    const result = await this.runRequired([
+      "display-message",
+      "-p",
+      "-t",
+      locator.paneId,
+      PROMPT_READY_FORMAT,
+    ]);
+    const [
+      sessionName,
+      windowId,
+      paneId,
+      windowPanes,
+      paneDead,
+      panePidText,
+      paneInMode,
+      ...extra
+    ] = result.stdout.trim().split("\t");
+    if (
+      sessionName !== locator.sessionName
+      || windowId !== locator.windowId
+      || paneId !== locator.paneId
+      || windowPanes !== "1"
+      || paneDead !== "0"
+      || Number(panePidText) !== locator.panePid
+      || paneInMode !== "0"
+      || extra.length > 0
+    ) {
+      throw new Error("tmux pane is not ready for prompt delivery");
     }
   }
 

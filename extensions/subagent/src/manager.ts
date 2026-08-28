@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-import { encodeSettledCursor } from "./cursor.js";
+import { encodeActivityCursor, encodeSettledCursor } from "./cursor.js";
 import {
   getDirectChild,
   registerDirectChild,
@@ -41,6 +42,7 @@ const WAIT_PAYLOAD_MAX_BYTES = 72 * 1024;
 export interface ManagedTmuxRuntime {
   launch(options: TmuxLaunchOptions): Promise<TmuxLocator>;
   sendPrompt(locator: TmuxLocator, text: string, delivery: PromptDelivery): Promise<void>;
+  capturePane(locator: TmuxLocator): Promise<string>;
   isAlive(locator: TmuxLocator): Promise<boolean>;
   close(locator: TmuxLocator): Promise<void>;
 }
@@ -58,6 +60,7 @@ export interface SubagentManagerOptions {
   sleep?: (milliseconds: number) => Promise<void>;
   registrationTimeoutMs?: number;
   pollIntervalMs?: number;
+  promptAckTimeoutMs?: number;
   closeTimeoutMs?: number;
   maxActive?: number;
   reservationTtlMs?: number;
@@ -103,6 +106,26 @@ export interface ManagedAgentList {
   capacity: SubagentCapacity;
 }
 
+export type PromptConfirmation =
+  | "session"
+  | "steering_queue"
+  | "follow_up_queue";
+
+export interface ManagedPromptResult {
+  agent: ManagedAgent;
+  deliveryId: string;
+  confirmation: PromptConfirmation;
+}
+
+export class DeliveryUnconfirmedError extends Error {
+  readonly code = "delivery_unconfirmed";
+
+  constructor(readonly deliveryId: string) {
+    super("delivery_unconfirmed: Child Pi may already have accepted the prompt");
+    this.name = "DeliveryUnconfirmedError";
+  }
+}
+
 export interface WaitManagedOptions {
   afterSettled: string;
   timeoutMs: number;
@@ -136,10 +159,12 @@ export class SubagentManager {
   private readonly sleep: (milliseconds: number) => Promise<void>;
   private readonly registrationTimeoutMs: number;
   private readonly pollIntervalMs: number;
+  private readonly promptAckTimeoutMs: number;
   private readonly closeTimeoutMs: number;
   private readonly maxActive: number;
   private readonly reservationTtlMs: number;
   private readonly nowMs: () => number;
+  private readonly promptLocks = new Map<string, Promise<void>>();
   private readonly inFlightSpawns = new Map<string, Set<Promise<ManagedAgent>>>();
   private readonly closingNamespaces = new Set<string>();
 
@@ -158,6 +183,7 @@ export class SubagentManager {
     }));
     this.registrationTimeoutMs = options.registrationTimeoutMs ?? 10_000;
     this.pollIntervalMs = options.pollIntervalMs ?? 50;
+    this.promptAckTimeoutMs = options.promptAckTimeoutMs ?? 1_000;
     this.closeTimeoutMs = options.closeTimeoutMs ?? 5_000;
     this.maxActive = options.maxActive ?? 3;
     if (!Number.isSafeInteger(this.maxActive) || this.maxActive <= 0) {
@@ -217,6 +243,7 @@ export class SubagentManager {
     const model = options.model ?? defaults.model;
     const thinkingLevel = options.thinkingLevel ?? defaults.thinkingLevel;
     const sessionDir = join(this.nativeSessionRoot, parent.sessionId, processInstanceId);
+    const sessionFile = join(sessionDir, "session.jsonl");
     const parentOwnership: ParentOwnership = {
       sessionId: parent.sessionId,
       epoch: parent.epoch,
@@ -233,6 +260,8 @@ export class SubagentManager {
     const args = [
       "--session-dir",
       sessionDir,
+      "--session",
+      sessionFile,
       "--name",
       displayName,
       "--extension",
@@ -244,6 +273,8 @@ export class SubagentManager {
     let locator: TmuxLocator | undefined;
     let registeredChild: SessionState | undefined;
     try {
+      await mkdir(sessionDir, { recursive: true });
+      await writeFile(sessionFile, "", { encoding: "utf8", mode: 0o600, flag: "wx" });
       locator = await this.runtime.launch({
         cwd,
         windowName: normalizeWindowName(displayName),
@@ -268,8 +299,13 @@ export class SubagentManager {
           (candidate) => candidate.reservationId !== registrationToken,
         ),
       }));
-      await this.runtime.sendPrompt(child.runtime.tmux ?? locator, options.task, "steer");
-      return toManagedAgent(child);
+      const initialDelivery = await this.prompt(
+        parent.sessionId,
+        child.sessionId,
+        options.task,
+        "steer",
+      );
+      return initialDelivery.agent;
     } catch (error) {
       if (locator) {
         try {
@@ -666,7 +702,19 @@ export class SubagentManager {
     agentId: string,
     text: string,
     delivery: PromptDelivery,
-  ): Promise<ManagedAgent> {
+  ): Promise<ManagedPromptResult> {
+    return this.withPromptLock(agentId, () => (
+      this.deliverPrompt(parentSessionId, agentId, text, delivery)
+    ));
+  }
+
+  private async deliverPrompt(
+    parentSessionId: string,
+    agentId: string,
+    text: string,
+    delivery: PromptDelivery,
+  ): Promise<ManagedPromptResult> {
+    const { wireText, deliveryId, marker } = createPromptEnvelope(text);
     const { child } = await this.requireDirectSession(parentSessionId, agentId);
     if (child.runtime.status !== "running" && child.runtime.status !== "settled") {
       throw new Error(`Managed child is not running: ${agentId}`);
@@ -677,8 +725,117 @@ export class SubagentManager {
       throw new Error(`Managed child runtime was interrupted: ${agentId}`);
     }
 
-    await this.runtime.sendPrompt(locator, text, delivery);
-    return toManagedAgent(child);
+    const baselineCursor = await this.readPromptBaseline(child);
+    await this.runtime.sendPrompt(locator, wireText, delivery);
+    const confirmation = await this.waitForPromptConfirmation({
+      child,
+      locator,
+      deliveryId,
+      marker,
+      after: baselineCursor,
+    });
+    return {
+      agent: toManagedAgent(child),
+      deliveryId,
+      confirmation,
+    };
+  }
+
+  private async withPromptLock<T>(
+    agentId: string,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    const previous = this.promptLocks.get(agentId) ?? Promise.resolve();
+    let release!: () => void;
+    const gate = new Promise<void>((resolveGate) => {
+      release = resolveGate;
+    });
+    const tail = previous.catch(() => undefined).then(() => gate);
+    this.promptLocks.set(agentId, tail);
+    await previous.catch(() => undefined);
+    try {
+      return await operation();
+    } finally {
+      release();
+      if (this.promptLocks.get(agentId) === tail) this.promptLocks.delete(agentId);
+    }
+  }
+
+  private async readPromptBaseline(child: SessionState): Promise<string> {
+    const deadline = this.nowMs() + this.promptAckTimeoutMs;
+    while (true) {
+      try {
+        const baseline = await readSessionView({
+          sessionFile: child.runtime.sessionFile,
+          agentId: child.sessionId,
+          epoch: child.epoch,
+          view: "turns",
+          limit: 0,
+        });
+        if (baseline.view !== "turns") {
+          throw new Error("Internal error: prompt baseline returned the wrong view");
+        }
+        return baseline.cursor;
+      } catch (error) {
+        if (!isPendingPromptBaseline(error)) throw error;
+        if (child.runtime.generation === 0 && child.runtime.settledGeneration === 0) {
+          return encodeActivityCursor({
+            agentId: child.sessionId,
+            epoch: child.epoch,
+            view: "turns",
+            position: 0,
+          });
+        }
+      }
+      const remaining = deadline - this.nowMs();
+      if (remaining <= 0) {
+        throw new Error("Timed out waiting for child session baseline");
+      }
+      await this.sleep(Math.min(this.pollIntervalMs, remaining));
+    }
+  }
+
+  private async waitForPromptConfirmation(options: {
+    child: SessionState;
+    locator: TmuxLocator;
+    deliveryId: string;
+    marker: string;
+    after: string;
+  }): Promise<PromptConfirmation> {
+    const deadline = this.nowMs() + this.promptAckTimeoutMs;
+    while (true) {
+      const [sessionResult, paneResult] = await Promise.allSettled([
+        readSessionView({
+          sessionFile: options.child.runtime.sessionFile,
+          agentId: options.child.sessionId,
+          epoch: options.child.epoch,
+          view: "turns",
+          after: options.after,
+          limit: 200,
+        }),
+        this.runtime.capturePane(options.locator),
+      ]);
+      if (
+        sessionResult.status === "fulfilled"
+        && sessionResult.value.view === "turns"
+        && sessionResult.value.turns.some((turn) => turn.user.text.includes(options.marker))
+      ) {
+        return "session";
+      }
+      if (paneResult.status === "fulfilled") {
+        if (paneResult.value.includes(`Steering: ${options.marker}`)) {
+          return "steering_queue";
+        }
+        if (paneResult.value.includes(`Follow-up: ${options.marker}`)) {
+          return "follow_up_queue";
+        }
+      }
+      const remaining = deadline - this.nowMs();
+      if (remaining <= 0) {
+        throw new DeliveryUnconfirmedError(options.deliveryId);
+      }
+      await this.sleep(Math.min(this.pollIntervalMs, remaining));
+    }
   }
 
   private async reserveSpawn(
@@ -1022,6 +1179,39 @@ function managedAgentFromLink(
     ...(link.launch.thinkingLevel ? { thinkingLevel: link.launch.thinkingLevel } : {}),
     sessionFile: link.sessionFile,
   };
+}
+
+function createPromptEnvelope(text: string): {
+  wireText: string;
+  deliveryId: string;
+  marker: string;
+} {
+  const normalizedInput = text
+    .replace(/\r\n/gu, "\n")
+    .replace(/\r/gu, "\n")
+    .replace(/\t/gu, "    ");
+  if (/[\u0000-\u0009\u000b-\u001f\u007f]/u.test(normalizedInput)) {
+    throw new Error("Subagent prompt contains an unsafe control character");
+  }
+  const normalized = normalizedInput.trim();
+  if (normalized.length === 0) throw new Error("Cannot deliver an empty subagent prompt");
+  const deliveryId = randomUUID().replaceAll("-", "").slice(0, 12);
+  const marker = `[subagent:${deliveryId}]`;
+  return {
+    wireText: `${marker}\n${normalized}`,
+    deliveryId,
+    marker,
+  };
+}
+
+function isPendingPromptBaseline(error: unknown): boolean {
+  return (
+    error instanceof Error
+    && (
+      ("code" in error && error.code === "ENOENT")
+      || error.message === "Pi session has no complete header"
+    )
+  );
 }
 
 function normalizeWindowName(value: string): string {

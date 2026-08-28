@@ -45,16 +45,35 @@ test.skipIf(!runIntegration)(
       sessionName: tmuxSessionName,
       transferDirectory: join(root, "prompt-transfer"),
     });
+    const blockingMarkerFile = join(root, "integration-block-ready");
     const extensionFile = join(root, "integration-extension.mjs");
     const subagentExtensionUrl = pathToFileURL(
       resolve("extensions/subagent/dist/index.js"),
     ).href;
     await writeFile(extensionFile, `
+import { writeFile } from "node:fs/promises";
+
 import subagentExtension from ${JSON.stringify(subagentExtensionUrl)};
 import { Type } from "typebox";
 
+const blockingMarkerFile = ${JSON.stringify(blockingMarkerFile)};
+
 export default function integrationExtension(pi) {
   subagentExtension(pi);
+  pi.registerTool({
+    name: "integration_block",
+    label: "Integration block",
+    description: "Block long enough to verify prompt delivery while the child is streaming.",
+    parameters: Type.Object({ marker: Type.String() }),
+    async execute(_toolCallId, params) {
+      await writeFile(blockingMarkerFile, params.marker, "utf8");
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 4_000));
+      return {
+        content: [{ type: "text", text: params.marker }],
+        details: {},
+      };
+    },
+  });
   pi.registerTool({
     name: "integration_large_output",
     label: "Integration large output",
@@ -94,8 +113,10 @@ export default function integrationExtension(pi) {
     const markerOne = `SUBAGENT_E2E_ONE_${Date.now()}`;
     const markerTwo = `SUBAGENT_E2E_TWO_${Date.now()}`;
     const markerThree = `SUBAGENT_E2E_THREE_${Date.now()}`;
-    const largeResultMarker = `SUBAGENT_E2E_LARGE_RESULT_${Date.now()}`;
+    const blockingToolMarker = `SUBAGENT_E2E_BLOCK_${Date.now()}`;
     const markerFour = `SUBAGENT_E2E_FOUR_${Date.now()}`;
+    const largeResultMarker = `SUBAGENT_E2E_LARGE_RESULT_${Date.now()}`;
+    const markerFive = `SUBAGENT_E2E_FIVE_${Date.now()}`;
     const model = process.env.PI_PROVIDER && process.env.PI_MODEL
       ? `${process.env.PI_PROVIDER}/${process.env.PI_MODEL}`
       : undefined;
@@ -146,18 +167,13 @@ export default function integrationExtension(pi) {
         (activity) => activity.kind === "assistant" && activity.text.includes(markerOne),
       ));
 
-      await manager.prompt(
+      const idleDelivery = await manager.prompt(
         parentId,
         spawned.agentId,
         `Reply with exactly ${markerTwo}. Do not call tools.`,
         "steer",
       );
-      await manager.prompt(
-        parentId,
-        spawned.agentId,
-        `Reply with exactly ${markerThree}. Do not call tools.`,
-        "follow_up",
-      );
+      assert.equal(idleDelivery.confirmation, "session");
       const second = await manager.wait(parentId, spawned.agentId, {
         afterSettled: first.settledCursor!,
         timeoutMs: 120_000,
@@ -170,44 +186,99 @@ export default function integrationExtension(pi) {
       assert.ok(second.activity.some(
         (activity) => activity.kind === "assistant" && activity.text.includes(markerTwo),
       ));
-      assert.ok(second.activity.some(
-        (activity) => activity.kind === "assistant" && activity.text.includes(markerThree),
-      ));
       assert.ok(second.activityCursor);
 
-      await manager.prompt(
+      const blockingDelivery = await manager.prompt(
         parentId,
         spawned.agentId,
-        `Call integration_large_output exactly once with marker ${largeResultMarker}. After it succeeds, reply with exactly ${markerFour}.`,
+        `Call integration_block exactly once with marker ${blockingToolMarker}. After it succeeds, reply with exactly ${markerFour}.`,
         "steer",
       );
-      const third = await manager.wait(parentId, spawned.agentId, {
+      assert.equal(blockingDelivery.confirmation, "session");
+      await waitForPath(blockingMarkerFile, 30_000);
+      const queuedDelivery = await manager.prompt(
+        parentId,
+        spawned.agentId,
+        `Reply with exactly ${markerThree}. Do not call tools.`,
+        "follow_up",
+      );
+      assert.equal(queuedDelivery.confirmation, "follow_up_queue");
+
+      let streamingSettled = await manager.wait(parentId, spawned.agentId, {
         afterSettled: second.settledCursor!,
         timeoutMs: 120_000,
         afterActivity: second.activityCursor,
+        assistantLimit: 3,
+        toolLimit: 3,
+      });
+      assert.equal(streamingSettled.outcome, "settled");
+      const streamingActivity = [...streamingSettled.activity];
+      for (let attempt = 0; attempt < 2 && !streamingActivity.some(
+        (activity) => activity.kind === "assistant" && activity.text.includes(markerThree),
+      ); attempt += 1) {
+        const next = await manager.wait(parentId, spawned.agentId, {
+          afterSettled: streamingSettled.settledCursor!,
+          timeoutMs: 120_000,
+          afterActivity: streamingSettled.activityCursor,
+          assistantLimit: 3,
+          toolLimit: 3,
+        });
+        assert.equal(next.outcome, "settled");
+        streamingSettled = next;
+        streamingActivity.push(...next.activity);
+      }
+      assert.ok(streamingActivity.some(
+        (activity) => (
+          activity.kind === "tool"
+          && activity.toolName === "integration_block"
+          && activity.outcome === "succeeded"
+        ),
+      ));
+      assert.ok(streamingActivity.some(
+        (activity) => activity.kind === "assistant" && activity.text.includes(markerFour),
+      ));
+      assert.ok(streamingActivity.some(
+        (activity) => activity.kind === "assistant" && activity.text.includes(markerThree),
+      ));
+      assert.ok(streamingSettled.activityCursor);
+
+      const largeDelivery = await manager.prompt(
+        parentId,
+        spawned.agentId,
+        `Call integration_large_output exactly once with marker ${largeResultMarker}. After it succeeds, reply with exactly ${markerFive}.`,
+        "steer",
+      );
+      assert.equal(largeDelivery.confirmation, "session");
+      const largeSettled = await manager.wait(parentId, spawned.agentId, {
+        afterSettled: streamingSettled.settledCursor!,
+        timeoutMs: 120_000,
+        afterActivity: streamingSettled.activityCursor,
         assistantLimit: 1,
         toolLimit: 1,
       });
-      assert.equal(third.outcome, "settled");
-      assert.equal(third.generation, second.generation + 1);
-      assert.ok(third.activity.some(
+      assert.equal(largeSettled.outcome, "settled");
+      assert.equal(largeSettled.generation, streamingSettled.generation + 1);
+      assert.ok(largeSettled.activity.some(
         (activity) => (
           activity.kind === "tool"
           && activity.toolName === "integration_large_output"
           && activity.outcome === "succeeded"
         ),
       ));
-      assert.ok(third.activity.some(
-        (activity) => activity.kind === "assistant" && activity.text.includes(markerFour),
+      assert.ok(largeSettled.activity.some(
+        (activity) => activity.kind === "assistant" && activity.text.includes(markerFive),
       ));
-      const serializedThird = JSON.stringify(third);
-      assert.equal(serializedThird.includes(largeResultMarker), false);
-      assert.equal(third.returnedBytes, Buffer.byteLength(serializedThird, "utf8"));
-      assert.ok(third.returnedBytes <= 72 * 1024);
+      const serializedLargeSettled = JSON.stringify(largeSettled);
+      assert.equal(serializedLargeSettled.includes(largeResultMarker), false);
+      assert.equal(
+        largeSettled.returnedBytes,
+        Buffer.byteLength(serializedLargeSettled, "utf8"),
+      );
+      assert.ok(largeSettled.returnedBytes <= 72 * 1024);
 
       const largeRead = await manager.read(parentId, spawned.agentId, {
         view: "recent_activity",
-        after: second.activityCursor,
+        after: streamingSettled.activityCursor,
         assistantLimit: 1,
         toolLimit: 1,
       });
@@ -225,7 +296,7 @@ export default function integrationExtension(pi) {
       assert.ok(largeTool);
       assert.equal(largeTool.outcome, "succeeded");
       assert.ok(largeRead.activity.some(
-        (activity) => activity.kind === "assistant" && activity.text.includes(markerFour),
+        (activity) => activity.kind === "assistant" && activity.text.includes(markerFive),
       ));
 
       const detail = await manager.read(parentId, spawned.agentId, {
@@ -259,3 +330,18 @@ export default function integrationExtension(pi) {
   },
   360_000,
 );
+
+async function waitForPath(path: string, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (true) {
+    try {
+      await access(path);
+      return;
+    } catch {
+      if (Date.now() >= deadline) {
+        throw new Error(`Timed out waiting for integration path: ${path}`);
+      }
+      await new Promise<void>((resolveDelay) => setTimeout(resolveDelay, 50));
+    }
+  }
+}
