@@ -46,7 +46,13 @@ function createTheme(): Theme {
       ? 82
       : name === "toolDiffContext"
         ? 189
-        : 81;
+        : name === "toolOutput"
+          ? 250
+          : name === "muted"
+            ? 244
+            : name === "dim"
+              ? 240
+              : 81;
 
   return {
     fg: (name: string, text: string) => `\x1b[38;5;${getFgCode(name)}m${text}\x1b[39m`,
@@ -266,6 +272,165 @@ test("tool overrides retain metadata and delegate execution using context cwd", 
   assert.equal(delegated.at(-1)?.signal, controller.signal);
   assert.equal(delegated.at(-1)?.onUpdate, onUpdate);
   assert.equal(delegated.at(-1)?.context, context);
+});
+
+test("read renderer moves the success marker to the call row and layers the line count", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const read = registered.find((tool) => tool.name === "read");
+  assert.ok(read?.renderCall);
+  assert.ok(read.renderResult);
+
+  const args = { path: "src/app.ts", offset: 4, limit: 2 };
+  const state = {};
+  const call = read.renderCall(
+    args,
+    theme,
+    createRenderContext({ args, state, isPartial: true }) as never,
+  );
+  assert.equal(
+    stripTerminalSequences(call.render(80).join("\n")),
+    "• Read src/app.ts (offset=4, limit=2)",
+  );
+
+  const result = read.renderResult(
+    { content: [{ type: "text", text: "alpha\nbeta" }], details: undefined },
+    { expanded: false, isPartial: false },
+    theme,
+    createRenderContext({ args, state }) as never,
+  );
+
+  const settledTitleAnsi = call.render(80).join("\n");
+  const summaryAnsi = result.render(80).at(0) ?? "";
+  assert.equal(
+    stripTerminalSequences(settledTitleAnsi),
+    "✓ Read src/app.ts (offset=4, limit=2)",
+  );
+  assert.ok(settledTitleAnsi.includes("\x1b[38;5;82m✓\x1b[39m"));
+  assert.equal(stripTerminalSequences(summaryAnsi), "  2 lines");
+  assert.ok(!summaryAnsi.includes("└"));
+  assert.ok(summaryAnsi.includes("\x1b[38;5;250m\x1b[1m2\x1b[22m\x1b[39m"));
+  assert.ok(summaryAnsi.includes("\x1b[38;5;240mlines\x1b[39m"));
+
+  const write = registered.find((tool) => tool.name === "write");
+  assert.ok(write?.renderCall);
+  const writeArgs = { path: "src/new.ts", content: "one\ntwo" };
+  const writeCall = write.renderCall(
+    writeArgs,
+    theme,
+    createRenderContext({ args: writeArgs }) as never,
+  );
+  assert.equal(
+    stripTerminalSequences(writeCall.render(80).join("\n")),
+    "• Write src/new.ts (2 lines)",
+  );
+});
+
+test("read renderer preserves summary variants", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const read = registered.find((tool) => tool.name === "read");
+  assert.ok(read?.renderResult);
+
+  const renderSummary = (
+    content: Array<{ type: string; text?: string; data?: string; mimeType?: string }>,
+    details: unknown = undefined,
+  ) => read.renderResult?.(
+    { content, details },
+    { expanded: false, isPartial: false },
+    theme,
+    createRenderContext({ args: { path: "fixture.txt" }, state: {} }) as never,
+  ).render(80).at(0) ?? "";
+
+  assert.equal(stripTerminalSequences(renderSummary([
+    { type: "text", text: "only" },
+  ])), "  1 line");
+
+  const truncated = renderSummary(
+    [{ type: "text", text: "one\ntwo" }],
+    { truncation: { truncated: true } },
+  );
+  assert.equal(stripTerminalSequences(truncated), "  2 lines · truncated");
+  assert.ok(truncated.includes("\x1b[38;5;240m · truncated\x1b[39m"));
+
+  const image = renderSummary([
+    { type: "text", text: "Read image file [image/png]" },
+    { type: "image", data: "base64", mimeType: "image/png" },
+  ]);
+  assert.equal(stripTerminalSequences(image), "  Image loaded");
+  assert.ok(image.includes("\x1b[38;5;250mImage loaded\x1b[39m"));
+});
+
+test("read renderer keeps partial and error calls neutral", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const read = registered.find((tool) => tool.name === "read");
+  assert.ok(read?.renderCall);
+  assert.ok(read.renderResult);
+
+  const args = { path: "src/app.ts" };
+  const state = {};
+  const call = read.renderCall(
+    args,
+    theme,
+    createRenderContext({ args, state, isPartial: true }) as never,
+  );
+  call.render(80);
+
+  const partial = read.renderResult(
+    { content: [{ type: "text", text: "alpha" }], details: undefined },
+    { expanded: false, isPartial: true },
+    theme,
+    createRenderContext({ args, state, isPartial: true }) as never,
+  );
+  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "• Read src/app.ts");
+  assert.equal(stripTerminalSequences(partial.render(80).join("\n")), "  … Reading");
+
+  const error = read.renderResult(
+    { content: [{ type: "text", text: "Permission denied\nstack" }], details: undefined },
+    { expanded: false, isPartial: false },
+    theme,
+    createRenderContext({ args, state, isError: true }) as never,
+  );
+  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "• Read src/app.ts");
+  assert.equal(stripTerminalSequences(error.render(80).join("\n")), "  ✗ Permission denied");
+});
+
+test("read renderer preserves expanded output and fits narrow widths", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const read = registered.find((tool) => tool.name === "read");
+  assert.ok(read?.renderCall);
+  assert.ok(read.renderResult);
+
+  const args = { path: "a/very/long/path/to/a/fixture.txt" };
+  const state = {};
+  const call = read.renderCall(
+    args,
+    theme,
+    createRenderContext({ args, state, isPartial: true }) as never,
+  );
+  const content = Array.from({ length: 42 }, (_, index) => `line ${index + 1}`).join("\n");
+  const result = read.renderResult(
+    { content: [{ type: "text", text: content }], details: undefined },
+    { expanded: true, isPartial: false },
+    theme,
+    createRenderContext({ args, state }) as never,
+  );
+
+  const lines = result.render(80).map((line) => stripTerminalSequences(line));
+  assert.equal(lines.length, 42);
+  assert.equal(lines[0], "  42 lines");
+  assert.equal(lines[1], "    line 1");
+  assert.equal(lines[40], "    line 40");
+  assert.equal(lines[41], "    … 2 more lines");
+
+  for (const width of [1, 2, 8, 20]) {
+    const narrowLines = [...call.render(width), ...result.render(width)];
+    assert.ok(narrowLines.every((line) => visibleWidth(line) <= width));
+  }
+  assert.deepEqual(call.render(0), []);
+  assert.deepEqual(result.render(0), []);
 });
 
 test("edit renderer refreshes its title and renders the patch with Codex styling", () => {

@@ -50,13 +50,32 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
             return getReadDefinition(ctx.cwd).execute(toolCallId, params, signal, onUpdate, ctx);
         },
         renderCall(args, theme, context) {
+            const state = context.state;
             const path = formatToolPath(args.path, context.cwd);
             const range = formatReadRange(args.offset, args.limit, theme);
-            return updateComponent(context.lastComponent, (width) => [
-                fitToWidth(formatToolTitle("Read", path, theme, range), width),
+            if (state.path !== path) {
+                state.path = path;
+                state.settledTitle = undefined;
+            }
+            state.initialTitle = formatToolTitle("Read", path, theme, range);
+            const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
+            state.callComponent = component;
+            component.setRenderer((width) => [
+                fitToWidth(state.settledTitle ?? state.initialTitle ?? "", width),
             ]);
+            return component;
         },
         renderResult(result, options, theme, context) {
+            const state = context.state;
+            const path = formatToolPath(context.args.path, context.cwd);
+            const range = formatReadRange(context.args.offset, context.args.limit, theme);
+            const nextTitle = !options.isPartial && !context.isError
+                ? formatToolTitle("Read", path, theme, range, { glyph: "✓", color: "success" })
+                : undefined;
+            if (state.settledTitle !== nextTitle) {
+                state.settledTitle = nextTitle;
+                state.callComponent?.invalidate();
+            }
             return updateComponent(context.lastComponent, (width) => renderReadResult(result, options, theme, context.isError, width));
         },
     };
@@ -289,9 +308,9 @@ function formatEditTitle(action, path, theme, suffix = "") {
         parts.push(suffix);
     return parts.join(" ");
 }
-function formatToolTitle(action, path, theme, suffix = "") {
+function formatToolTitle(action, path, theme, suffix = "", marker = { glyph: "•", color: "dim" }) {
     const parts = [
-        theme.fg("dim", "•"),
+        theme.fg(marker.color, marker.glyph),
         theme.fg("toolTitle", theme.bold(action)),
         theme.fg("accent", path || "(unknown path)"),
     ];
@@ -335,11 +354,13 @@ function renderReadResult(result, options, theme, isError, width) {
     }
     const hasImage = result.content.some((content) => content.type === "image");
     const lineCount = countLines(text);
-    let summary = hasImage ? "Image loaded" : formatLineCount(lineCount);
+    let summary = hasImage
+        ? `  ${theme.fg("toolOutput", "Image loaded")}`
+        : `  ${theme.fg("toolOutput", theme.bold(String(lineCount)))} ${theme.fg("dim", lineCount === 1 ? "line" : "lines")}`;
     if (result.details?.truncation?.truncated) {
-        summary += " · truncated";
+        summary += theme.fg("dim", " · truncated");
     }
-    const lines = [theme.fg("success", `  └ ${summary}`)];
+    const lines = [summary];
     if (options.expanded && text) {
         const contentLines = text.split("\n");
         const shown = contentLines.slice(0, EXPANDED_READ_LINES);
