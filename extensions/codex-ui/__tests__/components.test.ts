@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "vitest";
+import { test, vi } from "vitest";
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import {
   CURSOR_MARKER,
@@ -8,6 +8,21 @@ import {
   type EditorTheme,
   type TUI,
 } from "@earendil-works/pi-tui";
+
+const { stripTerminalSequencesMock } = vi.hoisted(() => ({
+  stripTerminalSequencesMock: vi.fn(),
+}));
+
+vi.mock("@earendil-works/pi-tui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@earendil-works/pi-tui")>();
+  return {
+    ...actual,
+    stripTerminalSequences(...args: Parameters<typeof actual.stripTerminalSequences>) {
+      stripTerminalSequencesMock(...args);
+      return actual.stripTerminalSequences(...args);
+    },
+  };
+});
 
 import { CodexEditor, CodexFooter, CodexHeader } from "../src/components.js";
 
@@ -89,6 +104,63 @@ test("footer keeps extension statuses and omits unavailable quota data", () => {
   assert.ok(rendered.includes("\x1b[38;5;244mfull access\x1b[39m"));
   assert.ok(rendered.includes("\x1b[38;5;244m● active\x1b[39m"));
   assert.ok(stripTerminalSequences(rendered).trimEnd().endsWith("● active"));
+});
+
+test("footer reuses sanitized statuses and painted output for an unchanged snapshot", () => {
+  let themePaints = 0;
+  const countingTheme = {
+    ...theme,
+    fg(name: string, text: string) {
+      themePaints += 1;
+      return theme.fg(name as never, text);
+    },
+  } as Theme;
+  const statuses = new Map([
+    ["mcp", "\x1b[31mMCP ready\x1b[39m"],
+    ["permissions", "· full access"],
+  ]);
+  const getContextUsage = vi.fn(() => ({ percent: 28 }));
+  const getExtensionStatuses = vi.fn(() => statuses);
+  const footer = new CodexFooter({
+    cwd: "/Users/pi/Code/app",
+    home: "/Users/pi",
+    getModelId: () => "gpt-test",
+    getThinkingLevel: () => "medium",
+    getContextUsage,
+    getExtensionStatuses,
+    getTheme: () => countingTheme,
+  });
+
+  stripTerminalSequencesMock.mockClear();
+  const initial = footer.render(120);
+  const stripsAfterInitialRender = stripTerminalSequencesMock.mock.calls.length;
+  const paintsAfterInitialRender = themePaints;
+  const repeated = footer.render(120);
+
+  assert.deepEqual(repeated, initial);
+  assert.equal(getContextUsage.mock.calls.length, 2);
+  assert.equal(getExtensionStatuses.mock.calls.length, 2);
+  assert.equal(stripTerminalSequencesMock.mock.calls.length, stripsAfterInitialRender);
+  assert.equal(themePaints, paintsAfterInitialRender);
+
+  statuses.set("permissions", "· sandboxed");
+  const changed = stripTerminalSequences(footer.render(120)[0] ?? "");
+  assert.match(changed, /sandboxed/u);
+  assert.equal(
+    stripTerminalSequencesMock.mock.calls.filter(([value]) => value === "· sandboxed").length,
+    1,
+  );
+
+  statuses.delete("mcp");
+  footer.render(120);
+  statuses.set("mcp", "\x1b[31mMCP ready\x1b[39m");
+  footer.render(120);
+  assert.equal(
+    stripTerminalSequencesMock.mock.calls.filter(
+      ([value]) => value === "\x1b[31mMCP ready\x1b[39m",
+    ).length,
+    2,
+  );
 });
 
 test("editor paints a flat composer while preserving the cursor marker", () => {

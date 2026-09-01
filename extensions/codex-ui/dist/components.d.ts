@@ -25,6 +25,8 @@ export declare class CodexHeader implements Component {
 }
 export declare class CodexFooter implements Component {
     private readonly options;
+    private readonly statusCache;
+    private cachedSnapshot;
     constructor(options: CodexFooterOptions);
     render(width: number): string[];
     invalidate(): void;

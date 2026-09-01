@@ -9,7 +9,6 @@ import {
   getLanguageFromPath,
   highlightCode,
   keyHint,
-  truncateToVisualLines,
   type BashToolDetails,
   type EditToolDetails,
   type ExtensionAPI,
@@ -25,6 +24,10 @@ import {
 } from "@earendil-works/pi-tui";
 
 import { BashRefreshScheduler } from "./bash-refresh-scheduler.js";
+import {
+  getExactFittedVisualLines,
+  getExactVisualTail,
+} from "./exact-visual-tail.js";
 import {
   fitToWidth,
   formatHomePath,
@@ -70,6 +73,27 @@ export interface DisplayDiffLine {
   highlightedText?: string;
 }
 
+interface WriteMetrics {
+  content: string;
+  lineCount: number;
+  bytes?: number;
+}
+
+interface CodexWriteState {
+  metrics?: WriteMetrics;
+}
+
+interface EditResultLayout {
+  source: object;
+  width: number;
+  isPartial: boolean;
+  isError: boolean;
+  path: string;
+  theme: Theme;
+  themeFingerprint: string;
+  lines: string[];
+}
+
 interface CodexEditState {
   path?: string;
   initialTitle?: string;
@@ -79,6 +103,10 @@ interface CodexEditState {
   preparedPath?: string;
   preparedTheme?: Theme;
   preparedDiff?: DisplayDiffLine[];
+  preparedStats?: { added: number; removed: number };
+  layoutSource?: object;
+  collapsedLayouts?: EditResultLayout[];
+  expandedLayout?: EditResultLayout;
 }
 
 type CodexBashStatus = "pending" | "running" | "completed" | "failed";
@@ -88,15 +116,40 @@ interface PreparedBashResult {
   warning: string;
 }
 
+interface BashCommandGeometry {
+  width: number;
+  lines: string[];
+}
+
+interface BashResultLayout {
+  prepared: PreparedBashResult;
+  width: number;
+  theme: Theme;
+  themeFingerprint: string;
+  expandHint: string;
+  lines: string[];
+}
+
 interface CodexBashState {
   startedAt?: number;
   endedAt?: number;
   status?: CodexBashStatus;
   callComponent?: ResponsiveLinesComponent;
+  commandSource?: string;
+  commandTheme?: Theme;
+  commandThemeFingerprint?: string;
+  commandGeometry?: BashCommandGeometry[];
+  commandPaint?: {
+    geometry: BashCommandGeometry;
+    status: CodexBashStatus;
+    lines: string[];
+  };
   preparedContent?: Array<{ type: string; text?: string }>;
   preparedDetails?: BashToolDetails;
   preparedIsPartial?: boolean;
   preparedResult?: PreparedBashResult;
+  collapsedResultLayouts?: BashResultLayout[];
+  expandedResultLayout?: BashResultLayout;
 }
 
 const DEFAULT_FACTORIES: CodexToolFactories = {
@@ -172,7 +225,7 @@ export function registerCodexTools(
       state.callComponent = component;
       component.setRenderer((width) => [
         fitToWidth(state.settledTitle ?? state.initialTitle ?? "", width),
-      ]);
+      ], { linesAlreadyFit: true });
       return component;
     },
     renderResult(result, options, theme, context) {
@@ -192,7 +245,8 @@ export function registerCodexTools(
       } else if (context.isError) {
         nextTitle = formatEditTitle("Edit failed", path, theme);
       } else if (preparedDiff) {
-        const stats = countDiffStats(preparedDiff);
+        const stats = state.preparedStats ?? countDiffStats(preparedDiff);
+        state.preparedStats = stats;
         const suffix = `(${namedGreen(`+${stats.added}`)} ${namedRed(`-${stats.removed}`)})`;
         nextTitle = formatEditTitle("Edited", path, theme, suffix);
       } else {
@@ -204,7 +258,8 @@ export function registerCodexTools(
         state.callComponent?.invalidate();
       }
 
-      return updateComponent(context.lastComponent, (width) => renderEditResult(
+      return updateComponent(context.lastComponent, (width) => getEditResultLayout(
+        state,
         result,
         preparedDiff,
         options,
@@ -225,17 +280,24 @@ export function registerCodexTools(
       return getWriteDefinition(ctx.cwd).execute(toolCallId, params, signal, onUpdate, ctx);
     },
     renderCall(args, theme, context) {
+      const state = context.state as unknown as CodexWriteState;
       const path = formatToolPath(args.path, context.cwd);
-      const lineCount = countLines(args.content);
-      const suffix = theme.fg("dim", `(${formatLineCount(lineCount)})`);
+      const metrics = getWriteMetrics(state, args.content, context.argsComplete);
+      const suffix = theme.fg("dim", `(${formatLineCount(metrics.lineCount)})`);
       return updateComponent(context.lastComponent, (width) => [
         fitToWidth(formatToolTitle("Write", path, theme, suffix), width),
       ]);
     },
     renderResult(result, options, theme, context) {
+      const state = context.state as unknown as CodexWriteState;
+      const metrics = getWriteMetrics(
+        state,
+        context.args.content,
+        context.argsComplete || (!options.isPartial && !context.isError),
+      );
       return updateComponent(context.lastComponent, (width) => renderWriteResult(
         result,
-        context.args.content,
+        metrics,
         options.isPartial,
         theme,
         context.isError,
@@ -257,13 +319,17 @@ export function registerCodexTools(
 
       const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
       state.callComponent = component;
-      component.setRenderer((width) => renderBashCall(args, state, theme, width));
+      component.setRenderer(
+        (width) => renderBashCall(args, state, theme, width),
+        { linesAlreadyFit: true },
+      );
       return component;
     },
     renderResult(result, options, theme, context) {
       const state = context.state as unknown as CodexBashState;
       const prepared = getPreparedBashResult(state, result, options.isPartial);
-      return updateComponent(context.lastComponent, (width) => layoutBashResult(
+      return updateComponent(context.lastComponent, (width) => getBashResultLayout(
+        state,
         prepared,
         options,
         theme,
@@ -350,10 +416,7 @@ export function renderDisplayDiff(
   const safeWidth = normalizeWidth(width);
   if (safeWidth === 0) return [];
 
-  const lineNumberWidth = Math.max(
-    1,
-    ...lines.map((line) => line.lineNumber === undefined ? 0 : String(line.lineNumber).length),
-  );
+  const lineNumberWidth = getDisplayLineNumberWidth(lines);
   const language = getLanguageFromPath(path);
   const codeForeground = theme.getFgAnsi("toolDiffContext");
 
@@ -390,6 +453,15 @@ export function renderDisplayDiff(
   });
 }
 
+export function getDisplayLineNumberWidth(lines: readonly DisplayDiffLine[]): number {
+  let lineNumberWidth = 1;
+  for (const line of lines) {
+    if (line.lineNumber === undefined) continue;
+    lineNumberWidth = Math.max(lineNumberWidth, String(line.lineNumber).length);
+  }
+  return lineNumberWidth;
+}
+
 function createDefinitionCache<T>(factory: (cwd: string) => T): (cwd: string) => T {
   const definitions = new Map<string, T>();
   return (cwd) => {
@@ -412,7 +484,7 @@ function updateComponent(
   renderer: (width: number) => string[],
 ): ResponsiveLinesComponent {
   const component = getResponsiveComponent(previous);
-  component.setRenderer(renderer);
+  component.setRenderer(renderer, { linesAlreadyFit: true });
   return component;
 }
 
@@ -511,6 +583,103 @@ function renderReadResult(
   return lines.map((line) => fitToWidth(line, width));
 }
 
+function getEditResultThemeFingerprint(theme: Theme): string {
+  return [
+    theme.fg("warning", "x"),
+    theme.fg("error", "x"),
+    theme.fg("success", "x"),
+    theme.getFgAnsi("toolDiffContext"),
+    theme.getBgAnsi("toolSuccessBg"),
+    theme.getBgAnsi("toolErrorBg"),
+  ].join("\0");
+}
+
+function getEditResultLayout(
+  state: CodexEditState,
+  result: { content: Array<{ type: string; text?: string }> },
+  diffLines: DisplayDiffLine[] | undefined,
+  options: { expanded: boolean; isPartial: boolean },
+  path: string,
+  theme: Theme,
+  isError: boolean,
+  width: number,
+): string[] {
+  const source = diffLines ?? result.content;
+  const themeFingerprint = getEditResultThemeFingerprint(theme);
+  if (state.layoutSource !== source) {
+    state.layoutSource = source;
+    state.collapsedLayouts = [];
+    state.expandedLayout = undefined;
+  }
+
+  if (options.expanded) {
+    const cached = state.expandedLayout;
+    if (
+      cached?.source === source
+      && cached.width === width
+      && cached.isPartial === options.isPartial
+      && cached.isError === isError
+      && cached.path === path
+      && cached.theme === theme
+      && cached.themeFingerprint === themeFingerprint
+    ) {
+      return cached.lines;
+    }
+
+    const lines = renderEditResult(result, diffLines, options, path, theme, isError, width);
+    state.expandedLayout = {
+      source,
+      width,
+      isPartial: options.isPartial,
+      isError,
+      path,
+      theme,
+      themeFingerprint,
+      lines,
+    };
+    return lines;
+  }
+
+  if (state.expandedLayout && diffLines) {
+    for (let index = COLLAPSED_DIFF_LINES; index < diffLines.length; index += 1) {
+      diffLines[index]!.highlightedText = undefined;
+    }
+  }
+  state.expandedLayout = undefined;
+  const layouts = state.collapsedLayouts ??= [];
+  const cachedIndex = layouts.findIndex((entry) => (
+    entry.source === source
+    && entry.width === width
+    && entry.isPartial === options.isPartial
+    && entry.isError === isError
+    && entry.path === path
+    && entry.theme === theme
+    && entry.themeFingerprint === themeFingerprint
+  ));
+  const cached = layouts[cachedIndex];
+  if (cached) {
+    if (cachedIndex !== layouts.length - 1) {
+      layouts.splice(cachedIndex, 1);
+      layouts.push(cached);
+    }
+    return cached.lines;
+  }
+
+  const lines = renderEditResult(result, diffLines, options, path, theme, isError, width);
+  layouts.push({
+    source,
+    width,
+    isPartial: options.isPartial,
+    isError,
+    path,
+    theme,
+    themeFingerprint,
+    lines,
+  });
+  if (layouts.length > 2) layouts.shift();
+  return lines;
+}
+
 function renderEditResult(
   result: { content: Array<{ type: string; text?: string }> },
   diffLines: readonly DisplayDiffLine[] | undefined,
@@ -533,6 +702,7 @@ function renderEditResult(
 
   const maximum = options.expanded ? diffLines.length : COLLAPSED_DIFF_LINES;
   const visible = diffLines.slice(0, maximum);
+  prepareDiffHighlights(visible, path);
   const lines = renderDisplayDiff(visible, theme, width, path);
   const remaining = diffLines.length - visible.length;
   if (remaining > 0) {
@@ -552,7 +722,7 @@ function renderDiffTruncationFooter(remaining: number, width: number): string {
 
 function renderWriteResult(
   result: { content: Array<{ type: string; text?: string }> },
-  content: string,
+  metrics: WriteMetrics,
   isPartial: boolean,
   theme: Theme,
   isError: boolean,
@@ -566,7 +736,7 @@ function renderWriteResult(
     return [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)];
   }
 
-  const summary = `  └ Written · ${formatLineCount(countLines(content))} · ${formatBytes(Buffer.byteLength(content, "utf8"))}`;
+  const summary = `  └ Written · ${formatLineCount(metrics.lineCount)} · ${formatBytes(metrics.bytes ?? Buffer.byteLength(metrics.content, "utf8"))}`;
   return [fitToWidth(theme.fg("success", summary), width)];
 }
 
@@ -594,7 +764,9 @@ function updateBashLifecycle(
       state.startedAt = Date.now();
       state.endedAt = undefined;
     }
-    scheduler.track(context.toolCallId, context.invalidate);
+    if (state.status !== "running") {
+      scheduler.track(context.toolCallId, context.invalidate);
+    }
   } else {
     if (
       (nextStatus === "completed" || nextStatus === "failed")
@@ -637,36 +809,79 @@ function renderBashCall(
     metadata.length > 0 ? theme.fg("dim", metadata.join(" · ")) : "",
     width,
   );
-  lines.push("", ...renderBashCommand(args.command, status, theme, width));
+  lines.push("", ...renderBashCommand(args.command, state, status, theme, width));
   return lines;
 }
 
 function renderBashCommand(
   command: string,
+  state: CodexBashState,
   status: CodexBashStatus,
   theme: Theme,
   width: number,
 ): string[] {
-  const displayCommand = sanitizeBashDisplayText(
-    stripTerminalSequences(typeof command === "string" ? command : ""),
-  ) || "…";
-  const text = theme.fg("toolTitle", theme.bold(`$ ${displayCommand}`));
-  const rail = width >= 2 ? theme.fg("success", "▌") : "";
-  const gap = width >= 3 ? " " : "";
-  const trailingPadding = width >= 4 ? 1 : 0;
-  const prefix = `${rail}${gap}`;
-  const contentWidth = Math.max(1, width - visibleWidth(prefix) - trailingPadding);
-  const commandLines = wrapTextWithAnsi(text, contentWidth);
+  const source = typeof command === "string" ? command : "";
+  const themeFingerprint = getBashCommandThemeFingerprint(theme);
+  if (
+    state.commandSource !== source
+    || state.commandTheme !== theme
+    || state.commandThemeFingerprint !== themeFingerprint
+  ) {
+    state.commandSource = source;
+    state.commandTheme = theme;
+    state.commandThemeFingerprint = themeFingerprint;
+    state.commandGeometry = [];
+    state.commandPaint = undefined;
+  }
+
+  const geometries = state.commandGeometry ??= [];
+  let geometryIndex = geometries.findIndex((entry) => entry.width === width);
+  let geometry = geometries[geometryIndex];
+  if (!geometry) {
+    const displayCommand = sanitizeBashDisplayText(stripTerminalSequences(source)) || "…";
+    const text = theme.fg("toolTitle", theme.bold(`$ ${displayCommand}`));
+    const rail = width >= 2 ? theme.fg("success", "▌") : "";
+    const gap = width >= 3 ? " " : "";
+    const trailingPadding = width >= 4 ? 1 : 0;
+    const prefix = `${rail}${gap}`;
+    const contentWidth = Math.max(1, width - visibleWidth(prefix) - trailingPadding);
+    const commandLines = wrapTextWithAnsi(text, contentWidth);
+    geometry = {
+      width,
+      lines: (commandLines.length > 0 ? commandLines : [""]).map((line) => (
+        `${theme.getBgAnsi("toolPendingBg")}${fitToWidth(`${prefix}${line}`, width, { pad: true })}`
+      )),
+    };
+    geometries.push(geometry);
+    if (geometries.length > 2) geometries.shift();
+  } else if (geometryIndex !== geometries.length - 1) {
+    geometries.splice(geometryIndex, 1);
+    geometries.push(geometry);
+  }
+
+  if (state.commandPaint?.geometry === geometry && state.commandPaint.status === status) {
+    return state.commandPaint.lines;
+  }
 
   const shellBackground = status === "completed"
     ? "toolSuccessBg"
     : status === "failed"
       ? "toolErrorBg"
       : "toolPendingBg";
+  const background = theme.getBgAnsi(shellBackground);
+  const lines = geometry.lines.map((line) => `${line}${background}`);
+  state.commandPaint = { geometry, status, lines };
+  return lines;
+}
 
-  return (commandLines.length > 0 ? commandLines : [""]).map((line) => (
-    `${theme.getBgAnsi("toolPendingBg")}${fitToWidth(`${prefix}${line}`, width, { pad: true })}${theme.getBgAnsi(shellBackground)}`
-  ));
+function getBashCommandThemeFingerprint(theme: Theme): string {
+  return [
+    theme.fg("toolTitle", theme.bold("x")),
+    theme.fg("success", "x"),
+    theme.getBgAnsi("toolPendingBg"),
+    theme.getBgAnsi("toolSuccessBg"),
+    theme.getBgAnsi("toolErrorBg"),
+  ].join("\0");
 }
 
 function getPreparedBashResult(
@@ -688,6 +903,8 @@ function getPreparedBashResult(
   state.preparedDetails = result.details;
   state.preparedIsPartial = isPartial;
   state.preparedResult = prepared;
+  state.collapsedResultLayouts = [];
+  state.expandedResultLayout = undefined;
   return prepared;
 }
 
@@ -703,46 +920,128 @@ function prepareBashResult(
   };
 }
 
-function layoutBashResult(
+function getBashResultThemeFingerprint(theme: Theme): string {
+  return [
+    theme.fg("toolOutput", "x"),
+    theme.fg("warning", "x"),
+    theme.fg("dim", "x"),
+    theme.fg("muted", "x"),
+  ].join("\0");
+}
+
+function getBashResultLayout(
+  state: CodexBashState,
   prepared: PreparedBashResult,
   options: { expanded: boolean },
   theme: Theme,
   services: CodexToolRenderServices,
   width: number,
 ): string[] {
+  const expandHint = formatExpandHint(options.expanded ? "collapse" : "expand", theme, services);
+  const themeFingerprint = getBashResultThemeFingerprint(theme);
+  if (options.expanded) {
+    const cached = state.expandedResultLayout;
+    if (
+      cached?.prepared === prepared
+      && cached.width === width
+      && cached.theme === theme
+      && cached.themeFingerprint === themeFingerprint
+      && cached.expandHint === expandHint
+    ) {
+      return cached.lines;
+    }
+
+    const lines = layoutBashResult(prepared, true, theme, expandHint, width);
+    state.expandedResultLayout = {
+      prepared,
+      width,
+      theme,
+      themeFingerprint,
+      expandHint,
+      lines,
+    };
+    return lines;
+  }
+
+  state.expandedResultLayout = undefined;
+  const layouts = state.collapsedResultLayouts ??= [];
+  const cachedIndex = layouts.findIndex((entry) => (
+    entry.prepared === prepared
+    && entry.width === width
+    && entry.theme === theme
+    && entry.themeFingerprint === themeFingerprint
+    && entry.expandHint === expandHint
+  ));
+  const cached = layouts[cachedIndex];
+  if (cached) {
+    if (cachedIndex !== layouts.length - 1) {
+      layouts.splice(cachedIndex, 1);
+      layouts.push(cached);
+    }
+    return cached.lines;
+  }
+
+  const lines = layoutBashResult(prepared, false, theme, expandHint, width);
+  layouts.push({ prepared, width, theme, themeFingerprint, expandHint, lines });
+  if (layouts.length > 2) layouts.shift();
+  return lines;
+}
+
+function layoutBashResult(
+  prepared: PreparedBashResult,
+  expanded: boolean,
+  theme: Theme,
+  expandHint: string,
+  width: number,
+): string[] {
   let visualLines: string[] = [];
   let skippedCount = 0;
   if (prepared.outputLines.length > 0) {
-    const styledOutput = prepared.outputLines
-      .map((line) => theme.fg("toolOutput", line))
-      .join("\n");
-    const preview = truncateToVisualLines(
-      styledOutput,
-      options.expanded ? Number.MAX_SAFE_INTEGER : COLLAPSED_BASH_LINES,
-      width,
-    );
-    visualLines = preview.visualLines;
-    skippedCount = preview.skippedCount;
+    if (expanded) {
+      visualLines = getExactFittedVisualLines(
+        prepared.outputLines,
+        (line) => theme.fg("toolOutput", line),
+        width,
+      );
+    } else {
+      const preview = getExactVisualTail(
+        prepared.outputLines,
+        (line) => theme.fg("toolOutput", line),
+        width,
+        COLLAPSED_BASH_LINES,
+      );
+      visualLines = preview.visualLines;
+      skippedCount = preview.skippedCount;
+    }
   }
 
-  const lines = ["", ...visualLines];
+  const lines = [""];
+  for (const visualLine of visualLines) {
+    lines.push(expanded ? visualLine : fitToWidth(visualLine, width));
+  }
   if (prepared.warning) {
-    lines.push("", ...wrapTextWithAnsi(theme.fg("warning", `[${prepared.warning}]`), width));
+    lines.push("");
+    for (const warningLine of wrapTextWithAnsi(
+      theme.fg("warning", `[${prepared.warning}]`),
+      width,
+    )) {
+      lines.push(fitToWidth(warningLine, width));
+    }
   }
 
   const totalVisualLines = visualLines.length + skippedCount;
   const lineLabel = `${totalVisualLines} visual ${totalVisualLines === 1 ? "line" : "lines"}`;
-  const footerLabel = !options.expanded && skippedCount > 0
+  const footerLabel = !expanded && skippedCount > 0
     ? `${skippedCount} earlier visual lines hidden`
     : lineLabel;
-  lines.push(
-    "",
-    ...renderAlignedLines(
-      theme.fg("dim", footerLabel),
-      formatExpandHint(options.expanded ? "collapse" : "expand", theme, services),
-      width,
-    ),
-  );
+  lines.push("");
+  for (const footerLine of renderAlignedLines(
+    theme.fg("dim", footerLabel),
+    expandHint,
+    width,
+  )) {
+    lines.push(fitToWidth(footerLine, width));
+  }
   return lines;
 }
 
@@ -781,23 +1080,32 @@ function renderAlignedLines(left: string, right: string, width: number): string[
 }
 
 function extractBashOutput(content: Array<{ type: string; text?: string }>): string {
-  return content
-    .filter((item) => item.type === "text" && typeof item.text === "string")
-    .map((item) => sanitizeBashDisplayText(stripTerminalSequences(item.text ?? "")).replace(/\r/g, ""))
-    .join("\n");
+  let output = "";
+  let hasText = false;
+  for (const item of content) {
+    if (item.type !== "text" || typeof item.text !== "string") continue;
+    if (hasText) output += "\n";
+    output += sanitizeBashDisplayText(stripTerminalSequences(item.text)).replace(/\r/gu, "");
+    hasText = true;
+  }
+  return output;
 }
 
 function sanitizeBashDisplayText(text: string): string {
-  return Array.from(text)
-    .filter((character) => {
-      const codePoint = character.codePointAt(0);
-      if (codePoint === undefined) return false;
-      if (codePoint === 0x09 || codePoint === 0x0a || codePoint === 0x0d) return true;
-      if (codePoint <= 0x1f) return false;
-      if (codePoint >= 0xd800 && codePoint <= 0xdfff) return false;
-      return codePoint < 0xfff9 || codePoint > 0xfffb;
-    })
-    .join("");
+  let sanitized = "";
+  for (const character of text) {
+    const codePoint = character.codePointAt(0);
+    if (codePoint === undefined) continue;
+    if (codePoint === 0x09 || codePoint === 0x0a || codePoint === 0x0d) {
+      sanitized += character;
+      continue;
+    }
+    if (codePoint <= 0x1f) continue;
+    if (codePoint >= 0xd800 && codePoint <= 0xdfff) continue;
+    if (codePoint >= 0xfff9 && codePoint <= 0xfffb) continue;
+    sanitized += character;
+  }
+  return sanitized;
 }
 
 function removeBashExecutionFooter(
@@ -867,21 +1175,26 @@ function getPreparedEditDiff(
     return state.preparedDiff;
   }
 
-  const parsed = parseEditDiff(details);
-  const language = getLanguageFromPath(path);
-  const prepared = language
-    ? parsed.map((line) => line.kind === "hunk"
-      ? line
-      : {
-          ...line,
-          highlightedText: highlightCode(line.text, language)[0] ?? line.text,
-        })
-    : parsed;
+  const prepared = parseEditDiff(details);
   state.preparedDetails = details;
   state.preparedPath = path;
   state.preparedTheme = theme;
   state.preparedDiff = prepared;
+  state.preparedStats = countDiffStats(prepared);
+  state.layoutSource = undefined;
+  state.collapsedLayouts = [];
+  state.expandedLayout = undefined;
   return prepared;
+}
+
+function prepareDiffHighlights(lines: readonly DisplayDiffLine[], path: string): void {
+  const language = getLanguageFromPath(path);
+  if (!language) return;
+
+  for (const line of lines) {
+    if (line.kind === "hunk" || line.highlightedText !== undefined) continue;
+    line.highlightedText = highlightCode(line.text, language)[0] ?? line.text;
+  }
 }
 
 function namedGreen(text: string): string {
@@ -920,8 +1233,33 @@ function firstLine(text: string): string {
   return text.split("\n", 1)[0] ?? "";
 }
 
+function getWriteMetrics(
+  state: CodexWriteState,
+  content: string,
+  includeBytes: boolean,
+): WriteMetrics {
+  let metrics = state.metrics;
+  if (metrics?.content !== content) {
+    metrics = {
+      content,
+      lineCount: countLines(content),
+    };
+    state.metrics = metrics;
+  }
+  if (includeBytes && metrics.bytes === undefined) {
+    metrics.bytes = Buffer.byteLength(content, "utf8");
+  }
+  return metrics;
+}
+
 function countLines(content: string): number {
-  return content.length === 0 ? 0 : content.split("\n").length;
+  if (content.length === 0) return 0;
+
+  let lineCount = 1;
+  for (let index = 0; index < content.length; index += 1) {
+    if (content.charCodeAt(index) === 0x0a) lineCount += 1;
+  }
+  return lineCount;
 }
 
 function formatLineCount(count: number): string {
