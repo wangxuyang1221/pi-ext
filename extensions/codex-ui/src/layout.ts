@@ -1,4 +1,8 @@
-import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import {
+  stripTerminalSequences,
+  truncateToWidth,
+  visibleWidth,
+} from "@earendil-works/pi-tui";
 
 const BACKGROUND_RESET = "\x1b[49m";
 const FULL_SGR_RESET = /\x1b\[(?:0)?m/g;
@@ -62,16 +66,59 @@ export function fitSegments(
   if (safeWidth === 0) return "";
 
   const active = segments
-    .map((segment, index) => ({ ...segment, index }))
+    .map((segment, index) => ({
+      ...segment,
+      index,
+      width: visibleWidth(segment.text),
+    }))
     .filter((segment) => segment.text.length > 0);
   if (active.length === 0) return "";
 
+  const plainSeparator = stripTerminalSequences(separator);
+  if (
+    !(plainSeparator.startsWith(" ") && plainSeparator.endsWith(" "))
+    || active.some((segment) => !Number.isFinite(segment.priority))
+  ) {
+    return fitSegmentsWithExactJoins(active, safeWidth, separator);
+  }
+
+  const separatorWidth = visibleWidth(separator);
+  let joinedWidth = active.reduce((total, segment) => total + segment.width, 0)
+    + separatorWidth * Math.max(0, active.length - 1);
+  if (active.length > 1 && joinedWidth > safeWidth) {
+    const removalOrder = [...active].sort((left, right) => (
+      left.priority - right.priority || right.index - left.index
+    ));
+    const removed = new Set<number>();
+    let remaining = active.length;
+    for (const segment of removalOrder) {
+      if (remaining <= 1 || joinedWidth <= safeWidth) break;
+      removed.add(segment.index);
+      joinedWidth -= segment.width + separatorWidth;
+      remaining -= 1;
+    }
+    const joined = active
+      .filter((segment) => !removed.has(segment.index))
+      .map((segment) => segment.text)
+      .join(separator);
+    return fitToWidth(joined, safeWidth);
+  }
+
+  return fitToWidth(active.map((segment) => segment.text).join(separator), safeWidth);
+}
+
+function fitSegmentsWithExactJoins(
+  segments: Array<PrioritizedSegment & { index: number }>,
+  width: number,
+  separator: string,
+): string {
+  const active = [...segments];
   const join = () => active
     .sort((left, right) => left.index - right.index)
     .map((segment) => segment.text)
     .join(separator);
 
-  while (active.length > 1 && visibleWidth(join()) > safeWidth) {
+  while (active.length > 1 && visibleWidth(join()) > width) {
     let removableIndex = 0;
     for (let index = 1; index < active.length; index += 1) {
       const candidate = active[index];
@@ -86,7 +133,7 @@ export function fitSegments(
     active.splice(removableIndex, 1);
   }
 
-  return fitToWidth(join(), safeWidth);
+  return fitToWidth(join(), width);
 }
 
 export function formatHomePath(path: string, home = process.env.HOME): string {

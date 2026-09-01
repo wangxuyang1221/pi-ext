@@ -1,10 +1,12 @@
 import { fitToWidth, normalizeWidth } from "./layout.js";
 export class ResponsiveLinesComponent {
     renderer = () => [];
+    linesAlreadyFit = false;
     cachedWidth;
     cachedLines;
-    setRenderer(renderer) {
+    setRenderer(renderer, options = {}) {
         this.renderer = renderer;
+        this.linesAlreadyFit = options.linesAlreadyFit ?? false;
         this.invalidate();
     }
     render(width) {
@@ -15,8 +17,10 @@ export class ResponsiveLinesComponent {
             return this.cachedLines;
         }
         this.cachedWidth = safeWidth;
-        this.cachedLines = this.renderer(safeWidth)
-            .map((line) => fitToWidth(line, safeWidth));
+        const lines = this.renderer(safeWidth);
+        this.cachedLines = this.linesAlreadyFit
+            ? lines
+            : lines.map((line) => fitToWidth(line, safeWidth));
         return this.cachedLines;
     }
     invalidate() {
