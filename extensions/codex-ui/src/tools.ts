@@ -40,6 +40,14 @@ const COLLAPSED_BASH_LINES = 5;
 const COLLAPSED_DIFF_LINES = 12;
 const EXPANDED_READ_LINES = 40;
 const BASH_DURATION_REFRESH_MS = 1000;
+const LOW_POWER_ERROR_PREVIEW_CHARS = 4 * 1024;
+const LOW_POWER_EDIT_PATCH_PREVIEW_CHARS = 4 * 1024;
+const LOW_POWER_EDIT_PREVIEW_LINES = 6;
+const LOW_POWER_BASH_COMMAND_PREVIEW_CHARS = 256;
+const LOW_POWER_BASH_OUTPUT_PREVIEW_CHARS = 4 * 1024;
+const LOW_POWER_BASH_PREVIEW_LINES = 3;
+const LOW_POWER_BASH_WARNING_PREVIEW_CHARS = 1024;
+const LOW_POWER_CONTENT_ITEM_LIMIT = 4 * 1024;
 const DIFF_INDENT = "    ";
 const ANSI_DEFAULT_FOREGROUND = "\x1b[39m";
 const ANSI_DIM = "\x1b[2m";
@@ -64,6 +72,7 @@ export interface CodexToolFactories {
 
 export interface CodexToolRenderServices {
   getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
+  isLowPowerEnabled?: () => boolean;
 }
 
 export interface DisplayDiffLine {
@@ -86,7 +95,10 @@ interface WriteMetrics {
   bytes?: number;
 }
 
+type CodexToolRenderMode = "full" | "low-power";
+
 interface CodexWriteState {
+  renderMode?: CodexToolRenderMode;
   metrics?: WriteMetrics;
 }
 
@@ -102,6 +114,7 @@ interface EditResultLayout {
 }
 
 interface CodexEditState {
+  renderMode?: CodexToolRenderMode;
   path?: string;
   initialTitle?: string;
   settledTitle?: string;
@@ -111,6 +124,8 @@ interface CodexEditState {
   preparedTheme?: Theme;
   preparedDiff?: DisplayDiffLine[];
   preparedStats?: { added: number; removed: number };
+  lowPowerPreparedDetails?: EditToolDetails;
+  lowPowerPreview?: string[];
   layoutSource?: object;
   collapsedLayouts?: EditResultLayout[];
   expandedLayout?: EditResultLayout;
@@ -121,6 +136,11 @@ type CodexBashStatus = "pending" | "running" | "completed" | "failed";
 interface PreparedBashResult {
   outputLines: string[];
   warning: string;
+}
+
+interface LowPowerPreparedBashResult {
+  outputLines: string[];
+  warnings: string[];
 }
 
 interface BashCommandGeometry {
@@ -138,9 +158,16 @@ interface BashResultLayout {
 }
 
 interface CodexBashState {
+  renderMode?: CodexToolRenderMode;
   startedAt?: number;
   endedAt?: number;
   status?: CodexBashStatus;
+  lowPowerDurationMs?: number;
+  lowPowerCommandCaptured?: boolean;
+  lowPowerCommandPreview?: string;
+  lowPowerPreparedContent?: Array<{ type: string; text?: string }>;
+  lowPowerPreparedDetails?: BashToolDetails;
+  lowPowerPreparedResult?: LowPowerPreparedBashResult;
   callComponent?: ResponsiveLinesComponent;
   commandSource?: string;
   commandTheme?: Theme;
@@ -242,6 +269,7 @@ export function registerCodexTools(
     },
     renderCall(args, theme, context) {
       const state = context.state as unknown as CodexEditState;
+      const lowPower = getToolRenderMode(state, services) === "low-power";
       const path = formatToolPath(args.path, context.cwd);
       if (state.path !== path) {
         state.path = path;
@@ -251,15 +279,57 @@ export function registerCodexTools(
 
       const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
       state.callComponent = component;
-      component.setRenderer((width) => [
-        fitToWidth(state.settledTitle ?? state.initialTitle ?? "", width),
-      ], { linesAlreadyFit: true });
+      component.setRenderer(
+        (width) => [fitToWidth(state.settledTitle ?? state.initialTitle ?? "", width)],
+        lowPower
+          ? {
+            linesAlreadyFit: true,
+            cacheKey: `low-power\0edit\0call\0${getLowPowerThemeFingerprint(theme)}\0${path}`,
+          }
+          : { linesAlreadyFit: true },
+      );
       return component;
     },
     renderResult(result, options, theme, context) {
       const state = context.state as unknown as CodexEditState;
       const path = state.path ?? formatToolPath(context.args.path, context.cwd);
       const details = result.details as EditToolDetails | undefined;
+      if (getToolRenderMode(state, services) === "low-power") {
+        const error = !options.isPartial && context.isError
+          ? getLowPowerError(result.content, "Edit failed")
+          : undefined;
+        const preview = !options.isPartial && error === undefined
+          ? getLowPowerEditPreview(state, details)
+          : [];
+        const nextTitle = options.isPartial
+          ? formatEditTitle("Editing", path, theme, `${ANSI_DIM}…${ANSI_INTENSITY_RESET}`)
+          : error !== undefined
+            ? formatEditTitle("Edit failed", path, theme)
+            : formatEditTitle("Edited", path, theme);
+        if (state.settledTitle !== nextTitle) {
+          state.settledTitle = nextTitle;
+          state.callComponent?.invalidate();
+        }
+
+        const status = options.isPartial ? "partial" : error !== undefined ? "error" : "success";
+        const cacheKey = [
+          "low-power",
+          "edit",
+          "result",
+          getLowPowerThemeFingerprint(theme),
+          status,
+          error ?? "",
+          preview.join("\n"),
+        ].join("\0");
+        return updateComponent(context.lastComponent, (width) => renderLowPowerEditResult(
+          preview,
+          options.isPartial,
+          error,
+          theme,
+          width,
+        ), cacheKey);
+      }
+
       const preparedDiff = !options.isPartial
         && !context.isError
         && details
@@ -310,6 +380,12 @@ export function registerCodexTools(
     renderCall(args, theme, context) {
       const state = context.state as unknown as CodexWriteState;
       const path = formatToolPath(args.path, context.cwd);
+      if (getToolRenderMode(state, services) === "low-power") {
+        return updateComponent(context.lastComponent, (width) => [
+          fitToWidth(formatToolTitle("Write", path, theme), width),
+        ], `low-power\0write\0call\0${getLowPowerThemeFingerprint(theme)}\0${path}`);
+      }
+
       const metrics = getWriteMetrics(state, args.content, context.argsComplete);
       const suffix = theme.fg("dim", `(${formatLineCount(metrics.lineCount)})`);
       return updateComponent(context.lastComponent, (width) => [
@@ -318,6 +394,19 @@ export function registerCodexTools(
     },
     renderResult(result, options, theme, context) {
       const state = context.state as unknown as CodexWriteState;
+      if (getToolRenderMode(state, services) === "low-power") {
+        const status = options.isPartial ? "partial" : context.isError ? "error" : "success";
+        const error = !options.isPartial && context.isError
+          ? getLowPowerError(result.content, "Write failed")
+          : undefined;
+        return updateComponent(context.lastComponent, (width) => renderLowPowerWriteResult(
+          options.isPartial,
+          theme,
+          error,
+          width,
+        ), `low-power\0write\0result\0${getLowPowerThemeFingerprint(theme)}\0${status}\0${error ?? ""}`);
+      }
+
       const metrics = getWriteMetrics(
         state,
         context.args.content,
@@ -343,10 +432,34 @@ export function registerCodexTools(
     },
     renderCall(args, theme, context) {
       const state = context.state as unknown as CodexBashState;
-      updateBashLifecycle(state, context, bashRefreshScheduler);
+      const lowPower = getToolRenderMode(state, services) === "low-power";
+      updateBashLifecycle(state, context, bashRefreshScheduler, !lowPower);
 
       const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
       state.callComponent = component;
+      if (lowPower) {
+        const commandPreview = getLowPowerBashCommandPreview(state, args, context.argsComplete);
+        const duration = state.lowPowerDurationMs === undefined
+          ? ""
+          : formatDuration(state.lowPowerDurationMs);
+        const timeout = getBashTimeoutLabel(args.timeout);
+        const cacheKey = [
+          "low-power",
+          "bash",
+          "call",
+          getLowPowerThemeFingerprint(theme),
+          state.status ?? "pending",
+          duration,
+          timeout,
+          commandPreview,
+        ].join("\0");
+        component.setRenderer(
+          (width) => renderLowPowerBashCall(commandPreview, timeout, state, theme, width),
+          { linesAlreadyFit: true, cacheKey },
+        );
+        return component;
+      }
+
       component.setRenderer(
         (width) => renderBashCall(args, state, theme, width),
         { linesAlreadyFit: true },
@@ -355,6 +468,23 @@ export function registerCodexTools(
     },
     renderResult(result, options, theme, context) {
       const state = context.state as unknown as CodexBashState;
+      if (getToolRenderMode(state, services) === "low-power") {
+        if (options.isPartial) {
+          return updateComponent(
+            context.lastComponent,
+            () => [],
+            "low-power\0bash\0result\0partial",
+          );
+        }
+
+        const prepared = getLowPowerPreparedBashResult(state, result);
+        return updateComponent(
+          context.lastComponent,
+          (width) => renderLowPowerBashResult(prepared, theme, width),
+          getLowPowerBashResultCacheKey(prepared, theme),
+        );
+      }
+
       const prepared = getPreparedBashResult(state, result, options.isPartial);
       return updateComponent(context.lastComponent, (width) => getBashResultLayout(
         state,
@@ -490,6 +620,29 @@ export function getDisplayLineNumberWidth(lines: readonly DisplayDiffLine[]): nu
   return lineNumberWidth;
 }
 
+function getToolRenderMode(
+  state: { renderMode?: CodexToolRenderMode },
+  services: CodexToolRenderServices,
+): CodexToolRenderMode {
+  state.renderMode ??= services.isLowPowerEnabled?.() ? "low-power" : "full";
+  return state.renderMode;
+}
+
+function getLowPowerThemeFingerprint(theme: Theme): string {
+  return [
+    theme.fg("toolTitle", theme.bold("x")),
+    theme.fg("toolOutput", "x"),
+    theme.fg("muted", "x"),
+    theme.fg("dim", "x"),
+    theme.fg("warning", "x"),
+    theme.fg("success", "x"),
+    theme.fg("error", "x"),
+    theme.getBgAnsi("toolPendingBg"),
+    theme.getBgAnsi("toolSuccessBg"),
+    theme.getBgAnsi("toolErrorBg"),
+  ].join("\0");
+}
+
 function createDefinitionCache<T>(factory: (cwd: string) => T): (cwd: string) => T {
   const definitions = new Map<string, T>();
   return (cwd) => {
@@ -510,9 +663,15 @@ function getResponsiveComponent(previous: Component | undefined): ResponsiveLine
 function updateComponent(
   previous: Component | undefined,
   renderer: (width: number) => string[],
+  cacheKey?: unknown,
 ): ResponsiveLinesComponent {
   const component = getResponsiveComponent(previous);
-  component.setRenderer(renderer, { linesAlreadyFit: true });
+  component.setRenderer(
+    renderer,
+    cacheKey === undefined
+      ? { linesAlreadyFit: true }
+      : { linesAlreadyFit: true, cacheKey },
+  );
   return component;
 }
 
@@ -711,6 +870,46 @@ function getEditResultLayout(
   return lines;
 }
 
+function getLowPowerEditPreview(
+  state: CodexEditState,
+  details: EditToolDetails | undefined,
+): string[] {
+  if (state.lowPowerPreparedDetails === details && state.lowPowerPreview !== undefined) {
+    return state.lowPowerPreview;
+  }
+
+  const patch = details?.patch;
+  const preview = typeof patch === "string"
+    ? getLowPowerPrefixLines(
+      patch,
+      LOW_POWER_EDIT_PATCH_PREVIEW_CHARS,
+      LOW_POWER_EDIT_PREVIEW_LINES,
+    )
+    : [];
+  state.lowPowerPreparedDetails = details;
+  state.lowPowerPreview = preview;
+  return preview;
+}
+
+function renderLowPowerEditResult(
+  preview: readonly string[],
+  isPartial: boolean,
+  error: string | undefined,
+  theme: Theme,
+  width: number,
+): string[] {
+  if (isPartial) {
+    return [fitToWidth(theme.fg("warning", "  … Editing"), width)];
+  }
+  if (error !== undefined) {
+    return [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)];
+  }
+  if (preview.length === 0) {
+    return [fitToWidth(theme.fg("success", "  └ Applied"), width)];
+  }
+  return preview.map((line) => fitToWidth(theme.fg("toolOutput", `    ${line}`), width));
+}
+
 function renderEditResult(
   result: { content: Array<{ type: string; text?: string }> },
   diffLines: readonly DisplayDiffLine[] | undefined,
@@ -751,6 +950,21 @@ function renderDiffTruncationFooter(remaining: number, width: number): string {
   return fitToWidth(`${ANSI_DIM}${label}${rule}${ANSI_INTENSITY_RESET}`, safeWidth);
 }
 
+function renderLowPowerWriteResult(
+  isPartial: boolean,
+  theme: Theme,
+  error: string | undefined,
+  width: number,
+): string[] {
+  if (isPartial) {
+    return [fitToWidth(theme.fg("warning", "  … Writing"), width)];
+  }
+  if (error !== undefined) {
+    return [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)];
+  }
+  return [fitToWidth(theme.fg("success", "  └ Written"), width)];
+}
+
 function renderWriteResult(
   result: { content: Array<{ type: string; text?: string }> },
   metrics: WriteMetrics,
@@ -781,6 +995,7 @@ function updateBashLifecycle(
     invalidate(): void;
   },
   scheduler: BashRefreshScheduler,
+  trackRefresh = true,
 ): void {
   const nextStatus: CodexBashStatus = context.isError
     ? "failed"
@@ -795,8 +1010,10 @@ function updateBashLifecycle(
       state.startedAt = Date.now();
       state.endedAt = undefined;
     }
-    if (state.status !== "running") {
+    if (trackRefresh && state.status !== "running") {
       scheduler.track(context.toolCallId, context.invalidate);
+    } else if (!trackRefresh) {
+      scheduler.untrack(context.toolCallId);
     }
   } else {
     if (
@@ -810,6 +1027,79 @@ function updateBashLifecycle(
   }
 
   state.status = nextStatus;
+  if (!trackRefresh) {
+    state.lowPowerDurationMs = state.startedAt === undefined
+      ? undefined
+      : Math.max(0, (state.endedAt ?? Date.now()) - state.startedAt);
+  }
+}
+
+function getLowPowerBashCommandPreview(
+  state: CodexBashState,
+  args: { command: string },
+  argsComplete: boolean,
+): string {
+  if (!argsComplete) return "…";
+  if (state.lowPowerCommandCaptured) return state.lowPowerCommandPreview ?? "…";
+
+  const command = args.command;
+  const source = typeof command === "string" ? command : "";
+  const bounded = source.slice(0, LOW_POWER_BASH_COMMAND_PREVIEW_CHARS);
+  const preview = sanitizeBashDisplayText(stripTerminalSequences(bounded))
+    .replace(/[\r\n]+/gu, " ")
+    .trim() || "…";
+  state.lowPowerCommandCaptured = true;
+  state.lowPowerCommandPreview = preview;
+  return preview;
+}
+
+function getBashTimeoutLabel(timeout: number | undefined): string {
+  return typeof timeout === "number" && Number.isFinite(timeout) && timeout > 0
+    ? `${timeout}s limit`
+    : "";
+}
+
+function renderLowPowerBashCall(
+  commandPreview: string,
+  timeout: string,
+  state: CodexBashState,
+  theme: Theme,
+  width: number,
+): string[] {
+  const safeWidth = normalizeWidth(width);
+  if (safeWidth === 0) return [];
+
+  const status = state.status ?? "pending";
+  const presentation = BASH_STATUS_PRESENTATION[status];
+  const summary = [
+    theme.fg(presentation.color, presentation.glyph),
+    theme.fg("toolTitle", theme.bold("Bash")),
+    theme.fg("muted", status),
+  ];
+  const metadata: string[] = [];
+  if (state.lowPowerDurationMs !== undefined) {
+    metadata.push(formatDuration(state.lowPowerDurationMs));
+  }
+  if (timeout) metadata.push(timeout);
+  if (metadata.length > 0) {
+    summary.push(theme.fg("dim", metadata.join(" · ")));
+  }
+
+  const rail = safeWidth >= 2 ? theme.fg("success", "▌") : "";
+  const gap = safeWidth >= 3 ? " " : "";
+  const command = theme.fg("toolTitle", theme.bold(`$ ${commandPreview}`));
+  const shellBackground = status === "completed"
+    ? "toolSuccessBg"
+    : status === "failed"
+      ? "toolErrorBg"
+      : "toolPendingBg";
+  const commandLine = `${theme.getBgAnsi("toolPendingBg")}${fitToWidth(
+    `${rail}${gap}${command}`,
+    safeWidth,
+    { pad: true },
+  )}${theme.getBgAnsi(shellBackground)}`;
+
+  return [fitToWidth(summary.join(" "), safeWidth), "", commandLine];
 }
 
 function renderBashCall(
@@ -913,6 +1203,145 @@ function getBashCommandThemeFingerprint(theme: Theme): string {
     theme.getBgAnsi("toolSuccessBg"),
     theme.getBgAnsi("toolErrorBg"),
   ].join("\0");
+}
+
+function getLowPowerPreparedBashResult(
+  state: CodexBashState,
+  result: { content: Array<{ type: string; text?: string }>; details?: BashToolDetails },
+): LowPowerPreparedBashResult {
+  if (
+    state.lowPowerPreparedResult !== undefined
+    && state.lowPowerPreparedContent === result.content
+    && state.lowPowerPreparedDetails === result.details
+  ) {
+    return state.lowPowerPreparedResult;
+  }
+
+  const extracted = extractBoundedBashOutputTail(
+    result.content,
+    LOW_POWER_BASH_OUTPUT_PREVIEW_CHARS,
+  ).trim();
+  const output = removeLowPowerBashExecutionFooter(extracted, result.details);
+  const prepared = {
+    outputLines: output ? output.split("\n").slice(-LOW_POWER_BASH_PREVIEW_LINES) : [],
+    warnings: formatLowPowerBashWarnings(result.details),
+  };
+  state.lowPowerPreparedContent = result.content;
+  state.lowPowerPreparedDetails = result.details;
+  state.lowPowerPreparedResult = prepared;
+  return prepared;
+}
+
+function getLowPowerBashResultCacheKey(
+  prepared: LowPowerPreparedBashResult,
+  theme: Theme,
+): string {
+  return [
+    "low-power",
+    "bash",
+    "result",
+    getLowPowerThemeFingerprint(theme),
+    prepared.outputLines.join("\n"),
+    prepared.warnings.join("\n"),
+  ].join("\0");
+}
+
+function renderLowPowerBashResult(
+  prepared: LowPowerPreparedBashResult,
+  theme: Theme,
+  width: number,
+): string[] {
+  const safeWidth = normalizeWidth(width);
+  if (safeWidth === 0) return [];
+
+  const lines = prepared.outputLines.map((line) => (
+    fitToWidth(theme.fg("toolOutput", line), safeWidth)
+  ));
+  if (prepared.warnings.length > 0) {
+    if (lines.length > 0) lines.push("");
+    for (const warning of prepared.warnings) {
+      lines.push(fitToWidth(theme.fg("warning", `[${warning}]`), safeWidth));
+    }
+  }
+  return lines;
+}
+
+function extractBoundedBashOutputTail(
+  content: Array<{ type: string; text?: string }>,
+  maxChars: number,
+): string {
+  const reversedChunks: string[] = [];
+  let remaining = maxChars;
+  let inspected = 0;
+  let hasText = false;
+
+  for (
+    let index = content.length - 1;
+    index >= 0 && remaining > 0 && inspected < LOW_POWER_CONTENT_ITEM_LIMIT;
+    index -= 1
+  ) {
+    inspected += 1;
+    const item = content[index];
+    if (item?.type !== "text") continue;
+    const text = item.text;
+    if (typeof text !== "string") continue;
+
+    if (hasText) {
+      reversedChunks.push("\n");
+      remaining -= 1;
+      if (remaining === 0) break;
+    }
+    const chunk = text.slice(-remaining);
+    reversedChunks.push(chunk);
+    remaining -= chunk.length;
+    hasText = true;
+  }
+
+  const bounded = reversedChunks.reverse().join("");
+  return sanitizeBashDisplayText(stripTerminalSequences(bounded)).replace(/\r/gu, "");
+}
+
+function removeLowPowerBashExecutionFooter(
+  output: string,
+  details: BashToolDetails | undefined,
+): string {
+  const fullOutputPath = details?.fullOutputPath;
+  if (
+    typeof fullOutputPath !== "string"
+    || fullOutputPath.length === 0
+    || fullOutputPath.length > LOW_POWER_BASH_WARNING_PREVIEW_CHARS
+    || !output.endsWith("]")
+  ) {
+    return output;
+  }
+
+  const footerStart = output.lastIndexOf("\n\n[");
+  if (footerStart !== -1 && output.slice(footerStart).includes(fullOutputPath)) {
+    return output.slice(0, footerStart).trimEnd();
+  }
+  return output;
+}
+
+function formatLowPowerBashWarnings(details: BashToolDetails | undefined): string[] {
+  const warnings: string[] = [];
+  const fullOutputPath = details?.fullOutputPath;
+  if (typeof fullOutputPath === "string" && fullOutputPath.length > 0) {
+    const path = sanitizeBashDisplayText(stripTerminalSequences(
+      fullOutputPath.slice(0, LOW_POWER_BASH_WARNING_PREVIEW_CHARS),
+    )).replace(/[\r\n]+/gu, " ").trim();
+    if (path) warnings.push(`Full output: ${path}`);
+  }
+
+  const truncation = details?.truncation;
+  if (truncation?.truncated) {
+    if (truncation.truncatedBy === "lines") {
+      warnings.push(`Truncated: showing ${truncation.outputLines} of ${truncation.totalLines} lines`);
+    } else {
+      const limit = formatSize(truncation.maxBytes ?? DEFAULT_MAX_BYTES);
+      warnings.push(`Truncated: ${truncation.outputLines} lines shown (${limit} limit)`);
+    }
+  }
+  return warnings;
 }
 
 function getPreparedBashResult(
@@ -1251,6 +1680,54 @@ function countDiffStats(lines: readonly DisplayDiffLine[]): { added: number; rem
     if (line.kind === "removed") removed += 1;
   }
   return { added, removed };
+}
+
+function getLowPowerPrefixLines(
+  text: string,
+  maximumChars: number,
+  maximumLines: number,
+): string[] {
+  const bounded = sanitizeBashDisplayText(stripTerminalSequences(
+    text.slice(0, maximumChars),
+  )).replace(/\r\n?/gu, "\n");
+  return bounded ? bounded.split("\n", maximumLines) : [];
+}
+
+function extractBoundedTextPrefix(
+  content: Array<{ type: string; text?: string }>,
+  maximumChars: number,
+): string {
+  let preview = "";
+  let remaining = maximumChars;
+  let hasText = false;
+  const maximumItems = Math.min(content.length, LOW_POWER_CONTENT_ITEM_LIMIT);
+  for (let index = 0; index < maximumItems && remaining > 0; index += 1) {
+    const item = content[index];
+    if (item?.type !== "text") continue;
+    const text = item.text;
+    if (typeof text !== "string") continue;
+    if (hasText) {
+      preview += "\n";
+      remaining -= 1;
+      if (remaining === 0) break;
+    }
+    const chunk = text.slice(0, remaining);
+    preview += chunk;
+    remaining -= chunk.length;
+    hasText = true;
+  }
+  return sanitizeBashDisplayText(stripTerminalSequences(preview));
+}
+
+function getLowPowerError(
+  content: Array<{ type: string; text?: string }>,
+  fallback: string,
+): string {
+  const preview = extractBoundedTextPrefix(
+    content,
+    LOW_POWER_ERROR_PREVIEW_CHARS,
+  ).replace(/\r\n?/gu, "\n");
+  return firstLine(preview) || fallback;
 }
 
 function extractText(content: Array<{ type: string; text?: string }>): string {

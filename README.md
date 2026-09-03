@@ -75,8 +75,17 @@ Codex encrypted compaction item.
 - 使用 `pi v0.84.3` 官方 wordmark 的 header
 - 实色背景 composer
 - model、thinking、cwd、context-left 和 extension statuses footer
-- streaming working indicator 和 terminal title
+- Thinking/Reasoning 最新段落的单行显示
+- 隐藏 streaming working row，并通过 terminal title 显示工作状态
 - `read`、`edit`、`write` 的紧凑 renderer
+
+Thinking/Reasoning 区域无论处于流式状态还是历史状态，都只渲染最新段落，并按当前可用宽度截断为一个终端行。完整 Thinking 内容仍保存在 Pi 会话数据中，`codex-ui` 仅改变显示结果。
+
+### Low-power rendering
+
+`/lowpower on` 只负责简化 `write`、`edit`、`bash` 的渲染；`/lowpower off` 恢复完整工具输出，`/lowpower status` 仅查询当前状态。两种模式都会隐藏 Pi 内置的 streaming working row，并在 agent 工作期间通过 terminal title 显示 `Thinking.`、`Thinking..`、`Thinking...` 与 spinner。标题每 `500ms` 更新一次，不触发全局 TUI 渲染。
+
+启用 Pi 的 `terminal.showTerminalProgress` 后，终端原生 edge progress 会与 title spinner 同时显示。该进度由终端处理，不进入 Pi TUI 渲染管线。Low-power 状态仅保存在当前 extension instance 中；`/new`、`/resume`、`/fork`、`/reload` 或进程重启会重新加载扩展，并恢复为默认关闭。
 
 ### Theme persistence
 

@@ -7,6 +7,7 @@ export interface CodexToolFactories {
 }
 export interface CodexToolRenderServices {
     getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
+    isLowPowerEnabled?: () => boolean;
 }
 export interface DisplayDiffLine {
     kind: "context" | "removed" | "added" | "hunk";
