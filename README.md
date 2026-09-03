@@ -75,8 +75,17 @@ Codex encrypted compaction item.
 - 使用 `pi v0.84.3` 官方 wordmark 的 header
 - 实色背景 composer
 - model、thinking、cwd、context-left 和 extension statuses footer
-- streaming working indicator 和 terminal title
+- Thinking/Reasoning 最新段落的单行显示
+- 隐藏 streaming working row，并通过 terminal title 显示工作状态
 - `read`、`edit`、`write` 的紧凑 renderer
+
+Thinking/Reasoning 区域无论处于流式状态还是历史状态，都只渲染最新段落，并按当前可用宽度截断为一个终端行。完整 Thinking 内容仍保存在 Pi 会话数据中，`codex-ui` 仅改变显示结果。
+
+### Low-power rendering
+
+`/lowpower on` 只负责简化 `write`、`edit`、`bash` 的渲染；`/lowpower off` 恢复完整工具输出，`/lowpower status` 仅查询当前状态。两种模式都会隐藏 Pi 内置的 streaming working row，并在 agent 工作期间通过 terminal title 显示 `Thinking.`、`Thinking..`、`Thinking...` 与 spinner。标题每 `500ms` 更新一次，不触发全局 TUI 渲染。
+
+启用 Pi 的 `terminal.showTerminalProgress` 后，终端原生 edge progress 会与 title spinner 同时显示。该进度由终端处理，不进入 Pi TUI 渲染管线。Low-power 状态仅保存在当前 extension instance 中；`/new`、`/resume`、`/fork`、`/reload` 或进程重启会重新加载扩展，并恢复为默认关闭。
 
 ### Theme persistence
 
@@ -176,7 +185,11 @@ subagent_wait
 subagent_close
 ```
 
-managed child 仍加载 lifecycle hooks 并写入 runtime state，但不注册 subagent 编排工具。合法管理拓扑只有 root 到 direct child；`target: "all"` 也只处理当前 root 的 direct children。
+managed child 仍加载 lifecycle hooks 并写入 runtime state，但不注册 subagent 编排工具。合法管理拓扑只有 root 到 direct child；`target: "all"` 也只处理当前 root 的 direct children。每个 child 固定对应一个 tmux window 和一个 pane；投递前会验证登记的 session、window、pane、进程和 pane 模式仍一致。
+
+初始 task 和后续 prompt 都采用 at-least-once 投递。每条消息会在首行加入 `[subagent:<12-char-id>]`，该标识会进入 child 模型上下文；只有 Pi 原生 session 出现对应 user turn，或 TUI 显示对应 `Steering:`/`Follow-up:` pending 项时才算成功。`subagent_prompt` 成功结果会附带 `deliveryId` 和 `confirmation`。提交后 1 秒仍无证据时返回 `delivery_unconfirmed`，但 child 可能已经接受消息；扩展不会自动重试，调用方重试可能产生重复任务。
+
+当前投递协议只支持 Pi 默认的 `Ctrl+C` 清空、`Enter` 提交和 `Alt+Enter` follow-up 键位。自定义 keybindings、替换 editor 的 extension，以及同一 window 内增加 pane 不在兼容范围内。
 
 每个 root namespace 默认最多占用 3 个 slot。`pending`、`starting`、`running`、`settled` 和 `closing` 均占用 slot；已确认进程死亡的 `interrupted` 不占用。并发 spawn 使用持久化 reservation 防止超卖；同一 Pi 进程切换 session 产生的 direct-child aliases 按 `processInstanceId` 去重。可通过正整数环境变量 `PI_SUBAGENT_MAX_ACTIVE` 调整上限。
 

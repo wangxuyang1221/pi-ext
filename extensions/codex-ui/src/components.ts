@@ -86,6 +86,17 @@ export class CodexHeader implements Component {
 }
 
 export class CodexFooter implements Component {
+  private readonly statusCache = new Map<string, { raw: string; sanitized: string }>();
+  private cachedSnapshot: {
+    width: number;
+    theme: Theme;
+    modelId: string;
+    thinking: string;
+    context: string | undefined;
+    statuses: string[];
+    lines: string[];
+  } | undefined;
+
   constructor(private readonly options: CodexFooterOptions) {}
 
   render(width: number): string[] {
@@ -96,9 +107,36 @@ export class CodexFooter implements Component {
     const modelId = this.options.getModelId() ?? "No model";
     const thinking = this.options.getThinkingLevel();
     const context = formatContextLeft(this.options.getContextUsage());
-    const statuses = [...this.options.getExtensionStatuses().values()]
-      .map((status) => stripTerminalSequences(status).trim().replace(/^·\s*/u, ""))
-      .filter((status) => status.length > 0);
+    const rawStatuses = this.options.getExtensionStatuses();
+    const activeStatusKeys = new Set<string>();
+    const statuses: string[] = [];
+    for (const [key, raw] of rawStatuses) {
+      activeStatusKeys.add(key);
+      let cached = this.statusCache.get(key);
+      if (!cached || cached.raw !== raw) {
+        cached = {
+          raw,
+          sanitized: stripTerminalSequences(raw).trim().replace(/^·\s*/u, ""),
+        };
+        this.statusCache.set(key, cached);
+      }
+      if (cached.sanitized.length > 0) statuses.push(cached.sanitized);
+    }
+    for (const key of this.statusCache.keys()) {
+      if (!activeStatusKeys.has(key)) this.statusCache.delete(key);
+    }
+
+    const cached = this.cachedSnapshot;
+    if (
+      cached?.width === safeWidth
+      && cached.theme === theme
+      && cached.modelId === modelId
+      && cached.thinking === thinking
+      && cached.context === context
+      && arraysEqual(cached.statuses, statuses)
+    ) {
+      return cached.lines;
+    }
 
     const segments: PrioritizedSegment[] = [
       {
@@ -121,10 +159,30 @@ export class CodexFooter implements Component {
     const contentWidth = safeWidth - visibleWidth(leftPadding);
     const separator = theme.fg("dim", " · ");
     const content = fitSegments(segments, contentWidth, separator);
-    return [fitToWidth(`${leftPadding}${content}`, safeWidth)];
+    const lines = [fitToWidth(`${leftPadding}${content}`, safeWidth)];
+    this.cachedSnapshot = {
+      width: safeWidth,
+      theme,
+      modelId,
+      thinking,
+      context,
+      statuses,
+      lines,
+    };
+    return lines;
   }
 
-  invalidate(): void {}
+  invalidate(): void {
+    this.cachedSnapshot = undefined;
+  }
+}
+
+function arraysEqual(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) return false;
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) return false;
+  }
+  return true;
 }
 
 const PLACEHOLDER = "Ask Pi to do anything";

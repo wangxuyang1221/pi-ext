@@ -1,13 +1,22 @@
 import { isAbsolute, relative, sep } from "node:path";
-import { createBashToolDefinition, createEditToolDefinition, createReadToolDefinition, createWriteToolDefinition, DEFAULT_MAX_BYTES, formatSize, getLanguageFromPath, highlightCode, keyHint, truncateToVisualLines, } from "@earendil-works/pi-coding-agent";
+import { createBashToolDefinition, createEditToolDefinition, createReadToolDefinition, createWriteToolDefinition, DEFAULT_MAX_BYTES, formatSize, getLanguageFromPath, highlightCode, keyHint, } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, wrapTextWithAnsi, } from "@earendil-works/pi-tui";
 import { BashRefreshScheduler } from "./bash-refresh-scheduler.js";
+import { getExactFittedVisualLines, getExactVisualTail, } from "./exact-visual-tail.js";
 import { fitToWidth, formatHomePath, normalizeWidth, paintBackground, } from "./layout.js";
 import { ResponsiveLinesComponent } from "./responsive-lines.js";
 const COLLAPSED_BASH_LINES = 5;
 const COLLAPSED_DIFF_LINES = 12;
 const EXPANDED_READ_LINES = 40;
 const BASH_DURATION_REFRESH_MS = 1000;
+const LOW_POWER_ERROR_PREVIEW_CHARS = 4 * 1024;
+const LOW_POWER_EDIT_PATCH_PREVIEW_CHARS = 4 * 1024;
+const LOW_POWER_EDIT_PREVIEW_LINES = 6;
+const LOW_POWER_BASH_COMMAND_PREVIEW_CHARS = 256;
+const LOW_POWER_BASH_OUTPUT_PREVIEW_CHARS = 4 * 1024;
+const LOW_POWER_BASH_PREVIEW_LINES = 3;
+const LOW_POWER_BASH_WARNING_PREVIEW_CHARS = 1024;
+const LOW_POWER_CONTENT_ITEM_LIMIT = 4 * 1024;
 const DIFF_INDENT = "    ";
 const ANSI_DEFAULT_FOREGROUND = "\x1b[39m";
 const ANSI_DIM = "\x1b[2m";
@@ -50,13 +59,32 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
             return getReadDefinition(ctx.cwd).execute(toolCallId, params, signal, onUpdate, ctx);
         },
         renderCall(args, theme, context) {
+            const state = context.state;
             const path = formatToolPath(args.path, context.cwd);
             const range = formatReadRange(args.offset, args.limit, theme);
-            return updateComponent(context.lastComponent, (width) => [
-                fitToWidth(formatToolTitle("Read", path, theme, range), width),
-            ]);
+            if (state.path !== path) {
+                state.path = path;
+                state.settledTitle = undefined;
+            }
+            state.initialTitle = formatToolTitle("Read", path, theme, range);
+            const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
+            state.callComponent = component;
+            component.setRenderer((width) => [
+                fitToWidth(state.settledTitle ?? state.initialTitle ?? "", width),
+            ], { linesAlreadyFit: true });
+            return component;
         },
         renderResult(result, options, theme, context) {
+            const state = context.state;
+            const path = formatToolPath(context.args.path, context.cwd);
+            const range = formatReadRange(context.args.offset, context.args.limit, theme);
+            const nextTitle = !options.isPartial && !context.isError
+                ? formatToolTitle("Read", path, theme, range, { glyph: "✓", color: "success" })
+                : undefined;
+            if (state.settledTitle !== nextTitle) {
+                state.settledTitle = nextTitle;
+                state.callComponent?.invalidate();
+            }
             return updateComponent(context.lastComponent, (width) => renderReadResult(result, options, theme, context.isError, width));
         },
     };
@@ -70,6 +98,7 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
         },
         renderCall(args, theme, context) {
             const state = context.state;
+            const lowPower = getToolRenderMode(state, services) === "low-power";
             const path = formatToolPath(args.path, context.cwd);
             if (state.path !== path) {
                 state.path = path;
@@ -78,15 +107,46 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
             state.initialTitle = formatEditTitle("Edit", path, theme);
             const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
             state.callComponent = component;
-            component.setRenderer((width) => [
-                fitToWidth(state.settledTitle ?? state.initialTitle ?? "", width),
-            ]);
+            component.setRenderer((width) => [fitToWidth(state.settledTitle ?? state.initialTitle ?? "", width)], lowPower
+                ? {
+                    linesAlreadyFit: true,
+                    cacheKey: `low-power\0edit\0call\0${getLowPowerThemeFingerprint(theme)}\0${path}`,
+                }
+                : { linesAlreadyFit: true });
             return component;
         },
         renderResult(result, options, theme, context) {
             const state = context.state;
             const path = state.path ?? formatToolPath(context.args.path, context.cwd);
             const details = result.details;
+            if (getToolRenderMode(state, services) === "low-power") {
+                const error = !options.isPartial && context.isError
+                    ? getLowPowerError(result.content, "Edit failed")
+                    : undefined;
+                const preview = !options.isPartial && error === undefined
+                    ? getLowPowerEditPreview(state, details)
+                    : [];
+                const nextTitle = options.isPartial
+                    ? formatEditTitle("Editing", path, theme, `${ANSI_DIM}…${ANSI_INTENSITY_RESET}`)
+                    : error !== undefined
+                        ? formatEditTitle("Edit failed", path, theme)
+                        : formatEditTitle("Edited", path, theme);
+                if (state.settledTitle !== nextTitle) {
+                    state.settledTitle = nextTitle;
+                    state.callComponent?.invalidate();
+                }
+                const status = options.isPartial ? "partial" : error !== undefined ? "error" : "success";
+                const cacheKey = [
+                    "low-power",
+                    "edit",
+                    "result",
+                    getLowPowerThemeFingerprint(theme),
+                    status,
+                    error ?? "",
+                    preview.join("\n"),
+                ].join("\0");
+                return updateComponent(context.lastComponent, (width) => renderLowPowerEditResult(preview, options.isPartial, error, theme, width), cacheKey);
+            }
             const preparedDiff = !options.isPartial
                 && !context.isError
                 && details
@@ -101,7 +161,8 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
                 nextTitle = formatEditTitle("Edit failed", path, theme);
             }
             else if (preparedDiff) {
-                const stats = countDiffStats(preparedDiff);
+                const stats = state.preparedStats ?? countDiffStats(preparedDiff);
+                state.preparedStats = stats;
                 const suffix = `(${namedGreen(`+${stats.added}`)} ${namedRed(`-${stats.removed}`)})`;
                 nextTitle = formatEditTitle("Edited", path, theme, suffix);
             }
@@ -112,7 +173,7 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
                 state.settledTitle = nextTitle;
                 state.callComponent?.invalidate();
             }
-            return updateComponent(context.lastComponent, (width) => renderEditResult(result, preparedDiff, options, path, theme, context.isError, width));
+            return updateComponent(context.lastComponent, (width) => getEditResultLayout(state, result, preparedDiff, options, path, theme, context.isError, width));
         },
     };
     pi.registerTool(editTool);
@@ -124,15 +185,30 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
             return getWriteDefinition(ctx.cwd).execute(toolCallId, params, signal, onUpdate, ctx);
         },
         renderCall(args, theme, context) {
+            const state = context.state;
             const path = formatToolPath(args.path, context.cwd);
-            const lineCount = countLines(args.content);
-            const suffix = theme.fg("dim", `(${formatLineCount(lineCount)})`);
+            if (getToolRenderMode(state, services) === "low-power") {
+                return updateComponent(context.lastComponent, (width) => [
+                    fitToWidth(formatToolTitle("Write", path, theme), width),
+                ], `low-power\0write\0call\0${getLowPowerThemeFingerprint(theme)}\0${path}`);
+            }
+            const metrics = getWriteMetrics(state, args.content, context.argsComplete);
+            const suffix = theme.fg("dim", `(${formatLineCount(metrics.lineCount)})`);
             return updateComponent(context.lastComponent, (width) => [
                 fitToWidth(formatToolTitle("Write", path, theme, suffix), width),
             ]);
         },
         renderResult(result, options, theme, context) {
-            return updateComponent(context.lastComponent, (width) => renderWriteResult(result, context.args.content, options.isPartial, theme, context.isError, width));
+            const state = context.state;
+            if (getToolRenderMode(state, services) === "low-power") {
+                const status = options.isPartial ? "partial" : context.isError ? "error" : "success";
+                const error = !options.isPartial && context.isError
+                    ? getLowPowerError(result.content, "Write failed")
+                    : undefined;
+                return updateComponent(context.lastComponent, (width) => renderLowPowerWriteResult(options.isPartial, theme, error, width), `low-power\0write\0result\0${getLowPowerThemeFingerprint(theme)}\0${status}\0${error ?? ""}`);
+            }
+            const metrics = getWriteMetrics(state, context.args.content, context.argsComplete || (!options.isPartial && !context.isError));
+            return updateComponent(context.lastComponent, (width) => renderWriteResult(result, metrics, options.isPartial, theme, context.isError, width));
         },
     };
     pi.registerTool(writeTool);
@@ -144,16 +220,43 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
         },
         renderCall(args, theme, context) {
             const state = context.state;
-            updateBashLifecycle(state, context, bashRefreshScheduler);
+            const lowPower = getToolRenderMode(state, services) === "low-power";
+            updateBashLifecycle(state, context, bashRefreshScheduler, !lowPower);
             const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
             state.callComponent = component;
-            component.setRenderer((width) => renderBashCall(args, state, theme, width));
+            if (lowPower) {
+                const commandPreview = getLowPowerBashCommandPreview(state, args, context.argsComplete);
+                const duration = state.lowPowerDurationMs === undefined
+                    ? ""
+                    : formatDuration(state.lowPowerDurationMs);
+                const timeout = getBashTimeoutLabel(args.timeout);
+                const cacheKey = [
+                    "low-power",
+                    "bash",
+                    "call",
+                    getLowPowerThemeFingerprint(theme),
+                    state.status ?? "pending",
+                    duration,
+                    timeout,
+                    commandPreview,
+                ].join("\0");
+                component.setRenderer((width) => renderLowPowerBashCall(commandPreview, timeout, state, theme, width), { linesAlreadyFit: true, cacheKey });
+                return component;
+            }
+            component.setRenderer((width) => renderBashCall(args, state, theme, width), { linesAlreadyFit: true });
             return component;
         },
         renderResult(result, options, theme, context) {
             const state = context.state;
+            if (getToolRenderMode(state, services) === "low-power") {
+                if (options.isPartial) {
+                    return updateComponent(context.lastComponent, () => [], "low-power\0bash\0result\0partial");
+                }
+                const prepared = getLowPowerPreparedBashResult(state, result);
+                return updateComponent(context.lastComponent, (width) => renderLowPowerBashResult(prepared, theme, width), getLowPowerBashResultCacheKey(prepared, theme));
+            }
             const prepared = getPreparedBashResult(state, result, options.isPartial);
-            return updateComponent(context.lastComponent, (width) => layoutBashResult(prepared, options, theme, services, width));
+            return updateComponent(context.lastComponent, (width) => getBashResultLayout(state, prepared, options, theme, services, width));
         },
     };
     pi.registerTool(bashTool);
@@ -225,7 +328,7 @@ export function renderDisplayDiff(lines, theme, width, path = "") {
     const safeWidth = normalizeWidth(width);
     if (safeWidth === 0)
         return [];
-    const lineNumberWidth = Math.max(1, ...lines.map((line) => line.lineNumber === undefined ? 0 : String(line.lineNumber).length));
+    const lineNumberWidth = getDisplayLineNumberWidth(lines);
     const language = getLanguageFromPath(path);
     const codeForeground = theme.getFgAnsi("toolDiffContext");
     return lines.map((line) => {
@@ -258,6 +361,33 @@ export function renderDisplayDiff(lines, theme, width, path = "") {
         return fitToWidth(content, safeWidth);
     });
 }
+export function getDisplayLineNumberWidth(lines) {
+    let lineNumberWidth = 1;
+    for (const line of lines) {
+        if (line.lineNumber === undefined)
+            continue;
+        lineNumberWidth = Math.max(lineNumberWidth, String(line.lineNumber).length);
+    }
+    return lineNumberWidth;
+}
+function getToolRenderMode(state, services) {
+    state.renderMode ??= services.isLowPowerEnabled?.() ? "low-power" : "full";
+    return state.renderMode;
+}
+function getLowPowerThemeFingerprint(theme) {
+    return [
+        theme.fg("toolTitle", theme.bold("x")),
+        theme.fg("toolOutput", "x"),
+        theme.fg("muted", "x"),
+        theme.fg("dim", "x"),
+        theme.fg("warning", "x"),
+        theme.fg("success", "x"),
+        theme.fg("error", "x"),
+        theme.getBgAnsi("toolPendingBg"),
+        theme.getBgAnsi("toolSuccessBg"),
+        theme.getBgAnsi("toolErrorBg"),
+    ].join("\0");
+}
 function createDefinitionCache(factory) {
     const definitions = new Map();
     return (cwd) => {
@@ -274,9 +404,11 @@ function getResponsiveComponent(previous) {
         ? previous
         : new ResponsiveLinesComponent();
 }
-function updateComponent(previous, renderer) {
+function updateComponent(previous, renderer, cacheKey) {
     const component = getResponsiveComponent(previous);
-    component.setRenderer(renderer);
+    component.setRenderer(renderer, cacheKey === undefined
+        ? { linesAlreadyFit: true }
+        : { linesAlreadyFit: true, cacheKey });
     return component;
 }
 function formatEditTitle(action, path, theme, suffix = "") {
@@ -289,9 +421,9 @@ function formatEditTitle(action, path, theme, suffix = "") {
         parts.push(suffix);
     return parts.join(" ");
 }
-function formatToolTitle(action, path, theme, suffix = "") {
+function formatToolTitle(action, path, theme, suffix = "", marker = { glyph: "•", color: "dim" }) {
     const parts = [
-        theme.fg("dim", "•"),
+        theme.fg(marker.color, marker.glyph),
         theme.fg("toolTitle", theme.bold(action)),
         theme.fg("accent", path || "(unknown path)"),
     ];
@@ -335,11 +467,13 @@ function renderReadResult(result, options, theme, isError, width) {
     }
     const hasImage = result.content.some((content) => content.type === "image");
     const lineCount = countLines(text);
-    let summary = hasImage ? "Image loaded" : formatLineCount(lineCount);
+    let summary = hasImage
+        ? `  ${theme.fg("toolOutput", "Image loaded")}`
+        : `  ${theme.fg("toolOutput", theme.bold(String(lineCount)))} ${theme.fg("dim", lineCount === 1 ? "line" : "lines")}`;
     if (result.details?.truncation?.truncated) {
-        summary += " · truncated";
+        summary += theme.fg("dim", " · truncated");
     }
-    const lines = [theme.fg("success", `  └ ${summary}`)];
+    const lines = [summary];
     if (options.expanded && text) {
         const contentLines = text.split("\n");
         const shown = contentLines.slice(0, EXPANDED_READ_LINES);
@@ -350,6 +484,109 @@ function renderReadResult(result, options, theme, isError, width) {
         }
     }
     return lines.map((line) => fitToWidth(line, width));
+}
+function getEditResultThemeFingerprint(theme) {
+    return [
+        theme.fg("warning", "x"),
+        theme.fg("error", "x"),
+        theme.fg("success", "x"),
+        theme.getFgAnsi("toolDiffContext"),
+        theme.getBgAnsi("toolSuccessBg"),
+        theme.getBgAnsi("toolErrorBg"),
+    ].join("\0");
+}
+function getEditResultLayout(state, result, diffLines, options, path, theme, isError, width) {
+    const source = diffLines ?? result.content;
+    const themeFingerprint = getEditResultThemeFingerprint(theme);
+    if (state.layoutSource !== source) {
+        state.layoutSource = source;
+        state.collapsedLayouts = [];
+        state.expandedLayout = undefined;
+    }
+    if (options.expanded) {
+        const cached = state.expandedLayout;
+        if (cached?.source === source
+            && cached.width === width
+            && cached.isPartial === options.isPartial
+            && cached.isError === isError
+            && cached.path === path
+            && cached.theme === theme
+            && cached.themeFingerprint === themeFingerprint) {
+            return cached.lines;
+        }
+        const lines = renderEditResult(result, diffLines, options, path, theme, isError, width);
+        state.expandedLayout = {
+            source,
+            width,
+            isPartial: options.isPartial,
+            isError,
+            path,
+            theme,
+            themeFingerprint,
+            lines,
+        };
+        return lines;
+    }
+    if (state.expandedLayout && diffLines) {
+        for (let index = COLLAPSED_DIFF_LINES; index < diffLines.length; index += 1) {
+            diffLines[index].highlightedText = undefined;
+        }
+    }
+    state.expandedLayout = undefined;
+    const layouts = state.collapsedLayouts ??= [];
+    const cachedIndex = layouts.findIndex((entry) => (entry.source === source
+        && entry.width === width
+        && entry.isPartial === options.isPartial
+        && entry.isError === isError
+        && entry.path === path
+        && entry.theme === theme
+        && entry.themeFingerprint === themeFingerprint));
+    const cached = layouts[cachedIndex];
+    if (cached) {
+        if (cachedIndex !== layouts.length - 1) {
+            layouts.splice(cachedIndex, 1);
+            layouts.push(cached);
+        }
+        return cached.lines;
+    }
+    const lines = renderEditResult(result, diffLines, options, path, theme, isError, width);
+    layouts.push({
+        source,
+        width,
+        isPartial: options.isPartial,
+        isError,
+        path,
+        theme,
+        themeFingerprint,
+        lines,
+    });
+    if (layouts.length > 2)
+        layouts.shift();
+    return lines;
+}
+function getLowPowerEditPreview(state, details) {
+    if (state.lowPowerPreparedDetails === details && state.lowPowerPreview !== undefined) {
+        return state.lowPowerPreview;
+    }
+    const patch = details?.patch;
+    const preview = typeof patch === "string"
+        ? getLowPowerPrefixLines(patch, LOW_POWER_EDIT_PATCH_PREVIEW_CHARS, LOW_POWER_EDIT_PREVIEW_LINES)
+        : [];
+    state.lowPowerPreparedDetails = details;
+    state.lowPowerPreview = preview;
+    return preview;
+}
+function renderLowPowerEditResult(preview, isPartial, error, theme, width) {
+    if (isPartial) {
+        return [fitToWidth(theme.fg("warning", "  … Editing"), width)];
+    }
+    if (error !== undefined) {
+        return [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)];
+    }
+    if (preview.length === 0) {
+        return [fitToWidth(theme.fg("success", "  └ Applied"), width)];
+    }
+    return preview.map((line) => fitToWidth(theme.fg("toolOutput", `    ${line}`), width));
 }
 function renderEditResult(result, diffLines, options, path, theme, isError, width) {
     if (options.isPartial) {
@@ -364,6 +601,7 @@ function renderEditResult(result, diffLines, options, path, theme, isError, widt
     }
     const maximum = options.expanded ? diffLines.length : COLLAPSED_DIFF_LINES;
     const visible = diffLines.slice(0, maximum);
+    prepareDiffHighlights(visible, path);
     const lines = renderDisplayDiff(visible, theme, width, path);
     const remaining = diffLines.length - visible.length;
     if (remaining > 0) {
@@ -379,7 +617,16 @@ function renderDiffTruncationFooter(remaining, width) {
     const rule = "─".repeat(Math.max(0, safeWidth - visibleWidth(label)));
     return fitToWidth(`${ANSI_DIM}${label}${rule}${ANSI_INTENSITY_RESET}`, safeWidth);
 }
-function renderWriteResult(result, content, isPartial, theme, isError, width) {
+function renderLowPowerWriteResult(isPartial, theme, error, width) {
+    if (isPartial) {
+        return [fitToWidth(theme.fg("warning", "  … Writing"), width)];
+    }
+    if (error !== undefined) {
+        return [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)];
+    }
+    return [fitToWidth(theme.fg("success", "  └ Written"), width)];
+}
+function renderWriteResult(result, metrics, isPartial, theme, isError, width) {
     if (isPartial) {
         return [fitToWidth(theme.fg("warning", "  … Writing"), width)];
     }
@@ -387,10 +634,10 @@ function renderWriteResult(result, content, isPartial, theme, isError, width) {
         const error = firstLine(extractText(result.content)) || "Write failed";
         return [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)];
     }
-    const summary = `  └ Written · ${formatLineCount(countLines(content))} · ${formatBytes(Buffer.byteLength(content, "utf8"))}`;
+    const summary = `  └ Written · ${formatLineCount(metrics.lineCount)} · ${formatBytes(metrics.bytes ?? Buffer.byteLength(metrics.content, "utf8"))}`;
     return [fitToWidth(theme.fg("success", summary), width)];
 }
-function updateBashLifecycle(state, context, scheduler) {
+function updateBashLifecycle(state, context, scheduler, trackRefresh = true) {
     const nextStatus = context.isError
         ? "failed"
         : !context.isPartial
@@ -403,7 +650,12 @@ function updateBashLifecycle(state, context, scheduler) {
             state.startedAt = Date.now();
             state.endedAt = undefined;
         }
-        scheduler.track(context.toolCallId, context.invalidate);
+        if (trackRefresh && state.status !== "running") {
+            scheduler.track(context.toolCallId, context.invalidate);
+        }
+        else if (!trackRefresh) {
+            scheduler.untrack(context.toolCallId);
+        }
     }
     else {
         if ((nextStatus === "completed" || nextStatus === "failed")
@@ -414,6 +666,62 @@ function updateBashLifecycle(state, context, scheduler) {
         scheduler.untrack(context.toolCallId);
     }
     state.status = nextStatus;
+    if (!trackRefresh) {
+        state.lowPowerDurationMs = state.startedAt === undefined
+            ? undefined
+            : Math.max(0, (state.endedAt ?? Date.now()) - state.startedAt);
+    }
+}
+function getLowPowerBashCommandPreview(state, args, argsComplete) {
+    if (!argsComplete)
+        return "…";
+    if (state.lowPowerCommandCaptured)
+        return state.lowPowerCommandPreview ?? "…";
+    const command = args.command;
+    const source = typeof command === "string" ? command : "";
+    const bounded = source.slice(0, LOW_POWER_BASH_COMMAND_PREVIEW_CHARS);
+    const preview = sanitizeBashDisplayText(stripTerminalSequences(bounded))
+        .replace(/[\r\n]+/gu, " ")
+        .trim() || "…";
+    state.lowPowerCommandCaptured = true;
+    state.lowPowerCommandPreview = preview;
+    return preview;
+}
+function getBashTimeoutLabel(timeout) {
+    return typeof timeout === "number" && Number.isFinite(timeout) && timeout > 0
+        ? `${timeout}s limit`
+        : "";
+}
+function renderLowPowerBashCall(commandPreview, timeout, state, theme, width) {
+    const safeWidth = normalizeWidth(width);
+    if (safeWidth === 0)
+        return [];
+    const status = state.status ?? "pending";
+    const presentation = BASH_STATUS_PRESENTATION[status];
+    const summary = [
+        theme.fg(presentation.color, presentation.glyph),
+        theme.fg("toolTitle", theme.bold("Bash")),
+        theme.fg("muted", status),
+    ];
+    const metadata = [];
+    if (state.lowPowerDurationMs !== undefined) {
+        metadata.push(formatDuration(state.lowPowerDurationMs));
+    }
+    if (timeout)
+        metadata.push(timeout);
+    if (metadata.length > 0) {
+        summary.push(theme.fg("dim", metadata.join(" · ")));
+    }
+    const rail = safeWidth >= 2 ? theme.fg("success", "▌") : "";
+    const gap = safeWidth >= 3 ? " " : "";
+    const command = theme.fg("toolTitle", theme.bold(`$ ${commandPreview}`));
+    const shellBackground = status === "completed"
+        ? "toolSuccessBg"
+        : status === "failed"
+            ? "toolErrorBg"
+            : "toolPendingBg";
+    const commandLine = `${theme.getBgAnsi("toolPendingBg")}${fitToWidth(`${rail}${gap}${command}`, safeWidth, { pad: true })}${theme.getBgAnsi(shellBackground)}`;
+    return [fitToWidth(summary.join(" "), safeWidth), "", commandLine];
 }
 function renderBashCall(args, state, theme, width) {
     const status = state.status ?? "pending";
@@ -432,24 +740,168 @@ function renderBashCall(args, state, theme, width) {
         metadata.push(`${args.timeout}s limit`);
     }
     const lines = renderAlignedLines(summary, metadata.length > 0 ? theme.fg("dim", metadata.join(" · ")) : "", width);
-    lines.push("", ...renderBashCommand(args.command, status, theme, width));
+    lines.push("", ...renderBashCommand(args.command, state, status, theme, width));
     return lines;
 }
-function renderBashCommand(command, status, theme, width) {
-    const displayCommand = sanitizeBashDisplayText(stripTerminalSequences(typeof command === "string" ? command : "")) || "…";
-    const text = theme.fg("toolTitle", theme.bold(`$ ${displayCommand}`));
-    const rail = width >= 2 ? theme.fg("success", "▌") : "";
-    const gap = width >= 3 ? " " : "";
-    const trailingPadding = width >= 4 ? 1 : 0;
-    const prefix = `${rail}${gap}`;
-    const contentWidth = Math.max(1, width - visibleWidth(prefix) - trailingPadding);
-    const commandLines = wrapTextWithAnsi(text, contentWidth);
+function renderBashCommand(command, state, status, theme, width) {
+    const source = typeof command === "string" ? command : "";
+    const themeFingerprint = getBashCommandThemeFingerprint(theme);
+    if (state.commandSource !== source
+        || state.commandTheme !== theme
+        || state.commandThemeFingerprint !== themeFingerprint) {
+        state.commandSource = source;
+        state.commandTheme = theme;
+        state.commandThemeFingerprint = themeFingerprint;
+        state.commandGeometry = [];
+        state.commandPaint = undefined;
+    }
+    const geometries = state.commandGeometry ??= [];
+    let geometryIndex = geometries.findIndex((entry) => entry.width === width);
+    let geometry = geometries[geometryIndex];
+    if (!geometry) {
+        const displayCommand = sanitizeBashDisplayText(stripTerminalSequences(source)) || "…";
+        const text = theme.fg("toolTitle", theme.bold(`$ ${displayCommand}`));
+        const rail = width >= 2 ? theme.fg("success", "▌") : "";
+        const gap = width >= 3 ? " " : "";
+        const trailingPadding = width >= 4 ? 1 : 0;
+        const prefix = `${rail}${gap}`;
+        const contentWidth = Math.max(1, width - visibleWidth(prefix) - trailingPadding);
+        const commandLines = wrapTextWithAnsi(text, contentWidth);
+        geometry = {
+            width,
+            lines: (commandLines.length > 0 ? commandLines : [""]).map((line) => (`${theme.getBgAnsi("toolPendingBg")}${fitToWidth(`${prefix}${line}`, width, { pad: true })}`)),
+        };
+        geometries.push(geometry);
+        if (geometries.length > 2)
+            geometries.shift();
+    }
+    else if (geometryIndex !== geometries.length - 1) {
+        geometries.splice(geometryIndex, 1);
+        geometries.push(geometry);
+    }
+    if (state.commandPaint?.geometry === geometry && state.commandPaint.status === status) {
+        return state.commandPaint.lines;
+    }
     const shellBackground = status === "completed"
         ? "toolSuccessBg"
         : status === "failed"
             ? "toolErrorBg"
             : "toolPendingBg";
-    return (commandLines.length > 0 ? commandLines : [""]).map((line) => (`${theme.getBgAnsi("toolPendingBg")}${fitToWidth(`${prefix}${line}`, width, { pad: true })}${theme.getBgAnsi(shellBackground)}`));
+    const background = theme.getBgAnsi(shellBackground);
+    const lines = geometry.lines.map((line) => `${line}${background}`);
+    state.commandPaint = { geometry, status, lines };
+    return lines;
+}
+function getBashCommandThemeFingerprint(theme) {
+    return [
+        theme.fg("toolTitle", theme.bold("x")),
+        theme.fg("success", "x"),
+        theme.getBgAnsi("toolPendingBg"),
+        theme.getBgAnsi("toolSuccessBg"),
+        theme.getBgAnsi("toolErrorBg"),
+    ].join("\0");
+}
+function getLowPowerPreparedBashResult(state, result) {
+    if (state.lowPowerPreparedResult !== undefined
+        && state.lowPowerPreparedContent === result.content
+        && state.lowPowerPreparedDetails === result.details) {
+        return state.lowPowerPreparedResult;
+    }
+    const extracted = extractBoundedBashOutputTail(result.content, LOW_POWER_BASH_OUTPUT_PREVIEW_CHARS).trim();
+    const output = removeLowPowerBashExecutionFooter(extracted, result.details);
+    const prepared = {
+        outputLines: output ? output.split("\n").slice(-LOW_POWER_BASH_PREVIEW_LINES) : [],
+        warnings: formatLowPowerBashWarnings(result.details),
+    };
+    state.lowPowerPreparedContent = result.content;
+    state.lowPowerPreparedDetails = result.details;
+    state.lowPowerPreparedResult = prepared;
+    return prepared;
+}
+function getLowPowerBashResultCacheKey(prepared, theme) {
+    return [
+        "low-power",
+        "bash",
+        "result",
+        getLowPowerThemeFingerprint(theme),
+        prepared.outputLines.join("\n"),
+        prepared.warnings.join("\n"),
+    ].join("\0");
+}
+function renderLowPowerBashResult(prepared, theme, width) {
+    const safeWidth = normalizeWidth(width);
+    if (safeWidth === 0)
+        return [];
+    const lines = prepared.outputLines.map((line) => (fitToWidth(theme.fg("toolOutput", line), safeWidth)));
+    if (prepared.warnings.length > 0) {
+        if (lines.length > 0)
+            lines.push("");
+        for (const warning of prepared.warnings) {
+            lines.push(fitToWidth(theme.fg("warning", `[${warning}]`), safeWidth));
+        }
+    }
+    return lines;
+}
+function extractBoundedBashOutputTail(content, maxChars) {
+    const reversedChunks = [];
+    let remaining = maxChars;
+    let inspected = 0;
+    let hasText = false;
+    for (let index = content.length - 1; index >= 0 && remaining > 0 && inspected < LOW_POWER_CONTENT_ITEM_LIMIT; index -= 1) {
+        inspected += 1;
+        const item = content[index];
+        if (item?.type !== "text")
+            continue;
+        const text = item.text;
+        if (typeof text !== "string")
+            continue;
+        if (hasText) {
+            reversedChunks.push("\n");
+            remaining -= 1;
+            if (remaining === 0)
+                break;
+        }
+        const chunk = text.slice(-remaining);
+        reversedChunks.push(chunk);
+        remaining -= chunk.length;
+        hasText = true;
+    }
+    const bounded = reversedChunks.reverse().join("");
+    return sanitizeBashDisplayText(stripTerminalSequences(bounded)).replace(/\r/gu, "");
+}
+function removeLowPowerBashExecutionFooter(output, details) {
+    const fullOutputPath = details?.fullOutputPath;
+    if (typeof fullOutputPath !== "string"
+        || fullOutputPath.length === 0
+        || fullOutputPath.length > LOW_POWER_BASH_WARNING_PREVIEW_CHARS
+        || !output.endsWith("]")) {
+        return output;
+    }
+    const footerStart = output.lastIndexOf("\n\n[");
+    if (footerStart !== -1 && output.slice(footerStart).includes(fullOutputPath)) {
+        return output.slice(0, footerStart).trimEnd();
+    }
+    return output;
+}
+function formatLowPowerBashWarnings(details) {
+    const warnings = [];
+    const fullOutputPath = details?.fullOutputPath;
+    if (typeof fullOutputPath === "string" && fullOutputPath.length > 0) {
+        const path = sanitizeBashDisplayText(stripTerminalSequences(fullOutputPath.slice(0, LOW_POWER_BASH_WARNING_PREVIEW_CHARS))).replace(/[\r\n]+/gu, " ").trim();
+        if (path)
+            warnings.push(`Full output: ${path}`);
+    }
+    const truncation = details?.truncation;
+    if (truncation?.truncated) {
+        if (truncation.truncatedBy === "lines") {
+            warnings.push(`Truncated: showing ${truncation.outputLines} of ${truncation.totalLines} lines`);
+        }
+        else {
+            const limit = formatSize(truncation.maxBytes ?? DEFAULT_MAX_BYTES);
+            warnings.push(`Truncated: ${truncation.outputLines} lines shown (${limit} limit)`);
+        }
+    }
+    return warnings;
 }
 function getPreparedBashResult(state, result, isPartial) {
     if (state.preparedResult !== undefined
@@ -463,6 +915,8 @@ function getPreparedBashResult(state, result, isPartial) {
     state.preparedDetails = result.details;
     state.preparedIsPartial = isPartial;
     state.preparedResult = prepared;
+    state.collapsedResultLayouts = [];
+    state.expandedResultLayout = undefined;
     return prepared;
 }
 function prepareBashResult(result, isPartial) {
@@ -473,27 +927,90 @@ function prepareBashResult(result, isPartial) {
         warning: formatBashTruncationWarning(result.details),
     };
 }
-function layoutBashResult(prepared, options, theme, services, width) {
+function getBashResultThemeFingerprint(theme) {
+    return [
+        theme.fg("toolOutput", "x"),
+        theme.fg("warning", "x"),
+        theme.fg("dim", "x"),
+        theme.fg("muted", "x"),
+    ].join("\0");
+}
+function getBashResultLayout(state, prepared, options, theme, services, width) {
+    const expandHint = formatExpandHint(options.expanded ? "collapse" : "expand", theme, services);
+    const themeFingerprint = getBashResultThemeFingerprint(theme);
+    if (options.expanded) {
+        const cached = state.expandedResultLayout;
+        if (cached?.prepared === prepared
+            && cached.width === width
+            && cached.theme === theme
+            && cached.themeFingerprint === themeFingerprint
+            && cached.expandHint === expandHint) {
+            return cached.lines;
+        }
+        const lines = layoutBashResult(prepared, true, theme, expandHint, width);
+        state.expandedResultLayout = {
+            prepared,
+            width,
+            theme,
+            themeFingerprint,
+            expandHint,
+            lines,
+        };
+        return lines;
+    }
+    state.expandedResultLayout = undefined;
+    const layouts = state.collapsedResultLayouts ??= [];
+    const cachedIndex = layouts.findIndex((entry) => (entry.prepared === prepared
+        && entry.width === width
+        && entry.theme === theme
+        && entry.themeFingerprint === themeFingerprint
+        && entry.expandHint === expandHint));
+    const cached = layouts[cachedIndex];
+    if (cached) {
+        if (cachedIndex !== layouts.length - 1) {
+            layouts.splice(cachedIndex, 1);
+            layouts.push(cached);
+        }
+        return cached.lines;
+    }
+    const lines = layoutBashResult(prepared, false, theme, expandHint, width);
+    layouts.push({ prepared, width, theme, themeFingerprint, expandHint, lines });
+    if (layouts.length > 2)
+        layouts.shift();
+    return lines;
+}
+function layoutBashResult(prepared, expanded, theme, expandHint, width) {
     let visualLines = [];
     let skippedCount = 0;
     if (prepared.outputLines.length > 0) {
-        const styledOutput = prepared.outputLines
-            .map((line) => theme.fg("toolOutput", line))
-            .join("\n");
-        const preview = truncateToVisualLines(styledOutput, options.expanded ? Number.MAX_SAFE_INTEGER : COLLAPSED_BASH_LINES, width);
-        visualLines = preview.visualLines;
-        skippedCount = preview.skippedCount;
+        if (expanded) {
+            visualLines = getExactFittedVisualLines(prepared.outputLines, (line) => theme.fg("toolOutput", line), width);
+        }
+        else {
+            const preview = getExactVisualTail(prepared.outputLines, (line) => theme.fg("toolOutput", line), width, COLLAPSED_BASH_LINES);
+            visualLines = preview.visualLines;
+            skippedCount = preview.skippedCount;
+        }
     }
-    const lines = ["", ...visualLines];
+    const lines = [""];
+    for (const visualLine of visualLines) {
+        lines.push(expanded ? visualLine : fitToWidth(visualLine, width));
+    }
     if (prepared.warning) {
-        lines.push("", ...wrapTextWithAnsi(theme.fg("warning", `[${prepared.warning}]`), width));
+        lines.push("");
+        for (const warningLine of wrapTextWithAnsi(theme.fg("warning", `[${prepared.warning}]`), width)) {
+            lines.push(fitToWidth(warningLine, width));
+        }
     }
     const totalVisualLines = visualLines.length + skippedCount;
     const lineLabel = `${totalVisualLines} visual ${totalVisualLines === 1 ? "line" : "lines"}`;
-    const footerLabel = !options.expanded && skippedCount > 0
+    const footerLabel = !expanded && skippedCount > 0
         ? `${skippedCount} earlier visual lines hidden`
         : lineLabel;
-    lines.push("", ...renderAlignedLines(theme.fg("dim", footerLabel), formatExpandHint(options.expanded ? "collapse" : "expand", theme, services), width));
+    lines.push("");
+    for (const footerLine of renderAlignedLines(theme.fg("dim", footerLabel), expandHint, width)) {
+        lines.push(fitToWidth(footerLine, width));
+    }
     return lines;
 }
 function formatExpandHint(description, theme, services) {
@@ -523,26 +1040,37 @@ function renderAlignedLines(left, right, width) {
     ];
 }
 function extractBashOutput(content) {
-    return content
-        .filter((item) => item.type === "text" && typeof item.text === "string")
-        .map((item) => sanitizeBashDisplayText(stripTerminalSequences(item.text ?? "")).replace(/\r/g, ""))
-        .join("\n");
+    let output = "";
+    let hasText = false;
+    for (const item of content) {
+        if (item.type !== "text" || typeof item.text !== "string")
+            continue;
+        if (hasText)
+            output += "\n";
+        output += sanitizeBashDisplayText(stripTerminalSequences(item.text)).replace(/\r/gu, "");
+        hasText = true;
+    }
+    return output;
 }
 function sanitizeBashDisplayText(text) {
-    return Array.from(text)
-        .filter((character) => {
+    let sanitized = "";
+    for (const character of text) {
         const codePoint = character.codePointAt(0);
         if (codePoint === undefined)
-            return false;
-        if (codePoint === 0x09 || codePoint === 0x0a || codePoint === 0x0d)
-            return true;
+            continue;
+        if (codePoint === 0x09 || codePoint === 0x0a || codePoint === 0x0d) {
+            sanitized += character;
+            continue;
+        }
         if (codePoint <= 0x1f)
-            return false;
+            continue;
         if (codePoint >= 0xd800 && codePoint <= 0xdfff)
-            return false;
-        return codePoint < 0xfff9 || codePoint > 0xfffb;
-    })
-        .join("");
+            continue;
+        if (codePoint >= 0xfff9 && codePoint <= 0xfffb)
+            continue;
+        sanitized += character;
+    }
+    return sanitized;
 }
 function removeBashExecutionFooter(output, details, isPartial) {
     if (isPartial
@@ -592,21 +1120,26 @@ function getPreparedEditDiff(state, details, path, theme) {
         && state.preparedTheme === theme) {
         return state.preparedDiff;
     }
-    const parsed = parseEditDiff(details);
-    const language = getLanguageFromPath(path);
-    const prepared = language
-        ? parsed.map((line) => line.kind === "hunk"
-            ? line
-            : {
-                ...line,
-                highlightedText: highlightCode(line.text, language)[0] ?? line.text,
-            })
-        : parsed;
+    const prepared = parseEditDiff(details);
     state.preparedDetails = details;
     state.preparedPath = path;
     state.preparedTheme = theme;
     state.preparedDiff = prepared;
+    state.preparedStats = countDiffStats(prepared);
+    state.layoutSource = undefined;
+    state.collapsedLayouts = [];
+    state.expandedLayout = undefined;
     return prepared;
+}
+function prepareDiffHighlights(lines, path) {
+    const language = getLanguageFromPath(path);
+    if (!language)
+        return;
+    for (const line of lines) {
+        if (line.kind === "hunk" || line.highlightedText !== undefined)
+            continue;
+        line.highlightedText = highlightCode(line.text, language)[0] ?? line.text;
+    }
 }
 function namedGreen(text) {
     return `${ANSI_NAMED_GREEN}${text}${ANSI_DEFAULT_FOREGROUND}`;
@@ -631,6 +1164,39 @@ function countDiffStats(lines) {
     }
     return { added, removed };
 }
+function getLowPowerPrefixLines(text, maximumChars, maximumLines) {
+    const bounded = sanitizeBashDisplayText(stripTerminalSequences(text.slice(0, maximumChars))).replace(/\r\n?/gu, "\n");
+    return bounded ? bounded.split("\n", maximumLines) : [];
+}
+function extractBoundedTextPrefix(content, maximumChars) {
+    let preview = "";
+    let remaining = maximumChars;
+    let hasText = false;
+    const maximumItems = Math.min(content.length, LOW_POWER_CONTENT_ITEM_LIMIT);
+    for (let index = 0; index < maximumItems && remaining > 0; index += 1) {
+        const item = content[index];
+        if (item?.type !== "text")
+            continue;
+        const text = item.text;
+        if (typeof text !== "string")
+            continue;
+        if (hasText) {
+            preview += "\n";
+            remaining -= 1;
+            if (remaining === 0)
+                break;
+        }
+        const chunk = text.slice(0, remaining);
+        preview += chunk;
+        remaining -= chunk.length;
+        hasText = true;
+    }
+    return sanitizeBashDisplayText(stripTerminalSequences(preview));
+}
+function getLowPowerError(content, fallback) {
+    const preview = extractBoundedTextPrefix(content, LOW_POWER_ERROR_PREVIEW_CHARS).replace(/\r\n?/gu, "\n");
+    return firstLine(preview) || fallback;
+}
 function extractText(content) {
     return content
         .filter((item) => item.type === "text" && typeof item.text === "string")
@@ -640,8 +1206,29 @@ function extractText(content) {
 function firstLine(text) {
     return text.split("\n", 1)[0] ?? "";
 }
+function getWriteMetrics(state, content, includeBytes) {
+    let metrics = state.metrics;
+    if (metrics?.content !== content) {
+        metrics = {
+            content,
+            lineCount: countLines(content),
+        };
+        state.metrics = metrics;
+    }
+    if (includeBytes && metrics.bytes === undefined) {
+        metrics.bytes = Buffer.byteLength(content, "utf8");
+    }
+    return metrics;
+}
 function countLines(content) {
-    return content.length === 0 ? 0 : content.split("\n").length;
+    if (content.length === 0)
+        return 0;
+    let lineCount = 1;
+    for (let index = 0; index < content.length; index += 1) {
+        if (content.charCodeAt(index) === 0x0a)
+            lineCount += 1;
+    }
+    return lineCount;
 }
 function formatLineCount(count) {
     return `${count} ${count === 1 ? "line" : "lines"}`;

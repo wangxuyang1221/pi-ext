@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { appendFile, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "vitest";
 
@@ -544,18 +544,28 @@ test("returns closed when terminal close deletes state during wait", async () =>
   }
 });
 
-test("prompts only a live direct child", async () => {
+test("confirms an enveloped literal prompt from a persisted user turn", async () => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-manager-test-"));
   const store = new SessionStateStore(root);
+  const sessionFile = join(root, "child-a.jsonl");
   const delivered: Array<{ text: string; delivery: string }> = [];
+  const confirmationSleeps: number[] = [];
   let alive = true;
+  let now = 0;
 
   try {
+    await writeFile(sessionFile, `${JSON.stringify({
+      type: "session",
+      version: 3,
+      id: "child-a",
+      timestamp: "2026-08-27T02:00:00.000Z",
+      cwd: "/repo",
+    })}\n`, "utf8");
     const child = createSessionState({
       sessionId: "child-a",
       epoch: "child-epoch",
       cwd: "/repo",
-      sessionFile: "/sessions/child-a.jsonl",
+      sessionFile,
       now: "2026-08-27T02:00:00.000Z",
       parent: {
         sessionId: "parent-a",
@@ -588,6 +598,39 @@ test("prompts only a live direct child", async () => {
       },
       async sendPrompt(_locator, text, delivery) {
         delivered.push({ text, delivery });
+        if (delivered.length === 1) {
+          assert.match(
+            text,
+            /^\[subagent:[a-f0-9]{12}\]\n\/quit\nnext {4}line$/u,
+          );
+          await appendFile(sessionFile, `${JSON.stringify({
+            type: "message",
+            id: "user-delivery",
+            parentId: null,
+            timestamp: "2026-08-27T02:00:02.000Z",
+            message: { role: "user", content: text },
+          })}\n`, "utf8");
+          return;
+        }
+        if (delivered.length === 2) {
+          assert.match(text, /^\[subagent:[a-f0-9]{12}\]\n!command\\$/u);
+          return;
+        }
+        if (delivered.length === 3) {
+          assert.match(text, /^\[subagent:[a-f0-9]{12}\]\nsteer-queued$/u);
+          return;
+        }
+        assert.match(text, /^\[subagent:[a-f0-9]{12}\]\neditor-only$/u);
+      },
+      async capturePane() {
+        const latest = delivered.at(-1)?.text;
+        if (latest?.endsWith("!command\\")) {
+          return `Follow-up: ${latest.split("\n")[0]}\n`;
+        }
+        if (latest?.endsWith("steer-queued")) {
+          return `Steering: ${latest.split("\n")[0]}\n`;
+        }
+        return latest?.endsWith("editor-only") ? latest.split("\n")[0] ?? "" : "";
       },
       async isAlive() {
         return alive;
@@ -596,18 +639,185 @@ test("prompts only a live direct child", async () => {
         alive = false;
       },
     };
-    const manager = createManager(root, store, runtime);
+    const manager = createManager(root, store, runtime, {
+      nowMs: () => now,
+      sleep: async (milliseconds) => {
+        confirmationSleeps.push(milliseconds);
+        now += milliseconds;
+      },
+    });
 
-    await manager.prompt("parent-a", "child-a", "Review the failure", "follow_up");
-    assert.deepEqual(delivered, [{ text: "Review the failure", delivery: "follow_up" }]);
+    const result = await manager.prompt(
+      "parent-a",
+      "child-a",
+      " \r\n/quit\rnext\tline \t",
+      "follow_up",
+    );
+    assert.equal(result.agent.agentId, "child-a");
+    assert.match(result.deliveryId, /^[a-f0-9]{12}$/u);
+    assert.equal(result.confirmation, "session");
+    assert.deepEqual(delivered, [{
+      text: `[subagent:${result.deliveryId}]\n/quit\nnext    line`,
+      delivery: "follow_up",
+    }]);
+
+    await assert.rejects(
+      manager.prompt("parent-a", "child-a", " \t\r\n ", "steer"),
+      /empty subagent prompt/u,
+    );
+    for (const unsafe of [
+      "\u0000unsafe",
+      "\u000bunsafe",
+      "unsafe\u001b[201~",
+      "unsafe\u007f",
+    ]) {
+      await assert.rejects(
+        manager.prompt("parent-a", "child-a", unsafe, "steer"),
+        /unsafe control character/u,
+      );
+    }
+    assert.equal(delivered.length, 1);
+
+    const queued = await manager.prompt(
+      "parent-a",
+      "child-a",
+      "!command\\",
+      "follow_up",
+    );
+    assert.equal(queued.confirmation, "follow_up_queue");
+    assert.match(queued.deliveryId, /^[a-f0-9]{12}$/u);
+    assert.equal(delivered.length, 2);
+
+    const steering = await manager.prompt(
+      "parent-a",
+      "child-a",
+      "steer-queued",
+      "steer",
+    );
+    assert.equal(steering.confirmation, "steering_queue");
+    assert.match(steering.deliveryId, /^[a-f0-9]{12}$/u);
+    assert.equal(delivered.length, 3);
+
+    await assert.rejects(
+      manager.prompt("parent-a", "child-a", "editor-only", "steer"),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.equal((error as Error & { code?: string }).code, "delivery_unconfirmed");
+        assert.match(
+          error.message,
+          /delivery_unconfirmed: Child Pi may already have accepted the prompt/u,
+        );
+        return true;
+      },
+    );
+    assert.equal(now, 1_000);
+    assert.deepEqual(confirmationSleeps, Array.from({ length: 20 }, () => 50));
+    assert.equal(delivered.length, 4);
 
     await manager.close("parent-a", "child-a");
     await assert.rejects(
       manager.prompt("parent-a", "child-a", "Too late", "steer"),
       /not a direct child/u,
     );
-    assert.equal(delivered.length, 1);
+    assert.equal(delivered.length, 4);
   } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("serializes concurrent prompts for the same agent", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-manager-test-"));
+  const store = new SessionStateStore(root);
+  const sessionFile = join(root, "child-concurrent.jsonl");
+  const sends: string[] = [];
+  let releaseFirst: (() => void) | undefined;
+  const firstGate = new Promise<void>((resolveGate) => {
+    releaseFirst = resolveGate;
+  });
+  let signalSecond: (() => void) | undefined;
+  const secondStarted = new Promise<void>((resolveSecond) => {
+    signalSecond = resolveSecond;
+  });
+
+  try {
+    await writeFile(sessionFile, `${JSON.stringify({
+      type: "session",
+      version: 3,
+      id: "child-concurrent",
+      timestamp: "2026-08-27T02:00:00.000Z",
+      cwd: "/repo",
+    })}\n`, "utf8");
+    const child = createSessionState({
+      sessionId: "child-concurrent",
+      epoch: "child-epoch",
+      cwd: "/repo",
+      sessionFile,
+      now: "2026-08-27T02:00:00.000Z",
+      parent: {
+        sessionId: "parent-concurrent",
+        epoch: "parent-epoch",
+        registrationToken: "registration-a",
+      },
+      launch: {
+        cwd: "/repo",
+        sessionDir: "/sessions/managed-a",
+        displayName: "Concurrent",
+        processInstanceId: "process-a",
+      },
+      tmux: locator,
+    });
+    child.runtime.status = "settled";
+    let parent = createSessionState({
+      sessionId: "parent-concurrent",
+      epoch: "parent-epoch",
+      cwd: "/repo",
+      sessionFile: "/sessions/parent-concurrent.jsonl",
+      now: "2026-08-27T02:00:00.000Z",
+    });
+    parent = registerDirectChild(parent, child, "2026-08-27T02:00:01.000Z");
+    await store.save(parent);
+    await store.save(child);
+
+    const runtime: ManagedTmuxRuntime = {
+      async launch() { throw new Error("not used"); },
+      async sendPrompt(_locator, text) {
+        sends.push(text);
+        const sendIndex = sends.length;
+        if (sendIndex === 1) await firstGate;
+        if (sendIndex === 2) signalSecond?.();
+        await appendFile(sessionFile, `${JSON.stringify({
+          type: "message",
+          id: `user-${sendIndex}`,
+          parentId: null,
+          timestamp: `2026-08-27T02:00:0${sendIndex + 1}.000Z`,
+          message: { role: "user", content: text },
+        })}\n`, "utf8");
+      },
+      async capturePane() { return ""; },
+      async isAlive() { return true; },
+      async close() {},
+    };
+    const manager = createManager(root, store, runtime);
+
+    const first = manager.prompt("parent-concurrent", "child-concurrent", "First", "steer");
+    while (sends.length === 0) await new Promise<void>((resolveTurn) => setImmediate(resolveTurn));
+    const second = manager.prompt("parent-concurrent", "child-concurrent", "Second", "steer");
+    const secondStartedBeforeRelease = await Promise.race([
+      secondStarted.then(() => true),
+      new Promise<boolean>((resolveTimeout) => setTimeout(() => resolveTimeout(false), 50)),
+    ]);
+    releaseFirst?.();
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+
+    assert.equal(secondStartedBeforeRelease, false);
+    assert.equal(sends.length, 2);
+    assert.notEqual(firstResult.deliveryId, secondResult.deliveryId);
+    assert.deepEqual(
+      sends.map((text) => text.split("\n").at(-1)),
+      ["First", "Second"],
+    );
+  } finally {
+    releaseFirst?.();
     await rm(root, { recursive: true, force: true });
   }
 });
@@ -616,7 +826,10 @@ function createManager(
   root: string,
   store: SessionStateStore,
   runtime: ManagedTmuxRuntime,
-  options: { sleep?: (milliseconds: number) => Promise<void> } = {},
+  options: {
+    sleep?: (milliseconds: number) => Promise<void>;
+    nowMs?: () => number;
+  } = {},
 ): SubagentManager {
   return new SubagentManager({
     ...options,

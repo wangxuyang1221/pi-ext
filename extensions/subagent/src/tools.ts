@@ -221,7 +221,11 @@ export function registerSubagentTools(
     parameters: promptParameters,
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const delivery = params.delivery ?? "follow_up";
-      const agent = await manager.prompt(
+      const {
+        agent,
+        deliveryId,
+        confirmation,
+      } = await manager.prompt(
         currentSessionId(ctx),
         params.agentId,
         params.text,
@@ -233,9 +237,11 @@ export function registerSubagentTools(
         agent: toAgentDisplay(agent),
         prompt: params.text,
         delivery,
+        deliveryId,
+        confirmation,
         message: "Prompt delivered; processing and completion are not implied.",
       };
-      return toolResult({ agent, delivery }, details);
+      return toolResult({ agent, delivery, deliveryId, confirmation }, details);
     },
   }));
 

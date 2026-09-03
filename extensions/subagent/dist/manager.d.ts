@@ -10,6 +10,7 @@ export declare const PI_SUBAGENT_LAUNCH = "PI_SUBAGENT_LAUNCH";
 export interface ManagedTmuxRuntime {
     launch(options: TmuxLaunchOptions): Promise<TmuxLocator>;
     sendPrompt(locator: TmuxLocator, text: string, delivery: PromptDelivery): Promise<void>;
+    capturePane(locator: TmuxLocator): Promise<string>;
     isAlive(locator: TmuxLocator): Promise<boolean>;
     close(locator: TmuxLocator): Promise<void>;
 }
@@ -26,6 +27,7 @@ export interface SubagentManagerOptions {
     sleep?: (milliseconds: number) => Promise<void>;
     registrationTimeoutMs?: number;
     pollIntervalMs?: number;
+    promptAckTimeoutMs?: number;
     closeTimeoutMs?: number;
     maxActive?: number;
     reservationTtlMs?: number;
@@ -65,6 +67,17 @@ export interface ManagedAgentList {
     agents: ManagedAgent[];
     capacity: SubagentCapacity;
 }
+export type PromptConfirmation = "session" | "steering_queue" | "follow_up_queue";
+export interface ManagedPromptResult {
+    agent: ManagedAgent;
+    deliveryId: string;
+    confirmation: PromptConfirmation;
+}
+export declare class DeliveryUnconfirmedError extends Error {
+    readonly deliveryId: string;
+    readonly code = "delivery_unconfirmed";
+    constructor(deliveryId: string);
+}
 export interface WaitManagedOptions {
     afterSettled: string;
     timeoutMs: number;
@@ -96,10 +109,12 @@ export declare class SubagentManager {
     private readonly sleep;
     private readonly registrationTimeoutMs;
     private readonly pollIntervalMs;
+    private readonly promptAckTimeoutMs;
     private readonly closeTimeoutMs;
     private readonly maxActive;
     private readonly reservationTtlMs;
     private readonly nowMs;
+    private readonly promptLocks;
     private readonly inFlightSpawns;
     private readonly closingNamespaces;
     constructor(options: SubagentManagerOptions);
@@ -112,7 +127,11 @@ export declare class SubagentManager {
     wait(parentSessionId: string, agentId: string, options: WaitManagedOptions, signal?: AbortSignal): Promise<ManagedWaitResult>;
     read(parentSessionId: string, agentId: string, options: Omit<ReadSessionViewOptions, "sessionFile" | "agentId" | "epoch" | "leafId">): Promise<SessionViewResult>;
     list(parentSessionId: string): Promise<ManagedAgentList>;
-    prompt(parentSessionId: string, agentId: string, text: string, delivery: PromptDelivery): Promise<ManagedAgent>;
+    prompt(parentSessionId: string, agentId: string, text: string, delivery: PromptDelivery): Promise<ManagedPromptResult>;
+    private deliverPrompt;
+    private withPromptLock;
+    private readPromptBaseline;
+    private waitForPromptConfirmation;
     private reserveSpawn;
     private reapExpiredReservations;
     private attachReservationLocator;

@@ -7,6 +7,7 @@ export interface CodexToolFactories {
 }
 export interface CodexToolRenderServices {
     getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
+    isLowPowerEnabled?: () => boolean;
 }
 export interface DisplayDiffLine {
     kind: "context" | "removed" | "added" | "hunk";
@@ -18,4 +19,5 @@ export declare function registerCodexTools(pi: ExtensionAPI, factories?: CodexTo
 export declare function parseDisplayDiff(diff: string): DisplayDiffLine[];
 export declare function parseUnifiedPatch(patch: string): DisplayDiffLine[];
 export declare function renderDisplayDiff(lines: readonly DisplayDiffLine[], theme: Theme, width: number, path?: string): string[];
+export declare function getDisplayLineNumberWidth(lines: readonly DisplayDiffLine[]): number;
 //# sourceMappingURL=tools.d.ts.map

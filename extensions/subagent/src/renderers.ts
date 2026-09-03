@@ -67,6 +67,8 @@ export interface SubagentUiDetails {
   task?: string;
   prompt?: string;
   delivery?: "steer" | "follow_up";
+  deliveryId?: string;
+  confirmation?: "session" | "steering_queue" | "follow_up_queue";
   view?: "recent_activity" | "turns" | "activity_detail";
   activityId?: string;
   section?: "assistant_text" | "tool_arguments" | "tool_result";

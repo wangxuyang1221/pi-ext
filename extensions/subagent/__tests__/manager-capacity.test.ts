@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { appendFile, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "vitest";
 
@@ -28,6 +28,7 @@ const baseLocator: TmuxLocator = {
 test("waits for in-flight spawn before close-all returns", async () => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-capacity-test-"));
   const store = new SessionStateStore(root);
+  const childSessionFile = join(root, "child-a.jsonl");
   let releaseLaunch: (() => void) | undefined;
   let markLaunchStarted: (() => void) | undefined;
   let alive = true;
@@ -52,11 +53,18 @@ test("waits for in-flight spawn before close-all returns", async () => {
         });
         const parent = JSON.parse(spec.environment[PI_SUBAGENT_PARENT]) as ParentOwnership;
         const launch = JSON.parse(spec.environment[PI_SUBAGENT_LAUNCH]) as LaunchMetadata;
+        await writeFile(childSessionFile, `${JSON.stringify({
+          type: "session",
+          version: 3,
+          id: "child-a",
+          timestamp: "2026-08-27T02:00:01.000Z",
+          cwd: spec.cwd,
+        })}\n`, "utf8");
         await store.save(createSessionState({
           sessionId: "child-a",
           epoch: "child-epoch",
           cwd: spec.cwd,
-          sessionFile: "/sessions/child-a.jsonl",
+          sessionFile: childSessionFile,
           now: "2026-08-27T02:00:01.000Z",
           parent,
           launch,
@@ -65,7 +73,16 @@ test("waits for in-flight spawn before close-all returns", async () => {
         }));
         return baseLocator;
       },
-      async sendPrompt() {},
+      async sendPrompt(_locator, text) {
+        await appendFile(childSessionFile, `${JSON.stringify({
+          type: "message",
+          id: "user-initial-task",
+          parentId: null,
+          timestamp: "2026-08-27T02:00:02.000Z",
+          message: { role: "user", content: text },
+        })}\n`, "utf8");
+      },
+      async capturePane() { return ""; },
       async isAlive() { return alive; },
       async close() {
         closes += 1;
