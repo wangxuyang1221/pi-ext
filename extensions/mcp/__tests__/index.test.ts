@@ -427,6 +427,7 @@ describe("MCP Pi integration", () => {
     expect(pi.registerTool).toHaveBeenCalledTimes(4);
 
     const queryWrapper = pi.tools.get("mcp__docs__query");
+    expect(queryWrapper.renderShell).toBe("self");
     expect(queryWrapper.description).toContain("Request narrower results or use server pagination");
     expect(queryWrapper.promptGuidelines).toContainEqual(
       expect.stringContaining("Full truncated output is not persisted"),

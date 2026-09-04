@@ -1,23 +1,20 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, truncateHead, } from "@earendil-works/pi-coding-agent";
-import { matchesKey, Text, truncateToWidth, } from "@earendil-works/pi-tui";
+import { matchesKey, truncateToWidth, } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { McpClientManager, McpConnectionError, McpToolError } from "./client.js";
 import { configTemplatePath, loadMcpConfigResult } from "./config.js";
 import { DEFAULT_FIELD_BYTES, DEFAULT_USER_MESSAGE_WIDTH, McpDiagnostics, sanitizeDiagnosticText, truncateUtf8, } from "./diagnostics.js";
+import { renderMcpToolCall, renderMcpToolResult, } from "./renderers.js";
 import { jsonSchemaToTypeBox } from "./schema.js";
 const MAX_SERVER_NAME_WIDTH = 28;
-const MAX_ARGUMENT_PREVIEW_WIDTH = 240;
-const MAX_RESULT_PREVIEW_WIDTH = 240;
-const MAX_PREVIEW_SOURCE_CHARS = 2048;
 const MAX_SERIALIZED_BLOCKS = 24;
 const MAX_LOG_LINES = 120;
 const MCP_OUTPUT_TRUNCATION_NOTICE = `[MCP output truncated: limits are ${formatBytes(DEFAULT_MAX_BYTES)}, ${DEFAULT_MAX_LINES} lines, and ${MAX_SERIALIZED_BLOCKS} serialized non-text blocks.]`;
 const MCP_OUTPUT_LIMIT_GUIDANCE = `MCP text output is limited to ${formatBytes(DEFAULT_MAX_BYTES)} and ${DEFAULT_MAX_LINES} lines; at most ${MAX_SERIALIZED_BLOCKS} non-text blocks are serialized, and structured details are limited to ${formatBytes(DEFAULT_MAX_BYTES)}. Request narrower results or use server pagination for complete data. Full truncated output is not persisted by this extension.`;
 const MAX_MODEL_TEXT_BYTES = Math.max(1, DEFAULT_MAX_BYTES - Buffer.byteLength(MCP_OUTPUT_TRUNCATION_NOTICE, "utf8"));
 const MAX_MODEL_TEXT_LINES = Math.max(1, DEFAULT_MAX_LINES - 1);
-const SENSITIVE_ARGUMENT_KEY = /api[-_]?key|access[-_]?token|authorization|password|passwd|secret|cookie/i;
 /** Registers the MCP integration for one Pi extension runtime. */
 export default function registerMcpExtension(pi) {
     const diagnostics = new McpDiagnostics();
@@ -272,8 +269,9 @@ function registerMcpTool(options) {
             MCP_OUTPUT_LIMIT_GUIDANCE,
         ],
         parameters,
+        renderShell: "self",
         renderCall(args, theme, context) {
-            return renderCompactText(formatMcpToolCallSummary(args, { serverName, toolName: tool.name, theme }), context.lastComponent);
+            return renderMcpToolCall(args, { serverName, toolName: tool.name }, theme, context);
         },
         async execute(_toolCallId, params, signal) {
             if (!availableTools.has(fullName)) {
@@ -306,11 +304,7 @@ function registerMcpTool(options) {
             }
         },
         renderResult(result, renderOptions, theme, context) {
-            return renderCompactText(formatMcpToolResultSummary(result, {
-                isError: context.isError,
-                isPartial: renderOptions.isPartial,
-                theme,
-            }), context.lastComponent);
+            return renderMcpToolResult(result, renderOptions, theme, context);
         },
     });
 }
@@ -621,120 +615,6 @@ class McpLogsComponent {
         this.renderedLines = undefined;
     }
 }
-class CompactTextComponent {
-    text = new Text("", 0, 0);
-    content = "";
-    renderedWidth;
-    setContent(content) {
-        if (content === this.content)
-            return;
-        this.content = content;
-        this.renderedWidth = undefined;
-    }
-    render(width) {
-        if (width <= 0)
-            return [];
-        if (this.renderedWidth !== width) {
-            const fitted = this.content
-                .split("\n")
-                .map((line) => truncateToWidth(line, width, "…"))
-                .join("\n");
-            this.text.setText(fitted);
-            this.renderedWidth = width;
-        }
-        return this.text.render(width);
-    }
-    invalidate() {
-        this.renderedWidth = undefined;
-        this.text.invalidate();
-    }
-}
-function renderCompactText(content, lastComponent) {
-    const component = lastComponent instanceof CompactTextComponent
-        ? lastComponent
-        : new CompactTextComponent();
-    component.setContent(content);
-    return component;
-}
-function formatMcpToolCallSummary(args, options) {
-    const safeServerName = sanitizeDiagnosticText(options.serverName, DEFAULT_FIELD_BYTES);
-    const safeToolName = sanitizeDiagnosticText(options.toolName, DEFAULT_FIELD_BYTES);
-    const title = options.theme.fg("toolTitle", options.theme.bold(`${safeServerName} / ${safeToolName}`));
-    const argumentSummary = formatMcpToolArguments(args);
-    return argumentSummary ? `${title}\n${options.theme.fg("dim", argumentSummary)}` : title;
-}
-function formatMcpToolArguments(args) {
-    if (!isRecord(args))
-        return "";
-    const entries = ownEntries(args, 8);
-    if (entries.length === 0)
-        return "";
-    const preferredString = entries.find(([key, value]) => !SENSITIVE_ARGUMENT_KEY.test(key) &&
-        typeof value === "string" &&
-        value.trim().length > 0)?.[1];
-    if (typeof preferredString === "string") {
-        return inlinePreview(preferredString, MAX_ARGUMENT_PREVIEW_WIDTH);
-    }
-    return inlinePreview(safeJson(summarizeArgumentValue(args, 0, new WeakSet())), MAX_ARGUMENT_PREVIEW_WIDTH);
-}
-function summarizeArgumentValue(value, depth, seen) {
-    if (value === null || typeof value === "number" || typeof value === "boolean")
-        return value;
-    if (typeof value === "string")
-        return inlinePreview(value, 120);
-    if (typeof value === "bigint")
-        return value.toString();
-    if (typeof value !== "object")
-        return String(value);
-    if (seen.has(value))
-        return "[circular]";
-    if (depth >= 2)
-        return Array.isArray(value) ? `[… +${value.length} items]` : "{…}";
-    seen.add(value);
-    if (Array.isArray(value)) {
-        const items = value.slice(0, 3).map((item) => summarizeArgumentValue(item, depth + 1, seen));
-        if (value.length > items.length)
-            items.push(`… +${value.length - items.length} items`);
-        seen.delete(value);
-        return items;
-    }
-    const entries = ownEntries(value, 5);
-    const result = {};
-    for (const [key, item] of entries.slice(0, 4)) {
-        result[key] = SENSITIVE_ARGUMENT_KEY.test(key)
-            ? "[redacted]"
-            : summarizeArgumentValue(item, depth + 1, seen);
-    }
-    if (entries.length > 4)
-        result["…"] = "more fields";
-    seen.delete(value);
-    return result;
-}
-function formatMcpToolResultSummary(result, options) {
-    const text = extractToolResultText(result);
-    const rawSize = Buffer.byteLength(text, "utf8");
-    const details = isRecord(result) ? asRecord(result.details) : undefined;
-    const isError = options.isError || details?.isError === true;
-    const marker = options.isPartial ? "…" : isError ? "✗" : "✓";
-    const markerColor = options.isPartial ? "warning" : isError ? "error" : "success";
-    const status = options.isPartial ? "running" : isError ? "failed" : "completed";
-    const preview = inlinePreview(text, MAX_RESULT_PREVIEW_WIDTH) || "(empty MCP result)";
-    return [
-        `${options.theme.fg(markerColor, marker)} ${options.theme.fg("muted", `${status} · ${formatBytes(rawSize)}`)}`,
-        options.theme.fg("toolOutput", preview),
-    ].join("\n");
-}
-function extractToolResultText(result) {
-    if (!isRecord(result) || !Array.isArray(result.content))
-        return "";
-    return result.content.map((item) => {
-        if (isRecord(item) && item.type === "text" && typeof item.text === "string")
-            return item.text;
-        if (isRecord(item) && item.type === "image")
-            return `[image: ${String(item.mimeType ?? "unknown")}]`;
-        return boundedJson(item, DEFAULT_FIELD_BYTES);
-    }).join("\n");
-}
 function notifyStatusForMode(ctx, message) {
     if (!ctx.hasUI)
         return;
@@ -776,22 +656,6 @@ function currentConfigResult(ctx, activeSession, diagnostics) {
 }
 function splitCommandArguments(args) {
     return args?.trim() ? args.trim().split(/\s+/) : [];
-}
-function ownEntries(value, limit) {
-    const entries = [];
-    for (const key in value) {
-        if (!Object.prototype.hasOwnProperty.call(value, key))
-            continue;
-        entries.push([key, value[key]]);
-        if (entries.length >= limit)
-            break;
-    }
-    return entries;
-}
-function inlinePreview(text, maxWidth) {
-    const boundedSource = text.slice(0, MAX_PREVIEW_SOURCE_CHARS);
-    const safeText = sanitizeDiagnosticText(boundedSource, DEFAULT_FIELD_BYTES);
-    return truncateToWidth(safeText.replace(/\s+/g, " ").trim(), maxWidth, "…");
 }
 function boundedJson(value, maxBytes) {
     return truncateUtf8(safeJson(value), maxBytes).value;
