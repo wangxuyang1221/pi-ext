@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test, vi } from "vitest";
-import type { ExtensionAPI, Theme, ToolDefinition } from "@earendil-works/pi-coding-agent";
+import {
+  AssistantMessageComponent,
+  initTheme,
+  type ExtensionAPI,
+  type Theme,
+  type ToolDefinition,
+} from "@earendil-works/pi-coding-agent";
+import { stripTerminalSequences } from "@earendil-works/pi-tui";
 
 import codexUiExtension, { CODEX_THEME_NAME } from "../src/index.js";
 
@@ -15,7 +22,7 @@ function createTheme(name = CODEX_THEME_NAME): Theme {
   } as unknown as Theme;
 }
 
-test("markdown transformer formats user messages and compacts thinking to one line", () => {
+test("markdown transformer formats user messages and prefixes compact thinking with an accent marker", () => {
   const transformers: Array<(markdown: string, context: Record<string, unknown>) => string> = [];
   const pi = {
     registerTool() {},
@@ -47,22 +54,50 @@ test("markdown transformer formats user messages and compacts thinking to one li
     messageType: "assistant-thinking",
     isStreaming: true,
     availableWidth: 80,
-  }), "**Summarizing code changes and test results**");
+  }), "`•` **Summarizing code changes and test results**");
   assert.equal(transform(thinking, {
     messageType: "assistant-thinking",
     isStreaming: false,
     availableWidth: 80,
-  }), "**Summarizing code changes and test results**");
+  }), "`•` **Summarizing code changes and test results**");
   assert.equal(transform("Earlier\n\n1234567890ABCDE", {
     messageType: "assistant-thinking",
     isStreaming: true,
     availableWidth: 10,
-  }), "123456789…");
+  }), "`•` 1234567…");
   assert.equal(transform("Earlier\n\n**1234567890ABCDE**", {
     messageType: "assistant-thinking",
     isStreaming: false,
     availableWidth: 10,
-  }), "**123456789…**");
+  }), "`•` **1234567…**");
+  assert.equal(transform("visible", {
+    messageType: "assistant-thinking",
+    isStreaming: true,
+    availableWidth: 1,
+  }), "`•`");
+  assert.equal(transform("visible", {
+    messageType: "assistant-thinking",
+    isStreaming: true,
+    availableWidth: 0,
+  }), "");
+
+  initTheme("dark");
+  const component = new AssistantMessageComponent(
+    {
+      role: "assistant",
+      content: [{ type: "thinking", thinking: "**Inspecting renderer output**" }],
+      stopReason: "stop",
+      timestamp: Date.now(),
+    } as never,
+    false,
+    undefined,
+    "Thinking...",
+    1,
+    [transform as never],
+  );
+  const rendered = stripTerminalSequences(component.render(80).join("\n"));
+  assert.match(rendered, /• Inspecting renderer output/u);
+  assert.ok(!rendered.includes("`"));
 });
 
 function createLowPowerCommandHarness() {
@@ -360,27 +395,32 @@ test("session UI installs only in TUI mode", async () => {
   assert.equal(unsubscribe.mock.calls.length, 1);
 
   const bash = registeredTools.find((tool) => tool.name === "bash");
-  assert.ok(bash?.renderResult);
+  assert.ok(bash?.renderCall);
+  assert.ok(bash.renderResult);
+  const bashState = {};
+  const bashContext = {
+    args: { command: "echo hello" },
+    state: bashState,
+    lastComponent: undefined,
+    cwd: "/repo/app",
+    executionStarted: false,
+    argsComplete: true,
+    isPartial: false,
+    expanded: false,
+    showImages: true,
+    isError: false,
+    toolCallId: "tool-1",
+    invalidate() {},
+  };
+  const bashCall = bash.renderCall(bashContext.args, profileTheme, bashContext as never);
   const bashResult = bash.renderResult(
     { content: [{ type: "text", text: "hello" }], details: undefined },
     { expanded: false, isPartial: false },
     profileTheme,
-    {
-      args: { command: "echo hello" },
-      state: {},
-      lastComponent: undefined,
-      cwd: "/repo/app",
-      executionStarted: false,
-      argsComplete: true,
-      isPartial: false,
-      expanded: false,
-      showImages: true,
-      isError: false,
-      toolCallId: "tool-1",
-      invalidate() {},
-    } as never,
+    bashContext as never,
   );
-  assert.match(bashResult.render(80).join("\n"), /ctrl\+shift\+o expand/u);
+  assert.deepEqual(bashResult.render(80), []);
+  assert.match(bashCall.render(80).join("\n"), /ctrl\+shift\+o expand/u);
 
   const headerFactory = calls.find((call) => call.name === "header")?.value as (() => {
     render(width: number): string[];

@@ -1,97 +1,342 @@
-/**
- * MCP 配置文件加载模块
- *
- * 按优先级查找配置文件：
- * 1. 环境变量 PI_MCP_CONFIG 指定的路径
- * 2. .pi/mcp.json（项目级）
- * 3. ~/.pi/agent/mcp.json（全局）
- */
-import { readFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
+import { resolve } from "node:path";
 import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
 import { parse, printParseErrorCode } from "jsonc-parser";
-import { logEvent } from "./logger.js";
-/** 默认配置文件名 */
 const CONFIG_FILENAME = "mcp.json";
-/**
- * 查找并加载 MCP 配置文件
- *
- * @param cwd - 当前工作目录（项目根）
- * @returns 解析后的配置，或 null（无配置）
- */
-export function loadMcpConfig(cwd) {
-    // 1. 环境变量指定的路径
-    const envPath = process.env.PI_MCP_CONFIG;
-    if (envPath) {
-        const resolvedEnvPath = resolve(cwd, envPath);
-        if (existsSync(resolvedEnvPath)) {
-            return readConfigFile(resolvedEnvPath);
-        }
-    }
-    // 2. 项目级配置
-    const projectPath = resolve(cwd, CONFIG_DIR_NAME, CONFIG_FILENAME);
-    if (existsSync(projectPath)) {
-        return readConfigFile(projectPath);
-    }
-    // 3. 全局配置
-    const globalPath = resolve(homedir(), CONFIG_DIR_NAME, "agent", CONFIG_FILENAME);
-    if (existsSync(globalPath)) {
-        return readConfigFile(globalPath);
-    }
-    return null;
+const LOGGING_LEVELS = new Set([
+    "debug",
+    "info",
+    "notice",
+    "warning",
+    "error",
+    "critical",
+    "alert",
+    "emergency",
+]);
+export function loadMcpConfig(cwd, diagnostics, dependencies) {
+    return loadMcpConfigResult(cwd, diagnostics, dependencies).config;
 }
-/**
- * 读取并解析 JSON 配置文件（使用 jsonc-parser，支持注释 + 尾随逗号）
- */
-function readConfigFile(path) {
+export function loadMcpConfigResult(cwd, diagnostics, dependencies = {}) {
+    const paths = configSearchPaths(cwd, dependencies);
+    const exists = dependencies.exists ?? existsSync;
+    const path = paths.find((candidate) => {
+        try {
+            return exists(candidate);
+        }
+        catch {
+            return false;
+        }
+    });
+    if (!path) {
+        return {
+            status: "missing",
+            config: null,
+            searchedPaths: paths,
+            issues: [],
+            invalidServers: {},
+            disabledServers: [],
+            configuredServerNames: [],
+        };
+    }
     try {
-        const raw = readFileSync(path, "utf-8");
-        const errors = [];
-        const config = parse(raw, errors, {
-            allowTrailingComma: true,
-        });
-        if (errors.length > 0) {
-            const msg = errors
-                .map((e) => `${printParseErrorCode(e.error)} at offset ${e.offset}`)
+        const readFile = dependencies.readFile ?? ((filePath) => readFileSync(filePath, "utf8"));
+        const raw = readFile(path);
+        const parseErrors = [];
+        const parsed = parse(raw, parseErrors, { allowTrailingComma: true });
+        if (parseErrors.length > 0) {
+            const message = parseErrors
+                .map((error) => `${printParseErrorCode(error.error)} at offset ${error.offset}`)
                 .join(", ");
-            logEvent("error", "MCP config JSONC parsing failed", { path, parseErrors: msg });
-            return null;
+            diagnostics?.record({
+                level: "error",
+                message: "MCP config parsing failed",
+                context: { path, parseErrors: message },
+            });
+            return invalidResult(path, paths, [{ code: "parse", message: `Invalid JSONC: ${message}` }]);
         }
-        if (!config.mcpServers || typeof config.mcpServers !== "object") {
-            logEvent("warn", "MCP config is missing mcpServers", { path });
-            return null;
-        }
-        // 过滤禁用的服务器并验证配置
-        const activeServers = {};
-        for (const [name, serverConfig] of Object.entries(config.mcpServers)) {
-            // 跳过无效配置项（null / 非对象 / 数组）
-            if (!serverConfig || typeof serverConfig !== "object" || Array.isArray(serverConfig)) {
-                logEvent("warn", "Skipping invalid MCP server config", { path, serverName: name });
-                continue;
-            }
-            if (serverConfig.disabled) {
-                logEvent("warn", "Skipping disabled MCP server", { path, serverName: name });
-                continue;
-            }
-            activeServers[name] = serverConfig;
-        }
-        if (Object.keys(activeServers).length === 0) {
-            logEvent("warn", "MCP config has no enabled servers", { path });
-            return null;
-        }
-        // 配置加载成功 — 启动信息由 index.ts 通过 ctx.ui.notify() 统一展示
-        return { mcpServers: activeServers };
+        return validateConfig(parsed, path, paths, diagnostics);
     }
-    catch (err) {
-        logEvent("error", "Failed to read MCP config", { path }, err);
-        return null;
+    catch (error) {
+        diagnostics?.record({
+            level: "error",
+            message: "MCP config could not be read",
+            context: { path },
+            error,
+        });
+        return invalidResult(path, paths, [{ code: "read", message: "The config file could not be read" }]);
     }
 }
-/**
- * 生成默认配置模板的路径
- */
 export function configTemplatePath(cwd) {
     return resolve(cwd, CONFIG_DIR_NAME, CONFIG_FILENAME);
+}
+function configSearchPaths(cwd, dependencies) {
+    const paths = [];
+    const env = dependencies.env ?? process.env;
+    const envPath = env.PI_MCP_CONFIG;
+    if (envPath)
+        paths.push(resolve(cwd, envPath));
+    if (dependencies.allowProjectConfig !== false) {
+        paths.push(resolve(cwd, CONFIG_DIR_NAME, CONFIG_FILENAME));
+    }
+    paths.push(resolve(dependencies.homeDir ?? homedir(), CONFIG_DIR_NAME, "agent", CONFIG_FILENAME));
+    return [...new Set(paths)];
+}
+function validateConfig(value, path, searchedPaths, diagnostics) {
+    if (!isPlainRecord(value) || !isPlainRecord(value.mcpServers)) {
+        const issue = { code: "mcpServers", message: "mcpServers must be an object" };
+        diagnostics?.record({ level: "error", message: "MCP config is invalid", context: { path, issue: issue.message } });
+        return invalidResult(path, searchedPaths, [issue]);
+    }
+    const configuredServerNames = Object.keys(value.mcpServers);
+    const activeServers = {};
+    const invalidServers = {};
+    const disabledServers = [];
+    const issues = [];
+    for (const [serverName, candidate] of Object.entries(value.mcpServers)) {
+        if (!serverName.trim()) {
+            issues.push({ code: "server-name", message: "Server names must not be empty" });
+            continue;
+        }
+        if (!isPlainRecord(candidate)) {
+            addServerIssue(serverName, "shape", "Server config must be an object", invalidServers, issues, diagnostics, path);
+            continue;
+        }
+        if (candidate.disabled === true) {
+            disabledServers.push(serverName);
+            continue;
+        }
+        const validated = validateServerConfig(serverName, candidate);
+        if (typeof validated === "string") {
+            addServerIssue(serverName, "server-config", validated, invalidServers, issues, diagnostics, path);
+            continue;
+        }
+        activeServers[serverName] = validated;
+    }
+    const diagnosticsConfig = validateDiagnosticsConfig(value.diagnostics, issues);
+    const config = {
+        mcpServers: activeServers,
+        ...(diagnosticsConfig ? { diagnostics: diagnosticsConfig } : {}),
+    };
+    const activeCount = Object.keys(activeServers).length;
+    const status = activeCount > 0
+        ? "loaded"
+        : configuredServerNames.length === disabledServers.length && issues.length === 0
+            ? "empty"
+            : issues.length > 0
+                ? "invalid"
+                : "empty";
+    return {
+        status,
+        config: status === "invalid" && activeCount === 0 ? null : config,
+        path,
+        searchedPaths,
+        issues,
+        invalidServers,
+        disabledServers,
+        configuredServerNames,
+    };
+}
+function validateServerConfig(serverName, value) {
+    const typeValue = value.type ?? "stdio";
+    if (!isTransportType(typeValue))
+        return "type must be stdio, sse, http, or streamable-http";
+    if (value.disabled !== undefined && typeof value.disabled !== "boolean")
+        return "disabled must be a boolean";
+    const timeoutError = validateTimeouts(value);
+    if (timeoutError)
+        return timeoutError;
+    const retry = validateRetry(value.retry);
+    if (typeof retry === "string")
+        return retry;
+    if (value.toolReplay !== undefined && value.toolReplay !== "never" && value.toolReplay !== "read-only") {
+        return "toolReplay must be never or read-only";
+    }
+    if (value.loggingLevel !== undefined && (typeof value.loggingLevel !== "string" || !LOGGING_LEVELS.has(value.loggingLevel))) {
+        return "loggingLevel is invalid";
+    }
+    const common = {
+        ...(value.disabled !== undefined ? { disabled: value.disabled } : {}),
+        ...copyNumber(value, "timeout"),
+        ...copyNumber(value, "connectTimeout"),
+        ...copyNumber(value, "requestTimeout"),
+        ...copyNumber(value, "maxRequestTimeout"),
+        ...(retry ? { retry } : {}),
+        ...(value.toolReplay ? { toolReplay: value.toolReplay } : {}),
+        ...(value.loggingLevel ? { loggingLevel: value.loggingLevel } : {}),
+    };
+    if (typeValue === "stdio") {
+        if (typeof value.command !== "string" || value.command.trim() === "")
+            return "command must be a non-empty string for stdio";
+        if (value.args !== undefined && (!Array.isArray(value.args) || value.args.some((item) => typeof item !== "string"))) {
+            return "args must be an array of strings";
+        }
+        const env = validateStringRecord(value.env, "env");
+        if (typeof env === "string")
+            return env;
+        if (value.cwd !== undefined && (typeof value.cwd !== "string" || value.cwd.trim() === ""))
+            return "cwd must be a non-empty string";
+        return {
+            ...common,
+            type: value.type === undefined ? undefined : "stdio",
+            command: value.command,
+            ...(value.args ? { args: [...value.args] } : {}),
+            ...(env ? { env } : {}),
+            ...(typeof value.cwd === "string" ? { cwd: value.cwd } : {}),
+        };
+    }
+    if (typeof value.url !== "string" || value.url.trim() === "")
+        return "url must be a non-empty string for HTTP/SSE";
+    try {
+        const parsed = new URL(value.url);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:")
+            return "url must use http or https";
+    }
+    catch {
+        return "url must be a valid HTTP or HTTPS URL";
+    }
+    const headers = validateStringRecord(value.headers, "headers");
+    if (typeof headers === "string")
+        return headers;
+    return {
+        ...common,
+        type: typeValue,
+        url: value.url,
+        ...(headers ? { headers } : {}),
+    };
+}
+function validateTimeouts(value) {
+    for (const field of ["timeout", "connectTimeout", "requestTimeout", "maxRequestTimeout"]) {
+        const candidate = value[field];
+        if (candidate !== undefined && !isPositiveInteger(candidate))
+            return `${field} must be a positive integer`;
+    }
+    const requestTimeout = numberValue(value.requestTimeout) ?? numberValue(value.timeout);
+    const maxRequestTimeout = numberValue(value.maxRequestTimeout);
+    if (requestTimeout !== undefined && maxRequestTimeout !== undefined && maxRequestTimeout < requestTimeout) {
+        return "maxRequestTimeout must be greater than or equal to requestTimeout";
+    }
+    return undefined;
+}
+function validateRetry(value) {
+    if (value === undefined)
+        return undefined;
+    if (!isPlainRecord(value))
+        return "retry must be an object";
+    if (value.enabled !== undefined && typeof value.enabled !== "boolean")
+        return "retry.enabled must be a boolean";
+    if (value.background !== undefined && typeof value.background !== "boolean")
+        return "retry.background must be a boolean";
+    const ranges = [
+        ["maxAttempts", 1, 10],
+        ["baseDelayMs", 1, 300_000],
+        ["factor", 1, 10],
+        ["maxDelayMs", 1, 300_000],
+        ["retryAfterMaxMs", 1, 300_000],
+        ["backgroundMaxDelayMs", 1, 300_000],
+    ];
+    const output = {};
+    for (const [field, minimum, maximum] of ranges) {
+        const candidate = value[field];
+        if (candidate === undefined)
+            continue;
+        if (typeof candidate !== "number" || !Number.isFinite(candidate) || candidate < minimum || candidate > maximum) {
+            return `retry.${field} must be between ${minimum} and ${maximum}`;
+        }
+        if (field === "maxAttempts" && !Number.isInteger(candidate))
+            return "retry.maxAttempts must be an integer";
+        output[field] = candidate;
+    }
+    if (typeof value.enabled === "boolean")
+        output.enabled = value.enabled;
+    if (typeof value.background === "boolean")
+        output.background = value.background;
+    if (output.baseDelayMs !== undefined && output.maxDelayMs !== undefined && output.maxDelayMs < output.baseDelayMs) {
+        return "retry.maxDelayMs must be greater than or equal to retry.baseDelayMs";
+    }
+    return output;
+}
+function validateDiagnosticsConfig(value, issues) {
+    if (value === undefined)
+        return undefined;
+    if (!isPlainRecord(value)) {
+        issues.push({ code: "diagnostics", message: "diagnostics must be an object" });
+        return undefined;
+    }
+    if (value.file === undefined)
+        return {};
+    if (!isPlainRecord(value.file)) {
+        issues.push({ code: "diagnostics-file", message: "diagnostics.file must be an object" });
+        return undefined;
+    }
+    if (value.file.enabled !== undefined && typeof value.file.enabled !== "boolean") {
+        issues.push({ code: "diagnostics-file-enabled", message: "diagnostics.file.enabled must be a boolean" });
+        return undefined;
+    }
+    if (value.file.enabled === true && (typeof value.file.path !== "string" || value.file.path.trim() === "")) {
+        issues.push({ code: "diagnostics-file-path", message: "diagnostics.file.path is required when file logging is enabled" });
+        return undefined;
+    }
+    if (value.file.maxBytes !== undefined && !isPositiveInteger(value.file.maxBytes)) {
+        issues.push({ code: "diagnostics-file-size", message: "diagnostics.file.maxBytes must be a positive integer" });
+        return undefined;
+    }
+    return {
+        file: {
+            ...(typeof value.file.enabled === "boolean" ? { enabled: value.file.enabled } : {}),
+            ...(typeof value.file.path === "string" ? { path: value.file.path } : {}),
+            ...(typeof value.file.maxBytes === "number" ? { maxBytes: value.file.maxBytes } : {}),
+        },
+    };
+}
+function validateStringRecord(value, field) {
+    if (value === undefined)
+        return undefined;
+    if (!isPlainRecord(value))
+        return `${field} must be an object with string values`;
+    const output = {};
+    for (const [key, candidate] of Object.entries(value)) {
+        if (typeof candidate !== "string")
+            return `${field} must contain only string values`;
+        output[key] = candidate;
+    }
+    return output;
+}
+function addServerIssue(serverName, code, message, invalidServers, issues, diagnostics, path) {
+    invalidServers[serverName] = message;
+    issues.push({ code, message, serverName });
+    diagnostics?.record({
+        level: "warn",
+        message: "Invalid MCP server config skipped",
+        serverName,
+        context: { path, issue: message },
+    });
+}
+function invalidResult(path, searchedPaths, issues) {
+    return {
+        status: "invalid",
+        config: null,
+        path,
+        searchedPaths,
+        issues,
+        invalidServers: {},
+        disabledServers: [],
+        configuredServerNames: [],
+    };
+}
+function copyNumber(value, field) {
+    return typeof value[field] === "number" ? { [field]: value[field] } : {};
+}
+function numberValue(value) {
+    return typeof value === "number" ? value : undefined;
+}
+function isPositiveInteger(value) {
+    return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+function isTransportType(value) {
+    return value === "stdio" || value === "sse" || value === "http" || value === "streamable-http";
+}
+function isPlainRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 //# sourceMappingURL=config.js.map

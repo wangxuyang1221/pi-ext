@@ -1,546 +1,1009 @@
-/**
- * McpClientManager 单元测试
- *
- * 覆盖三个审查发现的问题：
- * - P1: disconnectAll() 命令注入 / 误杀进程
- * - P2: 单服务器掉线后不自动重连
- * - P3: 超时重试路径泄漏 transport/子进程
- */
+import { PassThrough } from "node:stream";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Client, ClientOptions } from "@modelcontextprotocol/sdk/client/index.js";
+import type { FetchLike, Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
+import {
+  McpClientManager,
+  McpConnectionError,
+  McpToolError,
+  type McpClientManagerOptions,
+} from "../src/client.js";
+import { DEFAULT_FIELD_BYTES, McpDiagnostics } from "../src/diagnostics.js";
+import type { McpRetryScheduler } from "../src/retry.js";
+import type { McpManagerEvent, McpTool } from "../src/types.js";
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-
-// ============================================================
-// Mock 实例工厂
-// ============================================================
-
-interface MockTransport {
-  close: ReturnType<typeof vi.fn>;
-  stderr: null;
-  pid: number;
+interface Scenario {
+  connect?: (transport: FakeTransport, options?: Record<string, unknown>) => Promise<void>;
+  pages?: Array<{ tools: McpTool[]; nextCursor?: string }>;
+  calls?: Array<unknown | Error>;
+  call?: (
+    transport: FakeTransport,
+    request: { name: string; arguments?: Record<string, unknown> },
+  ) => Promise<unknown>;
+  close?: () => Promise<void>;
+  capabilities?: Record<string, unknown>;
+  onStart?: (transport: FakeTransport) => void;
+  sdkClosesOnConnectFailure?: boolean;
 }
 
-function newMockTransport(): MockTransport {
-  return {
-    close: vi.fn().mockResolvedValue(undefined),
-    stderr: null,
-    pid: 99999,
-  };
+class FakeTransport implements Transport {
+  onclose?: () => void;
+  onerror?: (error: Error) => void;
+  onmessage?: Transport["onmessage"];
+  readonly stderr = new PassThrough();
+  readonly pid: number;
+  readonly close = vi.fn(async () => {
+    this.onclose?.();
+  });
+  readonly start = vi.fn(async () => {
+    this.scenario.onStart?.(this);
+  });
+  readonly send = vi.fn(async () => undefined);
+
+  constructor(
+    readonly scenario: Scenario,
+    pid: number,
+    readonly fetch?: FetchLike,
+  ) {
+    this.pid = pid;
+  }
 }
 
-interface MockClientInst {
-  connect: ReturnType<typeof vi.fn>;
-  listTools: ReturnType<typeof vi.fn>;
-  callTool: ReturnType<typeof vi.fn>;
-  close: ReturnType<typeof vi.fn>;
-}
-
-/** 控制下次创建 mockClient 时 connect 是否 hang */
-let nextConnectHangs = false;
-
-function newMockClient(): MockClientInst {
-  return {
-    connect: nextConnectHangs
-      ? vi.fn().mockImplementation(() => new Promise<void>(() => {}))
-      : vi.fn().mockResolvedValue(undefined),
-    listTools: vi.fn().mockResolvedValue({
-      tools: [
-        {
-          name: "test_tool",
-          description: "A test tool",
-          inputSchema: { type: "object", properties: {} },
-        },
-      ],
-    }),
-    callTool: vi.fn().mockResolvedValue({
+class FakeClient {
+  onclose?: () => void;
+  onerror?: (error: Error) => void;
+  readonly handlers = new Map<string, (value: unknown) => void>();
+  readonly connect = vi.fn(async (transport: FakeTransport, options?: Record<string, unknown>) => {
+    this.transport = transport;
+    await transport.start();
+    try {
+      if (this.scenario.connect) await this.scenario.connect(transport, options);
+    } catch (error) {
+      if (this.scenario.sdkClosesOnConnectFailure) void this.close();
+      throw error;
+    }
+  });
+  readonly listTools = vi.fn(async (params?: { cursor?: string }) => {
+    const index = params?.cursor ? Number(params.cursor) : 0;
+    const page = this.scenario.pages?.[index] ?? { tools: [tool("query")] };
+    return {
+      tools: page.tools,
+      ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}),
+    };
+  });
+  readonly callTool = vi.fn(async (request: { name: string; arguments?: Record<string, unknown> }) => {
+    if (this.scenario.call) return this.scenario.call(this.transport!, request);
+    const value = this.scenario.calls?.shift() ?? {
       content: [{ type: "text", text: "ok" }],
       isError: false,
-    }),
-    close: vi.fn().mockResolvedValue(undefined),
+    };
+    if (value instanceof Error) throw value;
+    return value;
+  });
+  readonly closeOperation = vi.fn(async () => {
+    await this.scenario.close?.();
+    await this.transport?.close();
+    this.onclose?.();
+  });
+  close = this.closeOperation;
+  readonly setLoggingLevel = vi.fn(async () => ({}));
+  readonly getServerCapabilities = vi.fn(() => this.scenario.capabilities ?? {});
+  readonly setNotificationHandler = vi.fn((schema: { shape?: { method?: { value?: string } } }, handler: (value: unknown) => void) => {
+    const method = schema.shape?.method?.value ?? "notifications/message";
+    this.handlers.set(method, handler);
+  });
+  private transport?: FakeTransport;
+
+  constructor(
+    readonly scenario: Scenario,
+    readonly options: ClientOptions,
+  ) {}
+
+  emitClose(): void {
+    this.onclose?.();
+  }
+
+  emitError(error: Error): void {
+    this.onerror?.(error);
+  }
+
+  emitLog(params: Record<string, unknown>): void {
+    this.handlers.get("notifications/message")?.({ params });
+  }
+
+  emitToolListChanged(error: Error | null, tools: McpTool[] | null): void {
+    this.options.listChanged?.tools?.onChanged(error, tools as never);
+  }
+}
+
+class ImmediateScheduler implements McpRetryScheduler {
+  time = 0;
+  readonly sleeps: number[] = [];
+  now = () => this.time;
+  sleep = vi.fn(async (delayMs: number, signal?: AbortSignal) => {
+    if (signal?.aborted) throw signal.reason;
+    this.sleeps.push(delayMs);
+    this.time += delayMs;
+  });
+}
+
+class ControlledScheduler implements McpRetryScheduler {
+  time = 0;
+  readonly pending: Array<{
+    delayMs: number;
+    resolve: () => void;
+    reject: (reason: unknown) => void;
+    cleanup: () => void;
+  }> = [];
+  now = () => this.time;
+  sleep = vi.fn((delayMs: number, signal?: AbortSignal) => new Promise<void>((resolve, reject) => {
+    const onAbort = () => {
+      cleanup();
+      reject(signal?.reason);
+    };
+    const cleanup = () => signal?.removeEventListener("abort", onAbort);
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) {
+      onAbort();
+      return;
+    }
+    this.pending.push({ delayMs, resolve: () => {
+      cleanup();
+      this.time += delayMs;
+      resolve();
+    }, reject, cleanup });
+  }));
+
+  releaseNext(): void {
+    const pending = this.pending.shift();
+    pending?.resolve();
+  }
+}
+
+function tool(name: string, readOnlyHint?: boolean): McpTool {
+  return {
+    name,
+    description: `${name} description`,
+    inputSchema: { type: "object", properties: {} },
+    ...(readOnlyHint === undefined ? {} : { annotations: { readOnlyHint } }),
   };
 }
 
-// ============================================================
-// 实例追踪（每次 mock 构造时推入）
-// ============================================================
-
-const mockClients: MockClientInst[] = [];
-const mockTransports: MockTransport[] = [];
-
-function lastClient(): MockClientInst {
-  return mockClients[mockClients.length - 1];
+function createHarness(
+  scenarios: Scenario[],
+  overrides: Partial<McpClientManagerOptions> = {},
+) {
+  const clients: FakeClient[] = [];
+  const transports: FakeTransport[] = [];
+  let latestTransport: FakeTransport | undefined;
+  const manager = new McpClientManager({
+    random: () => 1,
+    transportFactory: (_config, context) => {
+      const scenario = scenarios.shift() ?? {};
+      const transport = new FakeTransport(scenario, 1000 + transports.length, context.fetch);
+      latestTransport = transport;
+      transports.push(transport);
+      return transport;
+    },
+    clientFactory: (options) => {
+      const transport = latestTransport!;
+      const client = new FakeClient(transport.scenario, options);
+      clients.push(client);
+      return client as unknown as Client;
+    },
+    ...overrides,
+  });
+  return { manager, clients, transports };
 }
-function lastTransport(): MockTransport {
-  return mockTransports[mockTransports.length - 1];
+
+const noBackground = {
+  retry: { maxAttempts: 1, background: false },
+} as const;
+
+async function settle(): Promise<void> {
+  await new Promise<void>((resolve) => setImmediate(resolve));
 }
-function resetTrackers() {
-  mockClients.length = 0;
-  mockTransports.length = 0;
-  nextConnectHangs = false;
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
 }
 
-// ============================================================
-// Mock MCP SDK
-// ============================================================
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
-vi.mock("@modelcontextprotocol/sdk/client/index.js", () => ({
-  Client: vi.fn(function () {
-    const inst = newMockClient();
-    mockClients.push(inst);
-    return inst;
-  }),
-}));
+describe("McpClientManager connection lifecycle", () => {
+  it("discovers every tools/list page and preserves annotations", async () => {
+    const { manager, clients } = createHarness([{
+      pages: [
+        { tools: [tool("first", true)], nextCursor: "1" },
+        { tools: [tool("second", false)] },
+      ],
+    }]);
 
-vi.mock("@modelcontextprotocol/sdk/client/stdio.js", () => ({
-  StdioClientTransport: vi.fn(function () {
-    const inst = newMockTransport();
-    mockTransports.push(inst);
-    return inst;
-  }),
-}));
+    const state = await manager.connectServer("docs", { command: "docs", ...noBackground });
 
-vi.mock("@modelcontextprotocol/sdk/client/sse.js", () => ({
-  SSEClientTransport: vi.fn(function () {
-    const inst = newMockTransport();
-    mockTransports.push(inst);
-    return inst;
-  }),
-}));
-
-vi.mock("@modelcontextprotocol/sdk/client/streamableHttp.js", () => ({
-  StreamableHTTPClientTransport: vi.fn(function () {
-    const inst = newMockTransport();
-    mockTransports.push(inst);
-    return inst;
-  }),
-}));
-
-vi.mock("node:child_process", () => ({
-  execSync: vi.fn(),
-  spawn: vi.fn(),
-  exec: vi.fn(),
-}));
-
-import { McpClientManager, McpConnectionError } from "../src/client.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-
-// ============================================================
-// Tests
-// ============================================================
-
-describe("McpClientManager", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    resetTrackers();
+    expect(state.connected).toBe(true);
+    expect(state.status).toBe("connected");
+    expect(state.tools.map((item) => item.name)).toEqual(["first", "second"]);
+    expect(state.tools[0].annotations?.readOnlyHint).toBe(true);
+    expect(clients[0].listTools).toHaveBeenNthCalledWith(2, { cursor: "1" }, expect.any(Object));
+    await manager.disconnectAll();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it("retries transient HTTP-style failures within the configured attempt bound", async () => {
+    const scheduler = new ImmediateScheduler();
+    const unavailable = () => Object.assign(new Error("unavailable"), { code: 503 });
+    const { manager, clients } = createHarness([
+      { connect: async () => { throw unavailable(); } },
+      { connect: async () => { throw unavailable(); } },
+      {},
+    ], { scheduler });
+
+    const state = await manager.connectServer("remote", {
+      type: "http",
+      url: "https://example.invalid/mcp",
+      connectTimeout: 10_000,
+      retry: { maxAttempts: 3, baseDelayMs: 10, maxDelayMs: 20, background: false },
+    });
+
+    expect(state.connected).toBe(true);
+    expect(clients).toHaveLength(3);
+    expect(scheduler.sleeps).toEqual([10, 20]);
+    await manager.disconnectAll();
   });
 
-  // ==========================================================
-  // P1: disconnectAll() 安全退出清理
-  // ==========================================================
-  describe("P1 - disconnectAll() 安全退出清理", () => {
-    it("应通过 MCP SDK transport 清理子进程，而不执行 shell 命令", async () => {
-      const m = new McpClientManager();
-      const s = await m.connectServer("safe-server", {
-        command: "echo", args: ["hello"], timeout: 10_000,
-      });
-      expect(s.connected).toBe(true);
+  it.each([
+    new Error("fetch failed"),
+    new Error("Connection closed"),
+    Object.assign(new Error("socket reset"), { code: "ECONNRESET" }),
+    new Error("Not connected"),
+  ])("retries normalized connection failure %#", async (failure) => {
+    const scheduler = new ImmediateScheduler();
+    const { manager, clients } = createHarness([
+      { connect: async () => { throw failure; } },
+      {},
+    ], { scheduler });
 
-      await m.disconnectAll();
-
-      expect(lastClient().close).toHaveBeenCalled();
-      expect(lastTransport().close).toHaveBeenCalled();
-      expect(m.hasConnections()).toBe(false);
+    const state = await manager.connectServer("remote", {
+      command: "remote",
+      connectTimeout: 10_000,
+      retry: { maxAttempts: 2, baseDelayMs: 1, maxDelayMs: 1, background: false },
     });
 
-    it("服务器名包含特殊字符时仍应只关闭对应 transport", async () => {
-      const m = new McpClientManager();
-      const name = "safe-name-with-dashes";
-      const s = await m.connectServer(name, {
-        command: "echo", args: ["test"], timeout: 10_000,
-      });
-      expect(s.connected).toBe(true);
-
-      await expect(m.disconnectAll()).resolves.toBeUndefined();
-      expect(mockTransports).toHaveLength(1);
-      expect(mockTransports[0].close).toHaveBeenCalled();
-    });
+    expect(state.connected).toBe(true);
+    expect(clients).toHaveLength(2);
+    await manager.disconnectAll();
   });
 
-  // ==========================================================
-  // P2: 单服务器掉线后自动重连
-  // ==========================================================
-  describe("P2 - 单服务器掉线后自动重连", () => {
-    it("单服务器断线后应自动重连并重试工具调用", async () => {
-      const m = new McpClientManager();
-      await m.connectServer("srv-a", { command: "echo", args: ["a"], timeout: 10_000 });
-      await m.connectServer("srv-b", { command: "echo", args: ["b"], timeout: 10_000 });
-      expect(m.getConnectionCount()).toBe(2);
-
-      // 模拟 srv-a 首次 callTool 断线
-      const clientA = mockClients[0];
-      // 第一次调用抛断线 → 触发重连 → 重连后新 client 正常响应
-      clientA.callTool.mockRejectedValueOnce(new Error("transport closed"));
-
-      // callTool 应自动重连并成功返回（不再抛错）
-      const result = await m.callTool("mcp__srv-a__test_tool", {});
-      expect(result.content).toBeDefined();
-
-      // 两个服务器都应在线（srv-a 已重连）
-      expect(m.getConnectionCount()).toBe(2);
-    });
-
-    it("单服务器重连失败时不应阻塞其他在线服务器的工具调用", async () => {
-      const m = new McpClientManager();
-      await m.connectServer("srv-a", { command: "echo", args: ["a"], timeout: 10_000 });
-      await m.connectServer("srv-b", { command: "echo", args: ["b"], timeout: 10_000 });
-      expect(m.getConnectionCount()).toBe(2);
-
-      // 清除 srv-a 的缓存配置，导致重连无法进行
-      (m as any).serverConfigs.delete("srv-a");
-
-      mockClients[0].callTool.mockRejectedValue(new Error("not connected"));
-      await expect(
-        m.callTool("mcp__srv-a__test_tool", {})
-      ).rejects.toThrow();
-
-      // srv-b 仍在线且可正常调用
-      expect(m.getConnectionCount()).toBe(1);
-      const result = await m.callTool("mcp__srv-b__test_tool", {});
-      expect(result.content).toBeDefined();
-    });
-
-    it("重连失败后工具映射不应丢失，下次调用应再次尝试重连", async () => {
-      const m = new McpClientManager();
-      await m.connectServer("flaky-srv", {
-        command: "echo",
-        timeout: 10_000,
-      });
-
-      // Step 1: 正常调用成功
-      let result = await m.callTool("mcp__flaky-srv__test_tool", {});
-      expect(result.content).toBeDefined();
-
-      // Step 2: 断线 → 清除 serverConfigs 使重连必然失败
-      (m as any).serverConfigs.delete("flaky-srv");
-      mockClients[0].callTool.mockRejectedValue(
-        new Error("transport closed")
-      );
-      await expect(
-        m.callTool("mcp__flaky-srv__test_tool", {})
-      ).rejects.toThrow();
-
-      // Step 3: 恢复配置但不显式重连（模拟用户下一次调用同一工具）
-      (m as any).serverConfigs.set("flaky-srv", {
-        command: "echo",
-        timeout: 10_000,
-      });
-
-      // Step 4: 再次调用同一工具 — 应能通过 toolToServer 找到 server
-      // 然后发现 connections 中不存在，自动尝试重连
-      // 关键断言：不应报 "未找到对应的 MCP 服务器"（unknown tool）
-      result = await m.callTool("mcp__flaky-srv__test_tool", {});
-      expect(result.content).toBeDefined();
-    });
-
-    it("connectServer 失败后不应删除配置缓存，以便后续自动重连", async () => {
-      const m = new McpClientManager();
-      nextConnectHangs = true; // 让连接必然超时失败
-
-      const s = await m.connectServer("keep-cache", {
-        command: "echo",
-        timeout: 50,
-      });
-      expect(s.connected).toBe(false);
-
-      // 关键：serverConfigs 应保留，不因一次失败就丢弃
-      const cached = (m as any).serverConfigs.get("keep-cache");
-      expect(cached).toBeDefined();
-      expect(cached.command).toBe("echo");
-    });
-
-    it("重连时应先清理该服务器旧的工具映射，防止失效工具残留", async () => {
-      const m = new McpClientManager();
-
-      // 首次连接
-      await m.connectServer("stale-srv", {
-        command: "echo",
-        timeout: 10_000,
-      });
-      expect(m.getAllTools().size).toBeGreaterThan(0);
-
-      // 手动注入一个旧工具映射（模拟上次连接残留）
-      const staleFullName = "mcp__stale-srv__old_deleted_tool";
-      (m as any).toolToServer.set(staleFullName, "stale-srv");
-      (m as any).toolCache.set(staleFullName, { name: "old_deleted_tool" });
-
-      // 断开连接（但保留 toolToServer ← 模拟 callTool 断线场景）
-      (m as any).connections.delete("stale-srv");
-
-      // 重连（connectServer 应先清理旧映射再注册新工具）
-      await m.connectServer("stale-srv", {
-        command: "echo",
-        timeout: 10_000,
-      });
-
-      // 旧工具映射应已被清理
-      expect((m as any).toolToServer.has(staleFullName)).toBe(false);
-      expect((m as any).toolCache.has(staleFullName)).toBe(false);
-
-      // 新工具仍正常
-      const newFullName = "mcp__stale-srv__test_tool";
-      expect((m as any).toolToServer.get(newFullName)).toBe("stale-srv");
-    });
-
-    it("重连失败时不应清除旧工具映射，保留原有路由", async () => {
-      const m = new McpClientManager();
-      await m.connectServer("keep-srv", {
-        command: "echo",
-        timeout: 10_000,
-      });
-
-      const toolKey = "mcp__keep-srv__test_tool";
-      expect((m as any).toolToServer.get(toolKey)).toBe("keep-srv");
-
-      // 模拟 callTool 断线后的状态：连接已清除，工具映射仍在
-      (m as any).connections.delete("keep-srv");
-
-      // 让重连必然失败
-      nextConnectHangs = true;
-      const s = await m.connectServer("keep-srv", {
-        command: "echo",
-        timeout: 50,
-      });
-      expect(s.connected).toBe(false);
-
-      // 关键：旧工具映射应保留
-      expect((m as any).toolToServer.get(toolKey)).toBe("keep-srv");
-    });
-
-    it("清理 server 'a' 的工具不应影响 server 'a__b' 的工具", async () => {
-      const m = new McpClientManager();
-
-      // 连接 server a
-      await m.connectServer("a", { command: "echo", timeout: 10_000 });
-      // 连接 server a__b（相似名称）
-      await m.connectServer("a__b", { command: "echo", timeout: 10_000 });
-
-      const toolA = "mcp__a__test_tool";
-      const toolAB = "mcp__a__b__test_tool";
-
-      expect((m as any).toolToServer.get(toolA)).toBe("a");
-      expect((m as any).toolToServer.get(toolAB)).toBe("a__b");
-
-      // 断线 a（使用内部的 closeConnection 逻辑）
-      (m as any).connections.delete("a");
-
-      // 重连 a（会触发原子工具切换）
-      await m.connectServer("a", { command: "echo", timeout: 10_000 });
-
-      // a__b 的工具不应被误删
-      expect((m as any).toolToServer.get(toolAB)).toBe("a__b");
-      expect((m as any).toolCache.has(toolAB)).toBe(true);
-    });
-
-    it("disconnectAll 应清空所有状态，包括断线后保留的工具映射", async () => {
-      const m = new McpClientManager();
-      await m.connectServer("srv", { command: "echo", timeout: 10_000 });
-
-      // 模拟断线：只有 toolToServer 保留，connections 已空
-      (m as any).connections.clear();
-
-      // disconnectAll 应清理全部残留状态
-      await m.disconnectAll();
-
-      expect((m as any).toolToServer.size).toBe(0);
-      expect((m as any).toolCache.size).toBe(0);
-      expect((m as any).retryCounts.size).toBe(0);
-      expect((m as any).serverConfigs.size).toBe(0);
-      expect((m as any).connections.size).toBe(0);
-    });
-
-    it("reload 生命周期：disconnectAll → reconnect 后状态应保留（防 resources_discover 误杀）", async () => {
-      // 模拟 Pi reload 时序：session_shutdown → session_start → resources_discover
-      const m = new McpClientManager();
-
-      // 1. session_start：连接 server
-      await m.connectServer("srv", { command: "echo", timeout: 10_000 });
-      expect(m.getConnectionCount()).toBe(1);
-
-      // 2. session_shutdown：断开所有
-      await m.disconnectAll();
-      expect(m.getConnectionCount()).toBe(0);
-
-      // 3. session_start(reload)：重新连接
-      await m.connectServer("srv", { command: "echo", timeout: 10_000 });
-      expect(m.getConnectionCount()).toBe(1);
-
-      // 4. resources_discover(reload)：不应执行 disconnectAll！
-      //    此处模拟"误触 disconnectAll"并断言会破坏状态
-      //    （测试通过意味着生产代码中 resources_discover 不调 disconnectAll）
-
-      // 关键断言：reconnect 后的连接仍然存活，工具映射完整
-      expect(m.getConnectionCount()).toBe(1);
-      expect((m as any).toolToServer.size).toBeGreaterThan(0);
-      expect((m as any).toolCache.size).toBeGreaterThan(0);
-    });
-  });
-
-  // ==========================================================
-  // P3: 超时重试路径不泄漏 transport/子进程
-  // ==========================================================
-  describe("P3 - 超时重试路径不泄漏 transport/子进程", () => {
-    it("连接超时后应关闭 transport 和 client 释放资源", async () => {
-      const m = new McpClientManager();
-      nextConnectHangs = true; // 让 connect 永远不 resolve
-
-      const s = await m.connectServer("timeout-srv", {
-        command: "sleep", args: ["999"], timeout: 50,
-      });
-
-      expect(s.connected).toBe(false);
-
-      // 验证 cleanup：transport 和 client 的 close 应被调用
-      const t = lastTransport();
-      const c = lastClient();
-      expect(t.close).toHaveBeenCalled();
-      expect(c.close).toHaveBeenCalled();
-    });
-
-    it("SSE 重试过程中每次超时都应清理前一轮资源", async () => {
-      const m = new McpClientManager();
-      nextConnectHangs = true; // 每次 connect 都 hang
-
-      const s = await m.connectServer("sse-retry", {
-        type: "sse", url: "http://localhost:9999/sse", timeout: 50,
-      });
-      expect(s.connected).toBe(false);
-
-      // 应有多个 transport/client 被创建（初始 + 至少 1 次重试）
-      expect(mockTransports.length).toBeGreaterThanOrEqual(2);
-      expect(mockClients.length).toBeGreaterThanOrEqual(2);
-
-      // 每个都应被关闭
-      for (const t of mockTransports) {
-        expect(t.close).toHaveBeenCalled();
-      }
-      for (const c of mockClients) {
-        expect(c.close).toHaveBeenCalled();
-      }
-    });
-
-    it("成功连接后不应意外关闭 transport/client", async () => {
-      const m = new McpClientManager();
-
-      const s = await m.connectServer("ok-srv", {
-        command: "echo", args: ["ok"], timeout: 10_000,
-      });
-      expect(s.connected).toBe(true);
-
-      const t = lastTransport();
-      const c = lastClient();
-
-      expect(t.close).not.toHaveBeenCalled();
-      expect(c.close).not.toHaveBeenCalled();
-
-      // 主动断开才应 close
-      await m.disconnectServer("ok-srv");
-      expect(t.close).toHaveBeenCalled();
-      expect(c.close).toHaveBeenCalled();
-    });
-
-    it("disconnectAll 不应等待 pending 连接自然超时后才返回", async () => {
-      const m = new McpClientManager();
-      nextConnectHangs = true;
-
-      void m.connectServer("pending-srv", {
-        command: "sleep",
-        args: ["999"],
-        timeout: 250,
-      });
-      await Promise.resolve();
-      await Promise.resolve();
-
-      const startedAt = Date.now();
-      await m.disconnectAll();
-      const elapsedMs = Date.now() - startedAt;
-
-      expect(elapsedMs).toBeLessThan(100);
-      expect(lastTransport().close).toHaveBeenCalled();
-      expect(lastClient().close).toHaveBeenCalled();
-    });
-  });
-
-  describe("P4 - 现代 MCP transport 与结果保真", () => {
-    it("应按服务器名报告实时连接状态", async () => {
-      const m = new McpClientManager();
-
-      expect(m.isServerConnected("status-srv")).toBe(false);
-      await m.connectServer("status-srv", {
-        command: "echo",
-        timeout: 10_000,
-      });
-      expect(m.isServerConnected("status-srv")).toBe(true);
-
-      await m.disconnectServer("status-srv");
-      expect(m.isServerConnected("status-srv")).toBe(false);
-    });
-
-    it("应支持 Streamable HTTP transport", async () => {
-      const m = new McpClientManager();
-
-      const state = await m.connectServer("http-srv", {
-        type: "http",
-        url: "http://localhost:3000/mcp",
-        headers: { Authorization: "Bearer token" },
-        timeout: 10_000,
-      });
-
-      expect(state.connected).toBe(true);
-      expect(StreamableHTTPClientTransport).toHaveBeenCalled();
-    });
-
-    it("callTool 应把 AbortSignal 传给 MCP SDK 的请求选项", async () => {
-      const m = new McpClientManager();
-      await m.connectServer("abort-srv", {
-        command: "echo",
-        timeout: 10_000,
-      });
-
-      const controller = new AbortController();
-      await m.callTool("mcp__abort-srv__test_tool", {}, { signal: controller.signal });
-
-      expect(lastClient().callTool).toHaveBeenCalledWith(
-        { name: "test_tool", arguments: {} },
-        undefined,
-        { signal: controller.signal },
-      );
-    });
-
-    it("callTool 应保留 structuredContent 和非文本 content block", async () => {
-      const m = new McpClientManager();
-      await m.connectServer("rich-srv", {
-        command: "echo",
-        timeout: 10_000,
-      });
-      lastClient().callTool.mockResolvedValueOnce({
-        content: [
-          { type: "text", text: "ok" },
-          { type: "image", data: "abc", mimeType: "image/png" },
-        ],
-        structuredContent: { answer: 42 },
-        isError: false,
-      });
-
-      const result = await m.callTool("mcp__rich-srv__test_tool", {});
-
-      expect(result.structuredContent).toEqual({ answer: 42 });
-      expect(result.content).toEqual([
-        { type: "text", text: "ok" },
-        { type: "image", data: "abc", mimeType: "image/png" },
+  it("does not retry authentication or deterministic protocol failures", async () => {
+    for (const failure of [
+      Object.assign(new Error("denied"), { code: 401 }),
+      new McpError(ErrorCode.InvalidParams, "bad initialize"),
+    ]) {
+      const { manager, clients } = createHarness([
+        { connect: async () => { throw failure; } },
+        {},
       ]);
+      const state = await manager.connectServer("remote", {
+        command: "remote",
+        retry: { maxAttempts: 3, background: false },
+      });
+      expect(state.connected).toBe(false);
+      expect(clients).toHaveLength(1);
+      await manager.disconnectAll();
+    }
+  });
+
+  it("does not start background recovery for a non-retryable foreground failure", async () => {
+    const scheduler = new ControlledScheduler();
+    const { manager, clients } = createHarness([
+      { connect: async () => { throw Object.assign(new Error("denied"), { code: 401 }); } },
+      {},
+    ], { scheduler });
+
+    const state = await manager.connectServer("remote", {
+      command: "remote",
+      retry: { maxAttempts: 3, background: true },
     });
+
+    expect(state.connected).toBe(false);
+    expect(state.status).toBe("offline");
+    expect(state.lastError?.category).toBe("auth");
+    expect(clients).toHaveLength(1);
+    expect(scheduler.pending).toHaveLength(0);
+    await manager.disconnectAll();
+  });
+
+  it("uses one hard connect deadline and closes a hanging Client", async () => {
+    vi.useFakeTimers();
+    const { manager, clients, transports } = createHarness([{
+      connect: () => new Promise<void>(() => undefined),
+    }]);
+    const connecting = manager.connectServer("slow", {
+      command: "slow",
+      connectTimeout: 50,
+      ...noBackground,
+    });
+
+    await vi.advanceTimersByTimeAsync(50);
+    const state = await connecting;
+
+    expect(state.status).toBe("offline");
+    expect(state.lastError?.category).toBe("timeout");
+    expect(clients[0].closeOperation).toHaveBeenCalledTimes(1);
+    expect(transports[0].close).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+    await manager.disconnectAll();
+  });
+
+  it("lets Client own transport shutdown exactly once", async () => {
+    const { manager, clients, transports } = createHarness([{}]);
+    await manager.connectServer("local", { command: "local", ...noBackground });
+
+    await manager.disconnectAll();
+
+    expect(clients[0].closeOperation).toHaveBeenCalledTimes(1);
+    expect(transports[0].close).toHaveBeenCalledTimes(1);
+  });
+
+  it("coalesces SDK and manager cleanup after initialization fails", async () => {
+    const { manager, clients, transports } = createHarness([{
+      connect: async () => { throw new Error("invalid initialize result"); },
+      sdkClosesOnConnectFailure: true,
+    }]);
+
+    const state = await manager.connectServer("local", { command: "local", ...noBackground });
+
+    expect(state.connected).toBe(false);
+    expect(clients[0].closeOperation).toHaveBeenCalledTimes(1);
+    expect(transports[0].close).toHaveBeenCalledTimes(1);
+    await manager.disconnectAll();
+  });
+
+  it("falls back to direct transport close only when Client close rejects", async () => {
+    const { manager, clients, transports } = createHarness([{}]);
+    await manager.connectServer("local", { command: "local", ...noBackground });
+    clients[0].closeOperation.mockRejectedValueOnce(new Error("close failed"));
+
+    await manager.disconnectAll();
+
+    expect(clients[0].closeOperation).toHaveBeenCalledTimes(1);
+    expect(transports[0].close).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates state on unexpected close and ignores callbacks from an old Client", async () => {
+    const scheduler = new ControlledScheduler();
+    const { manager, clients } = createHarness([{}, {}], { scheduler });
+    await manager.connectServer("remote", {
+      command: "remote",
+      retry: { maxAttempts: 1, background: true, baseDelayMs: 10, maxDelayMs: 10 },
+    });
+    const oldClient = clients[0];
+    await manager.reconnectServer("remote");
+    const currentGeneration = manager.getServerState("remote")?.generation;
+
+    oldClient.emitError(new Error("late old error"));
+    oldClient.emitClose();
+
+    expect(manager.getServerState("remote")?.generation).toBe(currentGeneration);
+    expect(manager.getServerState("remote")?.status).toBe("connected");
+    await manager.disconnectAll();
+  });
+
+  it("marks a current out-of-band client error degraded without closing it", async () => {
+    const { manager, clients } = createHarness([{}]);
+    await manager.connectServer("remote", { command: "remote", ...noBackground });
+
+    clients[0].emitError(Object.assign(new Error("socket warning"), { code: "ECONNRESET" }));
+
+    expect(manager.getServerState("remote")?.status).toBe("degraded");
+    expect(manager.isServerConnected("remote")).toBe(true);
+    await manager.disconnectAll();
+  });
+
+  it("hands terminal SDK SSE recovery failure to the background supervisor", async () => {
+    const scheduler = new ControlledScheduler();
+    const { manager, clients } = createHarness([{}, {}], { scheduler, random: () => 1 });
+    await manager.connectServer("remote", {
+      type: "streamable-http",
+      url: "https://example.invalid/mcp",
+      retry: { maxAttempts: 1, background: true, baseDelayMs: 10, maxDelayMs: 10 },
+    });
+
+    clients[0].emitError(new Error("Maximum reconnection attempts (2) exceeded."));
+    await settle();
+
+    expect(clients[0].closeOperation).toHaveBeenCalledTimes(1);
+    expect(manager.isServerConnected("remote")).toBe(false);
+    expect(manager.getServerState("remote")?.status).toBe("retrying");
+    expect(scheduler.pending).toHaveLength(1);
+    await manager.disconnectAll();
+  });
+
+  it("does not apply terminal Streamable HTTP recovery handling to stdio errors", async () => {
+    const { manager, clients } = createHarness([{}]);
+    await manager.connectServer("local", { command: "local", ...noBackground });
+
+    clients[0].emitError(new Error("Maximum reconnection attempts (2) exceeded."));
+    await settle();
+
+    expect(manager.getServerState("local")?.status).toBe("degraded");
+    expect(manager.isServerConnected("local")).toBe(true);
+    expect(clients[0].closeOperation).not.toHaveBeenCalled();
+    await manager.disconnectAll();
+  });
+
+  it("does not let delayed old-connection cleanup overwrite a completed reconnect", async () => {
+    const closeStarted = deferred<void>();
+    const closeGate = deferred<void>();
+    const { manager, clients } = createHarness([
+      {
+        close: async () => {
+          closeStarted.resolve();
+          await closeGate.promise;
+        },
+      },
+      {},
+    ]);
+    const config = {
+      type: "streamable-http" as const,
+      url: "https://example.invalid/mcp",
+      ...noBackground,
+    };
+    await manager.connectServer("remote", config);
+
+    clients[0].emitError(new Error("Maximum reconnection attempts (2) exceeded."));
+    await closeStarted.promise;
+    const reconnected = await manager.reconnectServer("remote");
+
+    expect(reconnected.status).toBe("connected");
+    expect(manager.isServerConnected("remote")).toBe(true);
+    closeGate.resolve();
+    await settle();
+
+    expect(manager.getServerState("remote")?.status).toBe("connected");
+    expect(manager.isServerConnected("remote")).toBe(true);
+    await manager.disconnectAll();
+  });
+
+  it("resolves namespace collisions deterministically instead of using connection order", async () => {
+    const { manager, clients } = createHarness([
+      { pages: [{ tools: [tool("query")] }] },
+      { pages: [{ tools: [tool("b__query")] }] },
+    ]);
+
+    await manager.connectServer("a__b", { command: "first", ...noBackground });
+    await manager.connectServer("a", { command: "second", ...noBackground });
+    await manager.callTool("mcp__a__b__query", {});
+
+    expect([...manager.getAllTools().keys()]).toEqual(["mcp__a__b__query"]);
+    expect(clients[0].callTool).not.toHaveBeenCalled();
+    expect(clients[1].callTool).toHaveBeenCalledWith(
+      { name: "b__query", arguments: {} },
+      undefined,
+      expect.any(Object),
+    );
+    expect(JSON.stringify(manager.diagnostics.getEvents())).toContain("Colliding MCP tool name ignored");
+    await manager.disconnectAll();
+  });
+
+  it("emits immutable state and tool catalog events", async () => {
+    const { manager } = createHarness([{}]);
+    const events: McpManagerEvent[] = [];
+    manager.subscribe((event) => events.push(event));
+
+    await manager.connectServer("docs", { command: "docs", ...noBackground });
+
+    expect(events.some((event) => event.type === "state" && event.state.status === "connected")).toBe(true);
+    expect(events.some((event) => event.type === "tools" && event.tools[0]?.name === "query")).toBe(true);
+    await manager.disconnectAll();
+  });
+});
+
+describe("HTTP response safety", () => {
+  it.each([429, 503, 520])("retries HTTP %i through the bounded fetch wrapper", async (status) => {
+    const scheduler = new ImmediateScheduler();
+    const body = status === 520
+      ? `<html><title>Web server is down</title><body>${"private-body ".repeat(2000)}</body></html>`
+      : "temporarily unavailable";
+    const fetch = vi.fn<FetchLike>()
+      .mockResolvedValueOnce(new Response(body, {
+        status,
+        headers: status === 429 ? { "Retry-After": "2", "Content-Length": String(Buffer.byteLength(body)) } : {},
+      }))
+      .mockResolvedValue(new Response("ok", { status: 200 }));
+    const connectViaFetch = async (transport: FakeTransport) => {
+      const response = await transport.fetch!("https://example.invalid/mcp", { method: "POST" });
+      if (!response.ok) throw Object.assign(new Error(await response.text()), { code: response.status });
+    };
+    const { manager } = createHarness([
+      { connect: connectViaFetch },
+      { connect: connectViaFetch },
+    ], { fetch, scheduler });
+
+    const state = await manager.connectServer("remote", {
+      type: "streamable-http",
+      url: "https://example.invalid/mcp",
+      connectTimeout: 10_000,
+      retry: { maxAttempts: 2, baseDelayMs: 1, maxDelayMs: 1, background: false },
+    });
+
+    expect(state.connected).toBe(true);
+    if (status === 429) expect(scheduler.sleeps).toEqual([2_000]);
+    const details = JSON.stringify(manager.diagnostics.getEvents("remote"));
+    expect(Buffer.byteLength(details, "utf8")).toBeLessThan(16_000);
+    expect(details).not.toContain("private-body private-body private-body");
+    if (status === 520) expect(details).toContain("Web server is down");
+    await manager.disconnectAll();
+  });
+
+  it("does not retain a successful HTTP status when a later fetch fails", async () => {
+    const networkError = new TypeError("fetch failed", {
+      cause: Object.assign(new Error("socket reset"), { code: "ECONNRESET" }),
+    });
+    const fetch = vi.fn<FetchLike>()
+      .mockResolvedValueOnce(new Response("ok", { status: 200 }))
+      .mockRejectedValueOnce(networkError);
+    const connectViaFetch = async (transport: FakeTransport) => {
+      await transport.fetch!("https://example.invalid/initialize", { method: "POST" });
+      await transport.fetch!("https://example.invalid/tools", { method: "POST" });
+    };
+    const { manager } = createHarness([{ connect: connectViaFetch }], { fetch });
+
+    const state = await manager.connectServer("remote", {
+      type: "streamable-http",
+      url: "https://example.invalid/mcp",
+      retry: { maxAttempts: 1, background: false },
+    });
+
+    expect(state.lastError).toMatchObject({
+      category: "connection",
+      code: "ECONNRESET",
+    });
+    expect(state.lastError?.httpStatus).toBeUndefined();
+    await manager.disconnectAll();
+  });
+
+  it("stops reading an unterminated HTTP error body at the exact byte limit", async () => {
+    const cancel = vi.fn();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("x".repeat(DEFAULT_FIELD_BYTES)));
+      },
+      cancel,
+    });
+    const fetch = vi.fn<FetchLike>().mockResolvedValue(new Response(body, { status: 503 }));
+    const connectViaFetch = async (transport: FakeTransport) => {
+      const response = await transport.fetch!("https://example.invalid/mcp", { method: "POST" });
+      throw Object.assign(new Error(await response.text()), { code: response.status });
+    };
+    const { manager } = createHarness([{ connect: connectViaFetch }], { fetch });
+
+    const state = await manager.connectServer("remote", {
+      type: "streamable-http",
+      url: "https://example.invalid/mcp",
+      retry: { maxAttempts: 1, background: false },
+    });
+
+    expect(state.lastError?.category).toBe("http-transient");
+    expect(state.lastError?.truncated).toBe(true);
+    expect(cancel).toHaveBeenCalledTimes(1);
+    await manager.disconnectAll();
+  });
+
+  it("does not attach an unrelated concurrent HTTP response to a network failure", async () => {
+    const networkError = Object.assign(new TypeError("fetch failed"), { code: "ECONNRESET" });
+    const fetch = vi.fn<FetchLike>(async (url) => {
+      if (String(url).endsWith("optional-stream")) {
+        await Promise.resolve();
+        return new Response("Method not allowed", { status: 405 });
+      }
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      throw networkError;
+    });
+    const connectViaFetch = async (transport: FakeTransport) => {
+      await Promise.all([
+        transport.fetch!("https://example.invalid/optional-stream"),
+        transport.fetch!("https://example.invalid/initialize", { method: "POST" }),
+      ]);
+    };
+    const { manager } = createHarness([{ connect: connectViaFetch }], { fetch });
+
+    const state = await manager.connectServer("remote", {
+      type: "streamable-http",
+      url: "https://example.invalid/mcp",
+      retry: { maxAttempts: 1, background: false },
+    });
+
+    expect(state.lastError?.category).toBe("connection");
+    expect(state.lastError?.httpStatus).toBeUndefined();
+    await manager.disconnectAll();
+  });
+
+  it("associates concurrent same-status HTTP failures with their originating requests", async () => {
+    const bothResponsesObserved = deferred<void>();
+    let observedResponses = 0;
+    const fetch = vi.fn<FetchLike>(async (url) => {
+      const first = String(url).endsWith("/first");
+      return new Response(first ? "first response" : "second response", {
+        status: 429,
+        headers: { "Retry-After": first ? "1" : "9" },
+      });
+    });
+    const scenario: Scenario = {
+      call: async (transport, request) => {
+        const requestId = String(request.arguments?.requestId);
+        const response = await transport.fetch!(`https://example.invalid/${requestId}`, {
+          method: "POST",
+        });
+        observedResponses += 1;
+        if (observedResponses === 2) bothResponsesObserved.resolve();
+        await bothResponsesObserved.promise;
+        throw Object.assign(
+          new Error(`Streamable HTTP error: ${await response.text()}`),
+          { code: response.status },
+        );
+      },
+    };
+    const { manager } = createHarness([scenario], { fetch });
+    await manager.connectServer("remote", {
+      type: "streamable-http",
+      url: "https://example.invalid/mcp",
+      ...noBackground,
+    });
+
+    const results = await Promise.allSettled([
+      manager.callTool("mcp__remote__query", { requestId: "first" }),
+      manager.callTool("mcp__remote__query", { requestId: "second" }),
+    ]);
+
+    expect(results.every((result) => result.status === "rejected")).toBe(true);
+    const firstError = (results[0] as PromiseRejectedResult).reason as McpToolError;
+    const secondError = (results[1] as PromiseRejectedResult).reason as McpToolError;
+    expect(firstError.normalizedError).toMatchObject({
+      category: "rate-limit",
+      httpStatus: 429,
+      retryAfterMs: 1_000,
+      detail: "first response",
+    });
+    expect(secondError.normalizedError).toMatchObject({
+      category: "rate-limit",
+      httpStatus: 429,
+      retryAfterMs: 9_000,
+      detail: "second response",
+    });
+    expect(JSON.stringify([firstError, secondError, manager.diagnostics.getEvents()]))
+      .not.toContain("__PI_MCP_HTTP_OBSERVATION_");
+    await manager.disconnectAll();
+  });
+});
+
+describe("stdio and server diagnostics", () => {
+  it("captures early chunked stderr without writing to process streams", async () => {
+    const diagnostics = new McpDiagnostics();
+    const stdout = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const stderr = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { manager } = createHarness([{
+      onStart: (transport) => {
+        transport.stderr.write(Buffer.from("early Bearer sec"));
+        transport.stderr.write(Buffer.from("ret\nsecond line\n"));
+      },
+    }], { diagnostics });
+
+    await manager.connectServer("local", { command: "local", ...noBackground });
+
+    expect(diagnostics.getStderr("local")).toEqual([
+      "early Bearer [redacted]",
+      "second line",
+    ]);
+    expect(stdout).not.toHaveBeenCalled();
+    expect(stderr).not.toHaveBeenCalled();
+    await manager.disconnectAll();
+  });
+
+  it("captures MCP logging notifications and applies configured level", async () => {
+    const diagnostics = new McpDiagnostics();
+    const { manager, clients } = createHarness([{
+      capabilities: { logging: {} },
+    }], { diagnostics });
+
+    await manager.connectServer("local", {
+      command: "local",
+      loggingLevel: "warning",
+      ...noBackground,
+    });
+    clients[0].emitLog({
+      level: "warning",
+      logger: "fixture",
+      data: { Authorization: "Bearer secret-value", message: "notice" },
+    });
+
+    expect(clients[0].setLoggingLevel).toHaveBeenCalledWith("warning", expect.any(Object));
+    const serialized = JSON.stringify(diagnostics.getEvents("local"));
+    expect(serialized).toContain("MCP server log notification");
+    expect(serialized).not.toContain("secret-value");
+    await manager.disconnectAll();
+  });
+});
+
+describe("background recovery", () => {
+  it("recovers after the foreground attempt and emits a background tool event", async () => {
+    const scheduler = new ControlledScheduler();
+    const { manager } = createHarness([
+      { connect: async () => { throw new Error("fetch failed"); } },
+      { pages: [{ tools: [tool("recovered")] }] },
+    ], { scheduler, random: () => 1 });
+    const events: McpManagerEvent[] = [];
+    manager.subscribe((event) => events.push(event));
+
+    const initial = await manager.connectServer("remote", {
+      command: "remote",
+      connectTimeout: 1_000,
+      retry: { maxAttempts: 1, background: true, baseDelayMs: 10, maxDelayMs: 10 },
+    });
+    expect(initial.connected).toBe(false);
+    expect(manager.getServerState("remote")?.status).toBe("retrying");
+    expect(scheduler.pending).toHaveLength(1);
+
+    scheduler.releaseNext();
+    await settle();
+
+    expect(manager.isServerConnected("remote")).toBe(true);
+    expect(events.some((event) => event.type === "tools" && event.source === "background" && event.tools[0]?.name === "recovered")).toBe(true);
+    await manager.disconnectAll();
+  });
+
+  it("manual reconnect cancels the pending supervisor and starts a new generation", async () => {
+    const scheduler = new ControlledScheduler();
+    const { manager, clients } = createHarness([
+      { connect: async () => { throw new Error("fetch failed"); } },
+      {},
+    ], { scheduler, random: () => 1 });
+    await manager.connectServer("remote", {
+      command: "remote",
+      retry: { maxAttempts: 1, background: true, baseDelayMs: 100, maxDelayMs: 100 },
+    });
+    const failedGeneration = manager.getServerState("remote")?.generation;
+
+    const state = await manager.reconnectServer("remote");
+
+    expect(state.connected).toBe(true);
+    expect(state.generation).toBeGreaterThan(failedGeneration ?? -1);
+    expect(clients).toHaveLength(2);
+    await manager.disconnectAll();
+  });
+
+  it("shutdown cancels retry sleep and prevents connection resurrection", async () => {
+    const scheduler = new ControlledScheduler();
+    const { manager, clients } = createHarness([
+      { connect: async () => { throw new Error("fetch failed"); } },
+      {},
+    ], { scheduler, random: () => 1 });
+    await manager.connectServer("remote", {
+      command: "remote",
+      retry: { maxAttempts: 1, background: true, baseDelayMs: 100, maxDelayMs: 100 },
+    });
+
+    await manager.shutdown();
+    scheduler.releaseNext();
+    await settle();
+
+    expect(manager.getConnectionCount()).toBe(0);
+    expect(clients).toHaveLength(1);
+  });
+});
+
+describe("safe tool calls", () => {
+  it("passes request timeouts and a cancellable signal to the SDK", async () => {
+    const { manager, clients } = createHarness([{}]);
+    await manager.connectServer("tools", {
+      command: "tools",
+      requestTimeout: 123,
+      maxRequestTimeout: 456,
+      ...noBackground,
+    });
+    const controller = new AbortController();
+
+    await manager.callTool("mcp__tools__query", { value: 1 }, { signal: controller.signal });
+
+    expect(clients[0].callTool).toHaveBeenCalledWith(
+      { name: "query", arguments: { value: 1 } },
+      undefined,
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+        timeout: 123,
+        maxTotalTimeout: 456,
+        resetTimeoutOnProgress: true,
+      }),
+    );
+    await manager.disconnectAll();
+  });
+
+  it("returns rich content and business isError without reconnecting", async () => {
+    const result = {
+      content: [
+        { type: "text", text: "bad input" },
+        { type: "image", data: "abc", mimeType: "image/png" },
+      ],
+      structuredContent: { field: "value" },
+      isError: true,
+    };
+    const { manager, clients } = createHarness([{ calls: [result] }, {}]);
+    await manager.connectServer("tools", { command: "tools", ...noBackground });
+
+    await expect(manager.callTool("mcp__tools__query", {})).resolves.toEqual(result);
+    expect(clients).toHaveLength(1);
+    await manager.disconnectAll();
+  });
+
+  it("rebuilds a dropped connection but does not replay an unsafe tool", async () => {
+    const dropped = new McpError(ErrorCode.ConnectionClosed, "response lost");
+    const { manager, clients } = createHarness([
+      { calls: [dropped], pages: [{ tools: [tool("write", false)] }] },
+      { pages: [{ tools: [tool("write", false)] }] },
+    ]);
+    await manager.connectServer("tools", { command: "tools", ...noBackground });
+
+    await expect(manager.callTool("mcp__tools__write", {})).rejects.toMatchObject({
+      outcomeUnknown: true,
+    });
+
+    expect(clients[0].callTool).toHaveBeenCalledTimes(1);
+    expect(clients[1].callTool).not.toHaveBeenCalled();
+    expect(manager.isServerConnected("tools")).toBe(true);
+    await manager.disconnectAll();
+  });
+
+  it("replays an explicitly read-only tool at most once", async () => {
+    const dropped = new McpError(ErrorCode.ConnectionClosed, "response lost");
+    const { manager, clients } = createHarness([
+      { calls: [dropped], pages: [{ tools: [tool("read", true)] }] },
+      { calls: [{ content: [{ type: "text", text: "recovered" }] }], pages: [{ tools: [tool("read", true)] }] },
+    ]);
+    await manager.connectServer("tools", {
+      command: "tools",
+      toolReplay: "read-only",
+      ...noBackground,
+    });
+
+    const result = await manager.callTool("mcp__tools__read", {});
+
+    expect(result.content[0].text).toBe("recovered");
+    expect(clients[0].callTool).toHaveBeenCalledTimes(1);
+    expect(clients[1].callTool).toHaveBeenCalledTimes(1);
+    await manager.disconnectAll();
+  });
+
+  it("preserves cancellation semantics when reconnect is cancelled after an unknown outcome", async () => {
+    const dropped = new McpError(ErrorCode.ConnectionClosed, "response lost");
+    const reconnectStarted = deferred<void>();
+    const { manager, clients } = createHarness([
+      { calls: [dropped], pages: [{ tools: [tool("read", true)] }] },
+      {
+        pages: [{ tools: [tool("read", true)] }],
+        connect: async (_transport, options) => {
+          reconnectStarted.resolve();
+          const signal = options?.signal as AbortSignal;
+          await new Promise<void>((_resolve, reject) => {
+            const onAbort = () => reject(signal.reason);
+            signal.addEventListener("abort", onAbort, { once: true });
+            if (signal.aborted) onAbort();
+          });
+        },
+      },
+    ]);
+    await manager.connectServer("tools", {
+      command: "tools",
+      toolReplay: "read-only",
+      ...noBackground,
+    });
+    const controller = new AbortController();
+
+    const call = manager.callTool("mcp__tools__read", {}, { signal: controller.signal });
+    await reconnectStarted.promise;
+    controller.abort(new DOMException("user stopped", "AbortError"));
+
+    await expect(call).rejects.toMatchObject({
+      name: "McpConnectionError",
+      outcomeUnknown: true,
+      normalizedError: { category: "cancelled" },
+    });
+    expect(clients).toHaveLength(2);
+    expect(clients[1].callTool).not.toHaveBeenCalled();
+    await manager.disconnectAll();
+  });
+
+  it("rechecks read-only annotations after reconnect before replaying", async () => {
+    const dropped = new McpError(ErrorCode.ConnectionClosed, "response lost");
+    const { manager, clients } = createHarness([
+      { calls: [dropped], pages: [{ tools: [tool("read", true)] }] },
+      { pages: [{ tools: [tool("read", false)] }] },
+    ]);
+    await manager.connectServer("tools", {
+      command: "tools",
+      toolReplay: "read-only",
+      ...noBackground,
+    });
+
+    await expect(manager.callTool("mcp__tools__read", {})).rejects.toMatchObject({
+      outcomeUnknown: true,
+    });
+
+    expect(clients[0].callTool).toHaveBeenCalledTimes(1);
+    expect(clients[1].callTool).not.toHaveBeenCalled();
+    expect(manager.isServerConnected("tools")).toBe(true);
+    await manager.disconnectAll();
+  });
+
+  it("never replays a read-only tool more than once when the replay also loses its response", async () => {
+    const dropped = new McpError(ErrorCode.ConnectionClosed, "response lost");
+    const { manager, clients } = createHarness([
+      { calls: [dropped], pages: [{ tools: [tool("read", true)] }] },
+      { calls: [dropped], pages: [{ tools: [tool("read", true)] }] },
+    ]);
+    await manager.connectServer("tools", {
+      command: "tools",
+      toolReplay: "read-only",
+      ...noBackground,
+    });
+
+    await expect(manager.callTool("mcp__tools__read", {})).rejects.toMatchObject({
+      outcomeUnknown: true,
+    });
+
+    expect(clients).toHaveLength(2);
+    expect(clients[0].callTool).toHaveBeenCalledTimes(1);
+    expect(clients[1].callTool).toHaveBeenCalledTimes(1);
+    expect(manager.getServerState("tools")?.status).toBe("offline");
+    await manager.disconnectAll();
+  });
+
+  it("closes the active transport without replay after caller cancellation or request timeout", async () => {
+    for (const failure of [
+      new DOMException("cancelled", "AbortError"),
+      new McpError(ErrorCode.RequestTimeout, "slow tool"),
+    ]) {
+      const { manager, clients } = createHarness([{ calls: [failure] }, {}]);
+      await manager.connectServer("tools", { command: "tools", ...noBackground });
+      await expect(manager.callTool("mcp__tools__query", {})).rejects.toBeInstanceOf(McpToolError);
+      expect(clients).toHaveLength(1);
+      expect(clients[0].closeOperation).toHaveBeenCalledTimes(1);
+      expect(manager.getServerState("tools")?.status).toBe("offline");
+      await manager.disconnectAll();
+    }
+  });
+
+  it("keeps retired routes and reports a deleted tool explicitly", async () => {
+    const { manager } = createHarness([
+      { pages: [{ tools: [tool("removed")] }] },
+      { pages: [{ tools: [] }] },
+    ]);
+    await manager.connectServer("tools", { command: "tools", ...noBackground });
+    await manager.reconnectServer("tools");
+
+    await expect(manager.callTool("mcp__tools__removed", {})).rejects.toThrow(/no longer available/i);
+    await manager.disconnectAll();
+  });
+
+  it("applies live tool catalog changes without duplicating a route", async () => {
+    const { manager, clients } = createHarness([{
+      pages: [{ tools: [tool("old")] }],
+    }]);
+    await manager.connectServer("tools", { command: "tools", ...noBackground });
+
+    clients[0].emitToolListChanged(null, [tool("new", true)]);
+
+    expect([...manager.getAllTools().keys()]).toEqual(["mcp__tools__new"]);
+    await expect(manager.callTool("mcp__tools__old", {})).rejects.toThrow(/no longer available/i);
+    await manager.disconnectAll();
   });
 });

@@ -1,23 +1,18 @@
 /**
- * MCP JSON Schema → TypeBox Schema 转换器
+ * Converts MCP JSON Schema definitions to TypeBox schemas.
  *
- * 将 MCP 工具返回的 JSON Schema 格式的 inputSchema
- * 转换为 Pi 的 TypeBox Schema，用于 registerTool().parameters
+ * The resulting schema is suitable for Pi registerTool().parameters.
  */
 import { type TSchema } from "typebox";
 import type { JsonSchema } from "./types.js";
 /**
- * 将 JSON Schema 转换为 TypeBox Schema
+ * Converts an MCP tool JSON Schema to a TypeBox schema.
  *
- * 支持的类型：
- * - string, number, integer, boolean
- * - object (with properties and required)
- * - array (with items)
- * - enum (const / enum)
- * - oneOf / anyOf
+ * Supported forms include primitive types, objects, arrays, enums, const,
+ * oneOf, and anyOf.
  *
- * @param schema - MCP 工具返回的 JSON Schema
- * @returns TypeBox TSchema 实例
+ * @param schema - JSON Schema returned by an MCP tool.
+ * @returns A TypeBox schema instance.
  */
 export declare function jsonSchemaToTypeBox(schema: JsonSchema): TSchema;
 //# sourceMappingURL=schema.d.ts.map

@@ -37,18 +37,26 @@ function truncatePlainText(text: string, maxWidth: number): string {
   return `${prefix}${ellipsis}`;
 }
 
+const THINKING_MARKER_MARKDOWN = "`•`";
+const THINKING_MARKER_WIDTH = 2;
+
 function compactThinkingMarkdown(markdown: string, availableWidth: number): string {
   const latestParagraph = markdown.trim().split(/\n\s*\n/u).at(-1) ?? "";
   const singleLine = latestParagraph.replace(/\s+/gu, " ").trim();
   if (availableWidth <= 0) return "";
+  if (availableWidth < THINKING_MARKER_WIDTH) return THINKING_MARKER_MARKDOWN;
 
+  const contentWidth = availableWidth - THINKING_MARKER_WIDTH;
+  let content = "";
   for (const marker of ["**", "__"] as const) {
     if (singleLine.startsWith(marker) && singleLine.endsWith(marker) && singleLine.length > marker.length * 2) {
-      const content = singleLine.slice(marker.length, -marker.length);
-      return `${marker}${truncatePlainText(content, availableWidth)}${marker}`;
+      const inner = singleLine.slice(marker.length, -marker.length);
+      content = `${marker}${truncatePlainText(inner, contentWidth)}${marker}`;
+      break;
     }
   }
-  return truncatePlainText(singleLine, availableWidth);
+  content ||= truncatePlainText(singleLine, contentWidth);
+  return content ? `${THINKING_MARKER_MARKDOWN} ${content}` : THINKING_MARKER_MARKDOWN;
 }
 
 function getBaseTitle(cwd: string): string {

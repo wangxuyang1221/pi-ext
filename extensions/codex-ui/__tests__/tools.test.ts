@@ -3,7 +3,6 @@ import { afterEach, test, vi } from "vitest";
 import {
   initTheme,
   ToolExecutionComponent,
-  truncateToVisualLines,
   type ExtensionAPI,
   type Theme,
   type ToolDefinition,
@@ -61,6 +60,7 @@ import {
   renderDisplayDiff,
   type CodexToolFactories,
 } from "../src/tools.js";
+import { getExactFittedVisualLines } from "../src/exact-visual-tail.js";
 import { fitToWidth } from "../src/layout.js";
 
 function createTheme(codeOffset = 0): Theme {
@@ -125,86 +125,33 @@ function legacySanitizeBash(text: string): string {
     .join("");
 }
 
-function legacyBashCommandLines(
-  command: string,
-  status: "pending" | "completed" | "failed",
-  width: number,
-): string[] {
-  const displayCommand = legacySanitizeBash(stripTerminalSequences(command)) || "…";
-  const text = theme.fg("toolTitle", theme.bold(`$ ${displayCommand}`));
-  const rail = width >= 2 ? theme.fg("success", "▌") : "";
-  const gap = width >= 3 ? " " : "";
-  const trailingPadding = width >= 4 ? 1 : 0;
-  const prefix = `${rail}${gap}`;
-  const contentWidth = Math.max(1, width - visibleWidth(prefix) - trailingPadding);
-  const commandLines = wrapTextWithAnsi(text, contentWidth);
-  const shellBackground = status === "completed"
-    ? "toolSuccessBg"
-    : status === "failed"
-      ? "toolErrorBg"
-      : "toolPendingBg";
-
-  return (commandLines.length > 0 ? commandLines : [""]).map((line) => fitToWidth(
-    `${theme.getBgAnsi("toolPendingBg")}${fitToWidth(`${prefix}${line}`, width, { pad: true })}${theme.getBgAnsi(shellBackground)}`,
-    width,
-  ));
-}
-
-function legacyAlignedLines(left: string, right: string, width: number): string[] {
-  if (!right) return wrapTextWithAnsi(left, width);
-
-  const gap = width - visibleWidth(left) - visibleWidth(right);
-  if (gap >= 1) return [`${left}${" ".repeat(gap)}${right}`];
-
-  return [
-    ...wrapTextWithAnsi(left, width),
-    ...wrapTextWithAnsi(right, width).map((line) => (
-      `${" ".repeat(Math.max(0, width - visibleWidth(line)))}${line}`
-    )),
-  ];
-}
-
-function legacyBashResultLines(
+function expectedBashResultLines(
   output: string,
-  expanded: boolean,
   width: number,
   warning = "",
 ): string[] {
   const sanitized = legacySanitizeBash(stripTerminalSequences(output)).replace(/\r/gu, "").trim();
-  let visualLines: string[] = [];
-  let skippedCount = 0;
-  if (sanitized) {
-    const styled = sanitized
-      .split("\n")
-      .map((line) => theme.fg("toolOutput", line))
-      .join("\n");
-    const preview = truncateToVisualLines(
-      styled,
-      expanded ? Number.MAX_SAFE_INTEGER : 5,
-      width,
-    );
-    visualLines = preview.visualLines;
-    skippedCount = preview.skippedCount;
-  }
-
-  const totalVisualLines = visualLines.length + skippedCount;
-  const lineLabel = `${totalVisualLines} visual ${totalVisualLines === 1 ? "line" : "lines"}`;
-  const footerLabel = !expanded && skippedCount > 0
-    ? `${skippedCount} earlier visual lines hidden`
-    : lineLabel;
-  const lines = ["", ...visualLines];
-  if (warning) {
-    lines.push("", ...wrapTextWithAnsi(theme.fg("warning", `[${warning}]`), width));
-  }
-  lines.push(
+  const indent = width >= 10 ? "      " : "";
+  const detailWidth = Math.max(1, width - visibleWidth(indent));
+  const visualLines = sanitized
+    ? getExactFittedVisualLines(
+      sanitized.split("\n"),
+      (line) => theme.fg("toolOutput", line),
+      detailWidth,
+    )
+    : [];
+  const lines = [
     "",
-    ...legacyAlignedLines(
-      theme.fg("dim", footerLabel),
-      `[app.tools.expand] ${expanded ? "collapse" : "expand"}`,
-      width,
-    ),
-  );
-  return lines.map((line) => fitToWidth(line, width));
+    ...visualLines.map((line) => fitToWidth(`${indent}${line}`, width)),
+  ];
+  if (warning) {
+    lines.push(
+      "",
+      ...wrapTextWithAnsi(theme.fg("warning", `[${warning}]`), detailWidth)
+        .map((line) => fitToWidth(`${indent}${line}`, width)),
+    );
+  }
+  return lines;
 }
 
 afterEach(() => {
@@ -386,10 +333,9 @@ test("tool overrides retain metadata and delegate execution using context cwd", 
     assert.deepEqual(tool.promptGuidelines, [`Use ${tool.name}.`]);
     assert.deepEqual(tool.constrainedSampling, { mode: "strict" });
   }
-  for (const name of ["read", "edit", "write"]) {
+  for (const name of ["read", "edit", "write", "bash"]) {
     assert.equal(registered.find((tool) => tool.name === name)?.renderShell, "self");
   }
-  assert.equal(registered.find((tool) => tool.name === "bash")?.renderShell, "default");
   assert.equal(typeof registered.find((tool) => tool.name === "edit")?.prepareArguments, "function");
 
   const read = registered.find((tool) => tool.name === "read");
@@ -1394,11 +1340,12 @@ test("low-power bash hides partial output without reading result text", () => {
   assert.equal(textReads, 0);
 });
 
-test("low-power bash final output keeps a three-line bounded tail and details warnings", () => {
+test("low-power bash keeps a bounded tail hidden until expanded", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => true });
   const bash = registered.find((tool) => tool.name === "bash");
-  assert.ok(bash?.renderResult);
+  assert.ok(bash?.renderCall);
+  assert.ok(bash.renderResult);
 
   let textReads = 0;
   const output = [
@@ -1427,44 +1374,49 @@ test("low-power bash final output keeps a three-line bounded tail and details wa
     },
   };
   const result = { content, details };
+  const args = { command: "seq 100" };
   const state: Record<string, unknown> = {};
+  const call = bash.renderCall(
+    args,
+    theme,
+    createRenderContext({ args, state, expanded: false, isPartial: false }) as never,
+  );
   const collapsed = bash.renderResult(
     result,
     { expanded: false, isPartial: false },
     theme,
-    createRenderContext({
-      args: { command: "seq 100" },
-      state,
-      expanded: false,
-      isPartial: false,
-    }) as never,
+    createRenderContext({ args, state, expanded: false, isPartial: false }) as never,
   );
-  const collapsedLines = collapsed.render(100);
-  const collapsedText = stripTerminalSequences(collapsedLines.join("\n"));
+  const collapsedText = stripTerminalSequences(call.render(100).join("\n"));
+
+  assert.deepEqual(collapsed.render(100), []);
+  assert.match(collapsedText, /3 lines shown/u);
+  assert.match(collapsedText, /details/u);
+  assert.ok(!collapsedText.includes("tail 2"));
+
+  bash.renderCall(
+    args,
+    theme,
+    createRenderContext({ args, state, expanded: true, isPartial: false, lastComponent: call }) as never,
+  );
   const expanded = bash.renderResult(
     result,
     { expanded: true, isPartial: false },
     theme,
-    createRenderContext({
-      args: { command: "seq 100" },
-      state,
-      expanded: true,
-      isPartial: false,
-      lastComponent: collapsed,
-    }) as never,
+    createRenderContext({ args, state, expanded: true, isPartial: false, lastComponent: collapsed }) as never,
   );
+  const expandedLines = expanded.render(100);
+  const expandedText = stripTerminalSequences(expandedLines.join("\n"));
 
-  assert.ok(!collapsedText.includes("HEAD-MUST-STAY-HIDDEN"));
-  assert.ok(!collapsedText.includes("tail 1 must stay hidden"));
-  assert.match(collapsedText, /tail 2\ntail 3\ntail 4/u);
-  assert.match(collapsedText, /Full output: \/tmp\/pi-bash-output\.log/u);
-  assert.match(collapsedText, /Truncated: showing 5 of 100 lines/u);
-  assert.ok(!collapsedText.includes("app.tools.expand"));
-  assert.deepEqual(expanded.render(100), collapsedLines);
+  assert.ok(!expandedText.includes("HEAD-MUST-STAY-HIDDEN"));
+  assert.ok(!expandedText.includes("tail 1 must stay hidden"));
+  assert.match(expandedText, /^ {6}tail 2\n {6}tail 3\n {6}tail 4/u);
+  assert.match(expandedText, /Full output: \/tmp\/pi-bash-output\.log/u);
+  assert.match(expandedText, /Truncated: showing 5 of 100 lines/u);
   assert.equal(expanded, collapsed);
   assert.equal(textReads, 1);
   assert.equal(state.preparedResult, undefined);
-  assert.ok(collapsedLines.every((line) => visibleWidth(line) <= 100));
+  assert.ok(expandedLines.every((line) => visibleWidth(line) <= 100));
 });
 
 test("low-power bash call bounds completed commands and runs without a refresh timer", () => {
@@ -1494,6 +1446,7 @@ test("low-power bash call bounds completed commands and runs without a refresh t
       args,
       state,
       invalidate,
+      expanded: false,
       argsComplete: false,
       executionStarted: true,
       isPartial: true,
@@ -1501,9 +1454,11 @@ test("low-power bash call bounds completed commands and runs without a refresh t
   );
   const initial = stripTerminalSequences(call.render(500).join("\n"));
 
-  assert.match(initial, /Bash running/u);
-  assert.match(initial, /0\.0s · 30s limit/u);
-  assert.match(initial, /\$ …/u);
+  assert.match(initial, /^ ├─ • Bash running/u);
+  assert.match(initial, /0\.0s/u);
+  assert.match(initial, /30s limit/u);
+  assert.match(initial, /output …/u);
+  assert.equal(initial.split("\n").length, 1);
   assert.equal(commandReads, 0);
   assert.equal(vi.getTimerCount(), 0);
 
@@ -1519,6 +1474,7 @@ test("low-power bash call bounds completed commands and runs without a refresh t
       args,
       state,
       invalidate,
+      expanded: false,
       lastComponent: call,
       argsComplete: true,
       executionStarted: true,
@@ -1526,10 +1482,11 @@ test("low-power bash call bounds completed commands and runs without a refresh t
     }) as never,
   );
   const updatedText = stripTerminalSequences(updated.render(500).join("\n"));
-  assert.match(updatedText, /1\.3s · 30s limit/u);
+  assert.match(updatedText, /1\.3s/u);
+  assert.match(updatedText, /30s limit/u);
   assert.ok(!updatedText.includes("😀"));
   assert.ok(!updatedText.includes("NEVER-SHOW-THIS"));
-  assert.equal(updatedText.split("\n").length, 3);
+  assert.equal(updatedText.split("\n").length, 1);
   assert.equal(commandReads, 1);
 
   vi.setSystemTime(new Date(2_000));
@@ -1540,6 +1497,7 @@ test("low-power bash call bounds completed commands and runs without a refresh t
       args,
       state,
       invalidate,
+      expanded: false,
       lastComponent: call,
       argsComplete: true,
       executionStarted: true,
@@ -1547,8 +1505,9 @@ test("low-power bash call bounds completed commands and runs without a refresh t
     }) as never,
   );
   const completedText = stripTerminalSequences(call.render(500).join("\n"));
-  assert.match(completedText, /Bash completed/u);
-  assert.match(completedText, /2\.0s · 30s limit/u);
+  assert.match(completedText, /^ ├─ • Bash completed/u);
+  assert.match(completedText, /2\.0s/u);
+  assert.match(completedText, /30s limit/u);
   assert.equal(commandReads, 1);
   assert.equal(vi.getTimerCount(), 0);
 });
@@ -1577,8 +1536,8 @@ test("low-power bash preserves failed status and fits sanitized narrow rows", ()
   );
   const output = stripTerminalSequences(component.render(80).join("\n"));
 
-  assert.match(output, /Bash failed/u);
-  assert.match(output, /\$ echo failed/u);
+  assert.match(output, /^ ├─ • Bash failed/u);
+  assert.match(output, /echo failed/u);
   assert.ok(!output.includes("\u0000"));
   assert.ok(!output.includes("0.0s"));
   assert.equal(vi.getTimerCount(), 0);
@@ -1687,16 +1646,18 @@ test("bash calls lock their render mode and isolate the full-mode refresh timer"
   assert.equal(isLowPowerEnabled.mock.calls.length, 2);
 });
 
-test("bash renderer shares running and completed state with the command receipt", () => {
+test("bash renderer uses a summary-first timeline and reveals details only when expanded", () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(0));
 
   const registered: ToolDefinition[] = [];
-  registerToolsForTest(registered);
+  registerToolsForTest(registered, undefined, {
+    getKeybindings: () => ({ getKeys: () => ["ctrl+o"] }),
+  });
   const bash = registered.find((tool) => tool.name === "bash");
   assert.ok(bash?.renderCall);
   assert.ok(bash.renderResult);
-  assert.notEqual(bash.renderShell, "self");
+  assert.equal(bash.renderShell, "self");
 
   const args = { command: "printf 'hello\\n'", timeout: 30 };
   const state = {};
@@ -1704,47 +1665,146 @@ test("bash renderer shares running and completed state with the command receipt"
   const call = bash.renderCall(
     args,
     theme,
-    createRenderContext({ args, state, invalidate, executionStarted: true, isPartial: true }) as never,
+    createRenderContext({ args, state, invalidate, executionStarted: true, isPartial: true, expanded: false }) as never,
   );
   const partial = bash.renderResult(
     { content: [{ type: "text", text: "hello" }], details: undefined },
     { expanded: false, isPartial: true },
     theme,
-    createRenderContext({ args, state, invalidate, isPartial: true }) as never,
+    createRenderContext({ args, state, invalidate, isPartial: true, expanded: false }) as never,
   );
   invalidate.mockImplementation(() => call.invalidate());
 
-  const runningLines = call.render(60);
-  assert.match(stripTerminalSequences(runningLines.join("\n")), /Bash running/u);
-  assert.match(stripTerminalSequences(runningLines.join("\n")), /30s limit/u);
-  assert.equal(stripTerminalSequences(runningLines[1] ?? "").trim(), "");
-  assert.match(stripTerminalSequences(runningLines[2] ?? ""), /▌ \$ printf 'hello\\n'/u);
-  assert.match(stripTerminalSequences(partial.render(60).join("\n")), /hello/u);
-  assert.ok(runningLines.some((line) => line.startsWith("\x1b[48;5;236m")));
+  const runningLines = call.render(120);
+  const runningSummary = stripTerminalSequences(runningLines.join("\n"));
+  assert.equal(runningLines.length, 1);
+  assert.match(runningSummary, /^ ├─ • Bash running/u);
+  assert.match(runningSummary, /printf 'hello\\n'/u);
+  assert.match(runningSummary, /1 line/u);
+  assert.match(runningSummary, /30s limit/u);
+  assert.match(runningSummary, /ctrl\+o expand/u);
+  assert.deepEqual(partial.render(120), []);
+  assert.ok(runningLines.every((line) => !line.includes("\x1b[48;5;")));
 
   vi.advanceTimersByTime(1250);
   assert.ok(invalidate.mock.calls.length >= 1);
-  assert.match(stripTerminalSequences(call.render(60).join("\n")), /1\.3s/u);
+  assert.match(stripTerminalSequences(call.render(120).join("\n")), /1\.3s/u);
 
   bash.renderCall(
     args,
     theme,
-    createRenderContext({ args, state, invalidate, executionStarted: true, isPartial: false }) as never,
+    createRenderContext({ args, state, invalidate, executionStarted: true, isPartial: false, expanded: true }) as never,
   );
   const completed = bash.renderResult(
     { content: [{ type: "text", text: "hello" }], details: undefined },
-    { expanded: false, isPartial: false },
+    { expanded: true, isPartial: false },
     theme,
-    createRenderContext({ args, state, invalidate, lastComponent: partial }) as never,
+    createRenderContext({ args, state, invalidate, lastComponent: partial, expanded: true }) as never,
   );
-  const completedLines = call.render(60);
-  const summary = stripTerminalSequences(completedLines.join("\n"));
+  const completedText = stripTerminalSequences([
+    ...call.render(120),
+    ...completed.render(120),
+  ].join("\n"));
 
-  assert.match(summary, /✓ Bash completed/u);
-  assert.match(summary, /1\.3s · 30s limit/u);
-  assert.ok((completedLines.at(-1) ?? "").endsWith("\x1b[48;5;22m"));
+  assert.match(completedText, /^ ├─ • Bash completed/u);
+  assert.match(completedText, /1\.3s/u);
+  assert.match(completedText, /\n {6}\$ printf 'hello\\n'/u);
+  assert.match(completedText, /\n {6}hello/u);
+  assert.match(completedText, /ctrl\+o collapse/u);
   assert.equal(completed, partial);
   assert.equal(vi.getTimerCount(), 0);
+});
+
+test("bash summary reserves metadata before truncating a long command", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(0));
+
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered, undefined, {
+    getKeybindings: () => ({ getKeys: () => ["ctrl+o"] }),
+  });
+  const bash = registered.find((tool) => tool.name === "bash");
+  assert.ok(bash?.renderCall);
+  assert.ok(bash.renderResult);
+
+  const args = { command: `printf '${"x".repeat(200)}'`, timeout: 30 };
+  const state = {};
+  const call = bash.renderCall(
+    args,
+    theme,
+    createRenderContext({ args, state, expanded: false, executionStarted: true, isPartial: true }) as never,
+  );
+  vi.setSystemTime(new Date(1_250));
+  bash.renderCall(
+    args,
+    theme,
+    createRenderContext({ args, state, expanded: false, executionStarted: true, isPartial: false, lastComponent: call }) as never,
+  );
+  bash.renderResult(
+    {
+      content: [{ type: "text", text: "first\nsecond" }],
+      details: {
+        truncation: {
+          truncated: true,
+          truncatedBy: "lines",
+          outputLines: 2,
+          totalLines: 20,
+        },
+      },
+    },
+    { expanded: false, isPartial: false },
+    theme,
+    createRenderContext({ args, state, expanded: false, isPartial: false }) as never,
+  );
+
+  const lines = call.render(80);
+  const summary = stripTerminalSequences(lines.join("\n"));
+  assert.equal(lines.length, 1);
+  assert.match(summary, /2 lines shown/u);
+  assert.match(summary, /truncated/u);
+  assert.match(summary, /1\.3s/u);
+  assert.match(summary, /30s limit/u);
+  assert.match(summary, /ctrl\+o expand/u);
+  assert.ok(visibleWidth(lines[0] ?? "") <= 80);
+});
+
+test("bash summary reports empty output without rendering a result body", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const bash = registered.find((tool) => tool.name === "bash");
+  assert.ok(bash?.renderCall);
+  assert.ok(bash.renderResult);
+
+  const args = { command: "true" };
+  const state = {};
+  const call = bash.renderCall(
+    args,
+    theme,
+    createRenderContext({ args, state, expanded: false, executionStarted: false, isPartial: false }) as never,
+  );
+  const result = bash.renderResult(
+    { content: [{ type: "text", text: "" }], details: undefined },
+    { expanded: false, isPartial: false },
+    theme,
+    createRenderContext({ args, state, expanded: false, isPartial: false }) as never,
+  );
+
+  assert.match(stripTerminalSequences(call.render(80).join("\n")), /0 lines/u);
+  assert.deepEqual(result.render(80), []);
+
+  bash.renderCall(
+    args,
+    theme,
+    createRenderContext({ args, state, expanded: true, executionStarted: false, isPartial: false, lastComponent: call }) as never,
+  );
+  bash.renderResult(
+    { content: [{ type: "text", text: "" }], details: undefined },
+    { expanded: true, isPartial: false },
+    theme,
+    createRenderContext({ args, state, expanded: true, isPartial: false, lastComponent: result }) as never,
+  );
+  assert.match(stripTerminalSequences(call.render(80).join("\n")), /0 lines/u);
+  assert.deepEqual(result.render(80), []);
 });
 
 test("bash command cache follows a mutable theme proxy", () => {
@@ -1786,7 +1846,7 @@ test("bash command cache follows a mutable theme proxy", () => {
   assert.notDeepEqual(hotAfterThemeChange, initial);
 });
 
-test("bash command cache preserves legacy ANSI output across widths and controls", () => {
+test("bash expanded command cache sanitizes controls and never paints a state background", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
   const bash = registered.find((tool) => tool.name === "bash");
@@ -1799,40 +1859,42 @@ test("bash command cache preserves legacy ANSI output across widths and controls
     "a long ASCII command with spaces and /punctuation/ that wraps",
   ];
   const statuses = [
-    { status: "pending" as const, isPartial: true, isError: false },
-    { status: "completed" as const, isPartial: false, isError: false },
-    { status: "failed" as const, isPartial: false, isError: true },
+    { isPartial: true, isError: false },
+    { isPartial: false, isError: false },
+    { isPartial: false, isError: true },
   ];
 
   for (const command of commands) {
     for (const status of statuses) {
-      for (const width of [1, 2, 3, 8, 20, 80, 120]) {
-        const args = { command };
-        const call = bash.renderCall(
+      const state: Record<string, unknown> = {};
+      const args = { command };
+      const call = bash.renderCall(
+        args,
+        theme,
+        createRenderContext({
           args,
-          theme,
-          createRenderContext({
-            args,
-            state: {},
-            executionStarted: false,
-            isPartial: status.isPartial,
-            isError: status.isError,
-          }) as never,
-        );
-        const pendingBackground = theme.getBgAnsi("toolPendingBg");
-        const commandLines = call.render(width)
-          .filter((line) => line.startsWith(pendingBackground));
-        assert.deepEqual(
-          commandLines,
-          legacyBashCommandLines(command, status.status, width),
-          `status=${status.status}, width=${width}, command=${JSON.stringify(command)}`,
-        );
+          state,
+          expanded: true,
+          executionStarted: false,
+          isPartial: status.isPartial,
+          isError: status.isError,
+        }) as never,
+      );
+      for (const width of [1, 2, 3, 8, 20, 80, 120]) {
+        const lines = call.render(width);
+        assert.ok(lines.every((line) => visibleWidth(line) <= width));
+        assert.ok(lines.every((line) => !line.includes("\x1b[48;5;")));
       }
+      const plain = stripTerminalSequences(call.render(120).join("\n"));
+      assert.ok(!plain.includes("\u0000"));
+      assert.ok(!plain.includes("\ud800"));
+      assert.ok(!plain.includes("\ufff9"));
+      assert.ok((state.commandGeometry as unknown[]).length <= 2);
     }
   }
 });
 
-test("bash duration ticks reuse static command geometry", () => {
+test("bash duration ticks reuse cached summary output metrics", () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(0));
 
@@ -1840,6 +1902,7 @@ test("bash duration ticks reuse static command geometry", () => {
   registerToolsForTest(registered);
   const bash = registered.find((tool) => tool.name === "bash");
   assert.ok(bash?.renderCall);
+  assert.ok(bash.renderResult);
 
   const args = { command: "printf 'static command body'", timeout: 30 };
   const state = {};
@@ -1847,13 +1910,20 @@ test("bash duration ticks reuse static command geometry", () => {
   const call = bash.renderCall(
     args,
     theme,
-    createRenderContext({ args, state, invalidate, executionStarted: true, isPartial: true }) as never,
+    createRenderContext({ args, state, invalidate, expanded: false, executionStarted: true, isPartial: true }) as never,
+  );
+  bash.renderResult(
+    { content: [{ type: "text", text: Array.from({ length: 50 }, (_, index) => `line ${index}`).join("\n") }], details: undefined },
+    { expanded: false, isPartial: true },
+    theme,
+    createRenderContext({ args, state, invalidate, expanded: false, executionStarted: true, isPartial: true }) as never,
   );
   invalidate.mockImplementation(() => call.invalidate());
 
-  const initial = call.render(60);
+  const initial = call.render(80);
   const wrapsAfterInitialRender = wrapTextWithAnsiMock.mock.calls.length;
   assert.ok(wrapsAfterInitialRender > 0);
+  assert.equal(initial.length, 1);
 
   vi.advanceTimersByTime(1250);
   const rebound = bash.renderCall(
@@ -1863,17 +1933,18 @@ test("bash duration ticks reuse static command geometry", () => {
       args,
       state,
       invalidate,
+      expanded: false,
       lastComponent: call,
       executionStarted: true,
       isPartial: true,
     }) as never,
   );
-  const updated = rebound.render(60);
+  const updated = rebound.render(80);
 
   assert.equal(rebound, call);
   assert.match(stripTerminalSequences(updated.join("\n")), /1\.3s/u);
   assert.equal(wrapTextWithAnsiMock.mock.calls.length, wrapsAfterInitialRender);
-  assert.deepEqual(updated.slice(2), initial.slice(2));
+  assert.equal(updated.length, 1);
 });
 
 test("bash renderer shares one refresh timer across concurrent executions", () => {
@@ -2019,7 +2090,7 @@ test("bash refresh scheduler cleans up on lifecycle events and ignores restored 
   assert.equal(vi.getTimerCount(), 0);
 });
 
-test("bash result optimizations preserve legacy ANSI output for all render modes", () => {
+test("bash result stays hidden when collapsed and preserves sanitized output when expanded", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
   const bash = registered.find((tool) => tool.name === "bash");
@@ -2055,17 +2126,28 @@ test("bash result optimizations preserve legacy ANSI output for all render modes
             executionStarted: false,
           }) as never,
         );
-        assert.deepEqual(
-          component.render(width),
-          legacyBashResultLines(output, expanded, width),
-          `partial=${renderState.isPartial}, error=${renderState.isError}, expanded=${expanded}, width=${width}`,
-        );
+        const lines = component.render(width);
+        assert.ok(lines.every((line) => visibleWidth(line) <= width));
+        if (!expanded) assert.deepEqual(lines, []);
       }
     }
   }
+
+  const expanded = bash.renderResult(
+    { content: [{ type: "text", text: output }], details: undefined },
+    { expanded: true, isPartial: false },
+    theme,
+    createRenderContext({ args: { command: "printf fixture" }, expanded: true, executionStarted: false }) as never,
+  );
+  const plain = stripTerminalSequences(expanded.render(120).join("\n"));
+  assert.match(plain, /red/u);
+  assert.match(plain, /controlsafe/u);
+  assert.ok(!plain.includes("\u0000"));
+  assert.ok(!plain.includes("\ud800"));
+  assert.ok(!plain.includes("\ufff9"));
 });
 
-test("expanded bash truncation warning matches legacy bytes across widths", () => {
+test("expanded bash output uses nested detail indentation across widths", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
   const bash = registered.find((tool) => tool.name === "bash");
@@ -2105,40 +2187,42 @@ test("expanded bash truncation warning matches legacy bytes across widths", () =
     );
     assert.deepEqual(
       component.render(width),
-      legacyBashResultLines(output, true, width, warning),
+      expectedBashResultLines(output, width, warning),
       `width=${width}`,
     );
   }
 });
 
-test("expanded bash avoids a second full-output fit pass", () => {
+test("expanded bash shares its full-output layout between the summary and result", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
   const bash = registered.find((tool) => tool.name === "bash");
-  assert.ok(bash?.renderResult);
+  assert.ok(bash?.renderCall);
+  assert.ok(bash.renderResult);
 
-  const countFinalFits = (lineCount: number): number => {
-    const output = Array.from({ length: lineCount }, (_, index) => `line ${index}`).join("\n");
-    const component = bash.renderResult(
-      { content: [{ type: "text", text: output }], details: undefined },
-      { expanded: true, isPartial: false },
-      theme,
-      createRenderContext({
-        args: { command: "seq fixture" },
-        state: {},
-        expanded: true,
-        executionStarted: false,
-      }) as never,
-    );
+  const args = { command: "seq fixture" };
+  const state = {};
+  const output = Array.from({ length: 200 }, (_, index) => `line ${index}`).join("\n");
+  const call = bash.renderCall(
+    args,
+    theme,
+    createRenderContext({ args, state, expanded: true, executionStarted: false }) as never,
+  );
+  const result = bash.renderResult(
+    { content: [{ type: "text", text: output }], details: undefined },
+    { expanded: true, isPartial: false },
+    theme,
+    createRenderContext({ args, state, expanded: true, executionStarted: false }) as never,
+  );
 
-    truncateToWidthMock.mockClear();
-    const actual = component.render(80);
-    const fitCount = truncateToWidthMock.mock.calls.length;
-    assert.deepEqual(actual, legacyBashResultLines(output, true, 80));
-    return fitCount;
-  };
+  wrapTextWithAnsiMock.mockClear();
+  call.render(80);
+  const wrapsAfterSummary = wrapTextWithAnsiMock.mock.calls.length;
+  assert.ok(wrapsAfterSummary >= 200);
 
-  assert.equal(countFinalFits(200), countFinalFits(20));
+  const actual = result.render(80);
+  assert.equal(wrapTextWithAnsiMock.mock.calls.length, wrapsAfterSummary);
+  assert.deepEqual(actual, expectedBashResultLines(output, 80));
 });
 
 test("bash renderer reuses prepared output until the result revision changes", () => {
@@ -2224,7 +2308,7 @@ test("bash renderer reuses prepared output until the result revision changes", (
   assert.ok(updatedTextReads > 0);
 });
 
-test("settled bash result reuses visual layout after host invalidation", () => {
+test("settled expanded bash result reuses visual layout after host invalidation", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
   const bash = registered.find((tool) => tool.name === "bash");
@@ -2246,9 +2330,9 @@ test("settled bash result reuses visual layout after host invalidation", () => {
   const state = {};
   const component = bash.renderResult(
     result,
-    { expanded: false, isPartial: false },
+    { expanded: true, isPartial: false },
     countingTheme,
-    createRenderContext({ args, state, executionStarted: false }) as never,
+    createRenderContext({ args, state, expanded: true, executionStarted: false }) as never,
   );
   const initial = component.render(40);
   const paintsAfterInitialRender = outputPaints;
@@ -2257,11 +2341,12 @@ test("settled bash result reuses visual layout after host invalidation", () => {
   component.invalidate();
   const rebound = bash.renderResult(
     result,
-    { expanded: false, isPartial: false },
+    { expanded: true, isPartial: false },
     countingTheme,
     createRenderContext({
       args,
       state,
+      expanded: true,
       lastComponent: component,
       executionStarted: false,
     }) as never,
@@ -2322,7 +2407,11 @@ test("bash result cache follows a mutable theme proxy", () => {
       coldAfterThemeChange,
       `expanded=${expanded}`,
     );
-    assert.notDeepEqual(hotAfterThemeChange, initial, `expanded=${expanded}`);
+    if (expanded) {
+      assert.notDeepEqual(hotAfterThemeChange, initial, `expanded=${expanded}`);
+    } else {
+      assert.deepEqual(initial, []);
+    }
   }
 });
 
@@ -2350,12 +2439,15 @@ test("bash row caches stay within the fixed geometry policy", () => {
     resultValue,
     { expanded: false, isPartial: false },
     theme,
-    createRenderContext({ args, state, executionStarted: false }) as never,
+    createRenderContext({ args, state, expanded: false, executionStarted: false }) as never,
   );
-  for (const width of [20, 40, 60]) result.render(width);
+  for (const width of [20, 40, 60]) {
+    result.render(width);
+    call.render(width);
+  }
 
   assert.ok((state.commandGeometry as unknown[]).length <= 2);
-  assert.ok(state.commandPaint);
+  assert.ok((state.visualCountLayouts as unknown[]).length <= 2);
   assert.ok((state.collapsedResultLayouts as unknown[]).length <= 2);
 
   result.invalidate();
@@ -2431,45 +2523,59 @@ test("settled bash history avoids output preprocessing on hot frames", () => {
   assert.equal(textReads, readsAfterColdFrame);
 });
 
-test("bash renderer keeps a five visual-line tail and falls back to the global expand hint", () => {
+test("bash renderer moves output count into the collapsed summary and reveals all output", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
   const bash = registered.find((tool) => tool.name === "bash");
-  assert.ok(bash?.renderResult);
+  assert.ok(bash?.renderCall);
+  assert.ok(bash.renderResult);
 
   const args = { command: "seq 12" };
   const state = {};
   const output = Array.from({ length: 12 }, (_, index) => `line ${index + 1}`).join("\n");
+  const call = bash.renderCall(
+    args,
+    theme,
+    createRenderContext({ args, state, expanded: false, executionStarted: false }) as never,
+  );
   const collapsed = bash.renderResult(
     { content: [{ type: "text", text: output }], details: undefined },
     { expanded: false, isPartial: false },
     theme,
-    createRenderContext({ args, state, executionStarted: false }) as never,
+    createRenderContext({ args, state, expanded: false, executionStarted: false }) as never,
   );
-  const collapsedText = stripTerminalSequences(collapsed.render(80).join("\n"));
+  const collapsedText = stripTerminalSequences(call.render(120).join("\n"));
 
-  assert.ok(!collapsedText.includes("line 7\n"));
-  assert.match(collapsedText, /line 8/u);
-  assert.match(collapsedText, /line 12/u);
-  assert.match(collapsedText, /7 earlier visual lines hidden/u);
+  assert.deepEqual(collapsed.render(120), []);
+  assert.match(collapsedText, /12 lines/u);
   assert.match(collapsedText, /\[app\.tools\.expand\] expand/u);
+  assert.doesNotMatch(collapsedText, /line 1/u);
   assert.deepEqual(keyHintMock.mock.calls.at(-1), ["app.tools.expand", "expand"]);
 
+  bash.renderCall(
+    args,
+    theme,
+    createRenderContext({ args, state, expanded: true, executionStarted: false, lastComponent: call }) as never,
+  );
   const expanded = bash.renderResult(
     { content: [{ type: "text", text: output }], details: undefined },
     { expanded: true, isPartial: false },
     theme,
-    createRenderContext({ args, state, executionStarted: false, lastComponent: collapsed }) as never,
+    createRenderContext({ args, state, expanded: true, executionStarted: false, lastComponent: collapsed }) as never,
   );
-  const expandedText = stripTerminalSequences(expanded.render(80).join("\n"));
+  const expandedText = stripTerminalSequences([
+    ...call.render(80),
+    ...expanded.render(80),
+  ].join("\n"));
 
   assert.match(expandedText, /line 1/u);
-  assert.match(expandedText, /12 visual lines/u);
+  assert.match(expandedText, /line 12/u);
+  assert.match(expandedText, /12 lines/u);
   assert.match(expandedText, /\[app\.tools\.expand\] collapse/u);
   assert.deepEqual(keyHintMock.mock.calls.at(-1), ["app.tools.expand", "collapse"]);
 });
 
-test("bash renderer uses keybindings injected by the host editor", () => {
+test("bash summary uses keybindings injected by the host editor", () => {
   const registered: ToolDefinition[] = [];
   const getKeys = vi.fn(() => ["alt+x"]);
   registerToolsForTest(
@@ -2478,13 +2584,13 @@ test("bash renderer uses keybindings injected by the host editor", () => {
     { getKeybindings: () => ({ getKeys } as never) },
   );
   const bash = registered.find((tool) => tool.name === "bash");
-  assert.ok(bash?.renderResult);
+  assert.ok(bash?.renderCall);
 
-  const component = bash.renderResult(
-    { content: [{ type: "text", text: "hello" }], details: undefined },
-    { expanded: false, isPartial: false },
+  const args = { command: "echo hello" };
+  const component = bash.renderCall(
+    args,
     theme,
-    createRenderContext({ args: { command: "echo hello" }, executionStarted: false }) as never,
+    createRenderContext({ args, expanded: false, executionStarted: false }) as never,
   );
   const output = stripTerminalSequences(component.render(80).join("\n"));
   const expectedKey = process.platform === "darwin" ? "option+x" : "alt+x";
@@ -2519,11 +2625,18 @@ test("bash result appears once when composed by the host tool component", () => 
 
   const renderedLines = component.render(80);
   const output = stripTerminalSequences(renderedLines.join("\n"));
-  const commandLine = renderedLines.find((line) => stripTerminalSequences(line).includes("$ echo hello"));
-  assert.ok(commandLine);
-  assert.match(commandLine, /\x1b\[48;[\d;]+m \x1b\[49m$/u);
-  assert.equal(output.split("hello").length - 1, 2);
-  assert.equal(output.split("1 visual line").length - 1, 1);
+  assert.match(output, / ├─ • Bash completed/u);
+  assert.match(output, /echo hello/u);
+  assert.equal(output.split("hello").length - 1, 1);
+  assert.equal(output.split("1 line").length - 1, 1);
+  assert.ok(renderedLines.every((line) => !line.includes("\x1b[48;")));
+
+  component.setExpanded(true);
+  const expandedLines = component.render(80);
+  const expandedOutput = stripTerminalSequences(expandedLines.join("\n"));
+  assert.equal(expandedOutput.split("1 line").length - 1, 1);
+  assert.equal(expandedOutput.split("collapse").length - 1, 1);
+  assert.equal(expandedOutput.split("\n      hello").length - 1, 1);
 });
 
 test("edit result appears once when composed by the host tool component", () => {
@@ -2627,13 +2740,13 @@ test("bash renderer reports errors and omits invented duration for restored rows
     theme,
     createRenderContext({ args, state, invalidate, executionStarted: false, isError: true }) as never,
   );
-  const summary = stripTerminalSequences(call.render(60).join("\n"));
-  const output = stripTerminalSequences(result.render(60).join("\n"));
+  const summary = stripTerminalSequences(call.render(120).join("\n"));
+  const output = stripTerminalSequences(result.render(120).join("\n"));
 
-  assert.match(summary, /✗ Bash failed/u);
+  assert.match(summary, /^ ├─ • Bash failed/u);
   assert.match(summary, /2s limit/u);
   assert.doesNotMatch(summary, /\d+\.\d+s/u);
-  assert.match(output, /Command timed out after 2 seconds/u);
+  assert.equal(output, "");
 });
 
 test("bash renderer strips terminal controls and never exceeds narrow widths", () => {
@@ -2648,13 +2761,13 @@ test("bash renderer strips terminal controls and never exceeds narrow widths", (
   const call = bash.renderCall(
     args,
     theme,
-    createRenderContext({ args, state, executionStarted: false }) as never,
+    createRenderContext({ args, state, expanded: true, executionStarted: false }) as never,
   );
   const result = bash.renderResult(
     { content: [{ type: "text", text: "\x1b[31mred\x1b[0m\r\nsafe\u0000text with a long suffix" }], details: undefined },
-    { expanded: false, isPartial: false },
+    { expanded: true, isPartial: false },
     theme,
-    createRenderContext({ args, state, executionStarted: false }) as never,
+    createRenderContext({ args, state, expanded: true, executionStarted: false }) as never,
   );
 
   for (const width of [1, 2, 8, 20]) {

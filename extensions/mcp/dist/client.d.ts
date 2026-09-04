@@ -1,115 +1,135 @@
-/**
- * MCP 客户端管理模块（生产级：超时控制 / 进程清理 / 断线重连 / 结构化错误）
- *
- * 每个 Extension 实例创建一个 McpClientManager，
- * 工具 execute 函数通过闭包捕获该实例，确保状态一致。
- */
-import type { McpServerConfig, McpTool, McpToolResult, McpServerState } from "./types.js";
+import { Client, type ClientOptions } from "@modelcontextprotocol/sdk/client/index.js";
+import type { FetchLike, Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import { McpDiagnostics } from "./diagnostics.js";
+import { type McpRetryScheduler } from "./retry.js";
+import type { McpConnectionStatus, McpManagerEvent, McpNormalizedError, McpServerConfig, McpServerState, McpTool, McpToolResult } from "./types.js";
+type ConnectionSource = "initial" | "manual" | "background";
+export interface McpConnectOptions {
+    source?: ConnectionSource;
+    signal?: AbortSignal;
+}
+export interface McpReconnectOptions {
+    source?: "manual";
+    signal?: AbortSignal;
+}
+export interface McpCallOptions {
+    signal?: AbortSignal;
+}
+export interface McpTransportFactoryContext {
+    serverName: string;
+    fetch: FetchLike;
+}
+export interface McpClientManagerOptions {
+    diagnostics?: McpDiagnostics;
+    scheduler?: McpRetryScheduler;
+    random?: () => number;
+    now?: () => number;
+    fetch?: FetchLike;
+    clientFactory?: (options: ClientOptions) => Client;
+    transportFactory?: (config: McpServerConfig, context: McpTransportFactoryContext) => Transport;
+}
+/** A bounded, normalized connection failure suitable for user-facing surfaces. */
 export declare class McpConnectionError extends Error {
-    serverName: string;
-    constructor(serverName: string, message: string);
+    readonly serverName: string;
+    readonly normalizedError?: McpNormalizedError | undefined;
+    readonly outcomeUnknown: boolean;
+    constructor(serverName: string, message: string, normalizedError?: McpNormalizedError | undefined, outcomeUnknown?: boolean);
 }
+/** A compatibility error class for callers that previously matched timeout failures. */
 export declare class McpTimeoutError extends McpConnectionError {
-    constructor(serverName: string, timeoutMs: number);
+    constructor(serverName: string, timeoutMs: number, normalizedError?: McpNormalizedError);
 }
+/** A compatibility error class for callers that previously matched authentication failures. */
 export declare class McpAuthError extends McpConnectionError {
-    constructor(serverName: string, detail: string);
+    constructor(serverName: string, detail: string, normalizedError?: McpNormalizedError);
 }
+/** A tool or routing error that did not require transport recovery. */
 export declare class McpToolError extends Error {
-    serverName: string;
-    toolName: string;
-    constructor(serverName: string, toolName: string, message: string);
+    readonly serverName: string;
+    readonly toolName: string;
+    readonly normalizedError?: McpNormalizedError | undefined;
+    constructor(serverName: string, toolName: string, message: string, normalizedError?: McpNormalizedError | undefined);
 }
+/**
+ * Owns MCP clients, transport lifecycles, bounded retries, and stable tool routes.
+ * The class intentionally has no stdout or stderr sink.
+ */
 export declare class McpClientManager {
-    /** 连接池：serverName → { client, transport, pid? } */
-    private connections;
-    /** 工具名 → 服务器名 */
-    private toolToServer;
-    /** 工具名 → 工具定义 */
-    private toolCache;
-    /** SSE 重连退避计数器 */
-    private retryCounts;
-    /** 自愈标记：已经尝试过全局重连 */
+    readonly diagnostics: McpDiagnostics;
+    private readonly scheduler;
+    private readonly random;
+    private readonly now;
+    private readonly baseFetch;
+    private readonly clientFactory;
+    private readonly transportFactory?;
+    private readonly runtimes;
+    private readonly listeners;
+    private readonly toolRoutes;
+    private readonly retiredToolRoutes;
+    private readonly toolCache;
+    private lifecycleGeneration;
+    private httpObservationSequence;
     private selfHealAttempted;
-    /** 服务器配置缓存，用于单服务器断线重连 */
-    private serverConfigs;
-    /** 正在重连中的服务器 Promise（并发去重，避免重复拉起 transport/子进程） */
-    private reconnecting;
-    /** 关闭中的 generation（disconnectAll 时递增，doConnect 检查防复活） */
-    private closingGeneration;
-    /** 连接进行中的临时跟踪（transport 已创建，但尚未写入 connections） */
-    private pendingConnections;
-    /**
-     * 连接 MCP 服务器（带超时 + SSE 退避重连）
-     */
-    connectServer(name: string, config: McpServerConfig): Promise<McpServerState>;
-    /**
-     * 实际执行连接重试循环（由 connectServer 调用）
-     */
-    private doConnect;
-    /**
-     * 执行 MCP 工具调用
-     *
-     * @param fullToolName - 完整工具名（mcp__server__tool）
-     * @param args - 工具参数
-     * @param _retryDepth - 内部用：当前重试深度（防止无限递归，最多一次 reconnect + retry）
-     */
-    callTool(fullToolName: string, args: Record<string, unknown>, options?: {
-        signal?: AbortSignal;
-    }, _retryDepth?: number): Promise<McpToolResult>;
-    /**
-     * 断开 MCP 服务器，并由 SDK 跨平台清理对应 transport 与子进程。
-     */
+    private disconnecting;
+    constructor(options?: McpClientManagerOptions);
+    /** Subscribes to immutable state and tool-catalog events. */
+    subscribe(listener: (event: McpManagerEvent) => void): () => void;
+    /** Connects one server with a single total deadline and bounded retries. */
+    connectServer(name: string, config: McpServerConfig, options?: McpConnectOptions): Promise<McpServerState>;
+    /** Reconnects a configured server immediately and wakes any background supervisor. */
+    reconnectServer(name: string, options?: McpReconnectOptions): Promise<McpServerState>;
+    /** Records a disabled or invalid configured server without attempting a connection. */
+    setUnavailableServer(name: string, status: Extract<McpConnectionStatus, "offline" | "disabled">, error?: string): McpServerState;
+    /** Executes one tool call and applies the configured safe replay policy. */
+    callTool(fullToolName: string, args: Record<string, unknown>, options?: McpCallOptions): Promise<McpToolResult>;
+    /** Disconnects one server while retaining its catalog for future recovery. */
     disconnectServer(name: string): Promise<void>;
-    /**
-     * 断开所有 MCP 服务器并清空全部状态
-     *
-     * generation 递增防止并发 doConnect 在 disconnectAll 后复活。
-     */
+    /** Cancels all work, closes all clients once, and clears session-owned state. */
     disconnectAll(): Promise<void>;
-    /**
-     * 自愈：重连所有服务器（从 config 重新加载）
-     */
+    /** Lifecycle alias used by the extension shutdown hook. */
+    shutdown(): Promise<void>;
+    /** Compatibility helper that reconnects every missing configured server once. */
     selfHeal(config: Record<string, McpServerConfig>): Promise<number>;
+    resetSelfHeal(): void;
+    isSelfHealAttempted(): boolean;
     getAllTools(): Map<string, McpTool>;
+    getServerState(name: string): McpServerState | undefined;
+    getServerSnapshot(name: string): McpServerState | undefined;
+    getAllServerStates(): McpServerState[];
+    getSnapshots(): McpServerState[];
     getConnectionCount(): number;
-    /**
-     * 判断指定服务器当前是否存在已建立的连接。
-     *
-     * @param name - MCP 配置中的服务器名。
-     * @returns 服务器当前已连接时返回 true。
-     */
     isServerConnected(name: string): boolean;
     hasConnections(): boolean;
-    isSelfHealAttempted(): boolean;
-    resetSelfHeal(): void;
-    /**
-     * 对单个断线服务器发起重连（使用缓存配置）
-     *
-     * @returns 重连后的状态；若缓存中无该服务器配置则返回 disconnected
-     */
-    reconnectServer(name: string): Promise<McpServerState>;
     mcpToolName(server: string, tool: string): string;
     getAllConnectionPids(): number[];
-    /**
-     * 清理指定服务器的工具映射（exact match，不依赖 startsWith）
-     */
-    private removeToolsForServer;
-    /**
-     * 关闭连接资源（client + transport + SDK 管理的子进程）。
-     */
-    private closeConnection;
-    /**
-     * 关闭原始连接资源（不依赖 Map 查找，可用于 pending connections）
-     */
-    private closeRawConnection;
-    /**
-     * 连接竞速：client.connect() vs timeout
-     */
-    private connectWithTimeout;
-    /**
-     * 根据配置创建 Transport
-     */
+    private createRuntime;
+    private runForegroundConnect;
+    private performConnectionAttempt;
+    private listAllTools;
+    private commitConnection;
+    private replaceToolCatalog;
+    private rebuildToolRoutes;
+    private emitToolCatalogs;
+    private attachClientHandlers;
+    private attachLoggingHandler;
+    private handleOutOfBandError;
+    private attachStderr;
     private createTransport;
+    private createBoundedFetch;
+    private invokeTool;
+    private normalizeConnectFailure;
+    private normalizeToolFailure;
+    private recordConnectFailure;
+    private dropConnection;
+    private startSupervisor;
+    private stopRuntimeWork;
+    private closeConnectionHandle;
+    private updateState;
+    private publishState;
+    private emit;
+    private snapshot;
+    private isCurrent;
+    private unavailableState;
 }
+export {};
 //# sourceMappingURL=client.d.ts.map

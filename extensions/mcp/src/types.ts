@@ -1,39 +1,104 @@
-/**
- * MCP Extension 类型定义
- */
-
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import type { LoggingLevel } from "@modelcontextprotocol/sdk/types.js";
 
-/** MCP 服务器配置 */
-export interface McpServerConfig {
-  /** 传输类型：stdio（子进程）、sse（兼容旧服务器）或 http（Streamable HTTP） */
-  type?: "stdio" | "sse" | "http" | "streamable-http";
-  /** stdio 传输：启动命令 */
-  command?: string;
-  /** stdio 传输：命令参数 */
-  args?: string[];
-  /** stdio 传输：环境变量 */
-  env?: Record<string, string>;
-  /** HTTP/SSE 传输：服务器 URL */
-  url?: string;
-  /** HTTP/SSE 传输：自定义 HTTP headers */
-  headers?: Record<string, string>;
-  /** 连接超时（毫秒），默认 30000 */
-  timeout?: number;
-  /** 是否禁用此服务器 */
-  disabled?: boolean;
+export type McpTransportType = "stdio" | "sse" | "http" | "streamable-http";
+export type McpToolReplayPolicy = "never" | "read-only";
+
+export interface McpRetryConfig {
+  enabled?: boolean;
+  maxAttempts?: number;
+  baseDelayMs?: number;
+  factor?: number;
+  maxDelayMs?: number;
+  retryAfterMaxMs?: number;
+  background?: boolean;
+  backgroundMaxDelayMs?: number;
 }
 
-/** 完整的 MCP 配置文件 */
+export interface McpFileLogConfig {
+  enabled?: boolean;
+  path?: string;
+  maxBytes?: number;
+}
+
+export interface McpDiagnosticsConfig {
+  file?: McpFileLogConfig;
+}
+
+export interface McpServerConfigBase {
+  disabled?: boolean;
+  /** Legacy fallback for connectTimeout and requestTimeout. */
+  timeout?: number;
+  connectTimeout?: number;
+  requestTimeout?: number;
+  maxRequestTimeout?: number;
+  retry?: McpRetryConfig;
+  toolReplay?: McpToolReplayPolicy;
+  loggingLevel?: LoggingLevel;
+}
+
+export interface McpStdioServerConfig extends McpServerConfigBase {
+  type?: "stdio";
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+  cwd?: string;
+  url?: never;
+  headers?: never;
+}
+
+export interface McpSseServerConfig extends McpServerConfigBase {
+  type: "sse";
+  url: string;
+  headers?: Record<string, string>;
+  command?: never;
+  args?: never;
+  env?: never;
+  cwd?: never;
+}
+
+export interface McpHttpServerConfig extends McpServerConfigBase {
+  type: "http" | "streamable-http";
+  url: string;
+  headers?: Record<string, string>;
+  command?: never;
+  args?: never;
+  env?: never;
+  cwd?: never;
+}
+
+export type McpServerConfig =
+  | McpStdioServerConfig
+  | McpSseServerConfig
+  | McpHttpServerConfig;
+
 export interface McpConfig {
   mcpServers: Record<string, McpServerConfig>;
+  diagnostics?: McpDiagnosticsConfig;
 }
 
-/** JSON Schema primitive 值类型 */
+export type McpConfigLoadStatus = "missing" | "invalid" | "empty" | "loaded";
+
+export interface McpConfigIssue {
+  code: string;
+  message: string;
+  serverName?: string;
+}
+
+export interface McpConfigLoadResult {
+  status: McpConfigLoadStatus;
+  config: McpConfig | null;
+  path?: string;
+  searchedPaths: string[];
+  issues: McpConfigIssue[];
+  invalidServers: Record<string, string>;
+  disabledServers: string[];
+  configuredServerNames: string[];
+}
+
 export type JsonPrimitive = string | number | boolean | null;
 
-/** MCP 服务端返回的工具定义（JSON Schema） */
 export interface JsonSchema {
   type?: string;
   description?: string;
@@ -45,41 +110,113 @@ export interface JsonSchema {
   oneOf?: JsonSchema[];
   anyOf?: JsonSchema[];
   additionalProperties?: boolean | JsonSchema;
+  [key: string]: unknown;
 }
 
-/** MCP 工具定义（来自 tools/list） */
+export interface McpToolAnnotations {
+  title?: string;
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+}
+
 export interface McpTool {
   name: string;
   description?: string;
   inputSchema: JsonSchema;
+  outputSchema?: JsonSchema;
+  annotations?: McpToolAnnotations;
+  title?: string;
 }
 
-/** MCP content block。保留未知字段以兼容 image/resource/audio 等结果类型。 */
 export interface McpContentBlock {
   type: string;
   text?: string;
   [key: string]: unknown;
 }
 
-/** MCP 工具调用结果 */
 export interface McpToolResult {
   content: McpContentBlock[];
   structuredContent?: Record<string, unknown>;
   isError?: boolean;
 }
 
-/** 连接的 MCP 服务器状态 */
+export type McpErrorCategory =
+  | "cancelled"
+  | "timeout"
+  | "dns"
+  | "connection"
+  | "auth"
+  | "rate-limit"
+  | "session-expired"
+  | "http-transient"
+  | "protocol"
+  | "config"
+  | "server"
+  | "unknown";
+
+export interface McpErrorCause {
+  name?: string;
+  message: string;
+  code?: string | number;
+}
+
+export interface McpNormalizedError {
+  category: McpErrorCategory;
+  message: string;
+  retryable: boolean;
+  code?: string | number;
+  httpStatus?: number;
+  retryAfterMs?: number;
+  detail?: string;
+  causeChain?: McpErrorCause[];
+  truncated?: boolean;
+  /** Exact source bytes when known, otherwise the observed lower bound before cancellation. */
+  originalBytes?: number;
+}
+
+export type McpConnectionStatus =
+  | "connecting"
+  | "connected"
+  | "degraded"
+  | "retrying"
+  | "offline"
+  | "disabled";
+
 export interface McpServerState {
   config: McpServerConfig;
   tools: McpTool[];
   connected: boolean;
+  status: McpConnectionStatus;
   error?: string;
+  lastError?: McpNormalizedError;
+  attempt: number;
+  lastAttemptAt?: number;
+  nextRetryAt?: number;
+  generation: number;
 }
 
-/** MCP 客户端连接信息 */
 export interface McpConnection {
   client: Client;
   transport: Transport;
-  /** 子进程 PID（仅 stdio 传输） */
   pid?: number;
+  generation: number;
+  closing: boolean;
+  closed: boolean;
+  detachStderr?: () => void;
 }
+
+export type McpManagerEvent =
+  | {
+      type: "state";
+      serverName: string;
+      state: McpServerState;
+      source: "initial" | "manual" | "background" | "lifecycle";
+    }
+  | {
+      type: "tools";
+      serverName: string;
+      tools: McpTool[];
+      source: "initial" | "manual" | "background";
+    };

@@ -1,28 +1,23 @@
 /**
- * MCP JSON Schema → TypeBox Schema 转换器
+ * Converts MCP JSON Schema definitions to TypeBox schemas.
  *
- * 将 MCP 工具返回的 JSON Schema 格式的 inputSchema
- * 转换为 Pi 的 TypeBox Schema，用于 registerTool().parameters
+ * The resulting schema is suitable for Pi registerTool().parameters.
  */
 import { Type } from "typebox";
 /**
- * 将 JSON Schema 转换为 TypeBox Schema
+ * Converts an MCP tool JSON Schema to a TypeBox schema.
  *
- * 支持的类型：
- * - string, number, integer, boolean
- * - object (with properties and required)
- * - array (with items)
- * - enum (const / enum)
- * - oneOf / anyOf
+ * Supported forms include primitive types, objects, arrays, enums, const,
+ * oneOf, and anyOf.
  *
- * @param schema - MCP 工具返回的 JSON Schema
- * @returns TypeBox TSchema 实例
+ * @param schema - JSON Schema returned by an MCP tool.
+ * @returns A TypeBox schema instance.
  */
 export function jsonSchemaToTypeBox(schema) {
-    // 处理 oneOf / anyOf（视为 union）
+    // Treat oneOf and anyOf as unions.
     if (schema.oneOf && schema.oneOf.length > 0) {
         const variants = schema.oneOf.map((s) => jsonSchemaToTypeBox(s));
-        // TypeBox Union 需要至少 2 个元素
+        // TypeBox unions require at least two members.
         if (variants.length === 1) {
             return withMeta(variants[0], schema);
         }
@@ -35,8 +30,7 @@ export function jsonSchemaToTypeBox(schema) {
         }
         return withMeta(Type.Union(variants), schema);
     }
-    // 处理枚举（const 或 enum）
-    // 支持所有 JSON Schema 合法 const：string / number / boolean / null
+    // Support every JSON Schema primitive accepted by const and enum.
     if (schema.const !== undefined) {
         return schema.const === null
             ? withMeta(Type.Null(), schema)
@@ -49,7 +43,7 @@ export function jsonSchemaToTypeBox(schema) {
             : Type.Union(literals);
         return withMeta(t, schema);
     }
-    // 基本类型
+    // Convert primitive and container types.
     switch (schema.type) {
         case "string":
             return withMeta(Type.String(), schema);
@@ -71,26 +65,26 @@ export function jsonSchemaToTypeBox(schema) {
             if (schema.properties) {
                 for (const [key, propSchema] of Object.entries(schema.properties)) {
                     const propType = jsonSchemaToTypeBox(propSchema);
-                    // 不在 required 中的字段设为 Optional
+                    // Properties absent from required are optional.
                     properties[key] = required.has(key) ? propType : Type.Optional(propType);
                 }
             }
-            // 没有明确 type 但提供了 properties，视为 object
+            // A schema with properties is treated as an object.
             if (Object.keys(properties).length > 0) {
                 const objOptions = buildObjectOptions(schema);
                 return withMeta(Type.Object(properties, objOptions), schema);
             }
-            // 空的 object（无 properties）
+            // Preserve constraints on objects without declared properties.
             if (schema.additionalProperties !== undefined) {
-                // 有额外属性约束时走 Type.Object({}, options)，避免 Record 语义错位
+                // Type.Object preserves additionalProperties value semantics.
                 const objOptions = buildObjectOptions(schema);
                 return withMeta(Type.Object({}, objOptions), schema);
             }
-            // 无任何约束 → Record<string, any>
+            // An unconstrained object maps to Record<string, any>.
             return withMeta(Type.Record(Type.String(), Type.Any()), schema);
         }
         default: {
-            // 没有明确类型但有 properties → 视为 object
+            // Infer object semantics when type is omitted but properties exist.
             if (schema.properties) {
                 const properties = {};
                 const required = new Set(schema.required ?? []);
@@ -101,24 +95,19 @@ export function jsonSchemaToTypeBox(schema) {
                 const objOptions = buildObjectOptions(schema);
                 return withMeta(Type.Object(properties, objOptions), schema);
             }
-            // 无法识别的类型，回退为 Any
+            // Unknown schema forms fall back to Any.
             return withMeta(Type.Any(), schema);
         }
     }
 }
-/**
- * 为 TypeBox schema 添加 description 元数据
- */
+/** Adds JSON Schema description metadata to a TypeBox schema. */
 function withMeta(schema, jsonSchema) {
     if (jsonSchema.description) {
         schema.description = jsonSchema.description;
     }
     return schema;
 }
-/**
- * 构建 Type.Object 的第二个参数（options），
- * 处理 additionalProperties: false 或 additionalProperties: schema。
- */
+/** Builds Type.Object options for additionalProperties constraints. */
 function buildObjectOptions(schema) {
     if (schema.additionalProperties === undefined)
         return {};
@@ -126,13 +115,9 @@ function buildObjectOptions(schema) {
     return { additionalProperties: constraint };
 }
 /**
- * 将 JsonSchema.additionalProperties 转为 TypeBox 约束：
- * - false → false（禁止额外字段）
- * - object (sub-schema) → 递归转换后的值类型（如 Type.Number()）
- *
- * 注意：这里直接返回【额外属性的值类型】本身，
- * 不包 Type.Record，因为 Type.Object({}, { additionalProperties }) 的
- * additionalProperties 参数接受的就是值类型。
+ * Converts additionalProperties to the value constraint accepted by
+ * Type.Object options. False rejects extra fields, while a sub-schema is
+ * converted recursively without wrapping it in Type.Record.
  */
 function buildAdditionalConstraint(schema) {
     if (schema.additionalProperties === false)

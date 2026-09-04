@@ -93,11 +93,12 @@ Codex encrypted compaction item.
 - 使用 `pi v0.84.3` 官方 wordmark 的 header
 - 实色背景 composer
 - model、thinking、Fast Mode、cwd、git branch、context-left 和 permissions 单行 footer
-- Thinking/Reasoning 最新段落的单行显示
+- 带 accent marker 的 Thinking/Reasoning 最新段落单行显示
 - 隐藏 streaming working row，并通过 terminal title 显示工作状态
 - `read`、`edit`、`write` 的紧凑 renderer
+- 以 Thinking marker 为主轴、使用固定 `├─ •` 分支前缀的 Bash timeline；默认单行摘要，按 `Ctrl+O` 展开详情
 
-Thinking/Reasoning 区域无论处于流式状态还是历史状态，都只渲染最新段落，并按当前可用宽度截断为一个终端行。完整 Thinking 内容仍保存在 Pi 会话数据中，`codex-ui` 仅改变显示结果。
+Thinking/Reasoning 区域无论处于流式状态还是历史状态，都只渲染最新段落，并按当前可用宽度截断为一个终端行。行首圆点使用主题的 `mdCode`，正文继续使用 `thinkingText`；在 `codex-pi` 中分别对应 cyan 与 muted。完整 Thinking 内容仍保存在 Pi 会话数据中，`codex-ui` 仅改变显示结果。
 
 ### Low-power rendering
 
@@ -137,7 +138,7 @@ pi-codex() {
 
 仓库不会自动修改 Shell 配置，也不提供一个假定 `pi install` 会加入 `PATH` 的 package bin。
 
-`read`、`edit`、`write` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。`write` 只显示路径、行数和字节数，不伪造 old/new diff。使用当前配置中的 `app.tools.expand` 快捷键可以展开工具详情，默认是 `Ctrl+O`。
+`read`、`edit`、`write`、`bash` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。`write` 只显示路径、行数和字节数，不伪造 old/new diff。Bash 使用 `renderShell: "self"`；摘要采用固定 `├─ •` 前缀，分支轴与 Thinking marker 对齐。折叠态只显示状态、命令、visual line 数、耗时和限制，不再铺满状态背景；展开后的命令、输出和截断信息缩进到 `Bash` 标题列。使用当前配置中的 `app.tools.expand` 快捷键可以展开工具详情，默认是 `Ctrl+O`。
 
 Footer 使用 ` ⋅ ` 分隔，并按 `model thinking ⋅ fast ⋅ cwd ⋅ git:branch ⋅ Context N% left ⋅ permissions` 排列。model 与 thinking 使用 Codex CLI 的 `#f6e2b7`，context 使用 `#f2b590`，Fast Mode 使用 `#c8a9ee`。终端变窄时会先缩短或移除 cwd 和 branch，再将 context 缩成 `N% left`；model、context 和 permissions 保留到最后。
 
@@ -156,39 +157,70 @@ pi \
 
 ## MCP extension
 
-在项目中创建 `.pi/mcp.json`，或在全局创建 `~/.pi/agent/mcp.json`：
+在项目中创建 `.pi/mcp.json`，或在全局创建 `~/.pi/agent/mcp.json`。配置支持 JSON comments、trailing commas，以及 `stdio`、`streamable-http`、`http` 兼容别名和 legacy `sse` transport。
 
 ```jsonc
 {
   "mcpServers": {
     "filesystem": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
-      "timeout": 30000
+      "command": "pnpm",
+      "args": ["dlx", "@modelcontextprotocol/server-filesystem", "."],
+      "connectTimeout": 30000,
+      "requestTimeout": 60000,
+      "maxRequestTimeout": 120000,
+      "retry": {
+        "maxAttempts": 3,
+        "baseDelayMs": 500,
+        "factor": 2,
+        "maxDelayMs": 5000,
+        "background": true
+      },
+      "toolReplay": "never"
     },
     "remote": {
-      "type": "http",
+      "type": "streamable-http",
       "url": "https://example.com/mcp",
       "headers": {
-        "Authorization": "Bearer replace-me"
+        "Authorization": "Bearer YOUR_API_KEY"
       }
+    }
+  },
+  "diagnostics": {
+    "file": {
+      "enabled": false,
+      "path": ".pi/logs/mcp.jsonl",
+      "maxBytes": 1048576
     }
   }
 }
 ```
 
-配置允许 JSON comments 和 trailing commas。支持 `stdio`、`http`、`streamable-http` 和 legacy `sse` transport。
+`connectTimeout` 是初始化、首次工具发现、前台重试和等待共用的总 deadline。`requestTimeout` 控制单次请求；当 `maxRequestTimeout` 更大时，progress notification 可以重置 request timer，但仍受该外层硬总上限约束。Timeout 或取消会关闭当前 transport，以终止仍在进行的 HTTP fetch，且不会重放原调用。旧 `timeout` 仍兼容，并在新字段缺省时分别作为 connect/request fallback。
+
+连接默认最多尝试 3 次，采用 500 ms 起步、因子 2、单次上限 5 s 的 full jitter。HTTP `Retry-After` 优先，但最多等待 5 min。临时网络错误、408、429、部分 5xx 与 520–527 可重试；认证、配置和确定性协议错误不会重试。前台 deadline 耗尽后可在后台有界恢复；可用 `/mcp reconnect <server>` 取消该 server 的后台等待并立即发起单 server 重连。
+
+工具调用自动重放默认关闭。`toolReplay: "read-only"` 只允许初始 catalog 与重连后的最新 catalog 都明确带有 `annotations.readOnlyHint === true`、且 route 所有者未变化的工具最多重放一次；该 annotation 来自服务器，不能替代对服务器和工具副作用的审查。
+
+传给模型的 MCP text 与序列化非 text 内容合计限制为 50 KiB、2000 行，最多序列化 24 个非 text block；`details` 中的 structured output 也限制为 50 KiB。超限 raw 输出不会自动落盘。工具提示会要求 agent 缩小结果或使用 server pagination；需要完整数据时应按服务端 cursor/page/limit 分段获取。
+
+内存 diagnostics 使用每服务器有界 ring buffer，并对控制字符、常见凭据和过长字段进行清理。文件日志默认关闭；启用后写入有界 JSONL，并保留一个 `.1` 轮转备份。Stdio stderr 使用 pipe 捕获到 diagnostics，不直接写入 Pi 终端。脱敏是降低风险的措施，不是保存或分享日志的安全保证。
 
 可用命令：
 
 ```text
 /mcp status
 /mcp reload
+/mcp reconnect <server>
+/mcp logs [server]
 /mcp-init
 ```
 
-`/mcp-init` 创建 `.pi/mcp.json`。不要提交 MCP headers 或环境变量中的凭据。
+`/mcp-init` 创建项目配置；修改配置或删除已注册工具后使用 `/mcp reload`。MCP 配置可以启动进程、携带 headers 并暴露有副作用的工具，应把 `.pi/mcp.json` 视为可执行配置，只信任已审查的项目，并且不要提交凭据。
+
+Exa hosted MCP 推荐直接使用 `https://mcp.exa.ai/mcp` 的 Streamable HTTP transport。Free plan 面向 casual use，匿名请求受当前 rate limit 政策约束；production 可通过 `x-api-key` header 配置 API key。不要在文档或配置中假定固定额度，也不要把 `mcp-remote` 作为原生远程连接故障的首选修复。
+
+完整配置、Exa tool selection、诊断边界和排错流程见 [`extensions/mcp/README.md`](extensions/mcp/README.md)。
 
 ## Subagent extension
 

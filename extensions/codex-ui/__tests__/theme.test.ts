@@ -70,6 +70,12 @@ test("package publishes the complete codex-pi theme and compiled extension", asy
   }
   assert.equal(theme.colors.userMessageBg, "userBg");
   assert.equal(theme.colors.selectedBg, "composerBg");
+  assert.equal(theme.colors.accent, "cyan");
+  assert.equal(theme.colors.mdCode, "cyan");
+  assert.equal(theme.colors.thinkingText, "muted");
+  assert.equal(theme.vars.foreground, "#d6d6d6");
+  assert.equal(theme.vars.cyan, "#5efcff");
+  assert.equal(theme.export.pageBg, "#292929");
   assert.equal(theme.vars.toolSuccessBg, "#213a2b");
   assert.equal(theme.vars.toolErrorBg, "#4a221d");
   assert.equal(theme.vars.syntaxText, "#cdd6f4");
