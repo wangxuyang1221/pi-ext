@@ -26,7 +26,7 @@ vi.mock("@earendil-works/pi-tui", async (importOriginal) => {
 
 import { CodexEditor, CodexFooter, CodexHeader } from "../src/components.js";
 
-function createTheme(): Theme {
+function createTheme(colorMode: "truecolor" | "256color" = "256color"): Theme {
   const foreground = (code: number, text: string) => `\x1b[38;5;${code}m${text}\x1b[39m`;
   return {
     name: "codex-pi",
@@ -42,7 +42,7 @@ function createTheme(): Theme {
     strikethrough: (text: string) => text,
     getFgAnsi: () => "\x1b[38;5;81m",
     getBgAnsi: () => "\x1b[48;5;238m",
-    getColorMode: () => "256color",
+    getColorMode: () => colorMode,
   } as unknown as Theme;
 }
 
@@ -69,44 +69,88 @@ test("header uses Pi branding and live session facts without fabricated badges",
   assert.ok(lines.every((line) => visibleWidth(line) <= 56));
 });
 
-test("footer keeps extension statuses and omits unavailable quota data", () => {
+test("footer renders the accepted stable status flow and ignores transient statuses", () => {
   const footer = new CodexFooter({
     cwd: "/Users/pi/Code/app",
     home: "/Users/pi",
     getModelId: () => "gpt-test",
     getThinkingLevel: () => "medium",
     getContextUsage: () => ({ percent: 28 }),
+    getBranch: () => "main",
     getExtensionStatuses: () => new Map([
+      ["pi-openai-fast-mode", "fast"],
       ["mcp", "\x1b[38;5;196mMCP 2/2 · 14 tools\x1b[39m"],
       ["permissions", "· full access"],
-      ["health", "● active"],
-      ["empty", "\x1b[38;5;196m   \x1b[39m"],
+      ["codex-compact", "Compacting context with Codex…"],
+      ["codex-ui-lowpower", "Low power"],
     ]),
     getTheme: () => theme,
   });
 
-  const wide = stripTerminalSequences(footer.render(160)[0] ?? "");
-  const narrow = stripTerminalSequences(footer.render(30)[0] ?? "");
-
-  assert.match(wide, /gpt-test medium/u);
-  assert.match(wide, /~\/Code\/app/u);
-  assert.match(wide, /Context 72% left/u);
-  assert.match(wide, /MCP 2\/2 · 14 tools · full access · ● active/u);
-  assert.ok(!wide.includes("· ·"));
-  assert.ok(!wide.includes("weekly"));
-  assert.ok(!wide.includes("fast"));
-  assert.ok(narrow.includes("MCP") || narrow.includes("full access"));
-  assert.ok(visibleWidth(footer.render(30)[0] ?? "") <= 30);
-
   const rendered = footer.render(160)[0] ?? "";
-  assert.ok(!rendered.includes("\x1b[38;5;196m"));
-  assert.ok(rendered.includes("\x1b[38;5;244mMCP 2/2 · 14 tools\x1b[39m"));
-  assert.ok(rendered.includes("\x1b[38;5;244mfull access\x1b[39m"));
-  assert.ok(rendered.includes("\x1b[38;5;244m● active\x1b[39m"));
-  assert.ok(stripTerminalSequences(rendered).trimEnd().endsWith("● active"));
+  const plain = stripTerminalSequences(rendered).trim();
+
+  assert.equal(
+    plain,
+    "gpt-test medium ⋅ fast ⋅ ~/Code/app ⋅ git:main ⋅ Context 72% left ⋅ full access",
+  );
+  assert.ok(!plain.includes("MCP"));
+  assert.ok(!plain.includes("Compacting"));
+  assert.ok(!plain.includes("Low power"));
+  assert.ok(!plain.includes("·"));
+  assert.ok(visibleWidth(rendered) <= 160);
 });
 
-test("footer reuses sanitized statuses and painted output for an unchanged snapshot", () => {
+test("footer uses Codex CLI colors for model, context, and Fast Mode", () => {
+  const truecolorTheme = createTheme("truecolor");
+  const footer = new CodexFooter({
+    cwd: "/Users/pi/Code/app",
+    home: "/Users/pi",
+    getModelId: () => "gpt-test",
+    getThinkingLevel: () => "max",
+    getContextUsage: () => ({ percent: 19 }),
+    getBranch: () => "main",
+    getExtensionStatuses: () => new Map([
+      ["pi-openai-fast-mode", "fast"],
+      ["permissions", "· full access"],
+    ]),
+    getTheme: () => truecolorTheme,
+  });
+
+  const rendered = footer.render(120)[0] ?? "";
+  assert.ok(rendered.includes("\x1b[38;2;246;226;183mgpt-test max\x1b[39m"));
+  assert.ok(rendered.includes("\x1b[38;2;242;181;144mContext 81% left\x1b[39m"));
+  assert.ok(rendered.includes("\x1b[38;2;200;169;238mfast\x1b[39m"));
+});
+
+test("footer degrades location before stable session facts on narrow terminals", () => {
+  const footer = new CodexFooter({
+    cwd: "/Users/pi/Code/t3code/pi-ext",
+    home: "/Users/pi",
+    getModelId: () => "gpt-5.6-sol",
+    getThinkingLevel: () => "max",
+    getContextUsage: () => ({ percent: 19 }),
+    getBranch: () => "main",
+    getExtensionStatuses: () => new Map([
+      ["pi-openai-fast-mode", "fast"],
+      ["permissions", "· full access"],
+    ]),
+    getTheme: () => theme,
+  });
+
+  const expected = new Map([
+    [100, "gpt-5.6-sol max ⋅ fast ⋅ ~/Code/t3code/pi-ext ⋅ git:main ⋅ Context 81% left ⋅ full access"],
+    [72, "gpt-5.6-sol max ⋅ fast ⋅ git:main ⋅ Context 81% left ⋅ full access"],
+    [52, "gpt-5.6-sol max ⋅ fast ⋅ 81% left ⋅ full access"],
+  ]);
+  for (const [width, line] of expected) {
+    const rendered = footer.render(width)[0] ?? "";
+    assert.equal(stripTerminalSequences(rendered).trim(), line);
+    assert.ok(visibleWidth(rendered) <= width);
+  }
+});
+
+test("footer caches only allowlisted statuses and painted output", () => {
   let themePaints = 0;
   const countingTheme = {
     ...theme,
@@ -116,6 +160,7 @@ test("footer reuses sanitized statuses and painted output for an unchanged snaps
     },
   } as Theme;
   const statuses = new Map([
+    ["pi-openai-fast-mode", "fast"],
     ["mcp", "\x1b[31mMCP ready\x1b[39m"],
     ["permissions", "· full access"],
   ]);
@@ -127,6 +172,7 @@ test("footer reuses sanitized statuses and painted output for an unchanged snaps
     getModelId: () => "gpt-test",
     getThinkingLevel: () => "medium",
     getContextUsage,
+    getBranch: () => "main",
     getExtensionStatuses,
     getTheme: () => countingTheme,
   });
@@ -143,22 +189,25 @@ test("footer reuses sanitized statuses and painted output for an unchanged snaps
   assert.equal(stripTerminalSequencesMock.mock.calls.length, stripsAfterInitialRender);
   assert.equal(themePaints, paintsAfterInitialRender);
 
-  statuses.set("permissions", "· sandboxed");
+  statuses.set("mcp", "\x1b[31mMCP reconnecting\x1b[39m");
+  assert.deepEqual(footer.render(120), initial);
+  assert.equal(stripTerminalSequencesMock.mock.calls.length, stripsAfterInitialRender);
+  assert.equal(themePaints, paintsAfterInitialRender);
+
+  statuses.set("permissions", "⋅ sandboxed");
   const changed = stripTerminalSequences(footer.render(120)[0] ?? "");
   assert.match(changed, /sandboxed/u);
   assert.equal(
-    stripTerminalSequencesMock.mock.calls.filter(([value]) => value === "· sandboxed").length,
+    stripTerminalSequencesMock.mock.calls.filter(([value]) => value === "⋅ sandboxed").length,
     1,
   );
 
-  statuses.delete("mcp");
+  statuses.delete("permissions");
   footer.render(120);
-  statuses.set("mcp", "\x1b[31mMCP ready\x1b[39m");
+  statuses.set("permissions", "⋅ sandboxed");
   footer.render(120);
   assert.equal(
-    stripTerminalSequencesMock.mock.calls.filter(
-      ([value]) => value === "\x1b[31mMCP ready\x1b[39m",
-    ).length,
+    stripTerminalSequencesMock.mock.calls.filter(([value]) => value === "⋅ sandboxed").length,
     2,
   );
 });

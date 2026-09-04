@@ -11,6 +11,7 @@ function createTheme(name = CODEX_THEME_NAME): Theme {
     bg: (_name: string, text: string) => text,
     bold: (text: string) => text,
     getBgAnsi: () => "\x1b[48;5;238m",
+    getColorMode: () => "256color",
   } as unknown as Theme;
 }
 
@@ -326,6 +327,37 @@ test("session UI installs only in TUI mode", async () => {
       matches: () => false,
     } as never,
   );
+
+  const footerFactory = calls.find((call) => call.name === "footer")?.value as ((
+    tui: { requestRender(): void },
+    theme: Theme,
+    footerData: {
+      getGitBranch(): string | null;
+      getExtensionStatuses(): ReadonlyMap<string, string>;
+      onBranchChange(listener: () => void): () => void;
+    },
+  ) => { render(width: number): string[]; dispose?(): void }) | undefined;
+  assert.ok(footerFactory);
+  const requestRender = vi.fn();
+  const unsubscribe = vi.fn();
+  let branchListener: (() => void) | undefined;
+  const footer = footerFactory(
+    { requestRender } as never,
+    profileTheme,
+    {
+      getGitBranch: () => "feature/footer",
+      getExtensionStatuses: () => new Map(),
+      onBranchChange(listener) {
+        branchListener = listener;
+        return unsubscribe;
+      },
+    },
+  );
+  assert.match(footer.render(100).join("\n"), /git:feature\/footer/u);
+  branchListener?.();
+  assert.equal(requestRender.mock.calls.length, 1);
+  footer.dispose?.();
+  assert.equal(unsubscribe.mock.calls.length, 1);
 
   const bash = registeredTools.find((tool) => tool.name === "bash");
   assert.ok(bash?.renderResult);

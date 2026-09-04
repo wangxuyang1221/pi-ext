@@ -1,6 +1,5 @@
 import {
   CustomEditor,
-  type ContextUsage,
   type KeybindingsManager,
   type Theme,
 } from "@earendil-works/pi-coding-agent";
@@ -13,14 +12,13 @@ import {
 } from "@earendil-works/pi-tui";
 
 import {
-  fitSegments,
   fitToWidth,
-  formatContextLeft,
   formatHomePath,
   normalizeWidth,
   paintBackground,
-  type PrioritizedSegment,
 } from "./layout.js";
+
+export { CodexFooter, type CodexFooterOptions } from "./footer.js";
 
 export interface CodexHeaderOptions {
   version: string;
@@ -28,16 +26,6 @@ export interface CodexHeaderOptions {
   home?: string;
   getModelId: () => string | undefined;
   getThinkingLevel: () => string;
-  getTheme: () => Theme;
-}
-
-export interface CodexFooterOptions {
-  cwd: string;
-  home?: string;
-  getModelId: () => string | undefined;
-  getThinkingLevel: () => string;
-  getContextUsage: () => Pick<ContextUsage, "percent"> | undefined;
-  getExtensionStatuses: () => ReadonlyMap<string, string>;
   getTheme: () => Theme;
 }
 
@@ -83,106 +71,6 @@ export class CodexHeader implements Component {
   }
 
   invalidate(): void {}
-}
-
-export class CodexFooter implements Component {
-  private readonly statusCache = new Map<string, { raw: string; sanitized: string }>();
-  private cachedSnapshot: {
-    width: number;
-    theme: Theme;
-    modelId: string;
-    thinking: string;
-    context: string | undefined;
-    statuses: string[];
-    lines: string[];
-  } | undefined;
-
-  constructor(private readonly options: CodexFooterOptions) {}
-
-  render(width: number): string[] {
-    const safeWidth = normalizeWidth(width);
-    if (safeWidth === 0) return [];
-
-    const theme = this.options.getTheme();
-    const modelId = this.options.getModelId() ?? "No model";
-    const thinking = this.options.getThinkingLevel();
-    const context = formatContextLeft(this.options.getContextUsage());
-    const rawStatuses = this.options.getExtensionStatuses();
-    const activeStatusKeys = new Set<string>();
-    const statuses: string[] = [];
-    for (const [key, raw] of rawStatuses) {
-      activeStatusKeys.add(key);
-      let cached = this.statusCache.get(key);
-      if (!cached || cached.raw !== raw) {
-        cached = {
-          raw,
-          sanitized: stripTerminalSequences(raw).trim().replace(/^·\s*/u, ""),
-        };
-        this.statusCache.set(key, cached);
-      }
-      if (cached.sanitized.length > 0) statuses.push(cached.sanitized);
-    }
-    for (const key of this.statusCache.keys()) {
-      if (!activeStatusKeys.has(key)) this.statusCache.delete(key);
-    }
-
-    const cached = this.cachedSnapshot;
-    if (
-      cached?.width === safeWidth
-      && cached.theme === theme
-      && cached.modelId === modelId
-      && cached.thinking === thinking
-      && cached.context === context
-      && arraysEqual(cached.statuses, statuses)
-    ) {
-      return cached.lines;
-    }
-
-    const segments: PrioritizedSegment[] = [
-      {
-        text: theme.fg("warning", `${modelId} ${thinking}`),
-        priority: 90,
-      },
-      {
-        text: theme.fg("success", formatHomePath(this.options.cwd, this.options.home)),
-        priority: 40,
-      },
-    ];
-    if (context) {
-      segments.push({ text: theme.fg("warning", context), priority: 60 });
-    }
-    for (const status of statuses) {
-      segments.push({ text: theme.fg("dim", status), priority: 100 });
-    }
-
-    const leftPadding = safeWidth > 1 ? " " : "";
-    const contentWidth = safeWidth - visibleWidth(leftPadding);
-    const separator = theme.fg("dim", " · ");
-    const content = fitSegments(segments, contentWidth, separator);
-    const lines = [fitToWidth(`${leftPadding}${content}`, safeWidth)];
-    this.cachedSnapshot = {
-      width: safeWidth,
-      theme,
-      modelId,
-      thinking,
-      context,
-      statuses,
-      lines,
-    };
-    return lines;
-  }
-
-  invalidate(): void {
-    this.cachedSnapshot = undefined;
-  }
-}
-
-function arraysEqual(left: readonly string[], right: readonly string[]): boolean {
-  if (left.length !== right.length) return false;
-  for (let index = 0; index < left.length; index += 1) {
-    if (left[index] !== right[index]) return false;
-  }
-  return true;
 }
 
 const PLACEHOLDER = "Ask Pi to do anything";

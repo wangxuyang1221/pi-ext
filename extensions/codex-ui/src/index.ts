@@ -192,15 +192,23 @@ export default function codexUiExtension(pi: ExtensionAPI): void {
       return new CodexEditor(tui, editorTheme, keybindings, getTheme);
     });
 
-    ctx.ui.setFooter((_tui, _theme, footerData) => new CodexFooter({
-      cwd: ctx.cwd,
-      home: process.env.HOME,
-      getModelId,
-      getThinkingLevel,
-      getContextUsage: () => ctx.getContextUsage(),
-      getExtensionStatuses: () => footerData.getExtensionStatuses(),
-      getTheme,
-    }));
+    ctx.ui.setFooter((tui, _theme, footerData) => {
+      const footer = new CodexFooter({
+        cwd: ctx.cwd,
+        home: process.env.HOME,
+        getModelId,
+        getThinkingLevel,
+        getContextUsage: () => ctx.getContextUsage(),
+        getBranch: () => footerData.getGitBranch(),
+        getExtensionStatuses: () => footerData.getExtensionStatuses(),
+        getTheme,
+      });
+      footer.setBranchSubscription(footerData.onBranchChange(() => {
+        footer.invalidate();
+        tui.requestRender();
+      }));
+      return footer;
+    });
 
     ctx.ui.setTitle(getBaseTitle(ctx.cwd));
     hideInlineWorkingRow(ctx.ui);

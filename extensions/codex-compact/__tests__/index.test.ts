@@ -27,6 +27,7 @@ function installExtension(branch: SessionEntry[] = [], hasUI = false, contextWin
 	const handlers = new Map<string, Handler>();
 	const notify = vi.fn();
 	const setStatus = vi.fn();
+	const setWidget = vi.fn();
 	const model = {
 		provider: "openai-codex",
 		api: "openai-codex-responses",
@@ -44,7 +45,7 @@ function installExtension(branch: SessionEntry[] = [], hasUI = false, contextWin
 		cwd: process.cwd(),
 		isProjectTrusted: () => true,
 		hasUI,
-		ui: { notify, setStatus },
+		ui: { notify, setStatus, setWidget },
 		abort: vi.fn(),
 		signal: new AbortController().signal,
 		model,
@@ -68,7 +69,7 @@ function installExtension(branch: SessionEntry[] = [], hasUI = false, contextWin
 		getActiveTools: () => [],
 		appendEntry,
 	} as never);
-	return { handlers, ctx, model, notify, setStatus, appendEntry };
+	return { handlers, ctx, model, notify, setStatus, setWidget, appendEntry };
 }
 
 function stubSuccessfulCompaction(encryptedContent = "opaque"): void {
@@ -146,7 +147,7 @@ test("keeps one presentation through request-side overflow recovery", async () =
 		type: "message",
 		message: { role: "user", content: [{ type: "text", text: "branch" }] },
 	} as never, checkpointEntry()];
-	const { handlers, ctx, notify, setStatus } = installExtension(branch, true);
+	const { handlers, ctx, notify, setStatus, setWidget } = installExtension(branch, true);
 	const fetchMock = vi.fn()
 		.mockResolvedValueOnce(new Response(
 			JSON.stringify({ error: { code: "context_length_exceeded", message: "retry with a shorter history" } }),
@@ -172,12 +173,78 @@ test("keeps one presentation through request-side overflow recovery", async () =
 	}
 
 	expect(fetchMock).toHaveBeenCalledTimes(2);
-	expect(setStatus.mock.calls).toEqual([
-		["codex-compact", "Compacting context with Codex (context recovery)…"],
-		["codex-compact", "Compacting context with Codex (context overflow recovery)…"],
-		["codex-compact", undefined],
+	expect(setStatus).not.toHaveBeenCalled();
+	expect(setWidget).toHaveBeenCalledTimes(2);
+	expect(setWidget).toHaveBeenNthCalledWith(
+		1,
+		"codex-compact",
+		expect.any(Function),
+		{ placement: "aboveEditor" },
+	);
+	expect(setWidget).toHaveBeenNthCalledWith(
+		2,
+		"codex-compact",
+		undefined,
+		{ placement: "aboveEditor" },
+	);
+	const factory = setWidget.mock.calls[0]?.[1] as ((
+		tui: { requestRender(): void },
+		theme: { fg(_color: string, text: string): string },
+	) => { render(width: number): string[] }) | undefined;
+	expect(factory).toBeTypeOf("function");
+	expect(factory?.({ requestRender() {} }, { fg: (_color, text) => text }).render(80)).toEqual([
+		"⠋ Compacting context... (esc to cancel)",
+		"",
 	]);
 	expect(notify).toHaveBeenCalledWith("Codex context compacted (context overflow recovery).", "info");
+});
+
+test("clears an active request-side presentation when the session tree changes", async () => {
+	const branch = [{
+		id: "history",
+		parentId: null,
+		timestamp: new Date().toISOString(),
+		type: "message",
+		message: { role: "user", content: [{ type: "text", text: "branch" }] },
+	} as never, checkpointEntry()];
+	const { handlers, ctx, setWidget } = installExtension(branch, true);
+	let resolveFetch!: (response: Response) => void;
+	let markFetchStarted!: () => void;
+	const fetchStarted = new Promise<void>((resolve) => {
+		markFetchStarted = resolve;
+	});
+	const fetchResponse = new Promise<Response>((resolve) => {
+		resolveFetch = resolve;
+	});
+	vi.stubGlobal("fetch", async () => {
+		markFetchStarted();
+		return fetchResponse;
+	});
+	const request = handlers.get("before_provider_request")?.({
+		payload: {
+			input: [
+				{ role: "user", content: [{ type: "input_text", text: "older" }] },
+				{ role: "user", content: [{ type: "input_text", text: "current" }] },
+			],
+		},
+	}, ctx) as Promise<unknown>;
+	try {
+		await fetchStarted;
+		handlers.get("session_tree")?.({}, ctx);
+		expect(setWidget).toHaveBeenNthCalledWith(
+			2,
+			"codex-compact",
+			undefined,
+			{ placement: "aboveEditor" },
+		);
+	} finally {
+		resolveFetch(new Response([
+			'data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"opaque"}}',
+			'data: {"type":"response.completed","response":{"id":"response"}}',
+		].join("\n\n") + "\n\n", { headers: { "content-type": "text/event-stream" } }));
+		await request;
+		vi.unstubAllGlobals();
+	}
 });
 
 test("filters Pi compaction summaries after a valid V2 checkpoint", () => {
@@ -388,7 +455,7 @@ test.each([
 	["threshold", false],
 	["overflow", true],
 ] as const)("fails closed for a terminal %s compaction error", async (reason, willRetry) => {
-	const { handlers, ctx, notify, setStatus } = installExtension([], true);
+	const { handlers, ctx, notify, setWidget } = installExtension([], true);
 	vi.stubGlobal("fetch", async () => new Response(
 		JSON.stringify({ error: { code: "manual_failure", message: "do-not-display-this-body" } }),
 		{ status: 400 },
@@ -404,7 +471,7 @@ test.each([
 	} finally {
 		vi.unstubAllGlobals();
 	}
-	expect(setStatus).not.toHaveBeenCalled();
+	expect(setWidget).not.toHaveBeenCalled();
 	expect(notify.mock.calls.filter((call) => call[1] === "info")).toHaveLength(0);
 	expect(notify).toHaveBeenCalledWith(
 		expect.stringMatching(/^OpenAI Codex failure: phase=session_before_compact; code=http_400; model=gpt; recoveryAttempted=false; outcome=compaction_cancelled; next=.+$/),
@@ -418,7 +485,7 @@ test.each([
 	["threshold", false],
 	["overflow", true],
 ] as const)("cancels an aborted %s compaction without a remote request", async (reason, willRetry) => {
-	const { handlers, ctx, notify, setStatus } = installExtension([], true);
+	const { handlers, ctx, notify, setWidget } = installExtension([], true);
 	const controller = new AbortController();
 	controller.abort();
 	const fetchMock = vi.fn();
@@ -436,7 +503,7 @@ test.each([
 	}
 
 	expect(fetchMock).not.toHaveBeenCalled();
-	expect(setStatus).not.toHaveBeenCalled();
+	expect(setWidget).not.toHaveBeenCalled();
 	expect(notify).not.toHaveBeenCalled();
 });
 
@@ -470,8 +537,8 @@ test("reports a safe manual compaction failure without UI", async () => {
 });
 
 test("cancels compaction when UI reporting throws", async () => {
-	const { handlers, ctx, notify, setStatus } = installExtension([], true);
-	setStatus.mockImplementation(() => { throw new Error("status failed"); });
+	const { handlers, ctx, notify, setWidget } = installExtension([], true);
+	setWidget.mockImplementation(() => { throw new Error("widget failed"); });
 	notify.mockImplementation(() => { throw new Error("notify failed"); });
 	vi.stubGlobal("fetch", async () => new Response(
 		JSON.stringify({ error: { code: "manual_failure", message: "safe" } }),
@@ -518,7 +585,7 @@ test("cancels the provider request when marker persistence throws", async () => 
 });
 
 test("cancels a stale compaction without reporting success", async () => {
-	const { handlers, ctx, notify, setStatus } = installExtension([], true);
+	const { handlers, ctx, notify, setWidget } = installExtension([], true);
 	let resolveFetch!: (response: Response) => void;
 	let markFetchStarted!: () => void;
 	const fetchStarted = new Promise<void>((resolve) => {
@@ -551,7 +618,7 @@ test("cancels a stale compaction without reporting success", async () => {
 			},
 		}));
 		await expect(compaction).resolves.toEqual({ cancel: true });
-		expect(setStatus).not.toHaveBeenCalled();
+		expect(setWidget).not.toHaveBeenCalled();
 		expect(notify).not.toHaveBeenCalledWith("Codex context compacted (manual).", "info");
 		const headers: Record<string, string | null> = {};
 		handlers.get("before_provider_headers")?.({ headers }, ctx);
@@ -710,7 +777,7 @@ test.each([
 	["threshold", false],
 	["overflow", true],
 ] as const)("leaves %s compaction presentation to Pi until commit", async (reason, willRetry) => {
-	const { handlers, ctx, model, notify, setStatus } = installExtension([], true);
+	const { handlers, ctx, model, notify, setWidget } = installExtension([], true);
 	await handlers.get("before_provider_request")?.({
 		payload: {
 			model: model.id,
@@ -741,7 +808,7 @@ test.each([
 			signal: new AbortController().signal,
 		}, ctx);
 
-		expect(setStatus).not.toHaveBeenCalled();
+		expect(setWidget).not.toHaveBeenCalled();
 		expect(notify).not.toHaveBeenCalled();
 		expect(requestBody).toMatchObject({
 			instructions: "request instructions",
@@ -877,7 +944,7 @@ test("warns once when no new compaction entry can be resolved", async () => {
 });
 
 test("leaves non-Codex compaction entirely to Pi", async () => {
-	const { handlers, ctx, notify, setStatus } = installExtension([], true);
+	const { handlers, ctx, notify, setWidget } = installExtension([], true);
 	ctx.model.provider = "anthropic";
 	ctx.model.api = "anthropic-messages";
 	const fetchMock = vi.fn();
@@ -898,7 +965,7 @@ test("leaves non-Codex compaction entirely to Pi", async () => {
 	}
 
 	expect(fetchMock).not.toHaveBeenCalled();
-	expect(setStatus).not.toHaveBeenCalled();
+	expect(setWidget).not.toHaveBeenCalled();
 	expect(notify).not.toHaveBeenCalled();
 });
 

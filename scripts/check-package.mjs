@@ -7,9 +7,10 @@ const publishedEntries = packageJson.files ?? [];
 
 const expectedExtensionEntries = [
   "./extensions/codex-compact/dist/index.js",
+  "./extensions/openai-fast-mode/dist/index.js",
+  "./extensions/permissions/dist/index.js",
   "./extensions/codex-ui/dist/index.js",
   "./extensions/mcp/dist/index.js",
-  "./extensions/permissions/dist/index.js",
   "./extensions/subagent/dist/index.js",
 ];
 const expectedThemeEntries = ["./themes/codex-pi.json"];
@@ -17,6 +18,9 @@ const requiredPublishedEntries = [
   "extensions/codex-compact/dist",
   "extensions/codex-compact/LICENSE",
   "extensions/codex-compact/UPSTREAM.md",
+  "extensions/openai-fast-mode/dist",
+  "extensions/openai-fast-mode/LICENSE",
+  "extensions/openai-fast-mode/UPSTREAM.md",
 ];
 
 function assertExactEntries(actual, expected, label) {
@@ -50,5 +54,5 @@ for (const entry of themeEntries) {
 }
 
 console.log(
-  `Verified ${extensionEntries.length} compiled Pi extension entries, ${themeEntries.length} theme entry, and Codex Compact attribution files.`,
+  `Verified ${extensionEntries.length} compiled Pi extension entries, ${themeEntries.length} theme entry, and required attribution files.`,
 );

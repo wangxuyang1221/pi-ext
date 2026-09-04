@@ -1,0 +1,1 @@
+{"version":3,"file":"presentation.d.ts","sourceRoot":"","sources":["../src/presentation.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,KAAK,EAAE,MAAM,iCAAiC,CAAC;AAC7D,OAAO,EAEN,KAAK,SAAS,EACd,KAAK,GAAG,EACR,MAAM,wBAAwB,CAAC;AAEhC,MAAM,MAAM,uBAAuB,GAAG,CAAC,GAAG,EAAE,GAAG,EAAE,KAAK,EAAE,KAAK,KAAK,SAAS,CAAC;AAmC5E,wBAAgB,sBAAsB,IAAI,uBAAuB,CAEhE"}

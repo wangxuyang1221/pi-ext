@@ -1,8 +1,9 @@
 # pi-ext
 
-为 [Pi Coding Agent](https://github.com/earendil-works/pi) 提供五个扩展和一套主题：
+为 [Pi Coding Agent](https://github.com/earendil-works/pi) 提供六个扩展和一套主题：
 
 - `codex-compact` 为支持的 ChatGPT auth 模型提供 Codex Remote Compaction V2。
+- `openai-fast-mode` 为匹配的 OpenAI 和 OpenAI-Codex 模型注入 priority service tier。
 - `codex-ui` 使用 Pi 品牌实现 Codex 风格的 TUI profile，并提供 `codex-pi` 主题。
 - `mcp` 连接 Model Context Protocol 服务器，并将工具注册为 `mcp__<server>__<tool>`。
 - `permissions` 提供 `Default permissions` 和 `Full access` 两种模式，以及逐次调用审批。
@@ -51,7 +52,7 @@ Codex compaction applied
 Codex encrypted compaction item.
 ```
 
-若远程请求、响应结构或 checkpoint 校验失败，扩展会取消本次 Codex 压缩，不会静默降级为 Pi 本地文本摘要。若最终 entry 无法证明来自本次 V2 attempt，则显示 warning。扩展在 provider request 前自主发起压缩时仍使用自己的短暂 footer 状态，因为此时 Pi 没有启动原生 compaction loader。
+若远程请求、响应结构或 checkpoint 校验失败，扩展会取消本次 Codex 压缩，不会静默降级为 Pi 本地文本摘要。若最终 entry 无法证明来自本次 V2 attempt，则显示 warning。扩展在 provider request 前自主发起压缩时，会在编辑器上方显示 `⠋ Compacting context... (esc to cancel)` 动画，并在下方保留一行间距。提示不会写入 footer；session、分支或模型切换时会立即清理。
 
 可在全局 `~/.pi/agent/pi-codex-compact.json` 配置，也可在受信任项目的 `.pi/pi-codex-compact.json` 覆盖：
 
@@ -68,13 +69,30 @@ Codex encrypted compaction item.
 
 本目录基于 `@yeungkc/pi-codex-compact` 0.0.6 导入；精确 commit、同步范围和本地改动记录见 `extensions/codex-compact/UPSTREAM.md`，上游 MIT license 见同目录 `LICENSE`。
 
+## OpenAI Fast Mode extension
+
+`openai-fast-mode` 为配置中精确匹配的 OpenAI 和 OpenAI-Codex 模型注入 `service_tier: "priority"`。可使用以下命令切换：
+
+```text
+/fast
+/fast on
+/fast off
+/fast toggle
+```
+
+启动参数 `--fast` 会启用并持久化 Fast Mode。全局状态继续保存在 `~/.pi/agent/extensions/pi-openai-fast-mode/config.json`；项目级状态保存在 `.pi/pi-openai-fast-mode/config.json`，迁入本仓库后无需迁移现有配置。
+
+扩展通过 `setStatus("pi-openai-fast-mode", "fast")` 发布 footer 状态，并主动清理 0.3.0 使用的 below-editor widget。不要再单独加载 `npm:pi-openai-fast-mode`，否则 `/fast`、flag 和 provider hooks 会重复注册。
+
+本目录基于 `pi-openai-fast-mode` 0.3.0 导入；精确 commit、同步范围和本地改动记录见 `extensions/openai-fast-mode/UPSTREAM.md`，上游 MIT license 见同目录 `LICENSE`。
+
 ## Codex UI profile
 
 `codex-ui` 仅在 Pi 的 TUI 模式中接管以下组件：
 
 - 使用 `pi v0.84.3` 官方 wordmark 的 header
 - 实色背景 composer
-- model、thinking、cwd、context-left 和 extension statuses footer
+- model、thinking、Fast Mode、cwd、git branch、context-left 和 permissions 单行 footer
 - Thinking/Reasoning 最新段落的单行显示
 - 隐藏 streaming working row，并通过 terminal title 显示工作状态
 - `read`、`edit`、`write` 的紧凑 renderer
@@ -121,7 +139,9 @@ pi-codex() {
 
 `read`、`edit`、`write` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。`write` 只显示路径、行数和字节数，不伪造 old/new diff。使用当前配置中的 `app.tools.expand` 快捷键可以展开工具详情，默认是 `Ctrl+O`。
 
-Footer 读取 `FooterDataProvider.getExtensionStatuses()`，因此 MCP 和 permissions 状态仍会显示。`pi-openai-fast-mode` 的 `fast` 保留在它自己的 below-editor widget 中；由于 Pi 0.84.3 没有公开 weekly quota 数据源，本 profile 不显示 weekly quota。
+Footer 使用 ` ⋅ ` 分隔，并按 `model thinking ⋅ fast ⋅ cwd ⋅ git:branch ⋅ Context N% left ⋅ permissions` 排列。model 与 thinking 使用 Codex CLI 的 `#f6e2b7`，context 使用 `#f2b590`，Fast Mode 使用 `#c8a9ee`。终端变窄时会先缩短或移除 cwd 和 branch，再将 context 缩成 `N% left`；model、context 和 permissions 保留到最后。
+
+Footer 只消费 `pi-openai-fast-mode` 和 `permissions` 两个稳定 status。MCP、压缩进度、low-power 和其他临时 status 不显示。内置的 `openai-fast-mode` 不再创建 below-editor widget。由于 Pi 0.84.3 没有公开 weekly quota 数据源，本 profile 不显示 weekly quota。
 
 Ghostty 的窗口透明度、blur、字体和 titlebar 仍由 Ghostty 配置负责。Pi cell 只使用不透明 ANSI 颜色。
 
@@ -258,7 +278,7 @@ pnpm run prototype:tui
 pnpm run prototype:subagent-ui
 ```
 
-仓库有意提交 `dist/`。Pi 从 Git 安装 package 时只安装生产依赖，因此需要预构建文件。CI 会拒绝过期的生成文件。`prepack` 会重建五个扩展，发布包只包含编译产物、theme、README、license 和 Codex Compact attribution。
+仓库有意提交 `dist/`。Pi 从 Git 安装 package 时只安装生产依赖，因此需要预构建文件。CI 会拒绝过期的生成文件。`prepack` 会重建六个扩展，发布包只包含编译产物、theme、README、license 和上游 attribution。
 
 `pnpm run prototype:tui` 启动 Codex、Claude、Hybrid 三套一次性 HTML 原型。生产 extension 只实现 Codex 方向，另外两套原型保留供后续使用。
 
@@ -267,6 +287,12 @@ pnpm run prototype:subagent-ui
 ```text
 extensions/
   codex-compact/
+    src/
+    __tests__/
+    dist/
+    LICENSE
+    UPSTREAM.md
+  openai-fast-mode/
     src/
     __tests__/
     dist/

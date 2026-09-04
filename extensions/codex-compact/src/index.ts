@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import { sessionEntryToContextMessages, type ExtensionAPI, type SessionEntry } from "@earendil-works/pi-coding-agent";
 import { shouldAutoCompact } from "./scheduler.js";
+import { createCompactionWidget, type CompactionWidgetFactory } from "./presentation.js";
 import { autoCompactTokenLimit, loadConfig } from "./config.js";
 import { createNativeCheckpoint, type NativeCheckpointRequest } from "./remote-compaction.js";
 import { createSessionCoordinator, type RemoteCompactionReason } from "./session-coordinator.js";
@@ -40,9 +41,16 @@ type CompactionNoticeContext = {
 	hasUI: boolean;
 	ui: {
 		notify(message: string, type?: "info" | "warning" | "error"): void;
-		setStatus(key: string, text: string | undefined): void;
+		setWidget(
+			key: string,
+			content: CompactionWidgetFactory | undefined,
+			options?: { placement?: "aboveEditor" | "belowEditor" },
+		): void;
 	};
 	sessionManager: { getSessionId(): string };
+};
+type RemoteCompactionPresentation = {
+	ctx: CompactionNoticeContext;
 };
 
 function failureNextStep(code: string, recoveryAttempted: boolean): string {
@@ -70,6 +78,8 @@ function safely(operation: () => void): void {
 	} catch {}
 }
 
+const COMPACTION_WIDGET_OPTIONS = { placement: "aboveEditor" } as const;
+
 function reportCompactionFailure(
 	ctx: CompactionNoticeContext,
 	model: { id?: unknown } | undefined,
@@ -92,7 +102,7 @@ function reportCompactionFailure(
 export default function codexCompactionExtension(pi: ExtensionAPI): void {
 	const basePayloadBySession = new Map<string, JsonObject>();
 	const turnStateBySession = new Map<string, string>();
-	const pendingOverflowPresentationBySession = new Map<string, CompactionNoticeContext>();
+	const remoteCompactionPresentationBySession = new Map<string, RemoteCompactionPresentation>();
 	const activePiCompactionSessions = new Set<string>();
 	const activePiCompactionControllerBySession = new Map<string, AbortController>();
 	const pendingPiCompactionBySession = new Map<string, {
@@ -142,9 +152,16 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 	const rememberTurnState = (sessionId: string, state: string): void => {
 		if (!turnStateBySession.has(sessionId)) turnStateBySession.set(sessionId, state);
 	};
-	const clearPendingOverflowPresentation = (ctx: CompactionNoticeContext): void => {
-		if (!pendingOverflowPresentationBySession.delete(ctx.sessionManager.getSessionId())) return;
-		if (ctx.hasUI) safely(() => ctx.ui.setStatus("codex-compact", undefined));
+	const clearRemoteCompactionPresentation = (
+		sessionId: string,
+		expected?: RemoteCompactionPresentation,
+	): void => {
+		const presentation = remoteCompactionPresentationBySession.get(sessionId);
+		if (!presentation || (expected && presentation !== expected)) return;
+		remoteCompactionPresentationBySession.delete(sessionId);
+		if (presentation.ctx.hasUI) {
+			safely(() => presentation.ctx.ui.setWidget("codex-compact", undefined, COMPACTION_WIDGET_OPTIONS));
+		}
 	};
 	const presentRemoteCompaction = async <T>(
 		ctx: CompactionNoticeContext,
@@ -153,11 +170,19 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		completed: (result: T) => boolean = () => true,
 	): Promise<T> => {
 		const sessionId = ctx.sessionManager.getSessionId();
+		const existingPresentation = remoteCompactionPresentationBySession.get(sessionId);
 		const resumesOverflowRecovery = reason === "context-overflow-recovery"
-			&& pendingOverflowPresentationBySession.has(sessionId);
-		if (!resumesOverflowRecovery) clearPendingOverflowPresentation(ctx);
+			&& existingPresentation !== undefined;
+		let presentation = resumesOverflowRecovery ? existingPresentation : undefined;
+		if (!resumesOverflowRecovery) {
+			clearRemoteCompactionPresentation(sessionId);
+			if (ctx.hasUI) {
+				presentation = { ctx };
+				remoteCompactionPresentationBySession.set(sessionId, presentation);
+				safely(() => ctx.ui.setWidget("codex-compact", createCompactionWidget(), COMPACTION_WIDGET_OPTIONS));
+			}
+		}
 		const label = remoteCompactionReasonLabel(reason);
-		if (ctx.hasUI) safely(() => ctx.ui.setStatus("codex-compact", `Compacting context with Codex (${label})…`));
 		let retainForOverflowRecovery = false;
 		try {
 			const result = await operation();
@@ -165,12 +190,10 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 			return result;
 		} catch (error) {
 			retainForOverflowRecovery = !resumesOverflowRecovery && isContextWindowCompactionError(error);
-			if (retainForOverflowRecovery) pendingOverflowPresentationBySession.set(sessionId, ctx);
 			throw error;
 		} finally {
-			if (!retainForOverflowRecovery) {
-				pendingOverflowPresentationBySession.delete(sessionId);
-				if (ctx.hasUI) safely(() => ctx.ui.setStatus("codex-compact", undefined));
+			if (!retainForOverflowRecovery && presentation) {
+				clearRemoteCompactionPresentation(sessionId, presentation);
 			}
 		}
 	};
@@ -247,10 +270,9 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		for (const controller of activePiCompactionControllerBySession.values()) controller.abort();
 		activePiCompactionControllerBySession.clear();
 		coordinator.clear();
-		for (const ctx of pendingOverflowPresentationBySession.values()) {
-			if (ctx.hasUI) safely(() => ctx.ui.setStatus("codex-compact", undefined));
+		for (const sessionId of [...remoteCompactionPresentationBySession.keys()]) {
+			clearRemoteCompactionPresentation(sessionId);
 		}
-		pendingOverflowPresentationBySession.clear();
 		activePiCompactionSessions.clear();
 		pendingPiCompactionBySession.clear();
 		basePayloadBySession.clear();
@@ -269,6 +291,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		const sessionId = ctx.sessionManager.getSessionId();
 		clearDeferredPiCompactionNotices(sessionId);
 		abortPiCompaction(sessionId);
+		clearRemoteCompactionPresentation(sessionId);
 		activePiCompactionSessions.delete(sessionId);
 		pendingPiCompactionBySession.delete(sessionId);
 		return coordinator.selectModel(event, ctx);
@@ -336,7 +359,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 				return payload;
 			} catch (error) {
 				if (ctx.signal?.aborted) {
-					clearPendingOverflowPresentation(ctx);
+					clearRemoteCompactionPresentation(sessionId);
 					return undefined;
 				}
 				if (recovery === undefined && isContextWindowCompactionError(error)) {
@@ -345,7 +368,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 				}
 				const recoveryAttempted = recovery !== undefined;
 				const code = compactionFailureClassification(error);
-				clearPendingOverflowPresentation(ctx);
+				clearRemoteCompactionPresentation(sessionId);
 				try {
 					ctx.abort();
 				} catch {}

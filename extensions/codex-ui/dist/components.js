@@ -1,6 +1,7 @@
 import { CustomEditor, } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, } from "@earendil-works/pi-tui";
-import { fitSegments, fitToWidth, formatContextLeft, formatHomePath, normalizeWidth, paintBackground, } from "./layout.js";
+import { fitToWidth, formatHomePath, normalizeWidth, paintBackground, } from "./layout.js";
+export { CodexFooter } from "./footer.js";
 export class CodexHeader {
     options;
     constructor(options) {
@@ -38,95 +39,6 @@ export class CodexHeader {
         ];
     }
     invalidate() { }
-}
-export class CodexFooter {
-    options;
-    statusCache = new Map();
-    cachedSnapshot;
-    constructor(options) {
-        this.options = options;
-    }
-    render(width) {
-        const safeWidth = normalizeWidth(width);
-        if (safeWidth === 0)
-            return [];
-        const theme = this.options.getTheme();
-        const modelId = this.options.getModelId() ?? "No model";
-        const thinking = this.options.getThinkingLevel();
-        const context = formatContextLeft(this.options.getContextUsage());
-        const rawStatuses = this.options.getExtensionStatuses();
-        const activeStatusKeys = new Set();
-        const statuses = [];
-        for (const [key, raw] of rawStatuses) {
-            activeStatusKeys.add(key);
-            let cached = this.statusCache.get(key);
-            if (!cached || cached.raw !== raw) {
-                cached = {
-                    raw,
-                    sanitized: stripTerminalSequences(raw).trim().replace(/^·\s*/u, ""),
-                };
-                this.statusCache.set(key, cached);
-            }
-            if (cached.sanitized.length > 0)
-                statuses.push(cached.sanitized);
-        }
-        for (const key of this.statusCache.keys()) {
-            if (!activeStatusKeys.has(key))
-                this.statusCache.delete(key);
-        }
-        const cached = this.cachedSnapshot;
-        if (cached?.width === safeWidth
-            && cached.theme === theme
-            && cached.modelId === modelId
-            && cached.thinking === thinking
-            && cached.context === context
-            && arraysEqual(cached.statuses, statuses)) {
-            return cached.lines;
-        }
-        const segments = [
-            {
-                text: theme.fg("warning", `${modelId} ${thinking}`),
-                priority: 90,
-            },
-            {
-                text: theme.fg("success", formatHomePath(this.options.cwd, this.options.home)),
-                priority: 40,
-            },
-        ];
-        if (context) {
-            segments.push({ text: theme.fg("warning", context), priority: 60 });
-        }
-        for (const status of statuses) {
-            segments.push({ text: theme.fg("dim", status), priority: 100 });
-        }
-        const leftPadding = safeWidth > 1 ? " " : "";
-        const contentWidth = safeWidth - visibleWidth(leftPadding);
-        const separator = theme.fg("dim", " · ");
-        const content = fitSegments(segments, contentWidth, separator);
-        const lines = [fitToWidth(`${leftPadding}${content}`, safeWidth)];
-        this.cachedSnapshot = {
-            width: safeWidth,
-            theme,
-            modelId,
-            thinking,
-            context,
-            statuses,
-            lines,
-        };
-        return lines;
-    }
-    invalidate() {
-        this.cachedSnapshot = undefined;
-    }
-}
-function arraysEqual(left, right) {
-    if (left.length !== right.length)
-        return false;
-    for (let index = 0; index < left.length; index += 1) {
-        if (left[index] !== right[index])
-            return false;
-    }
-    return true;
 }
 const PLACEHOLDER = "Ask Pi to do anything";
 const FULL_RESET = "\x1b[0m";
