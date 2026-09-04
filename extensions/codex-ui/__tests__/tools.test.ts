@@ -1453,12 +1453,15 @@ test("low-power bash call bounds completed commands and runs without a refresh t
     }) as never,
   );
   const initial = stripTerminalSequences(call.render(500).join("\n"));
+  const initialLines = initial.split("\n");
 
-  assert.match(initial, /^ ├─ • Bash running/u);
-  assert.match(initial, /0\.0s/u);
-  assert.match(initial, /30s limit/u);
-  assert.match(initial, /output …/u);
-  assert.equal(initial.split("\n").length, 1);
+  assert.equal(initialLines.length, 2);
+  assert.match(initialLines[0] ?? "", /^ ├─ • Bash running/u);
+  assert.doesNotMatch(initialLines[0] ?? "", /output …|0\.0s|30s limit|expand/u);
+  assert.equal(
+    initialLines[1],
+    "      output … · 0.0s · 30s limit · [app.tools.expand] expand",
+  );
   assert.equal(commandReads, 0);
   assert.equal(vi.getTimerCount(), 0);
 
@@ -1486,7 +1489,9 @@ test("low-power bash call bounds completed commands and runs without a refresh t
   assert.match(updatedText, /30s limit/u);
   assert.ok(!updatedText.includes("😀"));
   assert.ok(!updatedText.includes("NEVER-SHOW-THIS"));
-  assert.equal(updatedText.split("\n").length, 1);
+  assert.match(updatedText.split("\n")[0] ?? "", /\.\.\.$/u);
+  assert.equal(visibleWidth(updatedText.split("\n")[0] ?? ""), 110);
+  assert.equal(updatedText.split("\n").length, 2);
   assert.equal(commandReads, 1);
 
   vi.setSystemTime(new Date(2_000));
@@ -1508,6 +1513,7 @@ test("low-power bash call bounds completed commands and runs without a refresh t
   assert.match(completedText, /^ ├─ • Bash completed/u);
   assert.match(completedText, /2\.0s/u);
   assert.match(completedText, /30s limit/u);
+  assert.equal(completedText.split("\n").length, 2);
   assert.equal(commandReads, 1);
   assert.equal(vi.getTimerCount(), 0);
 });
@@ -1677,12 +1683,15 @@ test("bash renderer uses a summary-first timeline and reveals details only when 
 
   const runningLines = call.render(120);
   const runningSummary = stripTerminalSequences(runningLines.join("\n"));
-  assert.equal(runningLines.length, 1);
-  assert.match(runningSummary, /^ ├─ • Bash running/u);
-  assert.match(runningSummary, /printf 'hello\\n'/u);
-  assert.match(runningSummary, /1 line/u);
-  assert.match(runningSummary, /30s limit/u);
-  assert.match(runningSummary, /ctrl\+o expand/u);
+  const runningSummaryLines = runningSummary.split("\n");
+  assert.equal(runningLines.length, 2);
+  assert.match(runningSummaryLines[0] ?? "", /^ ├─ • Bash running/u);
+  assert.match(runningSummaryLines[0] ?? "", /printf 'hello\\n'/u);
+  assert.doesNotMatch(runningSummaryLines[0] ?? "", /\.\.\.$|1 line|30s limit|ctrl\+o/u);
+  assert.equal(
+    runningSummaryLines[1],
+    "      1 line · 0.0s · 30s limit · ctrl+o expand",
+  );
   assert.deepEqual(partial.render(120), []);
   assert.ok(runningLines.every((line) => !line.includes("\x1b[48;5;")));
 
@@ -1715,7 +1724,7 @@ test("bash renderer uses a summary-first timeline and reveals details only when 
   assert.equal(vi.getTimerCount(), 0);
 });
 
-test("bash summary reserves metadata before truncating a long command", () => {
+test("bash summary separates a long command from its metadata row", () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(0));
 
@@ -1758,14 +1767,26 @@ test("bash summary reserves metadata before truncating a long command", () => {
   );
 
   const lines = call.render(80);
-  const summary = stripTerminalSequences(lines.join("\n"));
-  assert.equal(lines.length, 1);
-  assert.match(summary, /2 lines shown/u);
-  assert.match(summary, /truncated/u);
-  assert.match(summary, /1\.3s/u);
-  assert.match(summary, /30s limit/u);
-  assert.match(summary, /ctrl\+o expand/u);
-  assert.ok(visibleWidth(lines[0] ?? "") <= 80);
+  const summaryLines = stripTerminalSequences(lines.join("\n")).split("\n");
+  const primary = summaryLines[0] ?? "";
+  assert.equal(lines.length, 2);
+  assert.match(primary, /^ ├─ • Bash completed +printf/u);
+  assert.match(primary, /\.\.\.$/u);
+  assert.doesNotMatch(primary, /2 lines|truncated|1\.3s|30s limit|ctrl\+o/u);
+  assert.equal(visibleWidth(primary), 72);
+  assert.equal(
+    summaryLines[1],
+    "      2 lines shown · truncated · 1.3s · 30s limit · ctrl+o expand",
+  );
+  assert.ok(lines.every((line) => visibleWidth(line) <= 80));
+
+  const widePrimary = stripTerminalSequences(call.render(160)[0] ?? "");
+  assert.match(widePrimary, /\.\.\.$/u);
+  assert.equal(visibleWidth(widePrimary), 110);
+
+  const narrowPrimary = stripTerminalSequences(call.render(64)[0] ?? "");
+  assert.match(narrowPrimary, /\.\.\.$/u);
+  assert.equal(visibleWidth(narrowPrimary), 64);
 });
 
 test("bash summary reports empty output without rendering a result body", () => {
@@ -1923,7 +1944,7 @@ test("bash duration ticks reuse cached summary output metrics", () => {
   const initial = call.render(80);
   const wrapsAfterInitialRender = wrapTextWithAnsiMock.mock.calls.length;
   assert.ok(wrapsAfterInitialRender > 0);
-  assert.equal(initial.length, 1);
+  assert.equal(initial.length, 2);
 
   vi.advanceTimersByTime(1250);
   const rebound = bash.renderCall(
@@ -1944,7 +1965,7 @@ test("bash duration ticks reuse cached summary output metrics", () => {
   assert.equal(rebound, call);
   assert.match(stripTerminalSequences(updated.join("\n")), /1\.3s/u);
   assert.equal(wrapTextWithAnsiMock.mock.calls.length, wrapsAfterInitialRender);
-  assert.equal(updated.length, 1);
+  assert.equal(updated.length, 2);
 });
 
 test("bash renderer shares one refresh timer across concurrent executions", () => {

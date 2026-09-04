@@ -51,6 +51,9 @@ const DIFF_INDENT = "    ";
 const BASH_TIMELINE_BRANCH = " ├─ ";
 const BASH_DETAIL_INDENT = "      ";
 const BASH_DETAIL_MIN_CONTENT_WIDTH = 4;
+const BASH_SUMMARY_PRIMARY_MAX_WIDTH = 110;
+const BASH_SUMMARY_MIN_GUTTER_WIDTH = 8;
+const BASH_SUMMARY_GUTTER_MIN_TERMINAL_WIDTH = 72;
 const ANSI_DEFAULT_FOREGROUND = "\x1b[39m";
 const ANSI_DIM = "\x1b[2m";
 const ANSI_INTENSITY_RESET = "\x1b[22m";
@@ -1137,13 +1140,13 @@ function renderLowPowerBashCall(
     order: 50,
   });
 
-  const lines = [renderBashTimelineSummary(
+  const lines = renderBashTimelineSummary(
     state.status ?? "pending",
     commandPreview,
     fields,
     theme,
     safeWidth,
-  )];
+  );
   if (state.expanded) {
     lines.push("", renderBashDetailLine(
       `${theme.fg("dim", "$ ")}${theme.fg("toolTitle", theme.bold(commandPreview))}`,
@@ -1192,13 +1195,13 @@ function renderBashCall(
     order: 50,
   });
 
-  const lines = [renderBashTimelineSummary(
+  const lines = renderBashTimelineSummary(
     state.status ?? "pending",
     getBashCommandPreview(args.command, state),
     fields,
     theme,
     safeWidth,
-  )];
+  );
   if (state.expanded) {
     lines.push("", ...renderBashCommand(args.command, state, theme, safeWidth));
   }
@@ -1211,35 +1214,64 @@ function renderBashTimelineSummary(
   fields: readonly BashSummaryField[],
   theme: Theme,
   width: number,
-): string {
+): string[] {
   const presentation = BASH_STATUS_PRESENTATION[status];
   const branch = width >= visibleWidth(`${BASH_TIMELINE_BRANCH}${presentation.glyph} Bash`)
     ? theme.fg("dim", BASH_TIMELINE_BRANCH)
     : "";
   const prefix = `${branch}${theme.fg(presentation.color, presentation.glyph)} ${theme.fg("toolTitle", theme.bold("Bash"))} ${theme.fg("muted", status)}`;
-  if (visibleWidth(prefix) >= width) return fitToWidth(prefix, width);
+  const primaryWidth = getBashSummaryPrimaryWidth(width);
+  const prefixWidth = visibleWidth(prefix);
+  const primary = prefixWidth >= primaryWidth
+    ? fitToWidth(prefix, primaryWidth)
+    : fitToWidth(
+      `${prefix} ${fitToWidth(
+        theme.fg("toolOutput", command),
+        Math.max(1, primaryWidth - prefixWidth - 1),
+        { ellipsis: "..." },
+      )}`,
+      primaryWidth,
+    );
+  const metadata = renderBashSummaryMetadata(fields, theme, width);
+  return metadata ? [primary, metadata] : [primary];
+}
 
-  const separator = " ";
+function getBashSummaryPrimaryWidth(width: number): number {
+  const gutterWidth = width >= BASH_SUMMARY_GUTTER_MIN_TERMINAL_WIDTH
+    ? BASH_SUMMARY_MIN_GUTTER_WIDTH
+    : 0;
+  return Math.max(1, Math.min(BASH_SUMMARY_PRIMARY_MAX_WIDTH, width - gutterWidth));
+}
+
+function renderBashSummaryMetadata(
+  fields: readonly BashSummaryField[],
+  theme: Theme,
+  width: number,
+): string {
+  if (fields.length === 0) return "";
+
+  const separator = theme.fg("dim", " · ");
   const separatorWidth = visibleWidth(separator);
+  const contentWidth = getBashDetailContentWidth(width);
+  const prioritized = [...fields].sort((left, right) => right.priority - left.priority);
   const selected: BashSummaryField[] = [];
-  let reservedWidth = visibleWidth(prefix) + separatorWidth + 1;
-  for (const field of [...fields].sort((left, right) => right.priority - left.priority)) {
-    const extraWidth = separatorWidth + visibleWidth(field.text);
-    if (reservedWidth + extraWidth <= width) {
+  let usedWidth = 0;
+
+  for (const field of prioritized) {
+    const extraWidth = (selected.length > 0 ? separatorWidth : 0) + visibleWidth(field.text);
+    if (usedWidth + extraWidth <= contentWidth) {
       selected.push(field);
-      reservedWidth += extraWidth;
+      usedWidth += extraWidth;
     }
   }
-  selected.sort((left, right) => left.order - right.order);
 
-  const fieldWidth = selected.reduce(
-    (total, field) => total + separatorWidth + visibleWidth(field.text),
-    0,
-  );
-  const commandWidth = Math.max(1, width - visibleWidth(prefix) - separatorWidth - fieldWidth);
-  const commandText = fitToWidth(theme.fg("toolOutput", command), commandWidth);
-  return fitToWidth(
-    [prefix, commandText, ...selected.map((field) => field.text)].join(separator),
+  if (selected.length === 0) {
+    return renderBashDetailLine(prioritized[0]?.text ?? "", width);
+  }
+
+  selected.sort((left, right) => left.order - right.order);
+  return renderBashDetailLine(
+    selected.map((field) => field.text).join(separator),
     width,
   );
 }

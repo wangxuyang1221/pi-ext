@@ -96,7 +96,7 @@ Codex encrypted compaction item.
 - 带 accent marker 的 Thinking/Reasoning 最新段落单行显示
 - 隐藏 streaming working row，并通过 terminal title 显示工作状态
 - `read`、`edit`、`write` 的紧凑 renderer
-- 以 Thinking marker 为主轴、使用固定 `├─ •` 分支前缀的 Bash timeline；默认单行摘要，按 `Ctrl+O` 展开详情
+- 以 Thinking marker 为主轴、使用固定 `├─ •` 分支前缀的 Bash timeline；摘要采用主副两行，按 `Ctrl+O` 展开详情
 
 Thinking/Reasoning 区域无论处于流式状态还是历史状态，都只渲染最新段落，并按当前可用宽度截断为一个终端行。行首圆点使用主题的 `mdCode`，正文继续使用 `thinkingText`；在 `codex-pi` 中分别对应 cyan 与 muted。完整 Thinking 内容仍保存在 Pi 会话数据中，`codex-ui` 仅改变显示结果。
 
@@ -138,7 +138,7 @@ pi-codex() {
 
 仓库不会自动修改 Shell 配置，也不提供一个假定 `pi install` 会加入 `PATH` 的 package bin。
 
-`read`、`edit`、`write`、`bash` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。`write` 只显示路径、行数和字节数，不伪造 old/new diff。Bash 使用 `renderShell: "self"`；摘要采用固定 `├─ •` 前缀，分支轴与 Thinking marker 对齐。折叠态只显示状态、命令、visual line 数、耗时和限制，不再铺满状态背景；展开后的命令、输出和截断信息缩进到 `Bash` 标题列。使用当前配置中的 `app.tools.expand` 快捷键可以展开工具详情，默认是 `Ctrl+O`。
+`read`、`edit`、`write`、`bash` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。`write` 只显示路径、行数和字节数，不伪造 old/new diff。Bash 使用 `renderShell: "self"`；摘要采用固定 `├─ •` 前缀，分支轴与 Thinking marker 对齐。折叠态使用主副两行：首行显示状态和命令，次行显示 visual line 数、耗时、限制与展开提示，不再铺满状态背景。首行最大为 110 cells；终端不少于 72 cells 时至少保留 8 cells 右侧留白，命令被裁剪时以三个 ASCII 句点 `...` 结束。展开后的命令、输出和截断信息缩进到 `Bash` 标题列。使用当前配置中的 `app.tools.expand` 快捷键可以展开工具详情，默认是 `Ctrl+O`。
 
 Footer 使用 ` ⋅ ` 分隔，并按 `model thinking ⋅ fast ⋅ cwd ⋅ git:branch ⋅ Context N% left ⋅ permissions` 排列。model 与 thinking 使用 Codex CLI 的 `#f6e2b7`，context 使用 `#f2b590`，Fast Mode 使用 `#c8a9ee`。终端变窄时会先缩短或移除 cwd 和 branch，再将 context 缩成 `N% left`；model、context 和 permissions 保留到最后。
 
