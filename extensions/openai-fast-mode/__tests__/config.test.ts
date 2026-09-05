@@ -32,7 +32,7 @@ afterEach(async () => {
 });
 
 describe("DEFAULT_CONFIG", () => {
-  it("starts disabled with exact OpenAI and OpenAI-Codex GPT-5.4/GPT-5.5/GPT-5.6 targets", () => {
+  it("starts disabled with exact OpenAI and OpenAI-Codex GPT-5.4/GPT-5.5/GPT-5.6/GPT-6 Astra targets", () => {
     expect(DEFAULT_CONFIG).toEqual({
       enabled: false,
       targets: [
@@ -42,6 +42,7 @@ describe("DEFAULT_CONFIG", () => {
         { provider: "openai", model: "gpt-5.6-sol", serviceTier: "priority" },
         { provider: "openai", model: "gpt-5.6-terra", serviceTier: "priority" },
         { provider: "openai", model: "gpt-5.6-luna", serviceTier: "priority" },
+        { provider: "openai", model: "gpt-6-astra", serviceTier: "priority" },
         { provider: "openai-codex", model: "gpt-5.4", serviceTier: "priority" },
         { provider: "openai-codex", model: "gpt-5.5", serviceTier: "priority" },
         { provider: "openai-codex", model: "gpt-5.6", serviceTier: "priority" },
@@ -58,6 +59,11 @@ describe("DEFAULT_CONFIG", () => {
         {
           provider: "openai-codex",
           model: "gpt-5.6-luna",
+          serviceTier: "priority",
+        },
+        {
+          provider: "openai-codex",
+          model: "gpt-6-astra",
           serviceTier: "priority",
         },
       ],

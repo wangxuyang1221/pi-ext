@@ -134,7 +134,12 @@ describe("piFastModeExtension registration", () => {
 });
 
 describe("piFastModeExtension runtime behavior", () => {
-  it("refreshes persisted targets on startup without changing enabled", async () => {
+  it.each([
+    { reason: "startup", enabled: true },
+    { reason: "startup", enabled: false },
+    { reason: "reload", enabled: true },
+    { reason: "reload", enabled: false },
+  ])("refreshes persisted targets on $reason while preserving enabled=$enabled", async ({ reason, enabled }) => {
     const root = await makeTempDir();
     const cwd = join(root, "project");
     const agentDir = join(root, "agent");
@@ -146,7 +151,7 @@ describe("piFastModeExtension runtime behavior", () => {
     await writeFile(
       configPath,
       JSON.stringify({
-        enabled: true,
+        enabled,
         targets: [
           { provider: "openai", model: "old-model", serviceTier: "flex" },
         ],
@@ -160,18 +165,23 @@ describe("piFastModeExtension runtime behavior", () => {
       agentDir,
     })(pi as any);
 
-    const ctx = makeCtx(cwd, { provider: "openai", id: "gpt-5.4" });
+    const ctx = makeCtx(cwd, { provider: "openai-codex", id: "gpt-6-astra" });
     await runHandler(
       handlers,
       "session_start",
-      { type: "session_start", reason: "startup" },
+      { type: "session_start", reason },
       ctx,
     );
 
     expect(JSON.parse(await readFile(configPath, "utf8"))).toEqual({
-      enabled: true,
+      enabled,
       targets: DEFAULT_CONFIG.targets,
     });
+    if (enabled) {
+      expectFastIndicatorShown(ctx);
+    } else {
+      expectFastIndicatorHidden(ctx);
+    }
   });
 
   it("--fast enables, persists, shows status, and mutates matching payloads", async () => {
@@ -356,6 +366,69 @@ describe("piFastModeExtension runtime behavior", () => {
     await expect(
       readFile(getUserConfigPath(agentDir), "utf8"),
     ).rejects.toThrow();
+  });
+
+  it.each(["openai", "openai-codex"])("keeps GPT-6 Astra status and request tier in sync on %s", async (provider) => {
+    const root = await makeTempDir();
+    const cwd = join(root, "project");
+    const agentDir = join(root, "agent");
+    await mkdir(cwd, { recursive: true });
+
+    const { pi, handlers, commands } = createFakePi(true);
+    createPiFastModeExtension({
+      extensionDir: join(root, "global", "pi-openai-fast-mode", "src"),
+      agentDir,
+    })(pi as any);
+
+    const model = { provider, id: "gpt-6-astra" };
+    const ctx = makeCtx(cwd, model);
+    const payload = { model: model.id, input: [], service_tier: "auto" };
+    const request = (context: TestContext = ctx) => runHandler(
+      handlers,
+      "before_provider_request",
+      { type: "before_provider_request", payload },
+      context,
+    );
+
+    await runHandler(
+      handlers,
+      "session_start",
+      { type: "session_start", reason: "startup" },
+      ctx,
+    );
+    expectFastIndicatorShown(ctx);
+    expect(await request()).toEqual({ ...payload, service_tier: "priority" });
+    expect(payload.service_tier).toBe("auto");
+
+    await commands.get("fast")!.handler("off", ctx);
+    expectFastIndicatorHidden(ctx);
+    expect(await request()).toBeUndefined();
+
+    await commands.get("fast")!.handler("on", ctx);
+    expectFastIndicatorShown(ctx);
+    expect(await request()).toEqual({ ...payload, service_tier: "priority" });
+
+    const unmatchedCtx = {
+      ...ctx,
+      model: { provider, id: "gpt-6-astra-unknown" },
+    };
+    await runHandler(
+      handlers,
+      "model_select",
+      { type: "model_select", model: unmatchedCtx.model },
+      unmatchedCtx,
+    );
+    expectFastIndicatorHidden(unmatchedCtx);
+    expect(await request(unmatchedCtx)).toBeUndefined();
+
+    await runHandler(
+      handlers,
+      "model_select",
+      { type: "model_select", model },
+      ctx,
+    );
+    expectFastIndicatorShown(ctx);
+    expect(await request()).toEqual({ ...payload, service_tier: "priority" });
   });
 
   it("model_select updates whether the status is visible", async () => {
