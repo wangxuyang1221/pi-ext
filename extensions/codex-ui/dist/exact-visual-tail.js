@@ -1,5 +1,15 @@
 import { visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
-import { fitToWidth } from "./layout.js";
+import { fitToWidth, normalizeWidth } from "./layout.js";
+export function countExactVisualLines(physicalLines, width, cache) {
+    const safeWidth = normalizeWidth(width);
+    if (safeWidth === 0)
+        return 0;
+    let total = 0;
+    for (const line of physicalLines) {
+        total += cache.count(`physical-line\0${safeWidth}\0${line}`, () => wrapTextWithAnsi(line.replace(/\t/gu, "   "), safeWidth).length);
+    }
+    return total;
+}
 export function getExactVisualLines(physicalLines, styleLine, width) {
     const visualLines = [];
     for (const physicalLine of physicalLines) {

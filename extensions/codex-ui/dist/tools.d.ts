@@ -1,4 +1,5 @@
 import { createBashToolDefinition, createEditToolDefinition, createReadToolDefinition, createWriteToolDefinition, type ExtensionAPI, type KeybindingsManager, type Theme } from "@earendil-works/pi-coding-agent";
+import { ToolRenderCache } from "./render-cache.js";
 export interface CodexToolFactories {
     read: typeof createReadToolDefinition;
     edit: typeof createEditToolDefinition;
@@ -8,6 +9,7 @@ export interface CodexToolFactories {
 export interface CodexToolRenderServices {
     getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
     isLowPowerEnabled?: () => boolean;
+    renderCache?: ToolRenderCache;
 }
 export interface DisplayDiffLine {
     kind: "context" | "removed" | "added" | "hunk";
@@ -18,6 +20,6 @@ export interface DisplayDiffLine {
 export declare function registerCodexTools(pi: ExtensionAPI, factories?: CodexToolFactories, services?: CodexToolRenderServices): void;
 export declare function parseDisplayDiff(diff: string): DisplayDiffLine[];
 export declare function parseUnifiedPatch(patch: string): DisplayDiffLine[];
-export declare function renderDisplayDiff(lines: readonly DisplayDiffLine[], theme: Theme, width: number, path?: string): string[];
+export declare function renderDisplayDiff(lines: readonly DisplayDiffLine[], theme: Theme, width: number, path?: string, highlightedLines?: readonly string[]): string[];
 export declare function getDisplayLineNumberWidth(lines: readonly DisplayDiffLine[]): number;
 //# sourceMappingURL=tools.d.ts.map

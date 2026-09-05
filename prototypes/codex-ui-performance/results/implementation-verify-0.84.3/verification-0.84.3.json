@@ -1,0 +1,47 @@
+{
+  "environment": {
+    "build": {
+      "baselineCommit": "23315d1b4dcd9572277a7415845bcfdec907831f",
+      "before": {
+        "bash-refresh-scheduler.ts": "3c8ee0c011d691d3eb994e35e9465643d518356fe01eb00c672a28a6788564d5",
+        "components.ts": "054923e982c5f1b2a0fff9fcc67aad55d43e154ce552b0c97e5dae3f17b8ac10",
+        "exact-visual-tail.ts": "23e629e8a34ff4efb5a7f1f8e000c7354ab9d47baf7d5155725e676285d8d406",
+        "footer.ts": "0b5ffd848dd0d9cdcc6d0b66a80109aa595b5b9d5d5cd37336521140cd83bc30",
+        "index.ts": "34ed09c37afecb2d16e29e5cfa0db6d00a65c419712ba05133d85a88c1ef3f4d",
+        "layout.ts": "d2899a347b223d8d2eb3cfacb0bce1b255e797d0e22bdb790c9548ccb5a4feba",
+        "responsive-lines.ts": "1f18cc8c0edf7c54d2dce12ce7eb15f5424b3679a8c19075f3ceba31a73de0ca",
+        "tools.ts": "3783f5902c05d46cdcc83ffef23ce824f74ce83497797b366ce1b47f5e157b5b"
+      },
+      "after": {
+        "bash-refresh-scheduler.ts": "3c8ee0c011d691d3eb994e35e9465643d518356fe01eb00c672a28a6788564d5",
+        "components.ts": "054923e982c5f1b2a0fff9fcc67aad55d43e154ce552b0c97e5dae3f17b8ac10",
+        "exact-visual-tail.ts": "b41f6d7ce2d370c15ae288945653ce9bf504e46663c2f32747ebc02f1c9b7c46",
+        "footer.ts": "0b5ffd848dd0d9cdcc6d0b66a80109aa595b5b9d5d5cd37336521140cd83bc30",
+        "index.ts": "34ed09c37afecb2d16e29e5cfa0db6d00a65c419712ba05133d85a88c1ef3f4d",
+        "layout.ts": "113ec7031eac95e397bea5c53100a1277c75e65cf3b201d69632099bf76d65be",
+        "render-cache.ts": "35f87a6165826d63dade2cfe0bf1c4bb2b14f13d09a47dd6e3ed6a582661b557",
+        "responsive-lines.ts": "1f18cc8c0edf7c54d2dce12ce7eb15f5424b3679a8c19075f3ceba31a73de0ca",
+        "tools.ts": "5f9e100f6e5ba8298638191ba39252a9d0c6491c74ee5eb0cafde2dfb9ac597f"
+      }
+    },
+    "upstream": {
+      "agent": {
+        "root": "/Users/wangxuyang/Code/t3code/pi-ext/node_modules/.pnpm/@earendil-works+pi-coding-agent@0.84.3_@modelcontextprotocol+sdk@1.29.0_zod@4.4.3__ws@8.21.3_zod@4.4.3/node_modules/@earendil-works/pi-coding-agent",
+        "version": "0.84.3",
+        "distSha256": "14162a3e9a358f969a10a55c9d77558c6e311a0e1ffa7a745d6cf49c738478f2"
+      },
+      "tui": {
+        "root": "/Users/wangxuyang/Code/t3code/pi-ext/node_modules/.pnpm/@earendil-works+pi-tui@0.84.3/node_modules/@earendil-works/pi-tui",
+        "version": "0.84.3",
+        "distSha256": "0e8b58be2008643cc7061a7c252575580e3c6b6582b99f379f564358e1b6d72e"
+      },
+      "ai": {
+        "root": "/Users/wangxuyang/Code/t3code/pi-ext/node_modules/.pnpm/@earendil-works+pi-ai@0.84.3_@modelcontextprotocol+sdk@1.29.0_zod@4.4.3__ws@8.21.3_zod@4.4.3/node_modules/@earendil-works/pi-ai",
+        "version": "0.84.3",
+        "distSha256": "827172280f455d508d84d44d2467bf35d144cb57feccd8b8f6ef51a0b9f73de5"
+      }
+    }
+  },
+  "agentVersion": "0.84.3",
+  "passedFrameAndFitComparisons": 1854
+}

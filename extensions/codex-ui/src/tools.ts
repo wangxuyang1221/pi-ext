@@ -25,8 +25,8 @@ import {
 
 import { BashRefreshScheduler } from "./bash-refresh-scheduler.js";
 import {
+  countExactVisualLines,
   getExactFittedVisualLines,
-  getExactVisualTail,
 } from "./exact-visual-tail.js";
 import {
   fitToWidth,
@@ -35,6 +35,7 @@ import {
   paintBackground,
 } from "./layout.js";
 import { ResponsiveLinesComponent } from "./responsive-lines.js";
+import { ToolRenderCache, type RenderCacheScope } from "./render-cache.js";
 
 const COLLAPSED_DIFF_LINES = 12;
 const EXPANDED_READ_LINES = 40;
@@ -78,6 +79,7 @@ export interface CodexToolFactories {
 export interface CodexToolRenderServices {
   getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
   isLowPowerEnabled?: () => boolean;
+  renderCache?: ToolRenderCache;
 }
 
 export interface DisplayDiffLine {
@@ -107,19 +109,9 @@ interface CodexWriteState {
   metrics?: WriteMetrics;
 }
 
-interface EditResultLayout {
-  source: object;
-  width: number;
-  isPartial: boolean;
-  isError: boolean;
-  path: string;
-  theme: Theme;
-  themeFingerprint: string;
-  lines: string[];
-}
-
 interface CodexEditState {
   renderMode?: CodexToolRenderMode;
+  cache?: RenderCacheScope;
   path?: string;
   initialTitle?: string;
   settledTitle?: string;
@@ -131,9 +123,6 @@ interface CodexEditState {
   preparedStats?: { added: number; removed: number };
   lowPowerPreparedDetails?: EditToolDetails;
   lowPowerPreview?: string[];
-  layoutSource?: object;
-  collapsedLayouts?: EditResultLayout[];
-  expandedLayout?: EditResultLayout;
 }
 
 type CodexBashStatus = "pending" | "running" | "completed" | "failed";
@@ -149,28 +138,14 @@ interface LowPowerPreparedBashResult {
   warnings: string[];
 }
 
-interface BashCommandGeometry {
-  width: number;
-  lines: string[];
-}
-
 interface BashResultLayout {
-  prepared: PreparedBashResult;
-  width: number;
-  theme: Theme;
-  themeFingerprint: string;
   lines: string[];
   visualLineCount: number;
 }
 
-interface BashVisualCountLayout {
-  prepared: PreparedBashResult;
-  width: number;
-  count: number;
-}
-
 interface CodexBashState {
   renderMode?: CodexToolRenderMode;
+  cache?: RenderCacheScope;
   startedAt?: number;
   endedAt?: number;
   status?: CodexBashStatus;
@@ -184,17 +159,14 @@ interface CodexBashState {
   expanded?: boolean;
   commandPreviewSource?: string;
   commandPreview?: string;
-  commandSource?: string;
-  commandTheme?: Theme;
-  commandThemeFingerprint?: string;
-  commandGeometry?: BashCommandGeometry[];
   preparedContent?: Array<{ type: string; text?: string }>;
   preparedDetails?: BashToolDetails;
   preparedIsPartial?: boolean;
+  outputContent?: Array<{ type: string; text?: string }>;
+  extractedOutput?: string;
+  outputText?: string;
+  outputLines?: string[];
   preparedResult?: PreparedBashResult;
-  visualCountLayouts?: BashVisualCountLayout[];
-  collapsedResultLayouts?: BashResultLayout[];
-  expandedResultLayout?: BashResultLayout;
 }
 
 const DEFAULT_FACTORIES: CodexToolFactories = {
@@ -214,15 +186,19 @@ export function registerCodexTools(
   const getWriteDefinition = createDefinitionCache(factories.write);
   const getBashDefinition = createDefinitionCache(factories.bash);
   const bashRefreshScheduler = new BashRefreshScheduler(BASH_DURATION_REFRESH_MS);
+  const renderCache = services.renderCache ?? new ToolRenderCache();
 
   pi.on("tool_execution_end", (event) => {
     if (event.toolName === "bash") {
       bashRefreshScheduler.untrack(event.toolCallId);
     }
   });
-  pi.on("session_shutdown", () => {
+  const resetRendering = () => {
     bashRefreshScheduler.dispose();
-  });
+    renderCache.clear();
+  };
+  pi.on("session_start", resetRendering);
+  pi.on("session_shutdown", resetRendering);
 
   const baseRead = getReadDefinition(process.cwd());
   const readTool: typeof baseRead = {
@@ -341,6 +317,7 @@ export function registerCodexTools(
         ), cacheKey);
       }
 
+      state.cache ??= renderCache.scope();
       const preparedDiff = !options.isPartial
         && !context.isError
         && details
@@ -397,10 +374,15 @@ export function registerCodexTools(
         ], `low-power\0write\0call\0${getLowPowerThemeFingerprint(theme)}\0${path}`);
       }
 
-      const metrics = getWriteMetrics(state, args.content, context.argsComplete);
-      const suffix = theme.fg("dim", `(${formatLineCount(metrics.lineCount)})`);
+      const getTitle = () => {
+        const metrics = getWriteMetrics(state, args.content, typeof args.content !== "string" && context.argsComplete);
+        const suffix = theme.fg("dim", `(${formatLineCount(metrics.lineCount)})`);
+        return formatToolTitle("Write", path, theme, suffix);
+      };
+      // Keep malformed arguments inside the host's renderCall error boundary.
+      const eagerTitle = typeof args.content === "string" ? undefined : getTitle();
       return updateComponent(context.lastComponent, (width) => [
-        fitToWidth(formatToolTitle("Write", path, theme, suffix), width),
+        fitToWidth(eagerTitle ?? getTitle(), width),
       ]);
     },
     renderResult(result, options, theme, context) {
@@ -418,14 +400,16 @@ export function registerCodexTools(
         ), `low-power\0write\0result\0${getLowPowerThemeFingerprint(theme)}\0${status}\0${error ?? ""}`);
       }
 
-      const metrics = getWriteMetrics(
+      const isText = typeof context.args.content === "string";
+      const getMetrics = () => getWriteMetrics(
         state,
         context.args.content,
-        context.argsComplete || (!options.isPartial && !context.isError),
+        (!isText && context.argsComplete) || (!options.isPartial && !context.isError),
       );
+      const eagerMetrics = isText ? undefined : getMetrics();
       return updateComponent(context.lastComponent, (width) => renderWriteResult(
         result,
-        metrics,
+        isText ? getMetrics() : eagerMetrics!,
         options.isPartial,
         theme,
         context.isError,
@@ -445,7 +429,8 @@ export function registerCodexTools(
     renderCall(args, theme, context) {
       const state = context.state as unknown as CodexBashState;
       const lowPower = getToolRenderMode(state, services) === "low-power";
-      updateBashLifecycle(state, context, bashRefreshScheduler, !lowPower);
+      state.cache ??= renderCache.scope();
+      updateBashLifecycle(state, context, state.cache.active ? bashRefreshScheduler : undefined, !lowPower);
 
       const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
       state.callComponent = component;
@@ -513,6 +498,7 @@ export function registerCodexTools(
         );
       }
 
+      state.cache ??= renderCache.scope();
       const previousPrepared = state.preparedResult;
       const previousExpanded = state.expanded;
       const prepared = getPreparedBashResult(state, result, options.isPartial);
@@ -603,6 +589,7 @@ export function renderDisplayDiff(
   theme: Theme,
   width: number,
   path = "",
+  highlightedLines?: readonly string[],
 ): string[] {
   const safeWidth = normalizeWidth(width);
   if (safeWidth === 0) return [];
@@ -611,7 +598,7 @@ export function renderDisplayDiff(
   const language = getLanguageFromPath(path);
   const codeForeground = theme.getFgAnsi("toolDiffContext");
 
-  return lines.map((line) => {
+  return lines.map((line, index) => {
     if (line.kind === "hunk") {
       return fitToWidth(`${DIFF_INDENT}${ANSI_DIM}⋮${ANSI_INTENSITY_RESET}`, safeWidth);
     }
@@ -625,7 +612,7 @@ export function renderDisplayDiff(
       : line.kind === "removed"
         ? namedRed("-")
         : " ";
-    const highlighted = line.highlightedText ?? (language
+    const highlighted = highlightedLines?.[index] ?? line.highlightedText ?? (language
       ? (highlightCode(line.text, language)[0] ?? line.text)
       : line.text);
     const codeWithDefault = applyCodeForeground(highlighted, codeForeground);
@@ -817,6 +804,13 @@ function getEditResultThemeFingerprint(theme: Theme): string {
   ].join("\0");
 }
 
+function getEditSyntaxFingerprint(theme: Theme): string {
+  // The host passes the live theme proxy also consumed by highlightCode.
+  return (["syntaxComment", "syntaxKeyword", "syntaxFunction", "syntaxVariable", "syntaxString",
+    "syntaxNumber", "syntaxType", "syntaxOperator", "syntaxPunctuation", "mdCodeBlock"] as const)
+    .map(color => theme.fg(color, "x")).join("\0");
+}
+
 function getEditResultLayout(
   state: CodexEditState,
   result: { content: Array<{ type: string; text?: string }> },
@@ -827,80 +821,11 @@ function getEditResultLayout(
   isError: boolean,
   width: number,
 ): string[] {
-  const source = diffLines ?? result.content;
-  const themeFingerprint = getEditResultThemeFingerprint(theme);
-  if (state.layoutSource !== source) {
-    state.layoutSource = source;
-    state.collapsedLayouts = [];
-    state.expandedLayout = undefined;
-  }
-
-  if (options.expanded) {
-    const cached = state.expandedLayout;
-    if (
-      cached?.source === source
-      && cached.width === width
-      && cached.isPartial === options.isPartial
-      && cached.isError === isError
-      && cached.path === path
-      && cached.theme === theme
-      && cached.themeFingerprint === themeFingerprint
-    ) {
-      return cached.lines;
-    }
-
-    const lines = renderEditResult(result, diffLines, options, path, theme, isError, width);
-    state.expandedLayout = {
-      source,
-      width,
-      isPartial: options.isPartial,
-      isError,
-      path,
-      theme,
-      themeFingerprint,
-      lines,
-    };
-    return lines;
-  }
-
-  if (state.expandedLayout && diffLines) {
-    for (let index = COLLAPSED_DIFF_LINES; index < diffLines.length; index += 1) {
-      diffLines[index]!.highlightedText = undefined;
-    }
-  }
-  state.expandedLayout = undefined;
-  const layouts = state.collapsedLayouts ??= [];
-  const cachedIndex = layouts.findIndex((entry) => (
-    entry.source === source
-    && entry.width === width
-    && entry.isPartial === options.isPartial
-    && entry.isError === isError
-    && entry.path === path
-    && entry.theme === theme
-    && entry.themeFingerprint === themeFingerprint
-  ));
-  const cached = layouts[cachedIndex];
-  if (cached) {
-    if (cachedIndex !== layouts.length - 1) {
-      layouts.splice(cachedIndex, 1);
-      layouts.push(cached);
-    }
-    return cached.lines;
-  }
-
-  const lines = renderEditResult(result, diffLines, options, path, theme, isError, width);
-  layouts.push({
-    source,
-    width,
-    isPartial: options.isPartial,
-    isError,
-    path,
-    theme,
-    themeFingerprint,
-    lines,
-  });
-  if (layouts.length > 2) layouts.shift();
-  return lines;
+  const cache = state.cache!;
+  const syntaxFingerprint = getEditSyntaxFingerprint(theme);
+  const key = ["edit-layout", cache.identity(diffLines ?? result.content), width, options.expanded,
+    options.isPartial, isError, path, cache.identity(theme), getEditResultThemeFingerprint(theme), syntaxFingerprint].join("\0");
+  return cache.lines(key, () => renderEditResult(result, diffLines, options, path, theme, isError, width, cache, syntaxFingerprint));
 }
 
 function getLowPowerEditPreview(
@@ -951,6 +876,8 @@ function renderEditResult(
   theme: Theme,
   isError: boolean,
   width: number,
+  cache: RenderCacheScope,
+  syntaxFingerprint: string,
 ): string[] {
   if (options.isPartial) {
     return [fitToWidth(theme.fg("warning", "  … Editing"), width)];
@@ -965,8 +892,12 @@ function renderEditResult(
 
   const maximum = options.expanded ? diffLines.length : COLLAPSED_DIFF_LINES;
   const visible = diffLines.slice(0, maximum);
-  prepareDiffHighlights(visible, path);
-  const lines = renderDisplayDiff(visible, theme, width, path);
+  const language = getLanguageFromPath(path);
+  const highlighted = cache.prefix(["edit-syntax", cache.identity(diffLines), path, syntaxFingerprint].join("\0"), visible.length, (index) => {
+    const line = visible[index]!;
+    return line.kind !== "hunk" && language ? (highlightCode(line.text, language)[0] ?? line.text) : line.text;
+  });
+  const lines = renderDisplayDiff(visible, theme, width, path, highlighted);
   const remaining = diffLines.length - visible.length;
   if (remaining > 0) {
     lines.push("", renderDiffTruncationFooter(remaining, width));
@@ -1027,7 +958,7 @@ function updateBashLifecycle(
     isError: boolean;
     invalidate(): void;
   },
-  scheduler: BashRefreshScheduler,
+  scheduler: BashRefreshScheduler | undefined,
   trackRefresh = true,
 ): void {
   const nextStatus: CodexBashStatus = context.isError
@@ -1044,9 +975,9 @@ function updateBashLifecycle(
       state.endedAt = undefined;
     }
     if (trackRefresh && state.status !== "running") {
-      scheduler.track(context.toolCallId, context.invalidate);
+      scheduler?.track(context.toolCallId, context.invalidate);
     } else if (!trackRefresh) {
-      scheduler.untrack(context.toolCallId);
+      scheduler?.untrack(context.toolCallId);
     }
   } else {
     if (
@@ -1056,7 +987,7 @@ function updateBashLifecycle(
     ) {
       state.endedAt = Date.now();
     }
-    scheduler.untrack(context.toolCallId);
+    scheduler?.untrack(context.toolCallId);
   }
 
   state.status = nextStatus;
@@ -1166,26 +1097,9 @@ function renderBashCall(
   const safeWidth = normalizeWidth(width);
   if (safeWidth === 0) return [];
 
-  const outputLineCount = getBashVisualLineCount(state, theme, safeWidth);
-  const fields: BashSummaryField[] = [];
-  if (state.preparedResult) {
-    const shown = state.preparedResult.truncated ? " shown" : "";
-    fields.push({
-      text: theme.fg("dim", `${outputLineCount} ${outputLineCount === 1 ? "line" : "lines"}${shown}`),
-      priority: 90,
-      order: 10,
-    });
-  }
+  const fields = state.expanded ? [] : getBashDynamicFields(state, theme, safeWidth);
   if (state.preparedResult?.truncated) {
     fields.push({ text: theme.fg("warning", "truncated"), priority: 95, order: 20 });
-  }
-  if (state.startedAt !== undefined) {
-    const endTime = state.endedAt ?? Date.now();
-    fields.push({
-      text: theme.fg("dim", formatDuration(Math.max(0, endTime - state.startedAt))),
-      priority: 80,
-      order: 30,
-    });
   }
   const timeout = getBashTimeoutLabel(args.timeout);
   if (timeout) fields.push({ text: theme.fg("dim", timeout), priority: 70, order: 40 });
@@ -1204,8 +1118,31 @@ function renderBashCall(
   );
   if (state.expanded) {
     lines.push("", ...renderBashCommand(args.command, state, theme, safeWidth));
+    if (!state.preparedResult) lines.push(...renderBashLiveFooter(state, theme, safeWidth));
   }
   return lines;
+}
+
+function getBashDynamicFields(state: CodexBashState, theme: Theme, width: number, visualLineCount?: number): BashSummaryField[] {
+  const fields: BashSummaryField[] = [];
+  if (state.preparedResult) {
+    const count = visualLineCount ?? getBashVisualLineCount(state, theme, width);
+    const shown = state.preparedResult.truncated ? " shown" : "";
+    fields.push({ text: theme.fg("dim", `${formatLineCount(count)}${shown}`), priority: 90, order: 10 });
+  }
+  if (state.startedAt !== undefined) {
+    fields.push({
+      text: theme.fg("dim", formatDuration(Math.max(0, (state.endedAt ?? Date.now()) - state.startedAt))),
+      priority: 80,
+      order: 30,
+    });
+  }
+  return fields;
+}
+
+function renderBashLiveFooter(state: CodexBashState, theme: Theme, width: number, visualLineCount?: number): string[] {
+  const metadata = renderBashSummaryMetadata(getBashDynamicFields(state, theme, width, visualLineCount), theme, width);
+  return metadata ? ["", metadata] : [];
 }
 
 function renderBashTimelineSummary(
@@ -1296,10 +1233,13 @@ function getBashCommandPreview(command: string, state: CodexBashState): string {
     return state.commandPreview;
   }
 
-  const preview = sanitizeBashDisplayText(stripTerminalSequences(source))
-    .replace(/\t/gu, "   ")
-    .replace(/[\r\n]+/gu, " ")
-    .trim() || "…";
+  // Keep one extra character so the existing summary truncation still emits its ellipsis.
+  const preview = (/^[\x20-\x7e]*$/u.test(source)
+    ? source.trim().slice(0, BASH_SUMMARY_PRIMARY_MAX_WIDTH + 1)
+    : sanitizeBashDisplayText(stripTerminalSequences(source))
+      .replace(/\t/gu, "   ")
+      .replace(/[\r\n]+/gu, " ")
+      .trim()) || "…";
   state.commandPreviewSource = source;
   state.commandPreview = preview;
   return preview;
@@ -1311,31 +1251,12 @@ function getBashVisualLineCount(state: CodexBashState, theme: Theme, width: numb
   if (state.expanded) {
     return getBashResultLayoutEntry(state, prepared, true, theme, width).visualLineCount;
   }
-  if (prepared.outputLines.length === 0) return 0;
-
-  const layouts = state.visualCountLayouts ??= [];
-  const cachedIndex = layouts.findIndex((entry) => (
-    entry.prepared === prepared && entry.width === width
-  ));
-  const cached = layouts[cachedIndex];
-  if (cached) {
-    if (cachedIndex !== layouts.length - 1) {
-      layouts.splice(cachedIndex, 1);
-      layouts.push(cached);
-    }
-    return cached.count;
-  }
-
-  const preview = getExactVisualTail(
-    prepared.outputLines,
-    (line) => line,
-    getBashDetailContentWidth(width),
-    1,
-  );
-  const count = preview.visualLines.length + preview.skippedCount;
-  layouts.push({ prepared, width, count });
-  if (layouts.length > 2) layouts.shift();
-  return count;
+  const source = prepared.outputLines;
+  if (source.length === 0) return 0;
+  const cache = state.cache!;
+  const detailWidth = getBashDetailContentWidth(width);
+  return cache.count(`bash-count\0${cache.identity(source)}\0${detailWidth}`,
+    () => countExactVisualLines(source, detailWidth, cache));
 }
 
 function renderBashCommand(
@@ -1345,22 +1266,9 @@ function renderBashCommand(
   width: number,
 ): string[] {
   const source = typeof command === "string" ? command : "";
-  const themeFingerprint = getBashCommandThemeFingerprint(theme);
-  if (
-    state.commandSource !== source
-    || state.commandTheme !== theme
-    || state.commandThemeFingerprint !== themeFingerprint
-  ) {
-    state.commandSource = source;
-    state.commandTheme = theme;
-    state.commandThemeFingerprint = themeFingerprint;
-    state.commandGeometry = [];
-  }
-
-  const geometries = state.commandGeometry ??= [];
-  let geometryIndex = geometries.findIndex((entry) => entry.width === width);
-  let geometry = geometries[geometryIndex];
-  if (!geometry) {
+  const cache = state.cache!;
+  const key = ["bash-command", source, width, cache.identity(theme), getBashCommandThemeFingerprint(theme)].join("\0");
+  return cache.lines(key, () => {
     const displayCommand = sanitizeBashDisplayText(stripTerminalSequences(source)) || "…";
     const indent = getBashDetailIndent(width);
     const prefix = theme.fg("dim", "$ ");
@@ -1370,20 +1278,10 @@ function renderBashCommand(
       theme.fg("toolTitle", theme.bold(displayCommand)),
       contentWidth,
     );
-    geometry = {
-      width,
-      lines: (commandLines.length > 0 ? commandLines : [""]).map((line, index) => (
-        fitToWidth(`${indent}${index === 0 ? prefix : continuation}${line}`, width)
-      )),
-    };
-    geometries.push(geometry);
-    if (geometries.length > 2) geometries.shift();
-  } else if (geometryIndex !== geometries.length - 1) {
-    geometries.splice(geometryIndex, 1);
-    geometries.push(geometry);
-  }
-
-  return geometry.lines;
+    return (commandLines.length > 0 ? commandLines : [""]).map((line, index) => (
+      fitToWidth(`${indent}${index === 0 ? prefix : continuation}${line}`, width)
+    ));
+  });
 }
 
 function getBashCommandThemeFingerprint(theme: Theme): string {
@@ -1547,37 +1445,43 @@ function getPreparedBashResult(
     return state.preparedResult;
   }
 
-  const prepared = prepareBashResult(result, isPartial);
+  const prepared = prepareBashResult(state, result, isPartial);
   state.preparedContent = result.content;
   state.preparedDetails = result.details;
   state.preparedIsPartial = isPartial;
   state.preparedResult = prepared;
-  state.visualCountLayouts = [];
-  state.collapsedResultLayouts = [];
-  state.expandedResultLayout = undefined;
   return prepared;
 }
 
 function prepareBashResult(
+  state: CodexBashState,
   result: { content: Array<{ type: string; text?: string }>; details?: BashToolDetails },
   isPartial: boolean,
 ): PreparedBashResult {
-  const extracted = extractBashOutput(result.content).trim();
-  const output = removeBashExecutionFooter(extracted, result.details, isPartial);
+  let outputLines: string[] | undefined;
   return {
-    outputLines: output ? output.split("\n") : [],
+    get outputLines() {
+      if (outputLines === undefined) {
+        if (state.outputContent !== result.content) {
+          state.extractedOutput = extractBashOutput(result.content).trim();
+          state.outputContent = result.content;
+        }
+        const output = removeBashExecutionFooter(state.extractedOutput ?? "", result.details, isPartial);
+        if (state.outputText !== output || state.outputLines === undefined) {
+          state.outputText = output;
+          state.outputLines = output ? output.split("\n") : [];
+        }
+        outputLines = state.outputLines;
+      }
+      return outputLines;
+    },
     warning: formatBashTruncationWarning(result.details),
     truncated: result.details?.truncation?.truncated === true,
   };
 }
 
 function getBashResultThemeFingerprint(theme: Theme): string {
-  return [
-    theme.fg("toolOutput", "x"),
-    theme.fg("warning", "x"),
-    theme.fg("dim", "x"),
-    theme.fg("muted", "x"),
-  ].join("\0");
+  return theme.fg("toolOutput", "x");
 }
 
 function getBashResultLayout(
@@ -1587,7 +1491,10 @@ function getBashResultLayout(
   theme: Theme,
   width: number,
 ): string[] {
-  return getBashResultLayoutEntry(state, prepared, options.expanded, theme, width).lines;
+  if (!options.expanded) return [];
+  const layout = getBashResultLayoutEntry(state, prepared, true, theme, width);
+  return [...layout.lines, ...renderBashWarning(prepared.warning, theme, width),
+    ...renderBashLiveFooter(state, theme, width, layout.visualLineCount)];
 }
 
 function getBashResultLayoutEntry(
@@ -1597,58 +1504,12 @@ function getBashResultLayoutEntry(
   theme: Theme,
   width: number,
 ): BashResultLayout {
-  const themeFingerprint = getBashResultThemeFingerprint(theme);
-  if (expanded) {
-    const cached = state.expandedResultLayout;
-    if (
-      cached?.prepared === prepared
-      && cached.width === width
-      && cached.theme === theme
-      && cached.themeFingerprint === themeFingerprint
-    ) {
-      return cached;
-    }
-
-    const layout = layoutBashResult(prepared, theme, width);
-    const entry = {
-      prepared,
-      width,
-      theme,
-      themeFingerprint,
-      ...layout,
-    };
-    state.expandedResultLayout = entry;
-    return entry;
-  }
-
-  state.expandedResultLayout = undefined;
-  const layouts = state.collapsedResultLayouts ??= [];
-  const cachedIndex = layouts.findIndex((entry) => (
-    entry.prepared === prepared
-    && entry.width === width
-    && entry.theme === theme
-    && entry.themeFingerprint === themeFingerprint
-  ));
-  const cached = layouts[cachedIndex];
-  if (cached) {
-    if (cachedIndex !== layouts.length - 1) {
-      layouts.splice(cachedIndex, 1);
-      layouts.push(cached);
-    }
-    return cached;
-  }
-
-  const entry = {
-    prepared,
-    width,
-    theme,
-    themeFingerprint,
-    lines: [],
-    visualLineCount: 0,
-  };
-  layouts.push(entry);
-  if (layouts.length > 2) layouts.shift();
-  return entry;
+  if (!expanded) return { lines: [], visualLineCount: 0 };
+  const cache = state.cache!;
+  const key = ["bash-output", cache.identity(prepared.outputLines), width,
+    cache.identity(theme), getBashResultThemeFingerprint(theme)].join("\0");
+  const lines = cache.lines(key, () => layoutBashResult(prepared, theme, width).lines);
+  return { lines, visualLineCount: Math.max(0, lines.length - 1) };
 }
 
 function layoutBashResult(
@@ -1665,20 +1526,16 @@ function layoutBashResult(
     )
     : [];
   const lines = visualLines.length > 0
-    ? ["", ...visualLines.map((line) => renderBashDetailLine(line, width))]
+    ? ["", ...visualLines.map((line) => `${getBashDetailIndent(width)}${line}`)]
     : [];
 
-  if (prepared.warning) {
-    lines.push("");
-    for (const warningLine of wrapTextWithAnsi(
-      theme.fg("warning", `[${prepared.warning}]`),
-      detailWidth,
-    )) {
-      lines.push(renderBashDetailLine(warningLine, width));
-    }
-  }
-
   return { lines, visualLineCount: visualLines.length };
+}
+
+function renderBashWarning(warning: string, theme: Theme, width: number): string[] {
+  if (!warning) return [];
+  return ["", ...wrapTextWithAnsi(theme.fg("warning", `[${warning}]`), getBashDetailContentWidth(width))
+    .map(line => renderBashDetailLine(line, width))];
 }
 
 function formatExpandHint(
@@ -1802,20 +1659,7 @@ function getPreparedEditDiff(
   state.preparedTheme = theme;
   state.preparedDiff = prepared;
   state.preparedStats = countDiffStats(prepared);
-  state.layoutSource = undefined;
-  state.collapsedLayouts = [];
-  state.expandedLayout = undefined;
   return prepared;
-}
-
-function prepareDiffHighlights(lines: readonly DisplayDiffLine[], path: string): void {
-  const language = getLanguageFromPath(path);
-  if (!language) return;
-
-  for (const line of lines) {
-    if (line.kind === "hunk" || line.highlightedText !== undefined) continue;
-    line.highlightedText = highlightCode(line.text, language)[0] ?? line.text;
-  }
 }
 
 function namedGreen(text: string): string {
@@ -1925,8 +1769,16 @@ function countLines(content: string): number {
   if (content.length === 0) return 0;
 
   let lineCount = 1;
-  for (let index = 0; index < content.length; index += 1) {
-    if (content.charCodeAt(index) === 0x0a) lineCount += 1;
+  if (typeof content === "string") {
+    for (let index = content.indexOf("\n"); index !== -1; index = content.indexOf("\n", index + 1)) {
+      lineCount += 1;
+    }
+  } else {
+    // Preserve the legacy malformed-argument behavior before host fallback.
+    const legacy = content as string;
+    for (let index = 0; index < legacy.length; index += 1) {
+      if (legacy.charCodeAt(index) === 0x0a) lineCount += 1;
+    }
   }
   return lineCount;
 }

@@ -3,7 +3,8 @@ coverage/
 .tmp/
 handoff/
 .scratch/
-prototypes/
+prototypes/*
+!prototypes/codex-ui-performance/
 DECISIONS.md
 *.tgz
 .DS_Store

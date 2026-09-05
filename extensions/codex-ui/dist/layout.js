@@ -10,10 +10,7 @@ export function fitToWidth(text, width, options = {}) {
     const safeWidth = normalizeWidth(width);
     if (safeWidth === 0)
         return "";
-    const fitted = truncateToWidth(text, safeWidth, options.ellipsis ?? "");
-    if (!options.pad)
-        return fitted;
-    return `${fitted}${" ".repeat(Math.max(0, safeWidth - visibleWidth(fitted)))}`;
+    return truncateToWidth(text, safeWidth, options.ellipsis ?? "", options.pad ?? false);
 }
 export function paintBackground(line, width, backgroundAnsi, modifierAfterReset = "") {
     const safeWidth = normalizeWidth(width);

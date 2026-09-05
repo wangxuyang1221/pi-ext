@@ -1,0 +1,17 @@
+{
+  "name": "codex-ui-performance-research",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test infrastructure.test.mjs",
+    "bench": "node --expose-gc run.mjs",
+    "verify": "node run.mjs --verify",
+    "memory": "node --expose-gc run.mjs --memory",
+    "smoke": "node cli-smoke.mjs"
+  },
+  "dependencies": {
+    "@xterm/headless": "5.5.0"
+  }
+}

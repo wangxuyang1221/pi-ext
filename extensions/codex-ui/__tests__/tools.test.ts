@@ -30,8 +30,7 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
   return {
     ...actual,
     highlightCode(...args: Parameters<typeof actual.highlightCode>) {
-      highlightCodeMock(...args);
-      return actual.highlightCode(...args);
+      return highlightCodeMock(...args) ?? actual.highlightCode(...args);
     },
     keyHint: keyHintMock,
   };
@@ -62,6 +61,7 @@ import {
 } from "../src/tools.js";
 import { getExactFittedVisualLines } from "../src/exact-visual-tail.js";
 import { fitToWidth } from "../src/layout.js";
+import { ToolRenderCache } from "../src/render-cache.js";
 
 function createTheme(codeOffset = 0): Theme {
   const getBgCode = (name: string) => (name === "toolErrorBg"
@@ -129,6 +129,7 @@ function expectedBashResultLines(
   output: string,
   width: number,
   warning = "",
+  truncated = false,
 ): string[] {
   const sanitized = legacySanitizeBash(stripTerminalSequences(output)).replace(/\r/gu, "").trim();
   const indent = width >= 10 ? "      " : "";
@@ -151,6 +152,8 @@ function expectedBashResultLines(
         .map((line) => fitToWidth(`${indent}${line}`, width)),
     );
   }
+  const count = visualLines.length;
+  lines.push("", fitToWidth(`${indent}${theme.fg("dim", `${count} ${count === 1 ? "line" : "lines"}${truncated ? " shown" : ""}`)}`, width));
   return lines;
 }
 
@@ -980,9 +983,39 @@ test("edit final layout cache follows a mutable theme proxy", () => {
   }
 });
 
-test("collapsing an expanded edit releases hidden highlight state", () => {
+test("edit cache follows syntax-only changes through the same theme proxy", () => {
+  initTheme("dark", false);
+  const backend = (keyword: number) => ({ ...theme, fg(name: string, text: string) {
+    return name === "syntaxKeyword" ? `\x1b[38;5;${keyword}m${text}\x1b[39m` : theme.fg(name as never, text);
+  } }) as Theme;
+  const mutable = createMutableThemeProxy(backend(196));
+  highlightCodeMock.mockImplementation((text: string) => [mutable.theme.fg("syntaxKeyword", text)]);
+  try {
+    const registered: ToolDefinition[] = [];
+    registerToolsForTest(registered);
+    const edit = registered.find(tool => tool.name === "edit")!;
+    const state = {};
+    const args = { path: "fixture.ts", edits: [] };
+    const result = { content: [], details: { diff: "+1 const flag = true;", patch: "" } };
+    const context = createRenderContext({ args, state });
+    const component = edit.renderResult!(result, { expanded: true, isPartial: false }, mutable.theme, context as never);
+    const initial = component.render(120);
+    mutable.setBackend(backend(82));
+    component.invalidate();
+    const updated = component.render(120);
+    const cold = edit.renderResult!(result, { expanded: true, isPartial: false }, mutable.theme,
+      { ...context, state: {} } as never).render(120);
+    assert.notDeepEqual(cold, initial);
+    assert.deepEqual(updated, cold);
+  } finally {
+    highlightCodeMock.mockReset();
+  }
+});
+
+test("edit retains expanded layouts and syntax only in the shared budget", () => {
   const registered: ToolDefinition[] = [];
-  registerToolsForTest(registered);
+  const renderCache = new ToolRenderCache();
+  registerToolsForTest(registered, undefined, { renderCache });
   const edit = registered.find((tool) => tool.name === "edit");
   assert.ok(edit?.renderResult);
 
@@ -1004,7 +1037,9 @@ test("collapsing an expanded edit releases hidden highlight state", () => {
   component.render(100);
   const highlightsAfterExpanded = highlightCodeMock.mock.calls.length;
   assert.equal(highlightsAfterExpanded, 30);
-  assert.ok(state.expandedLayout);
+  assert.equal(state.expandedLayout, undefined);
+  assert.ok((state.preparedDiff as Array<{ highlightedText?: string }>).every(line => line.highlightedText === undefined));
+  assert.ok(renderCache.stats().layouts.entries >= 2);
 
   component.invalidate();
   component = edit.renderResult(
@@ -1015,7 +1050,7 @@ test("collapsing an expanded edit releases hidden highlight state", () => {
   );
   component.render(100);
   assert.equal(state.expandedLayout, undefined);
-  assert.ok((state.collapsedLayouts as unknown[]).length <= 2);
+  assert.equal(state.collapsedLayouts, undefined);
 
   component.invalidate();
   component = edit.renderResult(
@@ -1026,7 +1061,10 @@ test("collapsing an expanded edit releases hidden highlight state", () => {
   );
   component.render(100);
 
-  assert.ok(highlightCodeMock.mock.calls.length > highlightsAfterExpanded);
+  assert.equal(highlightCodeMock.mock.calls.length, highlightsAfterExpanded);
+  component.render(99);
+  assert.equal(highlightCodeMock.mock.calls.length, highlightsAfterExpanded);
+  assert.ok(renderCache.stats().layouts.chargedBytes <= renderCache.stats().layouts.limitBytes);
 });
 
 test("low-power write renderer skips content metrics and shows bounded status", () => {
@@ -1234,6 +1272,31 @@ test("write line metrics preserve empty and trailing newline semantics", () => {
   }
 });
 
+test("write metrics scan only the latest drawn snapshot without a character loop", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const write = registered.find(tool => tool.name === "write")!;
+  const state = {};
+  const characterSpy = vi.spyOn(String.prototype, "charCodeAt");
+  const searchSpy = vi.spyOn(String.prototype, "indexOf");
+  const scanned = () => new Set([...characterSpy.mock.contexts, ...searchSpy.mock.contexts]
+    .map(value => String(value)).filter(value => value.startsWith("WRITE-BODY")));
+  try {
+    let call;
+    for (let index = 0; index < 16; index++) {
+      const args = { path: "fixture.ts", content: `WRITE-BODY ${index}\nlast` };
+      call = write.renderCall!(args, theme, createRenderContext({ args, state, argsComplete: false, lastComponent: call }) as never);
+    }
+    assert.equal(scanned().size, 0);
+    assert.match(stripTerminalSequences(call!.render(80).join("\n")), /2 lines/u);
+    assert.deepEqual([...scanned()], ["WRITE-BODY 15\nlast"]);
+    assert.equal(characterSpy.mock.contexts.filter(value => String(value).startsWith("WRITE-BODY")).length, 0);
+  } finally {
+    characterSpy.mockRestore();
+    searchSpy.mockRestore();
+  }
+});
+
 test("write streaming metrics avoid split arrays and final result recounting", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
@@ -1271,7 +1334,7 @@ test("write streaming metrics avoid split arrays and final result recounting", (
     );
     assert.match(stripTerminalSequences(call.render(80).join("\n")), /3 lines/u);
 
-    const finalByteReads = byteLengthSpy.mock.calls.filter(([value]) => value === finalArgs.content).length;
+    assert.equal(byteLengthSpy.mock.calls.filter(([value]) => value === finalArgs.content).length, 0);
     const result = write.renderResult(
       { content: [{ type: "text", text: "Successfully wrote 8 bytes" }], details: undefined },
       { expanded: false, isPartial: false },
@@ -1280,12 +1343,11 @@ test("write streaming metrics avoid split arrays and final result recounting", (
     );
     assert.match(stripTerminalSequences(result.render(80).join("\n")), /3 lines · 8 B/u);
 
+    result.invalidate();
+    assert.match(stripTerminalSequences(result.render(80).join("\n")), /3 lines · 8 B/u);
     const newlineSplits = splitSpy.mock.calls.filter(([separator]) => separator === "\n").length;
     assert.equal(newlineSplits, 0);
-    assert.equal(
-      byteLengthSpy.mock.calls.filter(([value]) => value === finalArgs.content).length,
-      finalByteReads,
-    );
+    assert.equal(byteLengthSpy.mock.calls.filter(([value]) => value === finalArgs.content).length, 1);
   } finally {
     splitSpy.mockRestore();
     byteLengthSpy.mockRestore();
@@ -1824,8 +1886,8 @@ test("bash summary reports empty output without rendering a result body", () => 
     theme,
     createRenderContext({ args, state, expanded: true, isPartial: false, lastComponent: result }) as never,
   );
-  assert.match(stripTerminalSequences(call.render(80).join("\n")), /0 lines/u);
-  assert.deepEqual(result.render(80), []);
+  assert.doesNotMatch(stripTerminalSequences(call.render(80).join("\n")), /0 lines/u);
+  assert.deepEqual(result.render(80), ["", `      ${theme.fg("dim", "0 lines")}`]);
 });
 
 test("bash command cache follows a mutable theme proxy", () => {
@@ -1910,9 +1972,29 @@ test("bash expanded command cache sanitizes controls and never paints a state ba
       assert.ok(!plain.includes("\u0000"));
       assert.ok(!plain.includes("\ud800"));
       assert.ok(!plain.includes("\ufff9"));
-      assert.ok((state.commandGeometry as unknown[]).length <= 2);
+      assert.equal(state.commandGeometry, undefined);
     }
   }
+});
+
+test("collapsed bash reuses physical line counts across output snapshots", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const bash = registered.find(tool => tool.name === "bash")!;
+  const state = {};
+  const args = { command: "printf sample" };
+  const context = createRenderContext({ args, state, expanded: false, executionStarted: false });
+  const call = bash.renderCall!(args, theme, context as never);
+  const prefix = Array.from({ length: 200 }, (_, index) => `BODY ${index}\t中文`).join("\n");
+  bash.renderResult!({ content: [{ type: "text", text: prefix }], details: undefined },
+    { expanded: false, isPartial: true }, theme, context as never);
+  call.render(80);
+  wrapTextWithAnsiMock.mockClear();
+  bash.renderResult!({ content: [{ type: "text", text: `${prefix}\nnew tail` }], details: undefined },
+    { expanded: false, isPartial: true }, theme, context as never);
+  assert.match(stripTerminalSequences(call.render(80).join("\n")), /201 lines/u);
+  assert.equal(wrapTextWithAnsiMock.mock.calls.length, 1);
+  assert.equal(wrapTextWithAnsiMock.mock.calls[0]?.[0], "new tail");
 });
 
 test("bash duration ticks reuse cached summary output metrics", () => {
@@ -2168,6 +2250,19 @@ test("bash result stays hidden when collapsed and preserves sanitized output whe
   assert.ok(!plain.includes("\ufff9"));
 });
 
+test("expanded bash does not truncate already fitted output rows twice", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const bash = registered.find(tool => tool.name === "bash")!;
+  const output = Array.from({ length: 200 }, (_, index) => `BODY ${index}`).join("\n");
+  const component = bash.renderResult!({ content: [{ type: "text", text: output }], details: undefined },
+    { expanded: true, isPartial: false }, theme, createRenderContext() as never);
+  truncateToWidthMock.mockClear();
+  const lines = component.render(80);
+  assert.equal(truncateToWidthMock.mock.calls.filter(([text]) => text.includes("BODY")).length, 0);
+  assert.deepEqual(lines, expectedBashResultLines(output, 80));
+});
+
 test("expanded bash output uses nested detail indentation across widths", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
@@ -2208,13 +2303,13 @@ test("expanded bash output uses nested detail indentation across widths", () => 
     );
     assert.deepEqual(
       component.render(width),
-      expectedBashResultLines(output, width, warning),
+      expectedBashResultLines(output, width, warning, true),
       `width=${width}`,
     );
   }
 });
 
-test("expanded bash shares its full-output layout between the summary and result", () => {
+test("expanded bash shares its full-output layout with bottom metrics", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
   const bash = registered.find((tool) => tool.name === "bash");
@@ -2239,11 +2334,51 @@ test("expanded bash shares its full-output layout between the summary and result
   wrapTextWithAnsiMock.mockClear();
   call.render(80);
   const wrapsAfterSummary = wrapTextWithAnsiMock.mock.calls.length;
-  assert.ok(wrapsAfterSummary >= 200);
+  assert.equal(wrapsAfterSummary, 1);
 
   const actual = result.render(80);
-  assert.equal(wrapTextWithAnsiMock.mock.calls.length, wrapsAfterSummary);
+  assert.equal(wrapTextWithAnsiMock.mock.calls.length, wrapsAfterSummary + 200);
   assert.deepEqual(actual, expectedBashResultLines(output, 80));
+});
+
+test("bash output preparation skips snapshots superseded before a frame", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const bash = registered.find(tool => tool.name === "bash")!;
+  const state = {};
+  let reads = 0;
+  let component;
+  for (let index = 0; index < 16; index++) {
+    component = bash.renderResult!({ content: [{ type: "text", get text() { reads++; return `snapshot ${index}`; } }], details: undefined },
+      { expanded: true, isPartial: true }, theme,
+      createRenderContext({ state, expanded: true, lastComponent: component }) as never);
+  }
+  assert.equal(reads, 0);
+  const text = stripTerminalSequences(component!.render(80).join("\n"));
+  assert.match(text, /snapshot 15/u);
+  assert.doesNotMatch(text, /snapshot 14/u);
+  assert.ok(reads > 0);
+  assert.ok(reads <= 2);
+});
+
+test("bash warning revisions reuse the same output geometry", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const bash = registered.find(tool => tool.name === "bash")!;
+  const state = {};
+  let reads = 0;
+  const output = Array.from({ length: 200 }, (_, index) => `BODY ${index}`).join("\n");
+  const content = [{ type: "text", get text() { reads++; return output; } }];
+  const context = createRenderContext({ state });
+  const component = bash.renderResult!({ content, details: undefined }, { expanded: true, isPartial: true }, theme, context as never);
+  component.render(80);
+  const initialReads = reads;
+  wrapTextWithAnsiMock.mockClear();
+  const updated = bash.renderResult!({ content, details: { fullOutputPath: "/fixture/output.log" } },
+    { expanded: true, isPartial: false }, theme, { ...context, lastComponent: component } as never).render(80);
+  assert.equal(reads, initialReads);
+  assert.equal(wrapTextWithAnsiMock.mock.calls.filter(([text]) => text.includes("BODY")).length, 0);
+  assert.match(stripTerminalSequences(updated.join("\n")), /Full output: \/fixture\/output\.log/u);
 });
 
 test("bash renderer reuses prepared output until the result revision changes", () => {
@@ -2263,6 +2398,7 @@ test("bash renderer reuses prepared output until the result revision changes", (
   const result = { content, details: undefined };
   const state = {};
   const context = createRenderContext({ args: { command: "printf test" }, state });
+  const call = bash.renderCall!(context.args, theme, { ...context, expanded: false } as never);
   const component = bash.renderResult(
     result,
     { expanded: false, isPartial: true },
@@ -2270,6 +2406,7 @@ test("bash renderer reuses prepared output until the result revision changes", (
     context as never,
   );
   component.render(80);
+  call.render(80);
   const readsAfterFirstRender = textReads;
   assert.ok(readsAfterFirstRender > 0);
 
@@ -2301,7 +2438,7 @@ test("bash renderer reuses prepared output until the result revision changes", (
       isPartial: false,
     }) as never,
   ).render(60);
-  assert.ok(textReads > readsAfterFirstRender);
+  assert.equal(textReads, readsAfterFirstRender);
 
   let updatedTextReads = 0;
   const updatedResult = {
@@ -2327,6 +2464,23 @@ test("bash renderer reuses prepared output until the result revision changes", (
   ).render(60);
 
   assert.ok(updatedTextReads > 0);
+});
+
+test("bash geometry changes when final truncation removes an execution footer", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const bash = registered.find(tool => tool.name === "bash")!;
+  const state = {};
+  const result = { content: [{ type: "text", text: "kept\n\n[execution footer: /fixture/output.log]" }],
+    details: { fullOutputPath: "/fixture/output.log", truncation: { truncated: true, truncatedBy: "lines", outputLines: 1, totalLines: 20 } } };
+  const context = createRenderContext({ state });
+  const component = bash.renderResult!(result as never, { expanded: true, isPartial: true }, theme, context as never);
+  assert.match(stripTerminalSequences(component.render(120).join("\n")), /execution footer/u);
+  const final = bash.renderResult!(result as never, { expanded: true, isPartial: false }, theme,
+    { ...context, lastComponent: component } as never).render(120);
+  assert.doesNotMatch(stripTerminalSequences(final.join("\n")), /execution footer/u);
+  assert.match(stripTerminalSequences(final.join("\n")), /1 line shown$/u);
+  assert.match(stripTerminalSequences(final.join("\n")), /Full output: \/fixture\/output.log/u);
 });
 
 test("settled expanded bash result reuses visual layout after host invalidation", () => {
@@ -2436,9 +2590,120 @@ test("bash result cache follows a mutable theme proxy", () => {
   }
 });
 
-test("bash row caches stay within the fixed geometry policy", () => {
+test("long printable ASCII commands retain only the summary prefix without clipping expanded commands", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
+  const bash = registered.find(tool => tool.name === "bash")!;
+  const command = `   printf ${"x".repeat(100_000)} suffix   `;
+  const state: Record<string, unknown> = {};
+  const args = { command };
+  const component = bash.renderCall!(args, theme, createRenderContext({ args, state, expanded: false }) as never);
+  const summary = component.render(300);
+  assert.ok((state.commandPreview as string).length <= 111);
+  assert.match(stripTerminalSequences(summary[0]!), /printf x+\.\.\.$/u);
+  const expanded = bash.renderCall!(args, theme, createRenderContext({ args, state, expanded: true, lastComponent: component }) as never).render(300);
+  assert.equal(expanded[0], summary[0]);
+  assert.match(stripTerminalSequences(expanded.join("\n")), /suffix/u);
+});
+
+test("oversized Bash output still wraps once per frame and matches retained layouts", () => {
+  const frames: string[][] = [];
+  for (const layoutBytes of [0, 1_000_000]) {
+    const registered: ToolDefinition[] = [];
+    registerToolsForTest(registered, undefined, { renderCache: new ToolRenderCache({ layoutBytes }) });
+    const bash = registered.find(tool => tool.name === "bash")!;
+    const result = { content: [{ type: "text", text: "BODY 中文\tend\n".repeat(200) }], details: undefined };
+    const component = bash.renderResult!(result, { expanded: true, isPartial: false }, theme, createRenderContext() as never);
+    wrapTextWithAnsiMock.mockClear();
+    frames.push(component.render(80));
+    assert.equal(wrapTextWithAnsiMock.mock.calls.filter(([text]) => String(text).includes("BODY")).length, 200);
+  }
+  assert.deepEqual(frames[0], frames[1]);
+});
+
+test("bash reuses expanded output when returning to a previous width or expansion", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const bash = registered.find(tool => tool.name === "bash")!;
+  const state = {};
+  const result = { content: [{ type: "text", text: "BODY\n".repeat(200) }], details: undefined };
+  const context = createRenderContext({ state });
+  const component = bash.renderResult!(result, { expanded: true, isPartial: false }, theme, context as never);
+  const initial = component.render(120);
+  component.render(119);
+  wrapTextWithAnsiMock.mockClear();
+  assert.deepEqual(component.render(120), initial);
+  assert.equal(wrapTextWithAnsiMock.mock.calls.length, 0);
+  bash.renderResult!(result, { expanded: false, isPartial: false }, theme, { ...context, lastComponent: component } as never).render(120);
+  const expanded = bash.renderResult!(result, { expanded: true, isPartial: false }, theme, { ...context, lastComponent: component } as never).render(120);
+  assert.deepEqual(expanded, initial);
+  assert.equal(wrapTextWithAnsiMock.mock.calls.length, 0);
+});
+
+test("late old-session calls cannot revive timers or cancel a new row with the same ID", async () => {
+  vi.useFakeTimers();
+  const registered: ToolDefinition[] = [];
+  const harness = registerToolsForTest(registered);
+  const bash = registered.find(tool => tool.name === "bash")!;
+  const oldInvalidation = vi.fn();
+  const old = createRenderContext({ state: {}, executionStarted: false, isPartial: true, invalidate: oldInvalidation });
+  bash.renderCall!({ command: "old" }, theme, old as never);
+  await harness.emit("session_start");
+  bash.renderCall!({ command: "old" }, theme, { ...old, executionStarted: true } as never);
+  vi.advanceTimersByTime(1000);
+  assert.equal(oldInvalidation.mock.calls.length, 0);
+  assert.equal(vi.getTimerCount(), 0);
+  const currentInvalidation = vi.fn();
+  bash.renderCall!({ command: "new" }, theme, createRenderContext({ isPartial: true, invalidate: currentInvalidation }) as never);
+  bash.renderCall!({ command: "old" }, theme, { ...old, isPartial: false } as never);
+  vi.advanceTimersByTime(1000);
+  assert.equal(currentInvalidation.mock.calls.length, 1);
+  await harness.emit("session_shutdown");
+  assert.equal(vi.getTimerCount(), 0);
+});
+
+test("session lifecycle clears shared layouts and rejects late row cache writes", async () => {
+  for (const event of ["session_start", "session_shutdown"]) {
+    const registered: ToolDefinition[] = [];
+    const renderCache = new ToolRenderCache();
+    const harness = registerToolsForTest(registered, undefined, { renderCache });
+    const bash = registered.find(tool => tool.name === "bash")!;
+    const state = {};
+    const result = { content: [{ type: "text", text: "body" }], details: undefined };
+    const context = createRenderContext({ state });
+    const component = bash.renderResult!(result, { expanded: true, isPartial: false }, theme, context as never);
+    const initial = component.render(80);
+    assert.ok(renderCache.stats().layouts.entries > 0);
+    await harness.emit(event);
+    assert.equal(renderCache.stats().layouts.entries, 0);
+    component.invalidate();
+    assert.deepEqual(component.render(80), initial);
+    assert.equal(renderCache.stats().layouts.entries, 0);
+  }
+});
+
+test("expanded commands obey the shared budget and remain correct after eviction", () => {
+  const registered: ToolDefinition[] = [];
+  const renderCache = new ToolRenderCache({ layoutBytes: 1000 });
+  registerToolsForTest(registered, undefined, { renderCache });
+  const bash = registered.find(tool => tool.name === "bash")!;
+  const state: Record<string, unknown> = {};
+  const args = { command: "printf cached-command" };
+  const component = bash.renderCall!(args, theme, createRenderContext({ args, state, expanded: true }) as never);
+  const first = component.render(80);
+  assert.equal(state.commandGeometry, undefined);
+  assert.ok(renderCache.stats().layouts.chargedBytes > 0);
+  component.render(79);
+  component.render(78);
+  assert.ok(renderCache.stats().layouts.evictions > 0);
+  assert.deepEqual(component.render(80), first);
+  assert.ok(renderCache.stats().layouts.chargedBytes <= 1000);
+});
+
+test("bash rows keep no extra expanded layouts outside the shared budget", () => {
+  const registered: ToolDefinition[] = [];
+  const renderCache = new ToolRenderCache({ layoutBytes: 20_000 });
+  registerToolsForTest(registered, undefined, { renderCache });
   const bash = registered.find((tool) => tool.name === "bash");
   assert.ok(bash?.renderCall);
   assert.ok(bash.renderResult);
@@ -2467,9 +2732,11 @@ test("bash row caches stay within the fixed geometry policy", () => {
     call.render(width);
   }
 
-  assert.ok((state.commandGeometry as unknown[]).length <= 2);
-  assert.ok((state.visualCountLayouts as unknown[]).length <= 2);
-  assert.ok((state.collapsedResultLayouts as unknown[]).length <= 2);
+  assert.equal(state.commandGeometry, undefined);
+  assert.equal(state.visualCountLayouts, undefined);
+  assert.ok(renderCache.stats().counts.entries > 0);
+  assert.ok(renderCache.stats().counts.chargedBytes <= renderCache.stats().counts.limitBytes);
+  assert.equal(state.collapsedResultLayouts, undefined);
 
   result.invalidate();
   bash.renderResult(
@@ -2478,7 +2745,9 @@ test("bash row caches stay within the fixed geometry policy", () => {
     theme,
     createRenderContext({ args, state, executionStarted: false, lastComponent: result }) as never,
   ).render(80);
-  assert.ok(state.expandedResultLayout);
+  assert.equal(state.expandedResultLayout, undefined);
+  assert.ok(renderCache.stats().layouts.entries > 0);
+  assert.ok(renderCache.stats().layouts.chargedBytes <= 20_000);
 
   result.invalidate();
   bash.renderResult(
@@ -2519,8 +2788,11 @@ test("settled bash history avoids output preprocessing on hot frames", () => {
         executionStarted: false,
       }) as never,
     );
+    const args = { command: `printf row-${index}` };
+    const call = bash.renderCall!(args, theme, createRenderContext({ args, state, expanded: false, executionStarted: false }) as never);
     component.render(120);
-    return { component, result, state, index };
+    call.render(120);
+    return { component, call, result, state, index };
   });
   const readsAfterColdFrame = textReads;
   assert.ok(readsAfterColdFrame > 0);
@@ -2539,6 +2811,8 @@ test("settled bash history avoids output preprocessing on hot frames", () => {
         executionStarted: false,
       }) as never,
     ).render(120);
+    row.call.invalidate();
+    row.call.render(120);
   }
 
   assert.equal(textReads, readsAfterColdFrame);

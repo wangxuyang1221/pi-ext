@@ -2,6 +2,15 @@ import assert from "node:assert/strict";
 import { test, vi } from "vitest";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 
+const { visibleWidthMock } = vi.hoisted(() => ({ visibleWidthMock: vi.fn() }));
+vi.mock("@earendil-works/pi-tui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@earendil-works/pi-tui")>();
+  return { ...actual, visibleWidth(text: string) {
+    visibleWidthMock(text);
+    return actual.visibleWidth(text);
+  } };
+});
+
 import {
   fitSegments,
   fitToWidth,
@@ -64,6 +73,13 @@ test("fitToWidth handles ANSI text and wide graphemes", () => {
   assert.match(stripTerminalSequences(fitted), /^状态 ok\s+$/u);
   assert.equal(visibleWidth(fitToWidth("abcdef", 4)), 4);
   assert.equal(fitToWidth("ignored", 0), "");
+});
+
+test("fitToWidth delegates padding without measuring the fitted string again", () => {
+  visibleWidthMock.mockClear();
+  const line = fitToWidth("\x1b[36m状态 ok\x1b[39m", 10, { pad: true });
+  assert.equal(visibleWidthMock.mock.calls.length, 0);
+  assert.equal(visibleWidth(line), 10);
 });
 
 test("paintBackground restores background and requested modifiers after full SGR resets", () => {
