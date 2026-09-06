@@ -13,6 +13,18 @@ const MCP_DETAIL_MIN_CONTENT_WIDTH = 4;
 const SENSITIVE_ARGUMENT_KEY = /api[-_]?key|access[-_]?token|authorization|password|passwd|secret|cookie/i;
 class ResponsiveLinesComponent {
     renderer = () => [];
+    // One bounded, unthemed result per host row. No width history or global cache.
+    prepared;
+    prepare(result, isError) {
+        const record = asRecord(result);
+        const details = asRecord(record?.details);
+        if (!this.prepared || this.prepared.content !== record?.content || this.prepared.structured !== details?.structuredContent) {
+            this.prepared = { content: record?.content, structured: details?.structuredContent,
+                presentation: prepareResultPresentation(result, isError) };
+        }
+        this.prepared.presentation.error = isError || details?.isError === true;
+        return this.prepared.presentation;
+    }
     setRenderer(renderer) {
         this.renderer = renderer;
     }
@@ -27,13 +39,18 @@ class ResponsiveLinesComponent {
 export function renderMcpToolCall(args, names, theme, context) {
     const component = getResponsiveComponent(context.lastComponent);
     const argumentSummary = formatMcpToolArguments(args);
-    component.setRenderer((width) => [formatMcpCallLine(names, argumentSummary, context.isPartial, context.isError, theme, width)]);
+    const state = context.state ?? {};
+    component.setRenderer((width) => [formatMcpCallLine(names, argumentSummary, context.isPartial || state.mcpStatus === undefined || state.mcpStatus === "pending", context.isError || state.mcpStatus === "error", theme, width)]);
     return component;
 }
 export function renderMcpToolResult(result, options, theme, context) {
     const component = getResponsiveComponent(context.lastComponent);
-    const presentation = prepareResultPresentation(result, context.isError);
-    component.setRenderer((width) => renderMcpResultLines(presentation, options, theme, width));
+    const presentation = component.prepare(result, context.isError);
+    const pending = options.isPartial || result == null;
+    if (context.state) {
+        context.state.mcpStatus = pending ? "pending" : presentation.error ? "error" : "success";
+    }
+    component.setRenderer((width) => renderMcpResultLines(presentation, { ...options, isPartial: pending }, theme, width));
     return component;
 }
 function getResponsiveComponent(previous) {
@@ -46,7 +63,7 @@ function formatMcpCallLine(names, argumentSummary, isPartial, isError, theme, wi
     const safeServerName = sanitizeDiagnosticText(names.serverName, DEFAULT_FIELD_BYTES);
     const safeToolName = sanitizeDiagnosticText(names.toolName, DEFAULT_FIELD_BYTES);
     const base = [
-        theme.fg("dim", "•"),
+        theme.fg(isError ? "error" : isPartial ? "dim" : "success", "•"),
         theme.fg("toolTitle", theme.bold(action)),
         theme.fg("accent", theme.bold(`${safeServerName} / ${safeToolName}`)),
     ].join(" ");
@@ -66,34 +83,61 @@ function renderMcpResultLines(presentation, options, theme, width) {
     if (options.isPartial) {
         return [formatResultSummary(theme.fg("accent", theme.bold("Running")), [{ text: theme.fg("dim", "waiting for response"), priority: 100, order: 10 }], theme, summaryWidth)];
     }
+    if (!presentation.error) {
+        if (!presentation.preview.trim())
+            return [];
+        if (options.expanded)
+            return renderExpandedDetail(presentation, theme, summaryWidth);
+        const preview = presentation.preview;
+        const indent = summaryWidth >= 8 ? MCP_DETAIL_INDENT : "";
+        const contentWidth = Math.max(1, summaryWidth - indent.length);
+        const { lines, truncated } = previewLines(preview, contentWidth);
+        if (truncated)
+            lines[lines.length - 1] = `${truncateToWidth(lines[lines.length - 1], Math.max(0, contentWidth - 3), "")}...`;
+        return lines.map((line, index) => theme.fg("dim", `${indent && index === 0 ? MCP_RESULT_BRANCH : indent}${line}`));
+    }
     const expandable = presentation.detail.length > 0;
     const expandHint = expandable
         ? formatExpandHint(options.expanded ? "collapse" : "expand", theme)
         : undefined;
-    const fields = presentation.error
-        ? [
-            ...(presentation.detail
-                ? [{
-                        text: theme.fg("dim", inlinePreview(presentation.detail, MAX_ERROR_PREVIEW_WIDTH)),
-                        priority: 90,
-                        order: 10,
-                    }]
-                : []),
-            ...(expandHint ? [{ text: expandHint, priority: 100, order: 20 }] : []),
-        ]
-        : [
-            { text: theme.fg("dim", presentation.kind), priority: 90, order: 10 },
-            { text: theme.fg("dim", formatBytes(presentation.size)), priority: 80, order: 20 },
-            ...(expandHint ? [{ text: expandHint, priority: 100, order: 30 }] : []),
-        ];
-    const outcome = presentation.error
-        ? theme.fg("error", "Failed")
-        : theme.fg("success", "Completed");
+    const fields = [
+        ...(presentation.detail
+            ? [{
+                    text: theme.fg("dim", inlinePreview(presentation.detail, MAX_ERROR_PREVIEW_WIDTH)),
+                    priority: 90,
+                    order: 10,
+                }]
+            : []),
+        ...(expandHint ? [{ text: expandHint, priority: 100, order: 20 }] : []),
+    ];
+    const outcome = theme.fg("error", "Failed");
     const lines = [formatResultSummary(outcome, fields, theme, summaryWidth)];
     if (options.expanded && expandable) {
         lines.push(...renderExpandedDetail(presentation, theme, summaryWidth));
     }
     return lines;
+}
+const previewSegmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+function previewLines(text, width) {
+    const lines = [];
+    let line = "";
+    let cells = 0;
+    for (const { segment } of previewSegmenter.segment(text)) {
+        const size = segment === "\n" ? 0 : visibleWidth(segment);
+        if (segment === "\n" || cells + size > width) {
+            lines.push(line);
+            if (lines.length === 5)
+                return { lines, truncated: true };
+            line = "";
+            cells = 0;
+            if (segment === "\n")
+                continue;
+        }
+        line += segment;
+        cells += size;
+    }
+    lines.push(line);
+    return { lines, truncated: false };
 }
 function formatResultSummary(outcome, fields, theme, width) {
     const prefix = `${theme.fg("dim", MCP_RESULT_BRANCH)}${outcome}`;
@@ -119,8 +163,8 @@ function renderExpandedDetail(presentation, theme, width) {
         ? MCP_DETAIL_INDENT
         : "";
     const contentWidth = Math.max(1, width - visibleWidth(indent));
-    const color = presentation.error ? "error" : "toolOutput";
-    const sourceLines = formatExpandedText(presentation.detail, presentation.kind).split("\n");
+    const color = presentation.error ? "error" : "dim";
+    const sourceLines = presentation.expandedDetail.split("\n");
     const output = [];
     let displayTruncated = false;
     outer: for (const sourceLine of sourceLines) {
@@ -162,43 +206,30 @@ function prepareResultPresentation(result, contextIsError) {
             textParts.push(safeJson(item));
     }
     let detail = textParts.join("\n");
-    let structured = false;
     if (detail.length === 0 && details?.structuredContent !== undefined) {
         detail = safeJson(details.structuredContent);
-        structured = true;
     }
-    const size = Buffer.byteLength(detail, "utf8");
     detail = sanitizeDiagnosticText(detail, DEFAULT_MAX_BYTES);
     const hasText = detail.trim().length > 0;
-    const json = hasText && (structured || parseJson(detail) !== undefined);
-    const kind = hasImage && hasText
-        ? "Mixed"
-        : hasImage
-            ? "Image"
-            : json
-                ? "JSON"
-                : hasText
-                    ? "Text"
-                    : "Empty";
-    return {
-        detail,
-        error: contextIsError || details?.isError === true,
-        kind,
-        size,
-    };
+    const parsed = hasText ? parseJson(detail) : undefined;
+    const json = !hasImage && parsed !== undefined;
+    let preview = hasImage && !hasText ? "Image" : detail;
+    let expandedDetail = preview;
+    if (json) {
+        try {
+            preview = sanitizeDiagnosticText(compactJson(parsed), DEFAULT_MAX_BYTES);
+            expandedDetail = sanitizeDiagnosticText(JSON.stringify(parsed, null, 2), DEFAULT_MAX_BYTES);
+        }
+        catch {
+            preview = detail;
+            expandedDetail = detail;
+        }
+    }
+    return { detail, preview, expandedDetail, error: contextIsError || details?.isError === true };
 }
-function formatExpandedText(detail, kind) {
-    if (kind !== "JSON")
-        return detail;
-    const parsed = parseJson(detail);
-    if (parsed === undefined)
-        return detail;
-    try {
-        return JSON.stringify(parsed, null, 2) ?? detail;
-    }
-    catch {
-        return detail;
-    }
+function compactJson(value) {
+    // Match complete JSON strings before punctuation so escapes and string contents stay intact.
+    return safeJson(value).replace(/"(?:[^"\\]|\\.)*"|[:,]/gu, token => token === ":" || token === "," ? `${token} ` : token);
 }
 function formatMcpToolArguments(args) {
     if (!isRecord(args))
@@ -297,19 +328,6 @@ function safeJson(value) {
     catch {
         return "[unserializable]";
     }
-}
-function formatBytes(bytes) {
-    if (!Number.isFinite(bytes) || bytes < 0)
-        return "0 B";
-    if (bytes < 1024)
-        return `${bytes} B`;
-    const kibibytes = bytes / 1024;
-    if (kibibytes < 1024)
-        return `${formatDecimal(kibibytes)} KB`;
-    return `${formatDecimal(kibibytes / 1024)} MB`;
-}
-function formatDecimal(value) {
-    return value >= 10 ? `${Math.round(value)}` : value.toFixed(1);
 }
 function normalizeWidth(width) {
     return Number.isFinite(width) ? Math.max(0, Math.floor(width)) : 0;

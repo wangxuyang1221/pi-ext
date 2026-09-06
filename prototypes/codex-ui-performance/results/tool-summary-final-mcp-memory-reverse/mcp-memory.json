@@ -1,0 +1,464 @@
+{
+  "environment": {
+    "build": {
+      "baselineCommit": "12158a900eafcbcb67c3f5cdbb00f19e1573ed27",
+      "baselineSnapshot": {
+        "path": "baselines/tool-summary-20260906.json.gz",
+        "sha256": "1fce6cc621ee7e9ed2e0e88444dce0e60eab6467937e14fa39fd601e6308518b"
+      },
+      "before": {
+        "bash-group-layout.ts": "e6231fe61ddae2dd8034767274e2f43fecc9cb3ffa3dbfd5999df048edbbf23f",
+        "bash-groups.ts": "82f02d460bf2609f3c3182e6a140bfd6fe20785d74503ea51e795680035bbae4",
+        "bash-refresh-scheduler.ts": "3c8ee0c011d691d3eb994e35e9465643d518356fe01eb00c672a28a6788564d5",
+        "components.ts": "054923e982c5f1b2a0fff9fcc67aad55d43e154ce552b0c97e5dae3f17b8ac10",
+        "exact-visual-tail.ts": "b41f6d7ce2d370c15ae288945653ce9bf504e46663c2f32747ebc02f1c9b7c46",
+        "footer.ts": "0b5ffd848dd0d9cdcc6d0b66a80109aa595b5b9d5d5cd37336521140cd83bc30",
+        "index.ts": "34ed09c37afecb2d16e29e5cfa0db6d00a65c419712ba05133d85a88c1ef3f4d",
+        "layout.ts": "113ec7031eac95e397bea5c53100a1277c75e65cf3b201d69632099bf76d65be",
+        "render-cache.ts": "35f87a6165826d63dade2cfe0bf1c4bb2b14f13d09a47dd6e3ed6a582661b557",
+        "responsive-lines.ts": "1f18cc8c0edf7c54d2dce12ce7eb15f5424b3679a8c19075f3ceba31a73de0ca",
+        "tools.ts": "4f3bca55facce646c9ad39860de0c9e90bd20f0aa2f97732e3afd4682f0b34ff"
+      },
+      "after": {
+        "bash-group-layout.ts": "e6231fe61ddae2dd8034767274e2f43fecc9cb3ffa3dbfd5999df048edbbf23f",
+        "bash-groups.ts": "82f02d460bf2609f3c3182e6a140bfd6fe20785d74503ea51e795680035bbae4",
+        "bash-refresh-scheduler.ts": "3c8ee0c011d691d3eb994e35e9465643d518356fe01eb00c672a28a6788564d5",
+        "components.ts": "054923e982c5f1b2a0fff9fcc67aad55d43e154ce552b0c97e5dae3f17b8ac10",
+        "exact-visual-tail.ts": "b41f6d7ce2d370c15ae288945653ce9bf504e46663c2f32747ebc02f1c9b7c46",
+        "footer.ts": "0b5ffd848dd0d9cdcc6d0b66a80109aa595b5b9d5d5cd37336521140cd83bc30",
+        "index.ts": "34ed09c37afecb2d16e29e5cfa0db6d00a65c419712ba05133d85a88c1ef3f4d",
+        "layout.ts": "113ec7031eac95e397bea5c53100a1277c75e65cf3b201d69632099bf76d65be",
+        "render-cache.ts": "35f87a6165826d63dade2cfe0bf1c4bb2b14f13d09a47dd6e3ed6a582661b557",
+        "responsive-lines.ts": "1f18cc8c0edf7c54d2dce12ce7eb15f5424b3679a8c19075f3ceba31a73de0ca",
+        "tools.ts": "36b61fcfa05ea3cf6475d70d7c479dbc30b2486b80a621678b8d36214a494848"
+      },
+      "mcp": {
+        "before": {
+          "client.ts": "c3ec6722e8efc36eb1a729331ac96dcb5c00e3eb2871b2fa49a8be36ec3ede65",
+          "config.ts": "4300b5500ab5ddd769e1152ae478cf818f2d43ada6f110f1f8f55ea47d42f43c",
+          "diagnostics.ts": "e658cb0f08d34cf8bf50cfecb8a0548090628050895d0ef78330b1dd81b2c0a5",
+          "index.ts": "08167f8bf3d377b8ef419828687ddd7a3a88f2549800a54bf080921439f10d0e",
+          "renderers.ts": "a2603bf22f8b5c306cebe32b9bc62c4da1c7d3c980561f4e16a31101847e6f2a",
+          "retry.ts": "7ad2aedc209c1333d2f350f28e116341c7804733d41ce4a7e94cb22292ba27e3",
+          "schema.ts": "27c1eaf79b7700b715a12fccebe9352c80560ccce4b87facdc2b8c6afc681a2e",
+          "types.ts": "935d92f320ba6dbbb7ce6a5c31b0e89c1c5fc31336119608b671e2d7b8d787bd"
+        },
+        "after": {
+          "client.ts": "c3ec6722e8efc36eb1a729331ac96dcb5c00e3eb2871b2fa49a8be36ec3ede65",
+          "config.ts": "4300b5500ab5ddd769e1152ae478cf818f2d43ada6f110f1f8f55ea47d42f43c",
+          "diagnostics.ts": "e658cb0f08d34cf8bf50cfecb8a0548090628050895d0ef78330b1dd81b2c0a5",
+          "index.ts": "08167f8bf3d377b8ef419828687ddd7a3a88f2549800a54bf080921439f10d0e",
+          "renderers.ts": "e98aefb1ee4958165e9cb5d8f6c1c294c8d3f74d901ca8d90ef7e7e4f8330376",
+          "retry.ts": "7ad2aedc209c1333d2f350f28e116341c7804733d41ce4a7e94cb22292ba27e3",
+          "schema.ts": "27c1eaf79b7700b715a12fccebe9352c80560ccce4b87facdc2b8c6afc681a2e",
+          "types.ts": "935d92f320ba6dbbb7ce6a5c31b0e89c1c5fc31336119608b671e2d7b8d787bd"
+        }
+      }
+    },
+    "benchmark": {
+      "bench.mjs": "00d862dd1a2f382cc3b6d4ef3b2c345a91bd2e26da4b90574d25973f592739a0",
+      "build.mjs": "4aa16df5365ff81481c90220d1d8239bd44bc87036bfe56bf249e983dee0f0b6",
+      "cli-fixture.mjs": "4cd054df2cb39a09a3b1874927db39b4bd792617e61add6e948e5aaebe5424d0",
+      "cli-smoke.mjs": "5fc1663f5c4f58f7d18673659dd2a0b583ba0fc95d6f5adbbade67a713fdd178",
+      "grouped-probe.mjs": "95f4951ac0d2c66060a2adc029b9836bdb70b844f48537788aef43e9eed83da3",
+      "infrastructure.test.mjs": "9a13b0bab36e89fcd607ba3d18b16d6d345ca74f8527afbbd68f99cc43084d08",
+      "mcp-bench.mjs": "51d60d65c9f1170a3f13dd8476161aa5b585126d8a0e42959fc0c3f42e7afeed",
+      "memory.mjs": "0f09a31904fd69dcf13a74592127f91235f7c278125a9072b712bfa073c1c782",
+      "run.mjs": "b19e80064f1c3c9f89e7f35c91a9cf2795c70e806929b149fdc478c801346a3a",
+      "shared.mjs": "2e7237513893c2ac0d1beb9888d786956e43058c72dbda8ffaf65bc39fb21283",
+      "snapshot.mjs": "a7284ea635eef879ecccef010aaeaf91afa7f6819e5d7074eaa7c0a0011bd844",
+      "verify-terminal.mjs": "391c3c397f1064a13878a34df04524844cb13f46709f2c2837ea0b40fdb081d0",
+      "verify.mjs": "91b65d880263ffcdcef56b631bf1c9cdee50edbb31e4127fbb1a1e801d1f4cfc"
+    },
+    "upstream": {
+      "agent": {
+        "root": "/Users/wangxuyang/Code/t3code/pi-ext/node_modules/.pnpm/@earendil-works+pi-coding-agent@0.84.3_@modelcontextprotocol+sdk@1.29.0_zod@4.4.3__ws@8.21.3_zod@4.4.3/node_modules/@earendil-works/pi-coding-agent",
+        "version": "0.84.3",
+        "distSha256": "14162a3e9a358f969a10a55c9d77558c6e311a0e1ffa7a745d6cf49c738478f2"
+      },
+      "tui": {
+        "root": "/Users/wangxuyang/Code/t3code/pi-ext/node_modules/.pnpm/@earendil-works+pi-tui@0.84.3/node_modules/@earendil-works/pi-tui",
+        "version": "0.84.3",
+        "distSha256": "0e8b58be2008643cc7061a7c252575580e3c6b6582b99f379f564358e1b6d72e"
+      },
+      "ai": {
+        "root": "/Users/wangxuyang/Code/t3code/pi-ext/node_modules/.pnpm/@earendil-works+pi-ai@0.84.3_@modelcontextprotocol+sdk@1.29.0_zod@4.4.3__ws@8.21.3_zod@4.4.3/node_modules/@earendil-works/pi-ai",
+        "version": "0.84.3",
+        "distSha256": "827172280f455d508d84d44d2467bf35d144cb57feccd8b8f6ef51a0b9f73de5"
+      }
+    },
+    "node": "v22.22.2",
+    "width": 120,
+    "height": 40,
+    "palette": "codex-pi",
+    "mode": "memory",
+    "rounds": 5,
+    "command": [
+      "/Users/wangxuyang/.nvm/versions/node/v22.22.2/bin/node",
+      "/Users/wangxuyang/Code/t3code/pi-ext/prototypes/codex-ui-performance/run.mjs",
+      "--memory"
+    ]
+  },
+  "cases": [
+    {
+      "variant": "after",
+      "samples": [
+        {
+          "rss": 251297792,
+          "heapTotal": 88899584,
+          "heapUsed": 29257048,
+          "external": 2340388,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257703936,
+          "heapTotal": 68190208,
+          "heapUsed": 29345552,
+          "external": 2340428,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257409024,
+          "heapTotal": 67665920,
+          "heapUsed": 28036216,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257441792,
+          "heapTotal": 67928064,
+          "heapUsed": 28038296,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257933312,
+          "heapTotal": 67928064,
+          "heapUsed": 28039288,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258490368,
+          "heapTotal": 67928064,
+          "heapUsed": 28039488,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258506752,
+          "heapTotal": 68714496,
+          "heapUsed": 28046160,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258506752,
+          "heapTotal": 67665920,
+          "heapUsed": 28055696,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258523136,
+          "heapTotal": 67665920,
+          "heapUsed": 28057048,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258523136,
+          "heapTotal": 68190208,
+          "heapUsed": 28057488,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258555904,
+          "heapTotal": 67928064,
+          "heapUsed": 28064848,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258572288,
+          "heapTotal": 67928064,
+          "heapUsed": 28069496,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258588672,
+          "heapTotal": 67928064,
+          "heapUsed": 28075376,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258588672,
+          "heapTotal": 67665920,
+          "heapUsed": 28075576,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258605056,
+          "heapTotal": 68190208,
+          "heapUsed": 28075776,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258621440,
+          "heapTotal": 68976640,
+          "heapUsed": 28075976,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258621440,
+          "heapTotal": 67928064,
+          "heapUsed": 28076176,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258637824,
+          "heapTotal": 68190208,
+          "heapUsed": 28076376,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258637824,
+          "heapTotal": 67665920,
+          "heapUsed": 28077800,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258637824,
+          "heapTotal": 67665920,
+          "heapUsed": 28078000,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258670592,
+          "heapTotal": 68452352,
+          "heapUsed": 28082224,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258736128,
+          "heapTotal": 67928064,
+          "heapUsed": 28154128,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258752512,
+          "heapTotal": 67928064,
+          "heapUsed": 28154328,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258785280,
+          "heapTotal": 67928064,
+          "heapUsed": 28154528,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        }
+      ],
+      "afterRelease": {
+        "rss": 258785280,
+        "heapTotal": 65306624,
+        "heapUsed": 25355584,
+        "external": 2335711,
+        "arrayBuffers": 29174
+      }
+    },
+    {
+      "variant": "before",
+      "samples": [
+        {
+          "rss": 258883584,
+          "heapTotal": 65830912,
+          "heapUsed": 26408416,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 258916352,
+          "heapTotal": 65568768,
+          "heapUsed": 26410752,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257196032,
+          "heapTotal": 65568768,
+          "heapUsed": 26410952,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257212416,
+          "heapTotal": 65830912,
+          "heapUsed": 26422008,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257212416,
+          "heapTotal": 65568768,
+          "heapUsed": 26422208,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257228800,
+          "heapTotal": 66093056,
+          "heapUsed": 26438560,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257228800,
+          "heapTotal": 65568768,
+          "heapUsed": 26438872,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257245184,
+          "heapTotal": 65830912,
+          "heapUsed": 26439776,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257245184,
+          "heapTotal": 65830912,
+          "heapUsed": 26440032,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257261568,
+          "heapTotal": 66093056,
+          "heapUsed": 26440232,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257261568,
+          "heapTotal": 65830912,
+          "heapUsed": 26442896,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257277952,
+          "heapTotal": 65568768,
+          "heapUsed": 26447416,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257277952,
+          "heapTotal": 65568768,
+          "heapUsed": 26448488,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257327104,
+          "heapTotal": 65830912,
+          "heapUsed": 26448824,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257343488,
+          "heapTotal": 65830912,
+          "heapUsed": 26449024,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257343488,
+          "heapTotal": 65568768,
+          "heapUsed": 26449224,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257359872,
+          "heapTotal": 65568768,
+          "heapUsed": 26452472,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257359872,
+          "heapTotal": 65568768,
+          "heapUsed": 26452672,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257376256,
+          "heapTotal": 65306624,
+          "heapUsed": 26453080,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257376256,
+          "heapTotal": 65306624,
+          "heapUsed": 26455072,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257392640,
+          "heapTotal": 65830912,
+          "heapUsed": 26455272,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257392640,
+          "heapTotal": 65306624,
+          "heapUsed": 26491648,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257409024,
+          "heapTotal": 65306624,
+          "heapUsed": 26491848,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        },
+        {
+          "rss": 257425408,
+          "heapTotal": 65306624,
+          "heapUsed": 26522024,
+          "external": 2335711,
+          "arrayBuffers": 29174
+        }
+      ],
+      "afterRelease": {
+        "rss": 257425408,
+        "heapTotal": 65306624,
+        "heapUsed": 25563976,
+        "external": 2335711,
+        "arrayBuffers": 29174
+      }
+    }
+  ]
+}

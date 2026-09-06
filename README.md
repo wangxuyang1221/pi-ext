@@ -96,9 +96,11 @@ Codex encrypted compaction item.
 - 带 accent marker 的 Thinking/Reasoning 最新段落单行显示
 - 隐藏 streaming working row，并通过 terminal title 显示工作状态
 - `read`、`edit`、`write` 的紧凑 renderer
-- 以 Thinking marker 为主轴、使用固定 `├─ •` 分支前缀的 Bash timeline；摘要采用主副两行，按 `Ctrl+O` 展开详情
+- Bash 分组标题与 `Read`、`Edited` 对齐，命令始终可见，结果默认折叠，按 `Ctrl+O` 展开
 
 Thinking/Reasoning 区域无论处于流式状态还是历史状态，都只渲染最新段落，并按当前可用宽度截断为一个终端行。行首圆点使用主题的 `mdCode`，正文继续使用 `thinkingText`；在 `codex-pi` 中分别对应 cyan 与 muted。完整 Thinking 内容仍保存在 Pi 会话数据中，`codex-ui` 仅改变显示结果。
+
+Write 写入中只显示黄色圆点和路径，成功后圆点变绿并显示最终总行数。失败保留红色圆点与错误正文；不显示累计行数、字节摘要或第二行 Written。完整模式与 low-power 共用此状态规则，Ctrl+O 不展开 Write 文件内容。
 
 ### Low-power rendering
 
@@ -138,7 +140,11 @@ pi-codex() {
 
 仓库不会自动修改 Shell 配置，也不提供一个假定 `pi install` 会加入 `PATH` 的 package bin。
 
-`read`、`edit`、`write`、`bash` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。`write` 只显示路径、行数和字节数，不伪造 old/new diff。Bash 使用 `renderShell: "self"`；摘要采用固定 `├─ •` 前缀，分支轴与 Thinking marker 对齐。折叠态使用主副两行：首行显示状态和命令，次行显示 visual line 数、耗时、限制与展开提示，不再铺满状态背景。首行最大为 110 cells；终端不少于 72 cells 时至少保留 8 cells 右侧留白，命令被裁剪时以三个 ASCII 句点 `...` 结束。展开后的命令、输出和截断信息缩进到 `Bash` 标题列。展开时，耗时与 visual line 数显示在正文及截断说明之后，没有结果时耗时显示在命令之后；完成后保留底部最终值。状态、命令摘要、timeout、truncated 标记及折叠提示仍在顶部。使用当前配置中的 `app.tools.expand` 快捷键可以展开工具详情，默认是 `Ctrl+O`。
+`read`、`edit`、`write`、`bash` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。`write` 只显示路径、行数和字节数，不伪造 old/new diff。Bash 使用 `renderShell: "self"`。full 模式下，同一 assistant 消息中连续的 Bash 调用组成一组，不跨 text、thinking、其他工具或消息合并；无法确认归属时独立显示。`Bash` 标签缩进两格，与 `Read`、`Edited` 对齐。标题显示调用数与状态，命令始终可见：收起时单行显示，按可用宽度截断，命令正文最多 120 个显示列，包含末尾的 `...`；展开后显示完整命令并正常换行。
+
+结果默认折叠，包括成功、错误和运行日志；命令、可确认的状态及截断警告不隐藏。全局 `app.tools.expand` 快捷键切换结果展示，同时展开完整命令，默认是 `Ctrl+O`，提示跟随实际绑定。展开显示本次捕获的全部输出，保留日志原有空行，命令块之间仅加一条连接线。执行完成不会覆盖用户的展开选择。运行耗时集中在展开组底部，避免每秒修改离屏命令而重绘历史；恢复历史不补造耗时、退出码或结束原因。截断时显示真实 `fullOutputPath`，不读取文件来补齐输出。low-power 仍保留原有有界轻量展示。
+
+更新后请重启 Pi 并恢复会话，确保加载新版代码；不要仅凭 `/reload` 成功判断旧进程已完成代码升级。分组只改变显示，不重新执行 Bash，也不修改持久化结果或用户 `!` Bash。当前契约与验证记录见 [Grouped Bash implementation plan](docs/plans/codex-ui-grouped-bash.md#current-revision)。
 
 Footer 使用 ` ⋅ ` 分隔，并按 `model thinking ⋅ fast ⋅ cwd ⋅ git:branch ⋅ Context N% left ⋅ permissions` 排列。model 与 thinking 使用 Codex CLI 的 `#f6e2b7`，context 使用 `#f2b590`，Fast Mode 使用 `#c8a9ee`。终端变窄时会先缩短或移除 cwd 和 branch，再将 context 缩成 `N% left`；model、context 和 permissions 保留到最后。
 
@@ -203,6 +209,10 @@ pi \
 工具调用自动重放默认关闭。`toolReplay: "read-only"` 只允许初始 catalog 与重连后的最新 catalog 都明确带有 `annotations.readOnlyHint === true`、且 route 所有者未变化的工具最多重放一次；该 annotation 来自服务器，不能替代对服务器和工具副作用的审查。
 
 传给模型的 MCP text 与序列化非 text 内容合计限制为 50 KiB、2000 行，最多序列化 24 个非 text block；`details` 中的 structured output 也限制为 50 KiB。超限 raw 输出不会自动落盘。工具提示会要求 agent 缩小结果或使用 server pagination；需要完整数据时应按服务端 cursor/page/limit 分段获取。
+
+MCP 成功结果默认显示最多五个视觉行的灰色预览，超限以 `...` 收尾；成功仅圆点变绿，不再显示 Completed、类型或字节摘要。Ctrl+O 展开灰色详情，仍受展示上限约束。失败保留明确错误正文。
+
+Pi 0.84.3 与本机 0.85.1 的 `/reload` 会先重建历史行，再注册动态 MCP 工具，历史 MCP 行可能退回默认渲染。变更前快照也能复现；重新启动 Pi 并恢复会话可恢复新样式。验收证据与限制见[实施计划](docs/plans/codex-ui-tool-summary.md#implementation-results)。
 
 内存 diagnostics 使用每服务器有界 ring buffer，并对控制字符、常见凭据和过长字段进行清理。文件日志默认关闭；启用后写入有界 JSONL，并保留一个 `.1` 轮转备份。Stdio stderr 使用 pipe 捕获到 diagnostics，不直接写入 Pi 终端。脱敏是降低风险的措施，不是保存或分享日志的安全保证。
 

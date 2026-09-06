@@ -1,0 +1,3562 @@
+{
+  "agentVersion": "0.85.0",
+  "cli": "/Users/wangxuyang/Library/pnpm/store/v11/links/@earendil-works/pi-coding-agent/0.85.0/0fb42a61fb7c4d484971f2fce65202130e498ad0c17769b1a7336145fbd43ecf/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js",
+  "cliSha256": "4c152df1ef4b743898ec780e49cf7a197e4032a4b0696f645730aa8c18703b96",
+  "scope": "Isolated real CLI + PTY, production dist, offline scripted provider, official harmless Bash. Regular/fullscreen, mixed/success/long/live, native/custom toggle, reload, resize, process restart with same session. No network or Ghostty/GPU measurement.",
+  "samples": [
+    {
+      "mode": "regular",
+      "scene": "mixed",
+      "customKey": true,
+      "phases": [
+        {
+          "phase": "initial",
+          "bytes": 3929,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-m│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                                 ctrl+g expand\n  ├ × $ printf smoke-command-1\n  │     Error: SMOKE-FAIL\n  │     original detail\n  ╰ ✓ $ printf smoke-command-2\n        Truncated capture · /fixture/captured-output.txt\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-mixed ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "expanded",
+          "bytes": 2696,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-m│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                               ctrl+g collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ × $ printf smoke-command-1\n  │     Error: SMOKE-FAIL\n  │     original detail\n  │     third detail\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n        Truncated capture · /fixture/captured-output.txt\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-mixed ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "reload",
+          "bytes": 7975,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-m│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                               ctrl+g collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ × $ printf smoke-command-1\n  │     Error: SMOKE-FAIL\n  │     original detail\n  │     third detail\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n        Truncated capture · /fixture/captured-output.txt\n\n Reloaded keybindings, extensions, skills, prompts, themes, and context files                                           \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-mixed ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "narrow",
+          "bytes": 3556,
+          "visible": "                                                            \n › Synthetic rendering smoke. Do not execute tools.         \n                                                            \n\nBash · 3 commands · 2 succeeded · 1 failed   ctrl+g collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ × $ printf smoke-command-1\n  │     Error: SMOKE-FAIL\n  │     original detail\n  │     third detail\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n        Truncated capture · /fixture/captured-output.txt\n\n Reloaded keybindings, extensions, skills, prompts, themes, \n and context files                                          \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ regular-mixed ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "collapsed",
+          "bytes": 1612,
+          "visible": "                                                            \n › Synthetic rendering smoke. Do not execute tools.         \n                                                            \n\nBash · 3 commands · 2 succeeded · 1 failed     ctrl+g expand\n  ├ × $ printf smoke-command-1\n  │     Error: SMOKE-FAIL\n  │     original detail\n  ╰ ✓ $ printf smoke-command-2\n        Truncated capture · /fixture/captured-output.txt\n\n Tool output: collapsed                                     \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ regular-mixed ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "restarted",
+          "bytes": 3929,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-m│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                                 ctrl+g expand\n  ├ × $ printf smoke-command-1\n  │     Error: SMOKE-FAIL\n  │     original detail\n  ╰ ✓ $ printf smoke-command-2\n        Truncated capture · /fixture/captured-output.txt\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-mixed ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "restored-expanded",
+          "bytes": 2696,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-m│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                               ctrl+g collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ × $ printf smoke-command-1\n  │     Error: SMOKE-FAIL\n  │     original detail\n  │     third detail\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n        Truncated capture · /fixture/captured-output.txt\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-mixed ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n"
+        }
+      ],
+      "events": []
+    },
+    {
+      "mode": "regular",
+      "scene": "success",
+      "customKey": false,
+      "phases": [
+        {
+          "phase": "initial",
+          "bytes": 3382,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-s│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 3 succeeded                                                                            ctrl+o expand\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-success ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "expanded",
+          "bytes": 2419,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-s│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 3 succeeded                                                                          ctrl+o collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ ✓ $ printf smoke-command-1\n  │     SMOKE-SUCCESS-1\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-success ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "reload",
+          "bytes": 7441,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-s│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 3 succeeded                                                                          ctrl+o collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ ✓ $ printf smoke-command-1\n  │     SMOKE-SUCCESS-1\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n\n Reloaded keybindings, extensions, skills, prompts, themes, and context files                                           \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-success ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "narrow",
+          "bytes": 3292,
+          "visible": "│model: fixture · off                      /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex│\n└──────────────────────────────────────────────────────────┘\n                                                            \n › Synthetic rendering smoke. Do not execute tools.         \n                                                            \n\nBash · 3 commands · 3 succeeded              ctrl+o collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ ✓ $ printf smoke-command-1\n  │     SMOKE-SUCCESS-1\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n\n Reloaded keybindings, extensions, skills, prompts, themes, \n and context files                                          \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ regular-success ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "collapsed",
+          "bytes": 1056,
+          "visible": "│model: fixture · off                      /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex│\n└──────────────────────────────────────────────────────────┘\n                                                            \n › Synthetic rendering smoke. Do not execute tools.         \n                                                            \n\nBash · 3 commands · 3 succeeded                ctrl+o expand\n\n Tool output: collapsed                                     \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ regular-success ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "restarted",
+          "bytes": 3382,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-s│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 3 succeeded                                                                            ctrl+o expand\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-success ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "restored-expanded",
+          "bytes": 2419,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-s│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 3 succeeded                                                                          ctrl+o collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ ✓ $ printf smoke-command-1\n  │     SMOKE-SUCCESS-1\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-success ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n\n\n"
+        }
+      ],
+      "events": []
+    },
+    {
+      "mode": "regular",
+      "scene": "long",
+      "customKey": false,
+      "phases": [
+        {
+          "phase": "initial",
+          "bytes": 3438,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-l│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 3 succeeded                                                                            ctrl+o expand\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-long ⋅ git:main ⋅ Context 88% left \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "expanded",
+          "bytes": 459718,
+          "visible": "        output 1770\n        output 1771\n        output 1772\n        output 1773\n        output 1774\n        output 1775\n        output 1776\n        output 1777\n        output 1778\n        output 1779\n        output 1780\n        output 1781\n        output 1782\n        output 1783\n        output 1784\n        output 1785\n        output 1786\n        output 1787\n        output 1788\n        output 1789\n        output 1790\n        output 1791\n        output 1792\n        output 1793\n        output 1794\n        output 1795\n        output 1796\n        output 1797\n        output 1798\n        SMOKE-TAIL 中文\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-long ⋅ git:main ⋅ Context 88% left "
+        },
+        {
+          "phase": "reload",
+          "bytes": 878665,
+          "visible": "        output 1767\n        output 1768\n        output 1769\n        output 1770\n        output 1771\n        output 1772\n        output 1773\n        output 1774\n        output 1775\n        output 1776\n        output 1777\n        output 1778\n        output 1779\n        output 1780\n        output 1781\n        output 1782\n        output 1783\n        output 1784\n        output 1785\n        output 1786\n        output 1787\n        output 1788\n        output 1789\n        output 1790\n        output 1791\n        output 1792\n        output 1793\n        output 1794\n        output 1795\n        output 1796\n        output 1797\n        output 1798\n        SMOKE-TAIL 中文\n\n Reloaded keybindings, extensions, skills, prompts, themes, and context files                                           \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-long ⋅ git:main ⋅ Context 88% left "
+        },
+        {
+          "phase": "narrow",
+          "bytes": 438924,
+          "visible": "        output 1784\n        output 1785\n        output 1786\n        output 1787\n        output 1788\n        output 1789\n        output 1790\n        output 1791\n        output 1792\n        output 1793\n        output 1794\n        output 1795\n        output 1796\n        output 1797\n        output 1798\n        SMOKE-TAIL 中文\n\n Reloaded keybindings, extensions, skills, prompts, themes, \n and context files                                          \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ regular-long ⋅ main ⋅ Context 88% left "
+        },
+        {
+          "phase": "collapsed",
+          "bytes": 2430,
+          "visible": "┌──────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                │\n│                                                          │\n│model: fixture · off                      /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex│\n└──────────────────────────────────────────────────────────┘\n                                                            \n › Synthetic rendering smoke. Do not execute tools.         \n                                                            \n\nBash · 3 commands · 3 succeeded                ctrl+o expand\n\n Tool output: collapsed                                     \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ regular-long ⋅ main ⋅ Context 88% left \n\n\n\n\n\n"
+        },
+        {
+          "phase": "restarted",
+          "bytes": 3438,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-l│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 3 succeeded                                                                            ctrl+o expand\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-long ⋅ git:main ⋅ Context 88% left \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "restored-expanded",
+          "bytes": 459718,
+          "visible": "        output 1770\n        output 1771\n        output 1772\n        output 1773\n        output 1774\n        output 1775\n        output 1776\n        output 1777\n        output 1778\n        output 1779\n        output 1780\n        output 1781\n        output 1782\n        output 1783\n        output 1784\n        output 1785\n        output 1786\n        output 1787\n        output 1788\n        output 1789\n        output 1790\n        output 1791\n        output 1792\n        output 1793\n        output 1794\n        output 1795\n        output 1796\n        output 1797\n        output 1798\n        SMOKE-TAIL 中文\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-long ⋅ git:main ⋅ Context 88% left "
+        }
+      ],
+      "events": []
+    },
+    {
+      "mode": "regular",
+      "scene": "live",
+      "customKey": false,
+      "phases": [
+        {
+          "phase": "initial",
+          "bytes": 2595,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-l│\n└──────────────────────────────────────────────────────────────────────────────────┘\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-live ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "live",
+          "bytes": 14059,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-l│\n└──────────────────────────────────────────────────────────────────────────────────┘\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                                 ctrl+o expand\n  ╰ × $ printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1                                                                1.0s\n        Error: LIVE-FAIL\n        \n\n LIVE-DONE                                                                                                              \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-live ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "expanded",
+          "bytes": 3169,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-l│\n└──────────────────────────────────────────────────────────────────────────────────┘\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                               ctrl+o collapse\n  ├ ✓ $ printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'                                                   1.0s\n  │     LIVE-FIRST\n  │     LIVE-FIRST-END\n  │     \n  │\n  ├ ✓ $ printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'                                                 1.0s\n  │     LIVE-SECOND\n  │     LIVE-SECOND-END\n  │     \n  │\n  ╰ × $ printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1                                                                1.0s\n        Error: LIVE-FAIL\n        \n        \n        Command exited with code 1\n\n LIVE-DONE                                                                                                              \n\n Tool output: expanded                                                                                                  \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-live ⋅ main ⋅ Context 100% left \n\n"
+        },
+        {
+          "phase": "reload",
+          "bytes": 9316,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-l│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                               ctrl+o collapse\n  ├ ✓ $ printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'\n  │     LIVE-FIRST\n  │     LIVE-FIRST-END\n  │     \n  │\n  ├ ✓ $ printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'\n  │     LIVE-SECOND\n  │     LIVE-SECOND-END\n  │     \n  │\n  ╰ × $ printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1\n        Error: LIVE-FAIL\n        \n        \n        Command exited with code 1\n\n LIVE-DONE                                                                                                              \n\n Reloaded keybindings, extensions, skills, prompts, themes, and context files                                           \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-live ⋅ main ⋅ Context 100% left \n\n\n\n\n"
+        },
+        {
+          "phase": "narrow",
+          "bytes": 4172,
+          "visible": "  │     LIVE-FIRST-END\n  │     \n  │\n  ├ ✓ $ printf 'LIVE-SECOND\\n'; sleep 1; printf\n  │     'LIVE-SECOND-END\\n'\n  │     LIVE-SECOND\n  │     LIVE-SECOND-END\n  │     \n  │\n  ╰ × $ printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1\n        Error: LIVE-FAIL\n        \n        \n        Command exited with code 1\n\n LIVE-DONE                                                  \n\n Reloaded keybindings, extensions, skills, prompts, themes, \n and context files                                          \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ regular-live ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "collapsed",
+          "bytes": 2860,
+          "visible": "┌──────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                │\n│                                                          │\n│model: fixture · off                      /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex│\n└──────────────────────────────────────────────────────────┘\n                                                            \n › Run the local fixture.                                   \n                                                            \n\nBash · 3 commands · 2 succeeded · 1 failed     ctrl+o expand\n  ╰ × $ printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1\n        Error: LIVE-FAIL\n        \n\n LIVE-DONE                                                  \n\n Tool output: collapsed                                     \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ regular-live ⋅ main ⋅ Context 100% left \n"
+        },
+        {
+          "phase": "restarted",
+          "bytes": 3862,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-l│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                                 ctrl+o expand\n  ╰ × $ printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1\n        Error: LIVE-FAIL\n        \n\n LIVE-DONE                                                                                                              \n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-live ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "restored-expanded",
+          "bytes": 3256,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/regular-l│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                               ctrl+o collapse\n  ├ ✓ $ printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'\n  │     LIVE-FIRST\n  │     LIVE-FIRST-END\n  │     \n  │\n  ├ ✓ $ printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'\n  │     LIVE-SECOND\n  │     LIVE-SECOND-END\n  │     \n  │\n  ╰ × $ printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1\n        Error: LIVE-FAIL\n        \n        \n        Command exited with code 1\n\n LIVE-DONE                                                                                                              \n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-live ⋅ main ⋅ Context 100% left \n\n"
+        }
+      ],
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Run the local fixture."
+              }
+            ],
+            "timestamp": 1788605887373
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Run the local fixture."
+              }
+            ],
+            "timestamp": 1788605887373
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605887377
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605887377
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_start",
+            "contentIndex": 0,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605887377
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIR"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605887377
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_delta",
+            "contentIndex": 0,
+            "delta": "{\"command\":\"printf 'LIVE-FIR\"}",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIR"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605887377
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605887377
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_end",
+            "contentIndex": 0,
+            "toolCall": {
+              "type": "toolCall",
+              "id": "live-bash-0",
+              "name": "bash",
+              "arguments": {
+                "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+              }
+            },
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605887377
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605887377
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_start",
+            "contentIndex": 1,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605887377
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-SEC"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605887377
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_delta",
+            "contentIndex": 1,
+            "delta": "{\"command\":\"printf 'LIVE-SEC\"}",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-SEC"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605887377
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-2",
+                "name": "bash",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605887377
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_end",
+            "contentIndex": 1,
+            "toolCall": {
+              "type": "toolCall",
+              "id": "live-bash-1",
+              "name": "bash",
+              "arguments": {
+                "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+              }
+            },
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-2",
+                  "name": "bash",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605887377
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-2",
+                "name": "bash",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605887377
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_start",
+            "contentIndex": 2,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-2",
+                  "name": "bash",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605887377
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-2",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'Error: L"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605887377
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_delta",
+            "contentIndex": 2,
+            "delta": "{\"command\":\"printf 'Error: L\"}",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-2",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'Error: L"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605887377
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-2",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605887377
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_end",
+            "contentIndex": 2,
+            "toolCall": {
+              "type": "toolCall",
+              "id": "live-bash-2",
+              "name": "bash",
+              "arguments": {
+                "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+              }
+            },
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-2",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605887377
+            }
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-2",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605887377
+          }
+        },
+        {
+          "type": "tool_execution_start",
+          "toolCallId": "live-bash-0",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+          }
+        },
+        {
+          "type": "tool_execution_start",
+          "toolCallId": "live-bash-1",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+          }
+        },
+        {
+          "type": "tool_execution_start",
+          "toolCallId": "live-bash-2",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+          }
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-0",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+          },
+          "partialResult": {
+            "content": []
+          }
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-1",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+          },
+          "partialResult": {
+            "content": []
+          }
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-2",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+          },
+          "partialResult": {
+            "content": []
+          }
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-0",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+          },
+          "partialResult": {
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-FIRST\n"
+              }
+            ],
+            "details": {}
+          }
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-2",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+          },
+          "partialResult": {
+            "content": [
+              {
+                "type": "text",
+                "text": "Error: LIVE-FAIL\n"
+              }
+            ],
+            "details": {}
+          }
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-1",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+          },
+          "partialResult": {
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-SECOND\n"
+              }
+            ],
+            "details": {}
+          }
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-0",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+          },
+          "partialResult": {
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-FIRST\nLIVE-FIRST-END\n"
+              }
+            ],
+            "details": {}
+          }
+        },
+        {
+          "type": "tool_execution_end",
+          "toolCallId": "live-bash-2",
+          "toolName": "bash",
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "Error: LIVE-FAIL\n\n\nCommand exited with code 1"
+              }
+            ],
+            "details": {}
+          },
+          "isError": true
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-1",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+          },
+          "partialResult": {
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-SECOND\nLIVE-SECOND-END\n"
+              }
+            ],
+            "details": {}
+          }
+        },
+        {
+          "type": "tool_execution_end",
+          "toolCallId": "live-bash-0",
+          "toolName": "bash",
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-FIRST\nLIVE-FIRST-END\n"
+              }
+            ]
+          },
+          "isError": false
+        },
+        {
+          "type": "tool_execution_end",
+          "toolCallId": "live-bash-1",
+          "toolName": "bash",
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-SECOND\nLIVE-SECOND-END\n"
+              }
+            ]
+          },
+          "isError": false
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-bash-0",
+            "toolName": "bash",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-FIRST\nLIVE-FIRST-END\n"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788605889915
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-bash-0",
+            "toolName": "bash",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-FIRST\nLIVE-FIRST-END\n"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788605889915
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-bash-1",
+            "toolName": "bash",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-SECOND\nLIVE-SECOND-END\n"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788605889915
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-bash-1",
+            "toolName": "bash",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-SECOND\nLIVE-SECOND-END\n"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788605889915
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-bash-2",
+            "toolName": "bash",
+            "content": [
+              {
+                "type": "text",
+                "text": "Error: LIVE-FAIL\n\n\nCommand exited with code 1"
+              }
+            ],
+            "details": {},
+            "isError": true,
+            "timestamp": 1788605889916
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-bash-2",
+            "toolName": "bash",
+            "content": [
+              {
+                "type": "text",
+                "text": "Error: LIVE-FAIL\n\n\nCommand exited with code 1"
+              }
+            ],
+            "details": {},
+            "isError": true,
+            "timestamp": 1788605889916
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788605889916
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788605889916
+          },
+          "assistantMessageEvent": {
+            "type": "text_start",
+            "contentIndex": 0,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788605889916
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788605889916
+          },
+          "assistantMessageEvent": {
+            "type": "text_delta",
+            "contentIndex": 0,
+            "delta": "LIVE-DONE",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788605889916
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788605889916
+          },
+          "assistantMessageEvent": {
+            "type": "text_end",
+            "contentIndex": 0,
+            "content": "LIVE-DONE",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788605889916
+            }
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788605889916
+          }
+        },
+        {
+          "type": "agent_end",
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Run the local fixture."
+                }
+              ],
+              "timestamp": 1788605887373
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-2",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605887377
+            },
+            {
+              "role": "toolResult",
+              "toolCallId": "live-bash-0",
+              "toolName": "bash",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-FIRST\nLIVE-FIRST-END\n"
+                }
+              ],
+              "isError": false,
+              "timestamp": 1788605889915
+            },
+            {
+              "role": "toolResult",
+              "toolCallId": "live-bash-1",
+              "toolName": "bash",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-SECOND\nLIVE-SECOND-END\n"
+                }
+              ],
+              "isError": false,
+              "timestamp": 1788605889915
+            },
+            {
+              "role": "toolResult",
+              "toolCallId": "live-bash-2",
+              "toolName": "bash",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Error: LIVE-FAIL\n\n\nCommand exited with code 1"
+                }
+              ],
+              "details": {},
+              "isError": true,
+              "timestamp": 1788605889916
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788605889916
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "fullscreen",
+      "scene": "mixed",
+      "customKey": true,
+      "phases": [
+        {
+          "phase": "initial",
+          "bytes": 4524,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                                 ctrl+g expand\n  ├ × $ printf smoke-command-1\n  │     Error: SMOKE-FAIL\n  │     original detail\n  ╰ ✓ $ printf smoke-command-2\n        Truncated capture · /fixture/captured-output.txt\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-mixed ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "expanded",
+          "bytes": 1887,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                               ctrl+g collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ × $ printf smoke-command-1\n  │     Error: SMOKE-FAIL\n  │     original detail\n  │     third detail\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n        Truncated capture · /fixture/captured-output.txt\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-mixed ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "reload",
+          "bytes": 8495,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                               ctrl+g collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ × $ printf smoke-command-1\n  │     Error: SMOKE-FAIL\n  │     original detail\n  │     third detail\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n        Truncated capture · /fixture/captured-output.txt\n\n Reloaded keybindings, extensions, skills, prompts, themes, and context files                                           \n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-mixed ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "narrow",
+          "bytes": 2585,
+          "visible": "                                                            \n › Synthetic rendering smoke. Do not execute tools.         \n                                                            \n\nBash · 3 commands · 2 succeeded · 1 failed   ctrl+g collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ × $ printf smoke-command-1\n  │     Error: SMOKE-FAIL\n  │     original detail\n  │     third detail\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n        Truncated capture · /fixture/captured-output.txt\n\n Reloaded keybindings, extensions, skills, prompts, themes, \n and context files                                          \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ fullscreen-mixed ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "collapsed",
+          "bytes": 2354,
+          "visible": "┌──────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                │\n│                                                          │\n│model: fixture · off                      /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex│\n└──────────────────────────────────────────────────────────┘\n                                                            \n › Synthetic rendering smoke. Do not execute tools.         \n                                                            \n\nBash · 3 commands · 2 succeeded · 1 failed     ctrl+g expand\n  ├ × $ printf smoke-command-1\n  │     Error: SMOKE-FAIL\n  │     original detail\n  ╰ ✓ $ printf smoke-command-2\n        Truncated capture · /fixture/captured-output.txt\n\n Tool output: collapsed                                     \n\n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ fullscreen-mixed ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "restarted",
+          "bytes": 4524,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                                 ctrl+g expand\n  ├ × $ printf smoke-command-1\n  │     Error: SMOKE-FAIL\n  │     original detail\n  ╰ ✓ $ printf smoke-command-2\n        Truncated capture · /fixture/captured-output.txt\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-mixed ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "restored-expanded",
+          "bytes": 1887,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                               ctrl+g collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ × $ printf smoke-command-1\n  │     Error: SMOKE-FAIL\n  │     original detail\n  │     third detail\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n        Truncated capture · /fixture/captured-output.txt\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-mixed ⋅ main ⋅ Context 100% left "
+        }
+      ],
+      "events": []
+    },
+    {
+      "mode": "fullscreen",
+      "scene": "success",
+      "customKey": false,
+      "phases": [
+        {
+          "phase": "initial",
+          "bytes": 4042,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 3 succeeded                                                                            ctrl+o expand\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-success ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "expanded",
+          "bytes": 1597,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 3 succeeded                                                                          ctrl+o collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ ✓ $ printf smoke-command-1\n  │     SMOKE-SUCCESS-1\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-success ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "reload",
+          "bytes": 7988,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 3 succeeded                                                                          ctrl+o collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ ✓ $ printf smoke-command-1\n  │     SMOKE-SUCCESS-1\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n\n Reloaded keybindings, extensions, skills, prompts, themes, and context files                                           \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-success ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "narrow",
+          "bytes": 2858,
+          "visible": "│model: fixture · off                      /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex│\n└──────────────────────────────────────────────────────────┘\n                                                            \n › Synthetic rendering smoke. Do not execute tools.         \n                                                            \n\nBash · 3 commands · 3 succeeded              ctrl+o collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ ✓ $ printf smoke-command-1\n  │     SMOKE-SUCCESS-1\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n\n Reloaded keybindings, extensions, skills, prompts, themes, \n and context files                                          \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ git:main ⋅ Context 100% left "
+        },
+        {
+          "phase": "collapsed",
+          "bytes": 1968,
+          "visible": "┌──────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                │\n│                                                          │\n│model: fixture · off                      /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex│\n└──────────────────────────────────────────────────────────┘\n                                                            \n › Synthetic rendering smoke. Do not execute tools.         \n                                                            \n\nBash · 3 commands · 3 succeeded                ctrl+o expand\n\n Tool output: collapsed                                     \n\n\n\n\n\n\n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ git:main ⋅ Context 100% left "
+        },
+        {
+          "phase": "restarted",
+          "bytes": 4042,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 3 succeeded                                                                            ctrl+o expand\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-success ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "restored-expanded",
+          "bytes": 1597,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 3 succeeded                                                                          ctrl+o collapse\n  ├ ✓ $ printf smoke-command-0\n  │     SMOKE-SUCCESS-0\n  │\n  ├ ✓ $ printf smoke-command-1\n  │     SMOKE-SUCCESS-1\n  │\n  ╰ ✓ $ printf smoke-command-2\n        SMOKE-SUCCESS-2\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-success ⋅ main ⋅ Context 100% left "
+        }
+      ],
+      "events": []
+    },
+    {
+      "mode": "fullscreen",
+      "scene": "long",
+      "customKey": false,
+      "phases": [
+        {
+          "phase": "initial",
+          "bytes": 4032,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 3 succeeded                                                                            ctrl+o expand\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-long ⋅ main ⋅ Context 88% left "
+        },
+        {
+          "phase": "expanded",
+          "bytes": 3156,
+          "visible": "        output 1770\n        output 1771\n        output 1772\n        output 1773\n        output 1774\n        output 1775\n        output 1776\n        output 1777\n        output 1778\n        output 1779\n        output 1780\n        output 1781\n        output 1782\n        output 1783\n        output 1784\n        output 1785\n        output 1786\n        output 1787\n        output 1788\n        output 1789\n        output 1790\n        output 1791\n        output 1792\n        output 1793\n        output 1794\n        output 1795\n        output 1796\n        output 1797\n        output 1798\n        SMOKE-TAIL 中文\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-long ⋅ main ⋅ Context 88% left "
+        },
+        {
+          "phase": "reload",
+          "bytes": 8332,
+          "visible": "        output 1767\n        output 1768\n        output 1769\n        output 1770\n        output 1771\n        output 1772\n        output 1773\n        output 1774\n        output 1775\n        output 1776\n        output 1777\n        output 1778\n        output 1779\n        output 1780\n        output 1781\n        output 1782\n        output 1783\n        output 1784\n        output 1785\n        output 1786\n        output 1787\n        output 1788\n        output 1789\n        output 1790\n        output 1791\n        output 1792\n        output 1793\n        output 1794\n        output 1795\n        output 1796\n        output 1797\n        output 1798\n        SMOKE-TAIL 中文\n\n Reloaded keybindings, extensions, skills, prompts, themes, and context files                                           \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-long ⋅ main ⋅ Context 88% left "
+        },
+        {
+          "phase": "narrow",
+          "bytes": 2336,
+          "visible": "        output 1784\n        output 1785\n        output 1786\n        output 1787\n        output 1788\n        output 1789\n        output 1790\n        output 1791\n        output 1792\n        output 1793\n        output 1794\n        output 1795\n        output 1796\n        output 1797\n        output 1798\n        SMOKE-TAIL 中文\n\n Reloaded keybindings, extensions, skills, prompts, themes, \n and context files                                          \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ fullscreen-long ⋅ main ⋅ Context 88% left "
+        },
+        {
+          "phase": "collapsed",
+          "bytes": 1968,
+          "visible": "┌──────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                │\n│                                                          │\n│model: fixture · off                      /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex│\n└──────────────────────────────────────────────────────────┘\n                                                            \n › Synthetic rendering smoke. Do not execute tools.         \n                                                            \n\nBash · 3 commands · 3 succeeded                ctrl+o expand\n\n Tool output: collapsed                                     \n\n\n\n\n\n\n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ fullscreen-long ⋅ main ⋅ Context 88% left "
+        },
+        {
+          "phase": "restarted",
+          "bytes": 4032,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Synthetic rendering smoke. Do not execute tools.                                                                     \n                                                                                                                        \n\nBash · 3 commands · 3 succeeded                                                                            ctrl+o expand\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-long ⋅ main ⋅ Context 88% left "
+        },
+        {
+          "phase": "restored-expanded",
+          "bytes": 3156,
+          "visible": "        output 1770\n        output 1771\n        output 1772\n        output 1773\n        output 1774\n        output 1775\n        output 1776\n        output 1777\n        output 1778\n        output 1779\n        output 1780\n        output 1781\n        output 1782\n        output 1783\n        output 1784\n        output 1785\n        output 1786\n        output 1787\n        output 1788\n        output 1789\n        output 1790\n        output 1791\n        output 1792\n        output 1793\n        output 1794\n        output 1795\n        output 1796\n        output 1797\n        output 1798\n        SMOKE-TAIL 中文\n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-long ⋅ main ⋅ Context 88% left "
+        }
+      ],
+      "events": []
+    },
+    {
+      "mode": "fullscreen",
+      "scene": "live",
+      "customKey": false,
+      "phases": [
+        {
+          "phase": "initial",
+          "bytes": 3357,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-live ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "live",
+          "bytes": 8069,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                                 ctrl+o expand\n  ╰ × $ printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1                                                                1.0s\n        Error: LIVE-FAIL\n        \n\n LIVE-DONE                                                                                                              \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-live ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "expanded",
+          "bytes": 2350,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                               ctrl+o collapse\n  ├ ✓ $ printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'                                                   1.0s\n  │     LIVE-FIRST\n  │     LIVE-FIRST-END\n  │     \n  │\n  ├ ✓ $ printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'                                                 1.0s\n  │     LIVE-SECOND\n  │     LIVE-SECOND-END\n  │     \n  │\n  ╰ × $ printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1                                                                1.0s\n        Error: LIVE-FAIL\n        \n        \n        Command exited with code 1\n\n LIVE-DONE                                                                                                              \n\n Tool output: expanded                                                                                                  \n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-live ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "reload",
+          "bytes": 9734,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                               ctrl+o collapse\n  ├ ✓ $ printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'\n  │     LIVE-FIRST\n  │     LIVE-FIRST-END\n  │     \n  │\n  ├ ✓ $ printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'\n  │     LIVE-SECOND\n  │     LIVE-SECOND-END\n  │     \n  │\n  ╰ × $ printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1\n        Error: LIVE-FAIL\n        \n        \n        Command exited with code 1\n\n LIVE-DONE                                                                                                              \n\n Reloaded keybindings, extensions, skills, prompts, themes, and context files                                           \n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-live ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "narrow",
+          "bytes": 2347,
+          "visible": "  │     LIVE-FIRST-END\n  │     \n  │\n  ├ ✓ $ printf 'LIVE-SECOND\\n'; sleep 1; printf\n  │     'LIVE-SECOND-END\\n'\n  │     LIVE-SECOND\n  │     LIVE-SECOND-END\n  │     \n  │\n  ╰ × $ printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1\n        Error: LIVE-FAIL\n        \n        \n        Command exited with code 1\n\n LIVE-DONE                                                  \n\n Reloaded keybindings, extensions, skills, prompts, themes, \n and context files                                          \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ fullscreen-live ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "collapsed",
+          "bytes": 2206,
+          "visible": "┌──────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                │\n│                                                          │\n│model: fixture · off                      /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex│\n└──────────────────────────────────────────────────────────┘\n                                                            \n › Run the local fixture.                                   \n                                                            \n\nBash · 3 commands · 2 succeeded · 1 failed     ctrl+o expand\n  ╰ × $ printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1\n        Error: LIVE-FAIL\n        \n\n LIVE-DONE                                                  \n\n Tool output: collapsed                                     \n\n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ fullscreen-live ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "restarted",
+          "bytes": 4433,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                                 ctrl+o expand\n  ╰ × $ printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1\n        Error: LIVE-FAIL\n        \n\n LIVE-DONE                                                                                                              \n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-live ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "restored-expanded",
+          "bytes": 2427,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-Dhrzak/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\nBash · 3 commands · 2 succeeded · 1 failed                                                               ctrl+o collapse\n  ├ ✓ $ printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'\n  │     LIVE-FIRST\n  │     LIVE-FIRST-END\n  │     \n  │\n  ├ ✓ $ printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'\n  │     LIVE-SECOND\n  │     LIVE-SECOND-END\n  │     \n  │\n  ╰ × $ printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1\n        Error: LIVE-FAIL\n        \n        \n        Command exited with code 1\n\n LIVE-DONE                                                                                                              \n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-live ⋅ main ⋅ Context 100% left "
+        }
+      ],
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Run the local fixture."
+              }
+            ],
+            "timestamp": 1788605953361
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Run the local fixture."
+              }
+            ],
+            "timestamp": 1788605953361
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605953365
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605953365
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_start",
+            "contentIndex": 0,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605953365
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIR"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605953365
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_delta",
+            "contentIndex": 0,
+            "delta": "{\"command\":\"printf 'LIVE-FIR\"}",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIR"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605953365
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605953365
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_end",
+            "contentIndex": 0,
+            "toolCall": {
+              "type": "toolCall",
+              "id": "live-bash-0",
+              "name": "bash",
+              "arguments": {
+                "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+              }
+            },
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605953365
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605953365
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_start",
+            "contentIndex": 1,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605953365
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-SEC"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605953365
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_delta",
+            "contentIndex": 1,
+            "delta": "{\"command\":\"printf 'LIVE-SEC\"}",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-SEC"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605953365
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-2",
+                "name": "bash",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605953365
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_end",
+            "contentIndex": 1,
+            "toolCall": {
+              "type": "toolCall",
+              "id": "live-bash-1",
+              "name": "bash",
+              "arguments": {
+                "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+              }
+            },
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-2",
+                  "name": "bash",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605953365
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-2",
+                "name": "bash",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605953365
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_start",
+            "contentIndex": 2,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-2",
+                  "name": "bash",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605953365
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-2",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'Error: L"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605953365
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_delta",
+            "contentIndex": 2,
+            "delta": "{\"command\":\"printf 'Error: L\"}",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-2",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'Error: L"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605953365
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-2",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605953365
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_end",
+            "contentIndex": 2,
+            "toolCall": {
+              "type": "toolCall",
+              "id": "live-bash-2",
+              "name": "bash",
+              "arguments": {
+                "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+              }
+            },
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-2",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605953365
+            }
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-bash-0",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-1",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-bash-2",
+                "name": "bash",
+                "arguments": {
+                  "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788605953365
+          }
+        },
+        {
+          "type": "tool_execution_start",
+          "toolCallId": "live-bash-0",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+          }
+        },
+        {
+          "type": "tool_execution_start",
+          "toolCallId": "live-bash-1",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+          }
+        },
+        {
+          "type": "tool_execution_start",
+          "toolCallId": "live-bash-2",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+          }
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-0",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+          },
+          "partialResult": {
+            "content": []
+          }
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-1",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+          },
+          "partialResult": {
+            "content": []
+          }
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-2",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+          },
+          "partialResult": {
+            "content": []
+          }
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-0",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+          },
+          "partialResult": {
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-FIRST\n"
+              }
+            ],
+            "details": {}
+          }
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-1",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+          },
+          "partialResult": {
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-SECOND\n"
+              }
+            ],
+            "details": {}
+          }
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-2",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+          },
+          "partialResult": {
+            "content": [
+              {
+                "type": "text",
+                "text": "Error: LIVE-FAIL\n"
+              }
+            ],
+            "details": {}
+          }
+        },
+        {
+          "type": "tool_execution_end",
+          "toolCallId": "live-bash-2",
+          "toolName": "bash",
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "Error: LIVE-FAIL\n\n\nCommand exited with code 1"
+              }
+            ],
+            "details": {}
+          },
+          "isError": true
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-1",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+          },
+          "partialResult": {
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-SECOND\nLIVE-SECOND-END\n"
+              }
+            ],
+            "details": {}
+          }
+        },
+        {
+          "type": "tool_execution_end",
+          "toolCallId": "live-bash-1",
+          "toolName": "bash",
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-SECOND\nLIVE-SECOND-END\n"
+              }
+            ]
+          },
+          "isError": false
+        },
+        {
+          "type": "tool_execution_update",
+          "toolCallId": "live-bash-0",
+          "toolName": "bash",
+          "args": {
+            "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+          },
+          "partialResult": {
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-FIRST\nLIVE-FIRST-END\n"
+              }
+            ],
+            "details": {}
+          }
+        },
+        {
+          "type": "tool_execution_end",
+          "toolCallId": "live-bash-0",
+          "toolName": "bash",
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-FIRST\nLIVE-FIRST-END\n"
+              }
+            ]
+          },
+          "isError": false
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-bash-0",
+            "toolName": "bash",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-FIRST\nLIVE-FIRST-END\n"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788605955907
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-bash-0",
+            "toolName": "bash",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-FIRST\nLIVE-FIRST-END\n"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788605955907
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-bash-1",
+            "toolName": "bash",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-SECOND\nLIVE-SECOND-END\n"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788605955908
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-bash-1",
+            "toolName": "bash",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-SECOND\nLIVE-SECOND-END\n"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788605955908
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-bash-2",
+            "toolName": "bash",
+            "content": [
+              {
+                "type": "text",
+                "text": "Error: LIVE-FAIL\n\n\nCommand exited with code 1"
+              }
+            ],
+            "details": {},
+            "isError": true,
+            "timestamp": 1788605955908
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-bash-2",
+            "toolName": "bash",
+            "content": [
+              {
+                "type": "text",
+                "text": "Error: LIVE-FAIL\n\n\nCommand exited with code 1"
+              }
+            ],
+            "details": {},
+            "isError": true,
+            "timestamp": 1788605955908
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788605955909
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788605955909
+          },
+          "assistantMessageEvent": {
+            "type": "text_start",
+            "contentIndex": 0,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788605955909
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788605955909
+          },
+          "assistantMessageEvent": {
+            "type": "text_delta",
+            "contentIndex": 0,
+            "delta": "LIVE-DONE",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788605955909
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788605955909
+          },
+          "assistantMessageEvent": {
+            "type": "text_end",
+            "contentIndex": 0,
+            "content": "LIVE-DONE",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788605955909
+            }
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788605955909
+          }
+        },
+        {
+          "type": "agent_end",
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Run the local fixture."
+                }
+              ],
+              "timestamp": 1788605953361
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-0",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-FIRST\\n'; sleep 1; printf 'LIVE-FIRST-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-1",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'LIVE-SECOND\\n'; sleep 1; printf 'LIVE-SECOND-END\\n'"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-bash-2",
+                  "name": "bash",
+                  "arguments": {
+                    "command": "printf 'Error: LIVE-FAIL\\n'; sleep 1; exit 1"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788605953365
+            },
+            {
+              "role": "toolResult",
+              "toolCallId": "live-bash-0",
+              "toolName": "bash",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-FIRST\nLIVE-FIRST-END\n"
+                }
+              ],
+              "isError": false,
+              "timestamp": 1788605955907
+            },
+            {
+              "role": "toolResult",
+              "toolCallId": "live-bash-1",
+              "toolName": "bash",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-SECOND\nLIVE-SECOND-END\n"
+                }
+              ],
+              "isError": false,
+              "timestamp": 1788605955908
+            },
+            {
+              "role": "toolResult",
+              "toolCallId": "live-bash-2",
+              "toolName": "bash",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Error: LIVE-FAIL\n\n\nCommand exited with code 1"
+                }
+              ],
+              "details": {},
+              "isError": true,
+              "timestamp": 1788605955908
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788605955909
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

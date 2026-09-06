@@ -1,8 +1,9 @@
 import { isAbsolute, relative, sep } from "node:path";
 import { createBashToolDefinition, createEditToolDefinition, createReadToolDefinition, createWriteToolDefinition, DEFAULT_MAX_BYTES, formatSize, getLanguageFromPath, highlightCode, keyHint, } from "@earendil-works/pi-coding-agent";
-import { stripTerminalSequences, visibleWidth, wrapTextWithAnsi, } from "@earendil-works/pi-tui";
+import { stripTerminalSequences, visibleWidth, } from "@earendil-works/pi-tui";
 import { BashRefreshScheduler } from "./bash-refresh-scheduler.js";
-import { countExactVisualLines, getExactFittedVisualLines, } from "./exact-visual-tail.js";
+import { BashGroups } from "./bash-groups.js";
+import { renderBashGroup } from "./bash-group-layout.js";
 import { fitToWidth, formatHomePath, normalizeWidth, paintBackground, } from "./layout.js";
 import { ResponsiveLinesComponent } from "./responsive-lines.js";
 import { ToolRenderCache } from "./render-cache.js";
@@ -50,6 +51,7 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
     const getBashDefinition = createDefinitionCache(factories.bash);
     const bashRefreshScheduler = new BashRefreshScheduler(BASH_DURATION_REFRESH_MS);
     const renderCache = services.renderCache ?? new ToolRenderCache();
+    const bashGroups = new BashGroups(renderCache, bashRefreshScheduler);
     pi.on("tool_execution_end", (event) => {
         if (event.toolName === "bash") {
             bashRefreshScheduler.untrack(event.toolCallId);
@@ -58,9 +60,37 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
     const resetRendering = () => {
         bashRefreshScheduler.dispose();
         renderCache.clear();
+        bashGroups.reset();
     };
-    pi.on("session_start", resetRendering);
+    const rebuildGroups = (_event, ctx) => {
+        resetRendering();
+        bashGroups.reset(ctx);
+    };
+    let firstSessionStart = true;
+    pi.on("session_start", (event, ctx) => {
+        // Reload builds the new instance's history rows before emitting session_start.
+        // Keep those fresh scopes and discover their ownership without reviving old instances.
+        if (firstSessionStart)
+            bashGroups.reset(ctx, true);
+        else
+            rebuildGroups(event, ctx);
+        firstSessionStart = false;
+    });
+    pi.on("session_tree", rebuildGroups);
+    pi.on("session_compact", rebuildGroups);
     pi.on("session_shutdown", resetRendering);
+    pi.on("message_start", (event, ctx) => {
+        if (ctx?.mode === "tui")
+            bashGroups.discover(event.message, true);
+    });
+    pi.on("message_update", (event, ctx) => {
+        if (ctx?.mode === "tui")
+            bashGroups.discover(event.message);
+    });
+    pi.on("message_end", (event, ctx) => {
+        if (ctx?.mode === "tui")
+            bashGroups.discover(event.message);
+    });
     const baseRead = getReadDefinition(process.cwd());
     const readTool = {
         ...baseRead,
@@ -198,35 +228,35 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
         renderCall(args, theme, context) {
             const state = context.state;
             const path = formatToolPath(args.path, context.cwd);
-            if (getToolRenderMode(state, services) === "low-power") {
-                return updateComponent(context.lastComponent, (width) => [
-                    fitToWidth(formatToolTitle("Write", path, theme), width),
-                ], `low-power\0write\0call\0${getLowPowerThemeFingerprint(theme)}\0${path}`);
-            }
-            const getTitle = () => {
-                const metrics = getWriteMetrics(state, args.content, typeof args.content !== "string" && context.argsComplete);
-                const suffix = theme.fg("dim", `(${formatLineCount(metrics.lineCount)})`);
-                return formatToolTitle("Write", path, theme, suffix);
-            };
-            // Keep malformed arguments inside the host's renderCall error boundary.
-            const eagerTitle = typeof args.content === "string" ? undefined : getTitle();
-            return updateComponent(context.lastComponent, (width) => [
-                fitToWidth(eagerTitle ?? getTitle(), width),
-            ]);
+            const lowPower = getToolRenderMode(state, services) === "low-power";
+            // Throw in the slot callback, never from the deferred component paint.
+            if (!lowPower && context.argsComplete && typeof args.content !== "string")
+                throw new TypeError();
+            state.callComponent = updateComponent(context.lastComponent, (width) => {
+                const suffix = state.status === "success" && state.metrics
+                    ? theme.fg("dim", `(${formatLineCount(state.metrics.lineCount)})`)
+                    : "";
+                return [fitToWidth(formatToolTitle("Write", path, theme, suffix, {
+                        glyph: "•", color: state.status === "success" ? "success" : state.status === "error" ? "error" : "warning",
+                    }), width)];
+            });
+            return state.callComponent;
         },
         renderResult(result, options, theme, context) {
             const state = context.state;
-            if (getToolRenderMode(state, services) === "low-power") {
-                const status = options.isPartial ? "partial" : context.isError ? "error" : "success";
-                const error = !options.isPartial && context.isError
-                    ? getLowPowerError(result.content, "Write failed")
-                    : undefined;
-                return updateComponent(context.lastComponent, (width) => renderLowPowerWriteResult(options.isPartial, theme, error, width), `low-power\0write\0result\0${getLowPowerThemeFingerprint(theme)}\0${status}\0${error ?? ""}`);
+            const lowPower = getToolRenderMode(state, services) === "low-power";
+            state.status = options.isPartial ? "pending" : context.isError ? "error" : "success";
+            if (state.status === "success") {
+                const content = context.args.content;
+                state.metrics = typeof content === "string" ? getWriteMetrics(state, content) : undefined;
             }
-            const isText = typeof context.args.content === "string";
-            const getMetrics = () => getWriteMetrics(state, context.args.content, (!isText && context.argsComplete) || (!options.isPartial && !context.isError));
-            const eagerMetrics = isText ? undefined : getMetrics();
-            return updateComponent(context.lastComponent, (width) => renderWriteResult(result, isText ? getMetrics() : eagerMetrics, options.isPartial, theme, context.isError, width));
+            state.callComponent?.invalidate();
+            const error = state.status === "error"
+                ? lowPower ? getLowPowerError(result.content, "Write failed") : firstLine(extractText(result.content)) || "Write failed"
+                : undefined;
+            return updateComponent(context.lastComponent, (width) => error === undefined
+                ? []
+                : [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)]);
         },
     };
     pi.registerTool(writeTool);
@@ -240,8 +270,10 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
         renderCall(args, theme, context) {
             const state = context.state;
             const lowPower = getToolRenderMode(state, services) === "low-power";
-            state.cache ??= renderCache.scope();
-            updateBashLifecycle(state, context, state.cache.active ? bashRefreshScheduler : undefined, !lowPower);
+            if (lowPower) {
+                state.cache ??= renderCache.scope();
+                updateBashLifecycle(state, context, state.cache.active ? bashRefreshScheduler : undefined, false);
+            }
             const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
             state.callComponent = component;
             state.expanded = context.expanded;
@@ -265,7 +297,11 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
                 component.setRenderer((width) => renderLowPowerBashCall(commandPreview, timeout, state, theme, services, width), { linesAlreadyFit: true, cacheKey });
                 return component;
             }
-            component.setRenderer((width) => renderBashCall(args, state, theme, services, width), { linesAlreadyFit: true });
+            const member = bashGroups.bind(context);
+            bashGroups.updateCall(member, context, component);
+            component.setRenderer((width) => member.group.members[0] === member
+                ? renderBashGroup(member.group, context.expanded, theme, width, formatExpandHint(context.expanded ? "collapse" : "expand", theme, services))
+                : [], { linesAlreadyFit: true });
             return component;
         },
         renderResult(result, options, theme, context) {
@@ -285,15 +321,9 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
                 }
                 return updateComponent(context.lastComponent, (width) => renderLowPowerBashResult(prepared, options.expanded, theme, width), `${getLowPowerBashResultCacheKey(prepared, theme)}\0${options.expanded}`);
             }
-            state.cache ??= renderCache.scope();
-            const previousPrepared = state.preparedResult;
-            const previousExpanded = state.expanded;
-            const prepared = getPreparedBashResult(state, result, options.isPartial);
-            state.expanded = options.expanded;
-            if (previousPrepared !== prepared || previousExpanded !== options.expanded) {
-                state.callComponent?.invalidate();
-            }
-            return updateComponent(context.lastComponent, (width) => getBashResultLayout(state, prepared, options, theme, width));
+            const member = bashGroups.bind(context);
+            bashGroups.updateResult(member, result);
+            return updateComponent(context.lastComponent, () => []);
         },
     };
     pi.registerTool(bashTool);
@@ -602,26 +632,6 @@ function renderDiffTruncationFooter(remaining, width) {
     const rule = "─".repeat(Math.max(0, safeWidth - visibleWidth(label)));
     return fitToWidth(`${ANSI_DIM}${label}${rule}${ANSI_INTENSITY_RESET}`, safeWidth);
 }
-function renderLowPowerWriteResult(isPartial, theme, error, width) {
-    if (isPartial) {
-        return [fitToWidth(theme.fg("warning", "  … Writing"), width)];
-    }
-    if (error !== undefined) {
-        return [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)];
-    }
-    return [fitToWidth(theme.fg("success", "  └ Written"), width)];
-}
-function renderWriteResult(result, metrics, isPartial, theme, isError, width) {
-    if (isPartial) {
-        return [fitToWidth(theme.fg("warning", "  … Writing"), width)];
-    }
-    if (isError) {
-        const error = firstLine(extractText(result.content)) || "Write failed";
-        return [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)];
-    }
-    const summary = `  └ Written · ${formatLineCount(metrics.lineCount)} · ${formatBytes(metrics.bytes ?? Buffer.byteLength(metrics.content, "utf8"))}`;
-    return [fitToWidth(theme.fg("success", summary), width)];
-}
 function updateBashLifecycle(state, context, scheduler, trackRefresh = true) {
     const nextStatus = context.isError
         ? "failed"
@@ -718,50 +728,6 @@ function renderLowPowerBashCall(commandPreview, timeout, state, theme, services,
     }
     return lines;
 }
-function renderBashCall(args, state, theme, services, width) {
-    const safeWidth = normalizeWidth(width);
-    if (safeWidth === 0)
-        return [];
-    const fields = state.expanded ? [] : getBashDynamicFields(state, theme, safeWidth);
-    if (state.preparedResult?.truncated) {
-        fields.push({ text: theme.fg("warning", "truncated"), priority: 95, order: 20 });
-    }
-    const timeout = getBashTimeoutLabel(args.timeout);
-    if (timeout)
-        fields.push({ text: theme.fg("dim", timeout), priority: 70, order: 40 });
-    fields.push({
-        text: formatExpandHint(state.expanded ? "collapse" : "expand", theme, services),
-        priority: 100,
-        order: 50,
-    });
-    const lines = renderBashTimelineSummary(state.status ?? "pending", getBashCommandPreview(args.command, state), fields, theme, safeWidth);
-    if (state.expanded) {
-        lines.push("", ...renderBashCommand(args.command, state, theme, safeWidth));
-        if (!state.preparedResult)
-            lines.push(...renderBashLiveFooter(state, theme, safeWidth));
-    }
-    return lines;
-}
-function getBashDynamicFields(state, theme, width, visualLineCount) {
-    const fields = [];
-    if (state.preparedResult) {
-        const count = visualLineCount ?? getBashVisualLineCount(state, theme, width);
-        const shown = state.preparedResult.truncated ? " shown" : "";
-        fields.push({ text: theme.fg("dim", `${formatLineCount(count)}${shown}`), priority: 90, order: 10 });
-    }
-    if (state.startedAt !== undefined) {
-        fields.push({
-            text: theme.fg("dim", formatDuration(Math.max(0, (state.endedAt ?? Date.now()) - state.startedAt))),
-            priority: 80,
-            order: 30,
-        });
-    }
-    return fields;
-}
-function renderBashLiveFooter(state, theme, width, visualLineCount) {
-    const metadata = renderBashSummaryMetadata(getBashDynamicFields(state, theme, width, visualLineCount), theme, width);
-    return metadata ? ["", metadata] : [];
-}
 function renderBashTimelineSummary(status, command, fields, theme, width) {
     const presentation = BASH_STATUS_PRESENTATION[status];
     const branch = width >= visibleWidth(`${BASH_TIMELINE_BRANCH}${presentation.glyph} Bash`)
@@ -814,56 +780,6 @@ function getBashDetailContentWidth(width) {
 }
 function renderBashDetailLine(line, width) {
     return fitToWidth(`${getBashDetailIndent(width)}${line}`, width);
-}
-function getBashCommandPreview(command, state) {
-    const source = typeof command === "string" ? command : "";
-    if (state.commandPreviewSource === source && state.commandPreview !== undefined) {
-        return state.commandPreview;
-    }
-    // Keep one extra character so the existing summary truncation still emits its ellipsis.
-    const preview = (/^[\x20-\x7e]*$/u.test(source)
-        ? source.trim().slice(0, BASH_SUMMARY_PRIMARY_MAX_WIDTH + 1)
-        : sanitizeBashDisplayText(stripTerminalSequences(source))
-            .replace(/\t/gu, "   ")
-            .replace(/[\r\n]+/gu, " ")
-            .trim()) || "…";
-    state.commandPreviewSource = source;
-    state.commandPreview = preview;
-    return preview;
-}
-function getBashVisualLineCount(state, theme, width) {
-    const prepared = state.preparedResult;
-    if (!prepared)
-        return 0;
-    if (state.expanded) {
-        return getBashResultLayoutEntry(state, prepared, true, theme, width).visualLineCount;
-    }
-    const source = prepared.outputLines;
-    if (source.length === 0)
-        return 0;
-    const cache = state.cache;
-    const detailWidth = getBashDetailContentWidth(width);
-    return cache.count(`bash-count\0${cache.identity(source)}\0${detailWidth}`, () => countExactVisualLines(source, detailWidth, cache));
-}
-function renderBashCommand(command, state, theme, width) {
-    const source = typeof command === "string" ? command : "";
-    const cache = state.cache;
-    const key = ["bash-command", source, width, cache.identity(theme), getBashCommandThemeFingerprint(theme)].join("\0");
-    return cache.lines(key, () => {
-        const displayCommand = sanitizeBashDisplayText(stripTerminalSequences(source)) || "…";
-        const indent = getBashDetailIndent(width);
-        const prefix = theme.fg("dim", "$ ");
-        const continuation = "  ";
-        const contentWidth = Math.max(1, getBashDetailContentWidth(width) - visibleWidth(prefix));
-        const commandLines = wrapTextWithAnsi(theme.fg("toolTitle", theme.bold(displayCommand)), contentWidth);
-        return (commandLines.length > 0 ? commandLines : [""]).map((line, index) => (fitToWidth(`${indent}${index === 0 ? prefix : continuation}${line}`, width)));
-    });
-}
-function getBashCommandThemeFingerprint(theme) {
-    return [
-        theme.fg("toolTitle", theme.bold("x")),
-        theme.fg("dim", "x"),
-    ].join("\0");
 }
 function getLowPowerPreparedBashResult(state, result) {
     if (state.lowPowerPreparedResult !== undefined
@@ -967,77 +883,6 @@ function formatLowPowerBashWarnings(details) {
     }
     return warnings;
 }
-function getPreparedBashResult(state, result, isPartial) {
-    if (state.preparedResult !== undefined
-        && state.preparedContent === result.content
-        && state.preparedDetails === result.details
-        && state.preparedIsPartial === isPartial) {
-        return state.preparedResult;
-    }
-    const prepared = prepareBashResult(state, result, isPartial);
-    state.preparedContent = result.content;
-    state.preparedDetails = result.details;
-    state.preparedIsPartial = isPartial;
-    state.preparedResult = prepared;
-    return prepared;
-}
-function prepareBashResult(state, result, isPartial) {
-    let outputLines;
-    return {
-        get outputLines() {
-            if (outputLines === undefined) {
-                if (state.outputContent !== result.content) {
-                    state.extractedOutput = extractBashOutput(result.content).trim();
-                    state.outputContent = result.content;
-                }
-                const output = removeBashExecutionFooter(state.extractedOutput ?? "", result.details, isPartial);
-                if (state.outputText !== output || state.outputLines === undefined) {
-                    state.outputText = output;
-                    state.outputLines = output ? output.split("\n") : [];
-                }
-                outputLines = state.outputLines;
-            }
-            return outputLines;
-        },
-        warning: formatBashTruncationWarning(result.details),
-        truncated: result.details?.truncation?.truncated === true,
-    };
-}
-function getBashResultThemeFingerprint(theme) {
-    return theme.fg("toolOutput", "x");
-}
-function getBashResultLayout(state, prepared, options, theme, width) {
-    if (!options.expanded)
-        return [];
-    const layout = getBashResultLayoutEntry(state, prepared, true, theme, width);
-    return [...layout.lines, ...renderBashWarning(prepared.warning, theme, width),
-        ...renderBashLiveFooter(state, theme, width, layout.visualLineCount)];
-}
-function getBashResultLayoutEntry(state, prepared, expanded, theme, width) {
-    if (!expanded)
-        return { lines: [], visualLineCount: 0 };
-    const cache = state.cache;
-    const key = ["bash-output", cache.identity(prepared.outputLines), width,
-        cache.identity(theme), getBashResultThemeFingerprint(theme)].join("\0");
-    const lines = cache.lines(key, () => layoutBashResult(prepared, theme, width).lines);
-    return { lines, visualLineCount: Math.max(0, lines.length - 1) };
-}
-function layoutBashResult(prepared, theme, width) {
-    const detailWidth = getBashDetailContentWidth(width);
-    const visualLines = prepared.outputLines.length > 0
-        ? getExactFittedVisualLines(prepared.outputLines, (line) => theme.fg("toolOutput", line), detailWidth)
-        : [];
-    const lines = visualLines.length > 0
-        ? ["", ...visualLines.map((line) => `${getBashDetailIndent(width)}${line}`)]
-        : [];
-    return { lines, visualLineCount: visualLines.length };
-}
-function renderBashWarning(warning, theme, width) {
-    if (!warning)
-        return [];
-    return ["", ...wrapTextWithAnsi(theme.fg("warning", `[${warning}]`), getBashDetailContentWidth(width))
-            .map(line => renderBashDetailLine(line, width))];
-}
 function formatExpandHint(description, theme, services) {
     const keys = services.getKeybindings?.()?.getKeys("app.tools.expand") ?? [];
     if (keys.length === 0) {
@@ -1050,19 +895,6 @@ function formatExpandHint(description, theme, services) {
         .join("+"))
         .join("/");
     return theme.fg("dim", keyText) + theme.fg("muted", ` ${description}`);
-}
-function extractBashOutput(content) {
-    let output = "";
-    let hasText = false;
-    for (const item of content) {
-        if (item.type !== "text" || typeof item.text !== "string")
-            continue;
-        if (hasText)
-            output += "\n";
-        output += sanitizeBashDisplayText(stripTerminalSequences(item.text)).replace(/\r/gu, "");
-        hasText = true;
-    }
-    return output;
 }
 function sanitizeBashDisplayText(text) {
     let sanitized = "";
@@ -1083,36 +915,6 @@ function sanitizeBashDisplayText(text) {
         sanitized += character;
     }
     return sanitized;
-}
-function removeBashExecutionFooter(output, details, isPartial) {
-    if (isPartial
-        || !details?.truncation?.truncated
-        || !details.fullOutputPath
-        || !output.endsWith("]")) {
-        return output;
-    }
-    const footerStart = output.lastIndexOf("\n\n[");
-    if (footerStart !== -1
-        && output.slice(footerStart).includes(details.fullOutputPath)) {
-        return output.slice(0, footerStart).trimEnd();
-    }
-    return output;
-}
-function formatBashTruncationWarning(details) {
-    const truncation = details?.truncation;
-    const warnings = [];
-    if (details?.fullOutputPath) {
-        warnings.push(`Full output: ${details.fullOutputPath}`);
-    }
-    if (truncation?.truncated) {
-        if (truncation.truncatedBy === "lines") {
-            warnings.push(`Truncated: showing ${truncation.outputLines} of ${truncation.totalLines} lines`);
-        }
-        else {
-            warnings.push(`Truncated: ${truncation.outputLines} lines shown (${formatSize(truncation.maxBytes ?? DEFAULT_MAX_BYTES)} limit)`);
-        }
-    }
-    return warnings.join(". ");
 }
 function formatDuration(milliseconds) {
     return `${(milliseconds / 1000).toFixed(1)}s`;
@@ -1205,7 +1007,7 @@ function extractText(content) {
 function firstLine(text) {
     return text.split("\n", 1)[0] ?? "";
 }
-function getWriteMetrics(state, content, includeBytes) {
+function getWriteMetrics(state, content) {
     let metrics = state.metrics;
     if (metrics?.content !== content) {
         metrics = {
@@ -1213,9 +1015,6 @@ function getWriteMetrics(state, content, includeBytes) {
             lineCount: countLines(content),
         };
         state.metrics = metrics;
-    }
-    if (includeBytes && metrics.bytes === undefined) {
-        metrics.bytes = Buffer.byteLength(content, "utf8");
     }
     return metrics;
 }
@@ -1240,15 +1039,5 @@ function countLines(content) {
 }
 function formatLineCount(count) {
     return `${count} ${count === 1 ? "line" : "lines"}`;
-}
-function formatBytes(bytes) {
-    if (bytes < 1024)
-        return `${bytes} B`;
-    const kibibytes = bytes / 1024;
-    if (kibibytes < 1024) {
-        return `${kibibytes >= 10 ? Math.round(kibibytes) : kibibytes.toFixed(1)} KB`;
-    }
-    const mebibytes = kibibytes / 1024;
-    return `${mebibytes >= 10 ? Math.round(mebibytes) : mebibytes.toFixed(1)} MB`;
 }
 //# sourceMappingURL=tools.js.map

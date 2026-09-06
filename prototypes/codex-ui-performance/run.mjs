@@ -23,7 +23,8 @@ const exports = {
   'modes/interactive/components/footer.js': ['FooterComponent'],
   'modes/interactive/components/assistant-message.js': ['AssistantMessageComponent'],
   'core/keybindings.js': ['KeybindingsManager'],
-  'core/tools/truncate.js': ['DEFAULT_MAX_BYTES', 'formatSize'],
+  'core/session-manager.js': ['sessionEntryToContextMessages'],
+  'core/tools/truncate.js': ['DEFAULT_MAX_BYTES', 'DEFAULT_MAX_LINES', 'formatSize'],
   ...Object.fromEntries(['bash', 'edit', 'read', 'write'].map(name => [
     `core/tools/${name}.js`, [`create${name[0].toUpperCase()}${name.slice(1)}ToolDefinition`],
   ])),
@@ -62,4 +63,4 @@ process.env.PI_PERF_SOURCES = JSON.stringify({
     .map(name => [name, createHash('sha256').update(fs.readFileSync(path.join(directory, name))).digest('hex')])),
   upstream: { agent: fingerprint(agentRoot), tui: fingerprint(tuiRoot), ai: fingerprint(aiRoot) },
 });
-await import(process.argv.includes('--verify') ? './verify.mjs' : process.argv.includes('--memory') ? './memory.mjs' : './bench.mjs');
+await import(process.env.PI_PERF_ONLY === 'mcp' ? './mcp-bench.mjs' : process.argv.includes('--grouped') ? './grouped-probe.mjs' : process.argv.includes('--verify') ? './verify.mjs' : process.argv.includes('--memory') ? './memory.mjs' : './bench.mjs');

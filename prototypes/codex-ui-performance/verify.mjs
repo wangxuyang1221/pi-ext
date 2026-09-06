@@ -4,19 +4,34 @@ import { setTheme, setThemeInstance, loadThemeFromPath } from '@earendil-works/p
 import { verifyTerminal } from './verify-terminal.mjs';
 import { fitToWidth as originalFit } from './.generated/before/layout.js';
 import { fitToWidth as optimizedFit } from './.generated/after/layout.js';
+import { stripTerminalSequences, visibleWidth } from '@earendil-works/pi-tui';
 import { cwd, definitions, fixtures, textResult, restoreClock, save } from './shared.mjs';
 
-function compareRows(rows, width, label, movedBashFooter = false) {
+function compareRows(rows, width, label, groupedBash = false) {
   const before = rows[0].render(width);
   const after = rows[1].render(width);
-  if (!movedBashFooter) return assert.deepEqual(after, before, label);
-  // Read the pinned host's render slots to compare unchanged regions independently.
-  const calls = rows.map(row => row.callRendererComponent.render(width));
-  assert.equal(calls[1][0], calls[0][0], `${label}/title`);
-  assert.deepEqual(calls[1].slice(2), calls[0].slice(2), `${label}/command`);
-  const results = rows.map(row => row.resultRendererComponent.render(width));
-  assert.deepEqual(results[1].slice(0, -2), results[0], `${label}/output-and-warning`);
-  assert.equal(after.length, before.length + 2, `${label}/footer-height`);
+  const write = rows[1].toolName === 'write';
+  if (!groupedBash && !write) return assert.deepEqual(after, before, label);
+  // Changed contracts compare warmed state with a fresh host row and explicit visible requirements.
+  const owner = definitions('after');
+  try {
+    const source = rows[1];
+    const fresh = owner.row(write ? 'write' : 'bash', source.args);
+    fresh.setExpanded(source.expanded);
+    if (source.executionStarted) fresh.markExecutionStarted();
+    if (source.argsComplete) fresh.setArgsComplete();
+    if (source.result) fresh.updateResult(source.result, source.isPartial);
+    assert.deepEqual(after, fresh.render(width), `${label}/fresh-grouped-layout`);
+    assert.ok(after.every(line => visibleWidth(line) <= width), `${label}/width`);
+    if (source.result) assert.deepEqual(source.resultRendererComponent?.render(width), [], `${label}/single-carrier`);
+    if (write) {
+      assert.doesNotMatch(after.map(stripTerminalSequences).join('\n'), /Written|Writing|bytes/u);
+      if (width >= 120 && source.result && !source.isPartial && !source.result.isError && typeof source.args.content === 'string') {
+        const count = source.args.content.length ? source.args.content.split('\n').length : 0;
+        assert.match(after.map(stripTerminalSequences).join('\n'), new RegExp(`\\(${count} lines?\\)`));
+      }
+    }
+  } finally { owner.dispose(); }
 }
 
 const readFixture = { id: 'read-unicode', name: 'read', args: { path: 'fixture.ts', offset: 3, limit: 40 },
@@ -46,7 +61,7 @@ try {
         for (const expanded of [false, true, false, true]) {
           for (const row of rows) row.setExpanded(expanded);
           for (const width of widths) {
-            compareRows(rows, width, `${fixture.id}/${theme}/${expanded}/${width}`, fixture.name === 'bash' && expanded);
+            compareRows(rows, width, `${fixture.id}/${theme}/${expanded}/${width}`, fixture.name === 'bash');
             checks++;
           }
         }
@@ -66,7 +81,7 @@ try {
         for (const row of rows) row.updateResult(result, index < 34);
         if (index % 5) continue;
         for (const width of [4, 40, 120]) {
-          compareRows(rows, width, `output revision/${index}/${expanded}/${width}`, expanded);
+          compareRows(rows, width, `output revision/${index}/${expanded}/${width}`, true);
           checks++;
         }
       }
@@ -83,7 +98,7 @@ try {
           if (withResult) row.updateResult(textResult('partial'), true);
         }
         for (const width of [1, 40, 120]) {
-          assert.deepEqual(rows[1].render(width), rows[0].render(width), `write revision/${String(content)}/${width}`);
+          compareRows(rows, width, `write revision/${String(content)}/${width}`);
           checks++;
         }
       }

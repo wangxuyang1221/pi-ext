@@ -1,0 +1,1 @@
+{"version":3,"file":"bash-group-layout.d.ts","sourceRoot":"","sources":["../src/bash-group-layout.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,KAAK,EAAE,MAAM,iCAAiC,CAAC;AAE7D,OAAO,KAAK,EAAE,SAAS,EAA0B,MAAM,kBAAkB,CAAC;AA2E1E,wFAAwF;AACxF,wBAAgB,eAAe,CAAC,KAAK,EAAE,SAAS,EAAE,QAAQ,EAAE,OAAO,EAAE,KAAK,EAAE,KAAK,EAAE,cAAc,EAAE,MAAM,EAAE,UAAU,EAAE,MAAM,GAAG,MAAM,EAAE,CA4BvI"}

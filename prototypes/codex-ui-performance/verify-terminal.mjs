@@ -60,7 +60,7 @@ async function compareWithFresh(row, actual, columns, label) {
 
 export async function verifyTerminal() {
   const results = [];
-  for (const shape of ['short', 'token']) for (const history of [0, 20]) {
+  for (const shape of ['short', 'token']) for (const history of [0, 20]) for (const groupSize of [1, 3]) {
     setTheme('dark', false);
     const owner = definitions('after');
     const terminal = new CaptureTerminal();
@@ -73,11 +73,18 @@ export async function verifyTerminal() {
         row.updateResult(textResult('offscreen-history-marker\n'.repeat(1800)));
         screen.addChild(row);
       }
-      const row = owner.row('bash', { command: 'printf sample', timeout: 30 }, screen);
-      row.setExpanded(true); row.setArgsComplete(); row.markExecutionStarted();
+      owner.declareBashGroup(groupSize);
+      const members = Array.from({ length: groupSize }, (_, index) => {
+        const member = owner.row('bash', { command: `printf sample-${index}`, timeout: 30 }, screen);
+        member.setExpanded(true); member.setArgsComplete();
+        if (index < groupSize - 1) member.updateResult(textResult('completed member\n'.repeat(1800)));
+        screen.addChild(member);
+        return member;
+      });
+      const row = members.at(-1);
+      row.markExecutionStarted();
       let output = shape === 'short' ? 'short output\n'.repeat(1800).trimEnd() : 'x'.repeat(50 * 1024);
       row.updateResult(textResult(output), true);
-      screen.addChild(row);
       screen.renderNow();
       await feed(parsed, terminal.take());
       const events = {
@@ -87,7 +94,7 @@ export async function verifyTerminal() {
         'replace-prefix'() { output = output.replace(/^(?:short output|xxxxx)/u, 'replaced'); row.updateResult(textResult(output), true); },
         complete() { row.updateResult(textResult(output)); },
         resize() { terminal.columns = 80; parsed.resize(80, 40); },
-        theme() { setTheme('light', false); row.invalidate(); },
+        theme() { setTheme('light', false); for (const member of members) member.invalidate(); },
       };
       for (const [event, update] of Object.entries(events)) {
         const previous = screen.fullRedraws;
@@ -99,8 +106,8 @@ export async function verifyTerminal() {
           assert.doesNotMatch(data, /offscreen-history-marker|\x1b\[(?:2J|3J)/u);
         }
         await feed(parsed, data);
-        await compareWithFresh(row, parsed, terminal.columns, `${shape}/${history}/${event}`);
-        results.push({ shape, history, event, bytes: Buffer.byteLength(data), fullRedraws });
+        await compareWithFresh(members[0], parsed, terminal.columns, `${shape}/${history}/${groupSize}/${event}`);
+        results.push({ shape, history, groupSize, event, bytes: Buffer.byteLength(data), fullRedraws });
       }
     } finally { owner.dispose(); screen.stop(); parsed.dispose(); }
   }

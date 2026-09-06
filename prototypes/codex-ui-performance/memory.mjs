@@ -50,7 +50,8 @@ try {
     const beforeClear = owner.stats();
     if (variant === 'after') {
       assert.ok(beforeClear.layouts.evictions > 20);
-      assert.ok(beforeClear.counts.evictions > 20);
+      // Grouped Bash no longer counts wrapped output for the collapsed summary.
+      assert.ok(beforeClear.counts.chargedBytes <= beforeClear.counts.limitBytes);
     }
     owner.reset();
     const clearedCache = owner.stats();

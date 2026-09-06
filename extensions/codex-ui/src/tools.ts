@@ -12,6 +12,7 @@ import {
   type BashToolDetails,
   type EditToolDetails,
   type ExtensionAPI,
+  type ExtensionContext,
   type KeybindingsManager,
   type ReadToolDetails,
   type Theme,
@@ -24,10 +25,8 @@ import {
 } from "@earendil-works/pi-tui";
 
 import { BashRefreshScheduler } from "./bash-refresh-scheduler.js";
-import {
-  countExactVisualLines,
-  getExactFittedVisualLines,
-} from "./exact-visual-tail.js";
+import { BashGroups, type BashGroupRowState } from "./bash-groups.js";
+import { renderBashGroup } from "./bash-group-layout.js";
 import {
   fitToWidth,
   formatHomePath,
@@ -99,7 +98,6 @@ interface CodexReadState {
 interface WriteMetrics {
   content: string;
   lineCount: number;
-  bytes?: number;
 }
 
 type CodexToolRenderMode = "full" | "low-power";
@@ -107,6 +105,8 @@ type CodexToolRenderMode = "full" | "low-power";
 interface CodexWriteState {
   renderMode?: CodexToolRenderMode;
   metrics?: WriteMetrics;
+  status?: "pending" | "success" | "error";
+  callComponent?: ResponsiveLinesComponent;
 }
 
 interface CodexEditState {
@@ -127,23 +127,12 @@ interface CodexEditState {
 
 type CodexBashStatus = "pending" | "running" | "completed" | "failed";
 
-interface PreparedBashResult {
-  outputLines: string[];
-  warning: string;
-  truncated: boolean;
-}
-
 interface LowPowerPreparedBashResult {
   outputLines: string[];
   warnings: string[];
 }
 
-interface BashResultLayout {
-  lines: string[];
-  visualLineCount: number;
-}
-
-interface CodexBashState {
+interface CodexBashState extends BashGroupRowState {
   renderMode?: CodexToolRenderMode;
   cache?: RenderCacheScope;
   startedAt?: number;
@@ -157,16 +146,6 @@ interface CodexBashState {
   lowPowerPreparedResult?: LowPowerPreparedBashResult;
   callComponent?: ResponsiveLinesComponent;
   expanded?: boolean;
-  commandPreviewSource?: string;
-  commandPreview?: string;
-  preparedContent?: Array<{ type: string; text?: string }>;
-  preparedDetails?: BashToolDetails;
-  preparedIsPartial?: boolean;
-  outputContent?: Array<{ type: string; text?: string }>;
-  extractedOutput?: string;
-  outputText?: string;
-  outputLines?: string[];
-  preparedResult?: PreparedBashResult;
 }
 
 const DEFAULT_FACTORIES: CodexToolFactories = {
@@ -187,6 +166,7 @@ export function registerCodexTools(
   const getBashDefinition = createDefinitionCache(factories.bash);
   const bashRefreshScheduler = new BashRefreshScheduler(BASH_DURATION_REFRESH_MS);
   const renderCache = services.renderCache ?? new ToolRenderCache();
+  const bashGroups = new BashGroups(renderCache, bashRefreshScheduler);
 
   pi.on("tool_execution_end", (event) => {
     if (event.toolName === "bash") {
@@ -196,9 +176,32 @@ export function registerCodexTools(
   const resetRendering = () => {
     bashRefreshScheduler.dispose();
     renderCache.clear();
+    bashGroups.reset();
   };
-  pi.on("session_start", resetRendering);
+  const rebuildGroups = (_event: unknown, ctx: ExtensionContext) => {
+    resetRendering();
+    bashGroups.reset(ctx);
+  };
+  let firstSessionStart = true;
+  pi.on("session_start", (event, ctx) => {
+    // Reload builds the new instance's history rows before emitting session_start.
+    // Keep those fresh scopes and discover their ownership without reviving old instances.
+    if (firstSessionStart) bashGroups.reset(ctx, true);
+    else rebuildGroups(event, ctx);
+    firstSessionStart = false;
+  });
+  pi.on("session_tree", rebuildGroups);
+  pi.on("session_compact", rebuildGroups);
   pi.on("session_shutdown", resetRendering);
+  pi.on("message_start", (event, ctx) => {
+    if (ctx?.mode === "tui") bashGroups.discover(event.message, true);
+  });
+  pi.on("message_update", (event, ctx) => {
+    if (ctx?.mode === "tui") bashGroups.discover(event.message);
+  });
+  pi.on("message_end", (event, ctx) => {
+    if (ctx?.mode === "tui") bashGroups.discover(event.message);
+  });
 
   const baseRead = getReadDefinition(process.cwd());
   const readTool: typeof baseRead = {
@@ -368,53 +371,34 @@ export function registerCodexTools(
     renderCall(args, theme, context) {
       const state = context.state as unknown as CodexWriteState;
       const path = formatToolPath(args.path, context.cwd);
-      if (getToolRenderMode(state, services) === "low-power") {
-        return updateComponent(context.lastComponent, (width) => [
-          fitToWidth(formatToolTitle("Write", path, theme), width),
-        ], `low-power\0write\0call\0${getLowPowerThemeFingerprint(theme)}\0${path}`);
-      }
-
-      const getTitle = () => {
-        const metrics = getWriteMetrics(state, args.content, typeof args.content !== "string" && context.argsComplete);
-        const suffix = theme.fg("dim", `(${formatLineCount(metrics.lineCount)})`);
-        return formatToolTitle("Write", path, theme, suffix);
-      };
-      // Keep malformed arguments inside the host's renderCall error boundary.
-      const eagerTitle = typeof args.content === "string" ? undefined : getTitle();
-      return updateComponent(context.lastComponent, (width) => [
-        fitToWidth(eagerTitle ?? getTitle(), width),
-      ]);
+      const lowPower = getToolRenderMode(state, services) === "low-power";
+      // Throw in the slot callback, never from the deferred component paint.
+      if (!lowPower && context.argsComplete && typeof args.content !== "string") throw new TypeError();
+      state.callComponent = updateComponent(context.lastComponent, (width) => {
+        const suffix = state.status === "success" && state.metrics
+          ? theme.fg("dim", `(${formatLineCount(state.metrics.lineCount)})`)
+          : "";
+        return [fitToWidth(formatToolTitle("Write", path, theme, suffix, {
+          glyph: "•", color: state.status === "success" ? "success" : state.status === "error" ? "error" : "warning",
+        }), width)];
+      });
+      return state.callComponent;
     },
     renderResult(result, options, theme, context) {
       const state = context.state as unknown as CodexWriteState;
-      if (getToolRenderMode(state, services) === "low-power") {
-        const status = options.isPartial ? "partial" : context.isError ? "error" : "success";
-        const error = !options.isPartial && context.isError
-          ? getLowPowerError(result.content, "Write failed")
-          : undefined;
-        return updateComponent(context.lastComponent, (width) => renderLowPowerWriteResult(
-          options.isPartial,
-          theme,
-          error,
-          width,
-        ), `low-power\0write\0result\0${getLowPowerThemeFingerprint(theme)}\0${status}\0${error ?? ""}`);
+      const lowPower = getToolRenderMode(state, services) === "low-power";
+      state.status = options.isPartial ? "pending" : context.isError ? "error" : "success";
+      if (state.status === "success") {
+        const content = context.args.content;
+        state.metrics = typeof content === "string" ? getWriteMetrics(state, content) : undefined;
       }
-
-      const isText = typeof context.args.content === "string";
-      const getMetrics = () => getWriteMetrics(
-        state,
-        context.args.content,
-        (!isText && context.argsComplete) || (!options.isPartial && !context.isError),
-      );
-      const eagerMetrics = isText ? undefined : getMetrics();
-      return updateComponent(context.lastComponent, (width) => renderWriteResult(
-        result,
-        isText ? getMetrics() : eagerMetrics!,
-        options.isPartial,
-        theme,
-        context.isError,
-        width,
-      ));
+      state.callComponent?.invalidate();
+      const error = state.status === "error"
+        ? lowPower ? getLowPowerError(result.content, "Write failed") : firstLine(extractText(result.content)) || "Write failed"
+        : undefined;
+      return updateComponent(context.lastComponent, (width) => error === undefined
+        ? []
+        : [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)]);
     },
   };
   pi.registerTool(writeTool);
@@ -429,8 +413,10 @@ export function registerCodexTools(
     renderCall(args, theme, context) {
       const state = context.state as unknown as CodexBashState;
       const lowPower = getToolRenderMode(state, services) === "low-power";
-      state.cache ??= renderCache.scope();
-      updateBashLifecycle(state, context, state.cache.active ? bashRefreshScheduler : undefined, !lowPower);
+      if (lowPower) {
+        state.cache ??= renderCache.scope();
+        updateBashLifecycle(state, context, state.cache.active ? bashRefreshScheduler : undefined, false);
+      }
 
       const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
       state.callComponent = component;
@@ -466,10 +452,12 @@ export function registerCodexTools(
         return component;
       }
 
-      component.setRenderer(
-        (width) => renderBashCall(args, state, theme, services, width),
-        { linesAlreadyFit: true },
-      );
+      const member = bashGroups.bind(context as unknown as Parameters<BashGroups["bind"]>[0]);
+      bashGroups.updateCall(member, context, component);
+      component.setRenderer((width) => member.group.members[0] === member
+        ? renderBashGroup(member.group, context.expanded, theme, width,
+          formatExpandHint(context.expanded ? "collapse" : "expand", theme, services))
+        : [], { linesAlreadyFit: true });
       return component;
     },
     renderResult(result, options, theme, context) {
@@ -498,21 +486,9 @@ export function registerCodexTools(
         );
       }
 
-      state.cache ??= renderCache.scope();
-      const previousPrepared = state.preparedResult;
-      const previousExpanded = state.expanded;
-      const prepared = getPreparedBashResult(state, result, options.isPartial);
-      state.expanded = options.expanded;
-      if (previousPrepared !== prepared || previousExpanded !== options.expanded) {
-        state.callComponent?.invalidate();
-      }
-      return updateComponent(context.lastComponent, (width) => getBashResultLayout(
-        state,
-        prepared,
-        options,
-        theme,
-        width,
-      ));
+      const member = bashGroups.bind(context as unknown as Parameters<BashGroups["bind"]>[0]);
+      bashGroups.updateResult(member, result);
+      return updateComponent(context.lastComponent, () => []);
     },
   };
   pi.registerTool(bashTool);
@@ -715,7 +691,7 @@ function formatToolTitle(
   path: string,
   theme: Theme,
   suffix = "",
-  marker: { glyph: string; color: "dim" | "success" } = { glyph: "•", color: "dim" },
+  marker: { glyph: string; color: "dim" | "success" | "warning" | "error" } = { glyph: "•", color: "dim" },
 ): string {
   const parts = [
     theme.fg(marker.color, marker.glyph),
@@ -914,41 +890,6 @@ function renderDiffTruncationFooter(remaining: number, width: number): string {
   return fitToWidth(`${ANSI_DIM}${label}${rule}${ANSI_INTENSITY_RESET}`, safeWidth);
 }
 
-function renderLowPowerWriteResult(
-  isPartial: boolean,
-  theme: Theme,
-  error: string | undefined,
-  width: number,
-): string[] {
-  if (isPartial) {
-    return [fitToWidth(theme.fg("warning", "  … Writing"), width)];
-  }
-  if (error !== undefined) {
-    return [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)];
-  }
-  return [fitToWidth(theme.fg("success", "  └ Written"), width)];
-}
-
-function renderWriteResult(
-  result: { content: Array<{ type: string; text?: string }> },
-  metrics: WriteMetrics,
-  isPartial: boolean,
-  theme: Theme,
-  isError: boolean,
-  width: number,
-): string[] {
-  if (isPartial) {
-    return [fitToWidth(theme.fg("warning", "  … Writing"), width)];
-  }
-  if (isError) {
-    const error = firstLine(extractText(result.content)) || "Write failed";
-    return [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)];
-  }
-
-  const summary = `  └ Written · ${formatLineCount(metrics.lineCount)} · ${formatBytes(metrics.bytes ?? Buffer.byteLength(metrics.content, "utf8"))}`;
-  return [fitToWidth(theme.fg("success", summary), width)];
-}
-
 function updateBashLifecycle(
   state: CodexBashState,
   context: {
@@ -1087,64 +1028,6 @@ function renderLowPowerBashCall(
   return lines;
 }
 
-function renderBashCall(
-  args: { command: string; timeout?: number },
-  state: CodexBashState,
-  theme: Theme,
-  services: CodexToolRenderServices,
-  width: number,
-): string[] {
-  const safeWidth = normalizeWidth(width);
-  if (safeWidth === 0) return [];
-
-  const fields = state.expanded ? [] : getBashDynamicFields(state, theme, safeWidth);
-  if (state.preparedResult?.truncated) {
-    fields.push({ text: theme.fg("warning", "truncated"), priority: 95, order: 20 });
-  }
-  const timeout = getBashTimeoutLabel(args.timeout);
-  if (timeout) fields.push({ text: theme.fg("dim", timeout), priority: 70, order: 40 });
-  fields.push({
-    text: formatExpandHint(state.expanded ? "collapse" : "expand", theme, services),
-    priority: 100,
-    order: 50,
-  });
-
-  const lines = renderBashTimelineSummary(
-    state.status ?? "pending",
-    getBashCommandPreview(args.command, state),
-    fields,
-    theme,
-    safeWidth,
-  );
-  if (state.expanded) {
-    lines.push("", ...renderBashCommand(args.command, state, theme, safeWidth));
-    if (!state.preparedResult) lines.push(...renderBashLiveFooter(state, theme, safeWidth));
-  }
-  return lines;
-}
-
-function getBashDynamicFields(state: CodexBashState, theme: Theme, width: number, visualLineCount?: number): BashSummaryField[] {
-  const fields: BashSummaryField[] = [];
-  if (state.preparedResult) {
-    const count = visualLineCount ?? getBashVisualLineCount(state, theme, width);
-    const shown = state.preparedResult.truncated ? " shown" : "";
-    fields.push({ text: theme.fg("dim", `${formatLineCount(count)}${shown}`), priority: 90, order: 10 });
-  }
-  if (state.startedAt !== undefined) {
-    fields.push({
-      text: theme.fg("dim", formatDuration(Math.max(0, (state.endedAt ?? Date.now()) - state.startedAt))),
-      priority: 80,
-      order: 30,
-    });
-  }
-  return fields;
-}
-
-function renderBashLiveFooter(state: CodexBashState, theme: Theme, width: number, visualLineCount?: number): string[] {
-  const metadata = renderBashSummaryMetadata(getBashDynamicFields(state, theme, width, visualLineCount), theme, width);
-  return metadata ? ["", metadata] : [];
-}
-
 function renderBashTimelineSummary(
   status: CodexBashStatus,
   command: string,
@@ -1225,70 +1108,6 @@ function getBashDetailContentWidth(width: number): number {
 
 function renderBashDetailLine(line: string, width: number): string {
   return fitToWidth(`${getBashDetailIndent(width)}${line}`, width);
-}
-
-function getBashCommandPreview(command: string, state: CodexBashState): string {
-  const source = typeof command === "string" ? command : "";
-  if (state.commandPreviewSource === source && state.commandPreview !== undefined) {
-    return state.commandPreview;
-  }
-
-  // Keep one extra character so the existing summary truncation still emits its ellipsis.
-  const preview = (/^[\x20-\x7e]*$/u.test(source)
-    ? source.trim().slice(0, BASH_SUMMARY_PRIMARY_MAX_WIDTH + 1)
-    : sanitizeBashDisplayText(stripTerminalSequences(source))
-      .replace(/\t/gu, "   ")
-      .replace(/[\r\n]+/gu, " ")
-      .trim()) || "…";
-  state.commandPreviewSource = source;
-  state.commandPreview = preview;
-  return preview;
-}
-
-function getBashVisualLineCount(state: CodexBashState, theme: Theme, width: number): number {
-  const prepared = state.preparedResult;
-  if (!prepared) return 0;
-  if (state.expanded) {
-    return getBashResultLayoutEntry(state, prepared, true, theme, width).visualLineCount;
-  }
-  const source = prepared.outputLines;
-  if (source.length === 0) return 0;
-  const cache = state.cache!;
-  const detailWidth = getBashDetailContentWidth(width);
-  return cache.count(`bash-count\0${cache.identity(source)}\0${detailWidth}`,
-    () => countExactVisualLines(source, detailWidth, cache));
-}
-
-function renderBashCommand(
-  command: string,
-  state: CodexBashState,
-  theme: Theme,
-  width: number,
-): string[] {
-  const source = typeof command === "string" ? command : "";
-  const cache = state.cache!;
-  const key = ["bash-command", source, width, cache.identity(theme), getBashCommandThemeFingerprint(theme)].join("\0");
-  return cache.lines(key, () => {
-    const displayCommand = sanitizeBashDisplayText(stripTerminalSequences(source)) || "…";
-    const indent = getBashDetailIndent(width);
-    const prefix = theme.fg("dim", "$ ");
-    const continuation = "  ";
-    const contentWidth = Math.max(1, getBashDetailContentWidth(width) - visibleWidth(prefix));
-    const commandLines = wrapTextWithAnsi(
-      theme.fg("toolTitle", theme.bold(displayCommand)),
-      contentWidth,
-    );
-    return (commandLines.length > 0 ? commandLines : [""]).map((line, index) => (
-      fitToWidth(`${indent}${index === 0 ? prefix : continuation}${line}`, width)
-    ));
-  });
-}
-
-function getBashCommandThemeFingerprint(theme: Theme): string {
-  return [
-    theme.fg("toolTitle", theme.bold("x")),
-    theme.fg("dim", "x"),
-  ].join("\0");
 }
 
 function getLowPowerPreparedBashResult(
@@ -1431,113 +1250,6 @@ function formatLowPowerBashWarnings(details: BashToolDetails | undefined): strin
   return warnings;
 }
 
-function getPreparedBashResult(
-  state: CodexBashState,
-  result: { content: Array<{ type: string; text?: string }>; details?: BashToolDetails },
-  isPartial: boolean,
-): PreparedBashResult {
-  if (
-    state.preparedResult !== undefined
-    && state.preparedContent === result.content
-    && state.preparedDetails === result.details
-    && state.preparedIsPartial === isPartial
-  ) {
-    return state.preparedResult;
-  }
-
-  const prepared = prepareBashResult(state, result, isPartial);
-  state.preparedContent = result.content;
-  state.preparedDetails = result.details;
-  state.preparedIsPartial = isPartial;
-  state.preparedResult = prepared;
-  return prepared;
-}
-
-function prepareBashResult(
-  state: CodexBashState,
-  result: { content: Array<{ type: string; text?: string }>; details?: BashToolDetails },
-  isPartial: boolean,
-): PreparedBashResult {
-  let outputLines: string[] | undefined;
-  return {
-    get outputLines() {
-      if (outputLines === undefined) {
-        if (state.outputContent !== result.content) {
-          state.extractedOutput = extractBashOutput(result.content).trim();
-          state.outputContent = result.content;
-        }
-        const output = removeBashExecutionFooter(state.extractedOutput ?? "", result.details, isPartial);
-        if (state.outputText !== output || state.outputLines === undefined) {
-          state.outputText = output;
-          state.outputLines = output ? output.split("\n") : [];
-        }
-        outputLines = state.outputLines;
-      }
-      return outputLines;
-    },
-    warning: formatBashTruncationWarning(result.details),
-    truncated: result.details?.truncation?.truncated === true,
-  };
-}
-
-function getBashResultThemeFingerprint(theme: Theme): string {
-  return theme.fg("toolOutput", "x");
-}
-
-function getBashResultLayout(
-  state: CodexBashState,
-  prepared: PreparedBashResult,
-  options: { expanded: boolean },
-  theme: Theme,
-  width: number,
-): string[] {
-  if (!options.expanded) return [];
-  const layout = getBashResultLayoutEntry(state, prepared, true, theme, width);
-  return [...layout.lines, ...renderBashWarning(prepared.warning, theme, width),
-    ...renderBashLiveFooter(state, theme, width, layout.visualLineCount)];
-}
-
-function getBashResultLayoutEntry(
-  state: CodexBashState,
-  prepared: PreparedBashResult,
-  expanded: boolean,
-  theme: Theme,
-  width: number,
-): BashResultLayout {
-  if (!expanded) return { lines: [], visualLineCount: 0 };
-  const cache = state.cache!;
-  const key = ["bash-output", cache.identity(prepared.outputLines), width,
-    cache.identity(theme), getBashResultThemeFingerprint(theme)].join("\0");
-  const lines = cache.lines(key, () => layoutBashResult(prepared, theme, width).lines);
-  return { lines, visualLineCount: Math.max(0, lines.length - 1) };
-}
-
-function layoutBashResult(
-  prepared: PreparedBashResult,
-  theme: Theme,
-  width: number,
-): Pick<BashResultLayout, "lines" | "visualLineCount"> {
-  const detailWidth = getBashDetailContentWidth(width);
-  const visualLines = prepared.outputLines.length > 0
-    ? getExactFittedVisualLines(
-      prepared.outputLines,
-      (line) => theme.fg("toolOutput", line),
-      detailWidth,
-    )
-    : [];
-  const lines = visualLines.length > 0
-    ? ["", ...visualLines.map((line) => `${getBashDetailIndent(width)}${line}`)]
-    : [];
-
-  return { lines, visualLineCount: visualLines.length };
-}
-
-function renderBashWarning(warning: string, theme: Theme, width: number): string[] {
-  if (!warning) return [];
-  return ["", ...wrapTextWithAnsi(theme.fg("warning", `[${warning}]`), getBashDetailContentWidth(width))
-    .map(line => renderBashDetailLine(line, width))];
-}
-
 function formatExpandHint(
   description: string,
   theme: Theme,
@@ -1557,18 +1269,6 @@ function formatExpandHint(
   return theme.fg("dim", keyText) + theme.fg("muted", ` ${description}`);
 }
 
-function extractBashOutput(content: Array<{ type: string; text?: string }>): string {
-  let output = "";
-  let hasText = false;
-  for (const item of content) {
-    if (item.type !== "text" || typeof item.text !== "string") continue;
-    if (hasText) output += "\n";
-    output += sanitizeBashDisplayText(stripTerminalSequences(item.text)).replace(/\r/gu, "");
-    hasText = true;
-  }
-  return output;
-}
-
 function sanitizeBashDisplayText(text: string): string {
   let sanitized = "";
   for (const character of text) {
@@ -1584,46 +1284,6 @@ function sanitizeBashDisplayText(text: string): string {
     sanitized += character;
   }
   return sanitized;
-}
-
-function removeBashExecutionFooter(
-  output: string,
-  details: BashToolDetails | undefined,
-  isPartial: boolean,
-): string {
-  if (
-    isPartial
-    || !details?.truncation?.truncated
-    || !details.fullOutputPath
-    || !output.endsWith("]")
-  ) {
-    return output;
-  }
-
-  const footerStart = output.lastIndexOf("\n\n[");
-  if (
-    footerStart !== -1
-    && output.slice(footerStart).includes(details.fullOutputPath)
-  ) {
-    return output.slice(0, footerStart).trimEnd();
-  }
-  return output;
-}
-
-function formatBashTruncationWarning(details: BashToolDetails | undefined): string {
-  const truncation = details?.truncation;
-  const warnings: string[] = [];
-  if (details?.fullOutputPath) {
-    warnings.push(`Full output: ${details.fullOutputPath}`);
-  }
-  if (truncation?.truncated) {
-    if (truncation.truncatedBy === "lines") {
-      warnings.push(`Truncated: showing ${truncation.outputLines} of ${truncation.totalLines} lines`);
-    } else {
-      warnings.push(`Truncated: ${truncation.outputLines} lines shown (${formatSize(truncation.maxBytes ?? DEFAULT_MAX_BYTES)} limit)`);
-    }
-  }
-  return warnings.join(". ");
 }
 
 function formatDuration(milliseconds: number): string {
@@ -1749,7 +1409,6 @@ function firstLine(text: string): string {
 function getWriteMetrics(
   state: CodexWriteState,
   content: string,
-  includeBytes: boolean,
 ): WriteMetrics {
   let metrics = state.metrics;
   if (metrics?.content !== content) {
@@ -1758,9 +1417,6 @@ function getWriteMetrics(
       lineCount: countLines(content),
     };
     state.metrics = metrics;
-  }
-  if (includeBytes && metrics.bytes === undefined) {
-    metrics.bytes = Buffer.byteLength(content, "utf8");
   }
   return metrics;
 }
@@ -1785,14 +1441,4 @@ function countLines(content: string): number {
 
 function formatLineCount(count: number): string {
   return `${count} ${count === 1 ? "line" : "lines"}`;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  const kibibytes = bytes / 1024;
-  if (kibibytes < 1024) {
-    return `${kibibytes >= 10 ? Math.round(kibibytes) : kibibytes.toFixed(1)} KB`;
-  }
-  const mebibytes = kibibytes / 1024;
-  return `${mebibytes >= 10 ? Math.round(mebibytes) : mebibytes.toFixed(1)} MB`;
 }

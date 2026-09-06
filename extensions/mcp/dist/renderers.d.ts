@@ -1,6 +1,10 @@
 import { type Theme } from "@earendil-works/pi-coding-agent";
 import { type Component } from "@earendil-works/pi-tui";
+interface McpRowState {
+    mcpStatus?: "pending" | "success" | "error";
+}
 interface RendererContext {
+    state?: McpRowState;
     lastComponent: Component | undefined;
     isPartial: boolean;
     isError: boolean;

@@ -29,7 +29,7 @@ class CaptureTerminal {
   }
 }
 
-function createPipeline(history: number, output = Array.from({ length: 1800 }, (_, index) => `output ${index}`).join("\n"), withResult = true, offscreenRunning = false) {
+function createPipeline(history: number, output = Array.from({ length: 1800 }, (_, index) => `output ${index}`).join("\n"), withResult = true, offscreenRunning = false, groupSize = 1) {
   initTheme("dark", false);
   mkdirSync(join(process.cwd(), ".tmp"), { recursive: true });
   const directory = mkdtempSync(join(process.cwd(), ".tmp/codex-ui-pipeline-"));
@@ -39,10 +39,10 @@ function createPipeline(history: number, output = Array.from({ length: 1800 }, (
   screen.requestRender = () => {};
   screen.start();
   const tools: ToolDefinition[] = [];
-  const handlers = new Map<string, Array<() => void>>();
+  const handlers = new Map<string, Array<(event?: unknown, ctx?: unknown) => void>>();
   registerCodexTools({
     registerTool(tool: ToolDefinition) { tools.push(tool); },
-    on(event: string, handler: () => void) {
+    on(event: string, handler: (event?: unknown, ctx?: unknown) => void) {
       const callbacks = handlers.get(event) ?? [];
       callbacks.push(handler);
       handlers.set(event, callbacks);
@@ -59,20 +59,28 @@ function createPipeline(history: number, output = Array.from({ length: 1800 }, (
     row.updateResult({ content: [{ type: "text", text: "offscreen-history-marker\n".repeat(1800) }], isError: false }, running);
     screen.addChild(row);
   }
-  const row = bash();
-  row.setExpanded(true);
-  row.setArgsComplete();
-  row.markExecutionStarted();
+  const message = { role: "assistant", content: Array.from({ length: groupSize }, (_, index) => ({
+    type: "toolCall", id: `bash-${id + index}`, name: "bash", arguments: { command: "printf sample" },
+  })) };
+  for (const handler of handlers.get("message_start") ?? []) handler({ message }, { mode: "tui" });
+  const rows = Array.from({ length: groupSize }, () => bash());
   let text = output;
-  if (withResult) row.updateResult({ content: [{ type: "text", text }], isError: false }, true);
-  screen.addChild(row);
+  rows.forEach((row, index) => {
+    row.setExpanded(true); row.setArgsComplete();
+    const running = index === rows.length - 1;
+    if (running) row.markExecutionStarted();
+    if (withResult) row.updateResult({ content: [{ type: "text", text }], isError: false }, running);
+    screen.addChild(row);
+  });
+  const row = rows[0]!;
+  const active = rows.at(-1)!;
   screen.renderNow();
   terminal.take();
   return {
-    row, screen, terminal,
+    row, rows, screen, terminal,
     update(event: "append" | "replace-tail") {
       text = (event === "append" ? text : output) + "\nnext output";
-      row.updateResult({ content: [{ type: "text", text }], isError: false }, true);
+      active.updateResult({ content: [{ type: "text", text }], isError: false }, true);
     },
     dispose() {
       for (const handler of handlers.get("session_shutdown") ?? []) handler();
@@ -99,7 +107,7 @@ test("stable tail updates never resend offscreen history for short rows or long 
           writes.push(data);
           assert.equal(pipeline.screen.fullRedraws - before, 0);
           assert.doesNotMatch(data, /offscreen-history-marker|\x1b\[(?:2J|3J)/u);
-          assert.match(stripTerminalSequences(pipeline.row.render(120).slice(-4).join("\n")), /next output\s+\d+ lines · 0\.1s\s*$/u);
+          assert.match(stripTerminalSequences(pipeline.row.render(120).slice(-4).join("\n")), /next output\s+1: 0\.1s running\s*$/u);
         } finally { pipeline.dispose(); }
       }
       assert.equal(writes[1], writes[0]);
@@ -118,31 +126,34 @@ test("an offscreen running tool still refreshes instead of being hidden to avoid
     assert.equal(pipeline.screen.fullRedraws - previous, 1);
     const data = pipeline.terminal.take();
     assert.match(data, /offscreen-history-marker/u);
-    assert.match(stripTerminalSequences(data), /1800 lines · 1\.0s/u);
+    assert.match(stripTerminalSequences(data), /1: 1\.0s running/u);
   } finally { pipeline.dispose(); }
 });
 
-test("expanded footer changes owners once and freezes after an empty final result", () => {
+test("expanded running clocks move to completed commands and freeze after an empty final result", () => {
   vi.useFakeTimers();
   vi.setSystemTime(0);
   const pipeline = createPipeline(0, "", false);
   const plain = () => stripTerminalSequences(pipeline.row.render(120).join("\n")).trimEnd();
   try {
-    assert.match(plain(), /0\.0s$/u);
-    assert.doesNotMatch(plain(), /0 lines/u);
+    assert.match(plain(), /1: 0\.0s running$/u);
+    assert.match(plain(), /Waiting for output/u);
     vi.advanceTimersByTime(1000);
     pipeline.row.updateResult({ content: [], isError: false }, true);
-    assert.match(plain(), /0 lines · 1\.0s$/u);
+    assert.match(plain(), /1: 1\.0s running$/u);
     assert.equal(plain().match(/1\.0s/gu)?.length, 1);
     vi.advanceTimersByTime(1000);
     pipeline.row.updateResult({ content: [], isError: false });
     const final = plain();
-    assert.match(final, /completed/u);
-    assert.match(final, /0 lines · 2\.0s$/u);
+    assert.match(final, /1 succeeded/u);
+    assert.match(final, /\$ printf sample\s+2\.0s/u);
+    assert.match(final, /\(no output\)/u);
     vi.advanceTimersByTime(5000);
     assert.equal(plain(), final);
     pipeline.row.setExpanded(false);
-    assert.match(plain(), /0 lines · 2\.0s · 30s limit.*expand/u);
+    assert.match(plain(), /1 succeeded.*expand/u);
+    assert.equal(pipeline.row.render(120).length, 3);
+    assert.match(plain(), /\$ /u);
   } finally { pipeline.dispose(); }
 });
 
@@ -161,10 +172,29 @@ test("expanded bash timer ticks update the visible bottom instead of replaying h
     const after = pipeline.row.render(120);
     assert.deepEqual(after.slice(0, 3), before.slice(0, 3));
     const text = stripTerminalSequences(after.join("\n")).trimEnd();
-    assert.match(text, /1800 lines · 1\.0s$/u);
-    assert.match(text, /30s limit.*collapse/u);
+    assert.match(text, /1: 1\.0s running$/u);
+    assert.match(text, /1 running.*collapse/u);
   } finally {
     pipeline.dispose();
     vi.useRealTimers();
   }
 });
+
+for (const event of ["tick", "append", "replace-tail"] as const) {
+  test(`three-member groups keep ${event} at the visible tail instead of replaying history`, () => {
+    vi.useFakeTimers(); vi.setSystemTime(0);
+    const pipeline = createPipeline(20, "group output\n".repeat(1800), true, false, 3);
+    try {
+      const previous = pipeline.screen.fullRedraws;
+      vi.advanceTimersByTime(event === "tick" ? 1000 : 100);
+      if (event !== "tick") pipeline.update(event);
+      pipeline.screen.renderNow();
+      const data = pipeline.terminal.take();
+      assert.equal(pipeline.screen.fullRedraws - previous, 0);
+      assert.doesNotMatch(data, /offscreen-history-marker|\x1b\[(?:2J|3J)/u);
+      assert.equal(pipeline.rows[1]!.render(120).length, 0);
+      assert.equal(pipeline.rows[2]!.render(120).length, 0);
+      assert.match(stripTerminalSequences(pipeline.row.render(120).at(-1)!), /3: (?:1\.0|0\.1)s running/u);
+    } finally { pipeline.dispose(); }
+  });
+}

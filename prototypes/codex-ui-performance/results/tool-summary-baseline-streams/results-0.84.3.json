@@ -1,0 +1,937 @@
+{
+  "environment": {
+    "build": {
+      "baselineCommit": "12158a900eafcbcb67c3f5cdbb00f19e1573ed27",
+      "baselineSnapshot": {
+        "path": "baselines/tool-summary-20260906.json.gz",
+        "sha256": "1fce6cc621ee7e9ed2e0e88444dce0e60eab6467937e14fa39fd601e6308518b"
+      },
+      "before": {
+        "bash-group-layout.ts": "e6231fe61ddae2dd8034767274e2f43fecc9cb3ffa3dbfd5999df048edbbf23f",
+        "bash-groups.ts": "82f02d460bf2609f3c3182e6a140bfd6fe20785d74503ea51e795680035bbae4",
+        "bash-refresh-scheduler.ts": "3c8ee0c011d691d3eb994e35e9465643d518356fe01eb00c672a28a6788564d5",
+        "components.ts": "054923e982c5f1b2a0fff9fcc67aad55d43e154ce552b0c97e5dae3f17b8ac10",
+        "exact-visual-tail.ts": "b41f6d7ce2d370c15ae288945653ce9bf504e46663c2f32747ebc02f1c9b7c46",
+        "footer.ts": "0b5ffd848dd0d9cdcc6d0b66a80109aa595b5b9d5d5cd37336521140cd83bc30",
+        "index.ts": "34ed09c37afecb2d16e29e5cfa0db6d00a65c419712ba05133d85a88c1ef3f4d",
+        "layout.ts": "113ec7031eac95e397bea5c53100a1277c75e65cf3b201d69632099bf76d65be",
+        "render-cache.ts": "35f87a6165826d63dade2cfe0bf1c4bb2b14f13d09a47dd6e3ed6a582661b557",
+        "responsive-lines.ts": "1f18cc8c0edf7c54d2dce12ce7eb15f5424b3679a8c19075f3ceba31a73de0ca",
+        "tools.ts": "4f3bca55facce646c9ad39860de0c9e90bd20f0aa2f97732e3afd4682f0b34ff"
+      },
+      "after": {
+        "bash-group-layout.ts": "e6231fe61ddae2dd8034767274e2f43fecc9cb3ffa3dbfd5999df048edbbf23f",
+        "bash-groups.ts": "82f02d460bf2609f3c3182e6a140bfd6fe20785d74503ea51e795680035bbae4",
+        "bash-refresh-scheduler.ts": "3c8ee0c011d691d3eb994e35e9465643d518356fe01eb00c672a28a6788564d5",
+        "components.ts": "054923e982c5f1b2a0fff9fcc67aad55d43e154ce552b0c97e5dae3f17b8ac10",
+        "exact-visual-tail.ts": "b41f6d7ce2d370c15ae288945653ce9bf504e46663c2f32747ebc02f1c9b7c46",
+        "footer.ts": "0b5ffd848dd0d9cdcc6d0b66a80109aa595b5b9d5d5cd37336521140cd83bc30",
+        "index.ts": "34ed09c37afecb2d16e29e5cfa0db6d00a65c419712ba05133d85a88c1ef3f4d",
+        "layout.ts": "113ec7031eac95e397bea5c53100a1277c75e65cf3b201d69632099bf76d65be",
+        "render-cache.ts": "35f87a6165826d63dade2cfe0bf1c4bb2b14f13d09a47dd6e3ed6a582661b557",
+        "responsive-lines.ts": "1f18cc8c0edf7c54d2dce12ce7eb15f5424b3679a8c19075f3ceba31a73de0ca",
+        "tools.ts": "4f3bca55facce646c9ad39860de0c9e90bd20f0aa2f97732e3afd4682f0b34ff"
+      },
+      "mcp": {
+        "before": {
+          "client.ts": "c3ec6722e8efc36eb1a729331ac96dcb5c00e3eb2871b2fa49a8be36ec3ede65",
+          "config.ts": "4300b5500ab5ddd769e1152ae478cf818f2d43ada6f110f1f8f55ea47d42f43c",
+          "diagnostics.ts": "e658cb0f08d34cf8bf50cfecb8a0548090628050895d0ef78330b1dd81b2c0a5",
+          "index.ts": "08167f8bf3d377b8ef419828687ddd7a3a88f2549800a54bf080921439f10d0e",
+          "renderers.ts": "a2603bf22f8b5c306cebe32b9bc62c4da1c7d3c980561f4e16a31101847e6f2a",
+          "retry.ts": "7ad2aedc209c1333d2f350f28e116341c7804733d41ce4a7e94cb22292ba27e3",
+          "schema.ts": "27c1eaf79b7700b715a12fccebe9352c80560ccce4b87facdc2b8c6afc681a2e",
+          "types.ts": "935d92f320ba6dbbb7ce6a5c31b0e89c1c5fc31336119608b671e2d7b8d787bd"
+        },
+        "after": {
+          "client.ts": "c3ec6722e8efc36eb1a729331ac96dcb5c00e3eb2871b2fa49a8be36ec3ede65",
+          "config.ts": "4300b5500ab5ddd769e1152ae478cf818f2d43ada6f110f1f8f55ea47d42f43c",
+          "diagnostics.ts": "e658cb0f08d34cf8bf50cfecb8a0548090628050895d0ef78330b1dd81b2c0a5",
+          "index.ts": "08167f8bf3d377b8ef419828687ddd7a3a88f2549800a54bf080921439f10d0e",
+          "renderers.ts": "a2603bf22f8b5c306cebe32b9bc62c4da1c7d3c980561f4e16a31101847e6f2a",
+          "retry.ts": "7ad2aedc209c1333d2f350f28e116341c7804733d41ce4a7e94cb22292ba27e3",
+          "schema.ts": "27c1eaf79b7700b715a12fccebe9352c80560ccce4b87facdc2b8c6afc681a2e",
+          "types.ts": "935d92f320ba6dbbb7ce6a5c31b0e89c1c5fc31336119608b671e2d7b8d787bd"
+        }
+      }
+    },
+    "benchmark": {
+      "bench.mjs": "5552e2cae9a92f3b232fa141d078f0e019b2fb1ba7cfdf96195e448b32a23de2",
+      "build.mjs": "4aa16df5365ff81481c90220d1d8239bd44bc87036bfe56bf249e983dee0f0b6",
+      "cli-fixture.mjs": "2df69e85bdb29c2690ce7d2ac52bceaf6b67c099f21f677cf9f1bfa66d9e2e20",
+      "cli-smoke.mjs": "8a59ba3cc6abc87425d420200d2aa22f14b1a5df599b112183a8e84cbc675488",
+      "grouped-probe.mjs": "95f4951ac0d2c66060a2adc029b9836bdb70b844f48537788aef43e9eed83da3",
+      "infrastructure.test.mjs": "9a13b0bab36e89fcd607ba3d18b16d6d345ca74f8527afbbd68f99cc43084d08",
+      "memory.mjs": "0f09a31904fd69dcf13a74592127f91235f7c278125a9072b712bfa073c1c782",
+      "run.mjs": "74abacdfbda9dc2b3ba1ddbaa94bb6113b0deca4acdbfcdc56cc7c088ee7ab0e",
+      "shared.mjs": "2e7237513893c2ac0d1beb9888d786956e43058c72dbda8ffaf65bc39fb21283",
+      "snapshot.mjs": "a7284ea635eef879ecccef010aaeaf91afa7f6819e5d7074eaa7c0a0011bd844",
+      "verify-terminal.mjs": "391c3c397f1064a13878a34df04524844cb13f46709f2c2837ea0b40fdb081d0",
+      "verify.mjs": "b29cb36df1637b0375c48478bdea32f55ae623900fa67b843357a0b597983322"
+    },
+    "upstream": {
+      "agent": {
+        "root": "/Users/wangxuyang/Code/t3code/pi-ext/node_modules/.pnpm/@earendil-works+pi-coding-agent@0.84.3_@modelcontextprotocol+sdk@1.29.0_zod@4.4.3__ws@8.21.3_zod@4.4.3/node_modules/@earendil-works/pi-coding-agent",
+        "version": "0.84.3",
+        "distSha256": "14162a3e9a358f969a10a55c9d77558c6e311a0e1ffa7a745d6cf49c738478f2"
+      },
+      "tui": {
+        "root": "/Users/wangxuyang/Code/t3code/pi-ext/node_modules/.pnpm/@earendil-works+pi-tui@0.84.3/node_modules/@earendil-works/pi-tui",
+        "version": "0.84.3",
+        "distSha256": "0e8b58be2008643cc7061a7c252575580e3c6b6582b99f379f564358e1b6d72e"
+      },
+      "ai": {
+        "root": "/Users/wangxuyang/Code/t3code/pi-ext/node_modules/.pnpm/@earendil-works+pi-ai@0.84.3_@modelcontextprotocol+sdk@1.29.0_zod@4.4.3__ws@8.21.3_zod@4.4.3/node_modules/@earendil-works/pi-ai",
+        "version": "0.84.3",
+        "distSha256": "827172280f455d508d84d44d2467bf35d144cb57feccd8b8f6ef51a0b9f73de5"
+      }
+    },
+    "timestamp": "2026-09-05T15:52:43.969Z",
+    "node": "v22.22.2",
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M5",
+    "agentVersion": "0.84.3",
+    "width": 120,
+    "height": 40,
+    "terminalParser": "@xterm/headless@5.5.0",
+    "scrollback": 10000,
+    "rounds": 7,
+    "warmupRounds": 2,
+    "streamRounds": 4,
+    "streamWarmupRounds": 1,
+    "terminalProgram": "ghostty",
+    "palette": "dark for all variants",
+    "note": "Controlled rendering pipeline, not live CLI or Ghostty CPU/GPU."
+  },
+  "cold": [],
+  "interactions": [],
+  "pipeline": [],
+  "streams": [
+    {
+      "tool": "write",
+      "variant": "before",
+      "parseJson": false,
+      "bytesOfContent": 262144,
+      "chunkCharacters": 256,
+      "drawEvery": 16,
+      "parseWallMs": {
+        "median": 0.08701100000001816,
+        "p95": 0.09010899999975663,
+        "samples": [
+          0.08701100000001816,
+          0.09010899999975663,
+          0.07265900000038528
+        ]
+      },
+      "updateWallMs": {
+        "median": 0.8217209999994566,
+        "p95": 0.9566009999992957,
+        "samples": [
+          0.8217209999994566,
+          0.9566009999992957,
+          0.2755490000001828
+        ]
+      },
+      "drawWallMs": {
+        "median": 13.006631000000084,
+        "p95": 15.974797999999566,
+        "samples": [
+          11.760877999999991,
+          13.006631000000084,
+          15.974797999999566
+        ]
+      },
+      "nodeCpuMs": {
+        "median": 17.515999999999956,
+        "p95": 18.564000000000103,
+        "samples": [
+          18.564000000000103,
+          15.841999999999874,
+          17.515999999999956
+        ]
+      },
+      "parserCpuMs": {
+        "median": 17.955,
+        "p95": 18.178000000000008,
+        "samples": [
+          18.178000000000008,
+          17.955,
+          10.182000000000002
+        ]
+      },
+      "bytes": {
+        "median": 11163,
+        "p95": 11163,
+        "samples": [
+          11163,
+          11163,
+          11163
+        ]
+      },
+      "frames": {
+        "median": 64,
+        "p95": 64,
+        "samples": [
+          64,
+          64,
+          64
+        ]
+      },
+      "updates": {
+        "median": 1024,
+        "p95": 1024,
+        "samples": [
+          1024,
+          1024,
+          1024
+        ]
+      },
+      "totalCpuMs": {
+        "median": 33.79699999999987,
+        "p95": 36.74200000000011,
+        "samples": [
+          36.74200000000011,
+          33.79699999999987,
+          27.697999999999958
+        ]
+      }
+    },
+    {
+      "tool": "write",
+      "variant": "after",
+      "parseJson": false,
+      "bytesOfContent": 262144,
+      "chunkCharacters": 256,
+      "drawEvery": 16,
+      "parseWallMs": {
+        "median": 0.17394699999863406,
+        "p95": 0.17719700000270677,
+        "samples": [
+          0.17719700000270677,
+          0.17394699999863406,
+          0.07554500000037478
+        ]
+      },
+      "updateWallMs": {
+        "median": 2.0268499999988308,
+        "p95": 2.076906000000122,
+        "samples": [
+          2.0268499999988308,
+          2.076906000000122,
+          0.2637800000001107
+        ]
+      },
+      "drawWallMs": {
+        "median": 38.48874899999964,
+        "p95": 38.893917999999076,
+        "samples": [
+          38.48874899999964,
+          38.893917999999076,
+          18.159088999999994
+        ]
+      },
+      "nodeCpuMs": {
+        "median": 42.893000000000065,
+        "p95": 51.623999999999874,
+        "samples": [
+          42.893000000000065,
+          51.623999999999874,
+          21.937000000000086
+        ]
+      },
+      "parserCpuMs": {
+        "median": 26.507000000000005,
+        "p95": 27.935000000000013,
+        "samples": [
+          8.689,
+          26.507000000000005,
+          27.935000000000013
+        ]
+      },
+      "bytes": {
+        "median": 11163,
+        "p95": 11163,
+        "samples": [
+          11163,
+          11163,
+          11163
+        ]
+      },
+      "frames": {
+        "median": 64,
+        "p95": 64,
+        "samples": [
+          64,
+          64,
+          64
+        ]
+      },
+      "updates": {
+        "median": 1024,
+        "p95": 1024,
+        "samples": [
+          1024,
+          1024,
+          1024
+        ]
+      },
+      "totalCpuMs": {
+        "median": 51.582000000000065,
+        "p95": 78.13099999999989,
+        "samples": [
+          51.582000000000065,
+          78.13099999999989,
+          49.8720000000001
+        ]
+      }
+    },
+    {
+      "tool": "write",
+      "variant": "before",
+      "parseJson": true,
+      "bytesOfContent": 262144,
+      "chunkCharacters": 256,
+      "drawEvery": 16,
+      "parseWallMs": {
+        "median": 1850.3192530000006,
+        "p95": 1947.0596019999984,
+        "samples": [
+          1947.0596019999984,
+          1850.3192530000006,
+          1827.806086999989
+        ]
+      },
+      "updateWallMs": {
+        "median": 0.4389189999874361,
+        "p95": 0.9339500000028238,
+        "samples": [
+          0.9339500000028238,
+          0.4389189999874361,
+          0.23736299999200128
+        ]
+      },
+      "drawWallMs": {
+        "median": 9.225210999999035,
+        "p95": 11.898082999999588,
+        "samples": [
+          11.898082999999588,
+          9.170666999993045,
+          9.225210999999035
+        ]
+      },
+      "nodeCpuMs": {
+        "median": 1869.0659999999925,
+        "p95": 1971.6179999999906,
+        "samples": [
+          1971.6179999999906,
+          1869.0659999999925,
+          1846.5279999999932
+        ]
+      },
+      "parserCpuMs": {
+        "median": 21.057,
+        "p95": 22.269000000000002,
+        "samples": [
+          16.754999999999995,
+          21.057,
+          22.269000000000002
+        ]
+      },
+      "bytes": {
+        "median": 11643,
+        "p95": 11643,
+        "samples": [
+          11643,
+          11643,
+          11643
+        ]
+      },
+      "frames": {
+        "median": 67,
+        "p95": 67,
+        "samples": [
+          67,
+          67,
+          67
+        ]
+      },
+      "updates": {
+        "median": 1058,
+        "p95": 1058,
+        "samples": [
+          1058,
+          1058,
+          1058
+        ]
+      },
+      "totalCpuMs": {
+        "median": 1890.1229999999925,
+        "p95": 1988.3729999999905,
+        "samples": [
+          1988.3729999999905,
+          1890.1229999999925,
+          1868.7969999999932
+        ]
+      }
+    },
+    {
+      "tool": "write",
+      "variant": "after",
+      "parseJson": true,
+      "bytesOfContent": 262144,
+      "chunkCharacters": 256,
+      "drawEvery": 16,
+      "parseWallMs": {
+        "median": 1833.3532470000318,
+        "p95": 1842.1992039999586,
+        "samples": [
+          1828.311440000005,
+          1833.3532470000318,
+          1842.1992039999586
+        ]
+      },
+      "updateWallMs": {
+        "median": 0.3587790000165114,
+        "p95": 0.3922089999978198,
+        "samples": [
+          0.3587790000165114,
+          0.35413100000005215,
+          0.3922089999978198
+        ]
+      },
+      "drawWallMs": {
+        "median": 9.054873000010048,
+        "p95": 9.170254000002387,
+        "samples": [
+          9.054873000010048,
+          8.997582999998485,
+          9.170254000002387
+        ]
+      },
+      "nodeCpuMs": {
+        "median": 1858.7899999999913,
+        "p95": 1859.203999999992,
+        "samples": [
+          1851.327999999992,
+          1859.203999999992,
+          1858.7899999999913
+        ]
+      },
+      "parserCpuMs": {
+        "median": 13.540999999999999,
+        "p95": 14.542000000000002,
+        "samples": [
+          13.540999999999999,
+          6.596000000000001,
+          14.542000000000002
+        ]
+      },
+      "bytes": {
+        "median": 11643,
+        "p95": 11643,
+        "samples": [
+          11643,
+          11643,
+          11643
+        ]
+      },
+      "frames": {
+        "median": 67,
+        "p95": 67,
+        "samples": [
+          67,
+          67,
+          67
+        ]
+      },
+      "updates": {
+        "median": 1058,
+        "p95": 1058,
+        "samples": [
+          1058,
+          1058,
+          1058
+        ]
+      },
+      "totalCpuMs": {
+        "median": 1865.799999999992,
+        "p95": 1873.3319999999912,
+        "samples": [
+          1864.868999999992,
+          1865.799999999992,
+          1873.3319999999912
+        ]
+      }
+    },
+    {
+      "tool": "edit",
+      "variant": "before",
+      "parseJson": false,
+      "oldCharacters": 131072,
+      "newCharacters": 131074,
+      "chunkCharacters": 256,
+      "drawEvery": 16,
+      "parseWallMs": {
+        "median": 0.11599999998725252,
+        "p95": 0.1183709999822895,
+        "samples": [
+          0.1183709999822895,
+          0.11599999998725252,
+          0.0365879999990284
+        ]
+      },
+      "updateWallMs": {
+        "median": 1.2453360000472458,
+        "p95": 1.297612000045774,
+        "samples": [
+          1.297612000045774,
+          1.2453360000472458,
+          1.1834680000101798
+        ]
+      },
+      "drawWallMs": {
+        "median": 1.098584999992454,
+        "p95": 1.1202480000029027,
+        "samples": [
+          1.098584999992454,
+          1.097872999998799,
+          1.1202480000029027
+        ]
+      },
+      "previewWallMs": {
+        "median": 0.018083999999362277,
+        "p95": 0.019833000002108747,
+        "samples": [
+          0.018083999999362277,
+          0.019833000002108747,
+          0.017624999996769475
+        ]
+      },
+      "updates": {
+        "median": 1025,
+        "p95": 1025,
+        "samples": [
+          1025,
+          1025,
+          1025
+        ]
+      },
+      "frames": {
+        "median": 65,
+        "p95": 65,
+        "samples": [
+          65,
+          65,
+          65
+        ]
+      },
+      "nodeCpuMs": {
+        "median": 5.276999999999916,
+        "p95": 5.70100000000009,
+        "samples": [
+          3.328999999999901,
+          5.276999999999916,
+          5.70100000000009
+        ]
+      },
+      "parserCpuMs": {
+        "median": 0,
+        "p95": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "bytes": {
+        "median": 0,
+        "p95": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "fullRedraws": {
+        "median": 0,
+        "p95": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "totalCpuMs": {
+        "median": 5.276999999999916,
+        "p95": 5.70100000000009,
+        "samples": [
+          3.328999999999901,
+          5.276999999999916,
+          5.70100000000009
+        ]
+      },
+      "totalWallMs": {
+        "median": 2.479042000035406,
+        "p95": 2.53265200001988,
+        "samples": [
+          2.53265200001988,
+          2.479042000035406,
+          2.3579290000088804
+        ]
+      }
+    },
+    {
+      "tool": "edit",
+      "variant": "after",
+      "parseJson": false,
+      "oldCharacters": 131072,
+      "newCharacters": 131074,
+      "chunkCharacters": 256,
+      "drawEvery": 16,
+      "parseWallMs": {
+        "median": 0.03567300003851415,
+        "p95": 0.04054199999154662,
+        "samples": [
+          0.04054199999154662,
+          0.03567300003851415,
+          0.03163700000368408
+        ]
+      },
+      "updateWallMs": {
+        "median": 1.0402939999694354,
+        "p95": 1.2911259999746107,
+        "samples": [
+          1.0402939999694354,
+          1.2911259999746107,
+          0.9021029999603343
+        ]
+      },
+      "drawWallMs": {
+        "median": 1.090546000003087,
+        "p95": 1.1003729999683856,
+        "samples": [
+          1.0581240000137768,
+          1.090546000003087,
+          1.1003729999683856
+        ]
+      },
+      "previewWallMs": {
+        "median": 0.017833000001701294,
+        "p95": 0.018708000003243797,
+        "samples": [
+          0.01770799999940209,
+          0.018708000003243797,
+          0.017833000001701294
+        ]
+      },
+      "updates": {
+        "median": 1025,
+        "p95": 1025,
+        "samples": [
+          1025,
+          1025,
+          1025
+        ]
+      },
+      "frames": {
+        "median": 65,
+        "p95": 65,
+        "samples": [
+          65,
+          65,
+          65
+        ]
+      },
+      "nodeCpuMs": {
+        "median": 4.0519999999998815,
+        "p95": 4.693999999999913,
+        "samples": [
+          2.721999999999915,
+          4.693999999999913,
+          4.0519999999998815
+        ]
+      },
+      "parserCpuMs": {
+        "median": 0,
+        "p95": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "bytes": {
+        "median": 0,
+        "p95": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "fullRedraws": {
+        "median": 0,
+        "p95": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "totalCpuMs": {
+        "median": 4.0519999999998815,
+        "p95": 4.693999999999913,
+        "samples": [
+          2.721999999999915,
+          4.693999999999913,
+          4.0519999999998815
+        ]
+      },
+      "totalWallMs": {
+        "median": 2.156667999974161,
+        "p95": 2.436053000019456,
+        "samples": [
+          2.156667999974161,
+          2.436053000019456,
+          2.051945999934105
+        ]
+      }
+    },
+    {
+      "tool": "edit",
+      "variant": "before",
+      "parseJson": true,
+      "oldCharacters": 131072,
+      "newCharacters": 131074,
+      "chunkCharacters": 256,
+      "drawEvery": 16,
+      "parseWallMs": {
+        "median": 1945.823078999987,
+        "p95": 1957.7513920000274,
+        "samples": [
+          1936.3193870000687,
+          1957.7513920000274,
+          1945.823078999987
+        ]
+      },
+      "updateWallMs": {
+        "median": 1.536162999993394,
+        "p95": 1.5922830000708927,
+        "samples": [
+          1.536162999993394,
+          1.5922830000708927,
+          1.5196439999454014
+        ]
+      },
+      "drawWallMs": {
+        "median": 1.8455030000004626,
+        "p95": 1.9073310000167112,
+        "samples": [
+          1.8286729999927047,
+          1.9073310000167112,
+          1.8455030000004626
+        ]
+      },
+      "previewWallMs": {
+        "median": 0.02108299999963492,
+        "p95": 0.02149999999892316,
+        "samples": [
+          0.02149999999892316,
+          0.020624999997380655,
+          0.02108299999963492
+        ]
+      },
+      "updates": {
+        "median": 1059,
+        "p95": 1059,
+        "samples": [
+          1059,
+          1059,
+          1059
+        ]
+      },
+      "frames": {
+        "median": 67,
+        "p95": 67,
+        "samples": [
+          67,
+          67,
+          67
+        ]
+      },
+      "nodeCpuMs": {
+        "median": 1974.312999999983,
+        "p95": 1987.7529999999815,
+        "samples": [
+          1958.3529999999823,
+          1987.7529999999815,
+          1974.312999999983
+        ]
+      },
+      "parserCpuMs": {
+        "median": 0,
+        "p95": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "bytes": {
+        "median": 0,
+        "p95": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "fullRedraws": {
+        "median": 0,
+        "p95": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "totalCpuMs": {
+        "median": 1974.312999999983,
+        "p95": 1987.7529999999815,
+        "samples": [
+          1958.3529999999823,
+          1987.7529999999815,
+          1974.312999999983
+        ]
+      },
+      "totalWallMs": {
+        "median": 1949.2093089999325,
+        "p95": 1961.2716310001124,
+        "samples": [
+          1939.7057230000537,
+          1961.2716310001124,
+          1949.2093089999325
+        ]
+      }
+    },
+    {
+      "tool": "edit",
+      "variant": "after",
+      "parseJson": true,
+      "oldCharacters": 131072,
+      "newCharacters": 131074,
+      "chunkCharacters": 256,
+      "drawEvery": 16,
+      "parseWallMs": {
+        "median": 1906.2852910000693,
+        "p95": 1926.164569999968,
+        "samples": [
+          1905.1892819999957,
+          1926.164569999968,
+          1906.2852910000693
+        ]
+      },
+      "updateWallMs": {
+        "median": 1.5034270001015102,
+        "p95": 1.5115130000158388,
+        "samples": [
+          1.5034270001015102,
+          1.5115130000158388,
+          1.5024960001137515
+        ]
+      },
+      "drawWallMs": {
+        "median": 1.8740010000219627,
+        "p95": 1.9136229999967327,
+        "samples": [
+          1.8740010000219627,
+          1.9136229999967327,
+          1.8540820000016538
+        ]
+      },
+      "previewWallMs": {
+        "median": 0.021292000001267297,
+        "p95": 0.02195899999787798,
+        "samples": [
+          0.02195899999787798,
+          0.021292000001267297,
+          0.021207999998296145
+        ]
+      },
+      "updates": {
+        "median": 1059,
+        "p95": 1059,
+        "samples": [
+          1059,
+          1059,
+          1059
+        ]
+      },
+      "frames": {
+        "median": 67,
+        "p95": 67,
+        "samples": [
+          67,
+          67,
+          67
+        ]
+      },
+      "nodeCpuMs": {
+        "median": 1934.2589999999798,
+        "p95": 1953.6159999999818,
+        "samples": [
+          1920.6769999999813,
+          1953.6159999999818,
+          1934.2589999999798
+        ]
+      },
+      "parserCpuMs": {
+        "median": 0,
+        "p95": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "bytes": {
+        "median": 0,
+        "p95": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "fullRedraws": {
+        "median": 0,
+        "p95": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "totalCpuMs": {
+        "median": 1934.2589999999798,
+        "p95": 1953.6159999999818,
+        "samples": [
+          1920.6769999999813,
+          1953.6159999999818,
+          1934.2589999999798
+        ]
+      },
+      "totalWallMs": {
+        "median": 1909.663077000183,
+        "p95": 1929.610997999982,
+        "samples": [
+          1908.588669000117,
+          1929.610997999982,
+          1909.663077000183
+        ]
+      }
+    }
+  ],
+  "stable": []
+}

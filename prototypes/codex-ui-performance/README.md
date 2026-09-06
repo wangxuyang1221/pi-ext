@@ -28,6 +28,41 @@ PI_PERF_VARIANTS=after,before,native PI_PERF_RUN_ID=my-reverse-comparison \
 
 每次运行新建 `results/<run-id>/`。默认 ID 是时间戳，也可显式指定 `PI_PERF_RUN_ID`。已有 ID 会报错，不覆盖历史文件。一次运行内部可以保存检查点，但不会拼接其他运行的数据。源码改变后必须重新 `build`；结果中的 `build.after` 哈希对应实际转译的输入。
 
+## Grouped Bash revision
+
+用户确认新版原型后再次要求生产接入：标题与 Read/Edited 对齐，命令常显，结果默认折叠。当前测试与基准使用这一契约；第一次实现及回退记录保留，不能与本轮结果混用。当前契约与验收见[施工计划](../../docs/plans/codex-ui-grouped-bash.md#current-revision)。
+
+本轮保存的 `baselines/grouped-12158a9.json.gz` 是改动前生产快照，`baselines/grouped-withdrawn-12158a9.json.gz` 是撤销前的分组源码存档。两者均不可覆盖。`snapshot.mjs`、独立基线选择及可行性探针保留；未指定 `PI_PERF_BASELINE` 时仍使用旧 `before.json.gz`。
+
+```sh
+# Compare current production sources with the pre-grouping production snapshot.
+PI_PERF_BASELINE=baselines/grouped-12158a9.json.gz \
+  pnpm --dir prototypes/codex-ui-performance run build
+pnpm --dir prototypes/codex-ui-performance run verify
+
+# Historical feasibility probe only; not the production renderer.
+pnpm --dir prototypes/codex-ui-performance run grouped
+```
+
+基础设施测试会重建默认 baseline，测试之后须重新执行选定基线的 build。使用 `PI_PERF_VARIANTS=before,after PI_PERF_ONLY=groups PI_PERF_PROFILE=product` 运行生产分组矩阵，每个变体 96 个组合，覆盖 1/3 成员、最后一个/全部运行、tick/追加/交错更新、收起/展开、短行/长 token、0/20 历史及普通/fullscreen。探针 `grouped` 仍只用于原型位置实验，不是生产性能分数。
+
+## MCP and Write summary revision
+
+本轮基线是 `baselines/tool-summary-20260906.json.gz`，包含用户已接受的 Bash 工作树以及 MCP 全部源码，不能使用 HEAD 或旧 grouped 快照替代。`build.json` 的 `before` / `after` 保存 Codex UI 源码哈希，`mcp.before` / `mcp.after` 保存 MCP 源码哈希。旧快照没有 MCP 时，不允许运行 MCP 对比。
+
+```sh
+PI_PERF_BASELINE=baselines/tool-summary-20260906.json.gz pnpm --dir prototypes/codex-ui-performance run build
+PI_PERF_VARIANTS=before,after PI_PERF_ONLY=streams PI_PERF_STREAM_ROUNDS=5 PI_PERF_RUN_ID=my-summary-streams pnpm --dir prototypes/codex-ui-performance run bench
+PI_PERF_VARIANTS=before,after PI_PERF_ONLY=mcp PI_PERF_RUN_ID=my-summary-mcp pnpm --dir prototypes/codex-ui-performance run bench
+PI_PERF_VARIANTS=before,after PI_PERF_ONLY=mcp PI_PERF_RUN_ID=my-summary-memory pnpm --dir prototypes/codex-ui-performance run memory
+PI_SMOKE_SCENE=summary PI_PERF_RUN_ID=my-summary-cli pnpm --dir prototypes/codex-ui-performance run smoke
+PI_SMOKE_SCENE=summary-custom PI_PERF_RUN_ID=my-summary-custom-cli pnpm --dir prototypes/codex-ui-performance run smoke
+```
+
+反向运行使用 `PI_PERF_VARIANTS=after,before` 与新 run ID。Write 报告增加 `frameWallMs` / `frameCpuMs`，只统计流式绘制和终端解析，不把累计 JSON 解析混入帧指标。MCP 矩阵包含短文本、长 Unicode token、近上限 JSON、多块文本，以及 0/20 个历史工具、普通/fullscreen、重复折叠、展开、窄屏和恢复宽屏。`phases` 分别记录各阶段，避免把新增预览与旧元数据摘要当作等量工作。
+
+`summary` / `summary-custom` 使用正式 Write 执行和本地 stdio MCP echo server，验证真实参数流、成功/失败、新进程恢复及默认/自定义展开键。进程和写入均限制在仓库临时目录。报告中的 `reloadMcpRendererRetained: false` 是已复现的宿主限制，不是 reload 样式验收通过；`PI_SMOKE_BASELINE=1` 可用本轮变更前源码重现。详细结果见[生产验收报告](../../docs/research/codex-ui-tool-summary-validation.md)。
+
 ## Inputs and tools
 
 | File | Responsibility |
@@ -79,15 +114,17 @@ pnpm run build
 pnpm --dir prototypes/codex-ui-performance run smoke
 ```
 
-脚本将合成会话、HOME、Pi 配置、缓存和临时目录限制在仓库 `.tmp/` 下，禁用模型联网与自动扩展加载。加载真实 `dist/index.js` 和 `codex-pi` 主题，经 PTY 执行 Ctrl+O、`/reload`、120×40 → 60×24 resize、折叠和正常退出。保存解析后的可见文字及 CLI 哈希，回收进程和临时目录。
+脚本将合成会话、HOME、Pi 配置、缓存和临时目录限制在仓库 `.tmp/` 下，禁用联网与自动扩展加载。`cli-fixture.mjs` 导入真实 `dist/index.js`，只注册本地脚本化 provider，不替换 Bash 执行。普通/fullscreen 各检查 mixed、success、long、live，覆盖 Ctrl+O、自定义 Ctrl+G、reload、resize、收起、退出及新进程恢复同一会话。
 
-此 smoke 恢复的是已完成 Bash，不执行 shell、write/edit 或模型请求。运行中计时/输出更新由真实 ToolExecutionComponent 的确定性回归覆盖。它不是 Ghostty 窗口里的人工观感测试。
+恢复场景加入真实 Read/Edited renderer 作为对齐参照，并断言命令在初始、收起和重启后始终可见，结果仍被折叠。live 只执行三条固定的 `printf`/`sleep`/`exit 1` 命令，工具门禁拒绝其他调用；按调用 ID 校验公开生命周期事件，不假定完成顺序。success 另检查用户 `!` Bash 的独立持久化结果。`PI_SMOKE_SCENE`、`PI_SMOKE_MODE` 可筛选场景。测试 provider 不进入发布包。
 
-此 smoke 启动时就加载新版，运行期间不替换 JS，因此 `/reload` 成功不代表旧进程已完成代码热更新。后续本机 Pi 0.85.0 bundled CLI 的隔离补测中，替换本地 package 的 JS 后仍需重启并恢复会话，历史 Bash 才显示新版底部行数。此次更新应重启 Pi；直接引用仓库的安装无需重装。
+脚本保存解析后的可见文字、事件及 CLI 哈希，结束后清理进程和临时目录。`/reload` 只验证生命周期，不代替加载新代码的进程重启。实际升级应重启 Pi；直接引用仓库的安装无需重装。没有测量真实模型服务、任意 shell 命令性能或 Ghostty GPU。
 
 ## Results
 
-新结果全部在 `results/`：
+本轮命令常显版本的报告统一使用 `results/grouped-commands-*`，包括双版本矩阵、反向顺序、cold/stable/interactions、memory、verify 和 CLI。`grouped-delivery-*` 是第一次实现，`grouped-rollback-*` 是回退检查，均保留为历史记录，不代表当前契约。
+
+更早的单工具渲染优化结果也保留在 `results/`：
 
 - `baseline-0.85.0`、`baseline-0.84.3`：改生产源码前的新基线。
 - `production-0.85.0`、`production-reverse-0.85.0`：同配色完整正反顺序比较。
@@ -108,4 +145,4 @@ pnpm --dir prototypes/codex-ui-performance run smoke
 
 冷绘制和交互没有终端输出，不能与包含终端解析的 CPU 表混用。参数流同时给出包含/不包含累计 JSON 的口径。内存循环记录 GC 后 heap、循环内 heap/RSS 峰值、预算计费和清理结果；同进程依次运行的 RSS 受分配器高水位影响，不宜直接换算成额外内存百分比。
 
-没有测量模型联网、用户真实工具执行、其他 extensions、Ghostty CPU/GPU 或整机 CPU。缓存不会消除巨大冷 diff 的首次高亮，也不会改变上游 JSON 解析或普通 TUI 对离屏变化的全量重放规则。
+性能矩阵没有测量模型联网、真实工具执行耗时、其他 extensions、Ghostty CPU/GPU 或整机 CPU。CLI smoke 单独执行固定本地命令及用户 `!` Bash，只验证行为。缓存不会消除巨大冷 diff 的首次高亮，也不会改变上游 JSON 解析或普通 TUI 对离屏变化的全量重放规则。

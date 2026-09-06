@@ -70,10 +70,18 @@ export function definitions(variant, services = {}) {
       },
     }, undefined, { ...services, renderCache });
   }
+  const context = { mode: 'tui', sessionManager: { buildContextEntries: () => [] } };
+  for (const handler of events.get('session_start') ?? []) handler({ reason: 'startup' }, context);
   const rows = [];
   return {
     stats: () => renderCache?.stats(),
-    reset() { for (const handler of events.get('session_start') ?? []) handler(); },
+    declareBashGroup(count) {
+      const message = { role: 'assistant', content: Array.from({ length: count }, (_, index) => ({
+        type: 'toolCall', id: `bench-${rows.length + index}`, name: 'bash', arguments: {},
+      })) };
+      for (const handler of events.get('message_start') ?? []) handler({ message }, { mode: 'tui' });
+    },
+    reset() { for (const handler of events.get('session_start') ?? []) handler({ reason: 'switch' }, context); },
     row(name, args = {}, ui = { requestRender() {} }) {
       const row = new ToolExecutionComponent(name, `bench-${rows.length}`, args,
         { showImages: false }, tools.get(name), ui, cwd);

@@ -5,6 +5,8 @@
   "packageManager": "pnpm@11.9.0",
   "scripts": {
     "build": "node build.mjs",
+    "snapshot": "node snapshot.mjs",
+    "grouped": "node --expose-gc run.mjs --grouped",
     "test": "node --test infrastructure.test.mjs",
     "bench": "node --expose-gc run.mjs",
     "verify": "node run.mjs --verify",

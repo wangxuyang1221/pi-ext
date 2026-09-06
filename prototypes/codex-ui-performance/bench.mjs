@@ -174,7 +174,7 @@ async function interactions() {
   }
 }
 
-async function pipeline(fixtureId, mode, history, event, expanded = true) {
+async function pipeline(fixtureId, mode, history, event, expanded = true, groupSize = 1, running = 'last') {
   const fixture = fixtures.find(fixture => fixture.id === fixtureId);
   for (const variant of variants) {
     const owner = definitions(variant);
@@ -185,10 +185,18 @@ async function pipeline(fixtureId, mode, history, event, expanded = true) {
     try {
       completedRows(owner, screen, history, expanded);
       screen.addChild(assistant);
-      const row = owner.row('bash', fixture.args, screen);
-      row.setExpanded(expanded); row.setArgsComplete(); row.markExecutionStarted();
-      row.updateResult(fixture.result, true);
-      screen.addChild(row); screen.addChild(editor); screen.addChild(footer);
+      owner.declareBashGroup(groupSize);
+      const rows = Array.from({ length: groupSize }, (_, index) => {
+        const row = owner.row('bash', fixture.args, screen);
+        row.setExpanded(expanded); row.setArgsComplete();
+        const active = running === 'all' || index === groupSize - 1;
+        if (active) row.markExecutionStarted();
+        row.updateResult(fixture.result, active);
+        screen.addChild(row);
+        return row;
+      });
+      const row = rows.at(-1);
+      screen.addChild(editor); screen.addChild(footer);
       screen.renderNow();
       await feed(emulator, terminal.take());
       let output = fixture.result.content[0].text;
@@ -201,6 +209,8 @@ async function pipeline(fixtureId, mode, history, event, expanded = true) {
             output += `\nnext line ${index}`;
             row.updateResult(textResult(output), true);
           }
+          if (event === 'interleaved') rows[index % rows.length].updateResult(
+            textResult(fixture.result.content[0].text + `\nmember update ${index}`), true);
           screen.renderNow();
         });
         const data = terminal.take();
@@ -209,7 +219,7 @@ async function pipeline(fixtureId, mode, history, event, expanded = true) {
           parserCpuMs: parser.cpuMs, parserWallMs: parser.wallMs, totalCpuMs: node.cpuMs + parser.cpuMs,
           bytes: Buffer.byteLength(data), fullRedraws: screen.fullRedraws - previousRedraws });
       }
-      report.pipeline.push({ fixture: fixtureId, mode, history, event, expanded, variant,
+      report.pipeline.push({ fixture: fixtureId, mode, history, event, expanded, groupSize, running, variant,
         ...Object.fromEntries(Object.keys(samples[0]).map(key => [key, summary(samples.map(sample => sample[key]))])) });
     } finally {
       owner.dispose(); footer.dispose(); screen.stop(); emulator.dispose();
@@ -244,6 +254,7 @@ async function writeStreams() {
   const raw = JSON.stringify({ path: 'fixture.ts', content });
   for (const parseJson of [false, true]) for (const variant of variants) {
     const samples = [];
+    const frames = [];
     for (let round = 0; round < streamRounds; round++) {
       const owner = definitions(variant);
       const { screen, terminal } = makeScreen('regular');
@@ -269,7 +280,9 @@ async function writeStreams() {
             totals.drawWallMs += phase.wallMs; totals.nodeCpuMs += phase.cpuMs; totals.frames++;
             const data = terminal.take();
             totals.bytes += Buffer.byteLength(data);
-            totals.parserCpuMs += (await feed(emulator, data)).cpuMs;
+            const parsed = await feed(emulator, data);
+            totals.parserCpuMs += parsed.cpuMs;
+            if (round >= 1) frames.push({ wallMs: phase.wallMs + parsed.wallMs, cpuMs: phase.cpuMs + parsed.cpuMs });
           }
         }
         const phase = measured(() => { row.setArgsComplete(); row.updateResult(textResult('Successfully wrote file.')); screen.renderNow(); });
@@ -281,6 +294,7 @@ async function writeStreams() {
       } finally { owner.dispose(); footer.dispose(); screen.stop(); emulator.dispose(); }
     }
     report.streams.push({ tool: 'write', variant, parseJson, bytesOfContent: content.length, chunkCharacters: 256, drawEvery: 16,
+      frameWallMs: summary(frames.map(frame => frame.wallMs)), frameCpuMs: summary(frames.map(frame => frame.cpuMs)),
       ...Object.fromEntries(Object.keys(samples[0]).map(key => [key, summary(samples.map(sample => sample[key]))])) });
     console.log(`Completed write stream: ${variant}/json-${parseJson}`);
   }
@@ -350,6 +364,9 @@ async function editStreams() {
   }
 }
 
+export { makeScreen, chrome, feed, measured, summary, completedRows };
+
+if (!process.argv.includes('--grouped')) {
 try {
   const only = process.env.PI_PERF_ONLY;
   if (!only || only === 'cold') await cold();
@@ -368,6 +385,13 @@ try {
       for (const history of [0, 20]) await pipeline(fixture, 'fullscreen', history, 'tick');
     }
   }
+  if (only === 'groups') {
+    for (const fixture of ['bash-lines-1800', 'bash-token-50k']) for (const mode of ['regular', 'fullscreen'])
+      for (const history of [0, 20]) for (const expanded of [false, true]) for (const groupSize of [1, 3])
+        for (const running of groupSize === 1 ? ['last'] : ['last', 'all'])
+          for (const event of running === 'all' ? ['tick', 'interleaved'] : ['tick', 'append'])
+            await pipeline(fixture, mode, history, event, expanded, groupSize, running);
+  }
   if (only === 'product') {
     await pipeline('bash-lines-1800', 'regular', 0, 'replace-tail');
     for (const event of ['tick', 'replace-tail', 'append']) await pipeline('bash-token-50k', 'regular', 20, event);
@@ -379,3 +403,4 @@ try {
   const saved = save(`results-${process.env.PI_PERF_AGENT_VERSION}.json`, report);
   console.log(`Saved ${saved}`);
 } finally { restoreClock(); }
+}
