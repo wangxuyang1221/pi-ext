@@ -193,7 +193,10 @@ export function registerSubagentTools(
     label: "Spawn subagent",
     description: "创建一个由当前 session 管理的 subagent，并提交初始任务。工具在 runtime 注册后返回，不等待任务完成；subagent 保留到调用 subagent_close。",
     promptSnippet: "创建 subagent 异步执行独立任务。",
-    promptGuidelines: ["调用 subagent_spawn 前先检查已有 subagent。若有 subagent 处理过相关代码、文档或决策，使用 subagent_prompt；只有没有可复用对象且任务可独立验收时，才创建新的 subagent。"],
+    promptGuidelines: [
+      "调用 subagent_spawn 前优先通过 subagent_prompt 复用能够承接任务的已有 subagent，尤其是已掌握相关代码、文档或决策上下文的对象。已有信息不足以判断可复用对象或剩余容量时，先调用 subagent_list。",
+      "仅在没有合适的可复用对象，且任务边界和验收条件明确时调用 subagent_spawn。",
+    ],
     parameters: spawnParameters,
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const agent = await manager.spawn(currentSessionId(ctx), params, {
@@ -217,7 +220,11 @@ export function registerSubagentTools(
     label: "Prompt subagent",
     description: "向当前 session 管理且 runtime 存活的 subagent 发送任务或修正。返回只表示投递成功，不表示 subagent 已处理或完成。",
     promptSnippet: "继续或修正已有 subagent 的工作。",
-    promptGuidelines: ["新信息使当前路线失效或继续执行有风险时，使用 steer；其余提示使用 follow_up。"],
+    promptGuidelines: [
+      "使用 subagent_prompt 补充任务时，说明目标、范围和验收条件，并交代相对上一轮发生的变化。",
+      "调用 subagent_prompt 时，新信息使当前路线失效，或继续执行可能造成错误或风险时，使用 steer；无需打断当前工作的任务和补充信息使用 follow_up。",
+      "subagent_prompt 投递成功不代表任务完成。需要等待本次任务结果时，使用本次返回的 agent.settledCursor 调用 subagent_wait。",
+    ],
     parameters: promptParameters,
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const delivery = params.delivery ?? "follow_up";
@@ -250,7 +257,7 @@ export function registerSubagentTools(
     label: "List subagents",
     description: "列出当前 session 管理的 subagent 及其 agentId、名称、状态、generation、tmux window 和 session 文件路径。capacity.active 是 runtime 存活数，pending 是正在创建数，limit 是 active 与 pending 的总数上限，available 是当前还能创建数。",
     promptSnippet: "列出 subagent，并查看当前还能创建多少个。",
-    promptGuidelines: ["使用 subagent_list 查找已有 subagent、取得 agentId 或检查当前还能创建多少个。列表只反映调用时刻；确认新一轮 settled 事件时使用 subagent_wait。"],
+    promptGuidelines: ["需要查找可复用的 subagent，或已有信息不足以判断状态和剩余容量时使用 subagent_list。不要通过反复调用 subagent_list 等待任务完成；需要等待时使用 subagent_wait。"],
     parameters: listParameters,
     async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
       const { agents, capacity } = await manager.list(currentSessionId(ctx));
@@ -270,9 +277,9 @@ export function registerSubagentTools(
     description: "读取当前 session 管理的 subagent 已完整写入原生 Pi session 的 assistant message 和工具活动。recent_activity 返回近期摘要；turns 按 user turn 分组；activity_detail 分页返回单条活动的原始 section。生成中的 token 和工具增量不返回。",
     promptSnippet: "读取 subagent 的活动摘要或原始详情。",
     promptGuidelines: [
-      "常规跟踪使用 subagent_read 的 recent_activity。接受本次摘要后，把返回的 cursor 作为下次 after。",
-      "需要按 user prompt 重建上下文时使用 turns；摘要不足或需要原始内容时使用 activity_detail。",
-      "hasMore 只表示仍有活动，按任务需要读取。补取 recent_activity 省略的条目时，复用调用前的 after，并提高 assistantLimit 或 toolLimit；返回的 cursor 已越过这些条目。",
+      "使用 subagent_read 查看进度或获取近期结果时选择 recent_activity；按对话轮次重建上下文时选择 turns；读取单条活动的原始内容时选择 activity_detail，并按需分页。",
+      "使用 subagent_read 常规增量读取时，将上次返回的 cursor 作为 after。若需补取 recent_activity 本次省略的条目，应复用本次调用传入的 after，并提高 assistantLimit 或 toolLimit；本次返回的 cursor 已越过这些条目。",
+      "按任务需要继续调用 subagent_read，不必仅因 hasMore 为 true 就读完全部活动。需要等待新结果时使用 subagent_wait，避免反复读取空结果。",
     ],
     parameters: readParameters,
     prepareArguments(args): ReadParameters {
@@ -358,8 +365,9 @@ export function registerSubagentTools(
     description: "阻塞等待当前 session 管理的 subagent 在 afterSettled 之后产生新的 agent_settled。outcome 为 settled 时附带近期活动；timeout、closed 和 interrupted 不表示产生了新的 settled 事件。",
     promptSnippet: "主任务依赖结果时，等待 subagent 产生新的 settled 事件。",
     promptGuidelines: [
-      "主 agent 的下一步依赖 subagent 结果时使用 subagent_wait；常规进度跟踪使用 subagent_read。",
-      "afterSettled 使用启动该轮任务的 subagent_spawn 或 subagent_prompt 返回的 agent.settledCursor。timeout 后复用同一个 afterSettled；只有 outcome 为 settled 才证明产生了新的 settled 事件，任务结果仍以返回的活动为准。",
+      "下一步依赖 subagent 的结果且暂无其他可推进工作时使用 subagent_wait；仅查看当前进度时使用 subagent_read。",
+      "调用 subagent_wait 时，afterSettled 使用启动目标轮次的 subagent_spawn 或 subagent_prompt 返回的 agent.settledCursor。timeout 后继续等待同一轮次时，复用该值。",
+      "subagent_wait 返回 outcome 为 settled 只表示该轮运行已结束，不代表任务成功或通过验收。读取返回活动，确认任务结果后再决定继续、补充任务或关闭。",
     ],
     parameters: waitParameters,
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
@@ -386,8 +394,9 @@ export function registerSubagentTools(
     description: "终止当前 session 管理的一个或全部 subagent，停止其 Pi 进程和 tmux window，并删除 Extension 管理状态。原生 Pi session 文件保留。",
     promptSnippet: "终止 subagent，并释放其占用的名额。",
     promptGuidelines: [
-      "关闭前，将本轮拟关闭的全部 subagent 合并为一次确认，列出 name 和 agentId，并说明关闭后无法继续通过 subagent 工具访问。",
-      "用户的同意仅覆盖确认中列出的 target。当前请求已明确要求关闭这些 target 时，可直接调用 subagent_close。",
+      "由主 agent 根据后续任务需要决定是否调用 subagent_close，无需向用户确认；用户明确要求保留时除外。",
+      "任务结束不代表应立即调用 subagent_close。仍需追问、验收或复用上下文时保留；确认不再需要，或容量不足且有可释放的 subagent 时关闭。",
+      "调用 subagent_close 后无法继续通过 subagent 工具访问。关闭前应读取所需结果，并记录后续工作需要的信息。",
     ],
     parameters: targetParameters,
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {

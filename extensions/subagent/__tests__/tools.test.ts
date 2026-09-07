@@ -431,21 +431,29 @@ test("encodes reuse, delivery, observation, wait, and close boundaries", () => {
   const registered = registerTools();
   const tools = new Map(registered.map((tool) => [tool.name, tool]));
   const spawn = tools.get("subagent_spawn");
+  const list = tools.get("subagent_list");
   const prompt = tools.get("subagent_prompt");
   const read = tools.get("subagent_read");
   const wait = tools.get("subagent_wait");
   const close = tools.get("subagent_close");
   assert.ok(spawn);
+  assert.ok(list);
   assert.ok(prompt);
   assert.ok(read);
   assert.ok(wait);
   assert.ok(close);
 
   assert.deepEqual(spawn.promptGuidelines, [
-    "调用 subagent_spawn 前先检查已有 subagent。若有 subagent 处理过相关代码、文档或决策，使用 subagent_prompt；只有没有可复用对象且任务可独立验收时，才创建新的 subagent。",
+    "调用 subagent_spawn 前优先通过 subagent_prompt 复用能够承接任务的已有 subagent，尤其是已掌握相关代码、文档或决策上下文的对象。已有信息不足以判断可复用对象或剩余容量时，先调用 subagent_list。",
+    "仅在没有合适的可复用对象，且任务边界和验收条件明确时调用 subagent_spawn。",
+  ]);
+  assert.deepEqual(list.promptGuidelines, [
+    "需要查找可复用的 subagent，或已有信息不足以判断状态和剩余容量时使用 subagent_list。不要通过反复调用 subagent_list 等待任务完成；需要等待时使用 subagent_wait。",
   ]);
   assert.deepEqual(prompt.promptGuidelines, [
-    "新信息使当前路线失效或继续执行有风险时，使用 steer；其余提示使用 follow_up。",
+    "使用 subagent_prompt 补充任务时，说明目标、范围和验收条件，并交代相对上一轮发生的变化。",
+    "调用 subagent_prompt 时，新信息使当前路线失效，或继续执行可能造成错误或风险时，使用 steer；无需打断当前工作的任务和补充信息使用 follow_up。",
+    "subagent_prompt 投递成功不代表任务完成。需要等待本次任务结果时，使用本次返回的 agent.settledCursor 调用 subagent_wait。",
   ]);
   const deliverySchema = (prompt.parameters as {
     properties: { delivery: Record<string, unknown> };
@@ -453,9 +461,9 @@ test("encodes reuse, delivery, observation, wait, and close boundaries", () => {
   assert.equal(deliverySchema.default, "follow_up");
 
   assert.deepEqual(read.promptGuidelines, [
-    "常规跟踪使用 subagent_read 的 recent_activity。接受本次摘要后，把返回的 cursor 作为下次 after。",
-    "需要按 user prompt 重建上下文时使用 turns；摘要不足或需要原始内容时使用 activity_detail。",
-    "hasMore 只表示仍有活动，按任务需要读取。补取 recent_activity 省略的条目时，复用调用前的 after，并提高 assistantLimit 或 toolLimit；返回的 cursor 已越过这些条目。",
+    "使用 subagent_read 查看进度或获取近期结果时选择 recent_activity；按对话轮次重建上下文时选择 turns；读取单条活动的原始内容时选择 activity_detail，并按需分页。",
+    "使用 subagent_read 常规增量读取时，将上次返回的 cursor 作为 after。若需补取 recent_activity 本次省略的条目，应复用本次调用传入的 after，并提高 assistantLimit 或 toolLimit；本次返回的 cursor 已越过这些条目。",
+    "按任务需要继续调用 subagent_read，不必仅因 hasMore 为 true 就读完全部活动。需要等待新结果时使用 subagent_wait，避免反复读取空结果。",
   ]);
   assert.equal(
     wait.description,
@@ -463,12 +471,14 @@ test("encodes reuse, delivery, observation, wait, and close boundaries", () => {
   );
   assert.equal(wait.promptSnippet, "主任务依赖结果时，等待 subagent 产生新的 settled 事件。");
   assert.deepEqual(wait.promptGuidelines, [
-    "主 agent 的下一步依赖 subagent 结果时使用 subagent_wait；常规进度跟踪使用 subagent_read。",
-    "afterSettled 使用启动该轮任务的 subagent_spawn 或 subagent_prompt 返回的 agent.settledCursor。timeout 后复用同一个 afterSettled；只有 outcome 为 settled 才证明产生了新的 settled 事件，任务结果仍以返回的活动为准。",
+    "下一步依赖 subagent 的结果且暂无其他可推进工作时使用 subagent_wait；仅查看当前进度时使用 subagent_read。",
+    "调用 subagent_wait 时，afterSettled 使用启动目标轮次的 subagent_spawn 或 subagent_prompt 返回的 agent.settledCursor。timeout 后继续等待同一轮次时，复用该值。",
+    "subagent_wait 返回 outcome 为 settled 只表示该轮运行已结束，不代表任务成功或通过验收。读取返回活动，确认任务结果后再决定继续、补充任务或关闭。",
   ]);
   assert.deepEqual(close.promptGuidelines, [
-    "关闭前，将本轮拟关闭的全部 subagent 合并为一次确认，列出 name 和 agentId，并说明关闭后无法继续通过 subagent 工具访问。",
-    "用户的同意仅覆盖确认中列出的 target。当前请求已明确要求关闭这些 target 时，可直接调用 subagent_close。",
+    "由主 agent 根据后续任务需要决定是否调用 subagent_close，无需向用户确认；用户明确要求保留时除外。",
+    "任务结束不代表应立即调用 subagent_close。仍需追问、验收或复用上下文时保留；确认不再需要，或容量不足且有可释放的 subagent 时关闭。",
+    "调用 subagent_close 后无法继续通过 subagent 工具访问。关闭前应读取所需结果，并记录后续工作需要的信息。",
   ]);
 
   const timeoutSchema = (wait.parameters as {

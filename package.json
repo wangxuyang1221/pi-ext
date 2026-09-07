@@ -66,6 +66,8 @@
     "test": "vitest run",
     "check": "pnpm run typecheck && pnpm test && pnpm run build && pnpm run package:check",
     "package:check": "node ./scripts/check-package.mjs",
+    "prototype:search-ui": "node ./prototypes/codex-search-ui-prototype/demo.mjs",
+    "prototype:search-ui:check": "node ./prototypes/codex-search-ui-prototype/demo.mjs --smoke",
     "prototype:tui": "node ./prototypes/pi-tui-style-prototype/dev.mjs",
     "prototype:bash-ui": "node ./prototypes/codex-bash-ui-prototype/demo.mjs",
     "prototype:title-spinner": "node ./prototypes/codex-bash-ui-prototype/demo.mjs --title-spinner",
