@@ -4,7 +4,53 @@
 
 当前原型中，`Bash` 标题向右缩进两格，与生产 `Read`、`Edited` 标签对齐；命令始终可见，收起时单行预览，结果默认折叠；`Ctrl+O` 展开完整命令与结果。用户已确认这一效果并要求更新生产，本目录继续保留为 fixture 设计参考。
 
-只保留分组样式。其他四种变体、变体选择器、`/bash-logs` 和日志弹层已移除。界面文案继续使用已获用户确认的英文，说明文档使用中文。
+默认入口仍只保留已确认的分组样式。历史上的四种布局变体、`/bash-logs` 和日志弹层不恢复。新增 `--polish` 隔离试验只比较两个辅助信息区域，见下节。统计与快捷键沿用英文；本次新增方案名称与操作说明使用已获用户确认的中文。
+
+## Metadata Polish Experiment
+
+原型只回答一个问题：保留 Bash 主体和全部统计信息时，精细排印、仪表式排版、轻底色按键，哪一种能改善两个辅助信息区域的精致感？在同一工具行中切换，观察数字与标签对比、分组间距、右侧留白和展开后的稳定性。
+
+```sh
+pnpm run prototype:bash-ui --polish
+```
+
+用户已选择方案 3，正式 `codex-ui` 已接入轻底色按键与辅助信息排印。默认打开截图对应的一条长命令 fixture，耗时为 `0.1s`，初始方案为轻底色按键。切换不会改变内容或展开状态。
+
+| 入口 | 方案 | 变化 |
+| --- | --- | --- |
+| `Alt+0` 或 `/bash-polish 0` | 原版对照 | 返回接入前的冻结渲染器结果，包括原有 `1 commands` 文案 |
+| `Alt+1` 或 `/bash-polish 1` | 精细排印 | 数字和按键用 `muted`，标签与单位用 `dim`，分隔点用 `borderMuted`；统计分隔点两侧各两格 |
+| `Alt+2` 或 `/bash-polish 2` | 仪表式排版 | 标签在前、数字在后，组内一格、组间三格，其余沿用方案一 |
+| `Alt+3` 或 `/bash-polish 3` | 轻底色按键 | 左侧沿用方案一，快捷键采用 `selectedBg` 轻底色，左右各一格，无字符边框 |
+
+三种试验都将右侧提示和耗时内收两格；空间不足时优先保留正式命令预览，不缩短或重新换行命令。失败耗时保持原有警告色。窄屏可能隐藏标题右侧提示，底部控制说明仍可用。终端是等宽字符网格，不模拟网页的小字号、圆角、亚像素间距或不同字体。
+
+### Landing Map
+
+- `Target`：`extensions/codex-ui/src/bash-group-layout.ts` 的标题统计及右侧提示、耗时。方案 3 已在此正式实现，`tools.ts` 传入真实绑定的原始按键文本。
+- `Context`：真实 Pi 0.84.3 CLI、生产 Codex UI、主题、工具组件、命令分支、预览截断、展开输出、编辑器和页脚。无需独立网页或模拟卡片。
+- `Contract`：fixture 转为生产 `BashGroup`。方案 3 直接调用正式 `renderBashGroup()`，不再执行原型的 ANSI 尾部替换。原版、方案 1 和方案 2 使用 `src/original-bash-group-layout.ts` 中接入前的冻结副本；它只用于对照，不发布。通过真实 `context.invalidate()` 刷新，展开状态继续由 Pi 管理。
+
+### Fixtures and Limits
+
+`single` 复现截图中的长命令形态，但不会创建 commit。`mixed`、`success`、`long`、`edge` 可用 `/bash-scene` 切换。数据、计时与动画均为 fixture；超时与取消映射为生产支持的 `failed` 状态，截断标志也是 fixture。场景变化不改写初始会话。
+
+三种方案均保留生产 Bash 标题、状态标记、命令内容、预览长度和展开输出。测试验证这些不变量；不宣称验证了字体抗锯齿、特定终端的颜色矫正或截图像素一致性。不要将截图里的外部圆角背景重新做成工具边框。
+
+Context7 的 `/earendil-works/pi` 文档未锁定 0.84.3，本次接口以仓库安装的 0.84.3 类型声明及真实 CLI smoke 为准。[上游扩展文档](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md)仅作接口说明参考。
+
+### Checks and Handoff
+
+```sh
+pnpm run prototype:bash-ui:check
+pnpm run prototype:bash-ui --polish --pty-smoke
+pnpm run prototype:bash-ui --polish --pty-smoke --fullscreen
+pnpm run check
+```
+
+排印差异测试和实际工具行切换测试分别先失败，再实现通过。原型共 19 项测试通过；普通与 fullscreen 两种真实 CLI smoke 均通过，额外检查四种样式切换、展开、场景、重播、缩放、reload 和正常退出。正式接入后的 `pnpm run check` 通过：693 项测试通过、1 项原有集成测试跳过，类型检查、构建和发布包校验通过。正式测试新增元信息样式、主体宽度保护、主题与缓存、绑定与展开状态覆盖；排印和绑定两项均先失败后通过。原有 1,800 行历史输出渲染测试继续通过，计时刷新不触发全屏重绘或历史重放；本次未做独立耗时或峰值内存基准，不宣称性能提升。本次测试启动的进程与运行目录已清理，未启动监听服务；用户自行打开的原型实例不作清理。美观程度仍需用户在自己的终端中判断。
+
+元信息格式与间距规则已直接实现到正式 `bash-group-layout.ts`。正式实现只使用现有空白内收耗时，不改变命令可用宽度，也不增加输出扫描、计时器或整组二次渲染。未将原型的 ANSI 尾部替换、fixture adapter、控制区或离线入口迁入生产。按键提示跟随实际绑定，显式取消绑定时不显示虚构的按键；其余工具及 low-power 模式保持原样。以下章节保留默认分组原型的行为说明，不代表 `--polish` 的实现。
 
 ## Run
 
@@ -85,7 +131,7 @@ pnpm install --frozen-lockfile --ignore-scripts
 | 操作 | 入口 |
 | --- | --- |
 | 展开、收起全部工具详情 | Pi 当前绑定，隔离环境默认为 `Ctrl+O` |
-| 切换测试场景 | `/bash-scene`，或 `/bash-scene mixed`、`success`、`long`、`edge` |
+| 切换测试场景 | `/bash-scene`，或 `/bash-scene single`、`mixed`、`success`、`long`、`edge` |
 | 从头重播六秒进度 | `/bash-replay`，或 `Alt+R` |
 | 暂停、继续重播 | `/bash-pause`，或 `Alt+P` |
 | 暂停并推进一帧 | `/bash-step` |
@@ -95,6 +141,7 @@ pnpm install --frozen-lockfile --ignore-scripts
 
 ## Scenarios
 
+- `single`：截图形态的一条中文长命令与 `0.1s` 耗时，用于辅助信息细节比较。
 - `mixed`：短输出、成功检查、失败测试。收起时为标题加三条命令，展开后才显示错误日志。
 - `success`：三条命令全部成功。验证命令不会随结果一起隐藏，以及执行结束不会覆盖用户的展开选择。
 - `long`：无输出成功、243 行构建日志、较长失败日志。用于验证全量展开与反复收起，观察长日志占据对话空间的代价。

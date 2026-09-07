@@ -9,6 +9,7 @@ import {
   getLanguageFromPath,
   highlightCode,
   keyHint,
+  keyText,
   type BashToolDetails,
   type EditToolDetails,
   type ExtensionAPI,
@@ -457,7 +458,7 @@ export function registerCodexTools(
       bashGroups.updateCall(member, context, component);
       component.setRenderer((width) => member.group.members[0] === member
         ? renderBashGroup(member.group, context.expanded, theme, width,
-          formatExpandHint(context.expanded ? "collapse" : "expand", theme, services))
+          formatBashExpandKeys(services))
         : [], { linesAlreadyFit: true });
       return component;
     },
@@ -1249,6 +1250,16 @@ function formatLowPowerBashWarnings(details: BashToolDetails | undefined): strin
     }
   }
   return warnings;
+}
+
+function formatBashExpandKeys(services: CodexToolRenderServices): string {
+  const bindings = services.getKeybindings?.();
+  if (!bindings) return keyText("app.tools.expand");
+  return bindings.getKeys("app.tools.expand")
+    .map(key => String(key).split("+")
+      .map(part => process.platform === "darwin" && part.toLowerCase() === "alt" ? "option" : part)
+      .join("+"))
+    .join("/");
 }
 
 function formatExpandHint(

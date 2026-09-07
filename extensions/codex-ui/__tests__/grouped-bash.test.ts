@@ -38,6 +38,23 @@ function harness(services: Parameters<typeof registerCodexTools>[2] = {}) {
 }
 afterEach(() => vi.useRealTimers());
 
+test("Bash keycaps follow injected bindings and expansion without duplicating the action", () => {
+  let keys = ["ctrl+shift+o"];
+  const h = harness({ getKeybindings: () => ({ getKeys: () => keys }) });
+  try {
+    const a = h.row("a"); a.updateResult(result("body"));
+    assert.match(plain(a)[1]!, / ctrl\+shift\+o  expand$/u);
+    assert.doesNotMatch(plain(a)[1]!, /expand.*expand/u);
+    a.setExpanded(true);
+    assert.match(plain(a)[1]!, / ctrl\+shift\+o  collapse$/u);
+    keys = ["ctrl+x", "ctrl+y"]; a.invalidate();
+    assert.match(plain(a)[1]!, / ctrl\+x\/ctrl\+y  collapse$/u);
+    keys = []; a.invalidate();
+    assert.doesNotMatch(plain(a)[1]!, /collapse|ctrl\+/u);
+    assert(plain(a).includes("        body"));
+  } finally { h.dispose(); }
+});
+
 test("consecutive Bash calls use one host row and preserve source order under out-of-order completion", () => {
   const h = harness();
   try {
@@ -68,10 +85,10 @@ test("source text, thinking, other tools and assistant messages break groups", (
       h.declare([call("a"), separator, call("b")]);
       const a = h.row("a"); const b = h.row("b");
       a.updateResult(result("")); b.updateResult(result(""));
-      assert.match(plain(a).join("\n"), /1 commands.*1 succeeded/u);
-      assert.match(plain(b).join("\n"), /1 commands.*1 succeeded/u);
+      assert.match(plain(a).join("\n"), /1 command.*1 succeeded/u);
+      assert.match(plain(b).join("\n"), /1 command.*1 succeeded/u);
       h.declare([call("c")]); const c = h.row("c");
-      assert.match(plain(c).join("\n"), /1 commands/u);
+      assert.match(plain(c).join("\n"), /1 command/u);
     } finally { h.dispose(); }
   }
 });
@@ -241,7 +258,7 @@ test("captured output, truncation warnings and custom key hints remain visible a
     const output = "\x1b]52;c;bad\x07\x1b[31m中文👩‍💻é\x1b[0m\r\t\n" + "x".repeat(50 * 1024);
     a.updateResult({ ...result(output), details: { truncation: { truncated: true }, fullOutputPath: "/real/output.txt" } } as never);
     const lines = plain(a);
-    assert.match(lines.join("\n"), /ctrl\+x collapse/u);
+    assert.match(lines.join("\n"), /ctrl\+x  collapse/u);
     assert.match(lines.join("\n"), /Truncated capture.*\/real\/output.txt/u);
     assert.equal(lines.join("").match(/x/gu)!.length >= 50 * 1024, true);
     for (const width of [0, NaN, 1, 2, 4, 9, 10, 30, 71, 72, 119, 120, 121, 300]) {
@@ -263,7 +280,7 @@ test("host errors preserve timeout and cancellation reasons without fabricating 
     b.updateResult({ ...result("Command timed out after 2 seconds\noriginal detail\nextra detail"), isError: true });
     c.updateResult({ ...result("Command cancelled"), isError: true });
     const rendered = plain(a).join("\n");
-    assert.match(rendered, /3 commands · 1 succeeded · 2 failed/u);
+    assert.match(rendered, /3 commands  ·  1 succeeded  ·  2 failed/u);
     assert.doesNotMatch(rendered, /this is successful output|Command timed out|Command cancelled|extra detail|exit code|\d+\.\d+s/u);
     [a, b, c].forEach(row => row.setExpanded(true));
     const expanded = plain(a).join("\n");
@@ -280,9 +297,9 @@ test("low-power rows keep their own bounded renderer and break full-mode groupin
     h.declare([call("a"), call("b"), call("c")]);
     const a = h.row("a"); lowPower = true; const b = h.row("b"); lowPower = false; const c = h.row("c");
     a.updateResult(result("a")); b.updateResult(result("b")); c.updateResult(result("c"));
-    assert.match(plain(a).join("\n"), /1 commands/u);
+    assert.match(plain(a).join("\n"), /1 command/u);
     assert.match(plain(b).join("\n"), /Bash completed/u);
-    assert.match(plain(c).join("\n"), /1 commands/u);
+    assert.match(plain(c).join("\n"), /1 command/u);
   } finally { h.dispose(); }
 });
 

@@ -8,9 +8,10 @@ import { stripVTControlCharacters } from "node:util";
 export async function smokePty({ run, env, cliArgs }) {
   execFileSync("/usr/bin/expect", ["-v"]);
   const quote = value => `"${value.replace(/[\\"$\[\]]/gu, character => `\\${character}`)}"`;
+  const polish = env.PI_BASH_LAB_POLISH === "1";
   const phases = [
-    ["initial", "", /Grouped Bash/u],
-    ["warmup", `/bash-scene ${env.PI_BASH_LAB_SCENE === "success" ? "long" : "success"}`, /Scene (?:success|long)/u],
+    ["initial", "", polish ? /辅助信息对照/u : /Grouped Bash/u],
+    ["warmup", `/bash-scene ${env.PI_BASH_LAB_SCENE === "success" ? "long" : "success"}`, polish ? /success|long/u : /Scene (?:success|long)/u],
     ["mixed", "/bash-scene mixed", /pnpm test/u],
   ];
   const script = join(run, "smoke.exp");
@@ -30,6 +31,16 @@ proc capture {name} {
 spawn -noecho ${[process.execPath, ...cliArgs].map(quote).join(" ")}
 stty rows 44 columns 120 < $spawn_out(slave,name)
 ${phases.map(([name, command]) => `${command ? `send -- "\\025${command}\\r"` : ""}\ncapture ${name}`).join("\n")}
+${polish ? `send -- "\\0332"
+capture instrument
+send -- "\\0333"
+capture keycap
+send -- "\\0330"
+capture original
+send -- "\\0331"
+capture typography
+send -- "\\0333"
+capture accepted` : ""}
 send -- "\\017"
 capture mixedExpanded
 send -- "\\017"
@@ -92,11 +103,19 @@ exit [lindex $result 3]
     assert.equal(code, 0, diagnostics);
     const read = name => stripVTControlCharacters(readFileSync(join(run, `${name}.ansi`), "utf8"));
     for (const [name, , pattern] of phases) assert.match(read(name), pattern, `Missing ${name} marker`);
+    if (polish) {
+      assert.match(read("instrument"), /commands 3   succeeded 2   failed 1/u);
+      assert.match(read("keycap"), /轻底色按键/u);
+      assert.match(read("keycap"), /ctrl\+o  expand/u);
+      assert.match(read("original"), /3 commands · 2 succeeded · 1 failed/u);
+      assert.match(read("typography"), /精细排印/u);
+      assert.match(read("typography"), /3 commands  ·  2 succeeded  ·  1 failed/u);
+    }
     assert.match(read("initial"), /Read README\.md/u);
     assert.match(read("initial"), /Edited fixture\.ts/u);
     assert.doesNotMatch(read("mixed"), /AssertionError|Build completed/u);
     assert.match(read("mixedExpanded"), /Build completed/u);
-    assert.match(read("mixedCollapsed"), /ctrl\+o expand/u);
+    assert.match(read("mixedCollapsed"), polish ? /ctrl\+o  expand/u : /ctrl\+o expand/u);
     assert.match(read("mixedCollapsed"), /git status --short/u);
     assert.match(read("success"), /3 succeeded/u);
     assert.match(read("successExpanded"), /Typecheck completed/u);
@@ -107,9 +126,9 @@ exit [lindex $result 3]
     assert.match(read("successCollapsed"), /pnpm run typecheck/u);
     assert.doesNotMatch(read("successCollapsed"), /Typecheck completed/u);
     assert.match(read("longExpanded"), /Process exited with code 1/u);
-    assert.match(read("longCollapsed"), /ctrl\+o expand/u);
+    assert.match(read("longCollapsed"), polish ? /ctrl\+o  expand/u : /ctrl\+o expand/u);
     assert.match(read("edge"), /Truncated capture/u);
-    const all = [...phases.map(([name]) => name), "mixedExpanded", "mixedCollapsed", "success", "successExpanded", "replay", "paused", "settled", "successCollapsed", "long", "longExpanded", "longCollapsed", "edge", "narrow", "expanded", "collapsed", "reload"].map(read).join("\n");
+    const all = [...phases.map(([name]) => name), ...(polish ? ["instrument", "keycap", "original", "typography", "accepted"] : []), "mixedExpanded", "mixedCollapsed", "success", "successExpanded", "replay", "paused", "settled", "successCollapsed", "long", "longExpanded", "longCollapsed", "edge", "narrow", "expanded", "collapsed", "reload"].map(read).join("\n");
     assert.doesNotMatch(all, /Failed to load extension|TypeError:|RangeError:|ReferenceError:|Error loading theme|No models available|This project is not trusted|\/bash-logs|Alt\+L logs/u);
     console.log("Real Pi CLI PTY smoke passed: aligned labels, persistent commands, folded results, full captures, playback, resize, reload, clean exit.");
   } finally {

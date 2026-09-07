@@ -1,5 +1,5 @@
 import { isAbsolute, relative, sep } from "node:path";
-import { createBashToolDefinition, createEditToolDefinition, createReadToolDefinition, createWriteToolDefinition, DEFAULT_MAX_BYTES, formatSize, getLanguageFromPath, highlightCode, keyHint, } from "@earendil-works/pi-coding-agent";
+import { createBashToolDefinition, createEditToolDefinition, createReadToolDefinition, createWriteToolDefinition, DEFAULT_MAX_BYTES, formatSize, getLanguageFromPath, highlightCode, keyHint, keyText, } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, } from "@earendil-works/pi-tui";
 import { BashRefreshScheduler } from "./bash-refresh-scheduler.js";
 import { BashGroups } from "./bash-groups.js";
@@ -302,7 +302,7 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
             const member = bashGroups.bind(context);
             bashGroups.updateCall(member, context, component);
             component.setRenderer((width) => member.group.members[0] === member
-                ? renderBashGroup(member.group, context.expanded, theme, width, formatExpandHint(context.expanded ? "collapse" : "expand", theme, services))
+                ? renderBashGroup(member.group, context.expanded, theme, width, formatBashExpandKeys(services))
                 : [], { linesAlreadyFit: true });
             return component;
         },
@@ -884,6 +884,16 @@ function formatLowPowerBashWarnings(details) {
         }
     }
     return warnings;
+}
+function formatBashExpandKeys(services) {
+    const bindings = services.getKeybindings?.();
+    if (!bindings)
+        return keyText("app.tools.expand");
+    return bindings.getKeys("app.tools.expand")
+        .map(key => String(key).split("+")
+        .map(part => process.platform === "darwin" && part.toLowerCase() === "alt" ? "option" : part)
+        .join("+"))
+        .join("/");
 }
 function formatExpandHint(description, theme, services) {
     const keys = services.getKeybindings?.()?.getKeys("app.tools.expand") ?? [];

@@ -47,7 +47,7 @@ function createPipeline(history: number, output = Array.from({ length: 1800 }, (
       callbacks.push(handler);
       handlers.set(event, callbacks);
     },
-  } as unknown as ExtensionAPI);
+  } as unknown as ExtensionAPI, undefined, { getKeybindings: () => ({ getKeys: () => ["ctrl+o"] }) });
   let id = 0;
   const bash = () => new ToolExecutionComponent("bash", `bash-${id++}`, { command: "printf sample", timeout: 30 },
     { showImages: false }, tools.find(tool => tool.name === "bash"), screen, directory);

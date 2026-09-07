@@ -10,6 +10,10 @@ import bashUiPrototype, { registerBashLab } from "../src/index.js";
 import { clean, renderGroup } from "../src/renderers.js";
 import { registerCodexTools } from "../../../extensions/codex-ui/src/tools.js";
 
+import { fixtureGroup, renderPolish, POLISH_VARIANTS } from "../src/polish.js";
+import { renderBashGroup } from "../src/original-bash-group-layout.js";
+import { renderBashGroup as renderProduction } from "../../../extensions/codex-ui/src/bash-group-layout.js";
+
 const repository = process.env.PI_BASH_LAB_REPOSITORY!;
 const agentEntry = fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"));
 const themeModule = await import(pathToFileURL(join(dirname(agentEntry), "modes/interactive/theme/theme.js")).href);
@@ -17,7 +21,7 @@ const theme: Theme = themeModule.loadThemeFromPath(join(repository, "themes/code
 themeModule.setThemeInstance(theme);
 const plain = (lines: string[]) => stripTerminalSequences(lines.join("\n"));
 
-function harness(expandKey: "ctrl+o" | "ctrl+shift+o" = "ctrl+o") {
+function harness(expandKey: "ctrl+o" | "ctrl+shift+o" = "ctrl+o", polish = false) {
   const controller = new LabController();
   let tool: ToolDefinition | undefined;
   const events = new Map<string, (...args: any[]) => any>();
@@ -28,7 +32,7 @@ function harness(expandKey: "ctrl+o" | "ctrl+shift+o" = "ctrl+o") {
     on(event: string, handler: (...args: any[]) => any) { events.set(event, handler); },
     registerCommand(name: string, command: { handler: (...args: any[]) => any }) { commands.set(name, command); },
     registerShortcut(key: string) { shortcuts.add(key); },
-  } as unknown as ExtensionAPI, controller);
+  } as unknown as ExtensionAPI, controller, polish);
   assert(tool);
   const injectedKeybindings = new KeybindingsManager({ "app.tools.expand": { defaultKeys: expandKey } });
   const editor = {};
@@ -46,6 +50,65 @@ function harness(expandKey: "ctrl+o" | "ctrl+shift+o" = "ctrl+o") {
   });
   return { controller, tool, rows, events, commands, shortcuts, dispose: () => events.get("session_shutdown")?.() };
 }
+
+test("polish variants preserve production command bodies while styling both metadata regions", () => {
+  const group = fixtureGroup([{ ...fixturesFor("success")[0]!, durationMs: 100 }]);
+  const hint = theme.fg("dim", "ctrl+o") + theme.fg("muted", " expand");
+  const baseline = renderBashGroup(group, false, theme, 180, hint);
+  assert.deepEqual(renderPolish(group, false, theme, 180, hint, "original"), baseline);
+  for (const variant of POLISH_VARIANTS.slice(1)) {
+    const result = renderPolish(group, false, theme, 180, hint, variant);
+    assert.notEqual(result[0], baseline[0]);
+    assert.match(result[0]!, /command/u);
+    assert(result[0]!.includes(theme.fg("muted", "1")));
+    assert.equal(result.length, baseline.length);
+    const before = baseline[1]!.slice(0, baseline[1]!.lastIndexOf(theme.fg("dim", "0.1s"))).trimEnd();
+    assert(result[1]!.startsWith(before));
+    assert.match(stripTerminalSequences(result[1]!), /0\.1s  $/u);
+    assert.match(stripTerminalSequences(result[0]!), /expand  $/u);
+  }
+  assert.match(plain(renderPolish(group, false, theme, 180, hint, "instrument")), /command 1   succeeded 1/u);
+  assert(renderPolish(group, false, theme, 180, hint, "keycap")[0]!.includes(theme.bg("selectedBg", theme.fg("muted", " ctrl+o "))));
+  assert.deepEqual(renderPolish(group, false, theme, 180, hint, "keycap"), renderProduction(group, false, theme, 180, "ctrl+o"));
+});
+
+test("polish survives narrow widths, expanded output, live states, and custom keybindings", () => {
+  for (const scene of SCENES) for (const frame of [null, 0, 2, 7]) for (const expanded of [false, true]) {
+    const group = fixtureGroup(playbackRows(scene, frame));
+    for (const width of [0, 1, 8, 32, 63, 64, 80, 120, 180]) {
+      const baseline = renderBashGroup(group, expanded, theme, width, "ctrl+shift+o expand");
+      for (const variant of POLISH_VARIANTS) {
+        const result = renderPolish(group, expanded, theme, width, "ctrl+shift+o expand", variant);
+        assert.equal(result.length, baseline.length);
+        assert(result.every(line => visibleWidth(line) <= width));
+        for (let index = 1; index < result.length; index++) {
+          // The only allowed body change is the right-side duration's styling and inset.
+          const normalize = (line: string) => stripTerminalSequences(line).replace(/ +(?=\d+\.\d+s\s*$|queued\s*$)/u, " ").trimEnd();
+          assert.equal(normalize(result[index]!), normalize(baseline[index]!));
+        }
+        if (width === 180) assert(plain(result).includes("ctrl+shift+o"));
+      }
+    }
+  }
+});
+
+test("polish controls switch the actual tool row and retain its expansion state", async () => {
+  const h = harness("ctrl+shift+o", true);
+  try {
+    assert(h.commands.has("bash-polish"));
+    const row = h.rows[0]!;
+    const before = row.render(180);
+    await h.commands.get("bash-polish")!.handler("2", {});
+    const after = row.render(180);
+    assert.notDeepEqual(after, before);
+    assert.match(plain(after), /commands 3   succeeded 2   failed 1/u);
+    assert.match(plain(after), /ctrl\+shift\+o/u);
+    row.setExpanded(true);
+    await h.commands.get("bash-polish")!.handler("3", {});
+    assert.match(plain(row.render(180)), /Build completed/u);
+    assert(h.shortcuts.has("alt+1") && h.shortcuts.has("alt+2") && h.shortcuts.has("alt+3") && h.shortcuts.has("alt+0"));
+  } finally { h.dispose(); }
+});
 
 test("grouped rendering fits every fixture state and terminal width", () => {
   for (const scene of SCENES) for (const frame of [null, 0, 2, 7, LAST_FRAME]) {

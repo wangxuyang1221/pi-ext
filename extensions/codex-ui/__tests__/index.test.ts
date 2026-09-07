@@ -425,7 +425,7 @@ test("session UI installs only in TUI mode", async () => {
     bashContext as never,
   );
   assert.deepEqual(bashResult.render(80), []);
-  assert.match(bashCall.render(80).join("\n"), /ctrl\+shift\+o expand/u);
+  assert.match(bashCall.render(80).map(stripTerminalSequences).join("\n"), /ctrl\+shift\+o  expand/u);
 
   const headerFactory = calls.find((call) => call.name === "header")?.value as (() => {
     render(width: number): string[];

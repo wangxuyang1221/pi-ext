@@ -14,13 +14,14 @@ const option = name => {
   const index = args.indexOf(`--${name}`);
   return index < 0 ? undefined : args[index + 1];
 };
-const scene = option("scene") ?? "mixed";
+const polish = args.includes("--polish");
+const scene = option("scene") ?? (polish ? "single" : "mixed");
 if (args.some(arg => arg === "--variant" || arg.startsWith("--variant="))) {
   throw new Error("Grouped is now the only layout. Remove --variant from the command.");
 }
-if (!["mixed", "success", "long", "edge"].includes(scene)) throw new Error(`Invalid scene: ${scene}`);
+if (!["single", "mixed", "success", "long", "edge"].includes(scene)) throw new Error(`Invalid scene: ${scene}`);
 if (args.includes("--help")) {
-  console.log("pnpm run prototype:bash-ui [--scene mixed|success|long|edge] [--fullscreen] [--smoke] [--pty-smoke]");
+  console.log("pnpm run prototype:bash-ui [--polish] [--scene single|mixed|success|long|edge] [--fullscreen] [--smoke] [--pty-smoke]");
   process.exit(0);
 }
 
@@ -94,7 +95,7 @@ function isolatedEnvironment() {
     XDG_CONFIG_HOME: join(run, "home/.config"), XDG_CACHE_HOME: join(run, "cache"),
     PI_CODING_AGENT_DIR: join(run, "agent"), PI_CODING_AGENT_SESSION_DIR: join(run, "sessions"),
     JITI_FS_CACHE: join(run, "cache"), PI_OFFLINE: "1", PI_SKIP_VERSION_CHECK: "1", PI_TELEMETRY: "0",
-    PI_BASH_LAB_SCENE: scene, PI_BASH_LAB_REPOSITORY: repository,
+    PI_BASH_LAB_SCENE: scene, PI_BASH_LAB_REPOSITORY: repository, PI_BASH_LAB_POLISH: polish ? "1" : "0",
   };
 }
 

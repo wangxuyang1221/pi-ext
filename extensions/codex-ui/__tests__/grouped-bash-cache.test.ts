@@ -66,7 +66,7 @@ test("reload discovers already-created fresh rows before first session_start", (
     a.updateResult(result("first")); b.updateResult(result("second"));
     assert.match(text(b), /second/u);
     h.emit("session_start", { reason: "reload" });
-    assert.match(text(a), /2 commands · 2 succeeded/u);
+    assert.match(text(a), /2 commands  ·  2 succeeded/u);
     assert.match(text(a), /second/u);
     assert.deepEqual(b.render(120), []);
     h.emit("session_shutdown");
@@ -148,7 +148,7 @@ test("changing source separators reassigns already bound rows without swallowing
     h.declare([call("a"), call("b"), call("c")]);
     const a = h.row("a"); const b = h.row("b"); const c = h.row("c"); text(a);
     h.declare([call("a"), { type: "text", text: "break" }, call("b"), call("c")]);
-    assert.match(text(a), /1 commands/u);
+    assert.match(text(a), /1 command/u);
     assert.match(text(b), /2 commands/u);
     assert.equal(c.render(120).length, 0);
     h.declare([call("a"), call("b"), call("c")]);
@@ -195,7 +195,7 @@ test("recovery follows the host compaction projection instead of inventing hidde
     const a = h.row("kept-a"); const b = h.row("kept-b");
     a.updateResult(result("kept"));
     const projectsTail = sessionEntryToContextMessages(h.entries[0]).some(message => message.role === "assistant");
-    assert.match(text(a), projectsTail ? /2 commands/u : /1 commands/u);
+    assert.match(text(a), projectsTail ? /2 commands/u : /1 command/u);
     assert.equal(b.render(120).length === 0, projectsTail);
     assert.doesNotMatch(text(a), /\d+\.\d+s/u);
   } finally { h.dispose(); }

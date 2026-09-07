@@ -1,6 +1,6 @@
 // PROTOTYPE: Deterministic display fixtures. None of these commands are executed.
 
-export const SCENES = ["mixed", "success", "long", "edge"] as const;
+export const SCENES = ["single", "mixed", "success", "long", "edge"] as const;
 export type Scene = typeof SCENES[number];
 export type Status = "pending" | "running" | "completed" | "failed" | "cancelled" | "timeout";
 
@@ -40,7 +40,10 @@ const failure = [
 
 export function fixturesFor(scene: Scene): BashFixture[] {
   const common = { timeout: 30 };
-  const rows: Omit<BashFixture, "id">[] = scene === "mixed" || scene === "success" ? [
+  const rows: Omit<BashFixture, "id">[] = scene === "single" ? [
+    { ...common, command: 'git commit --amend -m "feat(codex-ui): 改进回复布局、编辑摘要与思考历史" -m "普通回复使用公开 Markdown 接口实现外层布局"',
+      output: ["[fixture 861ba19] feat(codex-ui): 改进回复布局、编辑摘要与思考历史", "Fixture only. No commit was created."], status: "completed", durationMs: 100, exitCode: 0 },
+  ] : scene === "mixed" || scene === "success" ? [
     { ...common, command: "git status --short", output: [" M extensions/codex-ui/src/tools.ts", "?? prototypes/codex-bash-ui-prototype/"], status: "completed", durationMs: 200, exitCode: 0 },
     { ...common, command: "pnpm run check", output: success, status: "completed", durationMs: 4200, exitCode: 0 },
     { ...common, command: "pnpm test", output: failure, status: "failed", durationMs: 1800, exitCode: 1 },

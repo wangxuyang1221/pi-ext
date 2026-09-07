@@ -14,9 +14,12 @@ function clean(text) {
 function elapsed(member) {
     return member.startedAt === undefined ? "" : `${(Math.max(0, (member.endedAt ?? Date.now()) - member.startedAt) / 1000).toFixed(1)}s`;
 }
-function withMetadata(left, right, width) {
+function withMetadata(left, right, width, preferredInset = 0) {
     const remaining = width - visibleWidth(left) - visibleWidth(right);
-    return right && remaining >= 3 ? left + " ".repeat(remaining) + right : fitToWidth(left, width, { ellipsis: "…" });
+    // Spend existing whitespace, never shorten or rewrap the command for metadata padding.
+    const inset = remaining >= preferredInset + 3 ? preferredInset : 0;
+    return right && remaining >= 3 ? left + " ".repeat(remaining - inset) + right + " ".repeat(inset)
+        : fitToWidth(left, width, { ellipsis: "…" });
 }
 function indent(last, width) { return width >= 16 ? last ? "        " : "  │     " : ""; }
 function fingerprint(theme) {
@@ -35,7 +38,9 @@ function commandLines(member, expanded, last, theme, width) {
     const branch = width >= 16 ? last ? "  ╰ " : "  ├ " : "";
     const prefix = width >= 8 ? `${theme.fg("borderMuted", branch)}${theme.fg(style.color, style.mark)} ${theme.fg("dim", "$ ")}` : "";
     const duration = member.status === "pending" ? "queued" : expanded && member.status === "running" ? "" : elapsed(member);
-    const meta = theme.fg(member.status === "failed" ? "warning" : "dim", duration);
+    const meta = member.status === "failed" ? theme.fg("warning", duration)
+        : !duration || member.status === "pending" ? theme.fg("dim", duration)
+            : theme.fg("muted", duration.slice(0, -1)) + theme.fg("dim", "s");
     const reserve = width >= 64 && duration ? visibleWidth(meta) + 3 : 0;
     const available = Math.max(1, width - visibleWidth(prefix) - reserve);
     const contentWidth = expanded ? available : Math.min(120, available);
@@ -48,7 +53,7 @@ function commandLines(member, expanded, last, theme, width) {
     });
     return commands.map((line, index) => {
         const left = (index ? theme.fg("borderMuted", indent(last, width)) : prefix) + theme.fg("toolTitle", line);
-        return index === 0 && reserve ? withMetadata(left, meta, width) : fitToWidth(left, width);
+        return index === 0 && reserve ? withMetadata(left, meta, width, 2) : fitToWidth(left, width);
     });
 }
 function outputLines(member, expanded, last, theme, width) {
@@ -72,15 +77,20 @@ function outputLines(member, expanded, last, theme, width) {
     return lines;
 }
 /** Render the accepted two-state layout with live clocks confined to the group tail. */
-export function renderBashGroup(group, expanded, theme, availableWidth, toggleHint) {
+export function renderBashGroup(group, expanded, theme, availableWidth, toggleKeys) {
     const width = normalizeWidth(availableWidth);
     if (!width)
         return [];
+    const metric = (count, label) => `${theme.fg("muted", String(count))} ${theme.fg("dim", label)}`;
     const counts = ["completed", "failed", "running", "pending"]
-        .flatMap(status => group.counts[status] ? [`${group.counts[status]} ${presentation[status].label}`] : []);
+        .flatMap(status => group.counts[status] ? [metric(group.counts[status], presentation[status].label)] : []);
+    const summary = [metric(group.members.length, group.members.length === 1 ? "command" : "commands"), ...counts]
+        .join(theme.fg("borderMuted", "  ·  "));
     // Match the two cells occupied by Read/Edited's marker and following space.
-    const title = `${width >= 8 ? "  " : ""}${theme.fg("toolTitle", theme.bold("Bash"))} ${theme.fg("dim", `· ${group.members.length} commands · ${counts.join(" · ")}`)}`;
-    const lines = [withMetadata(title, toggleHint, width)];
+    const title = `${width >= 8 ? "  " : ""}${theme.fg("toolTitle", theme.bold("Bash"))} ${theme.fg("dim", "· ")}${summary}`;
+    const hint = toggleKeys ? theme.bg("selectedBg", theme.fg("muted", ` ${toggleKeys} `))
+        + " " + theme.fg("dim", expanded ? "collapse" : "expand") + "  " : "";
+    const lines = [withMetadata(title, hint, width)];
     group.members.forEach((member, index) => {
         const last = index === group.members.length - 1;
         if (expanded && index)
