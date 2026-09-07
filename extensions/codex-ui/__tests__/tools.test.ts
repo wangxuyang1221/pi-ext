@@ -88,6 +88,7 @@ function createTheme(codeOffset = 0): Theme {
     getFgAnsi: (name: string) => `\x1b[38;5;${getFgCode(name)}m`,
     getBgAnsi: (name: string) => `\x1b[48;5;${getBgCode(name)}m`,
     bold: (text: string) => `\x1b[1m${text}\x1b[22m`,
+    underline: (text: string) => `\x1b[4m${text}\x1b[24m`,
   } as unknown as Theme;
 }
 
@@ -634,6 +635,7 @@ test("low-power edit renderer skips edit arguments and bounds the raw patch prev
   );
 
   assert.equal(stripTerminalSequences(call.render(80).join("\n")), "• Edited src/app.ts");
+  assert.ok(!call.render(80).join("\n").includes("\x1b[4m"));
   assert.equal(stripTerminalSequences(partial.render(80).join("\n")), "  … Editing");
   assert.deepEqual(expandedLines, [
     "    --- a/src/app.ts",
@@ -738,6 +740,9 @@ test("edit renderer refreshes its title and renders the patch with Codex styling
   const plainDiff = diffLines.map((line) => stripTerminalSequences(line).trimEnd());
 
   assert.equal(title, "• Edited src/app.ts (+2 -1)");
+  assert.ok(titleAnsi.startsWith("\x1b[4m"));
+  assert.ok(titleAnsi.endsWith("\x1b[24m"));
+  assert.ok(diffLines.every(line => !line.includes("\x1b[4m")));
   assert.ok(titleAnsi.includes("\x1b[32m+2\x1b[39m"));
   assert.ok(titleAnsi.includes("\x1b[31m-1\x1b[39m"));
   assert.ok(!titleAnsi.includes("\x1b[38;5;81msrc/app.ts"));
@@ -748,6 +753,41 @@ test("edit renderer refreshes its title and renders the patch with Codex styling
     "    3 + extra",
   ]);
   assert.ok(diffLines.every((line) => visibleWidth(line) <= 40));
+});
+
+test("edit underlines only nonempty settled diff titles and fits narrow widths", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const edit = registered.find(tool => tool.name === "edit");
+  assert.ok(edit?.renderCall && edit.renderResult);
+  const args = { path: "src/中文目录/long-renderer-name.ts", edits: [] };
+  const state = {};
+  const context = createRenderContext({ args, state });
+  const call = edit.renderCall(args, theme, context as never);
+  assert.ok(!call.render(120).join("\n").includes("\x1b[4m"));
+
+  for (const expanded of [false, true]) {
+    const result = edit.renderResult({ content: [], details: { diff: "+1 const value = 1;", patch: "" } },
+      { expanded, isPartial: false }, theme, context as never);
+    for (const width of [0, 1, 2, 8, 24, 80, 120]) {
+      const titleLines = call.render(width);
+      assert.ok(titleLines.every(line => visibleWidth(line) <= width));
+      assert.ok(result.render(width).every(line => visibleWidth(line) <= width));
+    }
+    assert.ok(call.render(120)[0]?.startsWith("\x1b[4m"));
+    assert.match(stripTerminalSequences(result.render(80)[0] ?? ""), /1 \+ const value/u);
+  }
+
+  for (const [isPartial, isError, details] of [
+    [true, false, { diff: "+1 partial", patch: "" }],
+    [false, true, { diff: "+1 ignored", patch: "" }],
+    [false, false, undefined],
+    [false, false, { diff: "", patch: "--- a/app.ts\n+++ b/app.ts" }],
+  ] as const) {
+    edit.renderResult({ content: [{ type: "text", text: "result" }], details },
+      { expanded: false, isPartial }, theme, { ...context, isError } as never);
+    assert.ok(!call.render(120).join("\n").includes("\x1b[4m"));
+  }
 });
 
 test("collapsed edit diff separates and fills its hidden-lines footer", () => {
@@ -1764,7 +1804,14 @@ test("edit result appears once when composed by the host tool component", () => 
     isError: false,
   });
 
-  const output = stripTerminalSequences(component.render(80).join("\n"));
-  assert.equal(output.split("old value").length - 1, 1);
-  assert.equal(output.split("new value").length - 1, 1);
+  for (const expanded of [false, true]) {
+    component.setExpanded(expanded);
+    const lines = component.render(80).map(stripTerminalSequences);
+    const title = lines.findIndex(line => line.includes("Edited src/app.ts"));
+    assert.ok(title >= 0);
+    assert.match(lines[title + 1] ?? "", /1 - old value/u);
+    const output = lines.join("\n");
+    assert.equal(output.split("old value").length - 1, 1);
+    assert.equal(output.split("new value").length - 1, 1);
+  }
 });

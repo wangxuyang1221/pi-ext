@@ -153,13 +153,18 @@ if (loadedVariant === "production") test("production lifecycle installs a static
     await emit("agent_start");
     const message = assistant("**Production title**");
     await emit("message_start", { message });
-    await emit("message_update", { message, assistantMessageEvent: { type: "thinking_delta", contentIndex: 0, delta: "**Production title**" } });
     const status = widgets.get("codex-ui-reasoning");
     assert.ok(status);
+    assert.deepEqual(status.render(80), [], "No generic status or gap before a model title");
+    await emit("message_update", { message, assistantMessageEvent: { type: "thinking_delta", contentIndex: 0, delta: "**Production title**" } });
     assert.deepEqual(status.render(80).map(stripTerminalSequences), ["• Production title", ""]);
     const previous = requests;
     for (let index = 0; index < 100; index++) status.render(80);
     assert.equal(requests, previous);
+    await emit("message_update", { message, assistantMessageEvent: { type: "text_start", contentIndex: 1 } });
+    assert.deepEqual(status.render(80), [], "Reply output must remove the title and gap");
+    await emit("tool_execution_start", { toolCallId: "fixture-read", toolName: "read" });
+    assert.deepEqual(status.render(80), [], "Tools must not install a generic status");
     await emit("agent_settled");
     assert.deepEqual(status.render(80), []);
   } finally { await emit("session_shutdown", { reason: "quit" }); }

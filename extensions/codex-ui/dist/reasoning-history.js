@@ -6,6 +6,11 @@ export function reasoningHistoryMarkdown(markdown) {
     const trimmed = trimBlankLines(markdown);
     if (!trimmed)
         return "";
+    // A sequence of standalone titles is not a leading title followed by prose.
+    const titleLines = trimmed.split(/\r?\n/u).filter(line => line.trim().length > 0);
+    if (titleLines.length > 1 && titleLines.every(line => /^\*\*[^*]+\*\*[ \t]*$/u.test(line))) {
+        return titleLines.map(line => `• ${line.trimEnd()}`).join("\n\n");
+    }
     const leading = trimmed.match(/^\*\*[^*]+\*\*\r?\n([\s\S]*)$/u);
     const body = (leading && trimBlankLines(leading[1])) || (trimmed.startsWith("**") && !trimmed.slice(2).includes("**")
         ? trimBlankLines(trimmed.slice(2)) : trimmed);

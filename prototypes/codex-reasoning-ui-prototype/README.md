@@ -4,7 +4,7 @@
 
 在真实 Pi 中，把运行中的思考移到输入框上方的静态单行，完成后保留多行次要文字，是否比原先青色圆点与单行截断更清晰？用户已确认该布局，并要求状态下方保留一行空白。正式实现现已接入 `extensions/codex-ui/src/`。
 
-用户已确认 `proposed` 的英文状态文案和左对齐布局，本轮接入 `production`。正式演示直接加载生产 extension，并在隔离配置中启用 `outputPad: 0`；真实 Pi 的同名设置需要另行应用，扩展不会自动修改用户配置。
+正式版保留已确认的左对齐布局，并按用户最新要求删除通用状态文案，只显示模型思考标题。正式演示直接加载生产 extension，并在隔离配置中启用 `outputPad: 0`；扩展不会自动修改用户配置。`proposed` 保留上一轮含英文固定状态的原型，便于对照。
 
 ## Landing map
 
@@ -15,11 +15,11 @@
 ## Run
 
 ```sh
-# 正式实现：英文状态文案与左对齐，默认入口
+# 正式实现：只显示模型思考标题，默认入口
 pnpm run prototype:reasoning-ui
 pnpm run prototype:reasoning-ui --variant production
 
-# 用户确认过的原型参考
+# 上一轮含固定状态文案的原型参考
 pnpm run prototype:reasoning-ui --variant proposed
 
 # 冻结的旧版样式
@@ -32,7 +32,7 @@ pnpm run prototype:reasoning-ui --runtime repository
 
 `production` 是默认变体，不拦截生产注册，不替换 transformer。`current` 保留原参数名，实际指修改前的冻结旧版，使用旧的 `outputPad: 1`；`proposed` 在同一冻结旧版上应用已确认的原型 composition，不代表正式代码。`production` 与 `proposed` 的隔离配置均使用 `outputPad: 0`。
 
-打开后自动播放。操作提示使用英文，思考示例仍中英混排，用来检查中文宽度和换行。正式版与原型的固定状态均为 `Thinking`、`Preparing response` 和 `Running <tool>`；provider 返回的标题、正文不翻译。演示中的思考和比值都是固定 fixture，不是真实模型输出或性能测量。
+打开后自动播放。操作提示使用英文，思考示例仍中英混排，用来检查中文宽度和换行。正式版无通用状态文案：没有完整模型标题时隐藏，开始回复或调用工具时移除状态及其空白行。只有旧的 `proposed` 参考仍显示 `Thinking`、`Preparing response` 和 `Running <tool>`；provider 返回的标题、正文均不翻译。演示中的思考和比值都是固定 fixture，不是真实模型输出或性能测量。
 
 - `/demo` 重播标准流程，`/demo long` 重播长内容。
 - `Esc` 使用 Pi 原生取消流程，`Ctrl+O` 使用原生工具展开交互。
@@ -56,7 +56,7 @@ pnpm run prototype:reasoning-ui --runtime repository
 
 • 我核对资料文件
 
-• Thinking
+• 检查资料
 
 [editor]
 ```
@@ -92,6 +92,7 @@ pnpm run prototype:reasoning-ui --runtime repository --upgrade-smoke
 
 - 原型与本轮正式落地均按 Red → Green 验证状态行错位、历史配置错位与中文固定状态。正式测试使用真实 `ToolExecutionComponent` 和 `AssistantMessageComponent` 比较图标及文本所在列，并断言原始中文 thinking 不变；PTY 对 `production` 和 `proposed` 都检查完成、缩窄和恢复会话后的对齐。
 - 本轮仅复测确定性渲染约束，不重跑 CPU/GPU 性能矩阵。已有性能报告及 `--bench` / `--probe` 使用固定 `outputPad: 1`，不代表新配置下的完整性能测量。
+- 模型标题专用状态测试覆盖未闭合标题、无标题不额外刷新、文本/工具阶段同时移除文字和空白行、迟到事件不恢复旧标题。正式 PTY 捕获另断言没有输出通用状态文案，已完成的历史内容保持原规则。
 - 本地检查覆盖原型 helper、真实 `AssistantMessageComponent`、所选生产注册、工具白名单、provider 流、取消和重播归属。生产状态的完整生命周期、样式与成本断言位于 `extensions/codex-ui/__tests__/reasoning*.test.ts`。
 - Pi 0.84.3 与 0.85.1 的生产 CLI + expect PTY 验证均通过。覆盖真实 read/bash/write/edit、完整会话保存、长文、120→60 列 resize、Ctrl+O、Esc、重播、reload，以及退出后从同一持久化会话重新启动。
 - PTY 用 headless terminal 解析实际 ANSI，验证静态标题没有粗体或斜体、状态下方空行没有编辑器背景。静止采样先等待真实标题，避免把启动或首标题延迟误判为动画。

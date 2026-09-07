@@ -206,6 +206,8 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
                 state.preparedStats = stats;
                 const suffix = `(${namedGreen(`+${stats.added}`)} ${namedRed(`-${stats.removed}`)})`;
                 nextTitle = formatEditTitle("Edited", path, theme, suffix);
+                if (preparedDiff.length > 0)
+                    nextTitle = theme.underline(nextTitle);
             }
             else {
                 nextTitle = formatEditTitle("Edited", path, theme);

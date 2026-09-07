@@ -49,9 +49,6 @@ export function registerReasoningStatus(pi: ExtensionAPI): (ctx: ExtensionContex
   let message: Pick<AssistantMessage, "timestamp" | "provider" | "model" | "api"> | undefined;
   const title = new ReasoningTitle();
   let contentIndex = -1;
-  const pendingTools = new Map<string, string>();
-  const runningTools = new Map<string, string>();
-  let visibleTool: string | undefined;
 
   const show = (next: string): void => {
     if (next === label) return;
@@ -59,7 +56,7 @@ export function registerReasoningStatus(pi: ExtensionAPI): (ctx: ExtensionContex
   };
   const clearMessage = (): void => { message = undefined; contentIndex = -1; title.reset(); };
   const clear = (): void => {
-    active = false; clearMessage(); pendingTools.clear(); runningTools.clear(); visibleTool = undefined;
+    active = false; clearMessage();
     show("");
   };
   const isCurrent = (next: AssistantMessage): boolean => active && message !== undefined
@@ -69,10 +66,10 @@ export function registerReasoningStatus(pi: ExtensionAPI): (ctx: ExtensionContex
   pi.on("agent_start", () => { clear(); active = status !== undefined; });
   pi.on("message_start", (event) => {
     if (!active || event.message.role !== "assistant") return;
-    clearMessage(); pendingTools.clear();
+    clearMessage();
     const { timestamp, provider, model, api } = event.message;
     message = { timestamp, provider, model, api };
-    show("Thinking");
+    show("");
   });
   pi.on("message_update", (event) => {
     if (event.message.role !== "assistant" || !isCurrent(event.message)) return;
@@ -85,31 +82,14 @@ export function registerReasoningStatus(pi: ExtensionAPI): (ctx: ExtensionContex
     if (update.type === "thinking_delta" || update.type === "thinking_start") {
       const block = event.message.content[update.contentIndex];
       const next = block?.type === "thinking" ? title.read(block.thinking, update.type === "thinking_delta" ? update.delta : undefined) : undefined;
-      show(next || "Thinking");
-    } else if (update.type === "text_start" || update.type === "text_delta") show("Preparing response");
-    else if (update.type === "toolcall_start") show("");
+      show(next || "");
+    } else if (update.type === "text_start" || update.type === "text_delta" || update.type === "toolcall_start") {
+      title.reset(); show("");
+    }
   });
   pi.on("message_end", (event) => {
     if (event.message.role !== "assistant" || !isCurrent(event.message)) return;
-    if (event.message.stopReason !== "error" && event.message.stopReason !== "aborted") {
-      for (const block of event.message.content) {
-        if (block.type === "toolCall") pendingTools.set(block.id, block.name);
-      }
-    }
     clearMessage(); show("");
-  });
-  pi.on("tool_execution_start", (event) => {
-    if (!active || pendingTools.get(event.toolCallId) !== event.toolName) return;
-    pendingTools.delete(event.toolCallId);
-    runningTools.set(event.toolCallId, event.toolName); visibleTool = event.toolCallId;
-    show(`Running ${event.toolName}`);
-  });
-  pi.on("tool_execution_end", (event) => {
-    if (!active || runningTools.get(event.toolCallId) !== event.toolName) return;
-    runningTools.delete(event.toolCallId);
-    if (visibleTool !== event.toolCallId) return;
-    visibleTool = runningTools.keys().next().value;
-    show(visibleTool === undefined ? "" : `Running ${runningTools.get(visibleTool)}`);
   });
   // agent_end clears old labels before the host's retry/compaction loaders take over.
   pi.on("agent_end", clear);

@@ -93,18 +93,27 @@ Codex encrypted compaction item.
 - 使用 `pi v0.84.3` 官方 wordmark 的 header
 - 实色背景 composer
 - model、thinking、Fast Mode、cwd、git branch、context-left 和 permissions 单行 footer
+- 普通 assistant 回复使用外层列表缩进，自动换行和后续段落保持对齐
 - 输入框上方的静态 Thinking/Reasoning 状态，以及完成后的多行思考历史
 - 隐藏 streaming working row，窗口标题保持静态
 - `read`、`edit`、`write` 的紧凑 renderer
 - Bash 分组标题与 `Read`、`Edited` 对齐，命令始终可见，结果默认折叠，按 `Ctrl+O` 展开
 
-运行中的 Thinking/Reasoning 位于输入框上方，使用弱化圆点和普通字重、非斜体标题，按可用宽度省略。状态下方保留一行无背景空白，不增加输入框内部 padding；结束后状态和这行空白一起移除。标题未闭合时显示 `Thinking`，正文输出时显示 `Preparing response`，工具执行时显示 `Running <tool>`。固定状态使用英文，模型返回的标题和正文保持原文，不翻译；不逐 token 更新标题，也没有动画或秒表。
+运行中的 Thinking/Reasoning 位于输入框上方，使用弱化圆点和普通字重、非斜体标题，按可用宽度省略。状态下方保留一行无背景空白，不增加输入框内部 padding；结束后状态和这行空白一起移除。只有提取到完整模型思考标题时才显示状态栏，标题和正文保持原文，不翻译。没有标题、标题未闭合、开始回复或调用工具时，状态栏及其下方空白行一起隐藏；不显示 `Thinking`、`Preparing response` 或 `Running <tool>` 等固定状态，也不保留过期标题。不逐 token 更新标题，没有动画或秒表。
 
 思考正文在 assistant `message_end` 后进入历史，保留多段内容并自然换行。有正文时去掉可识别的首标题，纯标题则保留。历史沿用原生 `thinkingText` 与斜体，圆点不再借用代码高亮。取消或失败后保留已有片段，原始 Thinking 内容及会话数据不变；原生思考显隐快捷键及其隐藏占位仍保留。Pi 原生容器的 Spacer 不由本扩展重建。
 
 静态状态不等于整个 Pi 零重绘。流式消息、工具、输入和 resize 仍能触发宿主绘制，多行历史首次排版也有成本。实现与实测边界见 [Reasoning implementation plan](docs/plans/codex-ui-reasoning.md#implementation-results)。更新后请重启 Pi 并恢复会话；两版目标 Pi 的运行中升级验证均发现 `/reload` 会沿用旧模块。
 
 Write 写入中只显示黄色圆点和路径，成功后圆点变绿并显示最终总行数。失败保留红色圆点与错误正文；不显示累计行数、字节摘要或第二行 Written。完整模式与 low-power 共用此状态规则，Ctrl+O 不展开 Write 文件内容。
+
+### Assistant reply layout
+
+普通回复通过公开 `registerMarkdownTransformer` 显示为一个外层列表项：首行使用 `-`，后续源文本行缩进两格，自动换行、标题、代码块和表格由 Pi 原生 Markdown 排版。空白内容不添加标记，已有列表会再嵌套一层。转换按文本块执行，同一回复含多个文本块时可以出现多个外层标记。
+
+转换只改变 TUI 显示，不修改会话原文或模型上下文，不修改上游 Pi、私有组件或全局 `outputPad`。`/copy` 使用原始回复文本；终端选择复制会包含显示出的列表标记、缩进和换行。thinking、工具卡片、编辑器以及原生取消和错误提示保持现状。
+
+流式更新与历史恢复使用同一规则，不增加刷新计时器或历史扫描。列表排版仍有额外成本，实测和边界见 [Reply list implementation](docs/plans/codex-ui-reply-list.md)。更新后请重启 Pi 并恢复会话，不要只依赖 `/reload` 加载新版代码。
 
 ### Output alignment
 

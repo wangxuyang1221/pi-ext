@@ -16,14 +16,14 @@
 | Running status | 静态弱化圆点、普通字重、非斜体标题；按可用宽度省略，始终只有一行文字 |
 | Editor spacing | 状态下方保留一整行无背景样式的空白；字体及输入框内部 padding 不变；状态隐藏时空白一起移除 |
 | Alignment | 状态圆点在第 1 列、正文在第 3 列，与工具图标和标题对齐；思考历史通过 Pi 的 `outputPad: 0` 对齐，普通消息也随共享设置左移一列 |
-| Fixed copy | 固定状态使用 `Thinking`、`Preparing response`、`Running <tool>`；模型标题与正文保持原文 |
+| Model-only status | 无完整模型标题时不显示；开始回复或调用工具时隐藏状态及其空白行。不显示通用固定状态；模型标题与正文保持原文 |
 | Updates | 标题或工作阶段改变才请求状态刷新；没有扫光、秒表或状态动画，不恢复原生 working spinner |
 | History | streaming 时不在历史中显示思考；assistant `message_end` 后自然换行、保留多段正文，不再取最后一段或强制单行 |
-| History formatting | 沿用原型的首标题规则：有正文时去掉可识别的首标题，纯标题保留；圆点不使用行内代码高亮，正文沿用 Pi 原生次要思考样式 |
+| History formatting | 有正文时去掉可识别的首标题；纯标题及连续的纯标题序列全部保留，每条摘要各加一个圆点。圆点不使用行内代码高亮，正文沿用 Pi 原生次要思考样式 |
 | Interrupted content | 取消或失败后保留已有思考片段；只在显示端处理未闭合标题标记，不改原始内容 |
 | Other UI | 保持 header、editor、footer、用户消息前缀、工具渲染、权限、取消和 `/lowpower` 行为 |
 
-历史定稿边界是整个 assistant 消息结束，不是单独的 `thinking_end`。英文状态与左对齐已获用户确认。Pi 0.84.3/0.85.1 没有公开的 extension 输出 padding setter；全局 `outputPad` 需通过 Pi 设置或独立配置变更启用，扩展不得绕过该限制修改私有组件。
+历史定稿边界是整个 assistant 消息结束，不是单独的 `thinking_end`。左对齐已获用户确认，后续修订按用户要求移除通用固定状态。Pi 0.84.3/0.85.1 没有公开的 extension 输出 padding setter；全局 `outputPad` 需通过 Pi 设置或独立配置变更启用，扩展不得绕过该限制修改私有组件。
 
 ## Todo
 
@@ -135,6 +135,17 @@ exit "$result"
 - Pi 原生容器仍拥有历史 block 的 Spacer；本次不重建整条消息布局。底部状态稳定不代表整帧 O(1)，宿主仍可能遍历与比较历史行。
 - 原型已证明公开接口下的布局和事件链可行，其一秒稳定窗口零输出字节不是完整性能验收，也不能推出 Ghostty CPU/GPU 结论。
 - 既有工具性能工作保持不变。需要参考验证设施时使用 [已落地的工具性能计划](codex-ui-rendering-performance.md)，不扩大成本次全面渲染重构。
+
+## Model-only status revision
+
+用户要求移除 `Thinking`、`Preparing response`、`Running <tool>`，只保留模型思考标题。以下修订覆盖先前的固定状态文案契约。
+
+- 正式 `reasoning-status.ts` 不再生成通用状态，也不再维护仅服务于工具状态的待执行/运行中工具映射。
+- 没有完整标题时返回空行数组。文本开始、文本 delta 或工具调用开始时清空标题显示，状态下方空白行同时移除；已有消息标识与 content index 检查继续拦截迟到事件。
+- 标题提取、原文、左对齐、历史 Markdown、输入框内部 padding 和全局配置均不改。原生隐藏思考时的占位提示不是此状态栏，本轮不修改。
+- 更新测试先复现意外显示 `Thinking` 和空白行，随后转绿；覆盖无标题、未闭合标题、回复、工具调用、并发工具、完成和迟到事件。正式 demo 使用新行为，`proposed` 保留上一轮含固定文案的参考。
+
+验证完成：三个 reasoning 测试文件共 14 项通过；两版 Pi 的正式本地检查各 12 项通过，实际 CLI + PTY 均通过静止、长文、缩窄、取消、重播、恢复会话及无通用状态文案断言。`pnpm run check` 通过，679 项测试通过、1 项跳过，构建与发布包校验成功。此次未重测 CPU/GPU 性能矩阵，也未修改全局配置。
 
 ## Alignment and copy revision
 

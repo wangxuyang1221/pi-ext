@@ -40,7 +40,7 @@ test("markdown transformer hides streaming thinking and preserves completed para
   assert.ok(transform);
   assert.equal(transform("hello", { messageType: "user" }), "› hello");
   assert.equal(transform("› hello", { messageType: "user" }), "› hello");
-  assert.equal(transform("hello", { messageType: "assistant" }), "hello");
+  assert.equal(transform("hello", { messageType: "assistant" }), "- hello");
 
   const thinking = [
     "**Reviewing test improvements and reload considerations**",

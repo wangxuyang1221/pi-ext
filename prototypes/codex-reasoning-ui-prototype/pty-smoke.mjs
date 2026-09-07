@@ -129,6 +129,12 @@ exit [lindex $result 3]
     assert.match(text("aborted"), /中断|aborted/iu);
     assert.match(text("reload"), /reload|Reload|重新|原型/u);
     assert.match(text("restored"), /最后一段/u);
+    if (variant === "production" && !upgrade) {
+      assert.match(text("completed"), /- 演示完成/u, "Production replies must use the outer list layout");
+      assert.doesNotMatch(text("completed"), /- - 演示完成/u, "Streaming must not stack list wrappers");
+      assert.doesNotMatch(all, /Preparing response|Running (?:read|bash|write|edit)|• Thinking(?:\s|$)/u,
+        "Production must not emit generic reasoning statuses");
+    }
     if (upgrade) {
       assert.equal(raw("restartedQuiet").length, 0, "Restarted production must not animate");
       assert.doesNotMatch(text("restartedLive"), /先读取隔离工作目录/u);
@@ -177,6 +183,14 @@ exit [lindex $result 3]
     assert.ok(sessionFiles.length > 0, "Real Pi session must be persisted");
     const session = sessionFiles.map(file => readFileSync(file, "utf8")).join("\n");
     assert.ok(session.includes("**Computing the ratio**"), "Display transformation must preserve original thinking");
+    if (variant === "production" && !upgrade) {
+      const texts = session.split("\n").filter(Boolean).flatMap(line => {
+        const entry = JSON.parse(line);
+        return entry.message?.role === "assistant" ? entry.message.content.filter(part => part.type === "text").map(part => part.text) : [];
+      });
+      assert(texts.some(text => text.startsWith("演示完成。")), "Persisted replies must retain their original text");
+      assert(!texts.some(text => text.startsWith("- 演示完成")), "Display markers must not enter the session");
+    }
     console.log(`Real Pi PTY smoke passed (${variant}): streaming, quiet interval, real tools, multiline history, resize, expand, abort, reload, persisted-session restart${upgrade ? ", live code replacement" : ""} and clean exit.`);
   } finally {
     cleanup();

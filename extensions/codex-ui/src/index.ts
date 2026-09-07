@@ -74,6 +74,10 @@ export default function codexUiExtension(pi: ExtensionAPI): void {
     if (context.messageType === "assistant-thinking") {
       return context.isStreaming ? "" : reasoningHistoryMarkdown(markdown);
     }
+    if (context.messageType === "assistant") {
+      // Display-only outer list: let native Markdown align wrapped lines and blocks.
+      return markdown.trim() ? `- ${markdown.replace(/\r?\n/gu, "\n  ")}` : markdown;
+    }
     if (context.messageType !== "user" || markdown.length === 0 || markdown.startsWith("› ")) {
       return markdown;
     }

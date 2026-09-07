@@ -36,32 +36,41 @@ test("incremental thinking titles do not repeatedly match the accumulated body",
   } finally { match.mockRestore(); await pipeline.dispose(); }
 });
 
-test("status follows text and concurrent tools without reviving a completed run", async () => {
+test("status shows only model titles and removes its gap during text and tool phases", async () => {
   const pipeline = await reasoningPipeline(codexUi, process.cwd());
+  const hidden = () => assert.deepEqual(pipeline.widgets.get("codex-ui-reasoning")!.render(120), []);
   try {
-    const message = await pipeline.begin();
-    assert.equal(statusText(pipeline), "• Thinking");
-    await pipeline.update("**Inspecting**", "**Inspecting**");
-    await pipeline.emit("message_update", { message, assistantMessageEvent: { type: "text_start", contentIndex: 1 } });
-    assert.equal(statusText(pipeline), "• Preparing response");
-    await pipeline.emit("message_end", { message: { ...message, stopReason: "toolUse", content: [
-      { type: "toolCall", id: "read-1", name: "read", arguments: {} },
-      { type: "toolCall", id: "bash-1", name: "bash", arguments: {} },
-    ] } });
-    await pipeline.emit("tool_execution_start", { toolCallId: "read-1", toolName: "read" });
-    assert.equal(statusText(pipeline), "• Running read");
-    await pipeline.emit("tool_execution_start", { toolCallId: "bash-1", toolName: "bash" });
-    assert.equal(statusText(pipeline), "• Running bash");
-    await pipeline.emit("tool_execution_end", { toolCallId: "bash-1", toolName: "bash" });
-    assert.equal(statusText(pipeline), "• Running read");
-    await pipeline.emit("tool_execution_end", { toolCallId: "unknown", toolName: "read" });
-    assert.equal(statusText(pipeline), "• Running read");
-    await pipeline.emit("tool_execution_end", { toolCallId: "read-1", toolName: "read", isError: true });
-    assert.equal(statusText(pipeline), "");
-    await pipeline.emit("agent_end", { messages: [] });
-    await pipeline.update("**Late update**", "**Late update**");
-    await pipeline.emit("tool_execution_start", { toolCallId: "read-1", toolName: "read" });
-    assert.equal(statusText(pipeline), "");
+    for (const type of ["text_start", "text_delta", "toolcall_start"]) {
+      const message = await pipeline.begin();
+      hidden();
+      const requests = pipeline.stats().requests;
+      await pipeline.update("No title yet", "No title yet");
+      hidden();
+      assert.equal(pipeline.stats().requests, requests + 1, "Untitled thinking must not request a widget render");
+      await pipeline.update("**Inspecting**", "**Inspecting**");
+      assert.equal(statusText(pipeline), "• Inspecting");
+      await pipeline.emit("message_update", { message, assistantMessageEvent: { type, contentIndex: 1 } });
+      hidden();
+      await pipeline.update("**Late thinking**", "**Late thinking**");
+      hidden();
+      await pipeline.emit("message_end", { message: { ...message, stopReason: "toolUse", content: [
+        { type: "toolCall", id: "read-1", name: "read", arguments: {} },
+        { type: "toolCall", id: "bash-1", name: "bash", arguments: {} },
+      ] } });
+      hidden();
+      for (const [event, toolCallId, toolName] of [
+        ["tool_execution_start", "read-1", "read"], ["tool_execution_start", "bash-1", "bash"],
+        ["tool_execution_end", "bash-1", "bash"], ["tool_execution_end", "unknown", "read"],
+        ["tool_execution_end", "read-1", "read"],
+      ]) {
+        await pipeline.emit(event!, { toolCallId, toolName });
+        hidden();
+      }
+      await pipeline.emit("agent_end", { messages: [] });
+      await pipeline.update("**Late update**", "**Late update**");
+      await pipeline.emit("tool_execution_start", { toolCallId: "read-1", toolName: "read" });
+      hidden();
+    }
   } finally { await pipeline.dispose(); }
 });
 
@@ -77,7 +86,7 @@ test("new thinking parts and replacement snapshots cannot be overwritten by olde
     };
     await update(0, "**First**", "**First**");
     await update(2, "**新", "**新");
-    assert.equal(statusText(pipeline), "• Thinking");
+    assert.deepEqual(pipeline.widgets.get("codex-ui-reasoning")!.render(120), []);
     await update(2, "**新的\n标题**", "的\n标题**");
     assert.equal(statusText(pipeline), "• 新的 标题");
     await update(0, "**First** stale", " stale");
@@ -85,10 +94,10 @@ test("new thinking parts and replacement snapshots cannot be overwritten by olde
     await update(2, "**Replaced**", "**Replaced**");
     assert.equal(statusText(pipeline), "• Replaced");
     await update(2, "**Unclosed", "**Unclosed");
-    assert.equal(statusText(pipeline), "• Thinking");
+    assert.deepEqual(pipeline.widgets.get("codex-ui-reasoning")!.render(120), []);
     await pipeline.emit("message_update", { message, assistantMessageEvent: { type: "text_start", contentIndex: 3 } });
     await update(2, "**Late thinking**", "**Late thinking**");
-    assert.equal(statusText(pipeline), "• Preparing response");
+    assert.deepEqual(pipeline.widgets.get("codex-ui-reasoning")!.render(120), []);
   } finally { await pipeline.dispose(); }
 });
 
