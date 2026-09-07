@@ -14,6 +14,8 @@ import { fixtureGroup, renderPolish, POLISH_VARIANTS } from "../src/polish.js";
 import { renderBashGroup } from "../src/original-bash-group-layout.js";
 import { renderBashGroup as renderProduction } from "../../../extensions/codex-ui/src/bash-group-layout.js";
 
+import { TitleAnimator, TITLE_FRAMES } from "../src/title-spinner.js";
+
 const repository = process.env.PI_BASH_LAB_REPOSITORY!;
 const agentEntry = fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"));
 const themeModule = await import(pathToFileURL(join(dirname(agentEntry), "modes/interactive/theme/theme.js")).href);
@@ -108,6 +110,41 @@ test("polish controls switch the actual tool row and retain its expansion state"
     assert.match(plain(row.render(180)), /Build completed/u);
     assert(h.shortcuts.has("alt+1") && h.shortcuts.has("alt+2") && h.shortcuts.has("alt+3") && h.shortcuts.has("alt+0"));
   } finally { h.dispose(); }
+});
+
+test("title animation follows elapsed time, skips stalled frames, and cancels its only timer", () => {
+  let now = 0;
+  let pending: (() => void) | undefined;
+  let delay = 0;
+  const titles: string[] = [];
+  const animator = new TitleAnimator(title => titles.push(title), "π · pi-ext", () => now, (callback, wait) => {
+    assert.equal(pending, undefined);
+    pending = callback; delay = wait;
+    return () => { pending = undefined; };
+  });
+  const advance = (time: number) => { now = time; const callback = pending; pending = undefined; callback?.(); };
+  animator.start("smooth");
+  assert.equal(titles.at(-1), `${TITLE_FRAMES[0]} π · pi-ext`);
+  assert.equal(delay, 80);
+  advance(80);
+  assert.equal(titles.at(-1), `${TITLE_FRAMES[1]} π · pi-ext`);
+  advance(350);
+  assert.equal(titles.at(-1), `${TITLE_FRAMES[4]} π · pi-ext`);
+  assert.equal(titles.length, 3);
+  assert.equal(delay, 50);
+  for (let index = 5; index < 300; index++) advance(index * 80);
+  assert.equal(animator.stats().samples, 256);
+  animator.start("legacy");
+  assert.equal(delay, 500);
+  assert.equal(titles.at(-1), "⠋ π Pi · Thinking.");
+  advance(now + 500);
+  assert.equal(titles.at(-1), "⠙ π Pi · Thinking..");
+  animator.stop();
+  assert.equal(pending, undefined);
+  assert.equal(titles.at(-1), "π · pi-ext");
+  const stopped = titles.length;
+  animator.stop();
+  assert.equal(titles.length, stopped);
 });
 
 test("grouped rendering fits every fixture state and terminal width", () => {

@@ -265,6 +265,7 @@ test("session UI installs only in TUI mode", async () => {
     registerCommand() {},
     registerMarkdownTransformer() {},
     getThinkingLevel: () => "high",
+    getSessionName: () => undefined,
     on(event: string, handler: (...args: never[]) => unknown) {
       handlers.set(event, handler);
     },
@@ -331,6 +332,7 @@ test("session UI installs only in TUI mode", async () => {
       cwd: "/repo/app",
       model: { id: "gpt-test" },
       getContextUsage: () => ({ tokens: 10, contextWindow: 100, percent: 10 }),
+      isIdle: () => true,
       ui,
     } as never,
   );
@@ -445,6 +447,7 @@ test("session UI preserves an active Codex theme without replacing it", async ()
     registerCommand() {},
     registerMarkdownTransformer() {},
     getThinkingLevel: () => "high",
+    getSessionName: () => undefined,
     on(event: string, handler: (...args: never[]) => unknown) {
       handlers.set(event, handler);
     },
@@ -463,6 +466,7 @@ test("session UI preserves an active Codex theme without replacing it", async ()
       cwd: "/repo/app",
       model: { id: "gpt-test" },
       getContextUsage: () => ({ tokens: 10, contextWindow: 100, percent: 10 }),
+      isIdle: () => true,
       ui: {
         theme,
         setStatus() {},

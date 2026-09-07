@@ -5,6 +5,10 @@
 - Delivery method: `Red-Green-Refactor`
 - Upstream Pi changes: `None`
 
+## Terminal Title Follow-up
+
+用户后续选择恢复终端顶部动画，采用单色、固定标题、80ms 帧周期与时间驱动选帧。正式实现在 `extensions/codex-ui/src/terminal-title.ts`，与本计划的静态正文思考区独立。下文关于删除旧 500ms 动画、静止窗口零标题字节的记录属于当时版本，不再描述当前顶部标题行为；正文状态的静态、缓存与不重复重绘约束继续有效。原型与当前验证见 [Title spinner](../../prototypes/codex-bash-ui-prototype/TITLE-SPINNER.md)。
+
 ## Understanding
 
 将用户已确认的 [reasoning UI 原型](../../prototypes/codex-reasoning-ui-prototype/README.md) 落到正式 codex-ui。运行中在输入框上方显示静态状态，结束后显示多行思考历史；不改会话数据、模型请求或工具执行行为。

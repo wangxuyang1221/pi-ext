@@ -64,7 +64,7 @@ export async function reasoningPipeline(register: (pi: ExtensionAPI) => void, ro
   let widgetInstalls = 0;
   const titles: string[] = [];
   const context = {
-    mode: "tui", cwd: root, model: { id: "fixture" },
+    mode: "tui", cwd: root, model: { id: "fixture" }, isIdle: () => true,
     sessionManager: { buildContextEntries: () => [] },
     getContextUsage: () => ({ tokens: 20, contextWindow: 128000, percent: 0.01 }),
     ui: {
@@ -94,6 +94,7 @@ export async function reasoningPipeline(register: (pi: ExtensionAPI) => void, ro
     registerCommand: (name: string, command: any) => commands.set(name, command),
     registerMarkdownTransformer: (transformer: MarkdownTransformer) => transformers.push(transformer),
     getThinkingLevel: () => "medium",
+    getSessionName: () => undefined,
     on: (name: string, handler: (event: any, ctx: any) => unknown) => handlers.set(name, [...handlers.get(name) ?? [], handler]),
   } as unknown as ExtensionAPI);
   const emit = async (name: string, event: any = {}) => {

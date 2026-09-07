@@ -229,8 +229,8 @@ test("production status and completed history align with real tools at zero outp
   } finally { await pipeline.dispose(); }
 });
 
-test("production status uses one static content row and an unstyled editor gap", async () => {
-  vi.useFakeTimers();
+test("production status stays static while the independent terminal title animates", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
   const pipeline = await reasoningPipeline(codexUi, process.cwd());
   try {
     await pipeline.begin();
@@ -252,14 +252,16 @@ test("production status uses one static content row and an unstyled editor gap",
     for (let index = 0; index < 100; index++) assert.equal(status.render(120), stable);
     vi.advanceTimersByTime(2000);
     assert.equal(pipeline.stats().requests, requests);
-    assert.equal(vi.getTimerCount(), 0);
+    assert.equal(vi.getTimerCount(), 1);
     const windowTitles = [...pipeline.titles];
     await pipeline.commands.get("lowpower").handler("on", pipeline.context);
     await pipeline.commands.get("lowpower").handler("off", pipeline.context);
     vi.advanceTimersByTime(2000);
     assert.equal(status.render(120), stable);
-    assert.deepEqual(pipeline.titles, windowTitles);
+    assert(pipeline.titles.length > windowTitles.length);
+    assert.equal(pipeline.stats().requests, requests);
     await pipeline.finish();
     assert.deepEqual(status.render(120), []);
+    assert.equal(vi.getTimerCount(), 0);
   } finally { await pipeline.dispose(); vi.useRealTimers(); }
 });

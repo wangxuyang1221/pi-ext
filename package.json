@@ -68,6 +68,7 @@
     "package:check": "node ./scripts/check-package.mjs",
     "prototype:tui": "node ./prototypes/pi-tui-style-prototype/dev.mjs",
     "prototype:bash-ui": "node ./prototypes/codex-bash-ui-prototype/demo.mjs",
+    "prototype:title-spinner": "node ./prototypes/codex-bash-ui-prototype/demo.mjs --title-spinner",
     "prototype:bash-ui:check": "node ./prototypes/codex-bash-ui-prototype/demo.mjs --smoke",
     "prototype:edit-spacing": "node ./prototypes/codex-edit-spacing-prototype/demo.mjs",
     "prototype:tool-summary": "node ./prototypes/codex-tool-summary-prototype/demo.mjs",

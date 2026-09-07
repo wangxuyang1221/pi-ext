@@ -1,4 +1,3 @@
-import { basename } from "node:path";
 import {
   VERSION,
   type ExtensionAPI,
@@ -10,14 +9,11 @@ import { CodexEditor, CodexFooter, CodexHeader } from "./components.js";
 import { registerCodexTools } from "./tools.js";
 import { reasoningHistoryMarkdown } from "./reasoning-history.js";
 import { registerReasoningStatus } from "./reasoning-status.js";
+import { registerTerminalTitleSpinner } from "./terminal-title.js";
 
 export const CODEX_THEME_NAME = "codex-pi";
 
 const LOW_POWER_ARGUMENTS = ["on", "off", "status"] as const;
-function getBaseTitle(cwd: string): string {
-  return `π · ${basename(cwd) || "session"}`;
-}
-
 function hideInlineWorkingRow(ui: ExtensionUIContext): void {
   ui.setWorkingVisible(false);
 }
@@ -26,6 +22,7 @@ export default function codexUiExtension(pi: ExtensionAPI): void {
   let lowPowerEnabled = false;
   let currentKeybindings: KeybindingsManager | undefined;
   const installReasoningStatus = registerReasoningStatus(pi);
+  const installTitleSpinner = registerTerminalTitleSpinner(pi);
 
   registerCodexTools(pi, undefined, {
     getKeybindings: () => currentKeybindings,
@@ -137,7 +134,7 @@ export default function codexUiExtension(pi: ExtensionAPI): void {
       return footer;
     });
 
-    ctx.ui.setTitle(getBaseTitle(ctx.cwd));
+    installTitleSpinner(ctx);
     hideInlineWorkingRow(ctx.ui);
     installReasoningStatus(ctx);
   });
