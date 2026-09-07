@@ -22,7 +22,7 @@ function createTheme(name = CODEX_THEME_NAME): Theme {
   } as unknown as Theme;
 }
 
-test("markdown transformer formats user messages and prefixes compact thinking with an accent marker", () => {
+test("markdown transformer hides streaming thinking and preserves completed paragraphs", () => {
   const transformers: Array<(markdown: string, context: Record<string, unknown>) => string> = [];
   const pi = {
     registerTool() {},
@@ -54,27 +54,28 @@ test("markdown transformer formats user messages and prefixes compact thinking w
     messageType: "assistant-thinking",
     isStreaming: true,
     availableWidth: 80,
-  }), "`•` **Summarizing code changes and test results**");
+  }), "");
+  const completed = "• **Identifying title spinner and tmux title issues\ncontinued on the next source line**\n\n**Summarizing code changes and test results**";
   assert.equal(transform(thinking, {
     messageType: "assistant-thinking",
     isStreaming: false,
     availableWidth: 80,
-  }), "`•` **Summarizing code changes and test results**");
+  }), completed);
   assert.equal(transform("Earlier\n\n1234567890ABCDE", {
     messageType: "assistant-thinking",
     isStreaming: true,
     availableWidth: 10,
-  }), "`•` 1234567…");
+  }), "");
   assert.equal(transform("Earlier\n\n**1234567890ABCDE**", {
     messageType: "assistant-thinking",
     isStreaming: false,
     availableWidth: 10,
-  }), "`•` **1234567…**");
+  }), "• Earlier\n\n**1234567890ABCDE**");
   assert.equal(transform("visible", {
     messageType: "assistant-thinking",
     isStreaming: true,
     availableWidth: 1,
-  }), "`•`");
+  }), "");
   assert.equal(transform("visible", {
     messageType: "assistant-thinking",
     isStreaming: true,
@@ -318,6 +319,8 @@ test("session UI installs only in TUI mode", async () => {
     setWorkingVisible(value: boolean) {
       calls.push({ name: "working-visible", value });
     },
+    setWorkingIndicator(value: unknown) { calls.push({ name: "working-indicator", value }); },
+    setWidget(key: string, value: unknown) { calls.push({ name: "widget", value: [key, value] }); },
     notify() {},
   };
 
@@ -341,6 +344,8 @@ test("session UI installs only in TUI mode", async () => {
     "footer",
     "title",
     "working-visible",
+    "working-indicator",
+    "widget",
   ]);
   assert.deepEqual(calls[0]?.value, ["codex-ui-lowpower", undefined]);
   assert.equal(calls[1]?.value, CODEX_THEME_NAME);
@@ -433,75 +438,6 @@ test("session UI installs only in TUI mode", async () => {
   assert.match(headerFactory().render(60).join("\n"), /gpt-next/u);
 });
 
-test("title spinner animates while working and is independent of low-power mode", async () => {
-  vi.useFakeTimers();
-  try {
-    const handlers = new Map<string, (...args: never[]) => unknown>();
-    const commands = new Map<string, Parameters<ExtensionAPI["registerCommand"]>[1]>();
-    const pi = {
-      registerTool() {},
-      registerCommand(name: string, options: Parameters<ExtensionAPI["registerCommand"]>[1]) {
-        commands.set(name, options);
-      },
-      registerMarkdownTransformer() {},
-      on(event: string, handler: (...args: never[]) => unknown) {
-        handlers.set(event, handler);
-      },
-    } as unknown as ExtensionAPI;
-    codexUiExtension(pi);
-
-    const titles: string[] = [];
-    const context = {
-      mode: "tui",
-      cwd: "/repo/app",
-      ui: {
-        setTitle(title: string) {
-          titles.push(title);
-        },
-        setStatus() {},
-        setWorkingVisible() {},
-        notify() {},
-      },
-    };
-    const agentStart = handlers.get("agent_start");
-    const agentSettled = handlers.get("agent_settled");
-    const sessionShutdown = handlers.get("session_shutdown");
-    const lowpower = commands.get("lowpower");
-    assert.ok(agentStart);
-    assert.ok(agentSettled);
-    assert.ok(sessionShutdown);
-    assert.ok(lowpower);
-
-    await agentStart({ type: "agent_start" } as never, context as never);
-    vi.advanceTimersByTime(1_000);
-    await agentSettled({ type: "agent_settled" } as never, context as never);
-
-    assert.deepEqual(titles, [
-      "⠋ π Pi · Thinking.",
-      "⠙ π Pi · Thinking..",
-      "⠹ π Pi · Thinking...",
-      "π · app",
-    ]);
-    vi.advanceTimersByTime(1_000);
-    assert.equal(titles.length, 4);
-
-    await lowpower.handler("on", context as never);
-    await agentStart({ type: "agent_start" } as never, context as never);
-    vi.advanceTimersByTime(500);
-    await sessionShutdown({ type: "session_shutdown", reason: "reload" } as never, context as never);
-
-    assert.deepEqual(titles.slice(4), [
-      "⠋ π Pi · Thinking.",
-      "⠙ π Pi · Thinking..",
-      "π · app",
-    ]);
-    vi.advanceTimersByTime(1_000);
-    assert.equal(titles.length, 7);
-  } finally {
-    vi.useRealTimers();
-  }
-});
-
 test("session UI preserves an active Codex theme without replacing it", async () => {
   const handlers = new Map<string, (...args: never[]) => unknown>();
   const pi = {
@@ -543,6 +479,8 @@ test("session UI preserves an active Codex theme without replacing it", async ()
         setFooter() {},
         setTitle() {},
         setWorkingVisible() {},
+        setWorkingIndicator() {},
+        setWidget() {},
         notify() {},
       },
     } as never,

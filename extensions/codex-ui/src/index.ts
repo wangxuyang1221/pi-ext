@@ -1,64 +1,19 @@
 import { basename } from "node:path";
-import { visibleWidth } from "@earendil-works/pi-tui";
 import {
   VERSION,
   type ExtensionAPI,
-  type ExtensionContext,
   type ExtensionUIContext,
   type KeybindingsManager,
 } from "@earendil-works/pi-coding-agent";
 
 import { CodexEditor, CodexFooter, CodexHeader } from "./components.js";
 import { registerCodexTools } from "./tools.js";
+import { reasoningHistoryMarkdown } from "./reasoning-history.js";
+import { registerReasoningStatus } from "./reasoning-status.js";
 
 export const CODEX_THEME_NAME = "codex-pi";
 
 const LOW_POWER_ARGUMENTS = ["on", "off", "status"] as const;
-const TITLE_SPINNER_INTERVAL_MS = 500;
-const TITLE_SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
-const TITLE_DOT_FRAMES = [".", "..", "..."] as const;
-const GRAPHEME_SEGMENTER = new Intl.Segmenter(undefined, { granularity: "grapheme" });
-
-function truncatePlainText(text: string, maxWidth: number): string {
-  const safeWidth = Number.isFinite(maxWidth) ? Math.max(0, Math.floor(maxWidth)) : 0;
-  if (safeWidth === 0) return "";
-  if (visibleWidth(text) <= safeWidth) return text;
-
-  const ellipsis = "…";
-  const contentWidth = Math.max(0, safeWidth - visibleWidth(ellipsis));
-  let prefix = "";
-  let prefixWidth = 0;
-  for (const { segment } of GRAPHEME_SEGMENTER.segment(text)) {
-    const segmentWidth = visibleWidth(segment);
-    if (prefixWidth + segmentWidth > contentWidth) break;
-    prefix += segment;
-    prefixWidth += segmentWidth;
-  }
-  return `${prefix}${ellipsis}`;
-}
-
-const THINKING_MARKER_MARKDOWN = "`•`";
-const THINKING_MARKER_WIDTH = 2;
-
-function compactThinkingMarkdown(markdown: string, availableWidth: number): string {
-  const latestParagraph = markdown.trim().split(/\n\s*\n/u).at(-1) ?? "";
-  const singleLine = latestParagraph.replace(/\s+/gu, " ").trim();
-  if (availableWidth <= 0) return "";
-  if (availableWidth < THINKING_MARKER_WIDTH) return THINKING_MARKER_MARKDOWN;
-
-  const contentWidth = availableWidth - THINKING_MARKER_WIDTH;
-  let content = "";
-  for (const marker of ["**", "__"] as const) {
-    if (singleLine.startsWith(marker) && singleLine.endsWith(marker) && singleLine.length > marker.length * 2) {
-      const inner = singleLine.slice(marker.length, -marker.length);
-      content = `${marker}${truncatePlainText(inner, contentWidth)}${marker}`;
-      break;
-    }
-  }
-  content ||= truncatePlainText(singleLine, contentWidth);
-  return content ? `${THINKING_MARKER_MARKDOWN} ${content}` : THINKING_MARKER_MARKDOWN;
-}
-
 function getBaseTitle(cwd: string): string {
   return `π · ${basename(cwd) || "session"}`;
 }
@@ -70,35 +25,7 @@ function hideInlineWorkingRow(ui: ExtensionUIContext): void {
 export default function codexUiExtension(pi: ExtensionAPI): void {
   let lowPowerEnabled = false;
   let currentKeybindings: KeybindingsManager | undefined;
-  let titleFrameIndex = 0;
-  let titleTimer: ReturnType<typeof setInterval> | undefined;
-
-  const clearTitleTimer = (): void => {
-    if (titleTimer === undefined) return;
-    clearInterval(titleTimer);
-    titleTimer = undefined;
-  };
-
-  const startTitleSpinner = (ctx: ExtensionContext): void => {
-    if (ctx.mode !== "tui") return;
-
-    clearTitleTimer();
-    titleFrameIndex = 0;
-    const paintFrame = (): void => {
-      const spinner = TITLE_SPINNER_FRAMES[titleFrameIndex % TITLE_SPINNER_FRAMES.length] ?? "⠋";
-      const dots = TITLE_DOT_FRAMES[titleFrameIndex % TITLE_DOT_FRAMES.length] ?? "...";
-      titleFrameIndex += 1;
-      ctx.ui.setTitle(`${spinner} π Pi · Thinking${dots}`);
-    };
-    paintFrame();
-    titleTimer = setInterval(paintFrame, TITLE_SPINNER_INTERVAL_MS);
-  };
-
-  const stopTitleSpinner = (ctx: ExtensionContext): void => {
-    clearTitleTimer();
-    titleFrameIndex = 0;
-    if (ctx.mode === "tui") ctx.ui.setTitle(getBaseTitle(ctx.cwd));
-  };
+  const installReasoningStatus = registerReasoningStatus(pi);
 
   registerCodexTools(pi, undefined, {
     getKeybindings: () => currentKeybindings,
@@ -143,21 +70,9 @@ export default function codexUiExtension(pi: ExtensionAPI): void {
     currentModelId = event.model.id;
   });
 
-  pi.on("agent_start", (_event, ctx) => {
-    startTitleSpinner(ctx);
-  });
-
-  pi.on("agent_settled", (_event, ctx) => {
-    stopTitleSpinner(ctx);
-  });
-
-  pi.on("session_shutdown", (_event, ctx) => {
-    stopTitleSpinner(ctx);
-  });
-
   pi.registerMarkdownTransformer((markdown, context) => {
     if (context.messageType === "assistant-thinking") {
-      return compactThinkingMarkdown(markdown, context.availableWidth);
+      return context.isStreaming ? "" : reasoningHistoryMarkdown(markdown);
     }
     if (context.messageType !== "user" || markdown.length === 0 || markdown.startsWith("› ")) {
       return markdown;
@@ -220,5 +135,6 @@ export default function codexUiExtension(pi: ExtensionAPI): void {
 
     ctx.ui.setTitle(getBaseTitle(ctx.cwd));
     hideInlineWorkingRow(ctx.ui);
+    installReasoningStatus(ctx);
   });
 }

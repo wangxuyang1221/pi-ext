@@ -7,6 +7,7 @@ prototypes/*
 !prototypes/codex-ui-performance/
 !prototypes/codex-bash-ui-prototype/
 !prototypes/codex-tool-summary-prototype/
+!prototypes/codex-reasoning-ui-prototype/
 DECISIONS.md
 *.tgz
 .DS_Store

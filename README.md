@@ -93,20 +93,36 @@ Codex encrypted compaction item.
 - 使用 `pi v0.84.3` 官方 wordmark 的 header
 - 实色背景 composer
 - model、thinking、Fast Mode、cwd、git branch、context-left 和 permissions 单行 footer
-- 带 accent marker 的 Thinking/Reasoning 最新段落单行显示
-- 隐藏 streaming working row，并通过 terminal title 显示工作状态
+- 输入框上方的静态 Thinking/Reasoning 状态，以及完成后的多行思考历史
+- 隐藏 streaming working row，窗口标题保持静态
 - `read`、`edit`、`write` 的紧凑 renderer
 - Bash 分组标题与 `Read`、`Edited` 对齐，命令始终可见，结果默认折叠，按 `Ctrl+O` 展开
 
-Thinking/Reasoning 区域无论处于流式状态还是历史状态，都只渲染最新段落，并按当前可用宽度截断为一个终端行。行首圆点使用主题的 `mdCode`，正文继续使用 `thinkingText`；在 `codex-pi` 中分别对应 cyan 与 muted。完整 Thinking 内容仍保存在 Pi 会话数据中，`codex-ui` 仅改变显示结果。
+运行中的 Thinking/Reasoning 位于输入框上方，使用弱化圆点和普通字重、非斜体标题，按可用宽度省略。状态下方保留一行无背景空白，不增加输入框内部 padding；结束后状态和这行空白一起移除。标题未闭合时显示 `Thinking`，正文输出时显示 `Preparing response`，工具执行时显示 `Running <tool>`。固定状态使用英文，模型返回的标题和正文保持原文，不翻译；不逐 token 更新标题，也没有动画或秒表。
+
+思考正文在 assistant `message_end` 后进入历史，保留多段内容并自然换行。有正文时去掉可识别的首标题，纯标题则保留。历史沿用原生 `thinkingText` 与斜体，圆点不再借用代码高亮。取消或失败后保留已有片段，原始 Thinking 内容及会话数据不变；原生思考显隐快捷键及其隐藏占位仍保留。Pi 原生容器的 Spacer 不由本扩展重建。
+
+静态状态不等于整个 Pi 零重绘。流式消息、工具、输入和 resize 仍能触发宿主绘制，多行历史首次排版也有成本。实现与实测边界见 [Reasoning implementation plan](docs/plans/codex-ui-reasoning.md#implementation-results)。更新后请重启 Pi 并恢复会话；两版目标 Pi 的运行中升级验证均发现 `/reload` 会沿用旧模块。
 
 Write 写入中只显示黄色圆点和路径，成功后圆点变绿并显示最终总行数。失败保留红色圆点与错误正文；不显示累计行数、字节摘要或第二行 Written。完整模式与 low-power 共用此状态规则，Ctrl+O 不展开 Write 文件内容。
 
+### Output alignment
+
+正式状态行的圆点在第 1 列，正文在第 3 列，与工具图标和标题对齐。历史思考还需使用 Pi 的公共设置 `outputPad: 0`。请在 `/settings` 中将 `Output padding` 设为 `0`，或在 `~/.pi/agent/settings.json` 的现有内容中合入：
+
+```json
+{
+  "outputPad": 0
+}
+```
+
+这个共享设置同时影响用户消息、普通回复和思考，左右各去掉原生的一列留白；工具和输入框内部 padding 不变。扩展不自动写全局配置，也不修改 Pi 私有组件。若历史仍右偏一列，检查已信任项目的 `.pi/settings.json` 是否覆盖了全局值。设回 `1` 或删除该字段即可恢复默认消息留白。
+
 ### Low-power rendering
 
-`/lowpower on` 只负责简化 `write`、`edit`、`bash` 的渲染；`/lowpower off` 恢复完整工具输出，`/lowpower status` 仅查询当前状态。两种模式都会隐藏 Pi 内置的 streaming working row，并在 agent 工作期间通过 terminal title 显示 `Thinking.`、`Thinking..`、`Thinking...` 与 spinner。标题每 `500ms` 更新一次，不触发全局 TUI 渲染。
+`/lowpower on` 只负责简化 `write`、`edit`、`bash` 的渲染；`/lowpower off` 恢复完整工具输出，`/lowpower status` 仅查询当前状态。两种模式都会隐藏 Pi 内置的 streaming working row，并使用同一套静态思考状态。原来的 `500ms` 窗口标题动画已移除，工具计时器不受本次调整影响。
 
-启用 Pi 的 `terminal.showTerminalProgress` 后，终端原生 edge progress 会与 title spinner 同时显示。该进度由终端处理，不进入 Pi TUI 渲染管线。Low-power 状态仅保存在当前 extension instance 中；`/new`、`/resume`、`/fork`、`/reload` 或进程重启会重新加载扩展，并恢复为默认关闭。
+启用 Pi 的 `terminal.showTerminalProgress` 后，终端原生 edge progress 仍由 Pi 管理，不进入 TUI 行渲染管线。Low-power 状态仅保存在当前 extension instance 中；`/new`、`/resume`、`/fork`、`/reload` 或进程重启会重新加载扩展，并恢复为默认关闭。
 
 ### Theme persistence
 
