@@ -1,7 +1,7 @@
 // PROTOTYPE: Scripted provider events; tool execution stays in the real isolated Pi loop.
 import { setTimeout as delay } from "node:timers/promises";
 import {
-  createAssistantMessageEventStream,
+  createAssistantMessageEventStream, parseStreamingJson,
   type Api, type AssistantMessage, type Context, type Model, type SimpleStreamOptions,
   type ThinkingContent, type TextContent, type ToolCall,
 } from "@earendil-works/pi-ai";
@@ -69,7 +69,16 @@ export function thinkingFor(step: number, long: boolean): string {
   return `**${titles[step] ?? titles[4]}**\n\n${body}`;
 }
 
-export function streamFixture(model: Model<Api>, context: Context, options?: SimpleStreamOptions) {
+export function streamFixedFixture(model: Model<Api>, context: Context, options?: SimpleStreamOptions) {
+  return streamFixture(model, context, options, "fixed");
+}
+
+export function streamInlineFixture(model: Model<Api>, context: Context, options?: SimpleStreamOptions) {
+  return streamFixture(model, context, options, "inline");
+}
+
+export function streamFixture(model: Model<Api>, context: Context, options?: SimpleStreamOptions, presentation: "history" | "fixed" | "inline" = "history") {
+  const summaryPreview = presentation !== "history";
   const stream = createAssistantMessageEventStream();
   const output: AssistantMessage = {
     role: "assistant", content: [], api: model.api, provider: model.provider, model: model.id,
@@ -99,14 +108,23 @@ export function streamFixture(model: Model<Api>, context: Context, options?: Sim
       }
       // The quiet interval makes static status behavior observable without extra stream updates.
       await wait(step === 0 ? 2600 : 1600);
-      stream.push({ type: "thinking_end", contentIndex: 0, content: source, partial: output });
-      if (step === 2 || step >= CALLS.length) {
+      if (summaryPreview && (step === 2 || step === 3)) {
+        for (const next of [thinkingFor(1, false), thinkingFor(3, long)]) {
+          await wait(1200);
+          const delta = `\n\n${next}`;
+          thinking.thinking += delta;
+          stream.push({ type: "thinking_delta", contentIndex: 0, delta, partial: output });
+        }
+        await wait(1200);
+      }
+      stream.push({ type: "thinking_end", contentIndex: 0, content: thinking.thinking, partial: output });
+      if ((!summaryPreview && step === 2) || step >= CALLS.length) {
         const text: TextContent = { type: "text", text: "" };
         const index = output.content.length;
         output.content.push(text);
         stream.push({ type: "text_start", contentIndex: index, partial: output });
         const parts = step === 2 ? ["演示数据的比值约为 **1.86 倍**。", "接下来写入临时报告，并补充边界说明。"] :
-          ["演示完成。\n\n", "- 实时思考只在输入框上方更新。\n- 已完成内容保留在历史中，允许自然换行。\n", "- `report.md` 只存在于本次隔离工作目录，退出后删除。\n\n这些数字是固定 fixture，不是性能实测。"];
+          ["演示完成。\n\n", ...(presentation === "inline" ? [] : [summaryPreview ? "- 实时思考只在输入框上方更新。\n" : "- 实时思考只在输入框上方更新。\n- 已完成内容保留在历史中，允许自然换行。\n"]), "- `report.md` 只存在于本次隔离工作目录，退出后删除。\n\n这些数字是固定 fixture，不是性能实测。"];
         for (const fragment of parts) {
           await wait(300);
           text.text += fragment;
@@ -120,9 +138,16 @@ export function streamFixture(model: Model<Api>, context: Context, options?: Sim
         const index = output.content.length;
         output.content.push(block);
         stream.push({ type: "toolcall_start", contentIndex: index, partial: output });
-        await wait(150);
-        block.arguments = structuredClone(call.arguments);
-        stream.push({ type: "toolcall_delta", contentIndex: index, delta: JSON.stringify(call.arguments), partial: output });
+        const serialized = JSON.stringify(call.arguments);
+        const size = summaryPreview && (call.name === "write" || call.name === "edit") ? Math.ceil(serialized.length / 4) : serialized.length;
+        let partial = "";
+        for (let offset = 0; offset < serialized.length; offset += size) {
+          await wait(summaryPreview && size < serialized.length ? 900 : 150);
+          const delta = serialized.slice(offset, offset + size);
+          partial += delta;
+          block.arguments = parseStreamingJson(partial);
+          stream.push({ type: "toolcall_delta", contentIndex: index, delta, partial: output });
+        }
         stream.push({ type: "toolcall_end", contentIndex: index, toolCall: block, partial: output });
         output.stopReason = "toolUse";
       }

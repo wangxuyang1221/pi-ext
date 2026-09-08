@@ -1,19 +1,22 @@
 // FIXTURE: Load production directly; retain proposed as a frozen-tool composition reference.
 import { appendFileSync } from "node:fs";
+import { setTimeout as delay } from "node:timers/promises";
 import type { ExtensionAPI, MarkdownTransformer } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import codexUi from "../../../extensions/codex-ui/src/index.js";
 import { ReasoningStatus, extractTitle, historyMarkdown } from "./status.js";
-import { PROVIDER, MODEL, PROMPTS, isFixtureCall, streamFixture } from "./fixture.js";
+import { PROVIDER, MODEL, PROMPTS, isFixtureCall, streamFixture, streamFixedFixture, streamInlineFixture } from "./fixture.js";
 
-export default function reasoningLab(pi: ExtensionAPI): void {
+export default function reasoningLab(pi: ExtensionAPI, registerUi: (pi: ExtensionAPI) => void = codexUi): void {
   const proposed = process.env.PI_REASONING_LAB_VARIANT === "proposed";
+  const fixed = process.env.PI_REASONING_LAB_VARIANT === "fixed";
+  const inline = process.env.PI_REASONING_LAB_VARIANT === "inline";
   const production = process.env.PI_REASONING_LAB_VARIANT === "production";
   const trace = (event: Record<string, unknown>) => {
     const path = process.env.PI_REASONING_LAB_TRACE;
     if (path) appendFileSync(path, JSON.stringify(event) + "\n");
   };
-  codexUi(proposed ? new Proxy(pi, {
+  registerUi(proposed ? new Proxy(pi, {
     get(target, property, receiver) {
       if (property === "registerMarkdownTransformer") return (transformer: MarkdownTransformer) => {
         target.registerMarkdownTransformer((markdown, context) => context.messageType === "assistant-thinking"
@@ -44,7 +47,7 @@ export default function reasoningLab(pi: ExtensionAPI): void {
     api: "openai-responses", baseUrl: "http://127.0.0.1:1", apiKey: "fixture-not-a-secret",
     models: [{ id: MODEL, name: "Local reasoning UI demo", reasoning: true, input: ["text"],
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 128000, maxTokens: 4096 }],
-    streamSimple: streamFixture,
+    streamSimple: inline || production ? streamInlineFixture : fixed ? streamFixedFixture : streamFixture,
   });
   pi.registerCommand("demo", {
     description: "Replay the thinking demo; use /demo long for long content",
@@ -68,11 +71,13 @@ export default function reasoningLab(pi: ExtensionAPI): void {
     ctx.ui.notify("Offline prototype: use /demo or /demo long. Free-form input is not sent.", "info");
     return { action: "handled" };
   });
-  pi.on("tool_call", event => {
+  pi.on("tool_call", async (event, ctx) => {
     if (!event.toolCallId.startsWith("reasoning-lab-") || !isFixtureCall(event.toolName, event.input)) {
       return { block: true, reason: "Only exact isolated fixture operations are allowed." };
     }
     trace({ type: "tool", name: event.toolName });
+    // Approximation: hold preflight so the real executing row is observable.
+    if (fixed || inline || production) await delay(process.env.PI_REASONING_LAB_FAST === "1" ? 40 : 1000, undefined, { signal: ctx.signal });
   });
   pi.on("user_bash", () => ({ result: {
     output: "User shell commands are disabled in this prototype.", exitCode: 1, cancelled: false, truncated: false,
@@ -90,7 +95,7 @@ export default function reasoningLab(pi: ExtensionAPI): void {
       });
     }
     ctx.ui.setWidget("reasoning-lab-help", (_tui, theme) => new Text(
-      theme.fg("dim", `${proposed ? "Alignment preview" : production ? "Production reference" : "Legacy reference"} · /demo replay · /demo long · Esc interrupt · Ctrl+D exit`),
+      theme.fg("dim", `${proposed || fixed || inline ? "Alignment preview" : production ? "Production reference" : "Legacy reference"} · /demo replay · /demo long · Esc interrupt · Ctrl+D exit`),
       1, 0,
     ), { placement: "belowEditor" });
     trace({ type: "ready", proposed, sessionFile: ctx.sessionManager.getSessionFile?.() });

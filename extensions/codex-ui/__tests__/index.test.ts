@@ -22,7 +22,7 @@ function createTheme(name = CODEX_THEME_NAME): Theme {
   } as unknown as Theme;
 }
 
-test("markdown transformer hides streaming thinking and preserves completed paragraphs", () => {
+test("markdown transformer uses the same latest summary during streaming and replay", () => {
   const transformers: Array<(markdown: string, context: Record<string, unknown>) => string> = [];
   const pi = {
     registerTool() {},
@@ -54,8 +54,8 @@ test("markdown transformer hides streaming thinking and preserves completed para
     messageType: "assistant-thinking",
     isStreaming: true,
     availableWidth: 80,
-  }), "");
-  const completed = "• **Identifying title spinner and tmux title issues\ncontinued on the next source line**\n\n**Summarizing code changes and test results**";
+  }), "• Summarizing code changes and test results");
+  const completed = "• Summarizing code changes and test results";
   assert.equal(transform(thinking, {
     messageType: "assistant-thinking",
     isStreaming: false,
@@ -70,7 +70,7 @@ test("markdown transformer hides streaming thinking and preserves completed para
     messageType: "assistant-thinking",
     isStreaming: false,
     availableWidth: 10,
-  }), "• Earlier\n\n**1234567890ABCDE**");
+  }), "• 1234567…");
   assert.equal(transform("visible", {
     messageType: "assistant-thinking",
     isStreaming: true,
@@ -346,8 +346,6 @@ test("session UI installs only in TUI mode", async () => {
     "footer",
     "title",
     "working-visible",
-    "working-indicator",
-    "widget",
   ]);
   assert.deepEqual(calls[0]?.value, ["codex-ui-lowpower", undefined]);
   assert.equal(calls[1]?.value, CODEX_THEME_NAME);

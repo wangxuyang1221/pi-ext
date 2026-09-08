@@ -94,16 +94,16 @@ Codex encrypted compaction item.
 - 实色背景 composer
 - model、thinking、Fast Mode、cwd、git branch、context-left 和 permissions 单行 footer
 - 普通 assistant 回复使用外层列表缩进，自动换行和后续段落保持对齐
-- 输入框上方的静态 Thinking/Reasoning 状态，以及完成后的多行思考历史
+- 原生消息位置的单行思考摘要，流式与完成后保持同一规则
 - 隐藏 streaming working row；运行时窗口标题使用 80ms 单色转圈，正文思考状态仍保持静态
 - `read`、`edit`、`write` 的紧凑 renderer
 - Bash 分组标题与 `Read`、`Edited` 对齐，命令始终可见，结果默认折叠，按 `Ctrl+O` 展开
 
-运行中的 Thinking/Reasoning 位于输入框上方，使用弱化圆点和普通字重、非斜体标题，按可用宽度省略。状态下方保留一行无背景空白，不增加输入框内部 padding；结束后状态和这行空白一起移除。只有提取到完整模型思考标题时才显示状态栏，标题和正文保持原文，不翻译。没有标题、标题未闭合、开始回复或调用工具时，状态栏及其下方空白行一起隐藏；不显示 `Thinking`、`Preparing response` 或 `Running <tool>` 等固定状态，也不保留过期标题。不逐 token 更新正文思考标题，正文状态没有动画或秒表。
+每段连续 Thinking 从第一个完整、独占源文本行的 `**标题**` 出现时，就在原生消息位置显示 `• 标题`。后续完整标题原地替换，尚未闭合的标题不覆盖上一条；超长标题截断为一行，无标题正文不充当摘要。输入框上方不再安装思考 widget，也不预留它的空白区。
 
-思考正文在 assistant `message_end` 后进入历史，保留多段内容并自然换行。有正文时去掉可识别的首标题，纯标题则保留。历史沿用原生 `thinkingText` 与斜体，圆点不再借用代码高亮。取消或失败后保留已有片段，原始 Thinking 内容及会话数据不变；原生思考显隐快捷键及其隐藏占位仍保留。Pi 原生容器的 Spacer 不由本扩展重建。
+生成工具参数、执行工具和 `message_end` 后继续显示同一摘要，不再补入多段思考正文。取消、失败和恢复会话使用相同规则；完整 Thinking 仍保留在 session 与模型上下文中。摘要沿用原生思考样式，括号、方括号和反斜杠标题使用代码样式保留字面量。原生 `Ctrl+T` 及隐藏占位不变，Pi 父容器的 Spacer 不由扩展重建，无标题思考仍可能留下宿主空行。
 
-静态状态不等于整个 Pi 零重绘。流式消息、工具、输入和 resize 仍能触发宿主绘制，多行历史首次排版也有成本。实现与实测边界见 [Reasoning implementation plan](docs/plans/codex-ui-reasoning.md#implementation-results)。更新后请重启 Pi 并恢复会话；两版目标 Pi 的运行中升级验证均发现 `/reload` 会沿用旧模块。
+这消除了思考延迟补入导致的工具行位移，不代表整个 Pi 零重绘。新增工具、回复、输入和 resize 仍会正常改变布局。实现、缓存边界和性能差异见 [Inline reasoning](docs/plans/codex-ui-inline-reasoning.md#results)。更新后请重启 Pi 并恢复会话，不要只依赖 `/reload` 更新模块。
 
 Write 写入中只显示黄色圆点和路径，成功后圆点变绿并显示最终总行数。失败保留红色圆点与错误正文；不显示累计行数、字节摘要或第二行 Written。完整模式与 low-power 共用此状态规则，Ctrl+O 不展开 Write 文件内容。
 
@@ -117,7 +117,7 @@ Write 写入中只显示黄色圆点和路径，成功后圆点变绿并显示�
 
 ### Output alignment
 
-正式状态行的圆点在第 1 列，正文在第 3 列，与工具图标和标题对齐。历史思考还需使用 Pi 的公共设置 `outputPad: 0`。请在 `/settings` 中将 `Output padding` 设为 `0`，或在 `~/.pi/agent/settings.json` 的现有内容中合入：
+单行思考摘要使用原生消息 padding。若要让圆点在第 1 列、文字在第 3 列，与工具图标和标题对齐，需使用 Pi 的公共设置 `outputPad: 0`。请在 `/settings` 中将 `Output padding` 设为 `0`，或在 `~/.pi/agent/settings.json` 的现有内容中合入：
 
 ```json
 {
@@ -129,7 +129,7 @@ Write 写入中只显示黄色圆点和路径，成功后圆点变绿并显示�
 
 ### Low-power rendering
 
-`/lowpower on` 只负责简化 `write`、`edit`、`bash` 的渲染；`/lowpower off` 恢复完整工具输出，`/lowpower status` 仅查询当前状态。两种模式都会隐藏 Pi 内置的 streaming working row，并使用同一套静态思考状态。窗口标题独立使用 `80ms` 单色转圈，与自动 compact 相同帧序列；项目名和会话名保持固定，不再播放动态省略号。按单调时钟选择帧，延迟后跳过错过的帧，不补播；仅写入 OSC 标题，不请求正文重绘。动画跨重试和自动 compact 保持运行，任务 settled、取消完成或会话退出时停止，恢复静态标题；手动 compact 也有标题反馈。两种 low-power 模式行为一致，工具计时器不受影响。
+`/lowpower on` 只负责简化 `write`、`edit`、`bash` 的渲染；`/lowpower off` 恢复完整工具输出，`/lowpower status` 仅查询当前状态。两种模式都会隐藏 Pi 内置的 streaming working row，并使用同一套原位单行思考摘要。窗口标题独立使用 `80ms` 单色转圈，与自动 compact 相同帧序列；项目名和会话名保持固定，不再播放动态省略号。按单调时钟选择帧，延迟后跳过错过的帧，不补播；仅写入 OSC 标题，不请求正文重绘。动画跨重试和自动 compact 保持运行，任务 settled、取消完成或会话退出时停止，恢复静态标题；手动 compact 也有标题反馈。两种 low-power 模式行为一致，工具计时器不受影响。
 
 启用 Pi 的 `terminal.showTerminalProgress` 后，终端原生 edge progress 仍由 Pi 管理，不进入 TUI 行渲染管线。Low-power 状态仅保存在当前 extension instance 中；`/new`、`/resume`、`/fork`、`/reload` 或进程重启会重新加载扩展，并恢复为默认关闭。
 

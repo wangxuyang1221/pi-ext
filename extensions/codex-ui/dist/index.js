@@ -1,8 +1,7 @@
 import { VERSION, } from "@earendil-works/pi-coding-agent";
 import { CodexEditor, CodexFooter, CodexHeader } from "./components.js";
 import { registerCodexTools } from "./tools.js";
-import { reasoningHistoryMarkdown } from "./reasoning-history.js";
-import { registerReasoningStatus } from "./reasoning-status.js";
+import { ReasoningSummary } from "./reasoning-summary.js";
 import { registerTerminalTitleSpinner } from "./terminal-title.js";
 export const CODEX_THEME_NAME = "codex-pi";
 const LOW_POWER_ARGUMENTS = ["on", "off", "status"];
@@ -12,7 +11,7 @@ function hideInlineWorkingRow(ui) {
 export default function codexUiExtension(pi) {
     let lowPowerEnabled = false;
     let currentKeybindings;
-    const installReasoningStatus = registerReasoningStatus(pi);
+    const reasoningSummary = new ReasoningSummary();
     const installTitleSpinner = registerTerminalTitleSpinner(pi);
     registerCodexTools(pi, undefined, {
         getKeybindings: () => currentKeybindings,
@@ -57,7 +56,7 @@ export default function codexUiExtension(pi) {
     });
     pi.registerMarkdownTransformer((markdown, context) => {
         if (context.messageType === "assistant-thinking") {
-            return context.isStreaming ? "" : reasoningHistoryMarkdown(markdown);
+            return reasoningSummary.render(markdown, context.availableWidth);
         }
         if (context.messageType === "assistant") {
             // Display-only outer list: let native Markdown align wrapped lines and blocks.
@@ -68,7 +67,10 @@ export default function codexUiExtension(pi) {
         }
         return `› ${markdown}`;
     });
+    pi.on("session_tree", () => reasoningSummary.clear());
+    pi.on("session_shutdown", () => reasoningSummary.clear());
     pi.on("session_start", (_event, ctx) => {
+        reasoningSummary.clear();
         if (ctx.mode !== "tui")
             return;
         ctx.ui.setStatus("codex-ui-lowpower", lowPowerEnabled ? "Low power" : undefined);
@@ -119,7 +121,6 @@ export default function codexUiExtension(pi) {
         });
         installTitleSpinner(ctx);
         hideInlineWorkingRow(ctx.ui);
-        installReasoningStatus(ctx);
     });
 }
 //# sourceMappingURL=index.js.map

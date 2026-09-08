@@ -32,6 +32,7 @@ function harness(variant: string) {
   let provider: any;
   reasoningLab({
     getThinkingLevel: () => "medium",
+    getSessionName: () => undefined,
     setActiveTools() {},
     registerTool: (tool: any) => tools.set(tool.name, tool),
     registerCommand: (name: string, command: any) => commands.set(name, command),
@@ -137,7 +138,7 @@ if (loadedVariant === "production") test("production lifecycle installs a static
   const h = harness("production");
   const widgets = new Map<string, any>();
   let requests = 0;
-  const ctx = { mode: "tui", cwd: "/fixture", model, sessionManager: { buildContextEntries: () => [] }, ui: {
+  const ctx = { mode: "tui", cwd: "/fixture", model, isIdle: () => true, sessionManager: { buildContextEntries: () => [] }, ui: {
     theme, setHeader() {}, setFooter() {}, setEditorComponent() {}, setTitle() {}, setStatus() {},
     setWorkingVisible() {}, setWorkingIndicator() {},
     setWidget(key: string, factory: any) {
@@ -174,7 +175,7 @@ if (loadedVariant === "production") test("production lifecycle installs a static
 test("proposed lifecycle uses English UI copy while preserving provider titles verbatim", async () => {
   const h = harness("proposed");
   const widgets = new Map<string, any>();
-  const ctx = { mode: "tui", cwd: "/fixture", model, sessionManager: { buildContextEntries: () => [] }, ui: {
+  const ctx = { mode: "tui", cwd: "/fixture", model, isIdle: () => true, sessionManager: { buildContextEntries: () => [] }, ui: {
     theme, setHeader() {}, setFooter() {}, setEditorComponent() {}, setTitle() {}, setStatus() {},
     setWorkingVisible() {}, setWorkingIndicator() {},
     setWidget(key: string, factory: any) {

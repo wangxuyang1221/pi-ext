@@ -18,15 +18,19 @@ const option = name => {
   return index < 0 ? undefined : args[index + 1];
 };
 if (args.includes("--help")) {
-  console.log("pnpm run prototype:reasoning-ui [--variant production|proposed|current] [--scene standard|long] [--runtime installed|repository] [--smoke] [--pty-smoke] [--upgrade-smoke] [--bench] [--probe]");
+  console.log("pnpm run prototype:reasoning-ui [--variant production|proposed|current|fixed|inline] [--scene standard|long] [--runtime installed|repository] [--smoke] [--pty-smoke] [--upgrade-smoke] [--bench] [--probe]");
   process.exit(0);
 }
 const variant = option("variant") ?? "production";
 const scene = option("scene") ?? "standard";
 const runtime = option("runtime") ?? "installed";
-if (!["production", "proposed", "current"].includes(variant)) throw new Error(`Invalid variant: ${variant}`);
+if (!["production", "proposed", "current", "fixed", "inline"].includes(variant)) throw new Error(`Invalid variant: ${variant}`);
 if (!["standard", "long"].includes(scene)) throw new Error(`Invalid scene: ${scene}`);
 if (!["installed", "repository"].includes(runtime)) throw new Error(`Invalid runtime: ${runtime}`);
+const summaryPreview = variant === "fixed" || variant === "inline";
+if (summaryPreview && args.some(arg => ["--bench", "--probe", "--upgrade-smoke"].includes(arg))) {
+  throw new Error("Summary previews support interactive, smoke and PTY smoke only.");
+}
 const repoPackage = resolve(dirname(fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"))), "..");
 function installedCli() {
   try {
@@ -97,9 +101,12 @@ try {
     symlinkSync(realpathSync(packageRoot), join(moduleScope, name), "dir");
   }
   // Freeze both historical variants; production loads the unmodified compiled entry.
-  const baselinePath = join(repository, "prototypes/codex-ui-performance/baselines/reasoning-before.json.gz");
+  const benchBaseline = args.includes("--bench-baseline");
+  if (benchBaseline && (!args.includes("--bench") || variant !== "production")) throw new Error("Baseline replay requires a production benchmark.");
+  const baselinePath = join(repository, "prototypes/codex-ui-performance/baselines",
+    benchBaseline ? "inline-reasoning-before.json.gz" : "reasoning-before.json.gz");
   const baseline = JSON.parse(gunzipSync(readFileSync(baselinePath)));
-  if (variant !== "production") {
+  if (variant === "proposed" || variant === "current" || benchBaseline) {
     const destination = join(run, "build/extensions/codex-ui/src");
     rmSync(destination, { recursive: true, force: true });
     mkdirSync(destination, { recursive: true });
@@ -110,7 +117,7 @@ try {
       writeFileSync(join(destination, name.replace(/\.ts$/u, ".js")), output);
     }
   }
-  const manifest = { variant, node: process.version, version, runtimeRoot, baseline: {
+  const manifest = { variant, benchBaseline, node: process.version, version, runtimeRoot, baseline: {
     commit: baseline.commit, sha256: createHash("sha256").update(readFileSync(baselinePath)).digest("hex"),
   }, modules: Object.fromEntries(["pi-coding-agent", "pi-ai", "pi-tui"].map(name => {
     const path = realpathSync(join(moduleScope, name));
@@ -133,11 +140,11 @@ try {
     await child(process.execPath, ["--expose-gc", join(compiled, "src/bench.js")], { cwd: repository, env });
     const results = join(directory, "results");
     mkdirSync(results, { recursive: true });
-    const destination = join(results, `${new Date().toISOString().replace(/[:.]/gu, "-")}-${version}-${variant}.json`);
+    const destination = join(results, `${new Date().toISOString().replace(/[:.]/gu, "-")}-${version}-${variant}${benchBaseline ? "-before" : ""}.json`);
     writeFileSync(destination, readFileSync(join(run, "metrics.json")), { flag: "wx" });
     console.log(`Saved ${destination}`);
   } else if (args.includes("--smoke")) {
-    await child(process.execPath, ["--test", join(compiled, "__tests__/prototype.test.js")], { cwd: repository, env });
+    await child(process.execPath, ["--test", join(compiled, variant === "production" ? "__tests__/inline.test.js" : summaryPreview ? `__tests__/${variant}.test.js` : "__tests__/prototype.test.js")], { cwd: repository, env });
   } else {
     const fixture = await import(pathToFileURL(join(compiled, "src/fixture.js")).href);
     writeFileSync(join(run, "workspace", fixture.INPUT_FILE), fixture.INPUT_DATA);
@@ -147,7 +154,7 @@ try {
       "--offline", "--approve", "--no-extensions", "--no-skills", "--no-prompt-templates", "--no-context-files", "--no-themes",
       "--theme", join(repository, "themes/codex-pi.json"), "--use-theme", "codex-pi",
       "--provider", fixture.PROVIDER, "--model", fixture.MODEL, "--session-dir", join(run, "sessions"),
-      "--extension", join(compiled, "src/index.js"), "--tui-mode", "regular",
+      "--extension", join(compiled, summaryPreview ? `src/${variant}-lab.js` : "src/index.js"), "--tui-mode", "regular",
     ];
     if (args.includes("--pty-smoke") || args.includes("--upgrade-smoke")) {
       const upgrade = args.includes("--upgrade-smoke");
@@ -155,10 +162,12 @@ try {
         if (variant !== "production") throw new Error("Upgrade smoke requires the production variant.");
         cpSync(sourceRoot, join(run, "upgrade-after"), { recursive: true });
         rmSync(sourceRoot, { recursive: true }); mkdirSync(sourceRoot);
-        for (const [name, source] of Object.entries(baseline.sources)) writeFileSync(join(sourceRoot, name.replace(/\.ts$/u, ".js")),
+        const upgradeBaseline = JSON.parse(gunzipSync(readFileSync(join(repository,
+          "prototypes/codex-ui-performance/baselines/inline-reasoning-before.json.gz"))));
+        for (const [name, source] of Object.entries(upgradeBaseline.sources)) writeFileSync(join(sourceRoot, name.replace(/\.ts$/u, ".js")),
           ts.transpileModule(source, { fileName: name, compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText);
       }
-      const { smokePty } = await import("./pty-smoke.mjs");
+      const { smokePty } = await import(summaryPreview || variant === "production" ? "./fixed-pty-smoke.mjs" : "./pty-smoke.mjs");
       await smokePty({ run, env, cliArgs, variant, prompt: fixture.PROMPTS[scene], manifest, upgrade, sourceRoot });
     } else {
       if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error("Interactive prototype requires a terminal. Use --smoke or --pty-smoke.");

@@ -5,6 +5,10 @@
 - Delivery method: `Red-Green-Refactor`
 - Upstream Pi changes: `None`
 
+## Inline reasoning follow-up
+
+用户已改选原生消息位置的单行摘要，正式实现见 [Inline reasoning](codex-ui-inline-reasoning.md)。输入框思考 widget 和完成后多行正文已移除；流式、工具阶段与完成后使用同一摘要，不再延迟补入。下文保留旧方案的实施和性能记录，不再作为当前思考显示规则。独立终端标题动画继续保留。
+
 ## Terminal Title Follow-up
 
 用户后续选择恢复终端顶部动画，采用单色、固定标题、80ms 帧周期与时间驱动选帧。正式实现在 `extensions/codex-ui/src/terminal-title.ts`，与本计划的静态正文思考区独立。下文关于删除旧 500ms 动画、静止窗口零标题字节的记录属于当时版本，不再描述当前顶部标题行为；正文状态的静态、缓存与不重复重绘约束继续有效。原型与当前验证见 [Title spinner](../../prototypes/codex-bash-ui-prototype/TITLE-SPINNER.md)。

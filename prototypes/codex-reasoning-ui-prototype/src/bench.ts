@@ -30,7 +30,7 @@ for (const [history, expanded] of [[0, false], [20, false], [20, true]] as const
       let text = "**Stable title**\n\n";
       await pipeline.update(text, text);
       pipeline.screen.renderNow(); await feed(pipeline.terminal.take());
-      for (const scenario of ["body-deltas", "title-only", "title-changes", "final-history", "stable-input"] as const) {
+      for (const scenario of ["body-deltas", "title-only", "title-changes", "appended-titles", "final-history", "stable-input"] as const) {
         let bytes = 0; let parseCpuMs = 0; let renderCpuMs = 0; let wallMs = 0; let maxFrameMs = 0;
         const frames = scenario === "final-history" ? 1 : 64;
         const previous = pipeline.screen.fullRedraws;
@@ -47,6 +47,10 @@ for (const [history, expanded] of [[0, false], [20, false], [20, true]] as const
               text = scenario === "title-only" ? `**Title ${index}**`
                 : `**Title ${index}**\n\n` + "Final reasoning paragraph. ".repeat(2500);
               await pipeline.update(text, text);
+            } else if (scenario === "appended-titles") {
+              const delta = `\n\n**Appended title ${index}**\n\n` + "Reasoning body. ".repeat(50);
+              text += delta;
+              await pipeline.update(text, delta);
             } else if (scenario === "final-history") await pipeline.finish();
             else pipeline.editor.handleInput(index % 2 ? "\x7f" : "x");
             pipeline.screen.renderNow();
