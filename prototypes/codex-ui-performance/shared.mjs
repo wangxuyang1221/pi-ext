@@ -75,9 +75,10 @@ export function definitions(variant, services = {}) {
   const rows = [];
   return {
     stats: () => renderCache?.stats(),
-    declareBashGroup(count) {
+    declareBashGroup(count) { this.declareGroup('bash', count); },
+    declareGroup(name, count) {
       const message = { role: 'assistant', content: Array.from({ length: count }, (_, index) => ({
-        type: 'toolCall', id: `bench-${rows.length + index}`, name: 'bash', arguments: {},
+        type: 'toolCall', id: `bench-${rows.length + index}`, name, arguments: {},
       })) };
       for (const handler of events.get('message_start') ?? []) handler({ message }, { mode: 'tui' });
     },
@@ -117,6 +118,8 @@ export function editFixture(lineCount) {
   };
 }
 export const fixtures = [
+  { id: 'read-lines-1800', name: 'read', args: { path: 'src/fixture.ts' }, result: textResult(shortOutput.slice(0, 50 * 1024)) },
+  { id: 'read-token-50k', name: 'read', args: { path: 'src/token.txt' }, result: textResult(tokenOutput) },
   { id: 'bash-short-3', name: 'bash', args: { command: 'printf sample' }, result: textResult('one\ntwo\nthree') },
   { id: 'bash-lines-1800', name: 'bash', args: { command: 'pnpm test' }, result: textResult(shortOutput) },
   { id: 'bash-token-50k', name: 'bash', args: { command: 'printf large-token' }, result: textResult(tokenOutput) },

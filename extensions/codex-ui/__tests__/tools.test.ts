@@ -405,7 +405,7 @@ test("tool overrides retain metadata and delegate execution using context cwd", 
   assert.equal(delegated.at(-1)?.context, context);
 });
 
-test("read renderer moves the success marker to the call row and layers the line count", () => {
+test("read renderer combines the success marker, filename, range and preview in the call row", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
   const read = registered.find((tool) => tool.name === "read");
@@ -417,11 +417,11 @@ test("read renderer moves the success marker to the call row and layers the line
   const call = read.renderCall(
     args,
     theme,
-    createRenderContext({ args, state, isPartial: true }) as never,
+    createRenderContext({ args, state, isPartial: true, expanded: false }) as never,
   );
   assert.equal(
     stripTerminalSequences(call.render(80).join("\n")),
-    "• Read src/app.ts (offset=4, limit=2)",
+    "◌ Read app.ts  src/ · Reading…",
   );
 
   const result = read.renderResult(
@@ -432,16 +432,13 @@ test("read renderer moves the success marker to the call row and layers the line
   );
 
   const settledTitleAnsi = call.render(80).join("\n");
-  const summaryAnsi = result.render(80).at(0) ?? "";
-  assert.equal(
-    stripTerminalSequences(settledTitleAnsi),
-    "✓ Read src/app.ts (offset=4, limit=2)",
-  );
+  assert.equal(stripTerminalSequences(settledTitleAnsi),
+    "✓ Read app.ts  src/ · L4–5 · 2 lines\n  │   4  alpha\n  │   5  beta");
   assert.ok(settledTitleAnsi.includes("\x1b[38;5;82m✓\x1b[39m"));
-  assert.equal(stripTerminalSequences(summaryAnsi), "  2 lines");
-  assert.ok(!summaryAnsi.includes("└"));
-  assert.ok(summaryAnsi.includes("\x1b[38;5;250m\x1b[1m2\x1b[22m\x1b[39m"));
-  assert.ok(summaryAnsi.includes("\x1b[38;5;240mlines\x1b[39m"));
+  assert.ok(settledTitleAnsi.includes(theme.fg("accent", "app.ts")));
+  assert.ok(settledTitleAnsi.includes(theme.fg("dim", "  src/")));
+  assert.ok(!settledTitleAnsi.includes("\x1b[1m"));
+  assert.deepEqual(result.render(80), []);
 
   const write = registered.find((tool) => tool.name === "write");
   assert.ok(write?.renderCall);
@@ -466,33 +463,33 @@ test("read renderer preserves summary variants", () => {
   const renderSummary = (
     content: Array<{ type: string; text?: string; data?: string; mimeType?: string }>,
     details: unknown = undefined,
-  ) => read.renderResult?.(
-    { content, details },
-    { expanded: false, isPartial: false },
-    theme,
-    createRenderContext({ args: { path: "fixture.txt" }, state: {} }) as never,
-  ).render(80).at(0) ?? "";
+  ) => {
+    const context = createRenderContext({ args: { path: "fixture.txt" }, state: {}, expanded: false });
+    const call = read.renderCall!(context.args, theme, context as never);
+    read.renderResult!({ content, details }, { expanded: false, isPartial: false }, theme, context as never);
+    return call.render(80).at(0) ?? "";
+  };
 
   assert.equal(stripTerminalSequences(renderSummary([
     { type: "text", text: "only" },
-  ])), "  1 line");
+  ])), "✓ Read fixture.txt  ./ · 1 line");
 
   const truncated = renderSummary(
     [{ type: "text", text: "one\ntwo" }],
     { truncation: { truncated: true } },
   );
-  assert.equal(stripTerminalSequences(truncated), "  2 lines · truncated");
-  assert.ok(truncated.includes("\x1b[38;5;240m · truncated\x1b[39m"));
+  assert.equal(stripTerminalSequences(truncated), "✓ Read fixture.txt  ./ · 2 lines · truncated");
+  assert.ok(truncated.includes(theme.fg("dim", " · 2 lines · truncated")));
 
   const image = renderSummary([
     { type: "text", text: "Read image file [image/png]" },
     { type: "image", data: "base64", mimeType: "image/png" },
   ]);
-  assert.equal(stripTerminalSequences(image), "  Image loaded");
-  assert.ok(image.includes("\x1b[38;5;250mImage loaded\x1b[39m"));
+  assert.equal(stripTerminalSequences(image), "✓ Read fixture.txt  ./ · Image loaded");
+  assert.ok(image.includes(theme.fg("dim", " · Image loaded")));
 });
 
-test("read renderer keeps partial and error calls neutral", () => {
+test("read renderer shows pending and failed states without false success or previews", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
   const read = registered.find((tool) => tool.name === "read");
@@ -514,8 +511,8 @@ test("read renderer keeps partial and error calls neutral", () => {
     theme,
     createRenderContext({ args, state, isPartial: true }) as never,
   );
-  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "• Read src/app.ts");
-  assert.equal(stripTerminalSequences(partial.render(80).join("\n")), "  … Reading");
+  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "◌ Read app.ts  src/ · Reading…\n  │ src/app.ts");
+  assert.deepEqual(partial.render(80), []);
 
   const error = read.renderResult(
     { content: [{ type: "text", text: "Permission denied\nstack" }], details: undefined },
@@ -523,8 +520,8 @@ test("read renderer keeps partial and error calls neutral", () => {
     theme,
     createRenderContext({ args, state, isError: true }) as never,
   );
-  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "• Read src/app.ts");
-  assert.equal(stripTerminalSequences(error.render(80).join("\n")), "  ✗ Permission denied");
+  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "× Read app.ts  src/ · Failed\n  │ src/app.ts\n  × Permission denied");
+  assert.deepEqual(error.render(80), []);
 });
 
 test("read renderer preserves expanded output and fits narrow widths", () => {
@@ -549,12 +546,14 @@ test("read renderer preserves expanded output and fits narrow widths", () => {
     createRenderContext({ args, state }) as never,
   );
 
-  const lines = result.render(80).map((line) => stripTerminalSequences(line));
-  assert.equal(lines.length, 42);
-  assert.equal(lines[0], "  42 lines");
-  assert.equal(lines[1], "    line 1");
-  assert.equal(lines[40], "    line 40");
-  assert.equal(lines[41], "    … 2 more lines");
+  const lines = call.render(80).map((line) => stripTerminalSequences(line));
+  assert.equal(lines.length, 43);
+  assert.match(lines[0]!, /42 lines$/u);
+  assert.equal(lines[1], "  │ a/very/long/path/to/a/fixture.txt");
+  assert.equal(lines[2], "  │   1  line 1");
+  assert.equal(lines[41], "  │  40  line 40");
+  assert.equal(lines[42], "  └ … 2 more lines");
+  assert.deepEqual(result.render(80), []);
 
   for (const width of [1, 2, 8, 20]) {
     const narrowLines = [...call.render(width), ...result.render(width)];

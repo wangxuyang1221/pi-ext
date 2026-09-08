@@ -4,11 +4,12 @@ import { stripTerminalSequences, visibleWidth, } from "@earendil-works/pi-tui";
 import { BashRefreshScheduler } from "./bash-refresh-scheduler.js";
 import { BashGroups } from "./bash-groups.js";
 import { renderBashGroup } from "./bash-group-layout.js";
+import { ReadGroups } from "./read-groups.js";
+import { renderReadGroup } from "./read-group-layout.js";
 import { fitToWidth, formatHomePath, normalizeWidth, paintBackground, } from "./layout.js";
 import { ResponsiveLinesComponent } from "./responsive-lines.js";
 import { ToolRenderCache } from "./render-cache.js";
 const COLLAPSED_DIFF_LINES = 12;
-const EXPANDED_READ_LINES = 40;
 const BASH_DURATION_REFRESH_MS = 1000;
 const LOW_POWER_ERROR_PREVIEW_CHARS = 4 * 1024;
 const LOW_POWER_EDIT_PATCH_PREVIEW_CHARS = 4 * 1024;
@@ -52,6 +53,7 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
     const bashRefreshScheduler = new BashRefreshScheduler(BASH_DURATION_REFRESH_MS);
     const renderCache = services.renderCache ?? new ToolRenderCache();
     const bashGroups = new BashGroups(renderCache, bashRefreshScheduler);
+    const readGroups = new ReadGroups(renderCache);
     pi.on("tool_execution_end", (event) => {
         if (event.toolName === "bash") {
             bashRefreshScheduler.untrack(event.toolCallId);
@@ -61,17 +63,21 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
         bashRefreshScheduler.dispose();
         renderCache.clear();
         bashGroups.reset();
+        readGroups.reset();
     };
     const rebuildGroups = (_event, ctx) => {
         resetRendering();
         bashGroups.reset(ctx);
+        readGroups.reset(ctx);
     };
     let firstSessionStart = true;
     pi.on("session_start", (event, ctx) => {
         // Reload builds the new instance's history rows before emitting session_start.
         // Keep those fresh scopes and discover their ownership without reviving old instances.
-        if (firstSessionStart)
+        if (firstSessionStart) {
             bashGroups.reset(ctx, true);
+            readGroups.reset(ctx, true);
+        }
         else
             rebuildGroups(event, ctx);
         firstSessionStart = false;
@@ -80,16 +86,22 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
     pi.on("session_compact", rebuildGroups);
     pi.on("session_shutdown", resetRendering);
     pi.on("message_start", (event, ctx) => {
-        if (ctx?.mode === "tui")
+        if (ctx?.mode === "tui") {
             bashGroups.discover(event.message, true);
+            readGroups.discover(event.message, true);
+        }
     });
     pi.on("message_update", (event, ctx) => {
-        if (ctx?.mode === "tui")
+        if (ctx?.mode === "tui") {
             bashGroups.discover(event.message);
+            readGroups.discover(event.message);
+        }
     });
     pi.on("message_end", (event, ctx) => {
-        if (ctx?.mode === "tui")
+        if (ctx?.mode === "tui") {
             bashGroups.discover(event.message);
+            readGroups.discover(event.message);
+        }
     });
     const baseRead = getReadDefinition(process.cwd());
     const readTool = {
@@ -100,32 +112,17 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
         },
         renderCall(args, theme, context) {
             const state = context.state;
-            const path = formatToolPath(args.path, context.cwd);
-            const range = formatReadRange(args.offset, args.limit, theme);
-            if (state.path !== path) {
-                state.path = path;
-                state.settledTitle = undefined;
-            }
-            state.initialTitle = formatToolTitle("Read", path, theme, range);
             const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
             state.callComponent = component;
-            component.setRenderer((width) => [
-                fitToWidth(state.settledTitle ?? state.initialTitle ?? "", width),
-            ], { linesAlreadyFit: true });
+            const member = readGroups.bind(context);
+            readGroups.updateCall(member, context, component, formatToolPath(typeof args.path === "string" ? args.path : "", context.cwd));
+            component.setRenderer((width) => renderReadGroup(member, context.expanded, theme, width), { linesAlreadyFit: true });
             return component;
         },
         renderResult(result, options, theme, context) {
-            const state = context.state;
-            const path = formatToolPath(context.args.path, context.cwd);
-            const range = formatReadRange(context.args.offset, context.args.limit, theme);
-            const nextTitle = !options.isPartial && !context.isError
-                ? formatToolTitle("Read", path, theme, range, { glyph: "✓", color: "success" })
-                : undefined;
-            if (state.settledTitle !== nextTitle) {
-                state.settledTitle = nextTitle;
-                state.callComponent?.invalidate();
-            }
-            return updateComponent(context.lastComponent, (width) => renderReadResult(result, options, theme, context.isError, width));
+            const member = readGroups.bind(context);
+            readGroups.updateResult(member, result, options.isPartial, context.isError);
+            return updateComponent(context.lastComponent, () => []);
         },
     };
     pi.registerTool(readTool);
@@ -515,44 +512,6 @@ function formatToolPath(path, cwd) {
     if (relativePath === "")
         return ".";
     return formatHomePath(path);
-}
-function formatReadRange(offset, limit, theme) {
-    if (offset === undefined && limit === undefined)
-        return "";
-    const parts = [];
-    if (offset !== undefined)
-        parts.push(`offset=${offset}`);
-    if (limit !== undefined)
-        parts.push(`limit=${limit}`);
-    return theme.fg("dim", `(${parts.join(", ")})`);
-}
-function renderReadResult(result, options, theme, isError, width) {
-    if (options.isPartial) {
-        return [fitToWidth(theme.fg("warning", "  … Reading"), width)];
-    }
-    const text = extractText(result.content);
-    if (isError) {
-        return [fitToWidth(theme.fg("error", `  ✗ ${firstLine(text) || "Read failed"}`), width)];
-    }
-    const hasImage = result.content.some((content) => content.type === "image");
-    const lineCount = countLines(text);
-    let summary = hasImage
-        ? `  ${theme.fg("toolOutput", "Image loaded")}`
-        : `  ${theme.fg("toolOutput", theme.bold(String(lineCount)))} ${theme.fg("dim", lineCount === 1 ? "line" : "lines")}`;
-    if (result.details?.truncation?.truncated) {
-        summary += theme.fg("dim", " · truncated");
-    }
-    const lines = [summary];
-    if (options.expanded && text) {
-        const contentLines = text.split("\n");
-        const shown = contentLines.slice(0, EXPANDED_READ_LINES);
-        lines.push(...shown.map((line) => `    ${theme.fg("toolOutput", line)}`));
-        const remaining = contentLines.length - shown.length;
-        if (remaining > 0) {
-            lines.push(theme.fg("dim", `    … ${remaining} more lines`));
-        }
-    }
-    return lines.map((line) => fitToWidth(line, width));
 }
 function getEditResultThemeFingerprint(theme) {
     return [

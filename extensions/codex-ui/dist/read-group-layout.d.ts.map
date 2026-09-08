@@ -1,0 +1,1 @@
+{"version":3,"file":"read-group-layout.d.ts","sourceRoot":"","sources":["../src/read-group-layout.ts"],"names":[],"mappings":"AACA,OAAO,KAAK,EAAE,KAAK,EAAE,MAAM,iCAAiC,CAAC;AAG7D,OAAO,KAAK,EAAE,UAAU,EAAE,MAAM,kBAAkB,CAAC;AAqGnD,kFAAkF;AAClF,wBAAgB,eAAe,CAAC,MAAM,EAAE,UAAU,EAAE,QAAQ,EAAE,OAAO,EAAE,KAAK,EAAE,KAAK,EAAE,cAAc,EAAE,MAAM,GAAG,MAAM,EAAE,CAUrH"}

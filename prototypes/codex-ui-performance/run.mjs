@@ -18,7 +18,7 @@ fs.mkdirSync(generatedDirectory, { recursive: true });
 const exports = {
   'modes/interactive/theme/theme.js': ['initTheme', 'theme', 'setTheme', 'setThemeInstance', 'loadThemeFromPath', 'getLanguageFromPath', 'highlightCode', 'getEditorTheme', 'getMarkdownTheme'],
   'modes/interactive/components/tool-execution.js': ['ToolExecutionComponent'],
-  'modes/interactive/components/keybinding-hints.js': ['keyHint'],
+  'modes/interactive/components/keybinding-hints.js': ['keyHint', 'keyText'],
   'modes/interactive/components/custom-editor.js': ['CustomEditor'],
   'modes/interactive/components/footer.js': ['FooterComponent'],
   'modes/interactive/components/assistant-message.js': ['AssistantMessageComponent'],
@@ -63,4 +63,4 @@ process.env.PI_PERF_SOURCES = JSON.stringify({
     .map(name => [name, createHash('sha256').update(fs.readFileSync(path.join(directory, name))).digest('hex')])),
   upstream: { agent: fingerprint(agentRoot), tui: fingerprint(tuiRoot), ai: fingerprint(aiRoot) },
 });
-await import(process.env.PI_PERF_ONLY === 'mcp' ? './mcp-bench.mjs' : process.argv.includes('--grouped') ? './grouped-probe.mjs' : process.argv.includes('--verify') ? './verify.mjs' : process.argv.includes('--memory') ? './memory.mjs' : './bench.mjs');
+await import(process.env.PI_PERF_ONLY === 'reads' ? process.argv.includes('--memory') ? './read-memory.mjs' : './read-bench.mjs' : process.env.PI_PERF_ONLY === 'mcp' ? './mcp-bench.mjs' : process.argv.includes('--grouped') ? './grouped-probe.mjs' : process.argv.includes('--verify') ? './verify.mjs' : process.argv.includes('--memory') ? './memory.mjs' : './bench.mjs');

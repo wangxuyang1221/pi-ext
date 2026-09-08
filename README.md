@@ -96,7 +96,7 @@ Codex encrypted compaction item.
 - 普通 assistant 回复使用外层列表缩进，自动换行和后续段落保持对齐
 - 原生消息位置的单行思考摘要，流式与完成后保持同一规则
 - 隐藏 streaming working row；运行时窗口标题使用 80ms 单色转圈，正文思考状态仍保持静态
-- `read`、`edit`、`write` 的紧凑 renderer
+- Read 连续文件分组与每文件三行短预览，以及 `edit`、`write` 的紧凑 renderer
 - Bash 分组标题与 `Read`、`Edited` 对齐，命令始终可见，结果默认折叠，按 `Ctrl+O` 展开
 
 每段连续 Thinking 从第一个完整、独占源文本行的 `**标题**` 出现时，就在原生消息位置显示 `• 标题`。后续完整标题原地替换，尚未闭合的标题不覆盖上一条；超长标题截断为一行，无标题正文不充当摘要。输入框上方不再安装思考 widget，也不预留它的空白区。
@@ -170,6 +170,8 @@ pi-codex() {
 结果默认折叠，包括成功、错误和运行日志；命令、可确认的状态及截断警告不隐藏。全局 `app.tools.expand` 快捷键切换结果展示，同时展开完整命令，默认是 `Ctrl+O`，提示跟随实际绑定。展开显示本次捕获的全部输出，保留日志原有空行，命令块之间仅加一条连接线。执行完成不会覆盖用户的展开选择。运行耗时集中在展开组底部，避免每秒修改离屏命令而重绘历史；恢复历史不补造耗时、退出码或结束原因。截断时显示真实 `fullOutputPath`，不读取文件来补齐输出。low-power 仍保留原有有界轻量展示。
 
 更新后请重启 Pi 并恢复会话，确保加载新版代码；不要仅凭 `/reload` 成功判断旧进程已完成代码升级。分组只改变显示，不重新执行 Bash，也不修改持久化结果或用户 `!` Bash。当前契约与验证记录见 [Grouped Bash implementation plan](docs/plans/codex-ui-grouped-bash.md#current-revision)。
+
+Read 在同一 assistant 消息内按调用顺序合并相邻读取，不跨 text、thinking、其他工具或消息边界。每个文件显示不加粗的主题 `accent` 文件名、暗灰目录和实际返回范围，默认附最多三屏幕行预览及余量提示。预览每行最多提取 512 个 UTF-16 代码单元，长行裁剪而不换行。全局 `app.tools.expand` 快捷键展开完整输入路径和最多 40 行源码，再次按键恢复短预览。错误、取消和续读提示保留；图片及归属不明的调用独立显示，避免宿主附件与文件名错位。分组不改执行、权限或持久化结果，不提供原型的配色与布局切换命令。双版本验证及预览开销见 [Read UI validation](docs/research/codex-ui-read-validation.md)。
 
 Footer 使用 ` ⋅ ` 分隔，并按 `model thinking ⋅ fast ⋅ cwd ⋅ git:branch ⋅ Context N% left ⋅ permissions` 排列。model 与 thinking 使用 Codex CLI 的 `#f6e2b7`，context 使用 `#f2b590`，Fast Mode 使用 `#c8a9ee`。终端变窄时会先缩短或移除 cwd 和 branch，再将 context 缩成 `N% left`；model、context 和 permissions 保留到最后。
 

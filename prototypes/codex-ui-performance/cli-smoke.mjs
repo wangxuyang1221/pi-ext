@@ -27,7 +27,7 @@ function fixture(scene, cwd) {
     const id = entries.length.toString(16).padStart(8, '0');
     entries.push({ type: 'message', id, parentId, timestamp, message: { timestamp: 0, ...message } }); parentId = id;
   };
-  if (scene === 'live' || scene.startsWith('summary')) return entries;
+  if (scene === 'live' || scene.startsWith('summary') || scene.startsWith('read')) return entries;
   append({ role: 'user', content: 'Synthetic rendering smoke. Do not execute tools.' });
   append({ role: 'assistant', content: [
     { type: 'toolCall', id: 'reference-read', name: 'read', arguments: { path: 'README.md' } },
@@ -48,13 +48,19 @@ function fixture(scene, cwd) {
   return entries;
 }
 try {
-  for (const mode of ['regular', 'fullscreen']) for (const scene of ['mixed', 'success', 'long', 'live', 'summary', 'summary-custom']) {
+  for (const mode of ['regular', 'fullscreen']) for (const scene of ['mixed', 'success', 'long', 'live', 'summary', 'summary-custom', 'read', 'read-custom']) {
     if (process.env.PI_SMOKE_SCENE && process.env.PI_SMOKE_SCENE !== scene) continue;
     const summaryScene = scene.startsWith('summary');
+    const readScene = scene.startsWith('read');
+    const previewScene = summaryScene || readScene;
     if (process.env.PI_SMOKE_MODE && process.env.PI_SMOKE_MODE !== mode) continue;
     const run = path.join(temporary, `${mode}-${scene}`);
     for (const name of ['home', 'agent', 'cache', 'tmp']) fs.mkdirSync(path.join(run, name), { recursive: true });
-    const customKey = scene === 'mixed' || scene === 'summary-custom';
+    const customKey = scene === 'mixed' || scene === 'summary-custom' || scene === 'read-custom';
+    if (readScene) {
+      fs.writeFileSync(path.join(run, 'first.txt'), 'READ-FIRST\nREAD-SECOND\nREAD-THIRD\nREAD-EXPANDED-TAIL\nREAD-FIFTH');
+      fs.writeFileSync(path.join(run, 'second.txt'), 'RANGE-FIRST\nRANGE-SECOND\nRANGE-THIRD\nRANGE-FOURTH\nRANGE-FIFTH');
+    }
     const mcpConfig = path.join(run, 'mcp.json');
     if (summaryScene) fs.writeFileSync(mcpConfig, JSON.stringify({ mcpServers: { fixture: {
       command: process.execPath, args: [path.join(repository, 'extensions/mcp/__tests__/fixtures/stdio-mcp-server.mjs')],
@@ -94,17 +100,18 @@ proc quit {} {
 }
 launch
 capture initial 2
-${summaryScene ? 'send -- "Run the local fixture.\\r"\ncapture pending 2\ncapture live 7' : scene === 'live' ? 'send -- "Run the local fixture.\\r"\ncapture live 9' : ''}
+${previewScene ? 'send -- "Run the local fixture.\\r"\ncapture pending 2\ncapture live 7' : scene === 'live' ? 'send -- "Run the local fixture.\\r"\ncapture live 9' : ''}
 ${scene === 'success' ? 'send -- "!printf USER-BASH-SMOKE\\r"\ncapture user-bash 3' : ''}
 send -- "${customKey ? '\\007' : '\\017'}"
 capture expanded
-${summaryScene ? '' : 'send -- "/reload\\r"\ncapture reload 2'}
+${previewScene ? '' : 'send -- "/reload\\r"\ncapture reload 2'}
 stty rows 24 columns 60 < $spawn_out(slave,name)
 exec kill -WINCH [exp_pid]
 capture narrow
 send -- "${customKey ? '\\007' : '\\017'}"
 capture collapsed
-${summaryScene ? 'send -- "/reload\\r"\ncapture reload 2' : ''}
+${readScene ? 'stty rows 40 columns 120 < $spawn_out(slave,name)\nexec kill -WINCH [exp_pid]' : ''}
+${previewScene ? 'send -- "/reload\\r"\ncapture reload 2' : ''}
 quit
 launch
 capture restarted 2
@@ -115,8 +122,9 @@ quit
     const env = { PATH: process.env.PATH, HOME: path.join(run, 'home'), TMPDIR: path.join(run, 'tmp'),
       XDG_CONFIG_HOME: path.join(run, 'home/.config'), XDG_CACHE_HOME: path.join(run, 'cache'),
       PI_CODING_AGENT_DIR: path.join(run, 'agent'), PI_CODING_AGENT_SESSION_DIR: path.join(run, 'agent/sessions'),
-      PI_OFFLINE: '1', PI_TELEMETRY: '0', PI_SKIP_VERSION_CHECK: '1', PI_TRUE_COLOR: '1', TERM: 'xterm-256color', LANG: 'en_US.UTF-8', JITI_FS_CACHE: path.join(run, 'cache'),
+      PI_OFFLINE: '1', PI_TELEMETRY: '0', PI_SKIP_VERSION_CHECK: '1', PI_TRUE_COLOR: '1', COLORTERM: 'truecolor', TERM: 'xterm-256color', LANG: 'en_US.UTF-8', JITI_FS_CACHE: path.join(run, 'cache'),
       PI_SMOKE_DIRECTORY: run, PI_SMOKE_NODE: process.execPath, PI_SMOKE_CLI: cli, PI_SMOKE_SESSION: session,
+      ...(readScene ? { PI_SMOKE_READ: '1' } : {}),
       ...(summaryScene ? { PI_MCP_CONFIG: mcpConfig, PI_SMOKE_SUMMARY: '1', PI_SMOKE_BASELINE: process.env.PI_SMOKE_BASELINE ?? '0' } : {}),
       PI_SMOKE_TRACE: trace, PI_SMOKE_MODE: mode, PI_SMOKE_EXTENSION: path.join(directory, 'cli-fixture.mjs'),
       PI_SMOKE_THEME: path.join(repository, 'themes/codex-pi.json') };
@@ -132,19 +140,52 @@ quit
     let terminal = new xterm.Terminal({ cols: 120, rows: 40, scrollback: 10000, allowProposedApi: true, logLevel: 'off' });
     const phases = [];
     try {
-      for (const phase of ['initial', ...(summaryScene ? ['pending', 'live'] : scene === 'live' ? ['live'] : []), ...(scene === 'success' ? ['user-bash'] : []), 'expanded', ...(summaryScene ? ['narrow', 'collapsed', 'reload'] : ['reload', 'narrow', 'collapsed']), 'restarted', 'restored-expanded']) {
+      for (const phase of ['initial', ...(previewScene ? ['pending', 'live'] : scene === 'live' ? ['live'] : []), ...(scene === 'success' ? ['user-bash'] : []), 'expanded', ...(previewScene ? ['narrow', 'collapsed', 'reload'] : ['reload', 'narrow', 'collapsed']), 'restarted', 'restored-expanded']) {
         if (phase === 'narrow') terminal.resize(60, 24);
+        if (readScene && phase === 'reload') terminal.resize(120, 40);
         if (phase === 'restarted') { terminal.dispose(); terminal = new xterm.Terminal({ cols: 120, rows: 40, scrollback: 10000, allowProposedApi: true, logLevel: 'off' }); }
         const data = fs.readFileSync(path.join(run, `${phase}.ansi`));
         if (data.length) await new Promise(resolve => terminal.write(data, resolve));
         const buffer = terminal.buffer.active;
         const visible = Array.from({ length: terminal.rows }, (_, index) => buffer.getLine(buffer.viewportY + index)?.translateToString(true) ?? '').join('\n');
         assert.doesNotMatch(visible, /Failed to load|TypeError|RangeError|ReferenceError/u);
+        if (readScene && ['live', 'reload', 'restarted'].includes(phase)) {
+          const index = visible.split('\n').findIndex(line => line.includes('first.txt'));
+          assert(index >= 0, `${mode}/${scene}/${phase}: filename visible`);
+          const line = buffer.getLine(buffer.viewportY + index);
+          const column = line.translateToString(true).indexOf('first.txt');
+          const cell = line.getCell(column);
+          assert.equal(cell.getFgColor(), 0x5efcff, 'Filename uses the product accent');
+          assert.equal(cell.isBold(), 0, 'Filename is not bold');
+        }
         phases.push({ phase, bytes: data.length, visible });
       }
     } finally { terminal.dispose(); }
     const view = phase => phases.find(item => item.phase === phase).visible;
     const events = fs.readFileSync(trace, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
+    if (readScene) {
+      fs.writeFileSync(path.join(repository, '.tmp/read-ui-cli-diagnostic.json'), JSON.stringify({ mode, scene, phases, events }, null, 2));
+      assert.match(view('pending'), /Reading/u);
+      assert.doesNotMatch(view('pending'), /✓.*first.txt|\d+ lines/u);
+      for (const phase of ['live', 'reload', 'restarted']) {
+        assert.match(view(phase), /Read 3 files/u, `${mode}/${scene}/${phase}`);
+        assert.match(view(phase), /READ-FIRST/u);
+        assert.match(view(phase), /READ-THIRD/u);
+        assert.match(view(phase), /L2–3 · 2 lines/u);
+        assert.match(view(phase), /missing.txt.*Failed/u);
+        assert.doesNotMatch(view(phase), /READ-EXPANDED-TAIL/u);
+      }
+      for (const phase of ['expanded', 'restored-expanded']) assert.match(view(phase), /READ-EXPANDED-TAIL/u);
+      assert.doesNotMatch(view('collapsed'), /READ-EXPANDED-TAIL/u);
+      assert.match(view('reload'), /Reloaded keybindings/u);
+      const ends = events.filter(event => event.type === 'tool_execution_end');
+      assert.equal(ends.length, 3);
+      assert.deepEqual([...ends].sort((a, b) => a.toolCallId.localeCompare(b.toolCallId)).map(event => event.isError), [false, false, true]);
+      samples.push({ mode, scene, customKey, phases, events });
+      console.log(`Passed CLI ${pkg.version}: ${mode}/${scene}`);
+      try { process.kill(-child.pid, 'SIGKILL'); } catch {} child = undefined;
+      continue;
+    }
     if (summaryScene) {
       fs.writeFileSync(path.join(repository, '.tmp/tool-summary-cli-diagnostic.json'), JSON.stringify({ mode, scene, phases, events }, null, 2));
       const baseline = process.env.PI_SMOKE_BASELINE === '1';

@@ -1,0 +1,3165 @@
+{
+  "agentVersion": "0.84.3",
+  "cli": "/Users/wangxuyang/Code/t3code/pi-ext/node_modules/.pnpm/@earendil-works+pi-coding-agent@0.84.3_@modelcontextprotocol+sdk@1.29.0_zod@4.4.3__ws@8.21.3_zod@4.4.3/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js",
+  "cliSha256": "1c3a5094b54aae9ae98c66516ce8c6578140363d081471ca7e91f9cb8c23dc8a",
+  "productionHashes": {
+    "codex-ui": {
+      "bash-group-layout.ts": "3cb5a9fa88127e71b113cec5d05f3e1782c7d53b11ec79213b070bf5d9784072",
+      "bash-groups.ts": "82f02d460bf2609f3c3182e6a140bfd6fe20785d74503ea51e795680035bbae4",
+      "bash-refresh-scheduler.ts": "3c8ee0c011d691d3eb994e35e9465643d518356fe01eb00c672a28a6788564d5",
+      "components.ts": "054923e982c5f1b2a0fff9fcc67aad55d43e154ce552b0c97e5dae3f17b8ac10",
+      "exact-visual-tail.ts": "b41f6d7ce2d370c15ae288945653ce9bf504e46663c2f32747ebc02f1c9b7c46",
+      "footer.ts": "0b5ffd848dd0d9cdcc6d0b66a80109aa595b5b9d5d5cd37336521140cd83bc30",
+      "index.ts": "421015218e938f6043dc3955da29a9f5cd86a9f1d06a52de07fc3f88ac4cd3e9",
+      "layout.ts": "113ec7031eac95e397bea5c53100a1277c75e65cf3b201d69632099bf76d65be",
+      "read-group-layout.ts": "9de109d1cc71a6f3e2ec16b873ac8cd42efb5ad0a562d17f501468d138a15234",
+      "read-groups.ts": "a29fe41ca68e5d93aeda4d7e54cfc574957762036e7a8d0e2b4d372e188dba78",
+      "reasoning-summary-scan.ts": "2c01781d087bca5956eb681fcec6fa216adfb331eaf90c3ade9fb07be450c9e4",
+      "reasoning-summary.ts": "6efc187663abe5d5768000f0150233b6084a72826e780653670386dae0e6644e",
+      "render-cache.ts": "35f87a6165826d63dade2cfe0bf1c4bb2b14f13d09a47dd6e3ed6a582661b557",
+      "responsive-lines.ts": "1f18cc8c0edf7c54d2dce12ce7eb15f5424b3679a8c19075f3ceba31a73de0ca",
+      "terminal-title.ts": "6f3e534d34b7f84e2b0e6787e3497be20cb3a24bf911e3b48c187c461df26d6d",
+      "tools.ts": "dfd3e832902b494092c27c90c58f2fe243337db2e23c8fd225086f8554077082"
+    },
+    "mcp": {
+      "client.ts": "c3ec6722e8efc36eb1a729331ac96dcb5c00e3eb2871b2fa49a8be36ec3ede65",
+      "config.ts": "4300b5500ab5ddd769e1152ae478cf818f2d43ada6f110f1f8f55ea47d42f43c",
+      "diagnostics.ts": "e658cb0f08d34cf8bf50cfecb8a0548090628050895d0ef78330b1dd81b2c0a5",
+      "index.ts": "08167f8bf3d377b8ef419828687ddd7a3a88f2549800a54bf080921439f10d0e",
+      "renderers.ts": "e98aefb1ee4958165e9cb5d8f6c1c294c8d3f74d901ca8d90ef7e7e4f8330376",
+      "retry.ts": "7ad2aedc209c1333d2f350f28e116341c7804733d41ce4a7e94cb22292ba27e3",
+      "schema.ts": "27c1eaf79b7700b715a12fccebe9352c80560ccce4b87facdc2b8c6afc681a2e",
+      "types.ts": "935d92f320ba6dbbb7ce6a5c31b0e89c1c5fc31336119608b671e2d7b8d787bd"
+    }
+  },
+  "fixtureSha256": "b3542b710885493be39cc8586920b9165c051e7a15cbaaeaf72fc9e94c8f7e88",
+  "scope": "Isolated real CLI + PTY, production dist, offline scripted provider, official harmless Bash. Regular/fullscreen, mixed/success/long/live, native/custom toggle, reload, resize, process restart with same session. No network or Ghostty/GPU measurement.",
+  "samples": [
+    {
+      "mode": "regular",
+      "scene": "read",
+      "customKey": false,
+      "phases": [
+        {
+          "phase": "initial",
+          "bytes": 2595,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-r│\n└──────────────────────────────────────────────────────────────────────────────────┘\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-read ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "pending",
+          "bytes": 3521,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-r│\n└──────────────────────────────────────────────────────────────────────────────────┘\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\n▸ Read 2 files\n  ◌ first.txt  ./ · Reading…\n  ◌ (unknown path)  ./ · Reading…\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-read ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "live",
+          "bytes": 5159,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-r│\n└──────────────────────────────────────────────────────────────────────────────────┘\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\n▸ Read 3 files\n  ✓ first.txt  ./ · 5 lines\n    │   1  READ-FIRST\n    │   2  READ-SECOND\n    │   3  READ-THIRD\n    └ … 2 more lines\n  ✓ second.txt  ./ · L2–3 · 2 lines\n    │   2  RANGE-SECOND\n    │   3  RANGE-THIRD\n    [2 more lines in file. Use offset=4 to continue.]\n  × missing.txt  ./ · Failed\n    × ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-r\n\n - LIVE-DONE                                                                                                            \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-read ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "expanded",
+          "bytes": 2963,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-r│\n└──────────────────────────────────────────────────────────────────────────────────┘\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\n▾ Read 3 files\n  ✓ first.txt  ./ · 5 lines\n    │ first.txt\n    │   1  READ-FIRST\n    │   2  READ-SECOND\n    │   3  READ-THIRD\n    │   4  READ-EXPANDED-TAIL\n    │   5  READ-FIFTH\n  ✓ second.txt  ./ · L2–3 · 2 lines\n    │ second.txt\n    │   2  RANGE-SECOND\n    │   3  RANGE-THIRD\n    [2 more lines in file. Use offset=4 to continue.]\n  × missing.txt  ./ · Failed\n    │ missing.txt\n    × ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-r\n\n - LIVE-DONE                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-read ⋅ main ⋅ Context 100% left \n\n"
+        },
+        {
+          "phase": "narrow",
+          "bytes": 4275,
+          "visible": "  ✓ first.txt  ./ · 5 lines\n    │ first.txt\n    │   1  READ-FIRST\n    │   2  READ-SECOND\n    │   3  READ-THIRD\n    │   4  READ-EXPANDED-TAIL\n    │   5  READ-FIFTH\n  ✓ second.txt  ./ · L2–3 · 2 lines\n    │ second.txt\n    │   2  RANGE-SECOND\n    │   3  RANGE-THIRD\n    [2 more lines in file. Use offset=4 to continue.]\n  × missing.txt  ./ · Failed\n    │ missing.txt\n    × ENOENT: no such file or directory, access '/Users/wang\n\n - LIVE-DONE                                                \n\n Tool output: expanded                                      \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ regular-read ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "collapsed",
+          "bytes": 3947,
+          "visible": " › Run the local fixture.                                   \n                                                            \n\n▸ Read 3 files\n  ✓ first.txt  ./ · 5 lines\n    │   1  READ-FIRST\n    │   2  READ-SECOND\n    │   3  READ-THIRD\n    └ … 2 more lines\n  ✓ second.txt  ./ · L2–3 · 2 lines\n    │   2  RANGE-SECOND\n    │   3  RANGE-THIRD\n    [2 more lines in file. Use offset=4 to continue.]\n  × missing.txt  ./ · Failed\n    × ENOENT: no such file or directory, access '/Users/wang\n\n - LIVE-DONE                                                \n\n Tool output: collapsed                                     \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ regular-read ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "reload",
+          "bytes": 13210,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-r│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\n▸ Read 3 files\n  ✓ first.txt  ./ · 5 lines\n    │   1  READ-FIRST\n    │   2  READ-SECOND\n    │   3  READ-THIRD\n    └ … 2 more lines\n  ✓ second.txt  ./ · L2–3 · 2 lines\n    │   2  RANGE-SECOND\n    │   3  RANGE-THIRD\n    [2 more lines in file. Use offset=4 to continue.]\n  × missing.txt  ./ · Failed\n    × ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-r\n\n - LIVE-DONE                                                                                                            \n\n Reloaded keybindings, extensions, skills, prompts, themes, and context files                                           \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-read ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "restarted",
+          "bytes": 4655,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-r│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\n▸ Read 3 files\n  ✓ first.txt  ./ · 5 lines\n    │   1  READ-FIRST\n    │   2  READ-SECOND\n    │   3  READ-THIRD\n    └ … 2 more lines\n  ✓ second.txt  ./ · L2–3 · 2 lines\n    │   2  RANGE-SECOND\n    │   3  RANGE-THIRD\n    [2 more lines in file. Use offset=4 to continue.]\n  × missing.txt  ./ · Failed\n    × ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-r\n\n - LIVE-DONE                                                                                                            \n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-read ⋅ main ⋅ Context 100% left \n\n\n\n\n\n\n\n"
+        },
+        {
+          "phase": "restored-expanded",
+          "bytes": 3297,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-r│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\n▾ Read 3 files\n  ✓ first.txt  ./ · 5 lines\n    │ first.txt\n    │   1  READ-FIRST\n    │   2  READ-SECOND\n    │   3  READ-THIRD\n    │   4  READ-EXPANDED-TAIL\n    │   5  READ-FIFTH\n  ✓ second.txt  ./ · L2–3 · 2 lines\n    │ second.txt\n    │   2  RANGE-SECOND\n    │   3  RANGE-THIRD\n    [2 more lines in file. Use offset=4 to continue.]\n  × missing.txt  ./ · Failed\n    │ missing.txt\n    × ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-r\n\n - LIVE-DONE                                                                                                            \n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ regular-read ⋅ main ⋅ Context 100% left \n\n"
+        }
+      ],
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Run the local fixture."
+              }
+            ],
+            "timestamp": 1788872411496
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Run the local fixture."
+              }
+            ],
+            "timestamp": 1788872411496
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872411501
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872411501
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_start",
+            "contentIndex": 0,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872411501
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872411501
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_delta",
+            "contentIndex": 0,
+            "delta": "{\"path\":\"first.txt\"}",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872411501
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872411501
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_end",
+            "contentIndex": 0,
+            "toolCall": {
+              "type": "toolCall",
+              "id": "live-read-0",
+              "name": "read",
+              "arguments": {
+                "path": "first.txt"
+              }
+            },
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872411501
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872411501
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_start",
+            "contentIndex": 1,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872411501
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {
+                  "path": "second.txt",
+                  "offset": 2,
+                  "limit": 2
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872411501
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_delta",
+            "contentIndex": 1,
+            "delta": "{\"path\":\"second.txt\",\"offset\":2,\"limit\":2}",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {
+                    "path": "second.txt",
+                    "offset": 2,
+                    "limit": 2
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872411501
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {
+                  "path": "second.txt",
+                  "offset": 2,
+                  "limit": 2
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-2",
+                "name": "read",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872411501
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_end",
+            "contentIndex": 1,
+            "toolCall": {
+              "type": "toolCall",
+              "id": "live-read-1",
+              "name": "read",
+              "arguments": {
+                "path": "second.txt",
+                "offset": 2,
+                "limit": 2
+              }
+            },
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {
+                    "path": "second.txt",
+                    "offset": 2,
+                    "limit": 2
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-2",
+                  "name": "read",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872411501
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {
+                  "path": "second.txt",
+                  "offset": 2,
+                  "limit": 2
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-2",
+                "name": "read",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872411501
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_start",
+            "contentIndex": 2,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {
+                    "path": "second.txt",
+                    "offset": 2,
+                    "limit": 2
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-2",
+                  "name": "read",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872411501
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {
+                  "path": "second.txt",
+                  "offset": 2,
+                  "limit": 2
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-2",
+                "name": "read",
+                "arguments": {
+                  "path": "missing.txt"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872411501
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_delta",
+            "contentIndex": 2,
+            "delta": "{\"path\":\"missing.txt\"}",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {
+                    "path": "second.txt",
+                    "offset": 2,
+                    "limit": 2
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-2",
+                  "name": "read",
+                  "arguments": {
+                    "path": "missing.txt"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872411501
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {
+                  "path": "second.txt",
+                  "offset": 2,
+                  "limit": 2
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-2",
+                "name": "read",
+                "arguments": {
+                  "path": "missing.txt"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872411501
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_end",
+            "contentIndex": 2,
+            "toolCall": {
+              "type": "toolCall",
+              "id": "live-read-2",
+              "name": "read",
+              "arguments": {
+                "path": "missing.txt"
+              }
+            },
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {
+                    "path": "second.txt",
+                    "offset": 2,
+                    "limit": 2
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-2",
+                  "name": "read",
+                  "arguments": {
+                    "path": "missing.txt"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872411501
+            }
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {
+                  "path": "second.txt",
+                  "offset": 2,
+                  "limit": 2
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-2",
+                "name": "read",
+                "arguments": {
+                  "path": "missing.txt"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872411501
+          }
+        },
+        {
+          "type": "tool_execution_start",
+          "toolCallId": "live-read-0",
+          "toolName": "read",
+          "args": {
+            "path": "first.txt"
+          }
+        },
+        {
+          "type": "tool_execution_start",
+          "toolCallId": "live-read-1",
+          "toolName": "read",
+          "args": {
+            "path": "second.txt",
+            "offset": 2,
+            "limit": 2
+          }
+        },
+        {
+          "type": "tool_execution_start",
+          "toolCallId": "live-read-2",
+          "toolName": "read",
+          "args": {
+            "path": "missing.txt"
+          }
+        },
+        {
+          "type": "tool_execution_end",
+          "toolCallId": "live-read-2",
+          "toolName": "read",
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-read/missing.txt'"
+              }
+            ],
+            "details": {}
+          },
+          "isError": true
+        },
+        {
+          "type": "tool_execution_end",
+          "toolCallId": "live-read-0",
+          "toolName": "read",
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "READ-FIRST\nREAD-SECOND\nREAD-THIRD\nREAD-EXPANDED-TAIL\nREAD-FIFTH"
+              }
+            ]
+          },
+          "isError": false
+        },
+        {
+          "type": "tool_execution_end",
+          "toolCallId": "live-read-1",
+          "toolName": "read",
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "RANGE-SECOND\nRANGE-THIRD\n\n[2 more lines in file. Use offset=4 to continue.]"
+              }
+            ]
+          },
+          "isError": false
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-read-0",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "READ-FIRST\nREAD-SECOND\nREAD-THIRD\nREAD-EXPANDED-TAIL\nREAD-FIFTH"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788872416025
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-read-0",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "READ-FIRST\nREAD-SECOND\nREAD-THIRD\nREAD-EXPANDED-TAIL\nREAD-FIFTH"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788872416025
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-read-1",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "RANGE-SECOND\nRANGE-THIRD\n\n[2 more lines in file. Use offset=4 to continue.]"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788872416026
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-read-1",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "RANGE-SECOND\nRANGE-THIRD\n\n[2 more lines in file. Use offset=4 to continue.]"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788872416026
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-read-2",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-read/missing.txt'"
+              }
+            ],
+            "details": {},
+            "isError": true,
+            "timestamp": 1788872416026
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-read-2",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-read/missing.txt'"
+              }
+            ],
+            "details": {},
+            "isError": true,
+            "timestamp": 1788872416026
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788872416027
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788872416027
+          },
+          "assistantMessageEvent": {
+            "type": "text_start",
+            "contentIndex": 0,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788872416027
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788872416027
+          },
+          "assistantMessageEvent": {
+            "type": "text_delta",
+            "contentIndex": 0,
+            "delta": "LIVE-DONE",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788872416027
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788872416027
+          },
+          "assistantMessageEvent": {
+            "type": "text_end",
+            "contentIndex": 0,
+            "content": "LIVE-DONE",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788872416027
+            }
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788872416027
+          }
+        },
+        {
+          "type": "agent_end",
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Run the local fixture."
+                }
+              ],
+              "timestamp": 1788872411496
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {
+                    "path": "second.txt",
+                    "offset": 2,
+                    "limit": 2
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-2",
+                  "name": "read",
+                  "arguments": {
+                    "path": "missing.txt"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872411501
+            },
+            {
+              "role": "toolResult",
+              "toolCallId": "live-read-0",
+              "toolName": "read",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "READ-FIRST\nREAD-SECOND\nREAD-THIRD\nREAD-EXPANDED-TAIL\nREAD-FIFTH"
+                }
+              ],
+              "isError": false,
+              "timestamp": 1788872416025
+            },
+            {
+              "role": "toolResult",
+              "toolCallId": "live-read-1",
+              "toolName": "read",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "RANGE-SECOND\nRANGE-THIRD\n\n[2 more lines in file. Use offset=4 to continue.]"
+                }
+              ],
+              "isError": false,
+              "timestamp": 1788872416026
+            },
+            {
+              "role": "toolResult",
+              "toolCallId": "live-read-2",
+              "toolName": "read",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/regular-read/missing.txt'"
+                }
+              ],
+              "details": {},
+              "isError": true,
+              "timestamp": 1788872416026
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788872416027
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "fullscreen",
+      "scene": "read",
+      "customKey": false,
+      "phases": [
+        {
+          "phase": "initial",
+          "bytes": 3357,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-read ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "pending",
+          "bytes": 1979,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\n▸ Read 2 files\n  ◌ first.txt  ./ · Reading…\n  ◌ (unknown path)  ./ · Reading…\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-read ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "live",
+          "bytes": 3606,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\n▸ Read 3 files\n  ✓ first.txt  ./ · 5 lines\n    │   1  READ-FIRST\n    │   2  READ-SECOND\n    │   3  READ-THIRD\n    └ … 2 more lines\n  ✓ second.txt  ./ · L2–3 · 2 lines\n    │   2  RANGE-SECOND\n    │   3  RANGE-THIRD\n    [2 more lines in file. Use offset=4 to continue.]\n  × missing.txt  ./ · Failed\n    × ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscree\n\n - LIVE-DONE                                                                                                            \n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-read ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "expanded",
+          "bytes": 1998,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\n▾ Read 3 files\n  ✓ first.txt  ./ · 5 lines\n    │ first.txt\n    │   1  READ-FIRST\n    │   2  READ-SECOND\n    │   3  READ-THIRD\n    │   4  READ-EXPANDED-TAIL\n    │   5  READ-FIFTH\n  ✓ second.txt  ./ · L2–3 · 2 lines\n    │ second.txt\n    │   2  RANGE-SECOND\n    │   3  RANGE-THIRD\n    [2 more lines in file. Use offset=4 to continue.]\n  × missing.txt  ./ · Failed\n    │ missing.txt\n    × ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscree\n\n - LIVE-DONE                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-read ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "narrow",
+          "bytes": 2612,
+          "visible": "  ✓ first.txt  ./ · 5 lines\n    │ first.txt\n    │   1  READ-FIRST\n    │   2  READ-SECOND\n    │   3  READ-THIRD\n    │   4  READ-EXPANDED-TAIL\n    │   5  READ-FIFTH\n  ✓ second.txt  ./ · L2–3 · 2 lines\n    │ second.txt\n    │   2  RANGE-SECOND\n    │   3  RANGE-THIRD\n    [2 more lines in file. Use offset=4 to continue.]\n  × missing.txt  ./ · Failed\n    │ missing.txt\n    × ENOENT: no such file or directory, access '/Users/wang\n\n - LIVE-DONE                                                \n\n Tool output: expanded                                      \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ fullscreen-read ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "collapsed",
+          "bytes": 1635,
+          "visible": " › Run the local fixture.                                   \n                                                            \n\n▸ Read 3 files\n  ✓ first.txt  ./ · 5 lines\n    │   1  READ-FIRST\n    │   2  READ-SECOND\n    │   3  READ-THIRD\n    └ … 2 more lines\n  ✓ second.txt  ./ · L2–3 · 2 lines\n    │   2  RANGE-SECOND\n    │   3  RANGE-THIRD\n    [2 more lines in file. Use offset=4 to continue.]\n  × missing.txt  ./ · Failed\n    × ENOENT: no such file or directory, access '/Users/wang\n\n - LIVE-DONE                                                \n\n Tool output: collapsed                                     \n\n                                                            \n› Ask Pi to do anything                                     \n                                                            \n fixture off ⋅ fullscreen-read ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "reload",
+          "bytes": 14000,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\n▸ Read 3 files\n  ✓ first.txt  ./ · 5 lines\n    │   1  READ-FIRST\n    │   2  READ-SECOND\n    │   3  READ-THIRD\n    └ … 2 more lines\n  ✓ second.txt  ./ · L2–3 · 2 lines\n    │   2  RANGE-SECOND\n    │   3  RANGE-THIRD\n    [2 more lines in file. Use offset=4 to continue.]\n  × missing.txt  ./ · Failed\n    × ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscree\n\n - LIVE-DONE                                                                                                            \n\n Reloaded keybindings, extensions, skills, prompts, themes, and context files                                           \n\n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-read ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "restarted",
+          "bytes": 5122,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\n▸ Read 3 files\n  ✓ first.txt  ./ · 5 lines\n    │   1  READ-FIRST\n    │   2  READ-SECOND\n    │   3  READ-THIRD\n    └ … 2 more lines\n  ✓ second.txt  ./ · L2–3 · 2 lines\n    │   2  RANGE-SECOND\n    │   3  RANGE-THIRD\n    [2 more lines in file. Use offset=4 to continue.]\n  × missing.txt  ./ · Failed\n    × ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscree\n\n - LIVE-DONE                                                                                                            \n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n\n\n\n\n\n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-read ⋅ main ⋅ Context 100% left "
+        },
+        {
+          "phase": "restored-expanded",
+          "bytes": 2344,
+          "visible": "┌──────────────────────────────────────────────────────────────────────────────────┐\n│pi v0.84.3 · Codex profile                                                        │\n│                                                                                  │\n│model: fixture · off                                              /model to change│\n│directory: /Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscree│\n└──────────────────────────────────────────────────────────────────────────────────┘\n                                                                                                                        \n › Run the local fixture.                                                                                               \n                                                                                                                        \n\n▾ Read 3 files\n  ✓ first.txt  ./ · 5 lines\n    │ first.txt\n    │   1  READ-FIRST\n    │   2  READ-SECOND\n    │   3  READ-THIRD\n    │   4  READ-EXPANDED-TAIL\n    │   5  READ-FIFTH\n  ✓ second.txt  ./ · L2–3 · 2 lines\n    │ second.txt\n    │   2  RANGE-SECOND\n    │   3  RANGE-THIRD\n    [2 more lines in file. Use offset=4 to continue.]\n  × missing.txt  ./ · Failed\n    │ missing.txt\n    × ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscree\n\n - LIVE-DONE                                                                                                            \n\n This project is not trusted. Project .pi resources and packages are ignored. Use /trust to save a trust decision, then \n restart pi.                                                                                                            \n\n Tool output: expanded                                                                                                  \n\n\n\n                                                                                                                        \n› Ask Pi to do anything                                                                                                 \n                                                                                                                        \n fixture off ⋅ fullscreen-read ⋅ main ⋅ Context 100% left "
+        }
+      ],
+      "events": [
+        {
+          "type": "message_start",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Run the local fixture."
+              }
+            ],
+            "timestamp": 1788872434403
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "Run the local fixture."
+              }
+            ],
+            "timestamp": 1788872434403
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872434410
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872434410
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_start",
+            "contentIndex": 0,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872434410
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872434410
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_delta",
+            "contentIndex": 0,
+            "delta": "{\"path\":\"first.txt\"}",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872434410
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872434410
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_end",
+            "contentIndex": 0,
+            "toolCall": {
+              "type": "toolCall",
+              "id": "live-read-0",
+              "name": "read",
+              "arguments": {
+                "path": "first.txt"
+              }
+            },
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872434410
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872434410
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_start",
+            "contentIndex": 1,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872434410
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {
+                  "path": "second.txt",
+                  "offset": 2,
+                  "limit": 2
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872434410
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_delta",
+            "contentIndex": 1,
+            "delta": "{\"path\":\"second.txt\",\"offset\":2,\"limit\":2}",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {
+                    "path": "second.txt",
+                    "offset": 2,
+                    "limit": 2
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872434410
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {
+                  "path": "second.txt",
+                  "offset": 2,
+                  "limit": 2
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-2",
+                "name": "read",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872434410
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_end",
+            "contentIndex": 1,
+            "toolCall": {
+              "type": "toolCall",
+              "id": "live-read-1",
+              "name": "read",
+              "arguments": {
+                "path": "second.txt",
+                "offset": 2,
+                "limit": 2
+              }
+            },
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {
+                    "path": "second.txt",
+                    "offset": 2,
+                    "limit": 2
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-2",
+                  "name": "read",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872434410
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {
+                  "path": "second.txt",
+                  "offset": 2,
+                  "limit": 2
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-2",
+                "name": "read",
+                "arguments": {}
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872434410
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_start",
+            "contentIndex": 2,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {
+                    "path": "second.txt",
+                    "offset": 2,
+                    "limit": 2
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-2",
+                  "name": "read",
+                  "arguments": {}
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872434410
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {
+                  "path": "second.txt",
+                  "offset": 2,
+                  "limit": 2
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-2",
+                "name": "read",
+                "arguments": {
+                  "path": "missing.txt"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872434410
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_delta",
+            "contentIndex": 2,
+            "delta": "{\"path\":\"missing.txt\"}",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {
+                    "path": "second.txt",
+                    "offset": 2,
+                    "limit": 2
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-2",
+                  "name": "read",
+                  "arguments": {
+                    "path": "missing.txt"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872434410
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {
+                  "path": "second.txt",
+                  "offset": 2,
+                  "limit": 2
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-2",
+                "name": "read",
+                "arguments": {
+                  "path": "missing.txt"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872434410
+          },
+          "assistantMessageEvent": {
+            "type": "toolcall_end",
+            "contentIndex": 2,
+            "toolCall": {
+              "type": "toolCall",
+              "id": "live-read-2",
+              "name": "read",
+              "arguments": {
+                "path": "missing.txt"
+              }
+            },
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {
+                    "path": "second.txt",
+                    "offset": 2,
+                    "limit": 2
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-2",
+                  "name": "read",
+                  "arguments": {
+                    "path": "missing.txt"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872434410
+            }
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "toolCall",
+                "id": "live-read-0",
+                "name": "read",
+                "arguments": {
+                  "path": "first.txt"
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-1",
+                "name": "read",
+                "arguments": {
+                  "path": "second.txt",
+                  "offset": 2,
+                  "limit": 2
+                }
+              },
+              {
+                "type": "toolCall",
+                "id": "live-read-2",
+                "name": "read",
+                "arguments": {
+                  "path": "missing.txt"
+                }
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "toolUse",
+            "timestamp": 1788872434410
+          }
+        },
+        {
+          "type": "tool_execution_start",
+          "toolCallId": "live-read-0",
+          "toolName": "read",
+          "args": {
+            "path": "first.txt"
+          }
+        },
+        {
+          "type": "tool_execution_start",
+          "toolCallId": "live-read-1",
+          "toolName": "read",
+          "args": {
+            "path": "second.txt",
+            "offset": 2,
+            "limit": 2
+          }
+        },
+        {
+          "type": "tool_execution_start",
+          "toolCallId": "live-read-2",
+          "toolName": "read",
+          "args": {
+            "path": "missing.txt"
+          }
+        },
+        {
+          "type": "tool_execution_end",
+          "toolCallId": "live-read-2",
+          "toolName": "read",
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscreen-read/missing.txt'"
+              }
+            ],
+            "details": {}
+          },
+          "isError": true
+        },
+        {
+          "type": "tool_execution_end",
+          "toolCallId": "live-read-1",
+          "toolName": "read",
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "RANGE-SECOND\nRANGE-THIRD\n\n[2 more lines in file. Use offset=4 to continue.]"
+              }
+            ]
+          },
+          "isError": false
+        },
+        {
+          "type": "tool_execution_end",
+          "toolCallId": "live-read-0",
+          "toolName": "read",
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "READ-FIRST\nREAD-SECOND\nREAD-THIRD\nREAD-EXPANDED-TAIL\nREAD-FIFTH"
+              }
+            ]
+          },
+          "isError": false
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-read-0",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "READ-FIRST\nREAD-SECOND\nREAD-THIRD\nREAD-EXPANDED-TAIL\nREAD-FIFTH"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788872438937
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-read-0",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "READ-FIRST\nREAD-SECOND\nREAD-THIRD\nREAD-EXPANDED-TAIL\nREAD-FIFTH"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788872438937
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-read-1",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "RANGE-SECOND\nRANGE-THIRD\n\n[2 more lines in file. Use offset=4 to continue.]"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788872438938
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-read-1",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "RANGE-SECOND\nRANGE-THIRD\n\n[2 more lines in file. Use offset=4 to continue.]"
+              }
+            ],
+            "isError": false,
+            "timestamp": 1788872438938
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-read-2",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscreen-read/missing.txt'"
+              }
+            ],
+            "details": {},
+            "isError": true,
+            "timestamp": 1788872438938
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "toolResult",
+            "toolCallId": "live-read-2",
+            "toolName": "read",
+            "content": [
+              {
+                "type": "text",
+                "text": "ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscreen-read/missing.txt'"
+              }
+            ],
+            "details": {},
+            "isError": true,
+            "timestamp": 1788872438938
+          }
+        },
+        {
+          "type": "message_start",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788872438939
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788872438939
+          },
+          "assistantMessageEvent": {
+            "type": "text_start",
+            "contentIndex": 0,
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788872438939
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788872438939
+          },
+          "assistantMessageEvent": {
+            "type": "text_delta",
+            "contentIndex": 0,
+            "delta": "LIVE-DONE",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788872438939
+            }
+          }
+        },
+        {
+          "type": "message_update",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788872438939
+          },
+          "assistantMessageEvent": {
+            "type": "text_end",
+            "contentIndex": 0,
+            "content": "LIVE-DONE",
+            "partial": {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788872438939
+            }
+          }
+        },
+        {
+          "type": "message_end",
+          "message": {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "LIVE-DONE"
+              }
+            ],
+            "api": "openai-responses",
+            "provider": "grouped-smoke",
+            "model": "fixture",
+            "usage": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "totalTokens": 0,
+              "cost": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "total": 0
+              }
+            },
+            "stopReason": "stop",
+            "timestamp": 1788872438939
+          }
+        },
+        {
+          "type": "agent_end",
+          "messages": [
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Run the local fixture."
+                }
+              ],
+              "timestamp": 1788872434403
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "toolCall",
+                  "id": "live-read-0",
+                  "name": "read",
+                  "arguments": {
+                    "path": "first.txt"
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-1",
+                  "name": "read",
+                  "arguments": {
+                    "path": "second.txt",
+                    "offset": 2,
+                    "limit": 2
+                  }
+                },
+                {
+                  "type": "toolCall",
+                  "id": "live-read-2",
+                  "name": "read",
+                  "arguments": {
+                    "path": "missing.txt"
+                  }
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "toolUse",
+              "timestamp": 1788872434410
+            },
+            {
+              "role": "toolResult",
+              "toolCallId": "live-read-0",
+              "toolName": "read",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "READ-FIRST\nREAD-SECOND\nREAD-THIRD\nREAD-EXPANDED-TAIL\nREAD-FIFTH"
+                }
+              ],
+              "isError": false,
+              "timestamp": 1788872438937
+            },
+            {
+              "role": "toolResult",
+              "toolCallId": "live-read-1",
+              "toolName": "read",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "RANGE-SECOND\nRANGE-THIRD\n\n[2 more lines in file. Use offset=4 to continue.]"
+                }
+              ],
+              "isError": false,
+              "timestamp": 1788872438938
+            },
+            {
+              "role": "toolResult",
+              "toolCallId": "live-read-2",
+              "toolName": "read",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext/.tmp/codex-ui-cli-6JOF0B/fullscreen-read/missing.txt'"
+                }
+              ],
+              "details": {},
+              "isError": true,
+              "timestamp": 1788872438938
+            },
+            {
+              "role": "assistant",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "LIVE-DONE"
+                }
+              ],
+              "api": "openai-responses",
+              "provider": "grouped-smoke",
+              "model": "fixture",
+              "usage": {
+                "input": 0,
+                "output": 0,
+                "cacheRead": 0,
+                "cacheWrite": 0,
+                "totalTokens": 0,
+                "cost": {
+                  "input": 0,
+                  "output": 0,
+                  "cacheRead": 0,
+                  "cacheWrite": 0,
+                  "total": 0
+                }
+              },
+              "stopReason": "stop",
+              "timestamp": 1788872438939
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

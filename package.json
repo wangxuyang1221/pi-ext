@@ -75,6 +75,8 @@
     "prototype:edit-spacing": "node ./prototypes/codex-edit-spacing-prototype/demo.mjs",
     "prototype:tool-summary": "node ./prototypes/codex-tool-summary-prototype/demo.mjs",
     "prototype:tool-summary:check": "node ./prototypes/codex-tool-summary-prototype/demo.mjs --smoke",
+    "prototype:read-ui": "node ./prototypes/codex-read-ui-prototype/demo.mjs",
+    "prototype:read-ui:check": "node ./prototypes/codex-read-ui-prototype/demo.mjs --smoke",
     "prototype:reasoning-ui": "node ./prototypes/codex-reasoning-ui-prototype/demo.mjs",
     "prototype:reasoning-ui:check": "node ./prototypes/codex-reasoning-ui-prototype/demo.mjs --smoke",
     "prototype:subagent-ui": "node ./prototypes/subagent-tool-ui-prototype/demo.mjs",

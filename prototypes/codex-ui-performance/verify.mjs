@@ -11,12 +11,13 @@ function compareRows(rows, width, label, groupedBash = false) {
   const before = rows[0].render(width);
   const after = rows[1].render(width);
   const write = rows[1].toolName === 'write';
-  if (!groupedBash && !write) return assert.deepEqual(after, before, label);
+  const read = rows[1].toolName === 'read';
+  if (!groupedBash && !write && !read) return assert.deepEqual(after, before, label);
   // Changed contracts compare warmed state with a fresh host row and explicit visible requirements.
   const owner = definitions('after');
   try {
     const source = rows[1];
-    const fresh = owner.row(write ? 'write' : 'bash', source.args);
+    const fresh = owner.row(source.toolName, source.args);
     fresh.setExpanded(source.expanded);
     if (source.executionStarted) fresh.markExecutionStarted();
     if (source.argsComplete) fresh.setArgsComplete();
@@ -24,6 +25,13 @@ function compareRows(rows, width, label, groupedBash = false) {
     assert.deepEqual(after, fresh.render(width), `${label}/fresh-grouped-layout`);
     assert.ok(after.every(line => visibleWidth(line) <= width), `${label}/width`);
     if (source.result) assert.deepEqual(source.resultRendererComponent?.render(width), [], `${label}/single-carrier`);
+    if (read && width >= 120 && source.result && !source.isPartial && !source.result.isError) {
+      const text = after.map(stripTerminalSequences).join('\n');
+      assert.match(text, /✓ Read/u);
+      assert.match(text, /lines?/u);
+      const sourceLines = text.split('\n').filter(line => /^  │\s+\d+  /u.test(line));
+      assert(sourceLines.length <= (source.expanded ? 40 : 3));
+    }
     if (write) {
       assert.doesNotMatch(after.map(stripTerminalSequences).join('\n'), /Written|Writing|bytes/u);
       if (width >= 120 && source.result && !source.isPartial && !source.result.isError && typeof source.args.content === 'string') {

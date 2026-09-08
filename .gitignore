@@ -10,6 +10,7 @@ prototypes/*
 !prototypes/codex-search-ui-prototype/
 !prototypes/codex-edit-spacing-prototype/
 !prototypes/codex-reasoning-ui-prototype/
+!prototypes/codex-read-ui-prototype/
 DECISIONS.md
 *.tgz
 .DS_Store

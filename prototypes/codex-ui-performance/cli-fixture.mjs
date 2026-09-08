@@ -19,12 +19,15 @@ const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0
 export default function fixture(pi) {
   codexUi(pi);
   const summary = process.env.PI_SMOKE_SUMMARY === '1';
+  const read = process.env.PI_SMOKE_READ === '1';
   if (summary) mcp(pi);
   const trace = event => fs.appendFileSync(process.env.PI_SMOKE_TRACE, JSON.stringify(event) + '\n');
   for (const name of ['message_start', 'message_update', 'message_end', 'tool_execution_start', 'tool_execution_update', 'tool_execution_end', 'agent_end']) {
     pi.on(name, event => trace(event));
   }
   pi.on('tool_call', event => {
+    if (read) return event.toolName === 'read' && ['first.txt', 'second.txt', 'missing.txt'].includes(event.input.path)
+      ? undefined : { block: true, reason: 'Only local Read smoke fixtures are allowed.' };
     if (summary && ((event.toolName === 'write' && ['summary.txt', '.'].includes(event.input.path))
       || (event.toolName === 'mcp__fixture__echo' && event.input.text === summaryText))) return;
     if (summary || event.toolName !== 'bash' || !commands.includes(event.input.command)) {
@@ -47,6 +50,17 @@ export default function fixture(pi) {
           stream.push({ type: 'text_start', contentIndex: 0, partial: message });
           stream.push({ type: 'text_delta', contentIndex: 0, delta: 'LIVE-DONE', partial: message });
           stream.push({ type: 'text_end', contentIndex: 0, content: 'LIVE-DONE', partial: message });
+        } else if (read) {
+          for (const [index, args] of [{ path: 'first.txt' }, { path: 'second.txt', offset: 2, limit: 2 }, { path: 'missing.txt' }].entries()) {
+            const block = { type: 'toolCall', id: `live-read-${index}`, name: 'read', arguments: {} };
+            message.content.push(block);
+            stream.push({ type: 'toolcall_start', contentIndex: index, partial: message });
+            await pause(750);
+            block.arguments = args;
+            stream.push({ type: 'toolcall_delta', contentIndex: index, delta: JSON.stringify(args), partial: message });
+            await pause(750);
+            stream.push({ type: 'toolcall_end', contentIndex: index, toolCall: block, partial: message });
+          }
         } else if (summary) {
           const calls = [
             { name: 'write', path: 'summary.txt' },

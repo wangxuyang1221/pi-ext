@@ -145,7 +145,7 @@ async function cold() {
 }
 
 async function interactions() {
-  for (const fixture of fixtures.filter(fixture => ['bash-lines-1800', 'edit-1000', 'edit-10000'].includes(fixture.id)
+  for (const fixture of fixtures.filter(fixture => ['bash-lines-1800', 'edit-1000', 'edit-10000', 'read-lines-1800', 'read-token-50k'].includes(fixture.id)
     && (!process.env.PI_PERF_FIXTURE || fixture.id === process.env.PI_PERF_FIXTURE))) {
     for (const variant of variants) {
       const times = { invalidate: [], collapse: [], reexpand: [], resizeCold: [], resizeReturn: [] };

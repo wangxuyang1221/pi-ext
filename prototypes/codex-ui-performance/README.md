@@ -63,6 +63,27 @@ PI_SMOKE_SCENE=summary-custom PI_PERF_RUN_ID=my-summary-custom-cli pnpm --dir pr
 
 `summary` / `summary-custom` 使用正式 Write 执行和本地 stdio MCP echo server，验证真实参数流、成功/失败、新进程恢复及默认/自定义展开键。进程和写入均限制在仓库临时目录。报告中的 `reloadMcpRendererRetained: false` 是已复现的宿主限制，不是 reload 样式验收通过；`PI_SMOKE_BASELINE=1` 可用本轮变更前源码重现。详细结果见[生产验收报告](../../docs/research/codex-ui-tool-summary-validation.md)。
 
+## Read groups revision
+
+本轮改动前生产快照是 `baselines/read-ui-20260908.json.gz`。必须显式选择它，默认 `before.json.gz` 和旧 grouped/tool-summary 快照均不是本轮基线。首次冷绘制及交互基线在生产修改前保存，记录位于 `results/read-ui-baseline-{cold,interactions,token}-0843/`。
+
+```sh
+PI_PERF_BASELINE=baselines/read-ui-20260908.json.gz pnpm --dir prototypes/codex-ui-performance run build
+PI_PERF_RUN_ID=my-read-verify pnpm --dir prototypes/codex-ui-performance run verify
+PI_PERF_ONLY=reads PI_PERF_VARIANTS=before,after PI_PERF_RUN_ID=my-read-matrix pnpm --dir prototypes/codex-ui-performance run bench
+PI_PERF_ONLY=reads PI_PERF_VARIANTS=before,after PI_PERF_RUN_ID=my-read-memory pnpm --dir prototypes/codex-ui-performance run memory
+PI_SMOKE_SCENE=read PI_PERF_RUN_ID=my-read-cli pnpm --dir prototypes/codex-ui-performance run smoke
+PI_SMOKE_SCENE=read-custom PI_PERF_RUN_ID=my-read-custom-cli pnpm --dir prototypes/codex-ui-performance run smoke
+```
+
+反向复测设置 `PI_PERF_VARIANTS=after,before` 并使用新 run ID。指定另一版本时沿用 `PI_PERF_AGENT_ROOT`，相邻 Pi 依赖必须匹配。所有测量串行运行。
+
+`read-bench.mjs` 比较三个连续调用，覆盖普通/fullscreen、0/20 条 Read 历史、接近 50 KiB 的多行正文及 50 KiB 单行。文件名 `read-lines-1800` 表示源 fixture 最多 1800 行，实际测试正文先按 50 KiB 裁剪。每组合七轮、前两轮预热，记录 pending、完成、20 次重复失效、单成员替换、展开、收起、120→30→120 列。测量包含真实工具组件、TUI、UTF-8 和等待完成的 xterm 解析，但周边仅固定文字，不是完整 CLI editor/footer。保留各阶段 wall/CPU/输出字节及原始样本，不把新增预览当作与旧摘要等量工作。
+
+`read-memory.mjs` 固定 20 条工具行，24 轮替换内容和宽度/展开往返，记录循环内内存、GC 后内存、预算淘汰及清理结果。计费预算不是 heap/RSS 上限。
+
+`read` / `read-custom` CLI smoke 使用正式 Read 读取隔离目录中的两份文件，并读取一个不存在的路径；不覆盖工具执行器。验证参数流、成功/失败、范围、三行预览、默认/自定义展开键、resize、reload、新进程恢复、文件名颜色和非粗体。测试专用 provider 与调用门禁不进入发布包。结果和限制见[验收记录](../../docs/research/codex-ui-read-validation.md)。
+
 ## Inputs and tools
 
 | File | Responsibility |
