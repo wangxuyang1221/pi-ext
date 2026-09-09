@@ -1,5 +1,6 @@
 import { markAgentSettled, markAgentStarted, markRuntimeStopped, } from "./lifecycle.js";
 import { activateSession } from "./runtime-state.js";
+import { promptDeliveryId } from "./delivery-receipt.js";
 export class SessionRuntimeHost {
     store;
     parent;
@@ -34,22 +35,36 @@ export class SessionRuntimeHost {
             ...(options.tmux ? { tmux: options.tmux } : {}),
             createEpoch: this.createEpoch,
         });
-        if (options.leafId !== null) {
-            state = {
-                ...state,
-                runtime: { ...state.runtime, leafId: options.leafId },
-            };
-        }
+        const { leafId: _oldLeafId, ...runtime } = state.runtime;
+        state = { ...state, runtime: { ...runtime,
+                ...(options.leafId === null ? {} : { leafId: options.leafId }),
+                leafPinned: true,
+                leafPosition: options.leafPosition,
+            } };
         await this.store.save(state);
         this.activeSessionId = options.sessionId;
     }
     async agentStarted() {
         await this.updateActive((state) => markAgentStarted(state, this.now()));
     }
+    async consumePrompt(text) {
+        const deliveryId = promptDeliveryId(text);
+        if (!this.parent || !this.activeSessionId || !deliveryId)
+            return undefined;
+        const state = await this.store.load(this.activeSessionId);
+        if (!state || !state.runtime.busy || state.runtime.generation < 1)
+            return undefined;
+        return {
+            agentId: state.sessionId,
+            epoch: state.epoch,
+            generation: state.runtime.generation,
+            deliveryId,
+        };
+    }
     async agentSettled() {
         await this.updateActive((state) => (markAgentSettled(state, this.now(), state.runtime.leafId)));
     }
-    async leafChanged(leafId) {
+    async leafChanged(leafId, pinned = false, leafPosition) {
         await this.updateActive((state) => {
             const { leafId: _oldLeafId, ...runtime } = state.runtime;
             return {
@@ -57,6 +72,8 @@ export class SessionRuntimeHost {
                 runtime: {
                     ...runtime,
                     ...(leafId === null ? {} : { leafId }),
+                    leafPinned: pinned,
+                    leafPosition,
                     updatedAt: this.now(),
                 },
             };

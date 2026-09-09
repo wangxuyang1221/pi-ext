@@ -1,5 +1,5 @@
 export type ActivityView = "recent_activity" | "turns";
-export type ActivityDetailSection = "assistant_text" | "tool_arguments" | "tool_result";
+export type ActivityDetailSection = "assistant_text" | "user_text" | "assistant_error" | "tool_arguments" | "tool_result";
 export interface ActivityCursor {
     kind: "activity";
     version: 1;
@@ -13,6 +13,20 @@ export interface ActivityCursorBinding {
     epoch: string;
     view: ActivityView;
 }
+export interface TurnsPageCursor {
+    kind: "turns_page";
+    version: 1;
+    agentId: string;
+    epoch: string;
+    leafId: string;
+    position: number;
+    afterPosition: number;
+    limit: number;
+    turnIndex: number;
+    activityIndex: number;
+}
+export declare function encodeTurnsPageCursor(value: Omit<TurnsPageCursor, "kind" | "version">): string;
+export declare function decodeTurnsPageCursor(cursor: string, expected: SettledCursorBinding): TurnsPageCursor;
 export interface DetailCursor {
     kind: "detail";
     version: 1;
@@ -34,6 +48,7 @@ export interface SettledCursor {
     agentId: string;
     epoch: string;
     generation: number;
+    deliveryId?: string;
 }
 export interface SettledCursorBinding {
     agentId: string;

@@ -3,6 +3,7 @@ import {
   encodeSettledCursor,
 } from "./cursor.js";
 import type { SessionState } from "./state-store.js";
+import { DeliveryReceiptReader } from "./delivery-receipt.js";
 
 export type WaitOutcome = "settled" | "interrupted" | "closed" | "timeout";
 
@@ -34,6 +35,7 @@ export async function waitForSettled(
   const startedAt = now();
   let expectedGeneration: number | undefined;
   let lastGeneration = 0;
+  const receiptReader = new DeliveryReceiptReader();
 
   while (true) {
     options.signal?.throwIfAborted();
@@ -56,7 +58,15 @@ export async function waitForSettled(
     });
     expectedGeneration ??= decodedCursor.generation;
 
-    if (state.runtime.settledGeneration > expectedGeneration) {
+    const consumedGeneration = decodedCursor.deliveryId
+      ? await receiptReader.read(state.runtime.sessionFile, {
+          agentId: options.agentId, epoch: state.epoch, deliveryId: decodedCursor.deliveryId,
+        })
+      : undefined;
+    const settled = decodedCursor.deliveryId
+      ? consumedGeneration !== undefined && state.runtime.settledGeneration >= consumedGeneration
+      : state.runtime.settledGeneration > expectedGeneration;
+    if (settled) {
       return {
         outcome: "settled",
         generation: state.runtime.settledGeneration,

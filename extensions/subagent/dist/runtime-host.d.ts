@@ -1,3 +1,4 @@
+import { type DeliveryReceipt } from "./delivery-receipt.js";
 import { SessionStateStore, type LaunchMetadata, type ParentOwnership, type TmuxLocator } from "./state-store.js";
 export interface SessionRuntimeHostOptions {
     store: SessionStateStore;
@@ -11,6 +12,7 @@ export interface StartRuntimeSessionOptions {
     cwd: string;
     sessionFile: string;
     leafId: string | null;
+    leafPosition?: number;
     pid?: number;
     tmux?: TmuxLocator;
 }
@@ -25,8 +27,9 @@ export declare class SessionRuntimeHost {
     getActiveSessionId(): string | undefined;
     startSession(options: StartRuntimeSessionOptions): Promise<void>;
     agentStarted(): Promise<void>;
+    consumePrompt(text: string): Promise<DeliveryReceipt | undefined>;
     agentSettled(): Promise<void>;
-    leafChanged(leafId: string | null): Promise<void>;
+    leafChanged(leafId: string | null, pinned?: boolean, leafPosition?: number): Promise<void>;
     shutdown(): Promise<void>;
     private updateActive;
 }

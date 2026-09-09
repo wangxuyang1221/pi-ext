@@ -16,6 +16,7 @@ import {
   type ManagedTmuxRuntime,
 } from "./manager.js";
 import { SessionRuntimeHost } from "./runtime-host.js";
+import { DELIVERY_RECEIPT_TYPE } from "./delivery-receipt.js";
 import {
   SessionStateStore,
   type LaunchMetadata,
@@ -116,6 +117,7 @@ export default function subagentExtension(
       cwd: ctx.cwd,
       sessionFile,
       leafId: ctx.sessionManager.getLeafId(),
+      leafPosition: ctx.sessionManager.getEntries().length,
       pid: process.pid,
       ...(tmux ? { tmux } : {}),
     });
@@ -125,13 +127,22 @@ export default function subagentExtension(
     await host.agentStarted();
   });
 
+  if (parent) pi.on("message_start", async (event) => {
+    if (event.message.role !== "user") return;
+    const content = event.message.content;
+    const text = typeof content === "string" ? content : content
+      .filter((part) => part.type === "text").map((part) => part.text).join("\n");
+    const receipt = await host.consumePrompt(text);
+    if (receipt) pi.appendEntry(DELIVERY_RECEIPT_TYPE, receipt);
+  });
+
   pi.on("agent_settled", async (_event, ctx) => {
-    await host.leafChanged(ctx.sessionManager.getLeafId());
+    await host.leafChanged(ctx.sessionManager.getLeafId(), false, ctx.sessionManager.getEntries().length);
     await host.agentSettled();
   });
 
-  pi.on("session_tree", async (event) => {
-    await host.leafChanged(event.newLeafId);
+  pi.on("session_tree", async (event, ctx) => {
+    await host.leafChanged(event.newLeafId, true, ctx.sessionManager.getEntries().length);
   });
 
   pi.on("session_shutdown", async () => {

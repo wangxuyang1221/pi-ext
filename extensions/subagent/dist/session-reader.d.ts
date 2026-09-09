@@ -10,6 +10,7 @@ export interface AssistantActivity {
     timestamp: string;
     text: string;
     stopReason: string;
+    errorMessage?: string;
     truncated: boolean;
     detailRef?: ActivityDetailRef;
 }
@@ -32,10 +33,12 @@ export interface ReadSessionViewOptions {
     toolLimit?: number;
     limit?: number;
     after?: string;
+    pageCursor?: string;
     activityId?: string;
     section?: ActivityDetailSection;
     detailCursor?: string;
-    leafId?: string;
+    leafId?: string | null;
+    leafPosition?: number;
     maximumBytes?: number;
 }
 export interface RecentActivityViewResult {
@@ -57,12 +60,19 @@ export interface SessionTurn {
         id: string;
         timestamp: string;
         text: string;
+        truncated?: boolean;
+        detailRef?: ActivityDetailRef;
     };
     activity: SessionActivity[];
+    continued?: boolean;
 }
 export interface TurnsViewResult {
     view: "turns";
     turns: SessionTurn[];
+    hasMore: boolean;
+    nextPageCursor?: string;
+    returnedBytes: number;
+    omittedTurns: number;
     warnings: string[];
     cursor: string;
     position: number;
@@ -79,5 +89,13 @@ export interface ActivityDetailViewResult {
     nextDetailCursor?: string;
 }
 export type SessionViewResult = RecentActivityViewResult | TurnsViewResult | ActivityDetailViewResult;
+/** Confirms native user persistence without applying presentation limits or pagination. */
+export declare function hasPersistedPrompt(options: {
+    sessionFile: string;
+    agentId: string;
+    epoch: string;
+    after: string;
+    marker: string;
+}): Promise<boolean>;
 export declare function readSessionView(options: ReadSessionViewOptions): Promise<SessionViewResult>;
 //# sourceMappingURL=session-reader.d.ts.map

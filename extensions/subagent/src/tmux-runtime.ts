@@ -164,7 +164,10 @@ export class TmuxRuntime {
       locator.paneId,
       "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_dead}\t#{pane_pid}",
     ]);
-    if (result.code !== 0) return false;
+    if (result.code !== 0) {
+      if (/^(?:can't find (?:pane|window|session):|no server running on |error connecting to .+ \(No such file or directory\))/u.test(result.stderr.trim())) return false;
+      assertCommandSucceeded(["display-message"], result);
+    }
     const [sessionName, windowId, paneId, paneDead, panePidText, ...extra] = result.stdout
       .trim()
       .split("\t");
@@ -281,10 +284,14 @@ export class TmuxRuntime {
 
   private async runRequired(args: string[]): Promise<CommandExecutionResult> {
     const result = await this.execute(this.tmuxPath, args);
-    if (result.code !== 0) {
-      throw new Error(`tmux ${args[0]} failed: ${result.stderr.trim() || `exit ${result.code}`}`);
-    }
+    assertCommandSucceeded(args, result);
     return result;
+  }
+}
+
+function assertCommandSucceeded(args: string[], result: CommandExecutionResult): void {
+  if (result.code !== 0) {
+    throw new Error(`tmux ${args[0]} failed: ${result.stderr.trim() || `exit ${result.code}`}`);
   }
 }
 

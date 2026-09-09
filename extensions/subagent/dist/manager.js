@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { encodeActivityCursor, encodeSettledCursor } from "./cursor.js";
 import { getDirectChild, registerDirectChild, removeDirectChildren, } from "./ownership.js";
-import { readSessionView, } from "./session-reader.js";
+import { readSessionView, hasPersistedPrompt, } from "./session-reader.js";
 import { waitForSettled, } from "./wait.js";
 export const PI_SUBAGENT_MAX_ACTIVE = "PI_SUBAGENT_MAX_ACTIVE";
 export const PI_SUBAGENT_STATE_ROOT = "PI_SUBAGENT_STATE_ROOT";
@@ -151,8 +151,8 @@ export class SubagentManager {
                     [PI_SUBAGENT_LAUNCH]: JSON.stringify(launch),
                 },
             });
-            await this.attachReservationLocator(parent.sessionId, registrationToken, locator);
-            const child = await this.waitForRegistration(parent, processInstanceId, registrationToken);
+            await this.attachReservationLocator(parent.sessionId, parent.epoch, reservation, locator);
+            const child = await this.waitForRegistration(parent, { ...reservation, tmux: locator });
             this.assertManagedLeaf(child);
             registeredChild = child;
             await this.store.update(parent.sessionId, (latestParent) => ({
@@ -273,14 +273,8 @@ export class SubagentManager {
                 || state.runtime.status === "running"
                 || state.runtime.status === "settled"
                 || state.runtime.status === "closing";
-            if (!hasActiveStatus) {
-                const hasLiveLocator = target === "all"
-                    && state.runtime.tmux !== undefined
-                    && await this.runtime.isAlive(state.runtime.tmux);
-                if (hasLiveLocator)
-                    activeStates.push(state);
+            if (!hasActiveStatus && (!state.runtime.tmux || !await this.runtime.isAlive(state.runtime.tmux)))
                 continue;
-            }
             const processInstanceId = state.runtime.processInstanceId
                 ?? state.launch?.processInstanceId;
             const newerSiblingLiveness = processInstanceId === undefined
@@ -288,7 +282,7 @@ export class SubagentManager {
                 : await Promise.all(siblingStates
                     .filter((sibling) => ((sibling.runtime.processInstanceId ?? sibling.launch?.processInstanceId)
                     === processInstanceId
-                    && sibling.runtime.updatedAt > state.runtime.updatedAt
+                    && (!hasActiveStatus || sibling.runtime.updatedAt > state.runtime.updatedAt)
                     && (sibling.runtime.status === "starting"
                         || sibling.runtime.status === "running"
                         || sibling.runtime.status === "settled"
@@ -405,7 +399,7 @@ export class SubagentManager {
                 toolLimit: options.toolLimit ?? 3,
                 maximumBytes,
                 ...(options.afterActivity ? { after: options.afterActivity } : {}),
-                ...(child.runtime.leafId ? { leafId: child.runtime.leafId } : {}),
+                ...readLeafOptions(child),
             });
             if (recent.view !== "recent_activity") {
                 throw new Error("Internal error: wait activity projection returned the wrong view");
@@ -435,9 +429,7 @@ export class SubagentManager {
             sessionFile: child.runtime.sessionFile,
             agentId,
             epoch: child.epoch,
-            ...(child.runtime.leafId && !child.runtime.busy
-                ? { leafId: child.runtime.leafId }
-                : {}),
+            ...readLeafOptions(child),
         });
     }
     async list(parentSessionId) {
@@ -513,7 +505,15 @@ export class SubagentManager {
             after: baselineCursor,
         });
         return {
-            agent: toManagedAgent(child),
+            agent: {
+                ...toManagedAgent(child),
+                settledCursor: encodeSettledCursor({
+                    agentId: child.sessionId,
+                    epoch: child.epoch,
+                    generation: child.runtime.settledGeneration,
+                    deliveryId,
+                }),
+            },
             deliveryId,
             confirmation,
         };
@@ -575,19 +575,17 @@ export class SubagentManager {
         const deadline = this.nowMs() + this.promptAckTimeoutMs;
         while (true) {
             const [sessionResult, paneResult] = await Promise.allSettled([
-                readSessionView({
+                hasPersistedPrompt({
                     sessionFile: options.child.runtime.sessionFile,
                     agentId: options.child.sessionId,
                     epoch: options.child.epoch,
-                    view: "turns",
                     after: options.after,
-                    limit: 200,
+                    marker: options.marker,
                 }),
                 this.runtime.capturePane(options.locator),
             ]);
             if (sessionResult.status === "fulfilled"
-                && sessionResult.value.view === "turns"
-                && sessionResult.value.turns.some((turn) => turn.user.text.includes(options.marker))) {
+                && sessionResult.value) {
                 return "session";
             }
             if (paneResult.status === "fulfilled") {
@@ -627,17 +625,16 @@ export class SubagentManager {
         });
     }
     async reapExpiredReservations(parent) {
-        const registeredProcessIds = new Set((await this.store.list()).flatMap((state) => (state.parent?.sessionId === parent.sessionId
-            && state.parent.epoch === parent.epoch
-            && state.launch
-            && state.runtime.tmux
-            ? [state.launch.processInstanceId]
-            : [])));
+        const registered = await this.store.list();
         const retained = [];
         for (const reservation of parent.reservations) {
             const expiresAt = Date.parse(reservation.expiresAt);
-            if (registeredProcessIds.has(reservation.processInstanceId))
+            const child = registered.find((state) => matchesReservation(state, parent, reservation));
+            if (child) {
+                this.assertManagedLeaf(child);
+                parent = registerDirectChild(parent, child, this.now());
                 continue;
+            }
             if (Number.isFinite(expiresAt) && expiresAt > this.nowMs()) {
                 retained.push(reservation);
                 continue;
@@ -656,10 +653,19 @@ export class SubagentManager {
             ? parent
             : { ...parent, reservations: retained };
     }
-    async attachReservationLocator(parentSessionId, reservationId, locator) {
-        await this.store.update(parentSessionId, (parent) => {
-            if (!parent.reservations.some((candidate) => candidate.reservationId === reservationId)) {
+    async attachReservationLocator(parentSessionId, parentEpoch, reservation, locator) {
+        const reservationId = reservation.reservationId;
+        await this.store.update(parentSessionId, async (parent) => {
+            if (parent.epoch !== parentEpoch) {
                 throw new Error(`Spawn reservation is no longer active: ${reservationId}`);
+            }
+            if (!parent.reservations.some((candidate) => (candidate.reservationId === reservationId
+                && candidate.processInstanceId === reservation.processInstanceId))) {
+                const child = (await this.store.list()).find((state) => (matchesReservation(state, parent, { ...reservation, tmux: locator })));
+                if (!child)
+                    throw new Error(`Spawn reservation is no longer active: ${reservationId}`);
+                this.assertManagedLeaf(child);
+                return registerDirectChild(parent, child, this.now());
             }
             return {
                 ...parent,
@@ -756,14 +762,13 @@ export class SubagentManager {
             this.assertManagedLeaf(child);
         if (discovered.length === 0)
             return;
-        const discoveredProcessIds = new Set(discovered.flatMap((child) => (child.launch ? [child.launch.processInstanceId] : [])));
         await this.store.update(parent.sessionId, (latestParent) => {
             const linked = discovered.reduce((state, child) => state.children.some((link) => link.agentId === child.sessionId)
                 ? state
                 : registerDirectChild(state, child, this.now()), latestParent);
             return {
                 ...linked,
-                reservations: linked.reservations.filter((reservation) => !discoveredProcessIds.has(reservation.processInstanceId)),
+                reservations: linked.reservations.filter((reservation) => !discovered.some((child) => matchesReservation(child, linked, reservation))),
             };
         });
     }
@@ -808,14 +813,10 @@ export class SubagentManager {
             throw new Error(`Subagent namespace is not initialized: ${sessionId}`);
         return state;
     }
-    async waitForRegistration(parent, processInstanceId, registrationToken) {
+    async waitForRegistration(parent, reservation) {
         const deadline = Date.now() + this.registrationTimeoutMs;
         while (true) {
-            const matches = (await this.store.list()).filter((state) => (state.parent?.sessionId === parent.sessionId
-                && state.parent.epoch === parent.epoch
-                && state.parent.registrationToken === registrationToken
-                && state.launch?.processInstanceId === processInstanceId
-                && state.runtime.tmux !== undefined));
+            const matches = (await this.store.list()).filter((state) => (matchesReservation(state, parent, reservation)));
             if (matches.length > 0) {
                 return matches.sort((left, right) => (right.runtime.updatedAt.localeCompare(left.runtime.updatedAt)))[0];
             }
@@ -825,6 +826,30 @@ export class SubagentManager {
             await this.sleep(this.pollIntervalMs);
         }
     }
+}
+function readLeafOptions(child) {
+    const runtime = child.runtime;
+    if (runtime.leafPosition !== undefined || runtime.leafPinned) {
+        return { leafId: runtime.leafId ?? null, leafPosition: runtime.leafPosition };
+    }
+    const unfinished = runtime.generation > runtime.settledGeneration;
+    const stopped = runtime.status === "interrupted" || runtime.status === "closed" || runtime.status === "errored";
+    return runtime.leafId && !runtime.busy && !(unfinished && stopped)
+        ? { leafId: runtime.leafId }
+        : {};
+}
+function matchesReservation(child, parent, reservation) {
+    const locator = child.runtime.tmux;
+    return child.parent?.sessionId === parent.sessionId
+        && child.parent.epoch === parent.epoch
+        && child.parent.registrationToken === reservation.reservationId
+        && child.launch?.processInstanceId === reservation.processInstanceId
+        && child.runtime.processInstanceId === reservation.processInstanceId
+        && locator !== undefined
+        && (!reservation.tmux || (locator.sessionName === reservation.tmux.sessionName
+            && locator.windowId === reservation.tmux.windowId
+            && locator.paneId === reservation.tmux.paneId
+            && locator.panePid === reservation.tmux.panePid));
 }
 function finalizeManagedWaitResult(value) {
     let returnedBytes = 0;

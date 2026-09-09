@@ -18,6 +18,19 @@ const agent = {
   generation: 2,
 };
 
+test("renders empty assistant error reasons in expanded read and wait output", () => {
+  for (const operation of ["read", "wait"] as const) {
+    const details: SubagentUiDetails = { operation, ok: true, view: "recent_activity", activity: [{
+      kind: "assistant", id: "error", timestamp: "now", text: "", stopReason: "error",
+      errorMessage: "HTTP 401: invalid API key", truncated: false,
+    }] };
+    const component = renderSubagentResult(operation, {}, { content: [], details },
+      { isPartial: false, expanded: true }, theme as never,
+      { state: {}, lastComponent: undefined, isPartial: false, isError: false });
+    assert.match(component.render(160).join("\n"), /HTTP 401: invalid API key/u);
+  }
+});
+
 test("states the terminal close boundary in text", () => {
   const details: SubagentUiDetails = {
     operation: "close",

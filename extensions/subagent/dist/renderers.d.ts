@@ -18,6 +18,7 @@ export interface AssistantActivity {
     timestamp: string;
     text: string;
     stopReason: string;
+    errorMessage?: string;
     truncated: boolean;
 }
 export interface ToolActivity {
@@ -42,9 +43,10 @@ export interface SubagentUiDetails {
     confirmation?: "session" | "steering_queue" | "follow_up_queue";
     view?: "recent_activity" | "turns" | "activity_detail";
     activityId?: string;
-    section?: "assistant_text" | "tool_arguments" | "tool_result";
+    section?: "assistant_text" | "assistant_error" | "user_text" | "tool_arguments" | "tool_result";
     originalBytes?: number;
     nextDetailCursor?: string;
+    nextPageCursor?: string;
     assistantCount?: number;
     toolCount?: number;
     omittedAssistant?: number;

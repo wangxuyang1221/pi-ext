@@ -3,6 +3,10 @@ import { readFile } from "node:fs/promises";
 import {
   type ActivityDetailSection,
   type ActivityView,
+  type TurnsPageCursor,
+  CursorError,
+  decodeTurnsPageCursor,
+  encodeTurnsPageCursor,
   decodeActivityCursor,
   decodeDetailCursor,
   encodeActivityCursor,
@@ -29,6 +33,7 @@ export interface AssistantActivity {
   timestamp: string;
   text: string;
   stopReason: string;
+  errorMessage?: string;
   truncated: boolean;
   detailRef?: ActivityDetailRef;
 }
@@ -51,6 +56,7 @@ interface RawAssistantActivity {
   timestamp: string;
   text: string;
   stopReason: string;
+  errorMessage?: string;
 }
 
 interface RawToolActivity {
@@ -75,10 +81,12 @@ export interface ReadSessionViewOptions {
   toolLimit?: number;
   limit?: number;
   after?: string;
+  pageCursor?: string;
   activityId?: string;
   section?: ActivityDetailSection;
   detailCursor?: string;
-  leafId?: string;
+  leafId?: string | null;
+  leafPosition?: number;
   maximumBytes?: number;
 }
 
@@ -102,13 +110,20 @@ export interface SessionTurn {
     id: string;
     timestamp: string;
     text: string;
+    truncated?: boolean;
+    detailRef?: ActivityDetailRef;
   };
   activity: SessionActivity[];
+  continued?: boolean;
 }
 
 export interface TurnsViewResult {
   view: "turns";
   turns: SessionTurn[];
+  hasMore: boolean;
+  nextPageCursor?: string;
+  returnedBytes: number;
+  omittedTurns: number;
   warnings: string[];
   cursor: string;
   position: number;
@@ -167,6 +182,21 @@ interface ToolResultRecord {
   position: number;
 }
 
+/** Confirms native user persistence without applying presentation limits or pagination. */
+export async function hasPersistedPrompt(options: {
+  sessionFile: string; agentId: string; epoch: string; after: string; marker: string;
+}): Promise<boolean> {
+  const { header, entries } = await readCompleteEntries(options.sessionFile);
+  if (header.version !== 3) throw new Error(`Unsupported Pi session version: ${String(header.version)}`);
+  if (header.id !== options.agentId) throw new Error("Session header id does not match the requested agent");
+  const after = decodeActivityCursor(options.after, { ...options, view: "turns" }).position;
+  return selectActiveBranch(entries).some((entry) => {
+    const message = entry.value.message;
+    return entry.position > after && entry.value.type === "message" && isRecord(message)
+      && message.role === "user" && extractUserText(message.content, String(entry.value.id)).startsWith(options.marker);
+  });
+}
+
 export async function readSessionView(
   options: ReadSessionViewOptions,
 ): Promise<SessionViewResult> {
@@ -178,7 +208,22 @@ export async function readSessionView(
     throw new Error("Session header id does not match the requested agent");
   }
 
-  const activeEntries = selectActiveBranch(entries, options.leafId);
+  let activeEntries = selectActiveBranch(entries, options.leafId);
+  if (options.leafPosition !== undefined && entries.length > options.leafPosition) {
+    const latestBranch = selectActiveBranch(entries);
+    if (options.leafId === null || latestBranch.some((entry) => entry.value.id === options.leafId)) {
+      activeEntries = latestBranch;
+    }
+  }
+  const page = options.view === "turns" && options.pageCursor
+    ? decodeTurnsPageCursor(options.pageCursor, options)
+    : undefined;
+  if (page) {
+    if (page.position > entries.length || !activeEntries.some((entry) => entry.value.id === page.leafId)) {
+      throw new CursorError("cursor_mismatch", "Cursor does not match the requested agent and view");
+    }
+    activeEntries = selectActiveBranch(entries.filter((entry) => entry.position <= page.position), page.leafId);
+  }
   if (options.view === "activity_detail") {
     if (!options.activityId || !options.section) {
       throw new Error("Activity detail requires activityId and section");
@@ -193,18 +238,18 @@ export async function readSessionView(
     });
   }
 
-  const position = entries.length;
-  const afterPosition = options.after
+  const afterPosition = page?.afterPosition ?? (options.after
     ? decodeActivityCursor(options.after, {
         agentId: options.agentId,
         epoch: options.epoch,
         view: options.view,
       }).position
-    : 0;
-  if (afterPosition > position) {
+    : 0);
+  if (afterPosition > entries.length) {
     throw new Error("Activity cursor points beyond the current session");
   }
 
+  const position = Math.max(afterPosition, activeEntries.at(-1)?.position ?? 0);
   const cursor = encodeActivityCursor({
     agentId: options.agentId,
     epoch: options.epoch,
@@ -221,7 +266,7 @@ export async function readSessionView(
       Math.max(0, options.maximumBytes ?? RECENT_ACTIVITY_MAX_BYTES),
     );
     const assistants = activity.filter((item) => (
-      item.activity.kind === "assistant" && item.activity.text.trim().length > 0
+      item.activity.kind === "assistant" && isVisibleAssistant(item.activity)
     ));
     const tools = activity.filter((item) => item.activity.kind === "tool");
     const assistantCandidates = takeLast(assistants, assistantLimit);
@@ -268,15 +313,7 @@ export async function readSessionView(
   }
 
   if (options.view === "turns") {
-    const turns = projectTurns(activeEntries, afterPosition);
-    const limit = options.limit ?? 20;
-    return {
-      view: "turns",
-      turns: limit === 0 ? [] : turns.slice(-limit),
-      warnings,
-      cursor,
-      position,
-    };
+    return readTurnsPage(activeEntries, afterPosition, options, page, warnings, cursor, position);
   }
   throw new Error(`Unsupported session view: ${String(options.view)}`);
 }
@@ -292,16 +329,23 @@ function readActivityDetail(options: {
   const activity = projectActivity(options.entries, 0)
     .find((item) => item.activity.id === options.activityId)
     ?.activity;
-  if (!activity) throw new Error(`Activity not found: ${options.activityId}`);
+  const user = options.section === "user_text"
+    ? options.entries.find((entry) => entry.value.id === options.activityId)?.value.message
+    : undefined;
+  if (!activity && !(isRecord(user) && user.role === "user")) {
+    throw new Error(`Activity not found: ${options.activityId}`);
+  }
 
   let detail: string;
-  if (options.section === "assistant_text") {
-    if (activity.kind !== "assistant") {
+  if (options.section === "user_text" && isRecord(user) && user.role === "user") {
+    detail = extractUserText(user.content, options.activityId);
+  } else if (options.section === "assistant_text" || options.section === "assistant_error") {
+    if (activity?.kind !== "assistant") {
       throw new Error("assistant_text is only available for assistant activity");
     }
-    detail = activity.text;
+    detail = options.section === "assistant_error" ? activity.errorMessage ?? "" : activity.text;
   } else {
-    if (activity.kind !== "tool") {
+    if (activity?.kind !== "tool") {
       throw new Error(`${options.section} is only available for tool activity`);
     }
     if (options.section === "tool_arguments") {
@@ -394,8 +438,8 @@ async function readCompleteEntries(sessionFile: string): Promise<{
   return { header, entries, warnings };
 }
 
-function selectActiveBranch(entries: ParsedEntry[], leafId?: string): ParsedEntry[] {
-  if (entries.length === 0) return [];
+function selectActiveBranch(entries: ParsedEntry[], leafId?: string | null): ParsedEntry[] {
+  if (entries.length === 0 || leafId === null) return [];
   const byId = new Map(entries.map((entry) => [String(entry.value.id), entry]));
   const selectedLeafId = leafId ?? String(entries.at(-1)?.value.id);
   const branch: ParsedEntry[] = [];
@@ -414,36 +458,92 @@ function selectActiveBranch(entries: ParsedEntry[], leafId?: string): ParsedEntr
   return branch.reverse();
 }
 
-function projectTurns(entries: ParsedEntry[], afterPosition: number): SessionTurn[] {
-  const starts = entries
-    .map((entry, index) => ({ entry, index }))
-    .filter(({ entry }) => {
-      const message = entry.value.message;
-      return entry.value.type === "message" && isRecord(message) && message.role === "user";
-    });
+function readTurnsPage(
+  entries: ParsedEntry[], afterPosition: number, options: ReadSessionViewOptions,
+  page: TurnsPageCursor | undefined, warnings: string[], cursor: string, position: number,
+): TurnsViewResult {
+  const starts = entries.map((entry, index) => ({ entry, index })).filter(({ entry }) => (
+    entry.value.type === "message" && isRecord(entry.value.message) && entry.value.message.role === "user"
+  ));
+  const ranges = starts.map((start, index) => ({ ...start, end: starts[index + 1]?.index ?? entries.length }))
+    .filter((range) => entries[range.end - 1]!.position > afterPosition);
+  const limit = page?.limit ?? options.limit ?? 20;
+  const selected = limit <= 0 ? [] : ranges.slice(-limit);
+  const turns: SessionTurn[] = [];
+  if (page && (page.turnIndex >= selected.length || page.position !== position)) {
+    throw new CursorError("invalid_cursor", "Invalid activity cursor");
+  }
+  const boundedWarnings = warnings.slice(0, SUMMARY_WARNING_LIMIT)
+    .map((warning) => truncateUtf8(warning, SUMMARY_WARNING_MAX_BYTES).text);
+  while (Buffer.byteLength(JSON.stringify(boundedWarnings)) > 8 * 1024) boundedWarnings.pop();
+  if (boundedWarnings.length < warnings.length) {
+    boundedWarnings.push(`${warnings.length - boundedWarnings.length} additional warnings omitted`);
+  }
+  const finish = (turnIndex: number, activityIndex: number): TurnsViewResult => {
+    const hasMore = turnIndex < selected.length;
+    const result = {
+      view: "turns" as const, turns, warnings: boundedWarnings, cursor, position,
+      omittedTurns: ranges.length - selected.length, hasMore,
+      ...(hasMore ? { nextPageCursor: encodeTurnsPageCursor({
+        agentId: options.agentId, epoch: options.epoch, position, afterPosition, limit,
+        leafId: String(entries.at(-1)!.value.id), turnIndex, activityIndex,
+      }) } : {}),
+    };
+    let returnedBytes = 0;
+    while (true) {
+      const value = { ...result, returnedBytes };
+      const bytes = Buffer.byteLength(JSON.stringify(value));
+      if (bytes === returnedBytes) return value;
+      returnedBytes = bytes;
+    }
+  };
 
-  return starts.flatMap(({ entry, index }, turnIndex) => {
-    const message = entry.value.message;
-    if (!isRecord(message)) throw new Error(`Invalid user message entry: ${String(entry.value.id)}`);
-    const nextStart = starts[turnIndex + 1]?.index ?? entries.length;
-    const turnEntries = entries.slice(index, nextStart);
-    if (!turnEntries.some((candidate) => candidate.position > afterPosition)) return [];
-
-    return [{
-      id: String(entry.value.id),
-      user: {
-        id: String(entry.value.id),
-        timestamp: String(entry.value.timestamp),
-        text: extractUserText(message.content, String(entry.value.id)),
+  for (let turnIndex = page?.turnIndex ?? 0; turnIndex < selected.length; turnIndex++) {
+    const range = selected[turnIndex]!;
+    const message = range.entry.value.message as Record<string, unknown>;
+    const id = String(range.entry.value.id);
+    const activity = projectActivity(entries.slice(range.index, range.end), afterPosition)
+      .sort((left, right) => left.order - right.order)
+      .filter((item) => item.activity.kind === "tool" || isVisibleAssistant(item.activity));
+    const start = turnIndex === page?.turnIndex ? page.activityIndex : 0;
+    if (start >= Math.max(1, activity.length)) {
+      throw new CursorError("invalid_cursor", "Invalid activity cursor");
+    }
+    const userText = truncateUtf8(extractUserText(message.content, id), 4 * 1024);
+    const turn: SessionTurn = {
+      id, user: { id, timestamp: String(range.entry.value.timestamp), text: userText.text,
+        ...(userText.truncated ? { truncated: true, detailRef: { activityId: id, sections: ["user_text"] } } : {}),
       },
-      activity: projectActivity(turnEntries, afterPosition)
-        .sort((left, right) => left.order - right.order)
-        .flatMap((item) => {
-          const summary = summarizeActivity(item.activity);
-          return summary ? [summary] : [];
-        }),
-    }];
-  });
+      activity: [], ...(start > 0 ? { continued: true } : {}),
+    };
+    turns.push(turn);
+    for (let index = start; index < Math.max(1, activity.length); index++) {
+      const item = activity[index]?.activity;
+      if (item) turn.activity.push(summarizeActivity(item)!);
+      const nextTurn = index + 1 >= activity.length ? turnIndex + 1 : turnIndex;
+      const nextIndex = nextTurn === turnIndex ? index + 1 : 0;
+      let result = finish(nextTurn, nextIndex);
+      if (result.returnedBytes > RECENT_ACTIVITY_MAX_BYTES) {
+        if (item) turn.activity.pop();
+        if (turn.activity.length === 0) turns.pop();
+        if (turns.length > 0) return finish(turnIndex, index);
+        turns.push(turn);
+        // A single escaped assistant can exceed the whole page budget.
+        let textBytes = ASSISTANT_TEXT_MAX_BYTES;
+        if (item) {
+          do {
+            textBytes = Math.floor(textBytes / 2);
+            turn.activity = [summarizeActivity(item, textBytes)!];
+            result = finish(nextTurn, nextIndex);
+          } while (result.returnedBytes > RECENT_ACTIVITY_MAX_BYTES && textBytes > 256);
+        }
+        if (result.returnedBytes > RECENT_ACTIVITY_MAX_BYTES) {
+          throw new Error(`Invalid Pi session entry at position ${range.entry.position}`);
+        }
+      }
+    }
+  }
+  return finish(selected.length, 0);
 }
 
 function projectActivity(entries: ParsedEntry[], afterPosition: number): OrderedActivity[] {
@@ -498,6 +598,7 @@ function projectActivity(entries: ParsedEntry[], afterPosition: number): Ordered
             timestamp: String(entry.value.timestamp),
             text: textParts.join("\n"),
             stopReason: message.stopReason,
+            ...(typeof message.errorMessage === "string" ? { errorMessage: message.errorMessage } : {}),
           },
           order: entry.position * 1_000,
           activityPosition: entry.position,
@@ -594,22 +695,36 @@ function buildRecentActivityResult(
   } while (true);
 }
 
-function summarizeActivity(activity: RawSessionActivity): SessionActivity | undefined {
+function isVisibleAssistant(activity: RawAssistantActivity): boolean {
+  return activity.text.trim().length > 0
+    || activity.stopReason === "error"
+    || activity.stopReason === "aborted"
+    || Boolean(activity.errorMessage);
+}
+
+function summarizeActivity(activity: RawSessionActivity, maximumTextBytes = ASSISTANT_TEXT_MAX_BYTES): SessionActivity | undefined {
   if (activity.kind === "assistant") {
-    if (activity.text.trim().length === 0) return undefined;
-    const text = truncateUtf8(activity.text, ASSISTANT_TEXT_MAX_BYTES);
+    if (!isVisibleAssistant(activity)) return undefined;
+    const failed = activity.stopReason === "error" || activity.stopReason === "aborted" || Boolean(activity.errorMessage);
+    const text = truncateUtf8(activity.text, failed ? Math.min(maximumTextBytes, 4 * 1024) : maximumTextBytes);
+    const error = activity.errorMessage === undefined ? undefined : truncateUtf8(activity.errorMessage, ERROR_PREVIEW_MAX_BYTES);
+    const truncated = text.truncated || error?.truncated === true;
     return {
       kind: "assistant",
       id: activity.id,
       timestamp: activity.timestamp,
       text: text.text,
       stopReason: activity.stopReason,
-      truncated: text.truncated,
-      ...(text.truncated
+      ...(error === undefined ? {} : { errorMessage: error.text }),
+      truncated,
+      ...(truncated
         ? {
             detailRef: {
               activityId: activity.id,
-              sections: ["assistant_text"],
+              sections: [
+                ...(text.truncated ? ["assistant_text" as const] : []),
+                ...(error?.truncated ? ["assistant_error" as const] : []),
+              ],
             },
           }
         : {}),

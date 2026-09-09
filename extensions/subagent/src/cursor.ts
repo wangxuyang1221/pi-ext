@@ -2,6 +2,8 @@ export type ActivityView = "recent_activity" | "turns";
 
 export type ActivityDetailSection =
   | "assistant_text"
+  | "user_text"
+  | "assistant_error"
   | "tool_arguments"
   | "tool_result";
 
@@ -18,6 +20,41 @@ export interface ActivityCursorBinding {
   agentId: string;
   epoch: string;
   view: ActivityView;
+}
+
+export interface TurnsPageCursor {
+  kind: "turns_page";
+  version: 1;
+  agentId: string;
+  epoch: string;
+  leafId: string;
+  position: number;
+  afterPosition: number;
+  limit: number;
+  turnIndex: number;
+  activityIndex: number;
+}
+
+export function encodeTurnsPageCursor(value: Omit<TurnsPageCursor, "kind" | "version">): string {
+  return encodeCursor({ kind: "turns_page", version: 1, ...value });
+}
+
+export function decodeTurnsPageCursor(cursor: string, expected: SettledCursorBinding): TurnsPageCursor {
+  const value = decodeCursor(cursor);
+  if (value.kind !== "turns_page" || value.version !== 1
+    || typeof value.agentId !== "string" || typeof value.epoch !== "string"
+    || typeof value.leafId !== "string"
+    || ![value.position, value.afterPosition, value.limit, value.turnIndex, value.activityIndex]
+      .every((item) => Number.isSafeInteger(item) && (item as number) >= 0)) {
+    throw new CursorError("invalid_cursor", "Invalid activity cursor");
+  }
+  if (value.epoch !== expected.epoch) {
+    throw new CursorError("epoch_mismatch", "Cursor epoch does not match the managed subagent");
+  }
+  if (value.agentId !== expected.agentId) {
+    throw new CursorError("cursor_mismatch", "Cursor does not match the requested agent and view");
+  }
+  return value as unknown as TurnsPageCursor;
 }
 
 export interface DetailCursor {
@@ -43,6 +80,7 @@ export interface SettledCursor {
   agentId: string;
   epoch: string;
   generation: number;
+  deliveryId?: string;
 }
 
 export interface SettledCursorBinding {
@@ -141,6 +179,9 @@ export function decodeSettledCursor(
     || typeof value.epoch !== "string"
     || !Number.isSafeInteger(value.generation)
     || (value.generation as number) < 0
+    || !(value.deliveryId === undefined || (
+      typeof value.deliveryId === "string" && /^[a-f0-9]{12}$/u.test(value.deliveryId)
+    ))
   ) {
     throw new CursorError("invalid_cursor", "Invalid settled cursor");
   }
@@ -193,7 +234,7 @@ function isActivityView(value: unknown): value is ActivityView {
 }
 
 function isActivityDetailSection(value: unknown): value is ActivityDetailSection {
-  return value === "assistant_text" || value === "tool_arguments" || value === "tool_result";
+  return value === "assistant_text" || value === "assistant_error" || value === "user_text" || value === "tool_arguments" || value === "tool_result";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

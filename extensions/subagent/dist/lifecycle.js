@@ -8,6 +8,7 @@ export function markAgentStarted(state, now) {
     return withRuntime(state, {
         status: "running",
         busy: true,
+        leafPinned: false,
         generation: state.runtime.generation + 1,
         updatedAt: now,
     });

@@ -262,7 +262,9 @@ function renderOutcome(outcome, theme) {
 }
 function renderActivity(activity, theme) {
     if (activity.kind === "assistant") {
-        return `${theme.fg("muted", "assistant")}  ${theme.fg("toolOutput", preview(activity.text, 120))}`;
+        const failed = activity.stopReason === "error" || activity.stopReason === "aborted" || Boolean(activity.errorMessage);
+        const text = activity.errorMessage || activity.text || activity.stopReason;
+        return `${theme.fg("muted", "assistant")}  ${theme.fg(failed ? "error" : "toolOutput", preview(text, 120))}`;
     }
     const arrow = theme.fg("dim", " → ");
     const outcome = activity.outcome === "failed" && activity.errorPreview

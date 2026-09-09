@@ -11,6 +11,7 @@ export function markAgentStarted(state: SessionState, now: string): SessionState
   return withRuntime(state, {
     status: "running",
     busy: true,
+    leafPinned: false,
     generation: state.runtime.generation + 1,
     updatedAt: now,
   });

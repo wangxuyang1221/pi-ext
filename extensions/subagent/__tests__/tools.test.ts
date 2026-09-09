@@ -86,6 +86,14 @@ test("uses strict read view variants with lightweight recent defaults", () => {
     agentId: "child-a",
     view: "all_entries",
   }), false);
+  assert.equal(Check(read.parameters as never, {
+    agentId: "child-a", view: "turns", pageCursor: "page-a",
+  }), true);
+  for (const section of ["user_text", "assistant_error"]) {
+    assert.equal(Check(read.parameters as never, {
+      agentId: "child-a", view: "activity_detail", activityId: "entry-a", section,
+    }), true);
+  }
 
   const variants = (read.parameters as { anyOf: Array<Record<string, any>> }).anyOf;
   const recent = variants.find((variant) => (
@@ -96,6 +104,20 @@ test("uses strict read view variants with lightweight recent defaults", () => {
   assert.equal(recent.properties.assistantLimit.maximum, 10);
   assert.equal(recent.properties.toolLimit.default, 1);
   assert.equal(recent.properties.toolLimit.maximum, 20);
+});
+
+test("forwards turns continuation separately from the incremental cursor", async () => {
+  const payload = { view: "turns", turns: [], warnings: [], cursor: "incremental", position: 3,
+    hasMore: true, nextPageCursor: "next-page", returnedBytes: 200, omittedTurns: 0 };
+  const readMock = vi.fn().mockResolvedValue(payload);
+  const read = registerTools({ read: readMock }).find((tool) => tool.name === "subagent_read")!;
+  const result = await (read.execute as (...args: any[]) => Promise<any>)("call", {
+    agentId: "child-a", view: "turns", pageCursor: "page-a",
+  }, undefined, undefined, { sessionManager: { getSessionFile: () => "parent.jsonl", getSessionId: () => "parent" } });
+  assert.deepEqual(readMock.mock.calls[0]?.[2], { view: "turns", pageCursor: "page-a" });
+  assert.equal(result.details.hasMore, true);
+  assert.equal(result.details.nextPageCursor, "next-page");
+  assert.equal(result.content[0].text, JSON.stringify(payload));
 });
 
 test("serializes recent activity exactly once without expanding the byte budget", async () => {
@@ -463,6 +485,7 @@ test("encodes reuse, delivery, observation, wait, and close boundaries", () => {
   assert.deepEqual(read.promptGuidelines, [
     "使用 subagent_read 查看进度或获取近期结果时选择 recent_activity；按对话轮次重建上下文时选择 turns；读取单条活动的原始内容时选择 activity_detail，并按需分页。",
     "使用 subagent_read 常规增量读取时，将上次返回的 cursor 作为 after。若需补取 recent_activity 本次省略的条目，应复用本次调用传入的 after，并提高 assistantLimit 或 toolLimit；本次返回的 cursor 已越过这些条目。",
+    "subagent_read 的 turns 每页完整 JSON 不超过 72 KiB；hasMore 和 nextPageCursor 表示当前快照尚有续页，续读使用 pageCursor。continued 表示同一 turn 的后续活动，user 摘要会重复用于定位，activity 不重复。limit 仍选择最近的 user turn 窗口，omittedTurns 是更早被省略的 turn 数，补取它们需复用原 after 并提高 limit。user 或 assistant 摘要截断时通过 detailRef 分页取回原文。",
     "按任务需要继续调用 subagent_read，不必仅因 hasMore 为 true 就读完全部活动。需要等待新结果时使用 subagent_wait，避免反复读取空结果。",
   ]);
   assert.equal(
@@ -484,9 +507,9 @@ test("encodes reuse, delivery, observation, wait, and close boundaries", () => {
   const timeoutSchema = (wait.parameters as {
     properties: { timeoutMs: Record<string, unknown> };
   }).properties.timeoutMs;
-  assert.equal(timeoutSchema.description, "本次调用最多等待的毫秒数；默认 30000，最大 120000。");
+  assert.equal(timeoutSchema.description, "本次调用最多等待的毫秒数；默认 30000，最大 600000。");
   assert.equal(timeoutSchema.default, 30_000);
-  assert.equal(timeoutSchema.maximum, 120_000);
+  assert.equal(timeoutSchema.maximum, 600_000);
 });
 
 function registerTools(

@@ -1,3 +1,23 @@
+export function encodeTurnsPageCursor(value) {
+    return encodeCursor({ kind: "turns_page", version: 1, ...value });
+}
+export function decodeTurnsPageCursor(cursor, expected) {
+    const value = decodeCursor(cursor);
+    if (value.kind !== "turns_page" || value.version !== 1
+        || typeof value.agentId !== "string" || typeof value.epoch !== "string"
+        || typeof value.leafId !== "string"
+        || ![value.position, value.afterPosition, value.limit, value.turnIndex, value.activityIndex]
+            .every((item) => Number.isSafeInteger(item) && item >= 0)) {
+        throw new CursorError("invalid_cursor", "Invalid activity cursor");
+    }
+    if (value.epoch !== expected.epoch) {
+        throw new CursorError("epoch_mismatch", "Cursor epoch does not match the managed subagent");
+    }
+    if (value.agentId !== expected.agentId) {
+        throw new CursorError("cursor_mismatch", "Cursor does not match the requested agent and view");
+    }
+    return value;
+}
 const CURSOR_PREFIX = "sa1.";
 export function encodeActivityCursor(value) {
     return encodeCursor({ kind: "activity", version: 1, ...value });
@@ -58,7 +78,8 @@ export function decodeSettledCursor(cursor, expected) {
         || typeof value.agentId !== "string"
         || typeof value.epoch !== "string"
         || !Number.isSafeInteger(value.generation)
-        || value.generation < 0) {
+        || value.generation < 0
+        || !(value.deliveryId === undefined || (typeof value.deliveryId === "string" && /^[a-f0-9]{12}$/u.test(value.deliveryId)))) {
         throw new CursorError("invalid_cursor", "Invalid settled cursor");
     }
     const decoded = value;
@@ -101,7 +122,7 @@ function isActivityView(value) {
     return value === "recent_activity" || value === "turns";
 }
 function isActivityDetailSection(value) {
-    return value === "assistant_text" || value === "tool_arguments" || value === "tool_result";
+    return value === "assistant_text" || value === "assistant_error" || value === "user_text" || value === "tool_arguments" || value === "tool_result";
 }
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);

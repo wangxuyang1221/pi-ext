@@ -276,7 +276,7 @@ subagent_close
 
 managed child 仍加载 lifecycle hooks 并写入 runtime state，但不注册 subagent 编排工具。合法管理拓扑只有 root 到 direct child；`target: "all"` 也只处理当前 root 的 direct children。每个 child 固定对应一个 tmux window 和一个 pane；投递前会验证登记的 session、window、pane、进程和 pane 模式仍一致。
 
-初始 task 和后续 prompt 都采用 at-least-once 投递。每条消息会在首行加入 `[subagent:<12-char-id>]`，该标识会进入 child 模型上下文；只有 Pi 原生 session 出现对应 user turn，或 TUI 显示对应 `Steering:`/`Follow-up:` pending 项时才算成功。`subagent_prompt` 成功结果会附带 `deliveryId` 和 `confirmation`。提交后 1 秒仍无证据时返回 `delivery_unconfirmed`，但 child 可能已经接受消息；扩展不会自动重试，调用方重试可能产生重复任务。
+初始 task 和后续 prompt 都采用 at-least-once 投递。每条消息会在首行加入 `[subagent:<12-char-id>]`，该标识会进入 child 模型上下文；只有 Pi 原生 session 出现对应 user turn，或 TUI 显示对应 `Steering:`/`Follow-up:` pending 项时才算成功。`subagent_prompt` 成功结果会附带 `deliveryId` 和 `confirmation`。返回的 `settledCursor` 绑定本次投递；child 消费对应 user 消息时，把运行代次 receipt 写入原生 session 的 custom entry。`subagent_wait` 只在该代次完成后返回 settled，不会把投递期间上一轮的结束当成本次完成。提交后 1 秒仍无证据时返回 `delivery_unconfirmed`，但 child 可能已经接受消息；扩展不会自动重试，调用方重试可能产生重复任务。
 
 当前投递协议只支持 Pi 默认的 `Ctrl+C` 清空、`Enter` 提交和 `Alt+Enter` follow-up 键位。自定义 keybindings、替换 editor 的 extension，以及同一 window 内增加 pane 不在兼容范围内。
 
@@ -293,13 +293,13 @@ managed child 仍加载 lifecycle hooks 并写入 runtime state，但不注册 s
 }
 ```
 
-`subagent_read` 只读取 Pi 原生 session JSONL 中已经持久化的 finalized 数据，支持 `recent_activity`、`turns` 和 `activity_detail`。它不解析 tmux pane history，也不复制 transcript。`recent_activity` 默认返回最近 1 条非空 assistant 结论和 1 条 tool 状态；tool 摘要不包含 arguments 或完整 result，失败时只附带有界预览。摘要返回计数、省略数、`hasMore` 和 UTF-8 JSON 字节数，最终 payload 不超过 72 KiB；`turns` 中的 activity 使用同一摘要投影。
+`subagent_read` 只读取 Pi 原生 session JSONL 中已经持久化的 finalized 数据，支持 `recent_activity`、`turns` 和 `activity_detail`。它不解析 tmux pane history，也不复制 transcript。`recent_activity` 默认返回最近 1 条可见 assistant 结论和 1 条 tool 状态；空文本的 error/aborted assistant 仍可见，错误原因预览最多 512 bytes，并保留 `stopReason`。tool 摘要不包含 arguments 或完整 result，失败时只附带有界预览。摘要返回计数、省略数、`hasMore` 和 UTF-8 JSON 字节数，最终 payload 不超过 72 KiB；`turns` 中的 activity 使用同一摘要投影，每页完整 JSON 同样不超过 72 KiB。`turns` 的 `hasMore` 和 `nextPageCursor` 表示当前所选 turn 范围尚有续页；用 `pageCursor` 续读固定快照，不能把增量 `after` 当成续页。跨页的同一 turn 标记 `continued: true`，user 上下文可重复，但 activity 不重复。user 摘要最多 4 KiB，失败 assistant 的部分文本最多 4 KiB。
 
-需要原始内容时，使用 `activity_detail` 按 activity id 读取单个 `assistant_text`、`tool_arguments` 或 `tool_result` section。每页最多 16 KiB，并使用绑定 agent、epoch、activity、section 和字节位置的独立 cursor 继续读取。普通 activity cursor 仍绑定 agent、epoch 和 view。
+需要原始内容时，使用 `activity_detail` 按 activity id 读取单个 `assistant_text`、`assistant_error`、`user_text`、`tool_arguments` 或 `tool_result` section。每页最多 16 KiB，并使用绑定 agent、epoch、activity、section 和字节位置的独立 cursor 继续读取。普通 activity cursor 仍绑定 agent、epoch 和 view，并保持增量位置不倒退。读取尊重主动树导航；记录 leaf 时同时保存文件位置，以区分已有的放弃分支与此后新落盘的后继记录。分页期间的新记录留给翻页完成后的增量读取。
 
-常规协作优先使用 `subagent_read` 摘要跟踪 child，让 main 继续推进；只有失败摘要不足、需要精确证据或用户明确要求时才读取 detail。`hasMore` 不要求自动读取全部历史；如果需要补取被 count limit 省略的摘要，应复用原 `after` 并提高对应 limit，而不是使用本次返回的新 cursor。只有 main 的下一步依赖 child 结果时才使用阻塞式 `subagent_wait`；wait 复用相同的轻量摘要投影。单次 wait 默认 30 秒、最长 120 秒；timeout 后可以复用同一 `afterSettled` 再次等待。
+常规协作优先使用 `subagent_read` 摘要跟踪 child，让 main 继续推进；只有失败摘要不足、需要精确证据或用户明确要求时才读取 detail。`hasMore` 不要求自动读取全部历史；如果需要补取被 count limit 省略的摘要，应复用原 `after` 并提高对应 limit，而不是使用本次返回的新 cursor。只有 main 的下一步依赖 child 结果时才使用阻塞式 `subagent_wait`；wait 复用相同的轻量摘要投影。`turns.omittedTurns` 单独表示 count limit 省略的 turn 数，不包含当前范围的待续页内容。单次 wait 默认 30 秒、最长 600 秒；timeout 后可以复用同一 `afterSettled` 再次等待。
 
-`subagent_close` 是终结操作：先停止并确认 Pi 进程与 tmux window 已退出，再解除 direct-child 关系并删除 Extension 状态，从而释放 slot。关闭失败或确认超时时保留关系、状态和 slot，以便重试。成功关闭不会删除或修改 Pi 原生 session JSONL、session 目录或项目文件。
+`subagent_close` 是终结操作：先停止并确认 Pi 进程与 tmux window 已退出，再解除 direct-child 关系并删除 Extension 状态，从而释放 slot。关闭失败或确认超时时保留关系、状态和 slot，以便重试。终态 child 若重新可达，单目标 close 仍核验并关闭对应 runtime；共享进程的历史 alias 不得关闭活跃 sibling。未知 tmux 查询错误会向上传递，不当作死亡证明。成功关闭不会删除或修改 Pi 原生 session JSONL、session 目录或项目文件。
 
 扩展要求当前 parent 使用持久化 Pi session；`--no-session` 模式下工具会明确拒绝。默认管理快照位于 Pi agent directory 的 `subagents/sessions/<sessionId>/state.json`，每个 session 独立原子写入。可使用以下环境变量：
 

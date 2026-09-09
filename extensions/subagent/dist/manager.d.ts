@@ -125,7 +125,7 @@ export declare class SubagentManager {
     private closeReservations;
     private closeDirect;
     wait(parentSessionId: string, agentId: string, options: WaitManagedOptions, signal?: AbortSignal): Promise<ManagedWaitResult>;
-    read(parentSessionId: string, agentId: string, options: Omit<ReadSessionViewOptions, "sessionFile" | "agentId" | "epoch" | "leafId">): Promise<SessionViewResult>;
+    read(parentSessionId: string, agentId: string, options: Omit<ReadSessionViewOptions, "sessionFile" | "agentId" | "epoch" | "leafId" | "leafPosition">): Promise<SessionViewResult>;
     list(parentSessionId: string): Promise<ManagedAgentList>;
     prompt(parentSessionId: string, agentId: string, text: string, delivery: PromptDelivery): Promise<ManagedPromptResult>;
     private deliverPrompt;

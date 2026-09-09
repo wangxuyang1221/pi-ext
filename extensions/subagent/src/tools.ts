@@ -118,6 +118,10 @@ const readParameters = Type.Union([
       default: 20,
     })),
     after: readAfter,
+    pageCursor: Type.Optional(Type.String({
+      description: "上一页的 nextPageCursor；用于续读同一 turns 快照，不能作为 after。提供后沿用首页的 after 与 limit。",
+      minLength: 1,
+    })),
   }, { additionalProperties: false }),
   Type.Object({
     agentId: readAgentId,
@@ -130,6 +134,8 @@ const readParameters = Type.Union([
     }),
     section: Type.Union([
       Type.Literal("assistant_text"),
+      Type.Literal("assistant_error"),
+      Type.Literal("user_text"),
       Type.Literal("tool_arguments"),
       Type.Literal("tool_result"),
     ], {
@@ -154,9 +160,9 @@ const waitParameters = Type.Object({
     minLength: 1,
   }),
   timeoutMs: Type.Optional(Type.Integer({
-    description: "本次调用最多等待的毫秒数；默认 30000，最大 120000。",
+    description: "本次调用最多等待的毫秒数；默认 30000，最大 600000。",
     minimum: 1,
-    maximum: 120_000,
+    maximum: 600_000,
     default: 30_000,
   })),
   afterActivity: Type.Optional(Type.String({
@@ -279,6 +285,7 @@ export function registerSubagentTools(
     promptGuidelines: [
       "使用 subagent_read 查看进度或获取近期结果时选择 recent_activity；按对话轮次重建上下文时选择 turns；读取单条活动的原始内容时选择 activity_detail，并按需分页。",
       "使用 subagent_read 常规增量读取时，将上次返回的 cursor 作为 after。若需补取 recent_activity 本次省略的条目，应复用本次调用传入的 after，并提高 assistantLimit 或 toolLimit；本次返回的 cursor 已越过这些条目。",
+      "subagent_read 的 turns 每页完整 JSON 不超过 72 KiB；hasMore 和 nextPageCursor 表示当前快照尚有续页，续读使用 pageCursor。continued 表示同一 turn 的后续活动，user 摘要会重复用于定位，activity 不重复。limit 仍选择最近的 user turn 窗口，omittedTurns 是更早被省略的 turn 数，补取它们需复用原 after 并提高 limit。user 或 assistant 摘要截断时通过 detailRef 分页取回原文。",
       "按任务需要继续调用 subagent_read，不必仅因 hasMore 为 true 就读完全部活动。需要等待新结果时使用 subagent_wait，避免反复读取空结果。",
     ],
     parameters: readParameters,
@@ -298,6 +305,7 @@ export function registerSubagentTools(
           ? {
               view: params.view,
               ...(params.limit === undefined ? {} : { limit: params.limit }),
+              ...(params.pageCursor === undefined ? {} : { pageCursor: params.pageCursor }),
               ...(params.after === undefined ? {} : { after: params.after }),
             }
           : {
@@ -337,7 +345,9 @@ export function registerSubagentTools(
           : result.view === "turns"
             ? {
                 returnedBytes: Buffer.byteLength(JSON.stringify(result), "utf8"),
-                truncated: summarizedActivity.some((item) => (
+                hasMore: result.hasMore,
+                nextPageCursor: result.nextPageCursor,
+                truncated: result.turns.some((turn) => turn.user.truncated) || summarizedActivity.some((item) => (
                   item.kind === "assistant" && item.truncated
                 )),
               }

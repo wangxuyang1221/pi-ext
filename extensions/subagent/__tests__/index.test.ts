@@ -42,6 +42,7 @@ test("wires the public tools to Pi session lifecycle events", async () => {
       getSessionId: () => "parent-a",
       getSessionFile: () => "/sessions/parent-a.jsonl",
       getLeafId: () => leafId,
+      getEntries: () => [],
     },
   };
 
@@ -130,6 +131,7 @@ test("keeps managed-child lifecycle hooks without registering orchestration tool
     registerTool: vi.fn((tool: { name: string }) => {
       tools.push(tool);
     }),
+    appendEntry: vi.fn(),
     exec: vi.fn(),
   };
   const ctx = {
@@ -138,6 +140,7 @@ test("keeps managed-child lifecycle hooks without registering orchestration tool
       getSessionId: () => "child-a",
       getSessionFile: () => "/sessions/child-a.jsonl",
       getLeafId: () => "assistant-a",
+      getEntries: () => [],
     },
   };
 
@@ -173,6 +176,12 @@ test("keeps managed-child lifecycle hooks without registering orchestration tool
 
     await handlers.get("session_start")?.({ type: "session_start", reason: "startup" }, ctx);
     await handlers.get("agent_start")?.({ type: "agent_start" }, ctx);
+    await handlers.get("message_start")?.({ type: "message_start", message: {
+      role: "user", content: [{ type: "text", text: "[subagent:012345abcdef]\nWork" }],
+    } }, ctx);
+    assert.deepEqual(pi.appendEntry.mock.calls, [["subagent_delivery", {
+      agentId: "child-a", epoch: "child-epoch", generation: 1, deliveryId: "012345abcdef",
+    }]]);
     await handlers.get("agent_settled")?.({ type: "agent_settled" }, ctx);
 
     const state = await store.load("child-a");

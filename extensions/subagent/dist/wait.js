@@ -1,10 +1,12 @@
 import { decodeSettledCursor, encodeSettledCursor, } from "./cursor.js";
+import { DeliveryReceiptReader } from "./delivery-receipt.js";
 export async function waitForSettled(options) {
     const now = options.now ?? Date.now;
     const sleep = options.sleep ?? delay;
     const startedAt = now();
     let expectedGeneration;
     let lastGeneration = 0;
+    const receiptReader = new DeliveryReceiptReader();
     while (true) {
         options.signal?.throwIfAborted();
         const state = await options.readState();
@@ -25,7 +27,15 @@ export async function waitForSettled(options) {
             epoch: state.epoch,
         });
         expectedGeneration ??= decodedCursor.generation;
-        if (state.runtime.settledGeneration > expectedGeneration) {
+        const consumedGeneration = decodedCursor.deliveryId
+            ? await receiptReader.read(state.runtime.sessionFile, {
+                agentId: options.agentId, epoch: state.epoch, deliveryId: decodedCursor.deliveryId,
+            })
+            : undefined;
+        const settled = decodedCursor.deliveryId
+            ? consumedGeneration !== undefined && state.runtime.settledGeneration >= consumedGeneration
+            : state.runtime.settledGeneration > expectedGeneration;
+        if (settled) {
             return {
                 outcome: "settled",
                 generation: state.runtime.settledGeneration,

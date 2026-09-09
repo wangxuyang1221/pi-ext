@@ -62,6 +62,8 @@ export interface SessionRuntimeState {
   settledGeneration: number;
   settledEntryId?: string;
   leafId?: string;
+  leafPinned?: boolean;
+  leafPosition?: number;
   cwd: string;
   sessionFile: string;
   pid?: number;

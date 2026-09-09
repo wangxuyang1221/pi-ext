@@ -307,6 +307,22 @@ test("captures the registered pane as joined plain text", async () => {
   );
 });
 
+test("does not report unknown tmux query failures as a dead runtime", async () => {
+  const calls: string[][] = [];
+  let stderr = "error connecting to /isolated/socket (Permission denied)";
+  const runtime = new TmuxRuntime({
+    execute: async (_command, args) => { calls.push(args); return { code: 1, stdout: "", stderr }; },
+    tmuxPath: "unused", sessionName: locator.sessionName, transferDirectory: "/unused",
+  });
+  await assert.rejects(runtime.isAlive(locator), /tmux display-message failed/u);
+  await assert.rejects(runtime.close(locator), /tmux display-message failed/u);
+  assert.equal(calls.some((args) => args[0] === "kill-window"), false);
+  stderr = "can't find pane: %9";
+  assert.equal(await runtime.isAlive(locator), false);
+  stderr = "no server running on /isolated/socket";
+  assert.equal(await runtime.isAlive(locator), false);
+});
+
 test("validates locator identity before treating or closing a pane", async () => {
   const calls: string[][] = [];
   let identity = "pi-subagents-test\t@7\t%9\t0\t1234\n";

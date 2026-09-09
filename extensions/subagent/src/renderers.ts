@@ -44,6 +44,7 @@ export interface AssistantActivity {
   timestamp: string;
   text: string;
   stopReason: string;
+  errorMessage?: string;
   truncated: boolean;
 }
 
@@ -71,9 +72,10 @@ export interface SubagentUiDetails {
   confirmation?: "session" | "steering_queue" | "follow_up_queue";
   view?: "recent_activity" | "turns" | "activity_detail";
   activityId?: string;
-  section?: "assistant_text" | "tool_arguments" | "tool_result";
+  section?: "assistant_text" | "assistant_error" | "user_text" | "tool_arguments" | "tool_result";
   originalBytes?: number;
   nextDetailCursor?: string;
+  nextPageCursor?: string;
   assistantCount?: number;
   toolCount?: number;
   omittedAssistant?: number;
@@ -477,7 +479,9 @@ function renderOutcome(
 
 function renderActivity(activity: ActivityDisplay, theme: Theme): string {
   if (activity.kind === "assistant") {
-    return `${theme.fg("muted", "assistant")}  ${theme.fg("toolOutput", preview(activity.text, 120))}`;
+    const failed = activity.stopReason === "error" || activity.stopReason === "aborted" || Boolean(activity.errorMessage);
+    const text = activity.errorMessage || activity.text || activity.stopReason;
+    return `${theme.fg("muted", "assistant")}  ${theme.fg(failed ? "error" : "toolOutput", preview(text, 120))}`;
   }
   const arrow = theme.fg("dim", " → ");
   const outcome = activity.outcome === "failed" && activity.errorPreview
