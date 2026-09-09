@@ -221,6 +221,49 @@ afterEach(() => {
 });
 
 describe("McpClientManager connection lifecycle", () => {
+  it("reports caller cancellation during retry sleep instead of the preceding connection error", async () => {
+    const scheduler = new ControlledScheduler();
+    const { manager, transports } = createHarness([{
+      connect: async () => { throw Object.assign(new Error("socket closed"), { code: "ECONNRESET" }); },
+    }], { scheduler });
+    const controller = new AbortController();
+    const connecting = manager.connectServer("docs", {
+      command: "docs", retry: { maxAttempts: 3, background: true },
+    }, { signal: controller.signal });
+    await settle();
+    expect(scheduler.sleep).toHaveBeenCalledTimes(1);
+    controller.abort(new DOMException("MCP startup interrupted", "AbortError"));
+    const state = await connecting;
+    expect(state).toMatchObject({ connected: false, status: "offline", lastError: { category: "cancelled", retryable: false } });
+    expect(scheduler.sleep).toHaveBeenCalledTimes(1);
+    expect(transports).toHaveLength(1);
+    expect(transports[0].close).toHaveBeenCalledTimes(1);
+    await manager.shutdown();
+  });
+
+  it("cancels hanging startup without closing a ready sibling or reviving a late connection", async () => {
+    const late = deferred<void>();
+    const scheduler = new ControlledScheduler();
+    const { manager, clients, transports } = createHarness([{}, { connect: () => late.promise }], { scheduler });
+    await manager.connectServer("ready", { command: "ready", ...noBackground });
+    const controller = new AbortController();
+    const connecting = manager.connectServer("pending", { command: "pending" }, { signal: controller.signal });
+    await settle();
+    controller.abort(new DOMException("MCP startup interrupted", "AbortError"));
+    expect(await connecting).toMatchObject({ connected: false, lastError: { category: "cancelled" } });
+    expect(manager.isServerConnected("ready")).toBe(true);
+    expect(transports[0].close).not.toHaveBeenCalled();
+    expect(transports[1].close).toHaveBeenCalledTimes(1);
+    late.resolve();
+    await settle();
+    expect(clients[1].listTools).not.toHaveBeenCalled();
+    expect(manager.isServerConnected("pending")).toBe(false);
+    expect(scheduler.sleep).not.toHaveBeenCalled();
+    await manager.reconnectServer("pending");
+    expect(manager.isServerConnected("pending")).toBe(true);
+    await manager.shutdown();
+  });
+
   it("discovers every tools/list page and preserves annotations", async () => {
     const { manager, clients } = createHarness([{
       pages: [

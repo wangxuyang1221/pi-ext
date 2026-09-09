@@ -21,8 +21,11 @@ if (mode === "exit-early") {
     { capabilities: { tools: {} } },
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [{
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    if (mode === "delay-tools") {
+      await new Promise((resolve) => setTimeout(resolve, Number(process.argv[3] ?? 3000)));
+    }
+    return { tools: [{
       name: "echo",
       description: "Echo text from the local stdio fixture",
       inputSchema: {
@@ -31,8 +34,8 @@ if (mode === "exit-early") {
         required: ["text"],
       },
       annotations: { readOnlyHint: true },
-    }],
-  }));
+    }] };
+  });
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => ({
     content: [{

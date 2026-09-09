@@ -472,7 +472,9 @@ export class McpClientManager {
             }
         }
         if (this.isCurrent(runtime, generation)) {
-            const normalized = finalError ?? normalizeMcpError(signal.reason ?? new McpDeadlineError(timeoutMs), { signalAborted: signal.aborted, deadlineExceeded: !signal.aborted });
+            const normalized = signal.aborted
+                ? normalizeMcpError(abortReason(signal), { signalAborted: true })
+                : finalError ?? normalizeMcpError(new McpDeadlineError(timeoutMs), { deadlineExceeded: true });
             this.updateState(runtime, {
                 status: runtime.config.disabled ? "disabled" : "offline",
                 connected: false,

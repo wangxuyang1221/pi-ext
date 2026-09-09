@@ -90,6 +90,8 @@ function createPiHarness() {
     }),
     registerCommand: vi.fn((name: string, definition: unknown) => commands.set(name, definition)),
     registerTool: vi.fn((definition: any) => tools.set(definition.name, definition)),
+    registerEntryRenderer: vi.fn(),
+    appendEntry: vi.fn(),
   };
   return {
     api,
@@ -118,6 +120,8 @@ function createTuiContext(cwd: string) {
       theme,
       notify: vi.fn(),
       setStatus: vi.fn(),
+      setWidget: vi.fn(),
+      onTerminalInput: vi.fn(() => vi.fn()),
       confirm: vi.fn(async () => false),
       custom: vi.fn(async (factory: (...args: any[]) => unknown) => {
         component = factory({ requestRender: vi.fn() }, theme, {}, vi.fn());

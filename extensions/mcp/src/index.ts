@@ -8,7 +8,6 @@ import {
   type ExtensionCommandContext,
   type ExtensionContext,
   type Theme,
-  type ThemeColor,
 } from "@earendil-works/pi-coding-agent";
 import {
   matchesKey,
@@ -30,6 +29,8 @@ import {
   renderMcpToolResult,
 } from "./renderers.js";
 import { jsonSchemaToTypeBox } from "./schema.js";
+import { inventoryComponent, inventoryServer, type McpInventory } from "./status-ui.js";
+import { McpStartup } from "./startup-ui.js";
 import type {
   McpConfigLoadResult,
   McpContentBlock,
@@ -44,7 +45,7 @@ interface McpManagerApi {
   connectServer(
     name: string,
     config: McpServerConfig,
-    options?: { source?: "initial" | "manual" | "background" },
+    options?: { source?: "initial" | "manual" | "background"; signal?: AbortSignal },
   ): Promise<McpServerState>;
   reconnectServer(
     name: string,
@@ -77,6 +78,7 @@ interface ActiveSession {
   configResult: McpConfigLoadResult;
   startupComplete: boolean;
   startupSummarySent: boolean;
+  startup?: McpStartup;
   backgroundRecoveryNotified: Set<string>;
 }
 
@@ -117,6 +119,17 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
   let lifecycleGeneration = 0;
   let activeSession: ActiveSession | undefined;
   let unsubscribeManager: (() => void) | undefined;
+  let pendingCleanup: Promise<void> | undefined;
+
+  const clearManager = async (): Promise<void> => {
+    const cleanup = (pendingCleanup ?? Promise.resolve()).then(() => shutdownManager(manager));
+    pendingCleanup = cleanup;
+    try {
+      await cleanup;
+    } finally {
+      if (pendingCleanup === cleanup) pendingCleanup = undefined;
+    }
+  };
 
   const isCurrent = (session: ActiveSession): boolean =>
     activeSession === session && session.generation === lifecycleGeneration;
@@ -191,6 +204,14 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
     lifecycleGeneration += 1;
     const generation = lifecycleGeneration;
     unsubscribeManager?.();
+    if (activeSession) {
+      activeSession.startup?.dispose();
+      activeSession = undefined;
+      await clearManager();
+    } else if (pendingCleanup) {
+      await pendingCleanup;
+    }
+    if (generation !== lifecycleGeneration) return;
 
     const configResult = loadMcpConfigResult(ctx.cwd, diagnostics, {
       allowProjectConfig: ctx.isProjectTrusted(),
@@ -219,10 +240,25 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
 
     const startConnections = async (): Promise<void> => {
       const entries = Object.entries(configResult.config?.mcpServers ?? {});
+      const startup = new McpStartup(entries.map(([name]) => name), ctx,
+        (name) => manager.isServerConnected(name),
+        (names) => {
+          if (!isCurrent(session)) return;
+          session.startupSummarySent = true;
+          notifyForMode(ctx, `MCP startup interrupted (cancelled: ${names.join(", ")})`, "warning");
+        },
+      );
+      session.startup = startup;
       const settled = await Promise.allSettled(
         entries.map(async ([serverName, config]) => {
-          const state = await manager.connectServer(serverName, config, { source: "initial" });
-          return { serverName, state };
+          try {
+            const state = await manager.connectServer(serverName, config, {
+              source: "initial", signal: startup.signal(serverName),
+            });
+            return { serverName, state };
+          } finally {
+            startup.settle(serverName);
+          }
         }),
       );
 
@@ -246,8 +282,16 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
       updateFooter(ctx, manager, configResult);
       if (!session.startupSummarySent) {
         session.startupSummarySent = true;
-        const summary = formatStartupSummary(configResult, manager);
-        notifyForMode(ctx, summary.message, summary.type);
+        if (ctx.mode === "tui" && configResult.status === "loaded") {
+          const failed = configResult.configuredServerNames.filter((name) => {
+            const state = manager.getServerState(name);
+            return !state?.connected && state?.status !== "disabled";
+          }).sort();
+          if (failed.length) notifyForMode(ctx, `MCP startup incomplete (failed: ${failed.join(", ")})`, "warning");
+        } else {
+          const summary = formatStartupSummary(configResult, manager);
+          notifyForMode(ctx, summary.message, summary.type);
+        }
       }
     };
 
@@ -274,11 +318,12 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
 
   pi.on("session_shutdown", async () => {
     lifecycleGeneration += 1;
+    activeSession?.startup?.dispose();
     activeSession = undefined;
     unsubscribeManager?.();
     unsubscribeManager = undefined;
     availableTools.clear();
-    await shutdownManager(manager);
+    await clearManager();
     await diagnostics.close();
   });
 
@@ -290,16 +335,30 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
     }
   });
 
+  pi.registerEntryRenderer<McpInventory>("mcp-inventory", (entry, _options, theme) =>
+    inventoryComponent(entry.data ?? { servers: [], verbose: false }, theme),
+  );
+
   pi.registerCommand("mcp", {
-    description: "Manage MCP servers. Usage: /mcp status | reload | reconnect <server> | logs [server]",
+    description: "Manage MCP servers. Usage: /mcp status | verbose | reload | reconnect <server> | logs [server]",
     handler: async (rawArgs, ctx) => {
       const args = splitCommandArguments(rawArgs);
-      const command = args[0] ?? "status";
+      const command = args[0]?.toLowerCase() ?? "status";
 
-      if (command === "status" && args.length <= 1) {
+      if ((command === "status" || command === "verbose") && args.length <= 1) {
         const configResult = currentConfigResult(ctx, activeSession, diagnostics);
         updateFooter(ctx, manager, configResult);
-        notifyStatusForMode(ctx, formatStatus(configResult, manager));
+        if (ctx.hasUI && ctx.mode === "tui") {
+          pi.appendEntry<McpInventory>("mcp-inventory", captureInventory(configResult, manager, command === "verbose"));
+        } else if (ctx.hasUI && command === "verbose") {
+          const inventory = captureInventory(configResult, manager, true);
+          const text = inventoryComponent(inventory, {
+            fg: (_color, value) => value, bold: (value) => value,
+          }).render(DEFAULT_USER_MESSAGE_WIDTH).join("\n");
+          notifyForMode(ctx, text, "info");
+        } else {
+          notifyForMode(ctx, formatStatus(configResult, manager), "info");
+        }
         return;
       }
 
@@ -321,7 +380,7 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
 
       notifyForMode(
         ctx,
-        "Usage: /mcp status | /mcp reload | /mcp reconnect <server> | /mcp logs [server]",
+        "Usage: /mcp status | /mcp verbose | /mcp reload | /mcp reconnect <server> | /mcp logs [server]",
         "warning",
       );
     },
@@ -725,6 +784,16 @@ function configTemplatePathFromResult(result: McpConfigLoadResult): string {
   return result.searchedPaths[0] ?? ".pi/mcp.json";
 }
 
+function captureInventory(configResult: McpConfigLoadResult, manager: McpManagerApi, verbose: boolean): McpInventory {
+  return {
+    servers: [...new Set(configResult.configuredServerNames)].sort()
+      .map((name) => inventoryServer(name, manager.getServerState(name))),
+    verbose,
+    ...(configResult.status === "missing" ? { notice: "MCP config not found." }
+      : configResult.status === "invalid" ? { notice: "MCP configuration is invalid." } : {}),
+  };
+}
+
 function formatStatus(configResult: McpConfigLoadResult, manager: McpManagerApi): string {
   const metrics = getMetrics(configResult, manager);
   const lines = [
@@ -844,32 +913,6 @@ class McpLogsComponent implements Component {
     this.renderedWidth = undefined;
     this.renderedLines = undefined;
   }
-}
-
-function notifyStatusForMode(
-  ctx: Pick<ExtensionContext, "hasUI" | "mode" | "ui">,
-  message: string,
-): void {
-  if (!ctx.hasUI) return;
-  const boundedMessage = boundedUserMessage(message);
-  if (ctx.mode !== "tui") {
-    ctx.ui.notify(boundedMessage, "info");
-    return;
-  }
-
-  const themedMessage = boundedMessage.split("\n").map((line, index) => {
-    if (index === 0 || line.length === 0) return line;
-    const marker = line[0];
-    const markerColor: ThemeColor | undefined = marker === "●"
-      ? "success"
-      : marker === "◌" || marker === "○"
-        ? "warning"
-        : undefined;
-    return markerColor
-      ? `${ctx.ui.theme.fg(markerColor, marker)}${line.slice(1)}`
-      : line;
-  }).join("\n");
-  ctx.ui.notify(themedMessage, "info");
 }
 
 function notifyForMode(

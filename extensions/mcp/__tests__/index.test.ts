@@ -138,6 +138,8 @@ interface PiMock {
   on: ReturnType<typeof vi.fn>;
   registerCommand: ReturnType<typeof vi.fn>;
   registerTool: ReturnType<typeof vi.fn>;
+  registerEntryRenderer: ReturnType<typeof vi.fn>;
+  appendEntry: ReturnType<typeof vi.fn>;
   handlers: Map<string, Array<(...args: any[]) => unknown>>;
   commands: Map<string, any>;
   tools: Map<string, any>;
@@ -159,6 +161,8 @@ function createPiMock(): PiMock {
     }),
     registerCommand: vi.fn((name: string, command: unknown) => commands.set(name, command)),
     registerTool: vi.fn((tool: any) => tools.set(tool.name, tool)),
+    registerEntryRenderer: vi.fn(),
+    appendEntry: vi.fn(),
     async emit(event: string, payload: unknown, ctx?: unknown) {
       let result: unknown;
       for (const handler of handlers.get(event) ?? []) {
@@ -234,6 +238,10 @@ function createContext(
   options: { trusted?: boolean; hasUI?: boolean } = {},
 ) {
   let customComponent: any;
+  let widgetComponent: any;
+  let terminalListener: ((data: string) => unknown) | undefined;
+  const requestRender = vi.fn();
+  const detachTerminal = vi.fn(() => { terminalListener = undefined; });
   const done = vi.fn();
   const theme = createTheme(true);
   const hasUI = options.hasUI ?? (mode === "tui" || mode === "rpc");
@@ -248,6 +256,13 @@ function createContext(
       theme,
       notify: vi.fn(),
       setStatus: vi.fn(),
+      setWidget: vi.fn((_key: string, factory: any) => {
+        widgetComponent = typeof factory === "function" ? factory({ requestRender }, theme) : undefined;
+      }),
+      onTerminalInput: vi.fn((listener: (data: string) => unknown) => {
+        terminalListener = listener;
+        return detachTerminal;
+      }),
       confirm: vi.fn(async () => false),
       custom: vi.fn(async (factory: (...args: any[]) => unknown) => {
         customComponent = factory({ requestRender: vi.fn() }, theme, {}, done);
@@ -258,6 +273,10 @@ function createContext(
       return customComponent;
     },
     customDone: done,
+    requestRender,
+    detachTerminal,
+    terminalInput: (data: string) => terminalListener?.(data),
+    widgetLines: (width = 120): string[] => widgetComponent?.render(width) ?? [],
   };
   return ctx;
 }
@@ -301,6 +320,7 @@ describe("MCP Pi integration", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
     mocks.loadMcpConfigResult.mockReset();
     mocks.connectServerImpl.mockReset();
     mocks.reconnectServerImpl.mockReset();
@@ -336,7 +356,8 @@ describe("MCP Pi integration", () => {
     expect(manager().setUnavailableServer).toHaveBeenCalledWith("disabled", "disabled");
   });
 
-  it("starts configured servers in parallel and emits one aggregate notification", async () => {
+  it("animates parallel startup from live completion and hides the row without a success notice", async () => {
+    vi.useFakeTimers();
     mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({
       alpha: { command: "alpha-mcp" },
       beta: { command: "beta-mcp" },
@@ -355,21 +376,130 @@ describe("MCP Pi integration", () => {
       1,
       "alpha",
       { command: "alpha-mcp" },
-      { source: "initial" },
+      { source: "initial", signal: expect.any(AbortSignal) },
     );
+    const initial = ctx.widgetLines().join("\n");
+    expect(stripAnsi(initial)).toContain("Starting MCP servers (0/2): alpha, beta");
+    expect(stripAnsi(initial)).toContain("0s • esc to interrupt");
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(ctx.widgetLines().join("\n")).not.toBe(initial);
+    expect(stripAnsi(ctx.widgetLines().join("\n"))).toContain("1s • esc to interrupt");
+    expect(manager().connectServer).toHaveBeenCalledTimes(2);
+    expect(ctx.ui.setWidget).toHaveBeenCalledTimes(1);
+    expect(pi.appendEntry).not.toHaveBeenCalled();
 
     beta.resolve(makeState("beta", { tools: [makeTool("find")] }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(stripAnsi(ctx.widgetLines().join("\n"))).toContain("Starting MCP servers (1/2): alpha");
     alpha.resolve(makeState("alpha", { tools: [makeTool("query")] }));
     await starting;
 
-    expect(ctx.ui.notify).toHaveBeenCalledTimes(1);
-    expect(stripAnsi(ctx.ui.notify.mock.calls[0][0])).toBe(
-      "MCP startup: 2/2 online, 2 tools, 0 retrying.",
-    );
+    expect(ctx.widgetLines()).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(ctx.detachTerminal).toHaveBeenCalledTimes(1);
+    expect(ctx.ui.notify).not.toHaveBeenCalled();
     expect(stripAnsi(ctx.ui.setStatus.mock.calls.at(-1)![1])).toBe(
       "MCP 2/2 online · 2 tools · 0 retrying",
     );
     expect(pi.registerTool).toHaveBeenCalledTimes(2);
+  });
+
+  it("interrupts only pending startup and releases its input listener and timer", async () => {
+    vi.useFakeTimers();
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({
+      ready: { command: "ready" }, pending: { command: "pending" },
+    }));
+    const signals = new Map<string, AbortSignal>();
+    mocks.connectServerImpl.mockImplementation((name: string, _config: unknown, options: { signal: AbortSignal }) => {
+      signals.set(name, options.signal);
+      if (name === "ready") return makeState(name);
+      return new Promise((resolve) => options.signal.addEventListener("abort", () => resolve(makeState(name, {
+        connected: false, status: "offline", tools: [], lastError: { category: "cancelled" },
+      })), { once: true }));
+    });
+    const pi = createPiMock();
+    const ctx = createContext();
+    registerMcpExtension(pi as never);
+    const starting = pi.emit("session_start", {}, ctx);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ctx.terminalInput("x")).toBeUndefined();
+    expect(ctx.terminalInput("\x1b")).toEqual({ consume: true });
+    await starting;
+    expect(signals.get("pending")!.aborted).toBe(true);
+    expect(signals.get("ready")!.aborted).toBe(false);
+    expect(stripAnsi(ctx.ui.notify.mock.calls[0][0])).toBe("MCP startup interrupted (cancelled: pending)");
+    expect(ctx.ui.notify).toHaveBeenCalledTimes(1);
+    expect(ctx.widgetLines()).toEqual([]);
+    expect(ctx.detachTerminal).toHaveBeenCalledTimes(1);
+    expect(ctx.terminalInput("\x1b")).toBeUndefined();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("counts terminal failure as completed and reports it when the startup row closes", async () => {
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({
+      alpha: { command: "alpha" }, beta: { command: "beta" },
+    }));
+    const alpha = deferred<any>();
+    const beta = deferred<any>();
+    mocks.connectServerImpl.mockImplementation((name: string) => name === "alpha" ? alpha.promise : beta.promise);
+    const pi = createPiMock();
+    const ctx = createContext();
+    registerMcpExtension(pi as never);
+    const starting = pi.emit("session_start", {}, ctx);
+    alpha.reject(new Error("failed to start"));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(stripAnsi(ctx.widgetLines().join("\n"))).toContain("Starting MCP servers (1/2): beta");
+    beta.resolve(makeState("beta"));
+    await starting;
+    expect(ctx.widgetLines()).toEqual([]);
+    expect(stripAnsi(ctx.ui.notify.mock.calls[0][0])).toBe("MCP startup incomplete (failed: alpha)");
+    expect(ctx.detachTerminal).toHaveBeenCalledTimes(1);
+  });
+
+  it("disposes replaced startup work and ignores its late completion", async () => {
+    vi.useFakeTimers();
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({ old: { command: "old" } }));
+    const old = deferred<any>();
+    let oldSignal: AbortSignal | undefined;
+    mocks.connectServerImpl.mockImplementation((_name: string, _config: unknown, options: { signal: AbortSignal }) => {
+      oldSignal = options.signal;
+      return old.promise;
+    });
+    const pi = createPiMock();
+    const ctx = createContext();
+    registerMcpExtension(pi as never);
+    const first = pi.emit("session_start", {}, ctx);
+    await flushPromises();
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({ next: { command: "next" } }));
+    mocks.connectServerImpl.mockResolvedValue(makeState("next"));
+    const nextCtx = createContext();
+    await pi.emit("session_start", {}, nextCtx);
+    expect(oldSignal!.aborted).toBe(true);
+    expect(ctx.widgetLines()).toEqual([]);
+    expect(manager().shutdown).toHaveBeenCalledTimes(1);
+    const toolCount = pi.registerTool.mock.calls.length;
+    old.resolve(makeState("old", { tools: [] }));
+    await first;
+    expect(ctx.ui.notify).not.toHaveBeenCalled();
+    expect(pi.registerTool).toHaveBeenCalledTimes(toolCount);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("waits for an in-flight session cleanup before starting the newest session", async () => {
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({ docs: { command: "docs" } }));
+    mocks.connectServerImpl.mockResolvedValue(makeState("docs"));
+    const pi = createPiMock();
+    registerMcpExtension(pi as never);
+    await pi.emit("session_start", {}, createContext());
+    const cleanup = deferred<void>();
+    manager().shutdown.mockReturnValue(cleanup.promise);
+    const second = pi.emit("session_start", {}, createContext());
+    const third = pi.emit("session_start", {}, createContext());
+    await flushPromises();
+    expect(manager().connectServer).toHaveBeenCalledTimes(1);
+    cleanup.resolve();
+    await Promise.all([second, third]);
+    expect(manager().connectServer).toHaveBeenCalledTimes(2);
   });
 
   it("registers tools after background recovery and deduplicates recovery events and notices", async () => {
@@ -624,7 +754,7 @@ describe("MCP Pi integration", () => {
     expect(pi.tools.has("mcp__docs__late-tool")).toBe(false);
   });
 
-  it("shows state metadata and the complete footer in status", async () => {
+  it("renders compact and verbose inventories as transcript-only entries while preserving the footer", async () => {
     mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({
       docs: { command: "docs-mcp" },
       search: { command: "search-mcp" },
@@ -646,15 +776,40 @@ describe("MCP Pi integration", () => {
     ctx.ui.notify.mockClear();
 
     await command(pi).handler("status", ctx);
-    const rawOutput = ctx.ui.notify.mock.calls[0][0] as string;
-    const output = stripAnsi(rawOutput);
-    expect(rawOutput).toContain("\x1b[32m●\x1b[0m");
-    expect(rawOutput).toContain("\x1b[33m◌\x1b[0m");
-    expect(output).toContain("MCP 1/2 online · 2 tools · 1 retrying");
-    expect(output).toContain("search retrying · 0 tools · attempt 3 · error connection · retry in");
+    expect(ctx.ui.notify).not.toHaveBeenCalled();
+    const render = pi.registerEntryRenderer.mock.calls.find(([name]) => name === "mcp-inventory")![1];
+    const renderLastEntry = () => render({ data: pi.appendEntry.mock.calls.at(-1)![1] }, {}, ctx.ui.theme).render(120).join("\n");
+    const output = stripAnsi(renderLastEntry());
+    expect(output).toContain("docs: connected (2 tools)");
+    expect(output).toContain("search: starting (0 tools)");
+    expect(output).not.toContain("1/2");
+    expect(output).not.toContain("attempt");
+    expect(output).not.toContain("Tools: one");
+    await command(pi).handler("VeRbOsE", ctx);
+    const verbose = stripAnsi(renderLastEntry());
+    expect(verbose).toContain("Tools: one, two");
+    expect(verbose).not.toContain("Auth:");
+    expect(verbose).not.toContain("Resources:");
+    expect(verbose).not.toContain("Resource templates:");
+    await command(pi).handler("", ctx);
+    expect(stripAnsi(renderLastEntry())).toBe(output);
     expect(stripAnsi(ctx.ui.setStatus.mock.calls.at(-1)![1])).toBe(
       "MCP 1/2 online · 2 tools · 1 retrying",
     );
+  });
+
+  it.each(["missing", "invalid"])("keeps %s configuration visible in the compact inventory", async (status) => {
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({}, { status, config: null }));
+    const pi = createPiMock();
+    const ctx = createContext();
+    registerMcpExtension(pi as never);
+    await pi.emit("session_start", {}, ctx);
+    await command(pi).handler("", ctx);
+    const render = pi.registerEntryRenderer.mock.calls.find(([name]) => name === "mcp-inventory")![1];
+    const text = stripAnsi(render({ data: pi.appendEntry.mock.calls.at(-1)![1] }, {}, ctx.ui.theme).render(120).join("\n"));
+    expect(text).toContain(status === "missing" ? "MCP config not found." : "MCP configuration is invalid.");
+    expect(text).not.toContain("No MCP servers configured.");
+    expect(ctx.ui.setWidget).not.toHaveBeenCalled();
   });
 
   it("uses a width-safe TUI logs component that closes on Escape and Enter", async () => {
@@ -710,6 +865,13 @@ describe("MCP Pi integration", () => {
 
     await command(pi).handler("status", rpcCtx);
     expect(String(rpcCtx.ui.notify.mock.calls.at(-1)![0])).not.toContain("\x1b");
+
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({ docs: { command: "docs" } }));
+    manager().states.set("docs", makeState("docs"));
+    await command(pi).handler("verbose", { ...rpcCtx, cwd: "/tmp/other-project" });
+    const verbose = String(rpcCtx.ui.notify.mock.calls.at(-1)![0]);
+    expect(verbose).toContain("Tools: query");
+    expect(verbose).not.toContain("\x1b");
 
     for (const mode of ["json", "print"] as const) {
       const ctx = createContext(mode);

@@ -81,6 +81,8 @@
     "prototype:reasoning-ui:check": "node ./prototypes/codex-reasoning-ui-prototype/demo.mjs --smoke",
     "prototype:subagent-ui": "node ./prototypes/subagent-tool-ui-prototype/demo.mjs",
     "prototype:compact-notice": "node ./prototypes/codex-compact-notice-prototype/demo.mjs",
+    "prototype:mcp-ui": "node ./prototypes/mcp-status-ui-prototype/demo.mjs",
+    "prototype:mcp-ui:check": "pnpm exec tsc -p ./prototypes/mcp-status-ui-prototype/tsconfig.json && pnpm exec vitest run extensions/mcp/__tests__/status-ui-prototype.test.ts",
     "prepack": "pnpm run build"
   },
   "dependencies": {

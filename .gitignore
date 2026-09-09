@@ -11,6 +11,7 @@ prototypes/*
 !prototypes/codex-edit-spacing-prototype/
 !prototypes/codex-reasoning-ui-prototype/
 !prototypes/codex-read-ui-prototype/
+!prototypes/mcp-status-ui-prototype/
 DECISIONS.md
 *.tgz
 .DS_Store

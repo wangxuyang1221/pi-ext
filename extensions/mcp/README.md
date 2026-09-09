@@ -177,7 +177,9 @@ Stdio transport 使用 `stderr: "pipe"`。扩展在 connect 前接管 stderr，�
 ## Commands
 
 ```text
+/mcp
 /mcp status
+/mcp verbose
 /mcp reload
 /mcp reconnect <server>
 /mcp logs [server]
@@ -186,13 +188,46 @@ Stdio transport 使用 `stderr: "pipe"`。扩展在 connect 前接管 stderr，�
 
 | Command | Behavior |
 | --- | --- |
-| `/mcp status` | 显示各 server 的 connection state、attempt、最近 error category、next retry 与 tool 数，不显示敏感 detail |
+| `/mcp`、`/mcp status` | TUI 中显示按名称排序的紧凑清单，每个 server 一行，包含状态与 tool 数；RPC 保留原有状态通知 |
+| `/mcp verbose` | 展开各 server 当前已连接的 tool 名称；RPC 使用有界纯文本通知 |
 | `/mcp reconnect <server>` | 只重连指定 server；unknown/disabled server 会返回错误，后台 connecting/retrying 会被手动 attempt 取代 |
 | `/mcp logs [server]` | 在 TUI/RPC 中查看最多 120 条内存 event 摘要；指定 server 时同时显示该 server 的有界 stderr |
 | `/mcp reload` | 重新读取配置并重建全部连接；配置变更或需要彻底清理已删除 tool/server 时使用 |
 | `/mcp-init` | 在项目中创建 `.pi/mcp.json` template |
 
 后台首次恢复成功后，新发现的 tool 可以动态注册；schema 或 description 变化时，同名注册也会在当前会话更新。Pi 当前不能在原 extension instance 中注销已注册 tool，因此 server 删除 tool 或配置删除 server 后，应执行 `/mcp reload` 完成彻底清理。
+
+### Startup and inventory UI
+
+TUI 启动时，在输入框上方显示动态状态行：
+
+```text
+• Starting MCP servers (1/4): beta, gamma, mysql (1s • esc to interrupt)
+```
+
+进度表示本轮已结束的前台启动任务数，成功和失败都计入；禁用和无效配置不参与连接进度。待启动名称按名称排序，最多展示三个，其余省略。单服务使用 `Booting MCP server`。终端较窄时截断状态行。
+
+所有前台启动任务结束后，状态行自动收起。全部成功不再追加启动汇总通知；失败显示 `MCP startup incomplete`，失败服务仍按原有策略决定是否后台恢复。配置缺失或无效的提示会保留。
+
+启动期间按 Esc 只取消本轮尚未完成的连接及其前台重试，保留已经连接的服务。被取消的连接不会自动转入后台重试，可通过 `/mcp reconnect <server>` 重新连接。已经结束前台启动、正在后台恢复的服务不属于本轮待取消任务。取消会关闭相应 transport，因此界面收起后，进程清理仍可能需要短暂等待。
+
+`/mcp` 的紧凑清单不再显示连接比例、attempt 或重试时间。`/mcp verbose` 展开工具名称，错误细节继续通过 `/mcp logs [server]` 查看。当前没有认证能力或资源清单的可靠数据源，因此不会输出原型中的 `Auth: Unsupported`、`Resources: (none)` 等模拟字段。
+
+两种 TUI 清单都是查询时的快照，保存在会话历史中，但不进入模型上下文。快照仅包含经过清理的展示字段，不保存 transport 配置、headers 或 env。主题颜色跟随 Pi，支持深色与浅色终端。RPC 不创建动画或终端输入监听；JSON、print 模式保持静默。
+
+### UI verification
+
+```bash
+pnpm exec vitest run extensions/mcp/__tests__
+conda run --no-capture-output -n codex-py312 python extensions/mcp/__tests__/ui-host-smoke.py
+pnpm run check
+```
+
+PTY smoke 使用真实 Pi 与正式 MCP extension，只连接本地 stdio fixture，覆盖启动成功、单服务、失败、Esc、手动重连、窄终端和浅色主题。HOME、配置与缓存隔离在仓库 `.tmp/` 下，正常结束后删除，并检查宿主及所记录的子进程已退出。
+
+动画期间只运行一个 50 ms 定时器，每帧只请求重绘，不读取连接状态或发起 MCP 请求。状态行按当前终端宽度限制绘制工作，完成、取消、会话替换和退出时清理定时器与输入监听。
+
+可用 `ui-host-smoke.py --baseline` 对照 Git HEAD 的启动实现，使用 `--measure` 测量工作区实现。应在相同环境交替多次运行；输出包含启动耗时、进程累计 CPU 时间与状态标题出现次数。标题出现次数只是 PTY 输出观测，不等同于精确帧数。`--baseline` 依赖 HEAD 仍是待比较的旧实现。
 
 ## Exa Streamable HTTP
 
@@ -258,7 +293,7 @@ Project trust 不是 server sandbox，也不能验证远程返回内容。Stdio 
 
 ## Troubleshooting
 
-1. 运行 `/mcp status`，确认 connection state、attempt、tool 数和最近 error category。
+1. 运行 `/mcp`，确认 connection state 和 tool 数；需要工具名称时运行 `/mcp verbose`。
 2. 运行 `/mcp logs <server>` 查看有界 event 摘要和该 server 的内存 stderr；需要持久化复现过程时，再临时启用 file logging。
 3. 按错误类别处理：
    - 401/403：检查 endpoint 和认证 header；不要反复 retry。
