@@ -14,6 +14,7 @@ export function registerGoalScheduler(pi, access) {
     let editedPending = false;
     let runGeneration = 0;
     let pending;
+    let pendingBudget;
     let restartRequested = false;
     let internalCancellation = false;
     let failedBash = false;
@@ -27,7 +28,6 @@ export function registerGoalScheduler(pi, access) {
     let recoverySuppressed = false;
     let modelGeneration = 0;
     let budgetNotified;
-    let fallbackReminder;
     const loop = new GoalLoopDetector();
     const admitted = new Map();
     let loopWarning;
@@ -98,7 +98,6 @@ export function registerGoalScheduler(pi, access) {
         const record = active(ctx);
         if (!record)
             return;
-        fallbackReminder = undefined;
         return { message: { customType: GOAL_CONTEXT, content: renderGoalPrompt(record.goal, editedPending), display: false, details: ticket(record) } };
     });
     pi.on("message_end", (event, ctx) => {
@@ -204,7 +203,7 @@ export function registerGoalScheduler(pi, access) {
         if (access.snapshot()?.goal && ctx.model?.provider !== "openai-codex")
             ctx.ui.notify("Automatic goal execution requires an OpenAI Codex model. Your saved goal is unchanged.", "warning");
     });
-    pi.on("session_shutdown", () => { resetLoop(); live = false; runGeneration++; pending = undefined; restartRequested = false; internalCancellation = false; });
+    pi.on("session_shutdown", () => { resetLoop(); live = false; runGeneration++; pending = undefined; pendingBudget = undefined; restartRequested = false; internalCancellation = false; });
     pi.on("context", async (event, ctx) => {
         // Follow-up inputs can begin another complete goal turn inside one agent run.
         if (completedResponse)
@@ -227,19 +226,19 @@ export function registerGoalScheduler(pi, access) {
         const isOwned = (message) => message.role === "custom" && (message.customType === GOAL_CONTEXT || message.customType === GOAL_BUDGET_CONTEXT);
         const owned = event.messages.filter(isOwned);
         const last = event.messages.at(-1);
-        const staleRequest = last?.role === "custom" && isOwned(last) && !valid(last.details, ctx, last.customType === GOAL_BUDGET_CONTEXT);
-        if (owned.some(message => message.role === "custom" && message.details?.scheduleId === pending?.scheduleId))
+        // Only undelivered tickets owned by this runtime can cancel a request.
+        // Persisted reminders remain history after state changes and reloads.
+        const matches = (message, queued) => !!queued && message.role === "custom" && message.details?.scheduleId === queued.scheduleId;
+        const staleRequest = last?.role === "custom" && isOwned(last)
+            && (matches(last, pending) || matches(last, pendingBudget))
+            && !valid(last.details, ctx, last.customType === GOAL_BUDGET_CONTEXT);
+        if (owned.some(message => matches(message, pending)))
             pending = undefined;
-        const reminder = [...owned].reverse().find(message => message.role === "custom" && valid(message.details, ctx, message.customType === GOAL_BUDGET_CONTEXT));
-        const messages = event.messages.filter(message => {
-            if (message.role === "custom" && message.customType === GOAL_LOOP_CONTEXT) {
-                const current = !!loopWarning && valid(loopWarning, ctx) && message.details?.scheduleId === loopWarning.scheduleId;
-                if (current)
-                    warningDelivered = true;
-                return current;
-            }
-            return !isOwned(message) || message === reminder;
-        });
+        if (owned.some(message => matches(message, pendingBudget)))
+            pendingBudget = undefined;
+        const messages = [...event.messages];
+        if (loopWarning && valid(loopWarning, ctx) && messages.some(message => message.role === "custom" && message.customType === GOAL_LOOP_CONTEXT && message.details?.scheduleId === loopWarning.scheduleId))
+            warningDelivered = true;
         if (staleRequest) {
             internalCancellation = true;
             bound = undefined;
@@ -251,19 +250,8 @@ export function registerGoalScheduler(pi, access) {
             bound = record ? ticket(record) : undefined;
             boundSignal = ctx.signal;
             modelGeneration = runGeneration;
-            if (record && bound) {
-                if (record.goal.status === "active" && !reminder) {
-                    // Compaction and a goal created mid-turn can leave no persisted reminder.
-                    // Restore one stable prefix, never a fresh instruction after tool evidence.
-                    if (!fallbackReminder || !valid(fallbackReminder.details, ctx)) {
-                        fallbackReminder = { role: "custom", customType: GOAL_CONTEXT, content: renderGoalPrompt(record.goal, editedPending), display: false, details: bound, timestamp: Date.now() };
-                    }
-                    messages.unshift(fallbackReminder);
-                    editedPending = false;
-                }
-                if (record.goal.status === "active")
-                    editedPending = false;
-            }
+            if (record?.goal?.status === "active")
+                editedPending = false;
         }
         return { messages };
     });
@@ -273,7 +261,8 @@ export function registerGoalScheduler(pi, access) {
             if ((pending && runEnded) || record?.goal?.status !== "budget_limited" || !valid(bound, ctx, true) || ctx.isIdle() || budgetNotified === record.goal.goalId)
                 return;
             budgetNotified = record.goal.goalId;
-            pi.sendMessage({ customType: GOAL_BUDGET_CONTEXT, content: renderGoalPrompt(record.goal, false, true), display: false, details: ticket(record) }, { deliverAs: "steer" });
+            pendingBudget = ticket(record);
+            pi.sendMessage({ customType: GOAL_BUDGET_CONTEXT, content: renderGoalPrompt(record.goal, false, true), display: false, details: pendingBudget }, { deliverAs: "steer" });
         },
         suspend: (ctx) => { suspended = true; runGeneration++; restartRequested = false; if (ctx)
             refresh(ctx); },

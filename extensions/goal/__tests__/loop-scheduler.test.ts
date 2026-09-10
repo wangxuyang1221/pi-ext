@@ -53,14 +53,14 @@ it("does not pause a parallel batch containing an explicit completion attempt", 
   expect(await h.tool()).toBeUndefined();
   expect(h.stop).not.toHaveBeenCalled();
 });
-it("releases a loop fence only for delivered external input and discards old warnings", async () => {
+it("releases a loop fence only for delivered external input and retains historical warnings", async () => {
   for (const message of [{ role: "user", content: "New request" }, { role: "custom", customType: "other-extension", content: "New request" }]) {
     const h = harness(); await h.begin();
     await h.repeat();
     await h.tool();
     await h.emit("message_end", { message });
     const next = await h.request();
-    expect(next.messages.some((item: any) => item.customType === "pi-ext-goal-loop-warning")).toBe(false);
+    expect(next.messages.some((item: any) => item.customType === "pi-ext-goal-loop-warning")).toBe(true);
     expect(await h.tool()).toBeUndefined();
     expect(h.record.goal!.status).toBe("paused");
     expect(h.ctx.abort).not.toHaveBeenCalled();

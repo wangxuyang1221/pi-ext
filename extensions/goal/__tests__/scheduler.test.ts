@@ -1,7 +1,10 @@
 import { expect, it, vi } from "vitest";
 import { renderGoalPrompt } from "../src/tools.js";
 import { registerGoalScheduler } from "../src/scheduler.js";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { sessionEntryToContextMessages, type ExtensionAPI, type ExtensionContext, type SessionEntry } from "@earendil-works/pi-coding-agent";
+import type { Model } from "@earendil-works/pi-ai";
+import { createSessionCoordinator } from "../../codex-compact/src/session-coordinator.js";
+import { fullInputForBranch, NATIVE_COMPACTION_KIND } from "../../codex-compact/src/native-compaction.js";
 import type { GoalRecord } from "../src/storage.js";
 function harness() {
   let record: GoalRecord = { schemaVersion: 1, recordId: "r", ownerSessionId: "s", cwd: "/test", sessionFile: "/test/s", revision: 1, generation: 1, continuationDeferral: false, recoveredFrom: null, goal: { goalId: "g", generation: 1, objective: "Objective", status: "active", tokensUsed: 0, elapsedSeconds: 0, createdAt: "2026-01-01", updatedAt: "2026-01-01" } };
@@ -29,6 +32,21 @@ it("keeps a continuation at its original history position across tool responses 
   expect(h.sendMessage).toHaveBeenCalledTimes(1);
 });
 
+it("retains all delivered continuation prompts across automatic turns", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  h.scheduler.start(h.ctx);
+  const first = { role: "custom", ...h.sendMessage.mock.calls[0]![0] };
+  await h.emit("context", { messages: [first] });
+  const answer = { role: "assistant", content: [], stopReason: "stop" };
+  await h.emit("agent_end", { messages: [answer] });
+  const second = { role: "custom", ...h.sendMessage.mock.calls[1]![0] };
+  const messages = [first, answer, second];
+  expect((await h.emit("context", { messages })).messages).toEqual(messages);
+  expect((await h.emit("context", { messages })).messages).toEqual(messages);
+  expect(h.sendMessage).toHaveBeenCalledTimes(2);
+});
+
 it("provides one persisted reminder for an explicit work turn and keeps retries unchanged", async () => {
   const h = harness();
   await h.emit("session_start");
@@ -40,17 +58,17 @@ it("provides one persisted reminder for an explicit work turn and keeps retries 
   expect((await h.emit("context", { messages })).messages).toEqual(first.messages);
 });
 
-it("restores missing goal context before retained evidence without regenerating an audit per request", async () => {
+it("does not reinsert prompts removed by compaction or absent after mid-turn goal creation", async () => {
   const h = harness();
   await h.emit("session_start");
   const user = { role: "user", content: "Finish now" };
   const first = await h.emit("context", { messages: [user] });
-  expect(first.messages.at(-1)).toEqual(user);
-  const reminder = first.messages[0];
+  expect(first.messages).toEqual([user]);
   h.record.goal!.tokensUsed = 500;
   const output = { role: "toolResult", content: "Verified" };
   const second = await h.emit("context", { messages: [user, output] });
-  expect(second.messages).toEqual([reminder, user, output]);
+  expect(second.messages).toEqual([user, output]);
+  expect(h.sendMessage).not.toHaveBeenCalled();
 });
 
 it("delivers the budget reminder once and preserves its original position", async () => {
@@ -78,7 +96,7 @@ it("does not turn late child exhaustion into a new wrap-up after a root continua
   h.scheduler.budget(h.ctx);
   expect(h.sendMessage).toHaveBeenCalledTimes(1);
   const filtered = await h.emit("context", { messages: [pending] });
-  expect(filtered.messages).toEqual([]);
+  expect(filtered.messages).toEqual([pending]);
   expect(h.ctx.abort).toHaveBeenCalledTimes(1);
 });
 
@@ -189,19 +207,101 @@ it("fails closed after a storage failure until an explicit successful resume", a
   h.scheduler.resume(h.ctx);
   expect(h.sendMessage).toHaveBeenCalledTimes(1);
 });
-it("refreshes current hidden context for an explicit user request without retaining old reminders", async () => {
+it("retains the old objective and records the edited prompt once for a new explicit turn", async () => {
   const h = harness();
   await h.emit("session_start");
-  const first = await h.emit("context", { messages: [{ role: "user", content: "Work" }] });
-  expect(first.messages[0].content).toContain("Objective");
+  const initial = await h.emit("before_agent_start", { prompt: "Work" });
+  const old = { role: "custom", ...initial.message };
+  await h.emit("context", { messages: [old] });
   h.scheduler.invalidate();
   h.record.goal!.objective = "Revised";
-  const second = await h.emit("context", { messages: [...first.messages, { role: "user", content: "Continue" }] });
-  expect(second.messages.filter((message: any) => message.role === "custom")).toHaveLength(1);
-  expect(second.messages[0].content).toContain("Revised");
-  expect(second.messages.at(-1).content).toBe("Continue");
+  const revised = await h.emit("before_agent_start", { prompt: "Continue" });
+  const messages = [old, { role: "user", content: "Continue" }, { role: "custom", ...revised.message }];
+  expect((await h.emit("context", { messages })).messages).toEqual(messages);
+  expect(old.content).toContain("Objective");
+  expect(revised.message.content).toContain("Revised");
   expect(h.ctx.abort).not.toHaveBeenCalled();
 });
+it.each(["clear", "blocked", "edit", "reload"])("does not cancel delivered history after %s even when a reminder is last", async change => {
+  const h = harness();
+  await h.emit("session_start");
+  h.scheduler.start(h.ctx);
+  const old = { role: "custom", ...h.sendMessage.mock.calls[0]![0] };
+  await h.emit("context", { messages: [old] });
+  h.scheduler.invalidate();
+  if (change === "clear") h.record.goal = null;
+  if (change === "blocked") h.record.goal!.status = "blocked";
+  if (change === "edit") h.record.goal!.objective = "Replacement";
+  if (change === "reload") {
+    await h.emit("session_shutdown");
+    await h.emit("session_start");
+  }
+  expect((await h.emit("context", { messages: [old] })).messages).toEqual([old]);
+  expect(h.ctx.abort).not.toHaveBeenCalled();
+  expect(h.sendMessage).toHaveBeenCalledTimes(1);
+});
+
+it("cancels an undelivered budget request once after clear while keeping its history", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  await h.emit("context", { messages: [{ role: "user", content: "Work" }] });
+  h.record.goal!.status = "budget_limited";
+  h.scheduler.budget(h.ctx);
+  const queued = { role: "custom", ...h.sendMessage.mock.calls[0]![0] };
+  h.record.goal = null;
+  h.scheduler.invalidate();
+  expect((await h.emit("context", { messages: [queued] })).messages).toEqual([queued]);
+  expect(h.ctx.abort).toHaveBeenCalledTimes(1);
+  await h.emit("agent_end", { messages: [{ role: "assistant", stopReason: "aborted" }] });
+  await h.emit("context", { messages: [queued] });
+  expect(h.ctx.abort).toHaveBeenCalledTimes(1);
+  expect(h.sendMessage).toHaveBeenCalledTimes(1);
+});
+
+it("reuses a native checkpoint across goal history, tool follow-ups, and clear without remote recovery", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  const model = { provider: "openai-codex", api: "openai-codex-responses", id: "gpt-6-astra", reasoning: true, contextWindow: 200_000 } as Model<any>;
+  const branch: SessionEntry[] = [];
+  const append = (entry: object) => branch.push({ id: `entry-${branch.length}`, parentId: branch.at(-1)?.id ?? null, timestamp: "2026-01-01T00:00:00Z", ...entry } as SessionEntry);
+  for (let turn = 0; turn < 2; turn++) {
+    h.scheduler.start(h.ctx);
+    const prompt = h.sendMessage.mock.calls.at(-1)![0];
+    append({ type: "custom_message", ...prompt });
+    await h.emit("context", { messages: branch.flatMap(sessionEntryToContextMessages) });
+  }
+  append({ type: "custom", customType: NATIVE_COMPACTION_KIND, data: {
+    kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: "openai-codex:openai-codex-responses:gpt-6-astra",
+    replacementHistory: [{ type: "compaction", encrypted_content: "offline-checkpoint" }],
+  } });
+  const createCheckpoint = vi.fn(async () => { throw new Error("Unexpected remote compaction"); });
+  const coordinator = createSessionCoordinator({ getBranch: () => branch, getAllTools: () => [], createCheckpoint, appendCheckpoint: vi.fn(), shouldAutoCompact: () => false });
+  Object.assign(h.ctx, { getSystemPrompt: () => "", modelRegistry: { find: () => model } });
+  for (let step = 0; step < 4; step++) {
+    if (step === 0 || step === 2) {
+      if (step === 2) { h.record.goal = null; h.scheduler.invalidate(); }
+      append({ type: "message", message: { role: "user", content: [{ type: "text", text: `Request ${step}` }], timestamp: step } });
+    } else {
+      append({ type: "message", message: { role: "assistant", api: model.api, provider: model.provider, model: model.id,
+        content: [{ type: "toolCall", id: `call_${step}`, name: "read", arguments: { path: "report.md" } }], stopReason: "toolUse", timestamp: step } });
+      append({ type: "message", message: { role: "toolResult", toolCallId: `call_${step}`, toolName: "read", content: [{ type: "text", text: "Verified" }], isError: false, timestamp: step } });
+    }
+    const messages = branch.flatMap(sessionEntryToContextMessages);
+    const projected = (await h.emit("context", { messages })).messages;
+    expect(projected).toEqual(messages);
+    // Serialize the hook output, not the unfiltered source branch.
+    const inputBranch = projected.map((message: any, index: number) => message.role === "custom"
+      ? { type: "custom_message", id: String(index), customType: message.customType, content: message.content, display: message.display, details: message.details }
+      : { type: "message", id: String(index), message }) as SessionEntry[];
+    const input = fullInputForBranch({ branch: inputBranch, model, tools: [] });
+    const result = await coordinator.prepareRequest(model, h.ctx, input);
+    expect(result?.[0]).toEqual({ type: "compaction", encrypted_content: "offline-checkpoint" });
+  }
+  expect(createCheckpoint).not.toHaveBeenCalled();
+  expect(h.sendMessage).toHaveBeenCalledTimes(2);
+  expect(h.ctx.abort).not.toHaveBeenCalled();
+});
+
 it("remembers explicit resume while the old pending continuation is being cancelled", async () => {
   const h = harness();
   await h.emit("session_start");
@@ -215,7 +315,7 @@ it("remembers explicit resume while the old pending continuation is being cancel
   expect(h.record.goal!.status).toBe("active");
   expect(h.sendMessage).toHaveBeenCalledTimes(2);
 });
-it("keeps one pending continuation and aborts only an invalid owned request, filtering its reminder", async () => {
+it("keeps one pending continuation and aborts an invalid queued request without rewriting history", async () => {
   const h = harness();
   await h.emit("session_start");
   h.scheduler.start(h.ctx);
@@ -226,7 +326,7 @@ it("keeps one pending continuation and aborts only an invalid owned request, fil
   h.scheduler.invalidate();
   const result = await h.emit("context", { messages: [{ role: "assistant", content: [] }, queued] });
   expect(h.ctx.abort).toHaveBeenCalledTimes(1);
-  expect(result.messages).toHaveLength(1);
+  expect(result.messages).toEqual([{ role: "assistant", content: [] }, queued]);
   await h.emit("context", { messages: [{ role: "user", content: "Unrelated" }] });
   expect(h.ctx.abort).toHaveBeenCalledTimes(1);
 });

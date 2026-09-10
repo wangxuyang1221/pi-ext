@@ -101,6 +101,33 @@ try {
       });
     } });
   }
+  await scenario("retained-history-after-continuation-clear-and-reload", [
+    ai.fauxAssistantMessage("First turn finished"),
+    tool("update_goal", { status: "blocked" }, "blocked"),
+    ai.fauxAssistantMessage("Waiting for input"),
+    ai.fauxAssistantMessage("Unrelated work completed"),
+    ai.fauxAssistantMessage("Work after reload completed"),
+  ], async ({ session, store, contexts, calls }) => {
+    await session.prompt("/goal Preserve delivered history");
+    await session.waitForIdle();
+    assert.equal(calls(), 3);
+    const beforeClear = contexts.at(-1);
+    const reminders = beforeClear.filter(message => message.customType === "pi-ext-goal-continuation");
+    assert.equal(reminders.length, 2);
+    assert.deepEqual(contexts[0][0], reminders[0]);
+    assert.deepEqual(contexts[1].filter(message => message.customType === "pi-ext-goal-continuation"), reminders);
+    await session.prompt("/goal clear");
+    await session.prompt("Do unrelated work");
+    await session.waitForIdle();
+    assert.equal(calls(), 4);
+    assert.equal((await store.records())[0].goal, null);
+    assert.deepEqual(contexts.at(-1).filter(message => message.customType === "pi-ext-goal-continuation"), reminders);
+    await session.reload();
+    await session.prompt("Continue unrelated work after reload");
+    await session.waitForIdle();
+    assert.equal(calls(), 5);
+    assert.deepEqual(contexts.at(-1).filter(message => message.customType === "pi-ext-goal-continuation"), reminders);
+  });
   await scenario("model-get-create-get-complete", [tool("get_goal", {}, "get-none"), tool("create_goal", { objective: "Explicit model-created goal", token_budget: 100 }, "create"), tool("get_goal", {}, "get-current"), tool("update_goal", { status: "complete" }, "finish"), ai.fauxAssistantMessage("Done")], async ({ session, store, calls }) => {
     await session.prompt("Explicitly create and finish the fixture goal");
     await session.waitForIdle();

@@ -9,7 +9,6 @@ export const GOAL_LOOP_CONTEXT = "pi-ext-goal-loop-warning";
 export const GOAL_LOOP_PAUSED = "Goal paused after repeated tool calls returned unchanged results. Review the last actions, then use /goal resume to continue.";
 const LOOP_WARNING = "Repeated tool calls are returning unchanged results. Reuse already verified evidence. If the objective is complete, call update_goal with status complete and deliver the result. Otherwise choose an action that yields new evidence, or wait on a verified live task handle. Continued repetition will pause this goal.";
 interface Ticket { instance: string; ownerSessionId: string; goalId: string; generation: number; runGeneration: number; scheduleId: string }
-interface Reminder { role: "custom"; customType: string; content: string; display: boolean; details: Ticket; timestamp: number }
 interface Access { snapshot(): GoalRecord | undefined; checkpoint?(expected: GoalRecord, ctx: ExtensionContext): Promise<unknown>; stop(status: Goal["status"], expected: GoalRecord, ctx: ExtensionContext, reason?: "repeated_tool_calls"): Promise<void> }
 /** Coordinate only this extension's continuation requests through public Pi events. */
 export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
@@ -19,6 +18,7 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
   let editedPending = false;
   let runGeneration = 0;
   let pending: Ticket | undefined;
+  let pendingBudget: Ticket | undefined;
   let restartRequested = false;
   let internalCancellation = false;
   let failedBash = false;
@@ -32,7 +32,6 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
   let recoverySuppressed = false;
   let modelGeneration = 0;
   let budgetNotified: string | undefined;
-  let fallbackReminder: Reminder | undefined;
   const loop = new GoalLoopDetector();
   const admitted = new Map<string, Ticket>();
   let loopWarning: Ticket | undefined;
@@ -87,7 +86,6 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
   pi.on("before_agent_start", (_event, ctx) => {
     const record = active(ctx);
     if (!record) return;
-    fallbackReminder = undefined;
     return { message: { customType: GOAL_CONTEXT, content: renderGoalPrompt(record.goal!, editedPending), display: false, details: ticket(record) } };
   });
   pi.on("message_end", (event, ctx) => {
@@ -168,7 +166,7 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
     refresh(ctx);
     if (access.snapshot()?.goal && ctx.model?.provider !== "openai-codex") ctx.ui.notify("Automatic goal execution requires an OpenAI Codex model. Your saved goal is unchanged.", "warning");
   });
-  pi.on("session_shutdown", () => { resetLoop(); live = false; runGeneration++; pending = undefined; restartRequested = false; internalCancellation = false; });
+  pi.on("session_shutdown", () => { resetLoop(); live = false; runGeneration++; pending = undefined; pendingBudget = undefined; restartRequested = false; internalCancellation = false; });
   pi.on("context", async (event, ctx) => {
     // Follow-up inputs can begin another complete goal turn inside one agent run.
     if (completedResponse) await finishRun(ctx);
@@ -185,17 +183,19 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
     const isOwned = (message: { role: string; customType?: string }) => message.role === "custom" && (message.customType === GOAL_CONTEXT || message.customType === GOAL_BUDGET_CONTEXT);
     const owned = event.messages.filter(isOwned);
     const last = event.messages.at(-1);
-    const staleRequest = last?.role === "custom" && isOwned(last) && !valid(last.details as Ticket, ctx, last.customType === GOAL_BUDGET_CONTEXT);
-    if (owned.some(message => message.role === "custom" && (message.details as Ticket)?.scheduleId === pending?.scheduleId)) pending = undefined;
-    const reminder = [...owned].reverse().find(message => message.role === "custom" && valid(message.details as Ticket, ctx, message.customType === GOAL_BUDGET_CONTEXT));
-    const messages = event.messages.filter(message => {
-      if (message.role === "custom" && message.customType === GOAL_LOOP_CONTEXT) {
-        const current = !!loopWarning && valid(loopWarning, ctx) && (message.details as Ticket)?.scheduleId === loopWarning.scheduleId;
-        if (current) warningDelivered = true;
-        return current;
-      }
-      return !isOwned(message) || message === reminder;
-    });
+    // Only undelivered tickets owned by this runtime can cancel a request.
+    // Persisted reminders remain history after state changes and reloads.
+    const matches = (message: { role: string; details?: unknown }, queued: Ticket | undefined) =>
+      !!queued && message.role === "custom" && (message.details as Ticket)?.scheduleId === queued.scheduleId;
+    const staleRequest = last?.role === "custom" && isOwned(last)
+      && (matches(last, pending) || matches(last, pendingBudget))
+      && !valid(last.details as Ticket, ctx, last.customType === GOAL_BUDGET_CONTEXT);
+    if (owned.some(message => matches(message, pending))) pending = undefined;
+    if (owned.some(message => matches(message, pendingBudget))) pendingBudget = undefined;
+    const messages = [...event.messages];
+    if (loopWarning && valid(loopWarning, ctx) && messages.some(message =>
+      message.role === "custom" && message.customType === GOAL_LOOP_CONTEXT && (message.details as Ticket)?.scheduleId === loopWarning!.scheduleId,
+    )) warningDelivered = true;
     if (staleRequest) {
       internalCancellation = true;
       bound = undefined;
@@ -206,18 +206,7 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
       bound = record ? ticket(record) : undefined;
       boundSignal = ctx.signal;
       modelGeneration = runGeneration;
-      if (record && bound) {
-        if (record.goal!.status === "active" && !reminder) {
-          // Compaction and a goal created mid-turn can leave no persisted reminder.
-          // Restore one stable prefix, never a fresh instruction after tool evidence.
-          if (!fallbackReminder || !valid(fallbackReminder.details as Ticket, ctx)) {
-            fallbackReminder = { role: "custom", customType: GOAL_CONTEXT, content: renderGoalPrompt(record.goal!, editedPending), display: false, details: bound, timestamp: Date.now() };
-          }
-          messages.unshift(fallbackReminder);
-          editedPending = false;
-        }
-        if (record.goal!.status === "active") editedPending = false;
-      }
+      if (record?.goal?.status === "active") editedPending = false;
     }
     return { messages };
   });
@@ -226,7 +215,8 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
       const record = active(ctx, true);
       if ((pending && runEnded) || record?.goal?.status !== "budget_limited" || !valid(bound, ctx, true) || ctx.isIdle() || budgetNotified === record.goal.goalId) return;
       budgetNotified = record.goal.goalId;
-      pi.sendMessage({ customType: GOAL_BUDGET_CONTEXT, content: renderGoalPrompt(record.goal, false, true), display: false, details: ticket(record) }, { deliverAs: "steer" });
+      pendingBudget = ticket(record);
+      pi.sendMessage({ customType: GOAL_BUDGET_CONTEXT, content: renderGoalPrompt(record.goal, false, true), display: false, details: pendingBudget }, { deliverAs: "steer" });
     },
     suspend: (ctx?: ExtensionContext) => { suspended = true; runGeneration++; restartRequested = false; if (ctx) refresh(ctx); },
     resume: (ctx: ExtensionContext, edited = false) => { suspended = false; editedPending = edited; recoverySuppressed = false; refresh(ctx); start(ctx); },
