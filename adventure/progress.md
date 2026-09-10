@@ -17,10 +17,10 @@
 - [Map #11](https://github.com/wangxuyang1221/adventure/issues/11) 管理地图与当前状态。
 - [Spec #12](https://github.com/wangxuyang1221/adventure/issues/12) 是完整规格唯一维护位置，已确定，可用于实施，保持 open。
 - [Implementation #17](https://github.com/wangxuyang1221/adventure/issues/17) 已交付并通过协调者第一次验收。
-- [Implementation #18](https://github.com/wangxuyang1221/adventure/issues/18) 是下一可执行关卡，最终异常停止与额度分类。
-- [Implementation #19](https://github.com/wangxuyang1221/adventure/issues/19) 依赖 #18，负责计量与最终交付，同一 worker 完成 A/B 两阶段。
+- [Implementation #18](https://github.com/wangxuyang1221/adventure/issues/18) 已交付并通过协调者第一次验收，最终异常停止与额度分类完成。
+- [Implementation #19](https://github.com/wangxuyang1221/adventure/issues/19) 是下一可执行关卡，负责计量与最终交付，同一 worker 完成 A/B 两阶段。
 
-本存档是 #17 通关后的自动保存。保存后继续派发 #18，不等待用户重复授权。接续时先读 Map 与当前 Issue，判断是否已派发，避免重复施工。
+本存档是 #18 通关后的自动保存。保存后继续派发 #19，不等待用户重复授权。接续时先读 Map 与当前 Issue，判断是否已派发，避免重复施工。
 
 ## Evolution
 
@@ -32,13 +32,15 @@
 
 协调者核对源码差异、测试和证据，独立重跑双版本新增 SDK 矩阵及全量 check，第一次验收通过。详细记录见 [slice-1-coordinator-acceptance.md](./evidence/slice-1-coordinator-acceptance.md)。
 
+自动保存 `3033c13` 后派发独立 #18 worker，交付 `b5ef6cd717621d132398a6a446ee11d02a2aa594`。最终 length/deferred/error 和非用户取消的 compaction 失败均等 settled 后处理，保守分类不复用 Pi 较宽的不重试 matcher。实际 SDK Red 还修复了 compaction 失败后旧 continuation 越过失败、取消被误当用户暂停及嵌套 summary 前缀遗漏。协调者独立重跑双版本终态矩阵与全量 check，通过第一次验收，见 [slice-2-coordinator-acceptance.md](./evidence/slice-2-coordinator-acceptance.md)。
+
 ## Agreed Decisions and Constraints
 
 完整行为以 Spec 为准，不重问已确认决定：
 
 - 不按 provider 名称设白名单，不另建 HTTP、鉴权或全局配置入口，不改 Pi 核心。保留根会话、TUI、持久和已选模型准入。无工具模型及不合规 adapter 不在承诺范围。
 - 不新增连续非空纯文本次数上限、强制预算或远端费用硬上限。保留既有空响应、重复工具和连续失败保护。
-- Pi 自身恢复结束后才处理最终 length/deferred/普通错误。仍 active 的未恢复结果转 blocked；普通错误不覆盖 budget_limited。明确账户额度可转 usage_limited，裸 429、含糊 billing、认证/网络错误不作为账户额度证据。#18 负责实现与核验。
+- Pi 自身恢复结束后才处理最终 length/deferred/普通错误。仍 active 的未恢复结果转 blocked；普通错误不覆盖 budget_limited。明确账户额度可转 usage_limited，裸 429、含糊 billing、认证/网络错误不作为账户额度证据。#18 已实现并通过核验。
 - 必要工具关闭只限制新自动续跑，不擅自恢复工具，不切断已归属用量及终态结算。工具恢复后仍须显式 `/goal resume`，普通输入、模型切换、reload 不解锁。
 - token 使用 input + output + cacheWrite，排除 cacheRead，reasoning 已包含于 output。缺失、非法、未经证实全零 usage 提示不完整并继续，只累计已知有效用量。历史缺口不能被后续有效响应、编辑、恢复、重载清除。
 - 归集根响应、Pi 提供 usage 的压缩/摘要及明确归属的受管直接子代理。不扩展第三方、孙代理或任意工具内部调用。
@@ -53,6 +55,9 @@
 
 ## Established Facts and Required Context
 
+- #18 产品提交 `b5ef6cd` 已推送。新增正式 `extensions/goal/__tests__/terminal-runtime.mjs`，双版本各 56 场景、129 请求通过，协调者独立复跑通过。加上 provider/execution 回归，每版共 93 场景、321 请求通过。最新 check 为 1064 测试通过、2 项默认跳过，见 [slice-2-final-outcomes.md](./evidence/slice-2-final-outcomes.md) 和 [slice-2-coordinator-check.log](./evidence/slice-2-coordinator-check.log)。#19 审计前序组合时必读并复用。
+- #18 只改 scheduler 与 quota 分类器。响应归属和 settled 异步存储前后均复核，旧事件不清除新绑定；有失败的 compaction 会阻止自己的旧排队续跑，但保留用户输入。`quota.ts` 只用固定来源的精确码和锚定文案。Codex 友好提示 `You have hit your ChatGPT usage limit.` 也可能由裸 429 生成，因此不作为明确账户额度证据。正反例及固定源码入口在 #18 报告的 Classification sources。
+- #18 worker session 为 `01a08c49-122c-71f4-81cc-7064b2e4ef04`，已结束本轮，可用于本关返工，不用于 #19 的新上下文。测试与协调者复跑均已退出，临时目录无残留，无任务监听端口。
 - #17 产品提交 `50ff3b0` 已在远端。新增 `toolRecoveryRequired` 是权威 goal 快照的可选字段，保留旧记录兼容；专用于显式恢复，不替代普通输入可解除的继承 continuationDeferral。
 - reload 工具排除项使用 `pi-ext-goal-tools` session custom entry，只保存必要工具的外部禁用，不是 goal 状态权威来源。写入失败会报错并继续释放 writer，已落盘的恢复门控仍保留；无法保证失败写入下禁用选择跨 reload 保存。
 - 公开 lifecycle/命令检查点观察工具开关，不轮询。两检查点之间关闭又恢复、从未观察到的瞬时变化不可追溯。
@@ -69,14 +74,14 @@
 
 ## Current Assumptions
 
-没有待用户选择的业务规划问题，预计可按 #18 → #19 继续。这个判断不替代后续实际 SDK 验证。#18 新终态规则与 #19 计量/最终交付尚未完成，不能把 #17 绿灯当作它们通过。
+没有待用户选择的业务规划问题，预计可直接推进 #19。这个判断不替代后续实际 SDK 验证。#19 计量/最终交付尚未完成，不能把前两关绿灯当作它通过。
 
 #19 的原生 adapter 代表样本与实际 TUI、受管直接子代理进程链路是已获批必需验收，不是已有通过结论。真实远端模型端到端不在已取得的证据范围。
 
 ## Continuation Point
 
-1. 本存档为 #17 通关自动保存。读 Map、Spec 和 #18，核对最新冒险分支工作区及现存 worker，若 #18 未派发则立即派发，不重问批准。将 Workspace 固定到本存档的最新提交，保留 #17 产品与全部证据。
-2. #18 worker 行动前完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md`、`/Users/wangxuyang/.agents/skills/wangxuyang/develop-with-tdd/SKILL.md` 及必要引用，执行计划只维护在 Issue。必须双版本 SDK 验证最终恢复、length/deferred、额度正反例、预算优先级和工具门控组合；错误正例需固定官方依据。
-3. 主代理依据 `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md` 和 `references/issue-templates.md` 验收。每轮在 Acceptance 追加结论，返工交回原 worker；通过后关闭、使用 handoff 更新本文件、提交推送并核对 Map/远端文件，继续下一关。
-4. #19 依赖 #18，通过前不派发。新 worker 同时负责阶段 A 计量和阶段 B 完整 Spec 审计。核对原生 Completions/Responses、Anthropic、Google，保留 Codex/自定义样本；真实受管子代理进程/投递/报告链路；实际 TUI 与工具提示；预算冻结恢复；正式文档与实际打包产物双版本加载。
-5. 所有关卡通过后，协调者核对 #19 同一 worker 的整体验收，保存并提交用户确认。此时 Map/Spec 保持 open，下一步写等待用户确认，停止推进。用户确认后才关闭，远端分支不自动删除。
+1. 本存档为 #18 通关自动保存。读 Map、Spec 和 #19，核对最新冒险分支工作区及现存 worker，若 #19 未派发则立即派发，不重问批准。将 Workspace 固定到本存档的最新提交，保留前两关产品与全部证据。
+2. #19 独立 worker 行动前完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md`、`/Users/wangxuyang/.agents/skills/wangxuyang/develop-with-tdd/SKILL.md` 及必要引用，执行计划只维护在 Issue，不再委派。一次只推进本关，两个阶段均由同一 worker 完成。
+3. 阶段 A 核对双版本原生 Completions/Responses、Anthropic、Google usage 映射，保留 Codex/自定义样本；真实受管子代理进程/投递/报告链路；实际 TUI 与工具提示；预算软收尾和冻结恢复、持久化/继承/替换及前两关交叉。必须使用实际 adapter 映射，不能自写 mapper 冒充。
+4. 阶段 B 对照完整 Spec 审计前序及 A 的证据、延期项、正式文档、实际打包产物双版本加载、pnpm run check 与资源清理。必需项未验证不能通过。前序缺陷交回相应原 worker，规格失效时重开 Planning，不擅改业务。
+5. 主代理依据 `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md` 和 `references/issue-templates.md` 验收，在 Acceptance 保留每轮结论与返工项。通过后关闭 #19，使用 handoff 更新本文件、提交推送并核对 Map/远端，提交用户确认。Map/Spec 此时保持 open，下一步写等待用户确认并停止推进。用户确认后才关闭，远端分支不自动删除。
