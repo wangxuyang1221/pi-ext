@@ -36,24 +36,28 @@
 
 - 起点提交为 `870cf4961436e8252a61c00d29a300a5a4b53760`，未修改产品源码。
 - `extensions/goal/src/capability.ts` 直接检查 openai-codex，并要求根会话、TUI 和持久化会话。这是本次当前代码已核验事实。
-- `package.json` 固定开发依赖 Pi 0.84.3；会话提供的宿主文档位于 Pi 0.85.1 包中。尚未完成双版本契约复核。
-- Node 为 22.22.2，pnpm 为 11.9.0，与项目要求匹配。尚未在新 worktree 安装依赖或运行检查。
-- `docs/research/pi-goal-any-provider-assessment.md` 已完整读取，可作为检索入口，但其白名单代码定位已过时。技术判断须复核相关当前源码与固定版本上游。
-- Map 的子 Issues 为 Spec #12、Planning #13 与 #14。#14 原生依赖 #13；后者已关闭。
-- 未启动服务或后台进程。
+- `package.json` 与实际安装的 Pi 开发依赖均为 0.84.3，宿主为 0.85.1。已在线核对两个固定 tag，并对照两版模型接入、扩展文档与相关类型契约。详细版本来源和边界见 [provider-feasibility.md](./evidence/provider-feasibility.md)。
+- 已核验的架构结论：Pi 提供模型与凭据接入、统一工具/消息/终止事件，goal 可以在 extension 层适配合规 provider，不需要为此改 Pi 核心。但 Model 没有通用 supportsTools 标志，不能承诺任意模型会可靠调用工具；统一错误没有通用额度类别，usage 也可能缺失。
+- 旧评估已过时：当前有重复工具调用和空响应保护；token 公式是 input + output + cacheWrite，不是旧报告的 input + output。
+- 独立源码复核确认非空纯文本 stop 仍可能无限自动续跑，最终 settled 后的 length/deferred 可能留下 active 且无续跑。证据见 [terminal-contract-review.md](./evidence/terminal-contract-review.md)。未做真实模型端到端验证。
+- Node 22.22.2、pnpm 11.9.0。新 worktree 已运行 `pnpm install --frozen-lockfile --ignore-scripts` 和 `pnpm run check`，后者通过类型、测试、构建及发布包校验：1012 项测试通过、2 项 subagent 集成测试跳过，见 [baseline-check.log](./evidence/baseline-check.log)。这是未修改产品源码的基线结果，不是跨 provider 新功能验收。
+- Map 的子 Issues 为 Spec #12、Planning #13、#14、#15、#16。#14 原生依赖已关闭的 #13；#15 与 #16 均原生依赖 #14。
+- research skill 安排的独立复核 subagent 已完成并关闭，报告已核对。没有需要后续接管的本任务后台服务。
 
 继续前完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md` 及其 `references/issue-templates.md`。保存使用 `/Users/wangxuyang/.agents/skills/wangxuyang/handoff/SKILL.md`，存档固定写在本文件。
 
 ## Current Assumptions
 
-旧评估认为 Pi 已提供 provider-neutral 的响应、事件和 usage 契约，可在 extension 层适配合规且支持工具的模型。该判断尚待本轮复核；无工具、缺失 usage、额度分类等行为尚未形成用户确认的方案。
+推荐候选已写在 Planning #14：覆盖所有 Pi 已接入且能调用普通 function tools、履行消息与终止事件契约的 provider，不按 provider 名称列白名单；保留根会话、TUI 与持久化会话的既有运行范围，不由 goal 编写任意私有协议。较轻候选是首版只覆盖 Codex 与 OpenAI-compatible 私有模型。支持边界仍待用户确认，不能仅凭本轮架构可行性直接实施。
+
+[Planning #15](https://github.com/wangxuyang1221/adventure/issues/15) 负责异常停止与恢复，[Planning #16](https://github.com/wangxuyang1221/adventure/issues/16) 负责 usage 缺失和预算语义。阈值、状态、持久化、真实服务测试范围等均未确认。
 
 ## Continuation Point
 
-首关自动保存后继续 #14，不等待用户重复确认接入职责。
+当前 #14 的事实查证已完成，等待用户选择支持边界，不要重复询问已经确定的模型接入职责。该关保持 open，候选未移交 Spec。
 
-1. 阅读当前 goal 调度、工具和计量代码，核对 Pi 0.84.3 与 0.85.1 文档和源码；按项目规定使用 Context7 定位，固定版本官方来源补证。
-2. 以必要的只读核验或离线实验判断 extension-only 路线，将证据保存在 `adventure/evidence/`。不要求用户提供密钥或真实服务。
-3. 向用户提交有证据支持的范围选择，一次只问一个决策。纯事实自主查证，运行保护和预算规则拆为有独立结论的 Planning。
-4. 更新 Planning 正文；通关后移交 Spec，处理后续关卡，更新本存档并提交推送，核对远端与 Map 后继续。
-5. 规划收敛后使用 slicing 提交实施切片审核，再派 worker 实施。最终须运行 `pnpm run check` 并整体验收；Map 与 Spec 在用户确认交付前保持 open。
+1. 用户确认推荐边界后，对照 #14 通关条件记录结论、移交 Spec 并关闭关卡，自动保存后继续 #15 或 #16。若选择缩小范围，更新受影响候选与依赖关卡。
+2. 运行保护与预算语义按决策依赖逐题推进，复用现有证据，不重做已证明的契约调查；新方案按必要场景做离线验证，不要求密钥或真实服务。
+3. 每关通关后维护 Issue 正文、Spec 和本存档，提交推送冒险分支并核对 Map。只有用户决策、真实阻塞、暂停或最终确认时停下。
+4. 规划收敛后读取 `/Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md` 提交切片审核，再按 adventure 派 worker 实施；worker 使用 write-todo-list 与 TDD。不得把当前证据提交视为用户已批准编码。
+5. 最终须运行 `pnpm run check` 并按 Spec 整体验收，完成延期验证和资源清理；Map 与 Spec 在用户确认交付前保持 open。产品文案语言仍待写入前询问。
