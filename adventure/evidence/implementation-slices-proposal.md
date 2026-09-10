@@ -1,10 +1,18 @@
-# Implementation slice proposal
+# Implementation slices
 
 ## Review status
 
-修订版待用户审核。用户已同意按三关重排，合并原 Slice 1+3、保留原 Slice 2、合并原 Slice 4+5；本次完整修订及验收归属尚待确认，不授权编码，不是已获批的 Implementation 清单。
+用户已审核通过三关完整修订版，并明确要求创建三关后保存游戏进度、暂停。三关均已创建，完整 Slice、共享约束、工作位置及延期验证归属已写入正文；没有派发 worker，也没有开始编码。恢复后直接从第一关推进，无需再次审核同一版本。
 
-规格唯一入口为 [Spec #12](https://github.com/wangxuyang1221/adventure/issues/12)。本文只分配交付结果和延期验证，不替代规格正文。审核通过后，每关完整字段写入对应 Implementation Issue，执行计划由该关 worker 在 Issue 中维护。新增/修改产品提示使用英文已确认，不做全仓翻译。
+规格唯一入口为 [Spec #12](https://github.com/wangxuyang1221/adventure/issues/12)。本文保留获批切片快照，不替代规格；历史文件名保持不变以保留既有链接。后续实施结果和执行计划由各关 Issue 维护，修订切片仍须先审核。新增/修改产品提示使用英文已确认，不做全仓翻译。
+
+## Implementation issues
+
+1. [Implementation #17](https://github.com/wangxuyang1221/adventure/issues/17)：执行准入与工具恢复。
+2. [Implementation #18](https://github.com/wangxuyang1221/adventure/issues/18)：最终异常与额度分类。
+3. [Implementation #19](https://github.com/wangxuyang1221/adventure/issues/19)：计量与最终交付。
+
+三关均是 Map #11 的原生子 Issue，原生依赖为 #18 blocked by #17、#19 blocked by #18；#17 无实施前置。当前按用户要求暂停在首关派发之前。
 
 ## Revision rationale
 
@@ -53,12 +61,12 @@
 
 | Requirement | Primary slice | Final audit |
 | --- | --- | --- |
-| Pi 模型接入、正常 function tools 与保留会话准入边界 | 1 | 3 |
-| 工具禁用意图、显式恢复、排队请求及最后用量 | 1 | 3 |
-| 最终恢复时序、length/deferred、保守额度分类及旧事件 | 2 | 3 |
-| 工具关闭与最终异常、预算优先级组合 | 2 | 3 |
-| 原生 usage 映射、跨 provider 来源组合、冻结与缺口持久化 | 3 A | 3 B |
-| 根/子代理缺失提示的 TUI 与工具结果可见性 | 3 A | 3 B |
-| 发布包、正式文档、全规格核对和临时资源清理 | 3 B | 3 B |
+| Pi 模型接入、正常 function tools 与保留会话准入边界 | #17 | #19 B |
+| 工具禁用意图、显式恢复、排队请求及最后用量 | #17 | #19 B |
+| 最终恢复时序、length/deferred、保守额度分类及旧事件 | #18 | #19 B |
+| 工具关闭与最终异常、预算优先级组合 | #18 | #19 B |
+| 原生 usage 映射、跨 provider 来源组合、冻结与缺口持久化 | #19 A | #19 B |
+| 根/子代理缺失提示的 TUI 与工具结果可见性 | #19 A | #19 B |
+| 发布包、正式文档、全规格核对和临时资源清理 | #19 B | #19 B |
 
 来源为 [异常报告](./exception-policy-review.md#result-and-deferred-verification) 与 [预算报告](./budget-policy-review.md#deferred-verification)。每关承担其相关双版本 SDK 验证，最终审计只汇总和补齐证据，不取代各关独立 acceptance。A/B 是同一 Slice 3 的执行和验收阶段，不创建两个隐藏的 Implementation 关卡。
