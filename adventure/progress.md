@@ -42,6 +42,7 @@
 - 已核验的架构结论：Pi 提供模型与凭据接入、统一工具/消息/终止事件，goal 可以在 extension 层适配合规 provider，不需要为此改 Pi 核心。但 Model 没有通用 supportsTools 标志，不能承诺任意模型会可靠调用工具；统一错误没有通用额度类别，usage 也可能缺失。
 - 旧评估已过时：当前有重复工具调用和空响应保护；token 公式是 input + output + cacheWrite，不是旧报告的 input + output。
 - 独立源码复核确认非空纯文本 stop 仍可能无限自动续跑，最终 settled 后的 length/deferred 可能留下 active 且无续跑。证据见 [terminal-contract-review.md](./evidence/terminal-contract-review.md)。未做真实模型端到端验证。
+- 用户追问 Codex 是否也存在该风险。在线核对本机 0.153.4、latest release 0.154.0，以及 main 固定 SHA `968835997714baaff199cfed5f89a2c65d8ca77d`：三者均无非空纯文本自动续跑次数上限；main 三轮空响应保护将非空文本记为 activity。原生依赖模型主动更新状态及预算/最终错误/外部控制等独立停止条件。证据见 [codex-text-loop-review.md](./evidence/codex-text-loop-review.md)。这是源码容许的执行路径，不是具体模型动态复现。
 - Node 22.22.2、pnpm 11.9.0。新 worktree 已运行 `pnpm install --frozen-lockfile --ignore-scripts` 和 `pnpm run check`，后者通过类型、测试、构建及发布包校验：1012 项测试通过、2 项 subagent 集成测试跳过，见 [baseline-check.log](./evidence/baseline-check.log)。这是未修改产品源码的基线结果，不是跨 provider 新功能验收。
 - Map 的子 Issues 为 Spec #12、Planning #13、#14、#15、#16。#14 原生依赖已关闭的 #13；#15 与 #16 均原生依赖现已关闭的 #14，两关均可推进，当前主线为 #15。
 - research skill 安排的独立复核 subagent 已完成并关闭，报告已核对。没有需要后续接管的本任务后台服务。
@@ -50,13 +51,13 @@
 
 ## Current Assumptions
 
-当前待讨论的候选已写在 Planning #15：为连续非空纯文本、始终不调用任何工具的自动续跑增加有限暂停保护，保留目标并允许用户显式恢复。收益是避免持续发请求却不调用工具，代价是可能暂停合法的长篇写作或分析。另一候选是不新增此项保护，保留现有保护与手动停止。两者均未确认；不要把没有工具调用等同于语义上没有进展。
+当前待讨论的候选已写在 Planning #15：为连续非空纯文本、始终不调用任何工具的自动续跑增加有限暂停保护，保留目标并允许用户显式恢复。收益是避免持续发请求却不调用工具，代价是可能暂停合法的长篇写作或分析。另一候选是不新增此项保护，保留现有保护与手动停止。两者均未确认；不要把没有工具调用等同于语义上没有进展。Codex 源码复核后需纠正先前措辞：新增纯文本保护不是 Codex 对齐要求或跨 provider 接入的技术前提，而是额外的产品取舍。用户本轮仅询问上游行为，不代表同意新增、放弃保护或强制预算。
 
 [Planning #15](https://github.com/wangxuyang1221/adventure/issues/15) 负责异常停止与恢复，[Planning #16](https://github.com/wangxuyang1221/adventure/issues/16) 负责 usage 缺失和预算语义。阈值、状态、持久化、真实服务测试范围等均未确认。
 
 ## Continuation Point
 
-当前 #15 等待用户决定是否对连续纯文本自动续跑增加有限暂停保护。#13 和 #14 均已关闭，不要重复询问接入职责或支持范围。#15 的候选规则尚未移交 Spec。
+当前 #15 已补充 Codex 上游对照证据，等待用户基于该事实决定是否增加额外的纯文本暂停保护。#13 和 #14 均已关闭，不要重复询问接入职责或支持范围。#15 的候选规则尚未移交 Spec。
 
 1. 用户确认保护方向后，再确定必要的计数阈值、重置条件和持久化范围；随后继续工具缺失、length/deferred 等最终结果的停止与恢复规则。一次只问一个问题，不提前替用户作出这些设计取舍。
 2. 运行保护与预算语义按决策依赖逐题推进，复用现有证据，不重做已证明的契约调查；新方案按必要场景做离线验证，不要求密钥或真实服务。
