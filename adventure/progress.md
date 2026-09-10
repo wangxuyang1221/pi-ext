@@ -18,7 +18,7 @@
 - [Spec #12](https://github.com/wangxuyang1221/adventure/issues/12) 是完整规格的唯一维护位置，已注明已确定、可用于实施，保持 open。
 - [Planning #16](https://github.com/wangxuyang1221/adventure/issues/16) 已关闭，预算规则与延期验证已移交 Spec。
 
-新增或修改的产品提示已确认使用英文，不做全仓翻译。当前已提交五个候选实施切片，等待用户审核依赖和粒度。没有获批切片，没有 Implementation worker 正在运行。
+新增或修改的产品提示已确认使用英文，不做全仓翻译。用户已同意按三关重排，现已提交完整修订版，等待最终切片审核。没有获批的完整切片，没有 Implementation worker 正在运行。
 
 ## Evolution
 
@@ -30,7 +30,9 @@
 
 用户恢复后连续选择四个方案 1：缺失 usage 提示并继续、保留排除 cacheRead 的公式、软预算收尾、停止后冻结迟到子代理计费增量。随后以“yep”确认剩余计量范围、恢复和提示兼容规则。完成验证，关闭 #16 并移交 Spec，提交 `f094d85`。
 
-用户接着选择文案方案 1，确认新增/修改的产品提示使用英文。主代理按 slicing 提交五个候选切片和延期验证分配，尚未获得审核意见。本次保存实施准备进度，等待切片审核，不是用户要求暂停。
+用户接着选择文案方案 1，确认新增/修改的产品提示使用英文。主代理先提交五个候选切片，存档提交 `5166c39`。用户询问自然合并方式，随后以“yep”同意按三关重排：原 1+3 合并、原 2 独立、原 4+5 合并。
+
+主代理已修订完整切片和延期验收分配。工具门控与最终异常的组合由新第二关承接，第三关按计量与交付审计两个阶段验收，但仍是同一关。依 slicing，修订后的完整内容再次提交审核；同意重排不等于提前批准尚未展示的完整修订。本次保存实施准备进度，等待审核，不是用户要求暂停。
 
 ## Agreed Decisions and Constraints
 
@@ -60,18 +62,18 @@
 - 当前 `accounting.ts` 已计算 input+output+cacheWrite；`storage.ts` 的 accountChild 在停止后只推进基线。旧 `docs/goal-descendant-acceptance.md` 关于“完成后的迟到用量仍归集”以及旧 input+output 的描述与当前代码不符，不能用作本次规格，交付时需校正。
 - 根 usage 缺失已有直接 warning，子代理 missing 通过目标快照传播。实施须验证两类来源的实际用户提示及查询/工具结果，不能只凭标记落盘宣称可见性通过。
 - 其余已存证据按需要读取：[terminal-contract-review.md](./evidence/terminal-contract-review.md) 是最终结果与非空纯文本路径；[codex-text-loop-review.md](./evidence/codex-text-loop-review.md) 说明固定 Codex 版本无非空文本自动续跑上限；[codex-output-limit-review.md](./evidence/codex-output-limit-review.md) 说明 Codex 输出上限重试、最终 Blocked 与 incomplete usage 边界；[remaining-execution-boundaries.md](./evidence/remaining-execution-boundaries.md) 说明 deferred 和工具可见性。它们解释既有决定，不授权重新加入用户排除的保护或复制 transport 行为。
-- [implementation-slices-proposal.md](./evidence/implementation-slices-proposal.md) 保存待审核候选，完整包含五个 slice 的字段与延期验证分配。顺序为正常 provider 运行、最终异常、工具禁用恢复、跨 provider 计量、发布包与整体验收。候选依赖链 1→2→3→4→5；每关独立验收，双版本 SDK 证据按关交付，不全部推迟到最后。审核时读取，未确认前不得用它授权编码。
+- [implementation-slices-proposal.md](./evidence/implementation-slices-proposal.md) 保存三关完整修订版和延期验证分配，待审核。新顺序为执行准入与工具恢复、最终异常与额度分类、计量与最终交付，依赖 1→2→3。每关独立验收，双版本 SDK 证据按关交付；工具关闭与新终态的组合放第二关，第三关 A/B 阶段均通过才通关，不拆成两个隐藏关卡。原五关的验收项没有删减。
 - Map 子 Issues 为 Spec #12、Planning #13/#14/#15/#16，四个 Planning 均关闭，Map 和 Spec 保持 open。没有 Implementation Issues，也没有实施 worker 或调研 subagent 在执行。未启动独立后台服务；预算实验临时目录已清除，测试夹具自行回收，工作区 lsof 检查未发现遗留运行进程。
 
 ## Current Assumptions
 
-未确认项只有五个候选实施切片及其验收分配。产品文案英文已确认，不能把这次“1”误当成切片审核通过。候选中的代表性 adapter 矩阵是验收范围提案，不是已经完成的测试或全 provider 远端覆盖承诺。
+未确认项只有三关完整修订版及其验收分配。英文提示和按三关合并的方向已确认，不再重问；最近的“yep”同意重排，不是对重排后完整字段的审核通过。候选中的代表性 adapter 矩阵是验收范围提案，不是已经完成的测试或全 provider 远端覆盖承诺。
 
 预计无需新的业务 Planning；若实际 SDK 运行证据推翻已确认设计，必须重开对应关卡、更新 Spec 与依赖，不能自行改业务取舍。预算实验和当前 check 不替代双版本新增跨 provider 验收。
 
 ## Continuation Point
 
-当前等待用户审核 [五个候选切片](./evidence/implementation-slices-proposal.md)，问题是依赖关系、是否需要合并/拆分，以及粒度是否合适。用户尚未回答；此前“yep”确认预算兼容规则，最近“1”确认英文提示，都不是切片批准。
+当前等待用户审核 [三关完整修订版](./evidence/implementation-slices-proposal.md)。用户已同意原 1+3、原 4+5 的合并方向；本次展示后的完整范围、依赖和验收尚未收到确认。下一次明确接受修订版后即可创建 Implementation 并开始实施，不要再重复询问合并方向。
 
 1. 收到审核意见后，按 `/Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md` 处理。调整候选时重新检查可独立验收性和无环依赖，修订后再次请用户审核，不自行把新版本算作已接受。
 2. 用户接受后，将每个 slice 的完整 goal/in_scope/out_of_scope/dependencies/acceptance/boundaries 写入 Implementation Issue。按候选中获批的分配承接异常和预算两份报告的延期矩阵，更新 Spec 的实施归属。审核前不创建 Implementation，不编写产品代码。
