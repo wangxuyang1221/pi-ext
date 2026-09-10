@@ -18,6 +18,8 @@
 - [Spec #12](https://github.com/wangxuyang1221/adventure/issues/12) 是规格唯一维护位置，当前形成中。
 - [Planning #16](https://github.com/wangxuyang1221/adventure/issues/16) 是当前关卡，确定 usage 缺失与预算语义。
 
+用户要求手动保存游戏进度，本次保存后停止推进。#16 保持 open，首题尚未选择；保存请求不构成对候选方案的确认。
+
 ## Evolution
 
 用户指定 adventure 仓库托管 Issues，代码仍在 pi-ext。已获准创建独立分支和 worktree，并只推送该分支。
@@ -57,7 +59,7 @@
 - Node 22.22.2、pnpm 11.9.0。新 worktree 已运行 `pnpm install --frozen-lockfile --ignore-scripts` 和 `pnpm run check`，后者通过类型、测试、构建及发布包校验：1012 项测试通过、2 项 subagent 集成测试跳过，见 [baseline-check.log](./evidence/baseline-check.log)。这是未修改产品源码的基线结果，不是跨 provider 新功能验收。
 - [异常规则场景核对](./evidence/exception-policy-review.md) 记录 #15 组合规则的静态验证及延期矩阵。已发现实现注意点：syncTools 不可无条件重加用户禁用工具；现有 continuationDeferral 会被普通用户输入释放，不能代表仅显式 resume 的新门控；工具执行门控不可混入计量 eligibility 导致最后一笔 usage 丢失。具体实现和实际 SDK 时序尚待测试，不应据此重问已确认行为。
 - Map 的子 Issues 为 Spec #12、Planning #13、#14、#15、#16。#13、#14、#15 已关闭；#16 是当前主线，其原生前置 #14 已完成。Spec 和 Map 保持 open。
-- 早期独立复核 subagents 已完成并关闭。Codex 输出上限复核 subagent `01a08ba1-72da-71f3-95ae-4f101e50f891` 已完成，报告已核对，保留给当前 Planning 的可能追问复用；使用前通过 subagent_list 核对是否仍存活，跨 session 不假定它存在。没有启动模型服务或需要接管的监听端口。
+- 本次手动保存前已确认所有调研任务结束，并关闭最后保留的 Codex 输出上限复核 subagent。必要结论均保存在上述证据文件，无需依赖原 subagent 会话恢复。没有实施 worker 在执行，也没有启动模型服务或需要接管的监听端口。
 
 继续前完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md` 及其 `references/issue-templates.md`。保存使用 `/Users/wangxuyang/.agents/skills/wangxuyang/handoff/SKILL.md`，存档固定写在本文件。
 
@@ -69,7 +71,14 @@ Planning #16 尚未作出预算行为决定。当前产品会对缺失、非法�
 
 ## Continuation Point
 
-#15 已关闭并移交 Spec，当前进入 #16。首题等待用户决定缺失 usage 时是否沿用提示并继续，或对有预算目标增加停止规则。不要重问 #13 至 #15 已确认事项。
+本次为用户要求的手动中途存档，保存后停止，等用户要求继续再恢复。#15 已关闭并移交 Spec，#16 保持 open，未确认的预算策略不移交 Spec。存档前提交为 `cb1f508`，本次只更新 Issue 和交接资料，未修改产品源码。
+
+暂停位置是 #16 首题，已经向用户给出以下选项，尚未回答：
+
+1. 提示计量不完整并继续，推荐，沿用现有行为以兼容私有服务。只累计已知用量，无法保证实际消耗在预算内。
+2. 有预算的 goal 停止，无预算的继续。避免无法计量时继续消耗，但不返回用量的服务将无法持续运行有预算的 goal。
+
+恢复后从这道题继续，不重问 #13 至 #15 已确认事项。
 
 1. 一次只问一个预算决策。先明确缺失 usage 的继续或停止行为，再按依赖确定 token 口径、检查时机、恢复和提示。能由代码回答的事实自主核验，复用现有固定来源，不索要密钥或真实服务。
 2. #16 方案形成后按其通关条件验证缓存、reasoning、全零、非法 usage 和子代理归集例子，再通关移交 Spec、保存并继续。不得把静态场景推演记作新增功能已通过运行测试。
