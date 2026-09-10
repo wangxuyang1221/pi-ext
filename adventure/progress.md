@@ -34,6 +34,8 @@ Planning #15 另已确认 length 方案：让 Pi 完成自身适用恢复，最�
 
 Planning #15 已确认必要工具关闭的方案 1：保留当前 goal 状态，停止新的自动续跑并提示缺失工具，不擅自重新启用。工具重新可用后，由用户显式 /goal resume 继续。该规则不等于检测模型是否选择调用工具。
 
+Planning #15 已确认 deferred 的方案 1：本次不新增异步取回流程。意外收到 deferred 且 Pi 最终 settled 仍没有正常结果时，将仍 active 的 goal 标为 blocked，保留目标并提示当前结果返回方式不支持，不覆盖预算限制，不盲目重提任务。
+
 沿用 Spec 的 Scope、Behavior 与 Working agreement。核心边界是复用 Pi 当前模型，不另存 base URL、API key；覆盖所有 Pi 已接入、支持普通 function tools 且履行消息/终止事件契约的 provider，不按名称设白名单。保留根会话、TUI、持久化会话要求，不改 Pi 核心，不由 goal 实现任意私有协议。不得把后续候选保护策略或旧调研建议当作已确认需求。
 
 代码仓库为 `wangxuyang1221/pi-ext`，冒险分支为 `adventure/goal-all-providers`，worktree 为 `/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers`。不改 main，不创建 PR、不合并、不部署，不记录密钥。当前主工作目录之外的该 worktree 写入和本次 Issue、冒险分支推送已获用户“同意”。
@@ -59,19 +61,19 @@ Planning #15 已确认必要工具关闭的方案 1：保留当前 goal 状态�
 
 ## Current Assumptions
 
-length 与必要工具关闭策略已确认，见 Agreed Decisions and Constraints。
+纯文本保护排除、length、必要工具关闭和 deferred 策略已确认，见 Agreed Decisions and Constraints。
 
-下一候选是意外 deferred 的处理：本次不新增异步结果取回流程；若自定义 provider 返回 deferred，且 Pi 最终 settled 仍未得到正常结果，则将仍 active 的 goal 标为 blocked 并提示当前结果返回方式不支持，保留目标，不覆盖预算限制，不盲目重新提交。更广候选是另行实现异步等待、取回与取消。用户尚未选择。
+最后待确认的 #15 候选为额度分类：推荐内置保守规则，只在明确账户额度耗尽时标记 usage_limited，其他无法恢复或无法分类的最终错误为 blocked。普通 429 不直接判作额度耗尽，仍先由 Pi 重试。普通错误保留 budget_limited，明确账户额度错误沿用现有可转 usage_limited 的优先级。匹配使用可验证的窄文案或标识，不依赖 billing 等含糊词。
 
-deferred 默认生产路径未见，但不能排除自定义 provider 返回。此题不涉及 deferred tool loading，不能悄悄把所有自定义 provider 排除，也不能把异步取回默认纳入已批准范围。
+较广候选是额外提供用户自定义额度错误匹配配置，方便私有服务但增加配置校验和误判风险。两者尚未确认；不得把全部私有错误都能精确识别写成承诺。
 
 [Planning #15](https://github.com/wangxuyang1221/adventure/issues/15) 负责异常停止与恢复，[Planning #16](https://github.com/wangxuyang1221/adventure/issues/16) 负责 usage 缺失和预算语义。其他异常的状态、恢复规则、真实服务测试范围等均未确认；已排除纯文本保护，不再为它设计阈值或持久化。
 
 ## Continuation Point
 
-当前 #15 已确认不新增纯文本保护、最终未恢复 length 转 blocked，以及必要工具关闭时保留状态并提示限制。正在等待用户决定意外 deferred 的处理。#13 和 #14 均已关闭，不要重复询问已确认规则。#15 尚未通关，其中决定暂留本关，不提前移交 Spec。
+当前 #15 已确认不新增纯文本保护、length、必要工具关闭与 deferred 的规则，等待用户确认额度分类是否仅采用内置保守规则。#13 和 #14 均已关闭，不要重复询问已确认规则。#15 尚未通关，其中决定暂留本关，不提前移交 Spec。
 
-1. 用户确认意外 deferred 的处理后，明确额度分类的必要规则。一次只问一个问题；能由代码回答的事实自主查证，用户排除的范围不再扩大回来。
+1. 用户确认额度分类后，对照本关通关条件核对场景与证据；规则完整且无阻碍决定成立的分歧时，通关 #15、移交 Spec、保存并继续 #16。不要为已有排除项增加新的阈值或功能。一次只问一个问题；能由代码回答的事实自主查证，用户排除的范围不再扩大回来。
 2. 运行保护与预算语义按决策依赖逐题推进，复用现有证据，不重做已证明的契约调查；新方案按必要场景做离线验证，不要求密钥或真实服务。
 3. 每关通关后维护 Issue 正文、Spec 和本存档，提交推送冒险分支并核对 Map。只有用户决策、真实阻塞、暂停或最终确认时停下。
 4. 规划收敛后读取 `/Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md` 提交切片审核，再按 adventure 派 worker 实施；worker 使用 write-todo-list 与 TDD。不得把当前证据提交视为用户已批准编码。
