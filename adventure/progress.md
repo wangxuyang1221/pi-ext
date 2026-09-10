@@ -12,76 +12,86 @@
 
 ## Current Goal or Problem
 
-按 adventure 流程完成 goal 的多 provider 与私有化模型适配。用户以 `next ?` 恢复游戏，撤销先前暂停要求。三关完整切片已获批，不重复审核。
+goal 多 provider 与私有化模型适配已完成本地分支实施和验收。三关 Implementation 均由独立 worker 交付并通过协调者第一次验收，最后一关的同一 worker 已完成完整 Spec 整体验收。当前等待用户确认交付，停止自动推进。
 
-- [Map #11](https://github.com/wangxuyang1221/adventure/issues/11) 管理地图与当前状态。
-- [Spec #12](https://github.com/wangxuyang1221/adventure/issues/12) 是完整规格唯一维护位置，已确定，可用于实施，保持 open。
-- [Implementation #17](https://github.com/wangxuyang1221/adventure/issues/17) 已交付并通过协调者第一次验收。
-- [Implementation #18](https://github.com/wangxuyang1221/adventure/issues/18) 已交付并通过协调者第一次验收，最终异常停止与额度分类完成。
-- [Implementation #19](https://github.com/wangxuyang1221/adventure/issues/19) 是下一可执行关卡，负责计量与最终交付，同一 worker 完成 A/B 两阶段。
+- [Map #11](https://github.com/wangxuyang1221/adventure/issues/11) 与 [Spec #12](https://github.com/wangxuyang1221/adventure/issues/12) 保持 open，用户确认后才关闭。Spec 是完整规格唯一维护位置。
+- [Implementation #17](https://github.com/wangxuyang1221/adventure/issues/17)、[#18](https://github.com/wangxuyang1221/adventure/issues/18)、[#19](https://github.com/wangxuyang1221/adventure/issues/19) 均验收通过。
+- 产品提交为 `7bff254d732c769d2e88474da645bf911fc5f6f8`，随后存档提交只增加协调者验收与本文件。
+- [完整交付审计](./evidence/slice-3-spec-audit.md)、[最终协调者验收](./evidence/slice-3-coordinator-acceptance.md)、[正式使用说明](../docs/goal-provider-support.md) 为主要入口。
 
-本存档是 #18 通关后的自动保存。保存后继续派发 #19，不等待用户重复授权。接续时先读 Map 与当前 Issue，判断是否已派发，避免重复施工。
+无需继续派发新的 Implementation，也不因没有真实远端模型实测就自行扩大范围。用户提出具体修改时再恢复对应关卡。
 
 ## Evolution
 
-代码起点 `870cf4961436e8252a61c00d29a300a5a4b53760`。Planning #13/#14 确认 Pi 负责模型配置与接入，goal 复用当前模型，仅改 extension，覆盖所有合规且支持普通 function tools 的 provider。Planning #15/#16 确认异常、工具恢复、预算与计量规则，均已通关并移交 Spec。
+产品起点 `870cf4961436e8252a61c00d29a300a5a4b53760`。Planning #13/#14 确认 Pi 负责模型接入和凭据，goal 仅改 extension，支持全部合规且支持普通 function tools 的 provider。#15/#16 确认异常、工具恢复、预算与计量规则，全部移交 Spec 并关闭。
 
-用户确认新增/修改产品提示使用英文。原五个候选切片按用户要求合并为三关，完整获批快照在 [implementation-slices-proposal.md](./evidence/implementation-slices-proposal.md)。已创建 #17/#18/#19 与原生依赖，前次在 `5cfd59f` 手动保存并暂停于派发前。
+用户确认新增/修改产品提示使用英文。原五个候选切片按用户要求合为三关，完整获批快照在 [implementation-slices-proposal.md](./evidence/implementation-slices-proposal.md)。创建 #17/#18/#19 后曾于 `5cfd59f` 手动保存暂停。
 
-本轮恢复后，独立 worker 完成 #17，提交并推送 `50ff3b0de1071acec8bd3a85acf9f9b6b431cdd7`。实际 SDK 发现宿主 reload 会重启全部扩展工具，修复为在 reload shutdown 保存必要工具的外部排除项，并在 startup 恢复禁用意图。另一 SDK Red 证明创建时已有工具缺失，必须在首请求前持久化恢复门控。两者均属于获批局部实现，不改变 Spec。
+用户以 `next ?` 恢复，撤销暂停。主代理顺序派发三个独立 worker，每关验收后自动保存，不重复审核：
 
-协调者核对源码差异、测试和证据，独立重跑双版本新增 SDK 矩阵及全量 check，第一次验收通过。详细记录见 [slice-1-coordinator-acceptance.md](./evidence/slice-1-coordinator-acceptance.md)。
+1. #17 产品 `50ff3b0`，存档 `3033c13`。移除 provider 白名单，持久化独立工具恢复门控。实际 SDK 发现 reload 会重加扩展工具，补保存外部排除项；创建时工具已缺失则首请求前落盘门控。
+2. #18 产品 `b5ef6cd`，存档 `46114b5`。终态等宿主 settled，保守额度分类。SDK Red 修复 compaction 失败后旧 continuation 越过失败、内部取消误记暂停及嵌套 summary 前缀遗漏。
+3. #19 产品 `7bff254`。补齐子代理缺失 usage 的即时英文 warning，未改公式或前序业务。完成双版本原生计量、真实受管进程/tmux、实际 TUI、实际包加载、文档和完整 Spec 审计。协调者独立复跑后验收通过。
 
-自动保存 `3033c13` 后派发独立 #18 worker，交付 `b5ef6cd717621d132398a6a446ee11d02a2aa594`。最终 length/deferred/error 和非用户取消的 compaction 失败均等 settled 后处理，保守分类不复用 Pi 较宽的不重试 matcher。实际 SDK Red 还修复了 compaction 失败后旧 continuation 越过失败、取消被误当用户暂停及嵌套 summary 前缀遗漏。协调者独立重跑双版本终态矩阵与全量 check，通过第一次验收，见 [slice-2-coordinator-acceptance.md](./evidence/slice-2-coordinator-acceptance.md)。
+所有局部发现都在获批切片范围内解决，没有更改业务规格，也没有重开 Planning。
 
 ## Agreed Decisions and Constraints
 
-完整行为以 Spec 为准，不重问已确认决定：
+完整行为以 Spec 为准，接续不要重问以下决定：
 
-- 不按 provider 名称设白名单，不另建 HTTP、鉴权或全局配置入口，不改 Pi 核心。保留根会话、TUI、持久和已选模型准入。无工具模型及不合规 adapter 不在承诺范围。
-- 不新增连续非空纯文本次数上限、强制预算或远端费用硬上限。保留既有空响应、重复工具和连续失败保护。
-- Pi 自身恢复结束后才处理最终 length/deferred/普通错误。仍 active 的未恢复结果转 blocked；普通错误不覆盖 budget_limited。明确账户额度可转 usage_limited，裸 429、含糊 billing、认证/网络错误不作为账户额度证据。#18 已实现并通过核验。
-- 必要工具关闭只限制新自动续跑，不擅自恢复工具，不切断已归属用量及终态结算。工具恢复后仍须显式 `/goal resume`，普通输入、模型切换、reload 不解锁。
-- token 使用 input + output + cacheWrite，排除 cacheRead，reasoning 已包含于 output。缺失、非法、未经证实全零 usage 提示不完整并继续，只累计已知有效用量。历史缺口不能被后续有效响应、编辑、恢复、重载清除。
-- 归集根响应、Pi 提供 usage 的压缩/摘要及明确归属的受管直接子代理。不扩展第三方、孙代理或任意工具内部调用。
-- 预算为软收尾，100 预算允许保留实际 110，不强杀当前运行、工具或子代理，不为迟到预算报告另开收尾回合。停止或收尾结束后迟到子代理增量只推进基线，恢复前刷新基线，不补计冻结时已观察到的增量。
-- 同一目标 edit/resume/reload 保留用量、预算和缺口，耗尽预算不能重置。继承累计快照但不继承活动子代理订阅，新目标独立计量，旧事件不能污染新目标。
+- 复用 Pi 当前模型与配置，不按 provider 名称设白名单，不建独立HTTP、鉴权或凭据入口，不改Pi核心。保留根会话、交互TUI、持久和已选模型边界，不保证无工具模型或不合规adapter。
+- 不新增连续非空纯文本次数限制或强制预算。保留原有空响应、重复工具和连续执行失败保护。
+- Pi恢复结束后最终未恢复length/deferred/普通错误将仍active目标转blocked。普通错误不覆盖budget_limited，明确账户额度可转usage_limited；裸429、billing、认证/网络不构成账户额度证据。不复制重试、不提高输出上限、不取回deferred结果。
+- 必要工具关闭不擅自重开，只停止新自动续跑；已归属用量和终态仍结算。工具恢复后须显式 `/goal resume`，普通输入、edit、模型切换和reload不能绕过。
+- token公式 `input + output + cacheWrite`，排除cacheRead，reasoning已含于output。缺失、非法、未经证实全零usage提示不完整并继续，有无预算均适用；只计已知有效值，后续有效响应、edit/resume/reload不能清除历史缺口。
+- 归集根响应、Pi提供usage的压缩/摘要及明确归属受管直接子代理。不扩展任意工具内部、第三方或孙代理账单。
+- 软预算允许实际110/100，不强杀当前运行、工具或子代理，不再发后续goal自动续跑。根已结束后迟到预算不另开提示回合。停止或预算收尾结束后child只推进基线，恢复前刷新，不补计冻结时已观察到的增量。10→50→60最终贡献20，不保证按真实发生时间精确切账。
+- 同目标保留用量、预算和缺口，耗尽预算不能靠resume/edit重置或追加。继承累计快照但不继承活动child订阅，新目标独立计量，旧事件不能污染新目标。
 
-用户已批准操作范围：代码仓库 `wangxuyang1221/pi-ext`，分支 `adventure/goal-all-providers`，worktree `/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers`。允许该主工作区之外的 worktree 写入、`wangxuyang1221/adventure` Issue 更新及冒险分支提交推送。不改 main、不创建 PR、不合并、不部署、不发布 registry、不记录真实凭据或写用户全局配置。其他工作区外副作用仍遵循批准要求。
+用户已批准操作范围：代码仓库 `wangxuyang1221/pi-ext`，分支 `adventure/goal-all-providers`，worktree `/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers`；允许该主工作目录之外worktree写入、`wangxuyang1221/adventure` Issues更新及冒险分支提交推送。不得改main、PR/合并/部署/registry发布、Pi核心、真实凭据或全局用户配置。其他工作区外副作用仍须批准，必要依赖安装例外。
 
-遵循 `docs/agents/repository-language-policy.md`。用户确认本次新增/修改产品提示英文，文档正文中文、标题英文，代码/测试名/注释英文，提交信息中文。`dist/` 只由构建生成。每关必须 `pnpm run check`。
+遵循 `docs/agents/repository-language-policy.md`。本次新增/修改产品提示英文已确认；文档正文中文、标题英文，代码/测试名/注释英文，提交信息中文。`dist/` 只能构建生成，完成前 `pnpm run check`。
 
-主代理只协调与验收，一次推进一个 Implementation，每关独立 worker 使用新上下文，不再委派，执行计划只写当前 Issue，使用 write-todo-list 与 TDD。后续切片修订先审核；SDK 证据推翻规格时重开对应 Planning，不自行改业务。
+Adventure由主代理协调，一次一关，worker新上下文、不再委派，执行计划只在Issue，使用write-todo-list与TDD。后续切片修订先审核；若SDK证据推翻规格则重开Planning，不自改业务。Map/Spec在用户确认前open；远端冒险分支不自动删除。
 
 ## Established Facts and Required Context
 
-- #18 产品提交 `b5ef6cd` 已推送。新增正式 `extensions/goal/__tests__/terminal-runtime.mjs`，双版本各 56 场景、129 请求通过，协调者独立复跑通过。加上 provider/execution 回归，每版共 93 场景、321 请求通过。最新 check 为 1064 测试通过、2 项默认跳过，见 [slice-2-final-outcomes.md](./evidence/slice-2-final-outcomes.md) 和 [slice-2-coordinator-check.log](./evidence/slice-2-coordinator-check.log)。#19 审计前序组合时必读并复用。
-- #18 只改 scheduler 与 quota 分类器。响应归属和 settled 异步存储前后均复核，旧事件不清除新绑定；有失败的 compaction 会阻止自己的旧排队续跑，但保留用户输入。`quota.ts` 只用固定来源的精确码和锚定文案。Codex 友好提示 `You have hit your ChatGPT usage limit.` 也可能由裸 429 生成，因此不作为明确账户额度证据。正反例及固定源码入口在 #18 报告的 Classification sources。
-- #18 worker session 为 `01a08c49-122c-71f4-81cc-7064b2e4ef04`，已结束本轮，可用于本关返工，不用于 #19 的新上下文。测试与协调者复跑均已退出，临时目录无残留，无任务监听端口。
-- #17 产品提交 `50ff3b0` 已在远端。新增 `toolRecoveryRequired` 是权威 goal 快照的可选字段，保留旧记录兼容；专用于显式恢复，不替代普通输入可解除的继承 continuationDeferral。
-- reload 工具排除项使用 `pi-ext-goal-tools` session custom entry，只保存必要工具的外部禁用，不是 goal 状态权威来源。写入失败会报错并继续释放 writer，已落盘的恢复门控仍保留；无法保证失败写入下禁用选择跨 reload 保存。
-- 公开 lifecycle/命令检查点观察工具开关，不轮询。两检查点之间关闭又恢复、从未观察到的瞬时变化不可追溯。
-- [slice-1-provider-admission.md](./evidence/slice-1-provider-admission.md) 包含实现、TDD Red/Green、双版本 SDK 方法/结果与复现。#18 修改 scheduler/index 或最终审计时必读。正式夹具为 `extensions/goal/__tests__/provider-runtime.mjs`，可供后续复用。
-- Node 22.22.2、pnpm 11.9.0；依赖 Pi 0.84.3，宿主 0.85.1。两版各新增 22 场景、60 请求通过；既有 execution SDK 各 15 场景、132 请求通过。协调者独立复跑新增双版本矩阵通过。
-- #17 全量 check 和协调者独立 check 均 1024 测试通过、2 个默认 subagent 集成测试跳过，类型检查/构建/发布包校验通过。日志在 [slice-1-check.log](./evidence/slice-1-check.log) 和 [slice-1-coordinator-check.log](./evidence/slice-1-coordinator-check.log)。跳过项不是通过。
-- SDK 矩阵真实运行 SDK loop、模型加载和 function tools。models.json 私有模型用原生 Completions adapter + 离线 SSE；内置风格、Codex、自定义入口使用合规 streamSimple。没有真实远端 provider 实测，不证明其他原生 adapter 映射或 PTY 视觉效果。
-- [provider-feasibility.md](./evidence/provider-feasibility.md) 是架构及固定 API 依据，准备 SDK 集成时读取。Pi 0.84.3 tag 为 `4e58f324fae8ebfa98a3d45181fb248072a2afac`，0.85.1 为 `d981de1229ef899957bbe968bc8dcda02a21f477`。Context7 `/earendil-works/pi` 仅覆盖 main，具体版本用固定文档/源码。Model 没有通用 supportsTools 标志，Usage reasoning 是 output 子集，没有统一账户额度枚举。
-- [exception-policy-review.md](./evidence/exception-policy-review.md)、[terminal-contract-review.md](./evidence/terminal-contract-review.md)、[codex-output-limit-review.md](./evidence/codex-output-limit-review.md)、[remaining-execution-boundaries.md](./evidence/remaining-execution-boundaries.md) 为 #18 的异常与恢复规则依据。
-- [budget-policy-review.md](./evidence/budget-policy-review.md) 及 [budget-accounting.mjs](./experiments/budget-accounting.mjs) 记录 47 个生产计量/存储合成场景，只支持预算规则，不替代真实 SDK/adapter 或 steering 时序。
-- 旧 `docs/goal-descendant-acceptance.md` 关于完成后迟到子代理仍归集及 input+output 的文字已过时，#19 必须校正。根 missing 直接 warning、子代理 missing 快照传播的实际 TUI/工具结果可见性归 #19。
-- #17 worker session 为 `01a08c27-5df2-75ce-b52f-81ebac7b1f35`，已结束本轮任务，可用于本关返工，不用于接管 #18 的新上下文。跨会话先通过当前可用 subagent 工具核对 runtime，不能假定可访问。
-- #17 worker 与协调者测试均已退出，worktree `.goal-*` 临时目录无残留，无任务后台服务或监听端口。worker runtime 留待返工，不等于遗留测试服务。
+### Product and verification
+
+- #17的权威goal快照新增可选 `toolRecoveryRequired`，旧记录兼容。它与普通输入可解除的继承continuationDeferral不同。reload通过 `pi-ext-goal-tools` session custom entry保存必要工具外部排除项。写入失败会报错并释放writer，但不能保证失败写入下的禁用项跨reload保存。公开检查点之间关闭又恢复且从未被观察到的瞬时变化不可追溯。
+- #18 scheduler复核响应/运行/目标归属，settled异步存储前后再次核对。quota分类器只有固定来源的精确码和锚定文案。`You have hit your ChatGPT usage limit.` 可能由Codex adapter对裸429生成，不作为明确账户额度证据。详见 [slice-2-final-outcomes.md](./evidence/slice-2-final-outcomes.md#classification-sources)。
+- #19只在child计量成功提交后首次完整→不完整时通知，没有改公式、冻结或计费路径。Google两版原生cacheWrite为0，实际90样本是80+10+0，其他家族及公式测试验证50+10+30。未伪造Google字段。
+- Node22.22.2、pnpm11.9.0；依赖Pi0.84.3、宿主0.85.1。Context7 `/earendil-works/pi` 只有main，固定版本依据官方源码/已安装包。两版共12份adapter源码与source map逐字节核对，见 [source hashes](./evidence/slice-3-fixed-sources.json)。
+- 最终worker与协调者check均1067测试通过、2项默认跳过，类型/构建/包校验通过。隔离subagent integration由worker另行1项通过，默认在线项未运行，不能计为通过。协调者日志 [slice-3-coordinator-check.log](./evidence/slice-3-coordinator-check.log)。
+- 两版原生根计量各74场景/288请求、真实受管IPC各16场景/16child；协调者独立重跑均通过。worker另跑两版tmux late/pending各2场景。真实进程有生产投递/报告/close，不是只伪造报告文件。
+- worker实际InteractiveMode PTY两版×根/child×无预算/1000共8组通过。协调者另抽验0.84.3根无预算与0.85.1 child预算1000，通过，edit/reload/resume后7token与旧缺口可见。
+- 前序双版本每版provider22场景/60请求、terminal56/129、execution15/132在#19再次通过；#17/#18之前已有协调者独立复验。
+- worker实际包306文件、416196bytes，SHA256 `88cadd23a22df27c42184a0b08fc2b5ca493cdad5088ebb99c3b361a12a65412`，305个非manifest文件与最终构建逐字节一致。两版由Pi发现全部7入口、4个非Codex原生家族各20请求通过，包内完整计量矩阵亦通过。协调者独立pack、解压、artifact检查及双版本正常流程通过。临时包已删，可按正式命令重建，不是已发布registry。
+
+### Evidence entrances
+
+- [slice-3-spec-audit.md](./evidence/slice-3-spec-audit.md)：最后worker的完整Spec/Acceptance/延期逐项对照、包和文档核验、复现与限制。交付确认或后续修改先读。
+- [slice-3-coordinator-acceptance.md](./evidence/slice-3-coordinator-acceptance.md)：最终独立验收与清理；[runtime摘要](./evidence/slice-3-coordinator-runtime.json)记录协调者PTY和包复验。
+- [slice-3-accounting.md](./evidence/slice-3-accounting.md)：原生adapter、真实child、实际TUI方法和命令，展开计量/TUI缺陷时读。
+- [slice-1-provider-admission.md](./evidence/slice-1-provider-admission.md)及[协调者验收](./evidence/slice-1-coordinator-acceptance.md)：准入、工具恢复和reload证据；[slice-2-final-outcomes.md](./evidence/slice-2-final-outcomes.md)及[协调者验收](./evidence/slice-2-coordinator-acceptance.md)：最终异常、额度来源和归属。
+- [provider-feasibility.md](./evidence/provider-feasibility.md)、[exception-policy-review.md](./evidence/exception-policy-review.md)、[budget-policy-review.md](./evidence/budget-policy-review.md)：规划依据和固定版本入口。历史推演不是新增实现已通过的唯一证据。
+- 正式夹具在 `extensions/goal/__tests__/`：`provider-runtime.mjs`、`terminal-runtime.mjs`、`accounting-runtime.mjs`、`accounting-child-runtime.mjs`、`accounting-tui-driver.py`、`package-provider-runtime.mjs`。根测试使用 `env -u PI_SUBAGENT_PARENT`，仍保留显式child准入反例。
+- 当前说明在 [README](../README.md#goal-extension) 与 [goal-provider-support.md](../docs/goal-provider-support.md)，已纠正旧descendant公式和完成后的迟到归集。其他旧报告已注明历史适用范围。
+
+### Cleanup and limits
+
+三名本场worker runtime已关闭，不应尝试使用旧agentId继续派发。所有结果已经入库并在Issue正文记录。协调者核对78个测试/worker PID均退出；无任务监听端口、`.goal-*`、`.slice-3*`、`.coordinator-*`临时目录。未停止用户原有宿主服务。PTY必要依赖pyte0.8.2已按依赖安装例外装入既有conda `codex-py312`，没有写Pi全局配置。
+
+未运行真实远端/付费模型、所有私有额度文案、Windows/Linux实际TUI、断电恢复或默认在线subagent integration。没有精确远端费用/硬封顶、未暴露服务端用量或孙代理账单保证。上述范围不属于本次必需验收；不能因离线矩阵通过宣称远端全部实测。
 
 ## Current Assumptions
 
-没有待用户选择的业务规划问题，预计可直接推进 #19。这个判断不替代后续实际 SDK 验证。#19 计量/最终交付尚未完成，不能把前两关绿灯当作它通过。
-
-#19 的原生 adapter 代表样本与实际 TUI、受管直接子代理进程链路是已获批必需验收，不是已有通过结论。真实远端模型端到端不在已取得的证据范围。
+所有获批实施与必需本地验收均已完成，没有已知失败断言或必需未验证项。用户尚未确认最终交付，不能把协调者验收等同于用户接受。后续修改或外部环境变化可能要求重跑受影响测试，但当前不自动扩大范围。
 
 ## Continuation Point
 
-1. 本存档为 #18 通关自动保存。读 Map、Spec 和 #19，核对最新冒险分支工作区及现存 worker，若 #19 未派发则立即派发，不重问批准。将 Workspace 固定到本存档的最新提交，保留前两关产品与全部证据。
-2. #19 独立 worker 行动前完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md`、`/Users/wangxuyang/.agents/skills/wangxuyang/develop-with-tdd/SKILL.md` 及必要引用，执行计划只维护在 Issue，不再委派。一次只推进本关，两个阶段均由同一 worker 完成。
-3. 阶段 A 核对双版本原生 Completions/Responses、Anthropic、Google usage 映射，保留 Codex/自定义样本；真实受管子代理进程/投递/报告链路；实际 TUI 与工具提示；预算软收尾和冻结恢复、持久化/继承/替换及前两关交叉。必须使用实际 adapter 映射，不能自写 mapper 冒充。
-4. 阶段 B 对照完整 Spec 审计前序及 A 的证据、延期项、正式文档、实际打包产物双版本加载、pnpm run check 与资源清理。必需项未验证不能通过。前序缺陷交回相应原 worker，规格失效时重开 Planning，不擅改业务。
-5. 主代理依据 `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md` 和 `references/issue-templates.md` 验收，在 Acceptance 保留每轮结论与返工项。通过后关闭 #19，使用 handoff 更新本文件、提交推送并核对 Map/远端，提交用户确认。Map/Spec 此时保持 open，下一步写等待用户确认并停止推进。用户确认后才关闭，远端分支不自动删除。
+当前停点是等待用户确认本地分支交付，不是暂停在编码途中，也不是等待切片审核。
+
+1. 读取Map及用户最新回复。用户明确确认交付后，更新Spec状态和Map下一步，关闭Map/Spec，并用 `/Users/wangxuyang/.agents/skills/wangxuyang/handoff/SKILL.md` 更新本文件、提交推送、核对远端。只读查看或模糊的继续不等于批准PR、合并或部署。
+2. 用户提出修改时，按受影响规则恢复对应关卡。先读本文件引用的当前实现/验收证据，不重做已完成调研或重问已确认规格。旧worker已关闭，需要时依adventure安排新的独立worker，执行前完整读取write-todo-list/TDD技能绝对路径及引用。修订切片须用户审核，业务规则失效重开Planning。
+3. 不自动删除冒险分支或worktree，不创建PR、合并、部署、发布。远端分支删除由用户决定，删除前先安排仍需保留的资料链接。

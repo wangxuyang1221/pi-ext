@@ -1,0 +1,119 @@
+{
+  "tui": [
+    {
+      "source": "root",
+      "budget": "unbounded",
+      "versions": {
+        "pi-coding-agent": "0.84.3",
+        "pi-ai": "0.84.3",
+        "pi-agent-core": "0.84.3"
+      },
+      "pid": 85631,
+      "passed": true,
+      "tokens": 7,
+      "usageIncomplete": true,
+      "cleanup": {
+        "pid": 85631,
+        "exited": true,
+        "status": 0
+      },
+      "screenChecks": {
+        "warning": {
+          "hasUsageWarning": true
+        },
+        "query": {
+          "hasUsageWarning": true
+        },
+        "reloaded-query": {
+          "hasUsageWarning": true
+        },
+        "resumed-query": {
+          "hasUsageWarning": true
+        }
+      }
+    },
+    {
+      "source": "child",
+      "budget": "1000",
+      "versions": {
+        "pi-coding-agent": "0.85.1",
+        "pi-ai": "0.85.1",
+        "pi-agent-core": "0.85.1"
+      },
+      "pid": 85673,
+      "passed": true,
+      "tokens": 7,
+      "usageIncomplete": true,
+      "cleanup": {
+        "pid": 85673,
+        "exited": true,
+        "status": 0
+      },
+      "screenChecks": {
+        "warning": {
+          "hasUsageWarning": true
+        },
+        "query": {
+          "hasUsageWarning": true
+        },
+        "reloaded-query": {
+          "hasUsageWarning": true
+        },
+        "resumed-query": {
+          "hasUsageWarning": true
+        }
+      }
+    }
+  ],
+  "packages": [
+    {
+      "versions": {
+        "pi-coding-agent": "0.84.3",
+        "pi-ai": "0.84.3",
+        "pi-agent-core": "0.84.3"
+      },
+      "passed": true,
+      "families": [
+        "completions",
+        "responses",
+        "anthropic",
+        "google"
+      ],
+      "entryCounts": [
+        7,
+        7,
+        7,
+        7
+      ],
+      "requests": 20,
+      "networkAttempts": 0,
+      "pid": 85988
+    },
+    {
+      "versions": {
+        "pi-coding-agent": "0.85.1",
+        "pi-ai": "0.85.1",
+        "pi-agent-core": "0.85.1"
+      },
+      "passed": true,
+      "families": [
+        "completions",
+        "responses",
+        "anthropic",
+        "google"
+      ],
+      "entryCounts": [
+        7,
+        7,
+        7,
+        7
+      ],
+      "requests": 20,
+      "networkAttempts": 0,
+      "pid": 86007
+    }
+  ],
+  "cleanup": {
+    "temporaryDirectoryRemoved": true
+  }
+}
