@@ -1,0 +1,13 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers
+
+stdout | extensions/subagent/__tests__/isolated-integration.test.ts > uses real Pi and an offline provider on an isolated tmux socket
+{"cleanup":{"socket":"/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.sa-it-fSZOqb/tmux.sock","pids":[79161,79160],"livePids":[],"socketUnavailable":true}}
+
+ ✓ extensions/subagent/__tests__/isolated-integration.test.ts (1 test) 6080ms
+   ✓ uses real Pi and an offline provider on an isolated tmux socket  6079ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  02:15:45
+   Duration  6.28s (transform 53ms, setup 0ms, collect 61ms, tests 6.08s, environment 0ms, prepare 29ms)

@@ -1,0 +1,285 @@
+{
+  "event": "result",
+  "versions": {
+    "pi-coding-agent": "0.85.1",
+    "pi-ai": "0.85.1",
+    "pi-agent-core": "0.85.1"
+  },
+  "source": "child",
+  "readyCount": 2,
+  "settledCount": 2,
+  "goal": {
+    "goalId": "3188c791-1753-4c88-b314-6a5a57378f87",
+    "generation": 1,
+    "objective": "Persistent TUI accounting edited",
+    "tokenBudget": 1000,
+    "status": "paused",
+    "tokensUsed": 7,
+    "elapsedSeconds": 0,
+    "createdAt": "2026-09-10T18:26:48.535Z",
+    "updatedAt": "2026-09-10T18:26:51.422Z",
+    "usageCheckpoint": {
+      "sourceId": "8489503f-f468-45ec-85ab-1cf2ae9387d8",
+      "tokens": 0,
+      "missing": false,
+      "lastReceipt": "28f9a1e6668e284269d0d71773b00b5b9dec591417d89ba17939ea7c2b605267"
+    },
+    "childUsage": [
+      {
+        "sourceId": "4b17eeef-3844-4349-9a26-0f2785d253df",
+        "reportPath": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/adventure/experiments/.slice-3-tui-0.85.1-child-1000/subagents/usage/d7d3eda5e0a327e193dc9f63f7e6417cf8a825b8db3f4c5156f45f40ce8d92d7/4b17eeef-3844-4349-9a26-0f2785d253df.json",
+        "tokens": 7,
+        "missing": true,
+        "lastReceipt": "d279d3b10e681741728220fe6827e8b17853c5620e376b47ab07b864d03dab2c"
+      }
+    ],
+    "usageIncomplete": true,
+    "activation": 3
+  },
+  "requests": [
+    {
+      "index": 1,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ]
+    },
+    {
+      "index": 2,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ]
+    },
+    {
+      "index": 3,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ]
+    },
+    {
+      "index": 4,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ]
+    },
+    {
+      "index": 5,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ]
+    },
+    {
+      "index": 6,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ]
+    },
+    {
+      "index": 7,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ]
+    },
+    {
+      "index": 8,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent_spawn",
+        "subagent_prompt",
+        "subagent_list",
+        "subagent_read",
+        "subagent_wait",
+        "subagent_close",
+        "fixture_observe"
+      ]
+    }
+  ],
+  "networkAttempts": 0,
+  "pid": 78166,
+  "exited": true,
+  "passed": true
+}

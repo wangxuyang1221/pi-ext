@@ -1,0 +1,110 @@
+[
+  {
+    "version": "0.84.3",
+    "ref": "4e58f324fae8ebfa98a3d45181fb248072a2afac",
+    "path": "packages/ai/src/api/openai-completions.ts",
+    "bytes": 60772,
+    "sha256": "22b4d36e1370ebf1ea3c6a1084bd436349ab63da20fe06214f92fc6652859d08",
+    "installedSourceMatches": true,
+    "url": "https://github.com/earendil-works/pi/blob/4e58f324fae8ebfa98a3d45181fb248072a2afac/packages/ai/src/api/openai-completions.ts"
+  },
+  {
+    "version": "0.84.3",
+    "ref": "4e58f324fae8ebfa98a3d45181fb248072a2afac",
+    "path": "packages/ai/src/api/openai-responses.ts",
+    "bytes": 13458,
+    "sha256": "4f0aab4f132165862f222d3bb0f96828781089ddc52cffe53d9fe31073f59c49",
+    "installedSourceMatches": true,
+    "url": "https://github.com/earendil-works/pi/blob/4e58f324fae8ebfa98a3d45181fb248072a2afac/packages/ai/src/api/openai-responses.ts"
+  },
+  {
+    "version": "0.84.3",
+    "ref": "4e58f324fae8ebfa98a3d45181fb248072a2afac",
+    "path": "packages/ai/src/api/openai-responses-shared.ts",
+    "bytes": 29412,
+    "sha256": "e86649ae0ccc20478df9919dc57e7bb3d8f2fc02e343cc1f87db16d8ca1ca2bb",
+    "installedSourceMatches": true,
+    "url": "https://github.com/earendil-works/pi/blob/4e58f324fae8ebfa98a3d45181fb248072a2afac/packages/ai/src/api/openai-responses-shared.ts"
+  },
+  {
+    "version": "0.84.3",
+    "ref": "4e58f324fae8ebfa98a3d45181fb248072a2afac",
+    "path": "packages/ai/src/api/anthropic-messages.ts",
+    "bytes": 44886,
+    "sha256": "c63b3cbe8afe2504bb5f60f2e7f7b8f773de68486a03cc0cc266c3c76f73f7f6",
+    "installedSourceMatches": true,
+    "url": "https://github.com/earendil-works/pi/blob/4e58f324fae8ebfa98a3d45181fb248072a2afac/packages/ai/src/api/anthropic-messages.ts"
+  },
+  {
+    "version": "0.84.3",
+    "ref": "4e58f324fae8ebfa98a3d45181fb248072a2afac",
+    "path": "packages/ai/src/api/google-generative-ai.ts",
+    "bytes": 16027,
+    "sha256": "1395c3f2a90bf701b8b5fc1b6f7de8d323193ed339e07a60630900099a543757",
+    "installedSourceMatches": true,
+    "url": "https://github.com/earendil-works/pi/blob/4e58f324fae8ebfa98a3d45181fb248072a2afac/packages/ai/src/api/google-generative-ai.ts"
+  },
+  {
+    "version": "0.84.3",
+    "ref": "4e58f324fae8ebfa98a3d45181fb248072a2afac",
+    "path": "packages/ai/src/api/openai-codex-responses.ts",
+    "bytes": 54149,
+    "sha256": "0af861bf377451d017715644fa829707fb97fbac90d5ff9b98985d262941f0e1",
+    "installedSourceMatches": true,
+    "url": "https://github.com/earendil-works/pi/blob/4e58f324fae8ebfa98a3d45181fb248072a2afac/packages/ai/src/api/openai-codex-responses.ts"
+  },
+  {
+    "version": "0.85.1",
+    "ref": "d981de1229ef899957bbe968bc8dcda02a21f477",
+    "path": "packages/ai/src/api/openai-completions.ts",
+    "bytes": 62409,
+    "sha256": "7c1002a6a17cd081f36a44defea533ea03f65e07477e4ddec49b402760e97df8",
+    "installedSourceMatches": true,
+    "url": "https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/ai/src/api/openai-completions.ts"
+  },
+  {
+    "version": "0.85.1",
+    "ref": "d981de1229ef899957bbe968bc8dcda02a21f477",
+    "path": "packages/ai/src/api/openai-responses.ts",
+    "bytes": 13908,
+    "sha256": "dea6113f21ab782bac450fc32ac8b8c99d8fd14f41cfe4c124fc6091c03910ed",
+    "installedSourceMatches": true,
+    "url": "https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/ai/src/api/openai-responses.ts"
+  },
+  {
+    "version": "0.85.1",
+    "ref": "d981de1229ef899957bbe968bc8dcda02a21f477",
+    "path": "packages/ai/src/api/openai-responses-shared.ts",
+    "bytes": 29490,
+    "sha256": "2562ad7497bfe9cf71533b7584400751746b6a563229a615f6e23848780d2bee",
+    "installedSourceMatches": true,
+    "url": "https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/ai/src/api/openai-responses-shared.ts"
+  },
+  {
+    "version": "0.85.1",
+    "ref": "d981de1229ef899957bbe968bc8dcda02a21f477",
+    "path": "packages/ai/src/api/anthropic-messages.ts",
+    "bytes": 48413,
+    "sha256": "9abf35ebe5dbe3a9d7a621c420aa0cbf474eb2ec7c79e1bea8e28966c564b7ab",
+    "installedSourceMatches": true,
+    "url": "https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/ai/src/api/anthropic-messages.ts"
+  },
+  {
+    "version": "0.85.1",
+    "ref": "d981de1229ef899957bbe968bc8dcda02a21f477",
+    "path": "packages/ai/src/api/google-generative-ai.ts",
+    "bytes": 16027,
+    "sha256": "1395c3f2a90bf701b8b5fc1b6f7de8d323193ed339e07a60630900099a543757",
+    "installedSourceMatches": true,
+    "url": "https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/ai/src/api/google-generative-ai.ts"
+  },
+  {
+    "version": "0.85.1",
+    "ref": "d981de1229ef899957bbe968bc8dcda02a21f477",
+    "path": "packages/ai/src/api/openai-codex-responses.ts",
+    "bytes": 54279,
+    "sha256": "0e314e541bfec8d4375d106f59f084da7d57079c08cfd637c58b1a60d7c6d98d",
+    "installedSourceMatches": true,
+    "url": "https://github.com/earendil-works/pi/blob/d981de1229ef899957bbe968bc8dcda02a21f477/packages/ai/src/api/openai-codex-responses.ts"
+  }
+]

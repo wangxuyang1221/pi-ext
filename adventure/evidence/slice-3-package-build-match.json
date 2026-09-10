@@ -1,0 +1,1227 @@
+{
+  "passed": true,
+  "archiveSha256": "88cadd23a22df27c42184a0b08fc2b5ca493cdad5088ebb99c3b361a12a65412",
+  "matchedFileCount": 305,
+  "files": [
+    {
+      "path": "extensions/codex-compact/LICENSE",
+      "sha256": "d2e9c552a7dda4e66910442fcef95d130f000aa3ebba2c985798d26df44b7ab7"
+    },
+    {
+      "path": "extensions/goal/LICENSE",
+      "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc"
+    },
+    {
+      "path": "extensions/openai-fast-mode/LICENSE",
+      "sha256": "e21611fc129b7e73416896492a9c2aafc3b183763c4281b9e610700f63a6ba70"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "9b52a7af7ea48d0b15d98b1a61ca4965b56896a8152719caf0109e27178255d5"
+    },
+    {
+      "path": "extensions/goal/NOTICE",
+      "sha256": "080c8b1d76f7f6d943f8ecb8bc0602b457fc4e023ec68384fe20e8105de57d14"
+    },
+    {
+      "path": "extensions/goal/dist/accounting.js",
+      "sha256": "7beb54cffce6055f999c2d0223b4a4c12d179ad62fec3e48182905a650950580"
+    },
+    {
+      "path": "extensions/codex-ui/dist/bash-group-layout.js",
+      "sha256": "078350770a400189bcbf4992dc444e26c35cf625d25853e9d0ad3c0d4e8ff2cc"
+    },
+    {
+      "path": "extensions/codex-ui/dist/bash-groups.js",
+      "sha256": "56c11d6bfca218d2e77ae2b4408ee8e832dcb8a517240cac359de2b3e21a029a"
+    },
+    {
+      "path": "extensions/codex-ui/dist/bash-refresh-scheduler.js",
+      "sha256": "e2f28ff183b2df9bb49f7b4d5944501134bb10b57697d7e2ad431a9d584f4284"
+    },
+    {
+      "path": "extensions/goal/dist/budget.js",
+      "sha256": "98bcd4ef95a016b5f5cc2370ed51f5b86f91a34a9401e734a323e38044ad7b81"
+    },
+    {
+      "path": "extensions/codex-compact/dist/capabilities.js",
+      "sha256": "fb858601580760fd87d3a5bdc0b474fe54dcea2c1dbcf7523d4dce6ec48cd170"
+    },
+    {
+      "path": "extensions/goal/dist/capability.js",
+      "sha256": "95f6abf5995c1afdfb2ebcf1febee56a7a65c171f85bff97ea884aa6987bdf50"
+    },
+    {
+      "path": "extensions/goal/dist/children.js",
+      "sha256": "d83ad6728d8b0547f884400cd1cc516978ea31b385d2945c833804075f18e407"
+    },
+    {
+      "path": "extensions/mcp/dist/client.js",
+      "sha256": "81ad7df93e799777d364dcd5bcb3c488cfe34602921240d11ccffcd0b52c43ff"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/commands.js",
+      "sha256": "e0dfefc0ec657169c08c5889ba97ad94b8a6c61eeaf43716f12374a8c5de6c7b"
+    },
+    {
+      "path": "extensions/codex-ui/dist/components.js",
+      "sha256": "ebb14066fd81cbead611e0227807e06dca6617df96ede26d1c47b7112df5488c"
+    },
+    {
+      "path": "extensions/codex-compact/dist/config.js",
+      "sha256": "70f812458e4734fd6e063b84dec6d37e2e5cf3ae158ed63145b11db304d270ce"
+    },
+    {
+      "path": "extensions/mcp/dist/config.js",
+      "sha256": "41f8badf6daa59c40b7be01f20d9a51df59e9a2e4333dd2b1829d54c29b433c2"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/config.js",
+      "sha256": "eb69f96514325ba82b99128fff60addb21bc299f81955b608a9131deb306a627"
+    },
+    {
+      "path": "extensions/goal/dist/content.js",
+      "sha256": "668b51875154ab54a81e5570c47bb90d860c3660bc048a8a154f33a3dc63762d"
+    },
+    {
+      "path": "extensions/subagent/dist/cursor.js",
+      "sha256": "88cd43742e17d3b6e9be35b1321d38d159d72ad608422fca457baacea4073657"
+    },
+    {
+      "path": "extensions/subagent/dist/delivery-receipt.js",
+      "sha256": "15167c26eaadde9fb07af618020cdf16f0e687ca33875e22086ffcf956d0a4d5"
+    },
+    {
+      "path": "extensions/mcp/dist/diagnostics.js",
+      "sha256": "78b66de08890c7d313ec285c084a71420e361526accd8992e5474b4ac120998c"
+    },
+    {
+      "path": "extensions/codex-ui/dist/exact-visual-tail.js",
+      "sha256": "ebf90387b2f302188dc8b48d9cb612e7d6c3fb5c295af7f2a5b7d57666bdf540"
+    },
+    {
+      "path": "extensions/codex-ui/dist/footer.js",
+      "sha256": "20228f42079fafec5d2a447b56444a9714f1b99af8ccddee64dde00855b142ea"
+    },
+    {
+      "path": "extensions/codex-compact/dist/index.js",
+      "sha256": "b70e2382ae258c855bd6bf706e9ac9560709641125929c4da5333e23ab318e7f"
+    },
+    {
+      "path": "extensions/codex-ui/dist/index.js",
+      "sha256": "6607f3f12938de8b3d8c5b20d0d4008cf38486f6a25828dc2948546d2bb5f2ae"
+    },
+    {
+      "path": "extensions/goal/dist/index.js",
+      "sha256": "0a94a5699e8649f65337cda27323aec5381fa16ec89d584097e69990a3188996"
+    },
+    {
+      "path": "extensions/mcp/dist/index.js",
+      "sha256": "63c4cb75eeeaf0969f7fb026837a40bba9f656c445da934c494c5aa0751f5b5a"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/index.js",
+      "sha256": "fb5cb16757cf0fd2bde51725d1b3ce55def7295edced3e0474e541d43c1ce07d"
+    },
+    {
+      "path": "extensions/permissions/dist/index.js",
+      "sha256": "f86e9cbf33518a67ff39ccb0956b64facccf2f3793f6c66fdada6393492b5bb8"
+    },
+    {
+      "path": "extensions/subagent/dist/index.js",
+      "sha256": "88386b4fefbe7a9ab68c8402f9d380b6ba0d120e6e30c73a44bf2631ff9c3fce"
+    },
+    {
+      "path": "extensions/codex-ui/dist/layout.js",
+      "sha256": "f290f6cecb32cac079541c8f51f17c72c7e46c49ae8e26414093ee1c412d65bd"
+    },
+    {
+      "path": "extensions/subagent/dist/layout.js",
+      "sha256": "91e7c685330b8c6b2bd96c913cd194ec38f20ccc7e7cbb7b4d1c559a38471964"
+    },
+    {
+      "path": "extensions/subagent/dist/lifecycle.js",
+      "sha256": "e0fe39fb6f125c7f143de865d38a2944e822bef6b3d154602b757015123ff7d2"
+    },
+    {
+      "path": "extensions/goal/dist/lock.js",
+      "sha256": "d86ccb2bf97c6e2c0f352719f321c269aff819185d7e7140ac27a174b9ef2de6"
+    },
+    {
+      "path": "extensions/goal/dist/loop.js",
+      "sha256": "5c8326eccdac46beb25a42640b1e26d04dc45f5d2030707258a52398b06fdb88"
+    },
+    {
+      "path": "extensions/subagent/dist/manager.js",
+      "sha256": "f5558fa1fcfbffbb524c69fe1d89a9d13ab7344ba7efe7d59621fc0c4c679553"
+    },
+    {
+      "path": "extensions/codex-compact/dist/native-compaction.js",
+      "sha256": "4664a134cf068c7c48783dc90290b31074d1a5ada1fac8eb61e93299a9cd0347"
+    },
+    {
+      "path": "extensions/subagent/dist/ownership.js",
+      "sha256": "72ee48f69489987289c0203f4bee01d49ec2804498175ffe058d2b0635f522a6"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/payload.js",
+      "sha256": "22f01b3b948b9cc8d5beec6d890311c787b459847d0163a157d758e915a5b9b3"
+    },
+    {
+      "path": "extensions/permissions/dist/permission-policy.js",
+      "sha256": "d042410bbc25cdac950e6d6e65baf3112663a7a904de167807032efbaeeffcd7"
+    },
+    {
+      "path": "extensions/codex-compact/dist/presentation.js",
+      "sha256": "2bec41b236c7da52abee389719cf62aa7cd5d4c41407c68c5d513b2fee602b28"
+    },
+    {
+      "path": "extensions/goal/dist/quota.js",
+      "sha256": "00c03a27789d211e2f83d845299d7392042a09ce58473d4cbe772b332b19d74b"
+    },
+    {
+      "path": "extensions/codex-ui/dist/read-group-layout.js",
+      "sha256": "20c2f3d00ed078a993847df6382c617e820057934b0a6ba077e8b7647d925f9f"
+    },
+    {
+      "path": "extensions/codex-ui/dist/read-groups.js",
+      "sha256": "c1b66e64f5b65d1e511d66f91a698c1ab83e0706ab32e9d9e9268770560d3289"
+    },
+    {
+      "path": "extensions/codex-ui/dist/reasoning-summary-scan.js",
+      "sha256": "12cf107465878d84d0da3cf446a5b9890b50a9e7dcf327dc7877410eb228bf57"
+    },
+    {
+      "path": "extensions/codex-ui/dist/reasoning-summary.js",
+      "sha256": "a4edc1c80b6e17cefafeb4a7413282b0fd1207d3036d3d7ca7c70650f2ea964a"
+    },
+    {
+      "path": "extensions/codex-compact/dist/remote-compaction.js",
+      "sha256": "318dc96b00ab40688a275f929eb523af352270d4e27428280fa7603eb131282c"
+    },
+    {
+      "path": "extensions/codex-ui/dist/render-cache.js",
+      "sha256": "d302386cf0fd386ccbd77b9939807e275a60ae442f20d07f24d125a62e8aaab8"
+    },
+    {
+      "path": "extensions/mcp/dist/renderers.js",
+      "sha256": "63d4074a53517da39991072fd3a034cfa409d8f4514a9d05c28c78d2d552ec27"
+    },
+    {
+      "path": "extensions/subagent/dist/renderers.js",
+      "sha256": "baf36322fb04557a65226c5411a488e7cc334f67d702cf41280017f6bceb1bf1"
+    },
+    {
+      "path": "extensions/codex-ui/dist/responsive-lines.js",
+      "sha256": "11b7f5bca530e86618b40084426ab979c437ecfe6208db5783a7a65e077d40b9"
+    },
+    {
+      "path": "extensions/mcp/dist/retry.js",
+      "sha256": "30322c542950b1010103ab340b334f34e050d869a4cf9db0a057ea97dda65628"
+    },
+    {
+      "path": "extensions/subagent/dist/runtime-host.js",
+      "sha256": "42700f775fe0d28bd9a62dc7f5bc4113401487e4b03f4a2066811d9fa0742e93"
+    },
+    {
+      "path": "extensions/subagent/dist/runtime-state.js",
+      "sha256": "4eebf568b83b7e546174e07fd06352ee167fea0d2579374aa10796b8818622c6"
+    },
+    {
+      "path": "extensions/codex-compact/dist/scheduler.js",
+      "sha256": "dac4331ab4792505b54637ebd737c4172961ae1e9b878e6d10a353138d3007e7"
+    },
+    {
+      "path": "extensions/goal/dist/scheduler.js",
+      "sha256": "503964da5b863705403f23db665502f538d89255c99529655b56602575e46534"
+    },
+    {
+      "path": "extensions/mcp/dist/schema.js",
+      "sha256": "7ad21e009591401be717b8f26138234eb9219428586139aa4af38e3fc3a0266d"
+    },
+    {
+      "path": "extensions/codex-compact/dist/session-coordinator.js",
+      "sha256": "c7e63595eaacf6499064e0c045967cacdd67e8fd0a3de156b08feee72ca76d72"
+    },
+    {
+      "path": "extensions/subagent/dist/session-reader.js",
+      "sha256": "21416eb76f3161cd5a12049a203deb48b7ed7fec505cde582dbec55433159b90"
+    },
+    {
+      "path": "extensions/mcp/dist/startup-ui.js",
+      "sha256": "f52f92666419362546cf1d697c7f872d95ba54ae5f19dd6a17fd3aec36250805"
+    },
+    {
+      "path": "extensions/subagent/dist/state-store.js",
+      "sha256": "ed6f1de5d788fee8331b19ee44eb625fbb39ed84cf5b7a1bc060b5008afde622"
+    },
+    {
+      "path": "extensions/mcp/dist/status-ui.js",
+      "sha256": "835ad80597b0b9d58b30fe018392ec3ebbecdcfe40b1e9504dbdf8762720824a"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/status.js",
+      "sha256": "132ad067be6d5e7bb393f13beeb9f0cadb3ffd0ae3fa7e6cc72d8052de8098ff"
+    },
+    {
+      "path": "extensions/goal/dist/storage.js",
+      "sha256": "ce50c309f86f176d8330bf45cafa97d4a9b09ad4bdebdda14df504865426bd24"
+    },
+    {
+      "path": "extensions/codex-ui/dist/terminal-title.js",
+      "sha256": "6037c98c3ed2389364ee908733d9fa3beb5152239b72e0e011a65d678bf67caf"
+    },
+    {
+      "path": "extensions/subagent/dist/tmux-runtime.js",
+      "sha256": "ee1613d5e2d64d0e57ca1b16bdf2452bed05e73131cb975be61321735f6d0ead"
+    },
+    {
+      "path": "extensions/codex-ui/dist/tools.js",
+      "sha256": "19f6ef0e7e1f951dd8e6208a187572bf1be9c29f8037af344181b06fb4392b67"
+    },
+    {
+      "path": "extensions/goal/dist/tools.js",
+      "sha256": "5e58946c5972e8d007b524d848a0b8c2245967a269445e2e6705e97432d56d21"
+    },
+    {
+      "path": "extensions/subagent/dist/tools.js",
+      "sha256": "4e8c74af4eb6eaae6ebc8640759e6113ac44f6980e909939e1cbef52d675277e"
+    },
+    {
+      "path": "extensions/mcp/dist/types.js",
+      "sha256": "01ae2a5b120382f9a648ced7ee8507493a134f216d100fc61600c6c9738235d2"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/types.js",
+      "sha256": "46cfbf4ffe5bfb135494ee6158c50d144efd6d999daeb3b7a624fc104775ba09"
+    },
+    {
+      "path": "extensions/goal/dist/upstream.js",
+      "sha256": "1a58aa0ddce9bbda73644cb3a4a2df9cd0ca5b5b397b16fa5be251111ec4ef52"
+    },
+    {
+      "path": "extensions/subagent/dist/usage.js",
+      "sha256": "64d76417445ccaa7137342d30da11d525a6f13f70f036d1ddff7022d98b7b84a"
+    },
+    {
+      "path": "extensions/subagent/dist/wait.js",
+      "sha256": "c4c3449629bb2ac3fc0ece4e6f5906eeae54d5449218ba7d95b5fcfb54b7bda7"
+    },
+    {
+      "path": "themes/codex-pi.json",
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad"
+    },
+    {
+      "path": "extensions/goal/dist/accounting.d.ts.map",
+      "sha256": "fb13d279cd9c7610d3c327e3fa6fbb06ae7db40d10edcecd535eed8f3a63b83d"
+    },
+    {
+      "path": "extensions/goal/dist/accounting.js.map",
+      "sha256": "ce404efeee5022f3c7496e929d4e9ecba0e9878b7cb5d802e37a3071b534f6cb"
+    },
+    {
+      "path": "extensions/codex-ui/dist/bash-group-layout.d.ts.map",
+      "sha256": "9bf009f36147d261e465d6365664badc7f3731d2f37714a321f30c6db2a10546"
+    },
+    {
+      "path": "extensions/codex-ui/dist/bash-group-layout.js.map",
+      "sha256": "422c23bdde69ad9f0d677dc9e05962c0ef1bae5efba9d9e0260451f67218056a"
+    },
+    {
+      "path": "extensions/codex-ui/dist/bash-groups.d.ts.map",
+      "sha256": "2b54bf4bd2f4a4842b020454f4591717c66ff294e6850840df09b06a33de071d"
+    },
+    {
+      "path": "extensions/codex-ui/dist/bash-groups.js.map",
+      "sha256": "adeb8226ddd3e51235159348b6ad80713ace60f3a6efe3a2d193a5149676cc28"
+    },
+    {
+      "path": "extensions/codex-ui/dist/bash-refresh-scheduler.d.ts.map",
+      "sha256": "30b63de05c3e5a80af647eb1a3b347d16806ad10c0c8d29f1e1decc38255b584"
+    },
+    {
+      "path": "extensions/codex-ui/dist/bash-refresh-scheduler.js.map",
+      "sha256": "4db59d870730714fcc7434eec62fd4d6ce7321e2ab77c76fae8f28f5d3e9527d"
+    },
+    {
+      "path": "extensions/goal/dist/budget.d.ts.map",
+      "sha256": "a455bd546b4d5ebb44aaba94ce850d3cc272e27326e2f8339496118ff12cba4c"
+    },
+    {
+      "path": "extensions/goal/dist/budget.js.map",
+      "sha256": "d4b690f057e41802e776853edad2973a8eadf5802f7d5c3cd6f2d6943da137d5"
+    },
+    {
+      "path": "extensions/codex-compact/dist/capabilities.d.ts.map",
+      "sha256": "60e95333940995819a839cc8eb686b274f06680923d0a7547008c73b721895c9"
+    },
+    {
+      "path": "extensions/codex-compact/dist/capabilities.js.map",
+      "sha256": "e47871605a25ffff91e721e83b3a3060777b44e258caf43e43c1a4342c4d7622"
+    },
+    {
+      "path": "extensions/goal/dist/capability.d.ts.map",
+      "sha256": "7fb87c47c1d7d8d0637ef477272139dcc394762d5ebcf2104cfc6168e0de48d4"
+    },
+    {
+      "path": "extensions/goal/dist/capability.js.map",
+      "sha256": "bfaaccf18f49bba334a58f786ed5495e3411dcee247bc11bbaed8a3dd25e0534"
+    },
+    {
+      "path": "extensions/goal/dist/children.d.ts.map",
+      "sha256": "8e28dfebb51fc433c551aecae6af73367161bd308606674e0230fab3d400c2b8"
+    },
+    {
+      "path": "extensions/goal/dist/children.js.map",
+      "sha256": "baae924c4df96da8c79d440bacb4601b7de84214bce73c997b451f247b20ccb8"
+    },
+    {
+      "path": "extensions/mcp/dist/client.d.ts.map",
+      "sha256": "6a9de9c45fcb0906538f7287d9b8157008e6ccff7e752439db554a403dd2f5b1"
+    },
+    {
+      "path": "extensions/mcp/dist/client.js.map",
+      "sha256": "e809afe37b71c8f7163960afda61db66fe229555d2399aa7551e94392095e491"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/commands.d.ts.map",
+      "sha256": "5caeba043a624e5af2012e5703ed8ebe3e53ab2e2743e75ef072690d234ce435"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/commands.js.map",
+      "sha256": "0bdbfe55c6ea290c385d785010b1d539c54f379623719485206d6f82ebab82da"
+    },
+    {
+      "path": "extensions/codex-ui/dist/components.d.ts.map",
+      "sha256": "1742c2e28581673a8f1cd1a55390776b19f0e84f0ce0ee226d085697d6752b12"
+    },
+    {
+      "path": "extensions/codex-ui/dist/components.js.map",
+      "sha256": "a5e5c7af07cfb3113eda45bb6269fbc5545ca5ac32c463fa1e7c6e18e1ddc619"
+    },
+    {
+      "path": "extensions/codex-compact/dist/config.d.ts.map",
+      "sha256": "42f5baee292fbbfdeee175604ca9d5c3526c5d9b938e03236803fac7707b84b8"
+    },
+    {
+      "path": "extensions/mcp/dist/config.d.ts.map",
+      "sha256": "2647c218e96aab44f58b1b817d3e2526fc6d5594a10aacd16bf110fa442e5a6e"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/config.d.ts.map",
+      "sha256": "e5e64c5a2c8c9aab60756ff56fb6169e9e41824835ad013d8c8036355672c12e"
+    },
+    {
+      "path": "extensions/codex-compact/dist/config.js.map",
+      "sha256": "9276362afecd95001ba5dc1661ac353d63937f30681ed8352493c52e5f99f7a7"
+    },
+    {
+      "path": "extensions/mcp/dist/config.js.map",
+      "sha256": "3e2a89defc6c791b9c80eeabc0c352496fc0056ecc9f500d4ef0c6f952e8997d"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/config.js.map",
+      "sha256": "6dda48e68980af9a78230466faea638a3c0d8d6eaa42d18e638f186a953657bf"
+    },
+    {
+      "path": "extensions/goal/dist/content.d.ts.map",
+      "sha256": "d3c7c93b5e474fa59cd30471dc2cfda45abb7abdbc41bf12158f50bb94f91f7a"
+    },
+    {
+      "path": "extensions/goal/dist/content.js.map",
+      "sha256": "9f9624327071a12a4e42e23a509308a933d81298ea99bfe192a737ec35be55bf"
+    },
+    {
+      "path": "extensions/subagent/dist/cursor.d.ts.map",
+      "sha256": "6e0469756394b68bafe7ca9d72b395d3030056ab6ff0583401d3fb72a4835968"
+    },
+    {
+      "path": "extensions/subagent/dist/cursor.js.map",
+      "sha256": "da472e1d124886e935cdc8579e2ba1cafb7144954572c1ebfec90aed90c49b4a"
+    },
+    {
+      "path": "extensions/subagent/dist/delivery-receipt.d.ts.map",
+      "sha256": "53561a1a4695f824d5a6814e2d1c443e2043ea3e2211d1711bc6600ebffe5420"
+    },
+    {
+      "path": "extensions/subagent/dist/delivery-receipt.js.map",
+      "sha256": "92d15d6cac3749841cb46a24cd474c8fa6032f245e25c04d8dec11047b66c9a7"
+    },
+    {
+      "path": "extensions/mcp/dist/diagnostics.d.ts.map",
+      "sha256": "75ceaab049c69f35dcb8f9eacf495821f4c1b646a0a75da847744a4dc621b9f5"
+    },
+    {
+      "path": "extensions/mcp/dist/diagnostics.js.map",
+      "sha256": "c7984980cf7ace5e7296e025c58faed7959f15cd793960c4b1f89bd838b66e76"
+    },
+    {
+      "path": "extensions/codex-ui/dist/exact-visual-tail.d.ts.map",
+      "sha256": "5a73f0fc145a61b0221a725473776531fe17bea7a2f540aa89c7d2f4b85901eb"
+    },
+    {
+      "path": "extensions/codex-ui/dist/exact-visual-tail.js.map",
+      "sha256": "3acae61f83d19dd28fbd509b6487b742b25163843a74b75f67cbb7626dd40e75"
+    },
+    {
+      "path": "extensions/codex-ui/dist/footer.d.ts.map",
+      "sha256": "9e95897dae016d242514132d895a975df196494429502e15d6bfc39ebcfb26ea"
+    },
+    {
+      "path": "extensions/codex-ui/dist/footer.js.map",
+      "sha256": "5a52da9a0103de7d18102e4958a898c85c4b8768c3f80fc5c42944c7ead7098e"
+    },
+    {
+      "path": "extensions/codex-compact/dist/index.d.ts.map",
+      "sha256": "8ffc4cf7f33b981c4ddc816a3b3c2be9cf659be915426f704f8a80a927bc37d4"
+    },
+    {
+      "path": "extensions/codex-ui/dist/index.d.ts.map",
+      "sha256": "d4784c1a8c1bf84544e42cc603ef0d208f4120849314ca4e3bd376d7678a86d1"
+    },
+    {
+      "path": "extensions/goal/dist/index.d.ts.map",
+      "sha256": "0e798065f80e04c1e6009e0069278afaf565feaebe03d2cf2612df46da3313bf"
+    },
+    {
+      "path": "extensions/mcp/dist/index.d.ts.map",
+      "sha256": "79e69e2642466f232ecc1bcf2628a4423503dc6f4c6192d24bc3dd48830d0323"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/index.d.ts.map",
+      "sha256": "67b63468793d8fa6985c35317c35054855a4dd2d99e815290100401edf232cfa"
+    },
+    {
+      "path": "extensions/permissions/dist/index.d.ts.map",
+      "sha256": "c3fe2061a6e52aad3961f60f334cbed7f0b887503b9d7604258a33279687ca7d"
+    },
+    {
+      "path": "extensions/subagent/dist/index.d.ts.map",
+      "sha256": "5f77de61481715516df1c3c37ff0d84e30ff80f4d4e3b4a37711ea1f797c1201"
+    },
+    {
+      "path": "extensions/codex-compact/dist/index.js.map",
+      "sha256": "3e468fda2d9928efd4765e1622dd356358457043da99269e1397c441c5eeca07"
+    },
+    {
+      "path": "extensions/codex-ui/dist/index.js.map",
+      "sha256": "ae5df1fd5c014fad6213103ebd6a282d4823f67ecfbaedf9a92ab6f9bb61e4d7"
+    },
+    {
+      "path": "extensions/goal/dist/index.js.map",
+      "sha256": "79fe60683f2679d96e984b6c6456ebfb4a4d28bbfbe6b368f6b0c77202bed81c"
+    },
+    {
+      "path": "extensions/mcp/dist/index.js.map",
+      "sha256": "ba23a63ffdf2a5d8127a7564c9d88a0597275e665b835ec6ce898c9f2260f2cf"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/index.js.map",
+      "sha256": "160c8fe91ed3d85b3e709fd1869570513e117f51047b11a21a4e051d5077d8d4"
+    },
+    {
+      "path": "extensions/permissions/dist/index.js.map",
+      "sha256": "7492636ff134558a823f412691e18154286749e20576aeefad3e2b5997257cf0"
+    },
+    {
+      "path": "extensions/subagent/dist/index.js.map",
+      "sha256": "562ebb0d014e5b9d90e0444ffa585b6ca27c50cdb3262c0fe57e205902caacd0"
+    },
+    {
+      "path": "extensions/codex-ui/dist/layout.d.ts.map",
+      "sha256": "428241620f8ffcbd2f044d74695c983600b1ec1a285cefddc3b845fd198da324"
+    },
+    {
+      "path": "extensions/subagent/dist/layout.d.ts.map",
+      "sha256": "80bff5a45addf4a3e3b8faf72d0882bcda83645a4330a581ce85364595bb898f"
+    },
+    {
+      "path": "extensions/codex-ui/dist/layout.js.map",
+      "sha256": "6b7c602612302a44a16d4b50a11de993bcfaf4b6b1cdc91cb6322f7db8ce2cd7"
+    },
+    {
+      "path": "extensions/subagent/dist/layout.js.map",
+      "sha256": "16f9e38de9c4d71bbe07fe3abb9a0c55c5f26537782245371583b3679d9d7330"
+    },
+    {
+      "path": "extensions/subagent/dist/lifecycle.d.ts.map",
+      "sha256": "0a435e9b29b043ec829dfaf7b929aef29d17fb6427b329e6b756b1d7e7766fe0"
+    },
+    {
+      "path": "extensions/subagent/dist/lifecycle.js.map",
+      "sha256": "bcb0ed2d3e9861aa7c8589134ba674c9475a5b106e4c22eb06c382cdd066d275"
+    },
+    {
+      "path": "extensions/goal/dist/lock.d.ts.map",
+      "sha256": "5ce58f0eacdd8a839f82f8f8a7458d19b29e670d24ec456436e671d21ce7d901"
+    },
+    {
+      "path": "extensions/goal/dist/lock.js.map",
+      "sha256": "9322ca4fb1482e3f1705adb16d351633397e16219015520089d9044f5e52d6fd"
+    },
+    {
+      "path": "extensions/goal/dist/loop.d.ts.map",
+      "sha256": "157d7017ab13f046c0c5f1cbf6e48c534c14d5330b4e44ef8f908a2bfab1e893"
+    },
+    {
+      "path": "extensions/goal/dist/loop.js.map",
+      "sha256": "f4738ad8a108611b549a3182fa01720d650fd2c95e897eb01f2a41a4306ff9f0"
+    },
+    {
+      "path": "extensions/subagent/dist/manager.d.ts.map",
+      "sha256": "d8fd47a42133b2b30c563b5f7978dad590073232c9e2b907208f35304e2f5c96"
+    },
+    {
+      "path": "extensions/subagent/dist/manager.js.map",
+      "sha256": "1a0628f13ccfb185a88e5bb876cd21d8529b51b3d925734270e719742ab19af1"
+    },
+    {
+      "path": "extensions/codex-compact/dist/native-compaction.d.ts.map",
+      "sha256": "4b03436b91c6d866fac42f8daf2ffa653e84ddbcc87da7fe77bbd54bc1a16d52"
+    },
+    {
+      "path": "extensions/codex-compact/dist/native-compaction.js.map",
+      "sha256": "787bb8915afbd5fd209efd9bab437b9fa88fb7e1b9d10cd255ca6d7fb27ca7a9"
+    },
+    {
+      "path": "extensions/subagent/dist/ownership.d.ts.map",
+      "sha256": "041b026e699ba5f8a5fb64ec094ba5095bd69bdad5f3c3855acb1b57c09b38e1"
+    },
+    {
+      "path": "extensions/subagent/dist/ownership.js.map",
+      "sha256": "8b91935d9d7592450fc667deb6d3ac00312103eb47f7dbc41afec65df5d4a2f0"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/payload.d.ts.map",
+      "sha256": "b87fd7189f02bf54fe9328b9511be0b08c5e203645751d2691d3472e52e8a66a"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/payload.js.map",
+      "sha256": "899e19b6474e548bf39911f67693cbf31d41a8756e0a00c795f8b9852952b569"
+    },
+    {
+      "path": "extensions/permissions/dist/permission-policy.d.ts.map",
+      "sha256": "15539430ff86c348e734bbfbdad21359b9b6bbd8b5478e5dd98330e87ce3c59e"
+    },
+    {
+      "path": "extensions/permissions/dist/permission-policy.js.map",
+      "sha256": "2d95d4b4a46d6c9115d6d0ce222a11e7e5258e6213434f23915b18ae7caad8b8"
+    },
+    {
+      "path": "extensions/codex-compact/dist/presentation.d.ts.map",
+      "sha256": "dce2deac8464eede73591cb40b4d413a52c3ecc17be43f521330010ea4b00106"
+    },
+    {
+      "path": "extensions/codex-compact/dist/presentation.js.map",
+      "sha256": "111f929169c24cd8f811ca1748bd61b6fa05fe79f337fe6091084387cc5ef803"
+    },
+    {
+      "path": "extensions/goal/dist/quota.d.ts.map",
+      "sha256": "7859c2f453d237346c4997255c515e6706cee87ab18ba30a2ff946efd8e8aded"
+    },
+    {
+      "path": "extensions/goal/dist/quota.js.map",
+      "sha256": "f827cbe7416138a9824e8bb70038d670b7bd44af64a4574d9599d0c60a99294a"
+    },
+    {
+      "path": "extensions/codex-ui/dist/read-group-layout.d.ts.map",
+      "sha256": "c956235dc6888f7ba33db88a1c58203c29ec5a30a8c8a81c0b99a128fd6dca16"
+    },
+    {
+      "path": "extensions/codex-ui/dist/read-group-layout.js.map",
+      "sha256": "4341198ff84ee7df9b973db895fb3d3d4bb83466cc024cf677c90a11889b12cd"
+    },
+    {
+      "path": "extensions/codex-ui/dist/read-groups.d.ts.map",
+      "sha256": "6c41dde5ca0993e9c24cd75c4359d670ca163e3ad47ef179481de4cf2c178118"
+    },
+    {
+      "path": "extensions/codex-ui/dist/read-groups.js.map",
+      "sha256": "7ffa63d6be1f8c54a47044256f1cecd03d3e8b0cd643e1673b489e866dc76d07"
+    },
+    {
+      "path": "extensions/codex-ui/dist/reasoning-summary-scan.d.ts.map",
+      "sha256": "a9e95a43b4c1adfea955fbf0b14980ddce1ebb9801e2faf8251826eea65bbf67"
+    },
+    {
+      "path": "extensions/codex-ui/dist/reasoning-summary-scan.js.map",
+      "sha256": "101afccf8b2df67073f2ff7e913973ba1d29fa5b003e12a024ab2302ea7fc2ea"
+    },
+    {
+      "path": "extensions/codex-ui/dist/reasoning-summary.d.ts.map",
+      "sha256": "e3561511acd81ff3fb31edee6f869d68f066ca926a8dee72e6ac5d2968858858"
+    },
+    {
+      "path": "extensions/codex-ui/dist/reasoning-summary.js.map",
+      "sha256": "3a8ef810394b9c4dd9a6cf74ffc0ad665d3aa275275f8e58a2581d40dfd87808"
+    },
+    {
+      "path": "extensions/codex-compact/dist/remote-compaction.d.ts.map",
+      "sha256": "eed5e8bf693097826bc700f11284e9cebc7964982b7d98df1c194b70484cc8bc"
+    },
+    {
+      "path": "extensions/codex-compact/dist/remote-compaction.js.map",
+      "sha256": "89f505d4e3b3872f126605d049f28c281ba6fba1d24b9edcac4afbc61cee1760"
+    },
+    {
+      "path": "extensions/codex-ui/dist/render-cache.d.ts.map",
+      "sha256": "f0bd9031de525d01a47b261433d63c0075a339dbb85a3b3eacc04fbd35ac513f"
+    },
+    {
+      "path": "extensions/codex-ui/dist/render-cache.js.map",
+      "sha256": "4cad42f0cf06228e6f4472a626563549f613f85235cc7402d34c87f04a096a83"
+    },
+    {
+      "path": "extensions/mcp/dist/renderers.d.ts.map",
+      "sha256": "21f8d4e4af7313d907cf064c8db8dad77d45a3ef3bbdb27a4679343517c59a8a"
+    },
+    {
+      "path": "extensions/subagent/dist/renderers.d.ts.map",
+      "sha256": "08bc82ecec731b46e5c39a22825a31f6c7bf838f621a0db6a63a19793b53df02"
+    },
+    {
+      "path": "extensions/mcp/dist/renderers.js.map",
+      "sha256": "18d9802c56842a0e244e02bdd24237274080a619ca4a54ad101a6aee21d6d4d7"
+    },
+    {
+      "path": "extensions/subagent/dist/renderers.js.map",
+      "sha256": "68738105f9cff9ec8296867a26849d6e03ed61835bf5f62555e05930bebb1711"
+    },
+    {
+      "path": "extensions/codex-ui/dist/responsive-lines.d.ts.map",
+      "sha256": "05aa3152868b23a11ad0626bf66daedc104c7cc8b882e1a09b797dc8f39cb8ae"
+    },
+    {
+      "path": "extensions/codex-ui/dist/responsive-lines.js.map",
+      "sha256": "b64da5b8bc14a14a7a76bdb93d92042040bc62118c2c2d772d61d70ebf284f35"
+    },
+    {
+      "path": "extensions/mcp/dist/retry.d.ts.map",
+      "sha256": "7d5fb34c60808aab91f3796c60a3480cdd9ae7cc38c78296221e49f98474f339"
+    },
+    {
+      "path": "extensions/mcp/dist/retry.js.map",
+      "sha256": "ac51aac6fdc04fe2427fd05c2cacf05b42cbb9bd9297583cfc8fc43d6478986e"
+    },
+    {
+      "path": "extensions/subagent/dist/runtime-host.d.ts.map",
+      "sha256": "d844c2161802549dbc5c45e1905b83d080ace524bdfba8d51203c10bf23b34bc"
+    },
+    {
+      "path": "extensions/subagent/dist/runtime-host.js.map",
+      "sha256": "86487d732eb5d66c322229c844c50e0cb89d4f3be39fd4142cd315b163c5c19e"
+    },
+    {
+      "path": "extensions/subagent/dist/runtime-state.d.ts.map",
+      "sha256": "2ad882bde477ffb75f9fcee14f084ea211fe99bf60256fd7cbbec54e3230440b"
+    },
+    {
+      "path": "extensions/subagent/dist/runtime-state.js.map",
+      "sha256": "471a3bb9ea391647b4dc3a4be35eec62eb3fbef75dab76bf71625086368d5fc8"
+    },
+    {
+      "path": "extensions/codex-compact/dist/scheduler.d.ts.map",
+      "sha256": "1bb86820ca8f2782170d577f80cd85aa6784ec92ee1c9a324d1df619f8403175"
+    },
+    {
+      "path": "extensions/goal/dist/scheduler.d.ts.map",
+      "sha256": "e74ae931cf9501e9da39025b984324cb8ba57c67b12a0f5f704b1a1d6c9259bc"
+    },
+    {
+      "path": "extensions/codex-compact/dist/scheduler.js.map",
+      "sha256": "15965a692a53f7e2f0de05775d48c2d375ef57215dc5e9f65ce0b2016efe971f"
+    },
+    {
+      "path": "extensions/goal/dist/scheduler.js.map",
+      "sha256": "ad5bf84ff4c5c0781d083fee4b9449af287f026662564ceafc33b365e7286f93"
+    },
+    {
+      "path": "extensions/mcp/dist/schema.d.ts.map",
+      "sha256": "f0d0e1139c8d528841f3234c62958e25c87d6892ac1bd21e154b5b020957b735"
+    },
+    {
+      "path": "extensions/mcp/dist/schema.js.map",
+      "sha256": "004c3100d38917b8b193ffe20b8e43551825ce7a8752b3f8c583ff1e6678cc19"
+    },
+    {
+      "path": "extensions/codex-compact/dist/session-coordinator.d.ts.map",
+      "sha256": "021e786301a9d09dc1208bd473132ff9aabef2f7eadc1e213e6da902ef7d7b55"
+    },
+    {
+      "path": "extensions/codex-compact/dist/session-coordinator.js.map",
+      "sha256": "934245491676b61a82de21f8a5554b9a994deb85efc7589189194a4ceeb8f0c0"
+    },
+    {
+      "path": "extensions/subagent/dist/session-reader.d.ts.map",
+      "sha256": "bb00b52a549d8dc8e233054698ed04ed7e606d786001e63dd6bdca5098579a95"
+    },
+    {
+      "path": "extensions/subagent/dist/session-reader.js.map",
+      "sha256": "185f42f37ef5286c02dcbb92e0d61076075cde3e471ed3372c4c561806695f7c"
+    },
+    {
+      "path": "extensions/mcp/dist/startup-ui.d.ts.map",
+      "sha256": "5781467512228c72006ba2aa70f2970782516d4e4192aaae31032a2eec97df86"
+    },
+    {
+      "path": "extensions/mcp/dist/startup-ui.js.map",
+      "sha256": "f4e1c664bdfc68101ac89f12fa4f743c559089f130ad7de124284514cacf8f03"
+    },
+    {
+      "path": "extensions/subagent/dist/state-store.d.ts.map",
+      "sha256": "2eda7905013a2ad52a6e83f765dcb741b89e8ad3bb936940394206eee7ea2789"
+    },
+    {
+      "path": "extensions/subagent/dist/state-store.js.map",
+      "sha256": "1718d1b64b18b35423d7d5a7920514ae05ac2f6af4915f3b85953aca290aae2c"
+    },
+    {
+      "path": "extensions/mcp/dist/status-ui.d.ts.map",
+      "sha256": "287411162bb69b52b73fa74427d0965f4023d9407ef22d9502f435db4207574b"
+    },
+    {
+      "path": "extensions/mcp/dist/status-ui.js.map",
+      "sha256": "3eb2d388c718ad695084fc65fcd0a329d1949608446d7e373b3b72ce8f18ee60"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/status.d.ts.map",
+      "sha256": "09d886415b0075c09f88887f014499a317ec1a20c4a18bb2e0267dab96963152"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/status.js.map",
+      "sha256": "590c81ba190ece3bd5e8217ae2a7a5d7913534b89c86937f98e0fe4e939eec8d"
+    },
+    {
+      "path": "extensions/goal/dist/storage.d.ts.map",
+      "sha256": "05913622e335862aab16cb3e4ca2a99b0965a5b6209a15dd7d226034d88e68a4"
+    },
+    {
+      "path": "extensions/goal/dist/storage.js.map",
+      "sha256": "7baf2b86a5fb65e4768ca0c43c34529d8242714c9946e7aa263678da06c034fe"
+    },
+    {
+      "path": "extensions/codex-ui/dist/terminal-title.d.ts.map",
+      "sha256": "318a6c04a8961ec94d717cc80f4e7076299c8911d7157366103928d91473ec5c"
+    },
+    {
+      "path": "extensions/codex-ui/dist/terminal-title.js.map",
+      "sha256": "39e9d3845732218c33fb49b538bf2cf4d887056be4186c0e9d26b7406b6eb41d"
+    },
+    {
+      "path": "extensions/subagent/dist/tmux-runtime.d.ts.map",
+      "sha256": "72082eb58681c2136b4955069d20db796445fdcfa9f25fd9b4cd59cd1e78e85f"
+    },
+    {
+      "path": "extensions/subagent/dist/tmux-runtime.js.map",
+      "sha256": "e0659dcba1f42fadf432db47cd54ff8f6baf1d6906530a05ae9ea1ebe5b296c4"
+    },
+    {
+      "path": "extensions/codex-ui/dist/tools.d.ts.map",
+      "sha256": "384c5870f7294824d65463253f32e19a733d327b955561d574f3695698c7101c"
+    },
+    {
+      "path": "extensions/goal/dist/tools.d.ts.map",
+      "sha256": "5e7f55c035eaf7a2c5188133b002719049f788d3279aaa7f1cb4242aa0c10202"
+    },
+    {
+      "path": "extensions/subagent/dist/tools.d.ts.map",
+      "sha256": "d87a57493180a8ca4038a5dd8d1553e1206a1c1c3c7b9fa10294c6ddcb6b52a0"
+    },
+    {
+      "path": "extensions/codex-ui/dist/tools.js.map",
+      "sha256": "b446cf10bc1211631ffa91b52a9ca28075430a603b92d3249f3da93eeb71f119"
+    },
+    {
+      "path": "extensions/goal/dist/tools.js.map",
+      "sha256": "92b13c84a64c5e68c4f4fc736fc92c13dc63abcb6c63e10fda6c3f4fa5b422d2"
+    },
+    {
+      "path": "extensions/subagent/dist/tools.js.map",
+      "sha256": "67f5f78effcc8d3883a424f31b0f5c8b1f1e119d2597289b52029ec7f9c88dd8"
+    },
+    {
+      "path": "extensions/mcp/dist/types.d.ts.map",
+      "sha256": "862e350f6caf709b301c84ebd0e977cc02c34016ca58cb75b1641b1d09461ce7"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/types.d.ts.map",
+      "sha256": "901818d1be386e8038be6b7ae7c761db9df5a21d91a2155ebf8eb3e0eb6ccf76"
+    },
+    {
+      "path": "extensions/mcp/dist/types.js.map",
+      "sha256": "a7de897b48fe57bf54d6f84169135ff2e89e2fc95ea0a0a815761cc29a41efee"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/types.js.map",
+      "sha256": "c9bb83450cec274092204234f21995597494034633e389ecbad584d207eae32c"
+    },
+    {
+      "path": "extensions/goal/dist/upstream.d.ts.map",
+      "sha256": "fd6e31bdda8e3cd3b49c59360058929d13169c55dfece4bf86e0dd765086fbdc"
+    },
+    {
+      "path": "extensions/goal/dist/upstream.js.map",
+      "sha256": "faca393e1e5b5d6afb9597ab05b7171ca669b2b186d25d40cb63cf9d40460c9e"
+    },
+    {
+      "path": "extensions/subagent/dist/usage.d.ts.map",
+      "sha256": "89f618671afbc5966851bceebdaef9a2e60c13094497f66503ac87a9dd9e88d5"
+    },
+    {
+      "path": "extensions/subagent/dist/usage.js.map",
+      "sha256": "7cd5ca8a421c672fd7b97b1ed65bd7fe90acbdb891170c9bb7299a30e37b8420"
+    },
+    {
+      "path": "extensions/subagent/dist/wait.d.ts.map",
+      "sha256": "850556a74e6cdf57661f83874da7deda8c56a7a9e95cfa628312905a7470fb1e"
+    },
+    {
+      "path": "extensions/subagent/dist/wait.js.map",
+      "sha256": "9030df2df8486167a3ce2163a99fe6f09c342eac3245b2a11ffec078e154942f"
+    },
+    {
+      "path": "docs/goal-budget-acceptance.md",
+      "sha256": "c3d9ba879927788482f8606f666ba940437f321d7d556724341ace04db4fd455"
+    },
+    {
+      "path": "docs/goal-descendant-acceptance.md",
+      "sha256": "f9891fa1b47561ae5685353a55b8c9cbff6abd4e2f19dd41553373fb5ed1b78c"
+    },
+    {
+      "path": "docs/goal-execution-report.md",
+      "sha256": "4b05da44405567ed051b21a103553446886582a1d877e8cbaff5d7c9ee766308"
+    },
+    {
+      "path": "docs/goal-integration-acceptance.md",
+      "sha256": "12e71c5aab92a4362afbe23432c14a2f900e4ea37e62a424a1f557e8c655e4d9"
+    },
+    {
+      "path": "docs/goal-lifecycle-acceptance.md",
+      "sha256": "c8de16b4f9aadf7b7cd45aa6eb4e33ea55e04b69f4f945d92f335bf73fff5fa0"
+    },
+    {
+      "path": "docs/goal-parity-acceptance.md",
+      "sha256": "9dd8b98a2e3ecdcdfc8b6b1c46500bda572a48c02999f2729addbb7395daa05d"
+    },
+    {
+      "path": "docs/goal-provider-support.md",
+      "sha256": "437d06b50aa4e923cd281c109f5c1174d3d8fdc8812cb5e327d16d2cc28b1a54"
+    },
+    {
+      "path": "docs/goal-storage-acceptance.md",
+      "sha256": "bacaf73934b17af09777e35472de705794c1545a4b07978c094f467016485ace"
+    },
+    {
+      "path": "docs/goal-ui-acceptance.md",
+      "sha256": "f5999a5e218d9afc44518436faa65933ae08e75d8efaa3077889ee287d381d22"
+    },
+    {
+      "path": "extensions/mcp/README.md",
+      "sha256": "a53a9ffc2e7bcb1283c3f56b93096800bc7f31bbfe751716cf7b556b8b978f0a"
+    },
+    {
+      "path": "extensions/permissions/README.md",
+      "sha256": "a72237c16874ce1a3c12a88cb85878c98ebc5ec43dee4ace49633b23d16a0a79"
+    },
+    {
+      "path": "README.md",
+      "sha256": "86af42d52264ce03f4582091043f21660886e0b7eae694a8c0b7419ead70603d"
+    },
+    {
+      "path": "extensions/codex-compact/UPSTREAM.md",
+      "sha256": "15c569c1ef52b4fced5bfbffbb9ac46622ada72ac732260d5aa1c67a499e0ad4"
+    },
+    {
+      "path": "extensions/goal/UPSTREAM.md",
+      "sha256": "73886c9e1b739499487fc56546d32454fe002526bfebe8c18c8554230cde0485"
+    },
+    {
+      "path": "extensions/openai-fast-mode/UPSTREAM.md",
+      "sha256": "5e3ca09cb74139fc9398b51892f32c3abd4f8b00243d190698b627dca6ce35d3"
+    },
+    {
+      "path": "extensions/goal/dist/accounting.d.ts",
+      "sha256": "0adc775447b5ea3eb38346406c4cdd016957bfc1d3c991076a492776b000463b"
+    },
+    {
+      "path": "extensions/codex-ui/dist/bash-group-layout.d.ts",
+      "sha256": "02e3a088f5dd4100933073ae88e2e57e184cbd83214c7451262762d48d269d1b"
+    },
+    {
+      "path": "extensions/codex-ui/dist/bash-groups.d.ts",
+      "sha256": "9ee5b5978bbf509e903c62a4e840e1e38126f9633de8f58ccbf065dbc9960e7d"
+    },
+    {
+      "path": "extensions/codex-ui/dist/bash-refresh-scheduler.d.ts",
+      "sha256": "0a346f933f36ef9d5d15c4f589aa0e0abaeb0d24061e7ec7fbf8c400f75d56c7"
+    },
+    {
+      "path": "extensions/goal/dist/budget.d.ts",
+      "sha256": "bdd9b6a63059b8cf37bd1fb7865138c373251c03713f42d7026433714255e2b5"
+    },
+    {
+      "path": "extensions/codex-compact/dist/capabilities.d.ts",
+      "sha256": "add659c46fc0d84a17ca32a2547b054ba4c76d839914006b56384ddb2d181e86"
+    },
+    {
+      "path": "extensions/goal/dist/capability.d.ts",
+      "sha256": "d8ffe7d0df0e0f86e916c684379d83e23b53455b718b153e56c436721d2ff068"
+    },
+    {
+      "path": "extensions/goal/dist/children.d.ts",
+      "sha256": "e2c22a908dd4370f0c1de673dc1035d80a609e037f2ea6d0363667853b98796b"
+    },
+    {
+      "path": "extensions/mcp/dist/client.d.ts",
+      "sha256": "a322386f66920ddb8793b357aab1cf37e06c8c4dc1150b2b7a27e69bfbaa9adf"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/commands.d.ts",
+      "sha256": "ce89bb6e2440b637af6b1962c26cee0cc2b40e3f63e1dacc6daa80472450ff89"
+    },
+    {
+      "path": "extensions/codex-ui/dist/components.d.ts",
+      "sha256": "02bacaa705f739341e8c630a9d641a105a3e1b57fd92db2d164949ed8bf7eee8"
+    },
+    {
+      "path": "extensions/codex-compact/dist/config.d.ts",
+      "sha256": "22cdcc782f4e36996671554f9dec0829cc16d9cb7f0b744760efaa2cf61460ef"
+    },
+    {
+      "path": "extensions/mcp/dist/config.d.ts",
+      "sha256": "f329ea5c123bea81860e2702d0243d0ec026ba5339c3009b0a733a3ebaaeb81c"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/config.d.ts",
+      "sha256": "6d88a8226db1e70208a720ea686ace7571b1b0a9fc88f882f0615be309bd6ae3"
+    },
+    {
+      "path": "extensions/goal/dist/content.d.ts",
+      "sha256": "7f03f1dfdeba8a6808b726d82d381af27405902570008357c3659060320e2c75"
+    },
+    {
+      "path": "extensions/subagent/dist/cursor.d.ts",
+      "sha256": "1f0369c0737cd92c09d3602b4ae829c9a1307b22fbcae3bffdd98a1e1a056a70"
+    },
+    {
+      "path": "extensions/subagent/dist/delivery-receipt.d.ts",
+      "sha256": "f2787d318fe22ce3b8016a8020f3d725dc83bbdd9302b50ec67cec11d52ac988"
+    },
+    {
+      "path": "extensions/mcp/dist/diagnostics.d.ts",
+      "sha256": "752d14cae0ba9011aa5657a83b4ce071fdcf9ce7ab90d398ab35cb5b81eaa83c"
+    },
+    {
+      "path": "extensions/codex-ui/dist/exact-visual-tail.d.ts",
+      "sha256": "80914d5f4fd34179eb4ac72325ee9d30f0ec88c28a266d7f257d2e1b1d74d121"
+    },
+    {
+      "path": "extensions/codex-ui/dist/footer.d.ts",
+      "sha256": "b97d317951039f5466cba290316b0e84bf4fa1e522f04b94038759e9124ca528"
+    },
+    {
+      "path": "extensions/codex-compact/dist/index.d.ts",
+      "sha256": "a0fd010369cdcc27793e75a77f8c93dce0726414287dc2b0e2936a7334268569"
+    },
+    {
+      "path": "extensions/codex-ui/dist/index.d.ts",
+      "sha256": "6bdb8926d18ea05ade208cf7c93b17867b011067794f30ef819f84aca483566d"
+    },
+    {
+      "path": "extensions/goal/dist/index.d.ts",
+      "sha256": "f60242f1bf4becca6a8ded99ebb4fe464058e44c6f9b9bf6ede18602aedb7230"
+    },
+    {
+      "path": "extensions/mcp/dist/index.d.ts",
+      "sha256": "f52cc9aad07fbd6610a3982604bd66e50cd7a1be80f7d53ca621baa60ee7a411"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/index.d.ts",
+      "sha256": "94b58f33a1d7d2c6344b8eb4f9bd46a3f4f7526af2da0ee61279b6b41e1269ba"
+    },
+    {
+      "path": "extensions/permissions/dist/index.d.ts",
+      "sha256": "bfbd78dae978985518ade5b4e8703fd3c4fd08214f1001588d28f62cd2c0fcb9"
+    },
+    {
+      "path": "extensions/subagent/dist/index.d.ts",
+      "sha256": "ba3697f413838632e4c6c085529b50d007289272dfd020b1182ab187a1ea6197"
+    },
+    {
+      "path": "extensions/codex-ui/dist/layout.d.ts",
+      "sha256": "71b5f0b29890677f990dcfff84398d6fbc87432e27b00cabcf4124eaedc5c825"
+    },
+    {
+      "path": "extensions/subagent/dist/layout.d.ts",
+      "sha256": "cc55c6aec93e70889853b56c28ec31c85b55efa606143d7fa034b92f9068b899"
+    },
+    {
+      "path": "extensions/subagent/dist/lifecycle.d.ts",
+      "sha256": "306404ff150c881ffd665b6b0c859975a2cefcdf7bc66e3f06f33b5c72d8472d"
+    },
+    {
+      "path": "extensions/goal/dist/lock.d.ts",
+      "sha256": "58326790a01525d1f5c3f821190c3a2112f520264680c5e4662b683ad926227b"
+    },
+    {
+      "path": "extensions/goal/dist/loop.d.ts",
+      "sha256": "449ba085abb16adf0b272bd3b810db9dd9a19f2cfd9c951f0565252567fdb5d0"
+    },
+    {
+      "path": "extensions/subagent/dist/manager.d.ts",
+      "sha256": "7c595c288f4ebe5a872c192b68d22464d814988035ee84be0c987576f88ed13b"
+    },
+    {
+      "path": "extensions/codex-compact/dist/native-compaction.d.ts",
+      "sha256": "21dc2313cbe743091d22f3c78f05fc2d8fbf0ce9839671948c7a6f35fd09aefd"
+    },
+    {
+      "path": "extensions/subagent/dist/ownership.d.ts",
+      "sha256": "be6a5c00206d97614a0cb6f545348424560822b644c7cde751fbf73cd69acdf0"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/payload.d.ts",
+      "sha256": "471ae369d0576cc7e4c19d36f396e996ca3bd03580894081160ec2864c2643ad"
+    },
+    {
+      "path": "extensions/permissions/dist/permission-policy.d.ts",
+      "sha256": "3d75ed3e78213211edb9e3f2f1dd1b41d79cff0466a291b32ac91c00a843b7f5"
+    },
+    {
+      "path": "extensions/codex-compact/dist/presentation.d.ts",
+      "sha256": "b7b8b7ec97cdd8621e0c7484f3d0dc5dc3cb1f97d8bc8ffea5e8b52b31778c27"
+    },
+    {
+      "path": "extensions/goal/dist/quota.d.ts",
+      "sha256": "ed16f5ac1323080ffd29d800a19632d4c217027aaa4f585d273c5d357af02eac"
+    },
+    {
+      "path": "extensions/codex-ui/dist/read-group-layout.d.ts",
+      "sha256": "ef0948ed4a158925b8fc5bc2055cc41ade4651715768468b25ee9119277e4af3"
+    },
+    {
+      "path": "extensions/codex-ui/dist/read-groups.d.ts",
+      "sha256": "7a1ccee3e0c020e99df69ee23cfa31bdbbfdcfb6fd90ec8a9029fe4331d18419"
+    },
+    {
+      "path": "extensions/codex-ui/dist/reasoning-summary-scan.d.ts",
+      "sha256": "4327bd6070aa5fdd05e739578e57fffb22a4dff593a94bf309a25ec00db68638"
+    },
+    {
+      "path": "extensions/codex-ui/dist/reasoning-summary.d.ts",
+      "sha256": "f4f766de8632bb90a4c8e5edc71fd7a07ce23bce9cad8b7e5b77aa6926dac854"
+    },
+    {
+      "path": "extensions/codex-compact/dist/remote-compaction.d.ts",
+      "sha256": "25dbf7eac04fe76a5333f763b56beeba490644e939ea6cd379974ac370012a94"
+    },
+    {
+      "path": "extensions/codex-ui/dist/render-cache.d.ts",
+      "sha256": "f70b492ed879613c2d8a9edc1bf7de26a3ff66ec7734306e25e6cc6417acf081"
+    },
+    {
+      "path": "extensions/mcp/dist/renderers.d.ts",
+      "sha256": "01e5ce38270b35dc45dd38a724109717e8dd6fd9f61d75da6ade804c97f3073d"
+    },
+    {
+      "path": "extensions/subagent/dist/renderers.d.ts",
+      "sha256": "82af3b740bea4bf9dcbc6231b1612e7da656a258d304533d96b9c9f2cd65ec29"
+    },
+    {
+      "path": "extensions/codex-ui/dist/responsive-lines.d.ts",
+      "sha256": "608b2da9c78a3fae6bd5cc0504d14c42dcdf8aba68b2fa64dfc73ae33a149414"
+    },
+    {
+      "path": "extensions/mcp/dist/retry.d.ts",
+      "sha256": "17b6e5dc0e0c10c46bf328280baa319db7f274cbf5ea377ad389529911fde6b4"
+    },
+    {
+      "path": "extensions/subagent/dist/runtime-host.d.ts",
+      "sha256": "75755d649cdb76f7180c8e91d5c1150f3def792cb40257672833bfeca2a0607d"
+    },
+    {
+      "path": "extensions/subagent/dist/runtime-state.d.ts",
+      "sha256": "4769e62a2e013ba443e2df027a2bc11334a72492ef67879548d21b2fa6f8219b"
+    },
+    {
+      "path": "extensions/codex-compact/dist/scheduler.d.ts",
+      "sha256": "6e66a5c8827a567eb0dc00ed907d67a61b4ce8b492d872dd840d74f6bc42372e"
+    },
+    {
+      "path": "extensions/goal/dist/scheduler.d.ts",
+      "sha256": "34badeb3ccf54d3f5e022dc2d5904045a3dc7c4d28f4d7e4b4a7c7dd4b4e2480"
+    },
+    {
+      "path": "extensions/mcp/dist/schema.d.ts",
+      "sha256": "679d46ddc6321f39600b56ea56c6fa2c8c641fd5383e9dba6b8371a3672b690d"
+    },
+    {
+      "path": "extensions/codex-compact/dist/session-coordinator.d.ts",
+      "sha256": "9d861f169028b86037935f26a7b965cc11edab7df0003dc979a04c33befa2812"
+    },
+    {
+      "path": "extensions/subagent/dist/session-reader.d.ts",
+      "sha256": "16c6ac70d16ee4c4051e1d5aa2c96af1d7f992d4d46755bb9588e3e95ceaac12"
+    },
+    {
+      "path": "extensions/mcp/dist/startup-ui.d.ts",
+      "sha256": "1c8b986f9e0f5812ddb4b6fe91c67fd984efd29fcf3e26357fe6f4c5e1a5590d"
+    },
+    {
+      "path": "extensions/subagent/dist/state-store.d.ts",
+      "sha256": "334e5492d892659d2571ff90893da43b189f78c245f2b72e6b467de7341c69cb"
+    },
+    {
+      "path": "extensions/mcp/dist/status-ui.d.ts",
+      "sha256": "fc4e84d2fda1eb0627d1105069dabc965bfb4296695d7c07d0a7f74fc3202ad0"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/status.d.ts",
+      "sha256": "8e6dd3c314491d38f7437ac36528946d5d0f266500ab138c96dff1d06af3568d"
+    },
+    {
+      "path": "extensions/goal/dist/storage.d.ts",
+      "sha256": "9ea7db8d4e4336ef737567dd905ac92f2cef47e12cc77e6a2046b91e524616cb"
+    },
+    {
+      "path": "extensions/codex-ui/dist/terminal-title.d.ts",
+      "sha256": "0f4c276311a64817aef9a27f09f0d09301c3484169f2b84d7cb1bdf833141565"
+    },
+    {
+      "path": "extensions/subagent/dist/tmux-runtime.d.ts",
+      "sha256": "445cae13201cbdcbb919943a8c6faaafd02c781d4f1e9eeabf4ed68e9bf950a3"
+    },
+    {
+      "path": "extensions/codex-ui/dist/tools.d.ts",
+      "sha256": "70af3519aaaa84743dd744f8e95d738285f8236a393e856e3710ebf28003e2c9"
+    },
+    {
+      "path": "extensions/goal/dist/tools.d.ts",
+      "sha256": "b1a25b4e6dd5533b20efda8fcbeaa3a96682aef05edc1d825ac0f2aa5a0b9a20"
+    },
+    {
+      "path": "extensions/subagent/dist/tools.d.ts",
+      "sha256": "d1bc5b361f104dd303112dff339966565e24c38d8f03d90a1602d04da18fc9da"
+    },
+    {
+      "path": "extensions/mcp/dist/types.d.ts",
+      "sha256": "52b04d22b7d95edec5997bb02f96408cd8acb0e5b16fa192e07df423aa759ed4"
+    },
+    {
+      "path": "extensions/openai-fast-mode/dist/types.d.ts",
+      "sha256": "b5898aa2bb1a40ad025a98f797f385324ae6f7d61a3ca3e9dee1673a61159799"
+    },
+    {
+      "path": "extensions/goal/dist/upstream.d.ts",
+      "sha256": "a484aaf87e15397436432fa9a6778daacd834ebed9e8190b4af681d37e46b1ac"
+    },
+    {
+      "path": "extensions/subagent/dist/usage.d.ts",
+      "sha256": "d0e22332cf8c49d060255c0564f9d3ed0d8a2624ead78a1cf0c414ed3f7543f7"
+    },
+    {
+      "path": "extensions/subagent/dist/wait.d.ts",
+      "sha256": "2eb55e07e3e8fad91cb8ed5e47b4b56024de751607c21550467513dc42ab6238"
+    }
+  ]
+}

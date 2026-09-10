@@ -1,0 +1,290 @@
+{
+  "pids": [
+    17937,
+    17936
+  ],
+  "alivePids": [],
+  "socket": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux.sock",
+  "socketUnavailable": true,
+  "commandLog": [
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "has-session",
+        "-t",
+        "=goal-direct-child"
+      ],
+      "code": 1,
+      "stdout": "",
+      "stderr": "error connecting to /Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux.sock (No such file or directory)\n"
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "new-session",
+        "-d",
+        "-P",
+        "-F",
+        "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_pid}",
+        "-s",
+        "goal-direct-child",
+        "-n",
+        "Budget child",
+        "-c",
+        "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late",
+        "exec /usr/bin/env 'HOME=/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late' 'LANG=en_US.UTF-8' 'PATH=/Users/wangxuyang/.pi/agent/bin:/Users/wangxuyang/Library/pnpm/bin:/Users/wangxuyang/Library/pnpm:/opt/homebrew/opt/python@3.12/libexec/bin:/opt/homebrew/Caskroom/miniconda/base/condabin:/Users/wangxuyang/.sdkman/candidates/java/current/bin:/Users/wangxuyang/Applications/maven/maven@3.9.15/apache-maven-3.9.15/bin:/Users/wangxuyang/.nvm/versions/node/v22.22.2/bin:/Applications/Sublime Text.app/Contents/SharedSupport/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/pkg/env/active/bin:/opt/pmk/env/global/bin:/Users/wangxuyang/.cargo/bin:/Applications/Ghostty.app/Contents/MacOS' 'PI_SUBAGENT=1' 'PI_SUBAGENT_ID=4bdc9f60-d052-48f0-a45c-70fef478906a' 'PI_SUBAGENT_LAUNCH={\"cwd\":\"/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late\",\"sessionDir\":\"/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/native/01a08c8c-57ff-7154-8641-9a7f9a041bdb/4bdc9f60-d052-48f0-a45c-70fef478906a\",\"model\":\"openai-codex/goal-budget-fixture\",\"thinkingLevel\":\"medium\",\"displayName\":\"Budget child\",\"processInstanceId\":\"4bdc9f60-d052-48f0-a45c-70fef478906a\"}' 'PI_SUBAGENT_PARENT={\"sessionId\":\"01a08c8c-57ff-7154-8641-9a7f9a041bdb\",\"epoch\":\"010173cd-953d-4b9b-a693-f2a5a6047514\",\"registrationToken\":\"6a377195-1349-4b3d-bf81-15d4408b2cf7\"}' 'PI_SUBAGENT_STATE_ROOT=/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/subagents' 'SHELL=/bin/sh' 'TERM=xterm-256color' 'TMPDIR=/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late' '/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/pi' '--session-dir' '/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/native/01a08c8c-57ff-7154-8641-9a7f9a041bdb/4bdc9f60-d052-48f0-a45c-70fef478906a' '--session' '/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/native/01a08c8c-57ff-7154-8641-9a7f9a041bdb/4bdc9f60-d052-48f0-a45c-70fef478906a/session.jsonl' '--name' 'Budget child' '--extension' '/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/extensions/goal/__tests__/child-tmux-fixture.mjs' '--model' 'openai-codex/goal-budget-fixture' '--thinking' 'medium'"
+      ],
+      "code": 0,
+      "stdout": "goal-direct-child\t@0\t%0\t17937\n",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "display-message",
+        "-p",
+        "#{pid}"
+      ],
+      "code": 0,
+      "stdout": "17936\n",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "display-message",
+        "-p",
+        "-t",
+        "%0",
+        "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_dead}\t#{pane_pid}"
+      ],
+      "code": 0,
+      "stdout": "goal-direct-child\t@0\t%0\t0\t17937\n",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "display-message",
+        "-p",
+        "-t",
+        "%0",
+        "#{session_name}\t#{window_id}\t#{pane_id}\t#{window_panes}\t#{pane_dead}\t#{pane_pid}\t#{pane_in_mode}"
+      ],
+      "code": 0,
+      "stdout": "goal-direct-child\t@0\t%0\t1\t0\t17937\t0\n",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "load-buffer",
+        "-b",
+        "subagent-d619bc4ee24a4c2b9689779237a5d3c9",
+        "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/transfer/prompt-d619bc4e-e24a-4c2b-9689-779237a5d3c9.txt"
+      ],
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "send-keys",
+        "-H",
+        "-t",
+        "%0",
+        "03"
+      ],
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "paste-buffer",
+        "-b",
+        "subagent-d619bc4ee24a4c2b9689779237a5d3c9",
+        "-t",
+        "%0",
+        "-p",
+        "-r",
+        "-d"
+      ],
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "send-keys",
+        "-H",
+        "-t",
+        "%0",
+        "0d"
+      ],
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "delete-buffer",
+        "-b",
+        "subagent-d619bc4ee24a4c2b9689779237a5d3c9"
+      ],
+      "code": 1,
+      "stdout": "",
+      "stderr": "unknown buffer: subagent-d619bc4ee24a4c2b9689779237a5d3c9\n"
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "capture-pane",
+        "-p",
+        "-J",
+        "-t",
+        "%0"
+      ],
+      "code": 0,
+      "stdout": "\n pi v0.85.1                                                                     \n escape interrupt · ctrl+c/ctrl+d clear/exit · / commands · ! bash · ctrl+o     \n more                                                                           \n Press ctrl+o to show full startup help and loaded resources.                   \n                                                                                \n Pi can explain its own features and look up its docs. Ask it how to use or     \n extend Pi.                                                                     \n\n[Extensions]                                                                    \n  child-tmux-fixture.mjs                                                        \n\n This project is not trusted. Project .pi resources and packages are ignored.   \n Use /trust to save a trust decision, then restart pi.                          \n\n Warning: tmux extended-keys is off. Modified Enter keys may not work. Add `set \n -g extended-keys on` to ~/.tmux.conf and restart tmux.                         \n\n────────────────────────────────────────────────────────────────────────────────\n                                                                                \n────────────────────────────────────────────────────────────────────────────────\n~ (adventure/goal-all-providers) • Budget child\n0.0%/128k                                           goal-budget-fixture • medium\n\n",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "display-message",
+        "-p",
+        "-t",
+        "%0",
+        "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_dead}\t#{pane_pid}"
+      ],
+      "code": 0,
+      "stdout": "goal-direct-child\t@0\t%0\t0\t17937\n",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "display-message",
+        "-p",
+        "-t",
+        "%0",
+        "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_dead}\t#{pane_pid}"
+      ],
+      "code": 0,
+      "stdout": "goal-direct-child\t@0\t%0\t0\t17937\n",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "display-message",
+        "-p",
+        "-t",
+        "%0",
+        "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_dead}\t#{pane_pid}"
+      ],
+      "code": 0,
+      "stdout": "goal-direct-child\t@0\t%0\t0\t17937\n",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "capture-pane",
+        "-p",
+        "-J",
+        "-t",
+        "%0"
+      ],
+      "code": 0,
+      "stdout": " Pi can explain its own features and look up its docs. Ask it how to use or     \n extend Pi.                                                                     \n\n[Extensions]                                                                    \n  child-tmux-fixture.mjs                                                        \n\n This project is not trusted. Project .pi resources and packages are ignored.   \n Use /trust to save a trust decision, then restart pi.                          \n\n Warning: tmux extended-keys is off. Modified Enter keys may not work. Add `set \n -g extended-keys on` to ~/.tmux.conf and restart tmux.                         \n\n                                                                                \n [subagent:54469ed6fa38]                                                        \n Offline child                                                                  \n                                                                                \n\n Child done                                                                     \n\n────────────────────────────────────────────────────────────────────────────────\n                                                                                \n────────────────────────────────────────────────────────────────────────────────\n~ (adventure/goal-all-providers) • Budget child\n↑80 ↓20 R40 CH33.3% 0.1%/128k                       goal-budget-fixture • medium\n",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "display-message",
+        "-p",
+        "-t",
+        "%0",
+        "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_dead}\t#{pane_pid}"
+      ],
+      "code": 0,
+      "stdout": "goal-direct-child\t@0\t%0\t0\t17937\n",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "kill-window",
+        "-t",
+        "@0"
+      ],
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "display-message",
+        "-p",
+        "-t",
+        "%0",
+        "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_dead}\t#{pane_pid}"
+      ],
+      "code": 1,
+      "stdout": "",
+      "stderr": "no server running on /Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux.sock\n"
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "display-message",
+        "-p",
+        "-t",
+        "%0",
+        "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_dead}\t#{pane_pid}"
+      ],
+      "code": 1,
+      "stdout": "",
+      "stderr": "no server running on /Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux.sock\n"
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "display-message",
+        "-p",
+        "-t",
+        "%0",
+        "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_dead}\t#{pane_pid}"
+      ],
+      "code": 1,
+      "stdout": "",
+      "stderr": "no server running on /Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux.sock\n"
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "kill-server"
+      ],
+      "code": 1,
+      "stdout": "",
+      "stderr": "no server running on /Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux.sock\n"
+    },
+    {
+      "command": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux",
+      "args": [
+        "list-sessions"
+      ],
+      "code": 1,
+      "stdout": "",
+      "stderr": "no server running on /Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux.sock\n"
+    }
+  ]
+}

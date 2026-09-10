@@ -1,0 +1,328 @@
+{
+  "passed": true,
+  "checkedProcesses": [
+    {
+      "pid": 2821,
+      "alive": false
+    },
+    {
+      "pid": 4867,
+      "alive": false
+    },
+    {
+      "pid": 5067,
+      "alive": false
+    },
+    {
+      "pid": 17033,
+      "alive": false
+    },
+    {
+      "pid": 17043,
+      "alive": false
+    },
+    {
+      "pid": 17469,
+      "alive": false
+    },
+    {
+      "pid": 17481,
+      "alive": false
+    },
+    {
+      "pid": 17936,
+      "alive": false
+    },
+    {
+      "pid": 17937,
+      "alive": false
+    },
+    {
+      "pid": 18424,
+      "alive": false
+    },
+    {
+      "pid": 18425,
+      "alive": false
+    },
+    {
+      "pid": 35979,
+      "alive": false
+    },
+    {
+      "pid": 36976,
+      "alive": false
+    },
+    {
+      "pid": 64101,
+      "alive": false
+    },
+    {
+      "pid": 64194,
+      "alive": false
+    },
+    {
+      "pid": 64286,
+      "alive": false
+    },
+    {
+      "pid": 64378,
+      "alive": false
+    },
+    {
+      "pid": 64469,
+      "alive": false
+    },
+    {
+      "pid": 64560,
+      "alive": false
+    },
+    {
+      "pid": 64666,
+      "alive": false
+    },
+    {
+      "pid": 64762,
+      "alive": false
+    },
+    {
+      "pid": 64858,
+      "alive": false
+    },
+    {
+      "pid": 64950,
+      "alive": false
+    },
+    {
+      "pid": 65046,
+      "alive": false
+    },
+    {
+      "pid": 65137,
+      "alive": false
+    },
+    {
+      "pid": 65228,
+      "alive": false
+    },
+    {
+      "pid": 65320,
+      "alive": false
+    },
+    {
+      "pid": 65429,
+      "alive": false
+    },
+    {
+      "pid": 65512,
+      "alive": false
+    },
+    {
+      "pid": 66303,
+      "alive": false
+    },
+    {
+      "pid": 66720,
+      "alive": false
+    },
+    {
+      "pid": 66848,
+      "alive": false
+    },
+    {
+      "pid": 66984,
+      "alive": false
+    },
+    {
+      "pid": 67112,
+      "alive": false
+    },
+    {
+      "pid": 67162,
+      "alive": false
+    },
+    {
+      "pid": 67249,
+      "alive": false
+    },
+    {
+      "pid": 67376,
+      "alive": false
+    },
+    {
+      "pid": 67503,
+      "alive": false
+    },
+    {
+      "pid": 67639,
+      "alive": false
+    },
+    {
+      "pid": 67767,
+      "alive": false
+    },
+    {
+      "pid": 67895,
+      "alive": false
+    },
+    {
+      "pid": 68052,
+      "alive": false
+    },
+    {
+      "pid": 68063,
+      "alive": false
+    },
+    {
+      "pid": 68179,
+      "alive": false
+    },
+    {
+      "pid": 68309,
+      "alive": false
+    },
+    {
+      "pid": 68445,
+      "alive": false
+    },
+    {
+      "pid": 68581,
+      "alive": false
+    },
+    {
+      "pid": 68718,
+      "alive": false
+    },
+    {
+      "pid": 68990,
+      "alive": false
+    },
+    {
+      "pid": 72811,
+      "alive": false
+    },
+    {
+      "pid": 72824,
+      "alive": false
+    },
+    {
+      "pid": 73496,
+      "alive": false
+    },
+    {
+      "pid": 73516,
+      "alive": false
+    },
+    {
+      "pid": 74232,
+      "alive": false
+    },
+    {
+      "pid": 74246,
+      "alive": false
+    },
+    {
+      "pid": 74453,
+      "alive": false
+    },
+    {
+      "pid": 75029,
+      "alive": false
+    },
+    {
+      "pid": 75033,
+      "alive": false
+    },
+    {
+      "pid": 75237,
+      "alive": false
+    },
+    {
+      "pid": 75833,
+      "alive": false
+    },
+    {
+      "pid": 75867,
+      "alive": false
+    },
+    {
+      "pid": 76563,
+      "alive": false
+    },
+    {
+      "pid": 76585,
+      "alive": false
+    },
+    {
+      "pid": 77289,
+      "alive": false
+    },
+    {
+      "pid": 77308,
+      "alive": false
+    },
+    {
+      "pid": 77559,
+      "alive": false
+    },
+    {
+      "pid": 78157,
+      "alive": false
+    },
+    {
+      "pid": 78166,
+      "alive": false
+    },
+    {
+      "pid": 78394,
+      "alive": false
+    },
+    {
+      "pid": 79160,
+      "alive": false
+    },
+    {
+      "pid": 79161,
+      "alive": false
+    }
+  ],
+  "remainingFixtureProcesses": [],
+  "taskTcpListeners": [],
+  "socketChecks": [
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0843-late/tmux.sock",
+      "unavailableAfterFixture": true
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0843-pending/tmux.sock",
+      "unavailableAfterFixture": true
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-late/tmux.sock",
+      "unavailableAfterFixture": true
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/.s3t-0851-pending/tmux.sock",
+      "unavailableAfterFixture": true
+    }
+  ],
+  "removedTemporaryPaths": [
+    "adventure/experiments/.slice-3-package",
+    "adventure/experiments/.slice-3-tui-child-0843",
+    "adventure/experiments/.slice-3-tui-root-0843"
+  ],
+  "remainingFixtureDirectories": [],
+  "packageEvidenceRetained": [
+    "slice-3-package-artifact.json",
+    "slice-3-package-build-match.json"
+  ],
+  "hostProcessesUntouched": true,
+  "globalPiConfigurationChanged": false,
+  "finalCheckReverified": {
+    "passedTests": 1067,
+    "defaultSkippedTests": 2,
+    "remainingFixtureProcesses": [],
+    "remainingFixtureDirectories": [],
+    "publishedFileHashesStillMatch": 305
+  }
+}

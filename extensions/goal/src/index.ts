@@ -482,7 +482,10 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
       assertCurrent(ctx);
       if (!lease) throw new Error("Goal lease is unavailable.");
       if (expected.goal?.status === "active") lease.setBudgetInFlight(!ctx.isIdle());
-      await commit(ctx, expected, () => lease!.accountChild(expected, usage));
+      const saved = await commit(ctx, expected, () => lease!.accountChild(expected, usage));
+      if (!expected.goal?.usageIncomplete && saved.goal?.usageIncomplete) {
+        ctx.ui.notify("Goal usage is incomplete: a managed child reported missing, invalid, or unverified zero usage. Reported tokens are only the observed usage, not an exact total.", "warning");
+      }
       mirror(ctx);
     },
     budget: ctx => scheduler.budget(ctx),

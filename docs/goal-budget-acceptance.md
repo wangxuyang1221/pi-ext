@@ -1,5 +1,9 @@
 # Goal budget acceptance
 
+## Current accounting boundary
+
+下方为 #7 的历史记录。当前根与受管直接子代理均使用 `input + output + cacheWrite`，排除 cacheRead，reasoning 已含于 output。缺失/非法/未经证实的全零 usage 在有无预算时均警告并继续，历史缺口不会因后续有效 usage、编辑、恢复或重载消失。预算只能约束已观察用量的自动续跑，不是硬 token 或费用上限。跨 provider 支持、停止后的报告基线和新验收入口见 [Goal provider support](goal-provider-support.md)。
+
 ## Status
 
 实施级别：#7 主代理预算与统计已实现，待协调者独立验收；不自行关闭 Issue。[交付证据评论](https://github.com/wangxuyang1221/adventure/issues/7#issuecomment-5602949981) 已追加，正文更新读回为 OPEN，写权已交回协调者。基准为 `f4a7e44b43070748f082523b7377b165c9471e9e` 加已验收的未提交 #4/#5/#6。本报告不把子孙归集、外部代理或美元硬封顶算作已完成。

@@ -1,0 +1,352 @@
+PASS 0.85.1 recoverable-length-exhausted (5 requests)
+PASS 0.85.1 final-length-tools-on-budget-none (3 requests)
+PASS 0.85.1 final-length-tools-on-budget-100 (2 requests)
+PASS 0.85.1 final-length-tools-off-budget-none (4 requests)
+PASS 0.85.1 final-length-tools-off-budget-100 (3 requests)
+PASS 0.85.1 final-deferred-tools-on-budget-none (3 requests)
+PASS 0.85.1 final-deferred-tools-on-budget-100 (2 requests)
+PASS 0.85.1 final-deferred-tools-off-budget-none (4 requests)
+PASS 0.85.1 final-deferred-tools-off-budget-100 (3 requests)
+PASS 0.85.1 final-error-tools-on-budget-none (3 requests)
+PASS 0.85.1 final-error-tools-on-budget-100 (1 requests)
+PASS 0.85.1 final-error-tools-off-budget-none (4 requests)
+PASS 0.85.1 final-error-tools-off-budget-100 (2 requests)
+PASS 0.85.1 final-quota-tools-on-budget-none (3 requests)
+PASS 0.85.1 final-quota-tools-on-budget-100 (1 requests)
+PASS 0.85.1 final-quota-tools-off-budget-none (4 requests)
+PASS 0.85.1 final-quota-tools-off-budget-100 (2 requests)
+PASS 0.85.1 classification-openai-code (1 requests)
+PASS 0.85.1 classification-codex-code (1 requests)
+PASS 0.85.1 classification-opencode-go (1 requests)
+PASS 0.85.1 classification-opencode-free (1 requests)
+PASS 0.85.1 classification-codex-text (1 requests)
+PASS 0.85.1 classification-workspace-credits (1 requests)
+PASS 0.85.1 classification-quota-details (1 requests)
+PASS 0.85.1 classification-bare-429 (1 requests)
+PASS 0.85.1 classification-rate-code (1 requests)
+PASS 0.85.1 classification-billing (1 requests)
+PASS 0.85.1 classification-authentication (1 requests)
+PASS 0.85.1 classification-network (1 requests)
+PASS 0.85.1 classification-ambiguous-quota (1 requests)
+PASS 0.85.1 classification-available-balance (1 requests)
+PASS 0.85.1 classification-codex-friendly-429 (1 requests)
+PASS 0.85.1 classification-code-substring (1 requests)
+PASS 0.85.1 classification-code-mention (1 requests)
+PASS 0.85.1 classification-json-code-mention (1 requests)
+PASS 0.85.1 classification-http-json-code (1 requests)
+PASS 0.85.1 classification-http-json-message (1 requests)
+PASS 0.85.1 native-retry-500-exhausted (2 requests)
+PASS 0.85.1 native-retry-500-recovers (2 requests)
+PASS 0.85.1 native-retry-429-exhausted (2 requests)
+PASS 0.85.1 native-retry-429-recovers (2 requests)
+PASS 0.85.1 native-compaction-length-recovers-with-tools-off (5 requests)
+PASS 0.85.1 native-compaction-error-recovers-with-tools-off (5 requests)
+PASS 0.85.1 compaction-failure-ordinary-budget-none (3 requests)
+PASS 0.85.1 compaction-failure-ordinary-budget-100 (3 requests)
+PASS 0.85.1 compaction-failure-quota-budget-none (3 requests)
+PASS 0.85.1 compaction-failure-quota-budget-100 (3 requests)
+PASS 0.85.1 queued-success-clears-old-quota-error (2 requests)
+PASS 0.85.1 replacement-ignores-old-error (2 requests)
+PASS 0.85.1 replacement-ignores-old-length (2 requests)
+PASS 0.85.1 replacement-ignores-old-deferred (2 requests)
+PASS 0.85.1 replacement-during-native-compaction-failure (4 requests)
+PASS 0.85.1 queued-input-recovers-length (2 requests)
+PASS 0.85.1 queued-input-recovers-deferred (2 requests)
+PASS 0.85.1 empty-response-guard-remains (4 requests)
+PASS 0.85.1 nonempty-text-has-no-new-limit (10 requests)
+{
+  "version": "0.85.1",
+  "versions": {
+    "pi-coding-agent": "0.85.1",
+    "pi-ai": "0.85.1",
+    "pi-agent-core": "0.85.1"
+  },
+  "networkAttempts": 0,
+  "results": [
+    {
+      "name": "recoverable-length-exhausted",
+      "calls": 5,
+      "status": "blocked"
+    },
+    {
+      "name": "final-length-tools-on-budget-none",
+      "calls": 3,
+      "status": "complete"
+    },
+    {
+      "name": "final-length-tools-on-budget-100",
+      "calls": 2,
+      "status": "budget_limited"
+    },
+    {
+      "name": "final-length-tools-off-budget-none",
+      "calls": 4,
+      "status": "complete"
+    },
+    {
+      "name": "final-length-tools-off-budget-100",
+      "calls": 3,
+      "status": "budget_limited"
+    },
+    {
+      "name": "final-deferred-tools-on-budget-none",
+      "calls": 3,
+      "status": "complete"
+    },
+    {
+      "name": "final-deferred-tools-on-budget-100",
+      "calls": 2,
+      "status": "budget_limited"
+    },
+    {
+      "name": "final-deferred-tools-off-budget-none",
+      "calls": 4,
+      "status": "complete"
+    },
+    {
+      "name": "final-deferred-tools-off-budget-100",
+      "calls": 3,
+      "status": "budget_limited"
+    },
+    {
+      "name": "final-error-tools-on-budget-none",
+      "calls": 3,
+      "status": "complete"
+    },
+    {
+      "name": "final-error-tools-on-budget-100",
+      "calls": 1,
+      "status": "budget_limited"
+    },
+    {
+      "name": "final-error-tools-off-budget-none",
+      "calls": 4,
+      "status": "complete"
+    },
+    {
+      "name": "final-error-tools-off-budget-100",
+      "calls": 2,
+      "status": "budget_limited"
+    },
+    {
+      "name": "final-quota-tools-on-budget-none",
+      "calls": 3,
+      "status": "complete"
+    },
+    {
+      "name": "final-quota-tools-on-budget-100",
+      "calls": 1,
+      "status": "budget_limited"
+    },
+    {
+      "name": "final-quota-tools-off-budget-none",
+      "calls": 4,
+      "status": "complete"
+    },
+    {
+      "name": "final-quota-tools-off-budget-100",
+      "calls": 2,
+      "status": "budget_limited"
+    },
+    {
+      "name": "classification-openai-code",
+      "calls": 1,
+      "status": "usage_limited"
+    },
+    {
+      "name": "classification-codex-code",
+      "calls": 1,
+      "status": "usage_limited"
+    },
+    {
+      "name": "classification-opencode-go",
+      "calls": 1,
+      "status": "usage_limited"
+    },
+    {
+      "name": "classification-opencode-free",
+      "calls": 1,
+      "status": "usage_limited"
+    },
+    {
+      "name": "classification-codex-text",
+      "calls": 1,
+      "status": "usage_limited"
+    },
+    {
+      "name": "classification-workspace-credits",
+      "calls": 1,
+      "status": "usage_limited"
+    },
+    {
+      "name": "classification-quota-details",
+      "calls": 1,
+      "status": "usage_limited"
+    },
+    {
+      "name": "classification-bare-429",
+      "calls": 1,
+      "status": "blocked"
+    },
+    {
+      "name": "classification-rate-code",
+      "calls": 1,
+      "status": "blocked"
+    },
+    {
+      "name": "classification-billing",
+      "calls": 1,
+      "status": "blocked"
+    },
+    {
+      "name": "classification-authentication",
+      "calls": 1,
+      "status": "blocked"
+    },
+    {
+      "name": "classification-network",
+      "calls": 1,
+      "status": "blocked"
+    },
+    {
+      "name": "classification-ambiguous-quota",
+      "calls": 1,
+      "status": "blocked"
+    },
+    {
+      "name": "classification-available-balance",
+      "calls": 1,
+      "status": "blocked"
+    },
+    {
+      "name": "classification-codex-friendly-429",
+      "calls": 1,
+      "status": "blocked"
+    },
+    {
+      "name": "classification-code-substring",
+      "calls": 1,
+      "status": "blocked"
+    },
+    {
+      "name": "classification-code-mention",
+      "calls": 1,
+      "status": "blocked"
+    },
+    {
+      "name": "classification-json-code-mention",
+      "calls": 1,
+      "status": "blocked"
+    },
+    {
+      "name": "classification-http-json-code",
+      "calls": 1,
+      "status": "usage_limited"
+    },
+    {
+      "name": "classification-http-json-message",
+      "calls": 1,
+      "status": "usage_limited"
+    },
+    {
+      "name": "native-retry-500-exhausted",
+      "calls": 2,
+      "status": "blocked"
+    },
+    {
+      "name": "native-retry-500-recovers",
+      "calls": 2,
+      "status": "active"
+    },
+    {
+      "name": "native-retry-429-exhausted",
+      "calls": 2,
+      "status": "blocked"
+    },
+    {
+      "name": "native-retry-429-recovers",
+      "calls": 2,
+      "status": "active"
+    },
+    {
+      "name": "native-compaction-length-recovers-with-tools-off",
+      "calls": 5,
+      "status": "active"
+    },
+    {
+      "name": "native-compaction-error-recovers-with-tools-off",
+      "calls": 5,
+      "status": "active"
+    },
+    {
+      "name": "compaction-failure-ordinary-budget-none",
+      "calls": 3,
+      "status": "blocked"
+    },
+    {
+      "name": "compaction-failure-ordinary-budget-100",
+      "calls": 3,
+      "status": "budget_limited"
+    },
+    {
+      "name": "compaction-failure-quota-budget-none",
+      "calls": 3,
+      "status": "usage_limited"
+    },
+    {
+      "name": "compaction-failure-quota-budget-100",
+      "calls": 3,
+      "status": "usage_limited"
+    },
+    {
+      "name": "queued-success-clears-old-quota-error",
+      "calls": 2,
+      "status": "active"
+    },
+    {
+      "name": "replacement-ignores-old-error",
+      "calls": 2,
+      "status": "active"
+    },
+    {
+      "name": "replacement-ignores-old-length",
+      "calls": 2,
+      "status": "active"
+    },
+    {
+      "name": "replacement-ignores-old-deferred",
+      "calls": 2,
+      "status": "active"
+    },
+    {
+      "name": "replacement-during-native-compaction-failure",
+      "calls": 4,
+      "status": "active"
+    },
+    {
+      "name": "queued-input-recovers-length",
+      "calls": 2,
+      "status": "active"
+    },
+    {
+      "name": "queued-input-recovers-deferred",
+      "calls": 2,
+      "status": "active"
+    },
+    {
+      "name": "empty-response-guard-remains",
+      "calls": 4,
+      "status": "blocked"
+    },
+    {
+      "name": "nonempty-text-has-no-new-limit",
+      "calls": 10,
+      "status": "complete"
+    }
+  ],
+  "cleanup": {
+    "temporaryRootRemoved": true,
+    "spawnedProcesses": 0,
+    "listeningPorts": []
+  }
+}

@@ -1,0 +1,162 @@
+{
+  "event": "result",
+  "versions": {
+    "pi-coding-agent": "0.85.1",
+    "pi-ai": "0.85.1",
+    "pi-agent-core": "0.85.1"
+  },
+  "source": "root",
+  "readyCount": 2,
+  "settledCount": 2,
+  "goal": {
+    "goalId": "09095f53-5cc0-4f77-854a-49e41b9f54bc",
+    "generation": 1,
+    "objective": "Persistent TUI accounting edited",
+    "tokenBudget": 1000,
+    "status": "paused",
+    "tokensUsed": 7,
+    "elapsedSeconds": 0,
+    "createdAt": "2026-09-10T18:26:39.071Z",
+    "updatedAt": "2026-09-10T18:26:41.161Z",
+    "usageCheckpoint": {
+      "sourceId": "2ebd6909-805e-4955-8a6e-05393e6c3178",
+      "tokens": 0,
+      "missing": false,
+      "lastReceipt": "15d6c52bd53f87888fa3f5d9815a14331f0e92d7ede467ef60480c5f34f5c4cf"
+    },
+    "usageIncomplete": true,
+    "activation": 3
+  },
+  "requests": [
+    {
+      "index": 1,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "fixture_observe"
+      ]
+    },
+    {
+      "index": 2,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "fixture_observe"
+      ]
+    },
+    {
+      "index": 3,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "fixture_observe"
+      ]
+    },
+    {
+      "index": 4,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "fixture_observe"
+      ]
+    },
+    {
+      "index": 5,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "fixture_observe"
+      ]
+    },
+    {
+      "index": 6,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "fixture_observe"
+      ]
+    },
+    {
+      "index": 7,
+      "family": "anthropic",
+      "api": "anthropic-messages",
+      "provider": "goal-anthropic",
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "fixture_observe"
+      ],
+      "serializedTools": [
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "fixture_observe"
+      ]
+    }
+  ],
+  "networkAttempts": 0,
+  "pid": 76585,
+  "exited": true,
+  "passed": true
+}

@@ -1,5 +1,9 @@
 # Goal integration acceptance
 
+## Historical scope
+
+本文保存 #10 的历史验收及当时的限制，不作为当前 provider 支持清单。当前 goal 不按 provider 名称设白名单，计量包含 cacheWrite，完成后迟到子代理报告不追补。当前说明见 [Goal provider support](goal-provider-support.md)，多 provider 的完整交付证据见 [Spec audit](https://github.com/wangxuyang1221/pi-ext/blob/adventure/goal-all-providers/adventure/evidence/slice-3-spec-audit.md)。历史 `.scratch/` 引用不是本次 #19 必需证据入口。
+
 ## Status
 
 [Implementation level #10](https://github.com/wangxuyang1221/adventure/issues/10) 的工作区集成证据已完成，结果待协调者独立验收。依据 [spec #3](https://github.com/wangxuyang1221/adventure/issues/3) 全文及 C1 至 C13。未提交、推送、部署或写 GitHub，不关闭 Issue。
@@ -53,7 +57,7 @@ C11/C12 例外未扩大，没有生产 provider wrapper、editor 重建或 Pi �
 
 ### V2: Accounting and direct children
 
-每版 `budget-runtime/evidence/results.json` 有11个通过场景，使用该版本实际 Codex adapter。正常预算100保存实际110，覆盖非缓存输入加输出、reasoning不重复、创建中途基线、重复receipt、缺失usage、错误及预算优先级。预算 PTY 每版 `soft/baseline/quota/interrupt` 4项全部通过，包含摘要、编辑取消、reload、保留预算/统计及 usageIncomplete。
+每版 `budget-runtime/evidence/results.json` 有11个通过场景，使用该版本实际 Codex adapter。正常预算100保存实际110，该历史样本的 cacheWrite 为零；当前公式为 `input + output + cacheWrite`，排除 cacheRead 且 reasoning 不重复、创建中途基线、重复receipt、缺失usage、错误及预算优先级。预算 PTY 每版 `soft/baseline/quota/interrupt` 4项全部通过，包含摘要、编辑取消、reload、保留预算/统计及 usageIncomplete。
 
 真实 tmux 每版 `budget/duplicate/late/pending` 全部通过，证据 `.scratch/goal-10/matrix-v2/{0843,0851}-tmux-<scenario>/evidence/`。root为真实SDK绑定TUI，child为真实CLI InteractiveMode。实际 TmuxRuntime 创建 pane、粘贴投递、捕获输出、检查存活并关闭，不用IPC冒充tmux。
 

@@ -1,0 +1,81 @@
+{
+  "version": "0.84.3",
+  "networkAttempts": 0,
+  "results": [
+    {
+      "name": "repeated-success-pauses-without-agent-abort",
+      "calls": 12,
+      "ends": 2
+    },
+    {
+      "name": "alternating-success-pauses",
+      "calls": 11,
+      "ends": 1
+    },
+    {
+      "name": "distinct-research-does-not-pause",
+      "calls": 42,
+      "ends": 1
+    },
+    {
+      "name": "loop-pause-preserves-steer-and-foreign-message",
+      "calls": 12,
+      "ends": 1
+    },
+    {
+      "name": "loop-pause-preserves-followUp-and-foreign-message",
+      "calls": 12,
+      "ends": 1
+    },
+    {
+      "name": "retained-history-after-continuation-clear-and-reload",
+      "calls": 5,
+      "ends": 4
+    },
+    {
+      "name": "model-get-create-get-complete",
+      "calls": 5,
+      "ends": 1
+    },
+    {
+      "name": "model-cannot-replace-unfinished-goal",
+      "calls": 3,
+      "ends": 1
+    },
+    {
+      "name": "create-auto-complete",
+      "calls": 2,
+      "ends": 1
+    },
+    {
+      "name": "three-full-failed-bash-runs",
+      "calls": 6,
+      "ends": 3
+    },
+    {
+      "name": "user-followups-count-as-complete-runs",
+      "calls": 6,
+      "ends": 1
+    },
+    {
+      "name": "native-retry-then-continuation",
+      "calls": 4,
+      "ends": 3
+    },
+    {
+      "name": "native-retry-exhausted",
+      "calls": 2,
+      "ends": 2
+    },
+    {
+      "name": "native-compaction-success",
+      "calls": 4,
+      "ends": 2
+    },
+    {
+      "name": "native-compaction-failure-explicit-input-and-resume",
+      "calls": 6,
+      "ends": 4
+    }
+  ]
+}

@@ -1,5 +1,9 @@
 # Goal direct child acceptance
 
+## Current accounting boundary
+
+本文件下方保存 #8 历史验收。当前行为以 [Goal provider support](goal-provider-support.md) 为准，跨 provider 新验证见 [#19 整体审计](https://github.com/wangxuyang1221/pi-ext/blob/adventure/goal-all-providers/adventure/evidence/slice-3-spec-audit.md)。计量仅包含已观察且归属明确的根、Pi 压缩/摘要和受管直接子代理，不包括孙代理或任意工具内部调用。
+
 ## Status
 
 [Implementation level #8](https://github.com/wangxuyang1221/adventure/issues/8) 已完成工作区实现及当前稳定基准验证，协调者独立验收通过并关闭。[验收检查点](https://github.com/wangxuyang1221/adventure/issues/8#issuecomment-5605128058) 包含40文件指纹。协调者另跑完整检查905通过、2默认跳过，日志 `.scratch/goal-8-coordinator-check.log`。正文写权已交回协调者。没有提交、推送或部署。[完整证据评论](https://github.com/wangxuyang1221/adventure/issues/8#issuecomment-5605066251) 已追加，正文已更新并 GET 核对，之后由协调者验收关闭。
@@ -17,10 +21,10 @@
 
 ## Implementation
 
-- `extensions/subagent/src/usage.ts`：在受管 child 中捕获请求归属，上报非缓存 input+output 累计值；response receipt 去重，报告临时文件 sync 后 rename。assignment 只有 opaque sourceId，报告只有 sourceId/tokens/missing/lastReceipt，不含根 objective、goal 凭据或 provider 密钥。settled/shutdown 重试已观察但暂未写盘的报告。
+- `extensions/subagent/src/usage.ts`：在受管 child 中捕获请求归属，上报 Pi 归一化 `input + output + cacheWrite` 累计值，排除 cacheRead，reasoning 不重复相加；response receipt 去重，报告临时文件 sync 后 rename。assignment 只有 opaque sourceId，报告只有 sourceId/tokens/missing/lastReceipt，不含根 objective、goal 凭据或 provider 密钥。settled/shutdown 重试已观察但暂未写盘的报告。
 - `extensions/subagent/src/index.ts` 与 `manager.ts`：投递前经共享 event bus 向同一父 session 的根 goal 申请归属，明确 await 其持久化 Promise；没有 owner 时清除旧 assignment。在途响应使用已捕获归属，不转嫁给替换后的目标。
 - `extensions/goal/src/children.ts`：只读取明确登记的报告文件，使用有界读取和 O_NOFOLLOW；fs.watch 唤醒归集，不扫描无归属会话，不新增轮询 goal 回合。get、命令、context、完成观察、settled 和 shutdown 做检查点，关闭 watcher 与 bus listener。
-- `extensions/goal/src/storage.ts`：独立 childUsage 检查点与根累计原子提交；root 与多个直接 child 的累计写可跨纯 revision 交错，但不放松 owner/record/goal/generation 隔离。继承复制累计值但删除活动子代理订阅；旧 goal 迟到报告不能污染新 goal。同目标完成后的已归属 child 晚到用量仍可归集，不重新激活目标。
+- `extensions/goal/src/storage.ts`：独立 childUsage 检查点与根累计原子提交；root 与多个直接 child 的累计写可跨纯 revision 交错，但不放松 owner/record/goal/generation 隔离。继承复制累计值但删除活动子代理订阅；旧 goal 迟到报告不能污染新 goal。同目标 paused、blocked、usage_limited、complete 或预算收尾结束后，晚到 child 报告只推进来源检查点，不再追加目标用量。恢复前刷新基线，恢复后只计后续报告增量，不追补冻结期间已观察到的用量；无法按实际发生时间拆分尚未报告的消耗。
 - `extensions/goal/src/scheduler.ts`：根已结束并排队续跑后，晚到 child 达预算不再新发收尾回合。仍在运行的根回合仅收尾一次，不因预算强杀模型或子代理。
 - managed child 默认 goal 入口不注册独立工具或循环。
 
@@ -58,7 +62,7 @@
 
 ```sh
 GOAL_CHILD_SCENARIO=pending GOAL_CHILD_EVIDENCE=.scratch/goal-8-recheck-pending \
-  node extensions/goal/__tests__/child-tmux-runtime.mjs node_modules/@earendil-works/pi-coding-agent
+  pnpm exec node extensions/goal/__tests__/child-tmux-runtime.mjs node_modules/@earendil-works/pi-coding-agent
 ```
 
 0.85.1 的 package 参数使用宿主安装路径，不换 repo 开发依赖。证据根目录必须全新，不能重用旧 gate 文件。

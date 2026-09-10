@@ -1,5 +1,9 @@
 # Goal Parity Acceptance
 
+## Historical scope
+
+本文保存上一轮独立验收记录。S7 的 openai-codex 白名单已由多 provider 改造移除；当前准入、工具恢复、最终异常和计量口径见 [Goal provider support](goal-provider-support.md)。下方历史测试数量和未执行范围不代表 #19 的交付结果，新证据见 [Spec audit](https://github.com/wangxuyang1221/pi-ext/blob/adventure/goal-all-providers/adventure/evidence/slice-3-spec-audit.md)。
+
 ## Scope
 
 本轮实现研究建议排名 1–7、9，共八个 slice；不包含排名 8 的执行故障分类重做、排名 10 的任意后代计费协议。不修改上游 Pi，不创建真实 goal，不调用付费模型。本文记录 worker 的实现证据与主代理独立验收结果，主代理复核见 Main acceptance。

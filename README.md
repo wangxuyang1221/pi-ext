@@ -13,7 +13,7 @@
 ## Requirements
 
 - Node.js 22.19 或更高版本
-- `@earendil-works/pi-coding-agent` 0.84.3
+- `@earendil-works/pi-coding-agent` 0.84.3；goal 另验证 0.85.1 的实际 SDK
 - `subagent` 运行时需要 tmux 3.6 或兼容版本
 - 支持 24-bit color 的终端可获得最接近设计稿的颜色效果
 
@@ -39,7 +39,7 @@ Pi package 以当前用户的完整系统权限运行。安装第三方 package 
 
 ## Goal extension
 
-在持久化交互 TUI 中使用 `/goal <objective>` 创建目标、`/goal` 查看摘要、`/goal clear` 清除。替换未完成目标需要确认，新目标重新计数。只有整个 trimmed 参数等于控制词时才按控制词处理，因此 `/goal pause now` 是目标文本。`/goal edit` 编辑目标且保留统计，`/goal pause` 暂停，`/goal resume` 显式恢复并解除继承门禁。执行范围为持久 TUI、OpenAI Codex 模型和 root 会话。其他 provider 保留目标与受限原因，允许本地查看、pause、clear 和只读 `get_goal`，不允许创建、编辑、恢复或模型更新目标。切换回支持的模型不会自行发起请求。
+在持久化交互 TUI 中使用 `/goal <objective>` 创建目标、`/goal` 查看摘要、`/goal clear` 清除。替换未完成目标需要确认，新目标重新计数。只有整个 trimmed 参数等于控制词时才按控制词处理，因此 `/goal pause now` 是目标文本。`/goal edit` 编辑目标且保留统计，`/goal pause` 暂停，`/goal resume` 显式恢复并解除继承门禁。执行范围为持久化交互 TUI 中的 root 会话。goal 复用 Pi 当前已选模型，不按 provider 名称限制。内置 provider、`models.json` 私有模型和扩展注册的 provider 均须支持普通 function tools，并履行 Pi 消息与终止事件契约。URL、API key 与鉴权仍由 Pi 管理，goal 不增加凭据配置或任意私有协议适配。无工具模型、不合规 adapter、非 TUI、临时会话和子会话不能保证 goal 执行。模型切换不会自行启动新请求。
 
 权威状态保存在公开 `getAgentDir()` 返回目录下的 `goals/`。新会话首条模型回复前也能保存，不依赖 Pi JSONL 已经落盘。历史 custom entry 只是镜像，失败不会回滚权威记录，下次摘要、绑定或 settled 检查点会重试。清除写入 tombstone，不从旧镜像复活。
 
@@ -57,19 +57,23 @@ Pi 原生粘贴图片会在编辑器中插入 `pi-clipboard-<UUID>.<ext>` 临时
 
 每次编辑生成独立不可变内容包，继承的旧快照不被修改。失败只清理本次且确认未提交的包，不确定提交保留文件供修复。成功保存的旧包不会随 edit、replace 或 clear 自动删除，以免损坏继承和历史引用；备份目标时需包含整个 `goals/`。状态通过 Pi `setStatus` 展示，未加载 codex-ui 时使用默认 footer；加载后在原 codex-ui footer 下增加目标行，不替换原 editor/footer。
 
-三个模型工具为 `get_goal`、`create_goal`、`update_goal`，工具描述与三个模板固定于 Codex main `b348fc26674189f758d5941cdab3f78f258b2aa7`。`update_goal` 允许用户明确要求的 paused，不允许模型自行决定暂停；返回实际持久状态，预算耗尽不被 pause/blocked 覆盖。完成、blocked、usage_limited 和 paused 都不会自动续跑。模型运行中 Esc 会暂停；原生重试等待中 Esc 取消后按 C12 记为 blocked，保留目标与统计，可用 `/goal resume` 恢复。关闭编辑或确认弹窗不会暂停。原生压缩失败后停止目标，显式输入或手动压缩仍可继续。写入或权威检查失败后停止自动推进，修复存储后显式 resume。
+三个模型工具为 `get_goal`、`create_goal`、`update_goal`，工具描述与三个模板固定于 Codex main `b348fc26674189f758d5941cdab3f78f258b2aa7`。`update_goal` 允许用户明确要求的 paused，不允许模型自行决定暂停；返回实际持久状态，预算耗尽不被 pause/blocked 覆盖。完成、blocked、usage_limited 和 paused 都不会自动续跑。模型运行中 Esc 会暂停；原生重试等待中 Esc 取消后按 C12 记为 blocked，保留目标与统计，可用 `/goal resume` 恢复。关闭编辑或确认弹窗不会暂停。先等待 Pi 完成适用的重试与压缩恢复；最终 settled 仍为 length、deferred 或普通不可恢复错误时，仍 active 的目标转 blocked，保留目标供 `/goal resume`。中途失败后成功不会被旧异常停止。普通错误不覆盖 budget_limited，明确账户余额、订阅或用量额度耗尽可转 usage_limited。裸 429、含糊 billing、认证与网络错误不视为账户额度耗尽。goal 不自行网络重试、提高输出上限或取回 deferred 结果。写入或权威检查失败后停止自动推进，修复存储后显式 resume。
 
 Goal 提示采用 Codex CLI 的历史保留方式：新工作回合记录一次提示，后续工具调用和重试不重新生成。已投递的续跑、预算与循环警告消息保留原文和位置，由统一压缩处理；目标编辑、暂停、清除或 `/reload` 不过滤旧提示，压缩后也不动态补插。只有当前运行实例仍在排队的失效请求会被取消，历史提示本身不会触发取消。运行中编辑通过 steer 在当前工具批次后送达新目标；空闲编辑启动一次。连续三个已接纳的自动续跑若 final 空白且整轮没有文本、reasoning、工具或外部活动，目标变为 blocked；显式用户工作不计入，该保护独立于重复工具检测。
 
-C11 限制：取消尚未发出的失效自有 goal 续跑时，公开 `ctx.abort()` 会清除其他扩展尚未处理的排队消息，用户追加文字可能退回编辑器，需要重发。已有聊天记录和保存目标保留。不为此包装 provider、重建 editor 或修改 Pi 核心。
+必要工具 `create_goal`、`get_goal`、`update_goal` 被禁用时，goal 列出缺失项并停止新的自动续跑，不擅自启用工具，也不因工具缺失本身改变目标状态。恢复工具后须显式 `/goal resume`；普通输入、模型切换、编辑或 reload 不解锁。已经归属当前目标的最后响应仍结算 usage、预算与最终错误。取消失效自有续跑不会误取消已送达的用户 steer/follow-up 或其他扩展消息；历史提示不获得取消权限。公开事件未观察到的瞬时工具开关变化无法追溯。
 
-主、子代理按 Pi 归一化 `usage.input + usage.cacheWrite + usage.output` 结算，缺失的 cacheWrite 按零处理，不计 cacheRead、不重复加 reasoning；原生压缩可见 usage 同样结算。创建前不计入，编辑/恢复不清零；缺失 usage 显示统计不完整。active 时间使用单调时钟，离线不计时。达到预算只向当前回合提醒一次收尾，继续记录实际超额用量，不硬杀、也不启动下一自动回合。
+根响应与受管直接子代理按 Pi 归一化 `usage.input + usage.output + usage.cacheWrite` 结算，排除 cacheRead；reasoning 已包含在 output 中，不重复加。Pi 提供 usage 的压缩和分支摘要同样结算，不使用 context tokensBefore、footer totalTokens 或任意工具内部模型调用账单。缺失、非法或未经证实的全零 usage 不虚构数量，有无预算均警告并继续。只有 cacheRead 为正时可计 0。后续有效 usage 正常追加，但查询与工具结果持续标明只含已观察用量，edit/resume/reload 不清除旧缺口。
+
+预算是已观察 token 的软限制，不是费用或处理过的所有 token 总量。最终 usage 或来源检查点使已知累计达到预算后，只在当前仍可收尾的运行中提醒一次，要求停止新实质工作并总结；不强制中断当前模型、工具或子代理。收尾依赖模型遵守提示，实际 110/100 会保留为 110，不截到 100，也不启动后续自动续跑。根回合已结束时，迟到报告不会为提示另开收尾回合。确实完成仍可标 complete，不因预算耗尽假称完成。active 时间使用单调时钟，离线不计时。
 
 可选配置为 `getAgentDir()` 目录下的 `goal.json`，例如 `{"maxGoalTokenBudget": 100000}`。扩展只读取，不创建或修改此配置。最大预算必须是正安全整数；配置上限同时作为创建时未指定预算的默认值，模型显式预算不能超限。未配置且未显式指定则无上限。非法配置阻止新建，修正后 `/reload`；`/goal --budget 100` 仍是目标文本，不是预算参数。
 
-加载本仓库 subagent 时，为根目标投递的直接子代理任务也计入同一预算。归属在投递前登记，子代理按请求捕获归属并上报累计值；根检查点去重，重复读取活动不重复收费。子代理关闭后报告保留供检查点和恢复使用，替换目标后旧报告不计入新目标。paused、blocked、usage_limited、complete 后冻结目标统计；预算收尾继续计费至结束。停止期 child 报告只推进 baseline，恢复前先 checkpoint，不补收停止期用量。主代理使用 activation fence，暂停前发起的响应不因恢复而重新收费。暂停目标不会杀子代理。显式继承复制累计统计，但不订阅源会话的子代理。C13 保留 root → direct child，不支持孙代理或第三方代理计费；managed child 不安装独立 goal 工具或循环。
+加载本仓库 subagent 时，为根目标投递的直接子代理任务也计入同一预算。归属在投递前登记，子代理按请求捕获归属并上报累计值；根检查点去重，重复读取活动不重复收费。子代理关闭后报告保留供检查点和恢复使用，替换目标后旧报告不计入新目标。paused、blocked、usage_limited、complete 后冻结目标统计；预算收尾继续计费至结束。停止期 child 报告只推进 baseline，恢复前先 checkpoint，不补收冻结期间已观察到的增量。例如该来源已计 10，停止后报告 50，目标仍计 10；恢复前基线为 50，恢复后报告 60，只追加 10。边界按报告观察时点结算，无法按真实发生时间拆分尚未报告的用量，也无法还原 provider 未暴露的失败请求或服务端消耗。主代理使用 activation fence，暂停前发起的响应不因恢复而重新收费。暂停目标不会杀子代理。显式继承复制累计统计，但不订阅源会话的子代理。C13 保留 root → direct child，不支持孙代理或第三方代理计费；managed child 不安装独立 goal 工具或循环。
 
-本次研究排名 1–7、9 已通过主代理独立验收，实施范围、离线 SDK 结果和限制见 [Goal parity acceptance](docs/goal-parity-acceptance.md)。以下为此前基线验收记录。
+当前支持范围、预算限制与复现入口见 [Goal provider support](docs/goal-provider-support.md)。多 provider 的完整交付证据见 [Spec audit](https://github.com/wangxuyang1221/pi-ext/blob/adventure/goal-all-providers/adventure/evidence/slice-3-spec-audit.md)。离线协议代表样本不等同于全部远端 provider 或模型的端到端实测。非空纯文本续跑不新增次数上限，既有空响应、重复工具与连续执行失败保护保留。
+
+以下为此前基线验收记录。研究排名 1–7、9 的历史实现及验收见 [Goal parity acceptance](docs/goal-parity-acceptance.md)，其中旧 provider 白名单不再作为当前限制。
 
 #4 至 #9 的基础存储、生命周期、执行、预算、直接子代理和附件/UI 已由协调者验收。Pi 0.84.3/0.85.1 的实际 SDK、受管 OS 子进程和 InteractiveMode PTY 使用离线原生 adapter 或 faux provider 夹具，不包含付费在线调用，不宣称断电零丢失。受管子进程使用真实 tmux transport 与子端 CLI，IPC 夹具仅作补充；根端使用 SDK，原生根 TUI 输入另有 PTY 矩阵。最终工作区集成结果、准确基准和未执行项见 [Goal integration acceptance](docs/goal-integration-acceptance.md)，是否通关以协调者独立验收为准。分项证据见 [Goal attachments and UI acceptance](docs/goal-ui-acceptance.md)、[Goal direct child accounting](docs/goal-descendant-acceptance.md)、[Goal budget acceptance](docs/goal-budget-acceptance.md)、[Goal execution report](docs/goal-execution-report.md)、[Goal storage acceptance](docs/goal-storage-acceptance.md) 与 [Goal lifecycle acceptance](docs/goal-lifecycle-acceptance.md)。
 

@@ -1,0 +1,2106 @@
+PASS 0.84.3 normal-function-tools-anthropic (6 requests)
+PASS 0.84.3 normal-function-tools-private-goal (6 requests)
+PASS 0.84.3 normal-function-tools-custom-goal (6 requests)
+PASS 0.84.3 normal-function-tools-openai-codex (6 requests)
+PASS 0.84.3 creation-with-disabled-tools-persists-recovery (1 requests)
+PASS 0.84.3 reload-keeps-disabled-tool-choice (1 requests)
+PASS 0.84.3 tool-recovery-create_goal (5 requests)
+PASS 0.84.3 tool-recovery-get_goal (5 requests)
+PASS 0.84.3 tool-recovery-update_goal (5 requests)
+PASS 0.84.3 disabled-tools-still-settle-budget (2 requests)
+PASS 0.84.3 stale-queued-continuation-none (1 requests)
+PASS 0.84.3 stale-queued-continuation-steer (2 requests)
+PASS 0.84.3 stale-queued-continuation-followUp (2 requests)
+PASS 0.84.3 stale-queued-continuation-foreign (2 requests)
+PASS 0.84.3 replacement-isolates-in-flight-usage-and-old-end (3 requests)
+PASS 0.84.3 nonempty-text-does-not-add-a-continuation-cap (7 requests)
+PASS 0.84.3 admission-rejects-rpc (0 requests)
+PASS 0.84.3 admission-rejects-print (0 requests)
+PASS 0.84.3 admission-rejects-json (0 requests)
+PASS 0.84.3 admission-rejects-ephemeral (0 requests)
+PASS 0.84.3 admission-rejects-child (0 requests)
+PASS 0.84.3 admission-rejects-no-model (0 requests)
+{
+  "version": "0.84.3",
+  "versions": {
+    "pi-coding-agent": "0.84.3",
+    "pi-ai": "0.84.3",
+    "pi-agent-core": "0.84.3"
+  },
+  "offline": true,
+  "networkAttempts": 0,
+  "results": [
+    {
+      "name": "normal-function-tools-anthropic",
+      "provider": "anthropic",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 6,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-5",
+          "api": "goal-offline-anthropic",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 2,
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-5",
+          "api": "goal-offline-anthropic",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 3,
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-5",
+          "api": "goal-offline-anthropic",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 4,
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-5",
+          "api": "goal-offline-anthropic",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 5,
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-5",
+          "api": "goal-offline-anthropic",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 6,
+          "provider": "anthropic",
+          "model": "claude-sonnet-4-5",
+          "api": "goal-offline-anthropic",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "name": "get_goal",
+          "isError": false
+        },
+        {
+          "name": "create_goal",
+          "isError": false
+        },
+        {
+          "name": "get_goal",
+          "isError": false
+        },
+        {
+          "name": "update_goal",
+          "isError": false
+        }
+      ],
+      "tokens": 21,
+      "status": "complete",
+      "notices": [],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 4
+        },
+        {
+          "type": "agent_start",
+          "requests": 4
+        },
+        {
+          "type": "agent_end",
+          "requests": 6
+        },
+        {
+          "type": "agent_settled",
+          "requests": 6
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 6
+        }
+      ]
+    },
+    {
+      "name": "normal-function-tools-private-goal",
+      "provider": "private-goal",
+      "transport": "native-openai-completions-with-offline-fetch",
+      "calls": 6,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 2,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 3,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 4,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 5,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 6,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "name": "get_goal",
+          "isError": false
+        },
+        {
+          "name": "create_goal",
+          "isError": false
+        },
+        {
+          "name": "get_goal",
+          "isError": false
+        },
+        {
+          "name": "update_goal",
+          "isError": false
+        }
+      ],
+      "tokens": 21,
+      "status": "complete",
+      "notices": [],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 4
+        },
+        {
+          "type": "agent_start",
+          "requests": 4
+        },
+        {
+          "type": "agent_end",
+          "requests": 6
+        },
+        {
+          "type": "agent_settled",
+          "requests": 6
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 6
+        }
+      ]
+    },
+    {
+      "name": "normal-function-tools-custom-goal",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 6,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 2,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 3,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 4,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 5,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 6,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "name": "get_goal",
+          "isError": false
+        },
+        {
+          "name": "create_goal",
+          "isError": false
+        },
+        {
+          "name": "get_goal",
+          "isError": false
+        },
+        {
+          "name": "update_goal",
+          "isError": false
+        }
+      ],
+      "tokens": 21,
+      "status": "complete",
+      "notices": [],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 4
+        },
+        {
+          "type": "agent_start",
+          "requests": 4
+        },
+        {
+          "type": "agent_end",
+          "requests": 6
+        },
+        {
+          "type": "agent_settled",
+          "requests": 6
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 6
+        }
+      ]
+    },
+    {
+      "name": "normal-function-tools-openai-codex",
+      "provider": "openai-codex",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 6,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "openai-codex",
+          "model": "function-model",
+          "api": "goal-offline-openai-codex",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 2,
+          "provider": "openai-codex",
+          "model": "function-model",
+          "api": "goal-offline-openai-codex",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 3,
+          "provider": "openai-codex",
+          "model": "function-model",
+          "api": "goal-offline-openai-codex",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 4,
+          "provider": "openai-codex",
+          "model": "function-model",
+          "api": "goal-offline-openai-codex",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 5,
+          "provider": "openai-codex",
+          "model": "function-model",
+          "api": "goal-offline-openai-codex",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 6,
+          "provider": "openai-codex",
+          "model": "function-model",
+          "api": "goal-offline-openai-codex",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "name": "get_goal",
+          "isError": false
+        },
+        {
+          "name": "create_goal",
+          "isError": false
+        },
+        {
+          "name": "get_goal",
+          "isError": false
+        },
+        {
+          "name": "update_goal",
+          "isError": false
+        }
+      ],
+      "tokens": 21,
+      "status": "complete",
+      "notices": [],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 4
+        },
+        {
+          "type": "agent_start",
+          "requests": 4
+        },
+        {
+          "type": "agent_end",
+          "requests": 6
+        },
+        {
+          "type": "agent_settled",
+          "requests": 6
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 6
+        }
+      ]
+    },
+    {
+      "name": "creation-with-disabled-tools-persists-recovery",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 1,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        }
+      ],
+      "tools": [],
+      "tokens": 7,
+      "status": "active",
+      "notices": [
+        {
+          "message": "Missing goal tools: create_goal. Restore them, then use explicit /goal resume. No new automatic goal continuation will start.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal saved.",
+          "level": "info"
+        },
+        {
+          "message": "Goal tools are available again. Use explicit /goal resume to continue automatic goal execution.",
+          "level": "warning"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 1
+        },
+        {
+          "type": "agent_settled",
+          "requests": 1
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 1
+        }
+      ]
+    },
+    {
+      "name": "reload-keeps-disabled-tool-choice",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 1,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal"
+          ]
+        }
+      ],
+      "tools": [],
+      "notices": [],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 1
+        },
+        {
+          "type": "agent_settled",
+          "requests": 1
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "reload",
+          "requests": 1
+        },
+        {
+          "type": "session_start",
+          "reason": "reload",
+          "requests": 1
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 1
+        }
+      ]
+    },
+    {
+      "name": "tool-recovery-create_goal",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 5,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 2,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 3,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 4,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 5,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "name": "update_goal",
+          "isError": false
+        }
+      ],
+      "tokens": 28,
+      "status": "complete",
+      "notices": [
+        {
+          "message": "Goal saved.",
+          "level": "info"
+        },
+        {
+          "message": "Missing goal tools: create_goal. Restore them, then use explicit /goal resume. No new automatic goal continuation will start.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal storage error: Missing goal tools: create_goal. Restore them before /goal resume.",
+          "level": "error"
+        },
+        {
+          "message": "Missing goal tools: create_goal. Restore them, then use explicit /goal resume. No new automatic goal continuation will start.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal tools are available again. Use explicit /goal resume to continue automatic goal execution.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal tools are available again. Use explicit /goal resume to continue automatic goal execution.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal: active\nRetain tool recovery intent\nElapsed: 0s | Tokens used: 21\nAutomatic continuation requires restored goal tools and explicit /goal resume.\nCommands: /goal <objective>, /goal edit, /goal pause, /goal resume, /goal clear, /goal-recover, /goal-fork",
+          "level": "info"
+        },
+        {
+          "message": "Goal active.",
+          "level": "info"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 1
+        },
+        {
+          "type": "agent_settled",
+          "requests": 1
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "reload",
+          "requests": 1
+        },
+        {
+          "type": "session_start",
+          "reason": "reload",
+          "requests": 1
+        },
+        {
+          "type": "agent_start",
+          "requests": 1
+        },
+        {
+          "type": "agent_end",
+          "requests": 2
+        },
+        {
+          "type": "agent_settled",
+          "requests": 2
+        },
+        {
+          "type": "model_select",
+          "requests": 2
+        },
+        {
+          "type": "agent_start",
+          "requests": 2
+        },
+        {
+          "type": "agent_end",
+          "requests": 3
+        },
+        {
+          "type": "agent_settled",
+          "requests": 3
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "reload",
+          "requests": 3
+        },
+        {
+          "type": "session_start",
+          "reason": "reload",
+          "requests": 3
+        },
+        {
+          "type": "agent_start",
+          "requests": 3
+        },
+        {
+          "type": "agent_end",
+          "requests": 5
+        },
+        {
+          "type": "agent_settled",
+          "requests": 5
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 5
+        }
+      ]
+    },
+    {
+      "name": "tool-recovery-get_goal",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 5,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 2,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 3,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 4,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 5,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "name": "update_goal",
+          "isError": false
+        }
+      ],
+      "tokens": 28,
+      "status": "complete",
+      "notices": [
+        {
+          "message": "Goal saved.",
+          "level": "info"
+        },
+        {
+          "message": "Missing goal tools: get_goal. Restore them, then use explicit /goal resume. No new automatic goal continuation will start.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal storage error: Missing goal tools: get_goal. Restore them before /goal resume.",
+          "level": "error"
+        },
+        {
+          "message": "Missing goal tools: get_goal. Restore them, then use explicit /goal resume. No new automatic goal continuation will start.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal tools are available again. Use explicit /goal resume to continue automatic goal execution.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal tools are available again. Use explicit /goal resume to continue automatic goal execution.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal: active\nRetain tool recovery intent\nElapsed: 0s | Tokens used: 21\nAutomatic continuation requires restored goal tools and explicit /goal resume.\nCommands: /goal <objective>, /goal edit, /goal pause, /goal resume, /goal clear, /goal-recover, /goal-fork",
+          "level": "info"
+        },
+        {
+          "message": "Goal active.",
+          "level": "info"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 1
+        },
+        {
+          "type": "agent_settled",
+          "requests": 1
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "reload",
+          "requests": 1
+        },
+        {
+          "type": "session_start",
+          "reason": "reload",
+          "requests": 1
+        },
+        {
+          "type": "agent_start",
+          "requests": 1
+        },
+        {
+          "type": "agent_end",
+          "requests": 2
+        },
+        {
+          "type": "agent_settled",
+          "requests": 2
+        },
+        {
+          "type": "model_select",
+          "requests": 2
+        },
+        {
+          "type": "agent_start",
+          "requests": 2
+        },
+        {
+          "type": "agent_end",
+          "requests": 3
+        },
+        {
+          "type": "agent_settled",
+          "requests": 3
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "reload",
+          "requests": 3
+        },
+        {
+          "type": "session_start",
+          "reason": "reload",
+          "requests": 3
+        },
+        {
+          "type": "agent_start",
+          "requests": 3
+        },
+        {
+          "type": "agent_end",
+          "requests": 5
+        },
+        {
+          "type": "agent_settled",
+          "requests": 5
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 5
+        }
+      ]
+    },
+    {
+      "name": "tool-recovery-update_goal",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 5,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 2,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 3,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 4,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 5,
+          "provider": "private-goal",
+          "model": "private-function-model",
+          "api": "openai-completions",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "name": "update_goal",
+          "isError": false
+        }
+      ],
+      "tokens": 28,
+      "status": "complete",
+      "notices": [
+        {
+          "message": "Goal saved.",
+          "level": "info"
+        },
+        {
+          "message": "Missing goal tools: update_goal. Restore them, then use explicit /goal resume. No new automatic goal continuation will start.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal storage error: Missing goal tools: update_goal. Restore them before /goal resume.",
+          "level": "error"
+        },
+        {
+          "message": "Missing goal tools: update_goal. Restore them, then use explicit /goal resume. No new automatic goal continuation will start.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal tools are available again. Use explicit /goal resume to continue automatic goal execution.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal tools are available again. Use explicit /goal resume to continue automatic goal execution.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal: active\nRetain tool recovery intent\nElapsed: 0s | Tokens used: 21\nAutomatic continuation requires restored goal tools and explicit /goal resume.\nCommands: /goal <objective>, /goal edit, /goal pause, /goal resume, /goal clear, /goal-recover, /goal-fork",
+          "level": "info"
+        },
+        {
+          "message": "Goal active.",
+          "level": "info"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 1
+        },
+        {
+          "type": "agent_settled",
+          "requests": 1
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "reload",
+          "requests": 1
+        },
+        {
+          "type": "session_start",
+          "reason": "reload",
+          "requests": 1
+        },
+        {
+          "type": "agent_start",
+          "requests": 1
+        },
+        {
+          "type": "agent_end",
+          "requests": 2
+        },
+        {
+          "type": "agent_settled",
+          "requests": 2
+        },
+        {
+          "type": "model_select",
+          "requests": 2
+        },
+        {
+          "type": "agent_start",
+          "requests": 2
+        },
+        {
+          "type": "agent_end",
+          "requests": 3
+        },
+        {
+          "type": "agent_settled",
+          "requests": 3
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "reload",
+          "requests": 3
+        },
+        {
+          "type": "session_start",
+          "reason": "reload",
+          "requests": 3
+        },
+        {
+          "type": "agent_start",
+          "requests": 3
+        },
+        {
+          "type": "agent_end",
+          "requests": 5
+        },
+        {
+          "type": "agent_settled",
+          "requests": 5
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 5
+        }
+      ]
+    },
+    {
+      "name": "disabled-tools-still-settle-budget",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 2,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 2,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal"
+          ]
+        }
+      ],
+      "tools": [],
+      "tokens": 117,
+      "status": "budget_limited",
+      "notices": [
+        {
+          "message": "Goal saved.",
+          "level": "info"
+        },
+        {
+          "message": "Missing goal tools: update_goal. Restore them, then use explicit /goal resume. No new automatic goal continuation will start.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal tools are available again. Use explicit /goal resume to continue automatic goal execution.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal budget_limited.",
+          "level": "info"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 2
+        },
+        {
+          "type": "agent_settled",
+          "requests": 2
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 2
+        }
+      ]
+    },
+    {
+      "name": "stale-queued-continuation-none",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 1,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        }
+      ],
+      "tools": [],
+      "tokens": 7,
+      "status": "active",
+      "notices": [
+        {
+          "message": "Goal saved.",
+          "level": "info"
+        },
+        {
+          "message": "Missing goal tools: get_goal. Restore them, then use explicit /goal resume. No new automatic goal continuation will start.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal usage is incomplete: a response has missing, invalid, or unverified zero usage. Reported tokens are only the observed usage, not an exact total.",
+          "level": "warning"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 1
+        },
+        {
+          "type": "agent_start",
+          "requests": 1
+        },
+        {
+          "type": "agent_end",
+          "requests": 1
+        },
+        {
+          "type": "agent_settled",
+          "requests": 1
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 1
+        }
+      ]
+    },
+    {
+      "name": "stale-queued-continuation-steer",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 2,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 2,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "create_goal",
+            "update_goal"
+          ]
+        }
+      ],
+      "tools": [],
+      "tokens": 14,
+      "status": "active",
+      "notices": [
+        {
+          "message": "Goal saved.",
+          "level": "info"
+        },
+        {
+          "message": "Missing goal tools: get_goal. Restore them, then use explicit /goal resume. No new automatic goal continuation will start.",
+          "level": "warning"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 1
+        },
+        {
+          "type": "agent_start",
+          "requests": 1
+        },
+        {
+          "type": "agent_end",
+          "requests": 2
+        },
+        {
+          "type": "agent_settled",
+          "requests": 2
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 2
+        }
+      ]
+    },
+    {
+      "name": "stale-queued-continuation-followUp",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 2,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 2,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "create_goal",
+            "update_goal"
+          ]
+        }
+      ],
+      "tools": [],
+      "tokens": 14,
+      "status": "active",
+      "notices": [
+        {
+          "message": "Goal saved.",
+          "level": "info"
+        },
+        {
+          "message": "Missing goal tools: get_goal. Restore them, then use explicit /goal resume. No new automatic goal continuation will start.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal usage is incomplete: a response has missing, invalid, or unverified zero usage. Reported tokens are only the observed usage, not an exact total.",
+          "level": "warning"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 1
+        },
+        {
+          "type": "agent_start",
+          "requests": 1
+        },
+        {
+          "type": "agent_end",
+          "requests": 1
+        },
+        {
+          "type": "agent_start",
+          "requests": 1
+        },
+        {
+          "type": "agent_end",
+          "requests": 2
+        },
+        {
+          "type": "agent_settled",
+          "requests": 2
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 2
+        }
+      ]
+    },
+    {
+      "name": "stale-queued-continuation-foreign",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 2,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 2,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "create_goal",
+            "update_goal"
+          ]
+        }
+      ],
+      "tools": [],
+      "tokens": 14,
+      "status": "active",
+      "notices": [
+        {
+          "message": "Goal saved.",
+          "level": "info"
+        },
+        {
+          "message": "Missing goal tools: get_goal. Restore them, then use explicit /goal resume. No new automatic goal continuation will start.",
+          "level": "warning"
+        },
+        {
+          "message": "Goal usage is incomplete: a response has missing, invalid, or unverified zero usage. Reported tokens are only the observed usage, not an exact total.",
+          "level": "warning"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 1
+        },
+        {
+          "type": "agent_start",
+          "requests": 1
+        },
+        {
+          "type": "agent_end",
+          "requests": 1
+        },
+        {
+          "type": "agent_start",
+          "requests": 1
+        },
+        {
+          "type": "agent_end",
+          "requests": 2
+        },
+        {
+          "type": "agent_settled",
+          "requests": 2
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 2
+        }
+      ]
+    },
+    {
+      "name": "replacement-isolates-in-flight-usage-and-old-end",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 3,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 2,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 3,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "name": "update_goal",
+          "isError": false
+        }
+      ],
+      "tokens": 7,
+      "status": "complete",
+      "notices": [
+        {
+          "message": "Goal saved.",
+          "level": "info"
+        },
+        {
+          "message": "Goal saved.",
+          "level": "info"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 3
+        },
+        {
+          "type": "agent_settled",
+          "requests": 3
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 3
+        }
+      ]
+    },
+    {
+      "name": "nonempty-text-does-not-add-a-continuation-cap",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 7,
+      "requests": [
+        {
+          "index": 1,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 2,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 3,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 4,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 5,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 6,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        },
+        {
+          "index": 7,
+          "provider": "custom-goal",
+          "model": "function-model",
+          "api": "goal-offline-custom-goal",
+          "tools": [
+            "get_goal",
+            "create_goal",
+            "update_goal"
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "name": "update_goal",
+          "isError": false
+        }
+      ],
+      "tokens": 42,
+      "status": "complete",
+      "notices": [
+        {
+          "message": "Goal saved.",
+          "level": "info"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "agent_start",
+          "requests": 0
+        },
+        {
+          "type": "agent_end",
+          "requests": 1
+        },
+        {
+          "type": "agent_start",
+          "requests": 1
+        },
+        {
+          "type": "agent_end",
+          "requests": 2
+        },
+        {
+          "type": "agent_start",
+          "requests": 2
+        },
+        {
+          "type": "agent_end",
+          "requests": 3
+        },
+        {
+          "type": "agent_start",
+          "requests": 3
+        },
+        {
+          "type": "agent_end",
+          "requests": 4
+        },
+        {
+          "type": "agent_start",
+          "requests": 4
+        },
+        {
+          "type": "agent_end",
+          "requests": 5
+        },
+        {
+          "type": "agent_start",
+          "requests": 5
+        },
+        {
+          "type": "agent_end",
+          "requests": 7
+        },
+        {
+          "type": "agent_settled",
+          "requests": 7
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 7
+        }
+      ]
+    },
+    {
+      "name": "admission-rejects-rpc",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 0,
+      "requests": [],
+      "tools": [],
+      "notices": [
+        {
+          "message": "Goal commands are available only in interactive TUI mode.",
+          "level": "warning"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 0
+        }
+      ]
+    },
+    {
+      "name": "admission-rejects-print",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 0,
+      "requests": [],
+      "tools": [],
+      "notices": [
+        {
+          "message": "Goal commands are available only in interactive TUI mode.",
+          "level": "warning"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 0
+        }
+      ]
+    },
+    {
+      "name": "admission-rejects-json",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 0,
+      "requests": [],
+      "tools": [],
+      "notices": [
+        {
+          "message": "Goal commands are available only in interactive TUI mode.",
+          "level": "warning"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 0
+        }
+      ]
+    },
+    {
+      "name": "admission-rejects-ephemeral",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 0,
+      "requests": [],
+      "tools": [],
+      "notices": [
+        {
+          "message": "Goal storage error: Goal execution requires a persistent session.",
+          "level": "error"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 0
+        }
+      ]
+    },
+    {
+      "name": "admission-rejects-child",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 0,
+      "requests": [],
+      "tools": [],
+      "notices": [
+        {
+          "message": "Goal storage error: Goal execution requires a root session.",
+          "level": "error"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 0
+        }
+      ]
+    },
+    {
+      "name": "admission-rejects-no-model",
+      "provider": "custom-goal",
+      "transport": "extension-registered-offline-streamSimple",
+      "calls": 0,
+      "requests": [],
+      "tools": [],
+      "notices": [
+        {
+          "message": "Goal storage error: Goal execution requires a selected model.",
+          "level": "error"
+        }
+      ],
+      "lifecycle": [
+        {
+          "type": "model_select",
+          "requests": 0
+        },
+        {
+          "type": "session_start",
+          "reason": "startup",
+          "requests": 0
+        },
+        {
+          "type": "session_shutdown",
+          "reason": "quit",
+          "requests": 0
+        }
+      ]
+    }
+  ],
+  "cleanup": {
+    "temporaryRootRemoved": true,
+    "spawnedProcesses": 0,
+    "listeningPorts": []
+  }
+}

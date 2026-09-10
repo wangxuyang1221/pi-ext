@@ -34,6 +34,7 @@ const requiredPublishedEntries = [
   "docs/goal-ui-acceptance.md",
   "docs/goal-integration-acceptance.md",
   "docs/goal-parity-acceptance.md",
+  "docs/goal-provider-support.md",
 ];
 const requiredMcpRuntimeExports = new Map([
   ["diagnostics.js", [

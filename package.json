@@ -47,6 +47,7 @@
     "extensions/goal/UPSTREAM.md",
     "extensions/goal/LICENSE",
     "extensions/goal/NOTICE",
+    "docs/goal-provider-support.md",
     "docs/goal-descendant-acceptance.md",
     "docs/goal-ui-acceptance.md",
     "docs/goal-integration-acceptance.md",
