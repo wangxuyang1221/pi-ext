@@ -1,0 +1,409 @@
+{
+  "method": "production-accounting-with-synthetic-events",
+  "sdkOrProviderVerified": false,
+  "scenarios": 47,
+  "results": [
+    {
+      "name": "cache-and-reasoning",
+      "source": "root",
+      "budget": null,
+      "tokens": 90,
+      "missing": false,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "cache-and-reasoning",
+      "source": "root",
+      "budget": 100,
+      "tokens": 90,
+      "missing": false,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "cache-and-reasoning",
+      "source": "child",
+      "tokens": 90,
+      "missing": false,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "reasoning-subset",
+      "source": "root",
+      "budget": null,
+      "tokens": 13,
+      "missing": false,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "reasoning-subset",
+      "source": "root",
+      "budget": 100,
+      "tokens": 13,
+      "missing": false,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "reasoning-subset",
+      "source": "child",
+      "tokens": 13,
+      "missing": false,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "cache-read-only",
+      "source": "root",
+      "budget": null,
+      "tokens": 0,
+      "missing": false,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "cache-read-only",
+      "source": "root",
+      "budget": 100,
+      "tokens": 0,
+      "missing": false,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "cache-read-only",
+      "source": "child",
+      "tokens": 0,
+      "missing": false,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "cache-write-only",
+      "source": "root",
+      "budget": null,
+      "tokens": 10,
+      "missing": false,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "cache-write-only",
+      "source": "root",
+      "budget": 100,
+      "tokens": 10,
+      "missing": false,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "cache-write-only",
+      "source": "child",
+      "tokens": 10,
+      "missing": false,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "unverified-zero",
+      "source": "root",
+      "budget": null,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "unverified-zero",
+      "source": "root",
+      "budget": 100,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "unverified-zero",
+      "source": "child",
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "missing",
+      "source": "root",
+      "budget": null,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "missing",
+      "source": "root",
+      "budget": 100,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "missing",
+      "source": "child",
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "missing-output",
+      "source": "root",
+      "budget": null,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "missing-output",
+      "source": "root",
+      "budget": 100,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "missing-output",
+      "source": "child",
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "negative",
+      "source": "root",
+      "budget": null,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "negative",
+      "source": "root",
+      "budget": 100,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "negative",
+      "source": "child",
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "fraction",
+      "source": "root",
+      "budget": null,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "fraction",
+      "source": "root",
+      "budget": 100,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "fraction",
+      "source": "child",
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "string",
+      "source": "root",
+      "budget": null,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "string",
+      "source": "root",
+      "budget": 100,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "string",
+      "source": "child",
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "nan",
+      "source": "root",
+      "budget": null,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "nan",
+      "source": "root",
+      "budget": 100,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "nan",
+      "source": "child",
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "infinity",
+      "source": "root",
+      "budget": null,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "infinity",
+      "source": "root",
+      "budget": 100,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "infinity",
+      "source": "child",
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "invalid-cache-read",
+      "source": "root",
+      "budget": null,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "invalid-cache-read",
+      "source": "root",
+      "budget": 100,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "invalid-cache-read",
+      "source": "child",
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "invalid-cache-write",
+      "source": "root",
+      "budget": null,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "invalid-cache-write",
+      "source": "root",
+      "budget": 100,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "invalid-cache-write",
+      "source": "child",
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "overflow",
+      "source": "root",
+      "budget": null,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "overflow",
+      "source": "root",
+      "budget": 100,
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "overflow",
+      "source": "child",
+      "tokens": 0,
+      "missing": true,
+      "replayCharged": false,
+      "passed": true
+    },
+    {
+      "name": "combined-sources",
+      "tokens": 110,
+      "budget": 100,
+      "passed": true
+    },
+    {
+      "name": "sticky-missing",
+      "survivedResumeEditReopen": true,
+      "resetForNewGoal": true,
+      "passed": true
+    }
+  ]
+}
