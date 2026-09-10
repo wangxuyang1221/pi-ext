@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { GoalLoopDetector, LOOP_WINDOW } from "./loop.js";
 import { goalCapability } from "./capability.js";
+import { isAccountUsageLimit } from "./quota.js";
 import { renderGoalPrompt } from "./tools.js";
 export const GOAL_CONTEXT = "pi-ext-goal-continuation";
 export const GOAL_BUDGET_CONTEXT = "pi-ext-goal-budget";
@@ -31,10 +32,12 @@ export function registerGoalScheduler(pi, access) {
     let emptyRuns = 0;
     const resetEmpty = () => { automaticRun = false; activity = false; emptyFinal = false; emptyRuns = 0; };
     let runEnded = false;
-    let lastError;
+    let lastFailure;
     let bound;
     let boundSignal;
+    let responseOrigin;
     let recoverySuppressed = false;
+    let compactionFailed = false;
     let modelGeneration = 0;
     let budgetNotified;
     const loop = new GoalLoopDetector();
@@ -57,7 +60,7 @@ export function registerGoalScheduler(pi, access) {
     // Tool availability gates new continuations, not bound responses or wrap-up.
     const runnable = (ctx) => {
         const record = active(ctx);
-        return record && !record.goal?.toolRecoveryRequired && !access.missingTools?.().length ? record : undefined;
+        return record && !compactionFailed && !record.goal?.toolRecoveryRequired && !access.missingTools?.().length ? record : undefined;
     };
     const refresh = (ctx) => {
         const goal = access.snapshot()?.goal;
@@ -126,6 +129,10 @@ export function registerGoalScheduler(pi, access) {
         if (!record)
             return;
         return { message: { customType: GOAL_CONTEXT, content: renderGoalPrompt(record.goal, editedPending), display: false, details: ticket(record) } };
+    });
+    pi.on("message_start", event => {
+        if (event.message.role === "assistant")
+            responseOrigin = { timestamp: event.message.timestamp, ticket: bound };
     });
     pi.on("message_end", (event, ctx) => {
         if (event.message.role === "user") {
@@ -197,7 +204,11 @@ export function registerGoalScheduler(pi, access) {
         const last = [...event.messages].reverse().find(message => message.role === "assistant");
         if (last?.role !== "assistant" || !valid(bound, ctx, true))
             return;
-        lastError = last.stopReason === "error" ? last.errorMessage ?? "Model request failed." : undefined;
+        if (responseOrigin && (responseOrigin.timestamp !== last.timestamp || responseOrigin.ticket?.scheduleId !== bound?.scheduleId))
+            return;
+        lastFailure = last.stopReason === "error" ? { reason: "error", message: last.errorMessage ?? "Model request failed." }
+            : last.stopReason === "length" ? { reason: "length", message: "Pi settled with a truncated response. Use /goal resume to retry." }
+                : last.stopReason === "deferred" ? { reason: "deferred", message: "deferred responses are not supported. Pi settled without a normal result. Resolve the response mode, then use /goal resume." } : undefined;
         const record = active(ctx, true);
         if (!record)
             return;
@@ -217,17 +228,36 @@ export function registerGoalScheduler(pi, access) {
         start(ctx, true);
     });
     pi.on("agent_settled", async (_event, ctx) => {
+        // A preceding handler may already have started another session-level run.
+        if (!ctx.isIdle())
+            return;
+        const origin = bound;
+        const failure = lastFailure;
         const record = active(ctx, true);
-        if (record && valid(bound, ctx, true) && lastError !== undefined) {
-            const quota = /insufficient_quota|usage_limit_reached|you(?:'|’)ve hit your usage limit/i.test(lastError);
+        if (record && valid(origin, ctx, true) && failure) {
+            const quota = failure.reason === "error" && isAccountUsageLimit(failure.message);
             // Pinned Codex preserves budget_limited on ordinary errors; only an
             // account usage limit overrides it while the bound turn is in flight.
             if (quota || record.goal.status === "active")
                 await access.stop(quota ? "usage_limited" : "blocked", record, ctx);
-            ctx.ui.notify(`Goal stopped: ${lastError.replace(/[\x00-\x1f\x7f]/g, " ").slice(0, 400)}`, "warning");
+            const current = access.snapshot();
+            if (bound !== origin || origin.runGeneration !== runGeneration || current?.goal?.goalId !== origin.goalId || current.generation !== origin.generation)
+                return;
+            const diagnosis = failure.reason === "error"
+                ? quota ? "The provider reported an account usage or credit limit. Resolve that limit, then use /goal resume."
+                    : "The model request failed and Pi finished recovery. Review the provider error, then use /goal resume."
+                : failure.message;
+            const status = current.goal.status;
+            // Provider errors can contain credentials or request data. Do not echo them.
+            ctx.ui.notify(status === "budget_limited"
+                ? `Goal remains budget_limited after the final ${failure.reason} result. No automatic continuation will start.`
+                : `Goal ${status}: ${diagnosis}`, "warning");
         }
-        bound = undefined;
-        boundSignal = undefined;
+        if (bound === origin && lastFailure === failure) {
+            lastFailure = undefined;
+            bound = undefined;
+            boundSignal = undefined;
+        }
     });
     pi.on("session_before_compact", event => {
         resetEmpty();
@@ -237,12 +267,22 @@ export function registerGoalScheduler(pi, access) {
             return { cancel: true };
     });
     pi.on("session_compact_failed", async (event, ctx) => {
-        const record = active(ctx);
-        if (!record || !valid(bound, ctx) || event.reason === "manual")
+        const record = active(ctx, true);
+        if (!record || !valid(bound, ctx, true) || event.reason === "manual")
+            return;
+        // Cancellation of our suppressed recovery is not a user pause.
+        if (event.aborted && compactionFailed)
             return;
         recoverySuppressed = true;
-        await access.stop(event.aborted ? "paused" : "blocked", record, ctx);
-        ctx.ui.notify(`Goal stopped after compaction ${event.aborted ? "cancellation" : "failure"}. Use /goal resume to retry.`, "warning");
+        if (!event.aborted) {
+            compactionFailed = true;
+            const message = event.errorMessage ?? "Compaction failed.";
+            if (!lastFailure || isAccountUsageLimit(message))
+                lastFailure = { reason: "error", message };
+            return;
+        }
+        await access.stop("paused", record, ctx);
+        ctx.ui.notify("Goal stopped after compaction cancellation. Use /goal resume to retry.", "warning");
     });
     pi.on("input", () => { recoverySuppressed = false; resetEmpty(); });
     pi.on("message_update", event => {
@@ -315,11 +355,15 @@ export function registerGoalScheduler(pi, access) {
                 restartAutomatic = true;
             }
             internalCancellation = true;
-            bound = undefined;
+            // Retain the failed recovery's ownership while retiring only our queued work.
+            if (!compactionFailed)
+                bound = undefined;
             ctx.abort();
         }
         else {
             runEnded = false;
+            lastFailure = undefined;
+            compactionFailed = false;
             const record = active(ctx) ?? (valid(bound, ctx, true) ? active(ctx, true) : undefined);
             bound = record ? ticket(record) : undefined;
             boundSignal = ctx.signal;
@@ -357,7 +401,7 @@ export function registerGoalScheduler(pi, access) {
             else
                 start(ctx);
         },
-        invalidate: () => { resetLoop(); resetEmpty(); runGeneration++; completedResponse = false; failedRuns = 0; failedBash = false; successfulTool = false; lastError = undefined; },
+        invalidate: () => { resetLoop(); resetEmpty(); runGeneration++; completedResponse = false; failedRuns = 0; failedBash = false; successfulTool = false; lastFailure = undefined; compactionFailed = false; },
         adopt: (ctx) => { suspended = false; const record = active(ctx); bound = record ? ticket(record) : undefined; modelGeneration = runGeneration; },
         assertModelGoal: (ctx) => { if (modelGeneration !== runGeneration || (bound && !valid(bound, ctx, true)))
             throw new Error("Stale goal tool invocation."); },

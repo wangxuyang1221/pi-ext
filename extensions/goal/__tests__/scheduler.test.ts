@@ -6,15 +6,20 @@ import type { Model } from "@earendil-works/pi-ai";
 import { createSessionCoordinator } from "../../codex-compact/src/session-coordinator.js";
 import { fullInputForBranch, NATIVE_COMPACTION_KIND } from "../../codex-compact/src/native-compaction.js";
 import type { GoalRecord } from "../src/storage.js";
-function harness() {
+function harness(afterStop?: () => Promise<void>) {
   let record: GoalRecord = { schemaVersion: 1, recordId: "r", ownerSessionId: "s", cwd: "/test", sessionFile: "/test/s", revision: 1, generation: 1, continuationDeferral: false, recoveredFrom: null, goal: { goalId: "g", generation: 1, objective: "Objective", status: "active", tokensUsed: 0, elapsedSeconds: 0, createdAt: "2026-01-01", updatedAt: "2026-01-01" } };
   const handlers = new Map<string, Function[]>();
   const sendMessage = vi.fn();
-  const ctx = { mode: "tui", model: { provider: "openai-codex" }, isIdle: () => false, sessionManager: { getSessionId: () => "s", getSessionFile: () => "/test/s" }, abort: vi.fn(), ui: { notify: vi.fn(), setStatus: vi.fn() } } as unknown as ExtensionContext;
-  const emit = async (type: string, event: any = {}) => { let result; for (const fn of handlers.get(type) ?? []) result = await fn(event, ctx); return result; };
+  let idle = false;
+  const ctx = { mode: "tui", model: { provider: "openai-codex" }, isIdle: () => idle, sessionManager: { getSessionId: () => "s", getSessionFile: () => "/test/s" }, abort: vi.fn(), ui: { notify: vi.fn(), setStatus: vi.fn() } } as unknown as ExtensionContext;
+  const emit = async (type: string, event: any = {}) => {
+    if (type === "agent_settled") idle = true;
+    if (type === "context") idle = false;
+    let result; for (const fn of handlers.get(type) ?? []) result = await fn(event, ctx); return result;
+  };
   const scheduler = registerGoalScheduler({ on: (type: string, fn: Function) => handlers.set(type, [...handlers.get(type) ?? [], fn]), sendMessage } as unknown as ExtensionAPI, {
     snapshot: () => record,
-    stop: async (status, expected) => { expect(expected.goal!.goalId).toBe(record.goal!.goalId); record = { ...record, goal: { ...record.goal!, status } }; },
+    stop: async (status, expected) => { expect(expected.goal!.goalId).toBe(record.goal!.goalId); record = { ...record, goal: { ...record.goal!, status } }; await afterStop?.(); },
   });
   return { scheduler, ctx, emit, sendMessage, get record() { return record; } };
 }
@@ -194,11 +199,42 @@ it("blocks a failed compaction chain but releases its guard for explicit input a
   await h.emit("session_start");
   await h.emit("context", { messages: [{ role: "user", content: "Work" }] });
   await h.emit("session_compact_failed", { reason: "threshold", aborted: false, errorMessage: "Summary failed" });
+  expect(h.record.goal!.status).toBe("active");
+  await h.emit("agent_settled");
   expect(h.record.goal!.status).toBe("blocked");
   expect(await h.emit("session_before_compact", { reason: "threshold" })).toEqual({ cancel: true });
   await h.emit("input", { source: "interactive", text: "New work" });
   expect(await h.emit("session_before_compact", { reason: "threshold" })).toBeUndefined();
   expect(await h.emit("session_before_compact", { reason: "manual" })).toBeUndefined();
+});
+it("cancels only the queued goal continuation after compaction fails and settles the original failure", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  await h.emit("context", { messages: [] });
+  const answer = { role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Progress" }] };
+  await h.emit("agent_end", { messages: [answer] });
+  const queued = { role: "custom", ...h.sendMessage.mock.calls[0]![0] };
+  await h.emit("session_compact_failed", { reason: "threshold", aborted: false, errorMessage: "Summary failed" });
+  expect(h.record.goal!.status).toBe("active");
+  await h.emit("context", { messages: [answer, queued] });
+  expect(h.ctx.abort).toHaveBeenCalledTimes(1);
+  await h.emit("agent_end", { messages: [{ role: "assistant", stopReason: "aborted" }] });
+  expect(await h.emit("session_before_compact", { reason: "threshold" })).toEqual({ cancel: true });
+  await h.emit("session_compact_failed", { reason: "threshold", aborted: true });
+  expect(h.record.goal!.status).toBe("active");
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe("blocked");
+  expect(h.sendMessage).toHaveBeenCalledTimes(1);
+});
+it("settles an explicit compaction account error even when usage already hit the budget", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  await h.emit("context", { messages: [] });
+  h.record.goal!.status = "budget_limited";
+  await h.emit("session_compact_failed", { reason: "overflow", aborted: false, errorMessage: "insufficient_quota" });
+  expect(h.record.goal!.status).toBe("budget_limited");
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe("usage_limited");
 });
 it("does not let an old run stop a replacement goal", async () => {
   const h = harness();
@@ -209,6 +245,31 @@ it("does not let an old run stop a replacement goal", async () => {
   await h.emit("agent_end", { messages: [{ role: "assistant", stopReason: "error", errorMessage: "insufficient_quota" }] });
   await h.emit("agent_settled");
   expect(h.record.goal!.status).toBe("active");
+});
+it("blocks a final length only after Pi settles and keeps the objective for resume", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  await h.emit("context", { messages: [{ role: "user", content: "Work" }] });
+  await h.emit("agent_end", { messages: [{ role: "assistant", content: [], stopReason: "length" }] });
+  expect(h.record.goal!.status).toBe("active");
+  expect(h.ctx.ui.notify).not.toHaveBeenCalled();
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe("blocked");
+  expect(h.record.goal!.objective).toBe("Objective");
+  expect(h.sendMessage).not.toHaveBeenCalled();
+  expect(h.ctx.ui.notify).toHaveBeenCalledWith(expect.stringMatching(/truncated response.*\/goal resume/), "warning");
+});
+it("blocks an unredeemed deferred response only after Pi settles without fetching or resubmitting", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  await h.emit("context", { messages: [] });
+  await h.emit("agent_end", { messages: [{ role: "assistant", content: [], stopReason: "deferred" }] });
+  expect(h.record.goal!.status).toBe("active");
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe("blocked");
+  expect(h.record.goal!.objective).toBe("Objective");
+  expect(h.sendMessage).not.toHaveBeenCalled();
+  expect(h.ctx.ui.notify).toHaveBeenCalledWith(expect.stringMatching(/deferred responses are not supported/), "warning");
 });
 it("leaves retry decisions to Pi, stopping only a settled error and classifying explicit quota errors", async () => {
   for (const [errorMessage, status] of [["500 Internal Server Error", "blocked"], ["insufficient_quota", "usage_limited"], ["429 Too many requests", "blocked"]]) {
@@ -221,6 +282,107 @@ it("leaves retry decisions to Pi, stopping only a settled error and classifying 
     await h.emit("agent_settled");
     expect(h.record.goal!.status).toBe(status);
   }
+});
+it.each([
+  "insufficient_quota", "usage_limit_reached", '{"error":{"type":"GoUsageLimitError"}}', "FreeUsageLimitError",
+  "You've hit your usage limit. Try again later.", "You’ve hit your usage limit for Codex.",
+  "Your workspace is out of credits. Add credits to continue.",
+  "Quota exceeded. Check your plan and billing details.", "  INSUFFICIENT_QUOTA  ",
+  "Summarization failed: insufficient_quota", "Turn prefix summarization failed: usage_limit_reached",
+  "Context overflow recovery failed: Summarization failed: insufficient_quota", "Auto-compaction failed: Turn prefix summarization failed: usage_limit_reached",
+  '429 {"error":{"code":"insufficient_quota"}}',
+  'HTTP 429: {"error":{"message":"Your workspace is out of credits. Add credits to continue."}}',
+])("classifies verified account exhaustion after settlement: %s", async errorMessage => {
+  const h = harness();
+  await h.emit("session_start");
+  await h.emit("context", { messages: [] });
+  await h.emit("agent_end", { messages: [{ role: "assistant", stopReason: "error", errorMessage }] });
+  expect(h.record.goal!.status).toBe("active");
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe("usage_limited");
+  expect(h.sendMessage).not.toHaveBeenCalled();
+});
+it.each([
+  "429 Too many requests", "rate_limit_exceeded", "billing service unavailable", "401 Authentication failed",
+  "Network error: connection refused", "quota exceeded", "available balance lookup failed", "Monthly usage limit lookup failed",
+  "not_insufficient_quota", "usage_limit_reached_handler_error", "GoUsageLimitErrorWrapper", "FreeUsageLimitErrorHandler",
+  "You have hit your ChatGPT usage limit.", "Documentation says you've hit your usage limit.",
+  "Failed to load handler for insufficient_quota", '{"error":{"type":"authentication_error","message":"Documentation says usage_limit_reached"}}',
+])("does not infer account exhaustion from ambiguous errors: %s", async errorMessage => {
+  const h = harness();
+  await h.emit("session_start");
+  await h.emit("context", { messages: [] });
+  await h.emit("agent_end", { messages: [{ role: "assistant", stopReason: "error", errorMessage }] });
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe("blocked");
+});
+it("reports a final failure without echoing potentially sensitive provider error text", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  await h.emit("context", { messages: [] });
+  await h.emit("agent_end", { messages: [{ role: "assistant", stopReason: "error", errorMessage: "401 Authorization: Bearer OFFLINE_SECRET_MARKER" }] });
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe("blocked");
+  expect(h.ctx.ui.notify).toHaveBeenCalledWith(expect.stringMatching(/Goal blocked.*Pi finished recovery.*\/goal resume/), "warning");
+  expect(JSON.stringify(vi.mocked(h.ctx.ui.notify).mock.calls)).not.toContain("OFFLINE_SECRET_MARKER");
+});
+it("does not carry an old failure into a later request that ends without an assistant", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  await h.emit("context", { messages: [] });
+  await h.emit("agent_end", { messages: [{ role: "assistant", stopReason: "error", errorMessage: "insufficient_quota" }] });
+  await h.emit("context", { messages: [{ role: "user", content: "New request" }] });
+  await h.emit("agent_end", { messages: [] });
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe("active");
+  expect(h.ctx.ui.notify).not.toHaveBeenCalled();
+});
+it("ignores an old terminal event after a newer response has been bound", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  await h.emit("context", { messages: [] });
+  const old = { role: "assistant", timestamp: 1, stopReason: "error", errorMessage: "insufficient_quota" };
+  await h.emit("message_start", { message: old });
+  await h.emit("agent_end", { messages: [old] });
+  await h.emit("context", { messages: [] });
+  const recovered = { role: "assistant", timestamp: 2, stopReason: "stop", content: [{ type: "text", text: "Recovered" }] };
+  await h.emit("message_start", { message: recovered });
+  await h.emit("agent_end", { messages: [recovered] });
+  await h.emit("agent_end", { messages: [old] });
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe("active");
+  expect(h.ctx.ui.notify).not.toHaveBeenCalled();
+});
+it("preserves a newer bound run when settlement yields to a replacement", async () => {
+  let replaced = false;
+  const h = harness(async () => {
+    if (replaced) return;
+    replaced = true;
+    h.scheduler.invalidate();
+    h.record.goal!.goalId = "replacement";
+    h.record.goal!.status = "active";
+    await h.emit("context", { messages: [] });
+  });
+  await h.emit("session_start");
+  await h.emit("context", { messages: [] });
+  await h.emit("agent_end", { messages: [{ role: "assistant", stopReason: "error", errorMessage: "Old failure" }] });
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe("active");
+  expect(h.ctx.ui.notify).not.toHaveBeenCalled();
+  await h.emit("agent_end", { messages: [{ role: "assistant", stopReason: "length", content: [] }] });
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe("blocked");
+});
+it("ignores settlement from an older run while a newer run is already live", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  await h.emit("context", { messages: [] });
+  Object.assign(h.ctx, { isIdle: () => false });
+  await h.emit("agent_settled");
+  await h.emit("agent_end", { messages: [{ role: "assistant", content: [], stopReason: "length" }] });
+  Object.assign(h.ctx, { isIdle: () => true });
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe("blocked");
 });
 it("counts complete runs rather than individual bash failures and stops on the third failed run", async () => {
   const h = harness();

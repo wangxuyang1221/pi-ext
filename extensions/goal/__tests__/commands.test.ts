@@ -391,6 +391,7 @@ it.each(["pause", "model-paused", "blocked", "abort", "complete", "usage_limited
   if (action === "pause") { await h.run("pause"); expect(h.notify.mock.calls.at(-1)?.[0]).toContain("budget_limited"); }
   else if (action === "abort" || action === "usage_limited") {
     await h.events.get("agent_end")!({ messages: [{ ...message, stopReason: action === "abort" ? "aborted" : "error", errorMessage: "usage_limit_reached" }] }, h.ctx);
+    Object.assign(h.ctx, { isIdle: () => true });
     await h.events.get("agent_settled")!({}, h.ctx);
   } else {
     const tool = vi.mocked(h.pi.registerTool).mock.calls.find(([tool]) => tool.name === "update_goal")![0];

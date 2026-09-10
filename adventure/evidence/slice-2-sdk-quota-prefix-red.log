@@ -1,0 +1,182 @@
+{
+  "name": "compaction-failure-quota-budget-none",
+  "requests": [
+    {
+      "index": 1,
+      "provider": "terminal-private",
+      "api": "terminal-offline",
+      "model": "function-model",
+      "deferredRequested": false,
+      "modelMaxTokens": 4096,
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal"
+      ]
+    },
+    {
+      "index": 2,
+      "provider": "terminal-private",
+      "api": "terminal-offline",
+      "model": "function-model",
+      "deferredRequested": false,
+      "modelMaxTokens": 4096,
+      "tools": [
+        "get_goal",
+        "create_goal",
+        "update_goal"
+      ],
+      "before": {
+        "goalId": "f62ae673-e5bc-42e8-9fd8-7efe487ca1fe",
+        "generation": 1,
+        "objective": "Settle a failed recovery with disabled tools",
+        "status": "active",
+        "tokensUsed": 0,
+        "elapsedSeconds": 0,
+        "createdAt": "2026-09-10T17:32:38.364Z",
+        "updatedAt": "2026-09-10T17:32:38.364Z"
+      }
+    },
+    {
+      "index": 3,
+      "provider": "terminal-private",
+      "api": "terminal-offline",
+      "model": "function-model",
+      "maxTokens": 512,
+      "deferredRequested": false,
+      "modelMaxTokens": 4096,
+      "tools": [],
+      "before": {
+        "goalId": "f62ae673-e5bc-42e8-9fd8-7efe487ca1fe",
+        "generation": 1,
+        "objective": "Settle a failed recovery with disabled tools",
+        "status": "active",
+        "tokensUsed": 7,
+        "elapsedSeconds": 0,
+        "createdAt": "2026-09-10T17:32:38.364Z",
+        "updatedAt": "2026-09-10T17:32:38.384Z",
+        "toolRecoveryRequired": true,
+        "usageCheckpoint": {
+          "sourceId": "58159020-f62d-48d8-b611-d4e8ec3d1b16",
+          "tokens": 7,
+          "missing": false,
+          "lastReceipt": "4d45fd1ee8014ef7e551a8283bb077b462de5bce5579683604e49539f9c15eba"
+        }
+      }
+    }
+  ],
+  "lifecycle": [
+    {
+      "type": "agent_start",
+      "requests": 0
+    },
+    {
+      "type": "message_end",
+      "requests": 0
+    },
+    {
+      "type": "message_end",
+      "requests": 1,
+      "stopReason": "stop"
+    },
+    {
+      "type": "agent_end",
+      "requests": 1,
+      "stopReason": "stop"
+    },
+    {
+      "type": "agent_settled",
+      "requests": 1
+    },
+    {
+      "type": "agent_start",
+      "requests": 1,
+      "status": "active",
+      "tokens": 0,
+      "goalId": "f62ae673-e5bc-42e8-9fd8-7efe487ca1fe"
+    },
+    {
+      "type": "message_end",
+      "requests": 1,
+      "status": "active",
+      "tokens": 0,
+      "goalId": "f62ae673-e5bc-42e8-9fd8-7efe487ca1fe"
+    },
+    {
+      "type": "message_end",
+      "requests": 2,
+      "status": "active",
+      "tokens": 7,
+      "goalId": "f62ae673-e5bc-42e8-9fd8-7efe487ca1fe",
+      "stopReason": "error"
+    },
+    {
+      "type": "agent_end",
+      "requests": 2,
+      "status": "active",
+      "tokens": 7,
+      "goalId": "f62ae673-e5bc-42e8-9fd8-7efe487ca1fe",
+      "stopReason": "error"
+    },
+    {
+      "type": "session_before_compact",
+      "requests": 2,
+      "status": "active",
+      "tokens": 7,
+      "goalId": "f62ae673-e5bc-42e8-9fd8-7efe487ca1fe",
+      "reason": "overflow",
+      "willRetry": true
+    },
+    {
+      "type": "session_compact_failed",
+      "requests": 3,
+      "status": "active",
+      "tokens": 7,
+      "goalId": "f62ae673-e5bc-42e8-9fd8-7efe487ca1fe",
+      "reason": "overflow",
+      "willRetry": false,
+      "errorMessage": "Context overflow recovery failed: Turn prefix summarization failed: insufficient_quota"
+    },
+    {
+      "type": "agent_settled",
+      "requests": 3,
+      "status": "blocked",
+      "tokens": 7,
+      "goalId": "f62ae673-e5bc-42e8-9fd8-7efe487ca1fe"
+    }
+  ],
+  "hostEvents": [
+    {
+      "type": "compaction_start",
+      "reason": "overflow"
+    },
+    {
+      "type": "compaction_end",
+      "reason": "overflow",
+      "willRetry": false
+    }
+  ],
+  "errors": []
+}
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'blocked'
+- 'usage_limited'
+
+    at scenario.budget.budget (file:///Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/extensions/goal/__tests__/terminal-runtime.mjs:251:14)
+    at async scenario (file:///Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/extensions/goal/__tests__/terminal-runtime.mjs:104:5)
+    at async file:///Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/extensions/goal/__tests__/terminal-runtime.mjs:246:5 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'blocked',
+  expected: 'usage_limited',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.22.2
