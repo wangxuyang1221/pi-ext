@@ -104,7 +104,7 @@ Codex 已有的有限 token budget 可以限制观测到的总消耗，但不判
 
 Planning #15 中的“连续纯文本有限暂停”属于本项目额外的安全取舍，不是对齐 Codex `0.153.4`、`0.154.0` 或本次固定 `main` 所必需的行为，也不是跨 provider 接入的技术前提。它可能暂停合法的写作或分析，不能把没有工具调用直接判定为没有语义进展。
 
-本次用户只是询问 Codex 如何处理，没有确认新增暂停保护，也没有确认放弃保护。候选方案与下一步决策只在 [Planning #15](https://github.com/wangxuyang1221/adventure/issues/15) 维护。
+后续决定：用户在了解上游行为后明确排除本次新增纯文本保护。完整决定与剩余异常处理讨论在 [Planning #15](https://github.com/wangxuyang1221/adventure/issues/15) 维护；本报告的上游事实不变。
 
 ## Evidence limits
 

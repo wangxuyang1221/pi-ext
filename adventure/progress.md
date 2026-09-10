@@ -28,6 +28,8 @@
 
 ## Agreed Decisions and Constraints
 
+Planning #15 中途已确认：用户在得知 Codex 也无非空纯文本续跑上限后，明确表示“那我们也不考虑这个问题”。本次不新增连续纯文本、未调用工具的暂停或阻塞保护，不再追问该项阈值；现有空响应和重复工具调用保护保留。此决定不授权强制预算，完整规则在 #15 通关时再移交 Spec。
+
 沿用 Spec 的 Scope、Behavior 与 Working agreement。核心边界是复用 Pi 当前模型，不另存 base URL、API key；覆盖所有 Pi 已接入、支持普通 function tools 且履行消息/终止事件契约的 provider，不按名称设白名单。保留根会话、TUI、持久化会话要求，不改 Pi 核心，不由 goal 实现任意私有协议。不得把后续候选保护策略或旧调研建议当作已确认需求。
 
 代码仓库为 `wangxuyang1221/pi-ext`，冒险分支为 `adventure/goal-all-providers`，worktree 为 `/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers`。不改 main，不创建 PR、不合并、不部署，不记录密钥。当前主工作目录之外的该 worktree 写入和本次 Issue、冒险分支推送已获用户“同意”。
@@ -51,15 +53,15 @@
 
 ## Current Assumptions
 
-当前待讨论的候选已写在 Planning #15：为连续非空纯文本、始终不调用任何工具的自动续跑增加有限暂停保护，保留目标并允许用户显式恢复。收益是避免持续发请求却不调用工具，代价是可能暂停合法的长篇写作或分析。另一候选是不新增此项保护，保留现有保护与手动停止。两者均未确认；不要把没有工具调用等同于语义上没有进展。Codex 源码复核后需纠正先前措辞：新增纯文本保护不是 Codex 对齐要求或跨 provider 接入的技术前提，而是额外的产品取舍。用户本轮仅询问上游行为，不代表同意新增、放弃保护或强制预算。
+下一候选已写在 Planning #15：单次输出达到长度限制，且 Pi 已用完适用的恢复并最终 settled 时，停止自动推进、标记 blocked 并保留目标供 /goal resume。另一候选是仍自动发起下一轮，代价是可能重复触及限制。两者未确认，不能在 agent_end 抢先阻断宿主恢复。
 
-[Planning #15](https://github.com/wangxuyang1221/adventure/issues/15) 负责异常停止与恢复，[Planning #16](https://github.com/wangxuyang1221/adventure/issues/16) 负责 usage 缺失和预算语义。阈值、状态、持久化、真实服务测试范围等均未确认。
+[Planning #15](https://github.com/wangxuyang1221/adventure/issues/15) 负责异常停止与恢复，[Planning #16](https://github.com/wangxuyang1221/adventure/issues/16) 负责 usage 缺失和预算语义。其他异常的状态、恢复规则、真实服务测试范围等均未确认；已排除纯文本保护，不再为它设计阈值或持久化。
 
 ## Continuation Point
 
-当前 #15 已补充 Codex 上游对照证据，等待用户基于该事实决定是否增加额外的纯文本暂停保护。#13 和 #14 均已关闭，不要重复询问接入职责或支持范围。#15 的候选规则尚未移交 Spec。
+当前 #15 已记录不新增纯文本保护，等待用户选择最终未恢复长度限制的处理。#13 和 #14 均已关闭，不要重复询问接入职责、支持范围或纯文本保护。#15 尚未通关，其中决定暂留本关，不提前移交 Spec。
 
-1. 用户确认保护方向后，再确定必要的计数阈值、重置条件和持久化范围；随后继续工具缺失、length/deferred 等最终结果的停止与恢复规则。一次只问一个问题，不提前替用户作出这些设计取舍。
+1. 用户确认 length 的最终处理后，继续 deferred、工具缺失和额度分类等必要异常规则。一次只问一个问题；能由代码回答的事实自主查证，用户排除的范围不再扩大回来。
 2. 运行保护与预算语义按决策依赖逐题推进，复用现有证据，不重做已证明的契约调查；新方案按必要场景做离线验证，不要求密钥或真实服务。
 3. 每关通关后维护 Issue 正文、Spec 和本存档，提交推送冒险分支并核对 Map。只有用户决策、真实阻塞、暂停或最终确认时停下。
 4. 规划收敛后读取 `/Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md` 提交切片审核，再按 adventure 派 worker 实施；worker 使用 write-todo-list 与 TDD。不得把当前证据提交视为用户已批准编码。
