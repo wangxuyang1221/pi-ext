@@ -4,9 +4,7 @@
 
 [Planning #14](https://github.com/wangxuyang1221/adventure/issues/14) 的查证结论：在复用 Pi 已接入模型的前提下，goal 可以通过修改本仓库 extension 适配其他 provider，不需要为此修改 Pi 核心。这个结论是公开契约与当前源码支持的架构可行性，不是跨 provider 功能已经实现或所有远端模型已验收。
 
-候选支持边界是：Pi 已接入的 provider，包括内置 provider、`models.json` 私有化模型和其他扩展注册的 provider；模型及适配器须能处理普通 function tools、返回合规终止事件。模型不会调用工具、不遵循契约或服务协议尚未适配 Pi，不在“保证能够完成 goal”的承诺内。usage 是否完整影响预算可信度，不宜据此拒绝整个 provider 名称。
-
-此边界尚待用户确认。用户已经确认的只有接入职责，见 [Spec Scope](https://github.com/wangxuyang1221/adventure/issues/12#scope)。
+用户已确认本关推荐的全 provider 方向，Planning #14 已通关。完整支持边界及 extension-only 设计已移交 [Spec Scope](https://github.com/wangxuyang1221/adventure/issues/12#scope) 与 [Design](https://github.com/wangxuyang1221/adventure/issues/12#design)，本报告保留查证依据。异常停止和 usage 缺失时的行为仍待后续 Planning。
 
 ## Baseline and verification method
 
@@ -24,7 +22,7 @@ Pi 官方 `models.json` 文档明确支持 Ollama、vLLM、LM Studio 与代理�
 
 对非标准协议，Pi 允许另一个扩展通过 `registerProvider` 注册完整 Provider 或自定义 `streamSimple`。因此“用户自行接入”不限于某个 provider 名称，但并不意味着填入任意 URL 就能调用任意服务。服务必须兼容已选 API，或已有能履行 Pi 契约的适配器。[P2]
 
-本次 goal 不承担编写任意私有协议适配器、认证流或模型目录服务。该范围是待确认候选，不是技术上禁止用户另写 provider 扩展。
+本次接入职责的已确认范围见 Spec Scope。上述能力说明用户可以另写 provider 扩展，不表示 goal 要承担任意私有协议适配。
 
 ## Extension contracts
 

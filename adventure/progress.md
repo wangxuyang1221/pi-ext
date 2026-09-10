@@ -16,7 +16,7 @@
 
 - [Map #11](https://github.com/wangxuyang1221/adventure/issues/11) 管理进度与关卡关系。
 - [Spec #12](https://github.com/wangxuyang1221/adventure/issues/12) 是规格唯一维护位置，当前形成中。
-- [Planning #14](https://github.com/wangxuyang1221/adventure/issues/14) 是当前关卡，核验 extension-only 可行性与支持边界。
+- [Planning #15](https://github.com/wangxuyang1221/adventure/issues/15) 是当前关卡，确定异常停止与恢复规则。
 
 ## Evolution
 
@@ -24,9 +24,11 @@
 
 [Planning #13](https://github.com/wangxuyang1221/adventure/issues/13) 已通关关闭。用户明确选择方案 1：Pi 负责私有化模型配置，goal 复用当前模型。由此排除 goal 自建模型接入入口；有效要求已移交 Spec。
 
+[Planning #14](https://github.com/wangxuyang1221/adventure/issues/14) 也已通关关闭。用户明确选择全部合规 Pi provider 的方案 1，而不是仅支持 OpenAI-compatible 的较轻首版。架构可行性已核验，支持边界与 extension-only 路线已移交 Spec；#15 与 #16 已解锁。
+
 ## Agreed Decisions and Constraints
 
-沿用 Spec 的 Scope、Behavior 与 Working agreement。核心边界是复用 Pi 当前模型，不另存 base URL、API key；不得把后续候选保护策略或旧调研建议当作已确认需求。
+沿用 Spec 的 Scope、Behavior 与 Working agreement。核心边界是复用 Pi 当前模型，不另存 base URL、API key；覆盖所有 Pi 已接入、支持普通 function tools 且履行消息/终止事件契约的 provider，不按名称设白名单。保留根会话、TUI、持久化会话要求，不改 Pi 核心，不由 goal 实现任意私有协议。不得把后续候选保护策略或旧调研建议当作已确认需求。
 
 代码仓库为 `wangxuyang1221/pi-ext`，冒险分支为 `adventure/goal-all-providers`，worktree 为 `/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers`。不改 main，不创建 PR、不合并、不部署，不记录密钥。当前主工作目录之外的该 worktree 写入和本次 Issue、冒险分支推送已获用户“同意”。
 
@@ -41,22 +43,22 @@
 - 旧评估已过时：当前有重复工具调用和空响应保护；token 公式是 input + output + cacheWrite，不是旧报告的 input + output。
 - 独立源码复核确认非空纯文本 stop 仍可能无限自动续跑，最终 settled 后的 length/deferred 可能留下 active 且无续跑。证据见 [terminal-contract-review.md](./evidence/terminal-contract-review.md)。未做真实模型端到端验证。
 - Node 22.22.2、pnpm 11.9.0。新 worktree 已运行 `pnpm install --frozen-lockfile --ignore-scripts` 和 `pnpm run check`，后者通过类型、测试、构建及发布包校验：1012 项测试通过、2 项 subagent 集成测试跳过，见 [baseline-check.log](./evidence/baseline-check.log)。这是未修改产品源码的基线结果，不是跨 provider 新功能验收。
-- Map 的子 Issues 为 Spec #12、Planning #13、#14、#15、#16。#14 原生依赖已关闭的 #13；#15 与 #16 均原生依赖 #14。
+- Map 的子 Issues 为 Spec #12、Planning #13、#14、#15、#16。#14 原生依赖已关闭的 #13；#15 与 #16 均原生依赖现已关闭的 #14，两关均可推进，当前主线为 #15。
 - research skill 安排的独立复核 subagent 已完成并关闭，报告已核对。没有需要后续接管的本任务后台服务。
 
 继续前完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md` 及其 `references/issue-templates.md`。保存使用 `/Users/wangxuyang/.agents/skills/wangxuyang/handoff/SKILL.md`，存档固定写在本文件。
 
 ## Current Assumptions
 
-推荐候选已写在 Planning #14：覆盖所有 Pi 已接入且能调用普通 function tools、履行消息与终止事件契约的 provider，不按 provider 名称列白名单；保留根会话、TUI 与持久化会话的既有运行范围，不由 goal 编写任意私有协议。较轻候选是首版只覆盖 Codex 与 OpenAI-compatible 私有模型。支持边界仍待用户确认，不能仅凭本轮架构可行性直接实施。
+当前待讨论的候选已写在 Planning #15：为连续非空纯文本、始终不调用任何工具的自动续跑增加有限暂停保护，保留目标并允许用户显式恢复。收益是避免持续发请求却不调用工具，代价是可能暂停合法的长篇写作或分析。另一候选是不新增此项保护，保留现有保护与手动停止。两者均未确认；不要把没有工具调用等同于语义上没有进展。
 
 [Planning #15](https://github.com/wangxuyang1221/adventure/issues/15) 负责异常停止与恢复，[Planning #16](https://github.com/wangxuyang1221/adventure/issues/16) 负责 usage 缺失和预算语义。阈值、状态、持久化、真实服务测试范围等均未确认。
 
 ## Continuation Point
 
-当前 #14 的事实查证已完成，等待用户选择支持边界，不要重复询问已经确定的模型接入职责。该关保持 open，候选未移交 Spec。
+当前 #15 等待用户决定是否对连续纯文本自动续跑增加有限暂停保护。#13 和 #14 均已关闭，不要重复询问接入职责或支持范围。#15 的候选规则尚未移交 Spec。
 
-1. 用户确认推荐边界后，对照 #14 通关条件记录结论、移交 Spec 并关闭关卡，自动保存后继续 #15 或 #16。若选择缩小范围，更新受影响候选与依赖关卡。
+1. 用户确认保护方向后，再确定必要的计数阈值、重置条件和持久化范围；随后继续工具缺失、length/deferred 等最终结果的停止与恢复规则。一次只问一个问题，不提前替用户作出这些设计取舍。
 2. 运行保护与预算语义按决策依赖逐题推进，复用现有证据，不重做已证明的契约调查；新方案按必要场景做离线验证，不要求密钥或真实服务。
 3. 每关通关后维护 Issue 正文、Spec 和本存档，提交推送冒险分支并核对 Map。只有用户决策、真实阻塞、暂停或最终确认时停下。
 4. 规划收敛后读取 `/Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md` 提交切片审核，再按 adventure 派 worker 实施；worker 使用 write-todo-list 与 TDD。不得把当前证据提交视为用户已批准编码。
