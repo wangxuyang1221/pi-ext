@@ -18,7 +18,7 @@
 - [Spec #12](https://github.com/wangxuyang1221/adventure/issues/12) 是完整规格的唯一维护位置，已注明已确定、可用于实施，保持 open。
 - [Planning #16](https://github.com/wangxuyang1221/adventure/issues/16) 已关闭，预算规则与延期验证已移交 Spec。
 
-下一步先确认新增或修改的产品提示文案语言，再按 slicing 提交实施切片审核。语言不是本关未决业务规则，不要因此重开 #16。没有获批切片，没有 Implementation worker 正在运行。
+新增或修改的产品提示已确认使用英文，不做全仓翻译。当前已提交五个候选实施切片，等待用户审核依赖和粒度。没有获批切片，没有 Implementation worker 正在运行。
 
 ## Evolution
 
@@ -28,7 +28,9 @@
 
 [Planning #15](https://github.com/wangxuyang1221/adventure/issues/15) 已确认异常终止、必要工具不可用、保守额度分类及不新增非空纯文本续跑限制，已关闭。前次手动存档停在 #16 首题，提交 `36e68c7`。
 
-本轮用户恢复后连续选择四个方案 1：缺失 usage 提示并继续、保留排除 cacheRead 的公式、软预算收尾、停止后冻结迟到子代理计费增量。随后以“yep”确认剩余计量范围、恢复和提示兼容规则。完成本关验证，关闭 #16 并移交 Spec。本次是通关自动保存，不是用户要求暂停。
+用户恢复后连续选择四个方案 1：缺失 usage 提示并继续、保留排除 cacheRead 的公式、软预算收尾、停止后冻结迟到子代理计费增量。随后以“yep”确认剩余计量范围、恢复和提示兼容规则。完成验证，关闭 #16 并移交 Spec，提交 `f094d85`。
+
+用户接着选择文案方案 1，确认新增/修改的产品提示使用英文。主代理按 slicing 提交五个候选切片和延期验证分配，尚未获得审核意见。本次保存实施准备进度，等待切片审核，不是用户要求暂停。
 
 ## Agreed Decisions and Constraints
 
@@ -43,7 +45,7 @@
 - 已知用量达预算后软收尾，保留实际超额值，不强杀当前回合、工具或子代理，不启动后续 goal 自动续跑。停止或预算收尾结束后，迟到子代理报告仅推进基线，不给目标加量；恢复前刷新基线，不补计冻结时已收到的增量。这不是远端费用硬上限，也不是精确的实际发生时间账单。
 - 同一目标编辑、恢复、重载保留累计值及预算，耗尽预算不能靠 resume/edit 重置，不新增追加预算入口。继承复制累计快照，不继承活动子代理订阅；创建/替换新目标重新计量，旧事件不污染新目标。
 
-操作范围：代码仓库 `wangxuyang1221/pi-ext`，分支 `adventure/goal-all-providers`，worktree `/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers`。当前主工作目录之外的该 worktree 写入、本次 Issue 更新及冒险分支提交推送已获用户“同意”。不改 main，不创建 PR、不合并、不部署，不记录密钥。遵循 `docs/agents/repository-language-policy.md`，产品文案语言尚待确认。
+操作范围：代码仓库 `wangxuyang1221/pi-ext`，分支 `adventure/goal-all-providers`，worktree `/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers`。当前主工作目录之外的该 worktree 写入、本次 Issue 更新及冒险分支提交推送已获用户“同意”。不改 main，不创建 PR、不合并、不部署，不记录密钥。遵循 `docs/agents/repository-language-policy.md`。用户已确认本次新增/修改的产品提示使用英文，不做全仓翻译；仓库文档正文仍遵循中文政策。
 
 实施必须先提交切片审核。审核通过后主代理只协调和验收，按 adventure 派独立 worker，一次一关，同一 worktree 顺序接手；worker 新上下文，不继续委派，使用 write-todo-list 与 TDD。
 
@@ -58,20 +60,21 @@
 - 当前 `accounting.ts` 已计算 input+output+cacheWrite；`storage.ts` 的 accountChild 在停止后只推进基线。旧 `docs/goal-descendant-acceptance.md` 关于“完成后的迟到用量仍归集”以及旧 input+output 的描述与当前代码不符，不能用作本次规格，交付时需校正。
 - 根 usage 缺失已有直接 warning，子代理 missing 通过目标快照传播。实施须验证两类来源的实际用户提示及查询/工具结果，不能只凭标记落盘宣称可见性通过。
 - 其余已存证据按需要读取：[terminal-contract-review.md](./evidence/terminal-contract-review.md) 是最终结果与非空纯文本路径；[codex-text-loop-review.md](./evidence/codex-text-loop-review.md) 说明固定 Codex 版本无非空文本自动续跑上限；[codex-output-limit-review.md](./evidence/codex-output-limit-review.md) 说明 Codex 输出上限重试、最终 Blocked 与 incomplete usage 边界；[remaining-execution-boundaries.md](./evidence/remaining-execution-boundaries.md) 说明 deferred 和工具可见性。它们解释既有决定，不授权重新加入用户排除的保护或复制 transport 行为。
-- Map 子 Issues 为 Spec #12、Planning #13/#14/#15/#16，四个 Planning 均关闭，Map 和 Spec 保持 open。没有实施 worker 或调研 subagent 在执行。本轮未启动独立后台服务；实验临时目录已清除，测试夹具自行回收，工作区 lsof 检查未发现遗留运行进程。
+- [implementation-slices-proposal.md](./evidence/implementation-slices-proposal.md) 保存待审核候选，完整包含五个 slice 的字段与延期验证分配。顺序为正常 provider 运行、最终异常、工具禁用恢复、跨 provider 计量、发布包与整体验收。候选依赖链 1→2→3→4→5；每关独立验收，双版本 SDK 证据按关交付，不全部推迟到最后。审核时读取，未确认前不得用它授权编码。
+- Map 子 Issues 为 Spec #12、Planning #13/#14/#15/#16，四个 Planning 均关闭，Map 和 Spec 保持 open。没有 Implementation Issues，也没有实施 worker 或调研 subagent 在执行。未启动独立后台服务；预算实验临时目录已清除，测试夹具自行回收，工作区 lsof 检查未发现遗留运行进程。
 
 ## Current Assumptions
 
-未确认项只有实施准备中的产品文案语言、切片与验收分配。建议新改动提示沿用现有英文，不做全仓中文化，但用户尚未选择，不能当作已授权。
+未确认项只有五个候选实施切片及其验收分配。产品文案英文已确认，不能把这次“1”误当成切片审核通过。候选中的代表性 adapter 矩阵是验收范围提案，不是已经完成的测试或全 provider 远端覆盖承诺。
 
 预计无需新的业务 Planning；若实际 SDK 运行证据推翻已确认设计，必须重开对应关卡、更新 Spec 与依赖，不能自行改业务取舍。预算实验和当前 check 不替代双版本新增跨 provider 验收。
 
 ## Continuation Point
 
-本次 #16 通关自动保存后继续至产品文案语言问题。用户尚未回答这道题；本轮最后“yep”仅确认剩余预算兼容规则，不是文案语言或实施切片批准。
+当前等待用户审核 [五个候选切片](./evidence/implementation-slices-proposal.md)，问题是依赖关系、是否需要合并/拆分，以及粒度是否合适。用户尚未回答；此前“yep”确认预算兼容规则，最近“1”确认英文提示，都不是切片批准。
 
-1. 先确认新增/修改的产品提示采用英文还是中文，推荐英文以保持当前界面一致。旧英文提示不因本次任务自动整体翻译；如用户选中文，写清仅本次改动范围还是更广范围，避免自行扩展。
-2. 已完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md`。根据 Spec 和两份验证报告形成可独立验收的实施 slices，完整列出 goal/in_scope/out_of_scope/dependencies/acceptance/boundaries，交用户审核。将双版本 SDK、跨 provider、工具门控与用量交叉、提示可见性、文档和最终清理分配到具体关卡。审核前不创建 Implementation，不编写产品代码。
+1. 收到审核意见后，按 `/Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md` 处理。调整候选时重新检查可独立验收性和无环依赖，修订后再次请用户审核，不自行把新版本算作已接受。
+2. 用户接受后，将每个 slice 的完整 goal/in_scope/out_of_scope/dependencies/acceptance/boundaries 写入 Implementation Issue。按候选中获批的分配承接异常和预算两份报告的延期矩阵，更新 Spec 的实施归属。审核前不创建 Implementation，不编写产品代码。
 3. 审核通过后创建 Implementation Issues，写原生归属与依赖，保存并派发首个 worker。按 `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md` 及 `references/issue-templates.md` 执行；worker 接手前完整读取被交接的 `/Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md` 和 `/Users/wangxuyang/.agents/skills/wangxuyang/develop-with-tdd/SKILL.md`。一次一关，不继承协调者整段对话。
 4. 每关验收、移交及保存后继续推进，只有用户决定、真实阻塞、暂停或最终确认时停下。保存使用 `/Users/wangxuyang/.agents/skills/wangxuyang/handoff/SKILL.md`，固定更新本文件，不另建常规 handoff 路径。
 5. 最后一关 worker 对照完整 Spec 做整体验收，运行 `pnpm run check`、补齐双版本延期验证、核对交付文档与临时资源清理。协调者保存并提交用户确认；用户确认交付前 Map 和 Spec 保持 open。远端冒险分支不自动删除。
