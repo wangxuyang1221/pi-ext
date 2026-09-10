@@ -37,6 +37,7 @@ export class CodexFooter {
         const fastStatus = this.readStatus(statuses, FAST_STATUS_KEY);
         const fast = fastStatus?.toLowerCase() === "fast" ? "fast" : undefined;
         const permissions = this.readStatus(statuses, PERMISSIONS_STATUS_KEY);
+        const goal = this.readStatus(statuses, "goal");
         const cached = this.cachedSnapshot;
         if (cached?.width === safeWidth
             && cached.theme === theme
@@ -45,7 +46,8 @@ export class CodexFooter {
             && cached.branch === branch
             && cached.contextPercent === contextPercent
             && cached.fast === fast
-            && cached.permissions === permissions) {
+            && cached.permissions === permissions
+            && cached.goal === goal) {
             return cached.lines;
         }
         const input = {
@@ -61,6 +63,8 @@ export class CodexFooter {
             theme,
         };
         const lines = [renderFooter(input)];
+        if (goal)
+            lines.push(fitToWidth(theme.fg("muted", ` ${goal}`), safeWidth));
         this.cachedSnapshot = {
             width: safeWidth,
             theme,
@@ -70,6 +74,7 @@ export class CodexFooter {
             contextPercent,
             fast,
             permissions,
+            goal,
             lines,
         };
         return lines;

@@ -12,6 +12,8 @@ prototypes/*
 !prototypes/codex-reasoning-ui-prototype/
 !prototypes/codex-read-ui-prototype/
 !prototypes/mcp-status-ui-prototype/
+!prototypes/goal-runtime-probe/
+prototypes/goal-runtime-probe/.isolated-agent/
 DECISIONS.md
 *.tgz
 .DS_Store

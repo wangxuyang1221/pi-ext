@@ -101,6 +101,21 @@ test("footer renders the accepted stable status flow and ignores transient statu
   assert.ok(visibleWidth(rendered) <= 160);
 });
 
+test("footer adds a live goal row without changing the existing status line", () => {
+  const statuses = new Map<string, string>();
+  const footer = new CodexFooter({ cwd: "/project", getModelId: () => "fixture", getThinkingLevel: () => "off", getContextUsage: () => undefined, getBranch: () => null, getExtensionStatuses: () => statuses, getTheme: () => theme });
+  const before = footer.render(100);
+  statuses.set("goal", "Goal: paused | 123 tokens | 8s");
+  const paused = footer.render(100);
+  assert.equal(paused[0], before[0]);
+  assert.match(stripTerminalSequences(paused[1] ?? ""), /Goal: paused/);
+  statuses.set("goal", "Goal: complete | 456 tokens | 9s");
+  assert.match(stripTerminalSequences(footer.render(100)[1] ?? ""), /Goal: complete/);
+  for (const width of [1, 8, 30, 80]) assert.ok(footer.render(width).every(line => visibleWidth(line) <= width));
+  statuses.delete("goal");
+  assert.deepEqual(footer.render(100), before);
+});
+
 test("footer uses Codex CLI colors for model, context, and Fast Mode", () => {
   const truecolorTheme = createTheme("truecolor");
   const footer = new CodexFooter({

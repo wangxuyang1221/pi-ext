@@ -592,11 +592,13 @@ test("confirms an enveloped literal prompt from a persisted user turn", async ()
     await store.save(parent);
     await store.save(child);
 
+    let assigned = 0;
     const runtime: ManagedTmuxRuntime = {
       async launch() {
         throw new Error("not used");
       },
       async sendPrompt(_locator, text, delivery) {
+        assert.equal(assigned, delivered.length + 1);
         delivered.push({ text, delivery });
         if (delivered.length === 1) {
           assert.match(
@@ -640,6 +642,11 @@ test("confirms an enveloped literal prompt from a persisted user turn", async ()
       },
     };
     const manager = createManager(root, store, runtime, {
+      beforePrompt: async (parentSessionId, assignedChild) => {
+        assert.equal(parentSessionId, "parent-a");
+        assert.equal(assignedChild.sessionId, "child-a");
+        assigned++;
+      },
       nowMs: () => now,
       sleep: async (milliseconds) => {
         confirmationSleeps.push(milliseconds);

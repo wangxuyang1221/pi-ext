@@ -32,6 +32,7 @@ export interface SubagentManagerOptions {
     maxActive?: number;
     reservationTtlMs?: number;
     nowMs?: () => number;
+    beforePrompt?: (parentSessionId: string, child: SessionState) => Promise<void>;
 }
 export interface SpawnSubagentOptions {
     task: string;
@@ -114,6 +115,7 @@ export declare class SubagentManager {
     private readonly maxActive;
     private readonly reservationTtlMs;
     private readonly nowMs;
+    private readonly beforePrompt?;
     private readonly promptLocks;
     private readonly inFlightSpawns;
     private readonly closingNamespaces;

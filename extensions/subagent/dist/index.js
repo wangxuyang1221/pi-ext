@@ -8,6 +8,7 @@ import { DELIVERY_RECEIPT_TYPE } from "./delivery-receipt.js";
 import { SessionStateStore, } from "./state-store.js";
 import { TmuxRuntime } from "./tmux-runtime.js";
 import { registerSubagentTools } from "./tools.js";
+import { assignUsage, GOAL_TASK_EVENT, registerChildUsage, usageDirectory } from "./usage.js";
 const PI_SUBAGENT_TMUX_PATH = "PI_SUBAGENT_TMUX_PATH";
 const PI_SUBAGENT_PI_PATH = "PI_SUBAGENT_PI_PATH";
 export default function subagentExtension(pi, options = {}) {
@@ -49,12 +50,28 @@ export default function subagentExtension(pi, options = {}) {
         extensionPath,
         piPath,
         environment: childEnvironment(env),
+        beforePrompt: async (parentSessionId, child) => {
+            const processId = child.launch?.processInstanceId;
+            if (!processId)
+                throw new Error("Managed child has no process identity.");
+            const directory = usageDirectory(stateRoot, processId);
+            const request = { parentSessionId, directory, promises: [] };
+            pi.events.emit(GOAL_TASK_EVENT, request);
+            const sources = await Promise.all(request.promises);
+            if (sources.length > 1)
+                throw new Error("Multiple goal accounting owners responded.");
+            // Clear a previous assignment when no active goal owns this delivery.
+            await assignUsage(directory, sources[0]);
+        },
         maxActive: options.maxActive ?? parseMaxActive(env[PI_SUBAGENT_MAX_ACTIVE]),
         ...(options.createId ? { createId: options.createId } : {}),
         ...(options.now ? { now: options.now } : {}),
     });
     if (!parent) {
         registerSubagentTools(pi, manager);
+    }
+    else if (launch) {
+        registerChildUsage(pi, usageDirectory(stateRoot, launch.processInstanceId));
     }
     pi.on("session_start", async (_event, ctx) => {
         const sessionFile = ctx.sessionManager.getSessionFile();

@@ -173,6 +173,8 @@ test("keeps managed-child lifecycle hooks without registering orchestration tool
 
     assert.deepEqual(tools, []);
     assert.deepEqual(eventNames.filter((name) => handlers.has(name)), eventNames);
+    assert.equal(handlers.has("context"), true);
+    assert.equal(handlers.has("message_end"), true);
 
     await handlers.get("session_start")?.({ type: "session_start", reason: "startup" }, ctx);
     await handlers.get("agent_start")?.({ type: "agent_start" }, ctx);

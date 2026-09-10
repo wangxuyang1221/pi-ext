@@ -66,6 +66,7 @@ export interface SubagentManagerOptions {
   maxActive?: number;
   reservationTtlMs?: number;
   nowMs?: () => number;
+  beforePrompt?: (parentSessionId: string, child: SessionState) => Promise<void>;
 }
 
 export interface SpawnSubagentOptions {
@@ -165,6 +166,7 @@ export class SubagentManager {
   private readonly maxActive: number;
   private readonly reservationTtlMs: number;
   private readonly nowMs: () => number;
+  private readonly beforePrompt?: SubagentManagerOptions["beforePrompt"];
   private readonly promptLocks = new Map<string, Promise<void>>();
   private readonly inFlightSpawns = new Map<string, Set<Promise<ManagedAgent>>>();
   private readonly closingNamespaces = new Set<string>();
@@ -196,6 +198,7 @@ export class SubagentManager {
       throw new Error("Subagent reservation TTL must be a positive integer");
     }
     this.nowMs = options.nowMs ?? Date.now;
+    this.beforePrompt = options.beforePrompt;
   }
 
   spawn(
@@ -721,6 +724,7 @@ export class SubagentManager {
     }
 
     const baselineCursor = await this.readPromptBaseline(child);
+    await this.beforePrompt?.(parentSessionId, child);
     await this.runtime.sendPrompt(locator, wireText, delivery);
     const confirmation = await this.waitForPromptConfirmation({
       child,

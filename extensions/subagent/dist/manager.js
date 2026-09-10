@@ -37,6 +37,7 @@ export class SubagentManager {
     maxActive;
     reservationTtlMs;
     nowMs;
+    beforePrompt;
     promptLocks = new Map();
     inFlightSpawns = new Map();
     closingNamespaces = new Set();
@@ -67,6 +68,7 @@ export class SubagentManager {
             throw new Error("Subagent reservation TTL must be a positive integer");
         }
         this.nowMs = options.nowMs ?? Date.now;
+        this.beforePrompt = options.beforePrompt;
     }
     spawn(parentSessionId, options, defaults) {
         const operation = this.spawnInternal(parentSessionId, options, defaults);
@@ -496,6 +498,7 @@ export class SubagentManager {
             throw new Error(`Managed child runtime was interrupted: ${agentId}`);
         }
         const baselineCursor = await this.readPromptBaseline(child);
+        await this.beforePrompt?.(parentSessionId, child);
         await this.runtime.sendPrompt(locator, wireText, delivery);
         const confirmation = await this.waitForPromptConfirmation({
             child,

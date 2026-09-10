@@ -1,10 +1,10 @@
 {
   "name": "pi-ext",
   "version": "0.1.0",
-  "description": "Codex compaction, Fast Mode, UI, subagent, MCP, and permissions extensions for Pi Coding Agent",
+  "description": "Goal, Codex compaction, Fast Mode, UI, subagent, MCP, and permissions extensions for Pi Coding Agent",
   "type": "module",
   "packageManager": "pnpm@11.9.0",
-  "license": "MIT",
+  "license": "(MIT AND Apache-2.0)",
   "author": "Wang Xuyang",
   "repository": {
     "type": "git",
@@ -17,6 +17,7 @@
   "keywords": [
     "pi-package",
     "pi-extension",
+    "goal",
     "codex",
     "compaction",
     "openai",
@@ -42,6 +43,17 @@
     "extensions/mcp/dist",
     "extensions/permissions/dist",
     "extensions/subagent/dist",
+    "extensions/goal/dist",
+    "extensions/goal/UPSTREAM.md",
+    "extensions/goal/LICENSE",
+    "extensions/goal/NOTICE",
+    "docs/goal-descendant-acceptance.md",
+    "docs/goal-ui-acceptance.md",
+    "docs/goal-integration-acceptance.md",
+    "docs/goal-storage-acceptance.md",
+    "docs/goal-lifecycle-acceptance.md",
+    "docs/goal-execution-report.md",
+    "docs/goal-budget-acceptance.md",
     "themes/codex-pi.json",
     "README.md",
     "LICENSE"
@@ -53,7 +65,8 @@
       "./extensions/permissions/dist/index.js",
       "./extensions/codex-ui/dist/index.js",
       "./extensions/mcp/dist/index.js",
-      "./extensions/subagent/dist/index.js"
+      "./extensions/subagent/dist/index.js",
+      "./extensions/goal/dist/index.js"
     ],
     "themes": [
       "./themes/codex-pi.json"
@@ -61,8 +74,8 @@
   },
   "scripts": {
     "clean": "node ./scripts/clean.mjs",
-    "build": "pnpm run clean && tsc -p ./extensions/codex-compact/tsconfig.json && tsc -p ./extensions/openai-fast-mode/tsconfig.json && tsc -p ./extensions/codex-ui/tsconfig.json && tsc -p ./extensions/mcp/tsconfig.json && tsc -p ./extensions/permissions/tsconfig.json && tsc -p ./extensions/subagent/tsconfig.json",
-    "typecheck": "tsc -p ./extensions/codex-compact/tsconfig.json --noEmit && tsc -p ./extensions/openai-fast-mode/tsconfig.json --noEmit && tsc -p ./extensions/codex-ui/tsconfig.json --noEmit && tsc -p ./extensions/mcp/tsconfig.json --noEmit && tsc -p ./extensions/permissions/tsconfig.json --noEmit && tsc -p ./extensions/subagent/tsconfig.json --noEmit",
+    "build": "pnpm run clean && tsc -p ./extensions/codex-compact/tsconfig.json && tsc -p ./extensions/openai-fast-mode/tsconfig.json && tsc -p ./extensions/codex-ui/tsconfig.json && tsc -p ./extensions/mcp/tsconfig.json && tsc -p ./extensions/permissions/tsconfig.json && tsc -p ./extensions/subagent/tsconfig.json && tsc -p ./extensions/goal/tsconfig.json",
+    "typecheck": "tsc -p ./extensions/codex-compact/tsconfig.json --noEmit && tsc -p ./extensions/openai-fast-mode/tsconfig.json --noEmit && tsc -p ./extensions/codex-ui/tsconfig.json --noEmit && tsc -p ./extensions/mcp/tsconfig.json --noEmit && tsc -p ./extensions/permissions/tsconfig.json --noEmit && tsc -p ./extensions/subagent/tsconfig.json --noEmit && tsc -p ./extensions/goal/tsconfig.json --noEmit",
     "test": "vitest run",
     "check": "pnpm run typecheck && pnpm test && pnpm run build && pnpm run package:check",
     "package:check": "node ./scripts/check-package.mjs",

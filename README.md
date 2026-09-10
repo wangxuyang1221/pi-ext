@@ -1,6 +1,6 @@
 # pi-ext
 
-为 [Pi Coding Agent](https://github.com/earendil-works/pi) 提供六个扩展和一套主题：
+为 [Pi Coding Agent](https://github.com/earendil-works/pi) 提供七个扩展和一套主题：
 
 - `codex-compact` 为支持的 ChatGPT auth 模型提供 Codex Remote Compaction V2。
 - `openai-fast-mode` 为匹配的 OpenAI 和 OpenAI-Codex 模型注入 priority service tier。
@@ -8,6 +8,7 @@
 - `mcp` 连接 Model Context Protocol 服务器，并将工具注册为 `mcp__<server>__<tool>`。
 - `permissions` 提供 `Default permissions` 和 `Full access` 两种模式，以及逐次调用审批。
 - `subagent` 通过 tmux 管理普通 TUI Pi child，并从 Pi 原生 session JSONL 读取活动与完成状态。
+- `goal` 提供目标独立保存、模型工具、事件驱动续跑、暂停/恢复、异常退出后的恢复和显式会话继承。
 
 ## Requirements
 
@@ -35,6 +36,38 @@ pi -e git:github.com/wangxuyang1221/pi-ext
 ```
 
 Pi package 以当前用户的完整系统权限运行。安装第三方 package 前应检查源码。
+
+## Goal extension
+
+在持久化交互 TUI 中使用 `/goal <objective>` 创建目标、`/goal` 查看摘要、`/goal clear` 清除。替换未完成目标需要确认，新目标重新计数。只有整个 trimmed 参数等于控制词时才按控制词处理，因此 `/goal pause now` 是目标文本。`/goal edit` 编辑目标且保留统计，`/goal pause` 暂停，`/goal resume` 显式恢复并解除继承门禁。OpenAI Codex 模型下可自动续跑；其他 provider 保留目标但不自动执行。
+
+权威状态保存在公开 `getAgentDir()` 返回目录下的 `goals/`。新会话首条模型回复前也能保存，不依赖 Pi JSONL 已经落盘。历史 custom entry 只是镜像，失败不会回滚权威记录，下次摘要、绑定或 settled 检查点会重试。清除写入 tombstone，不从旧镜像复活。
+
+`/goal-recover` 列出当前 cwd 中没有活跃写入者占用的目标，由用户选择。原会话文件存在时切换到该会话；不存在时先说明无法恢复未落盘对话，再在新持久化会话接管同一条记录和统计。恢复不发送模型请求，也不撤销文件或数据库副作用。`--no-session` 和非 TUI 不支持这些入口。
+
+锁使用进程、主机、实例和唯一 owner 文件标识，不按超时夺锁。同一主机明确已退出的进程可回收锁；身份不明、跨主机或 PID 已复用时不抢占。若提示锁身份不明，先退出所有相关 Pi 实例并备份 `goals/`，人工核验后只移除对应 `.lock` 目录，再运行恢复入口。不要在写入者存活时删除锁。损坏或未知版本的权威 JSON 需要从已核验的权威备份修复，不能用历史镜像自动代替。
+
+同一会话的 `/tree` 不回退目标、状态和累计统计。普通 `/fork`、`/clone` 不继承目标，即使复制了历史镜像。`/goal-fork` 可选择历史用户消息之前 fork 或当前位置 clone，先核验当前权威快照，再保存独立新记录。目标身份、状态、预算和累计统计完整复制，源记录不变。历史 fork 会把所选用户文本放入新会话编辑器。
+
+显式继承不会把 active 改成 paused，而是持久化 `continuationDeferral` 门禁；reload 和重开仍保留。明确的交互用户输入会解除门禁，但不把 paused、blocked 等停止状态改成 active，扩展注入消息不会解除。取消或失败不清除源目标，继承写盘失败时新会话可能没有目标。Pi 原生尚不能 clone 未落盘会话，插件会报告失败并保留已独立保存的目标，不伪造回复强行落盘。
+
+TUI 超过4000个 Unicode 字符的目标写入 `goals/content/<bundleId>/objective.txt`，权威记录和模型上下文保存短引用。`/goal` 显示前1000字符摘要，`/goal edit` 验证引用和文件校验和后打开完整正文，重开仍可编辑。工具 objective 仍限制4000字符，不会自动物化。
+
+Pi 原生粘贴图片会在编辑器中插入 `pi-clipboard-<UUID>.<ext>` 临时路径。提交目标时仅识别当前 Pi 临时目录中的这种路径，逐项选择 `Copy attachment`、`Keep as text` 或 `Cancel`；不读真实剪贴板、不扫描其他路径。明确选择后复制 PNG、JPEG、GIF 或 WebP 并改写正文引用，临时源删除不影响保存附件。正文上限1 MiB，每目标最多32张图、单图20 MiB；超过限制则拒绝本次保存，不改变旧目标。路径遍历、符号链接和校验和不匹配会报错。
+
+每次编辑生成独立不可变内容包，继承的旧快照不被修改。失败只清理本次且确认未提交的包，不确定提交保留文件供修复。成功保存的旧包不会随 edit、replace 或 clear 自动删除，以免损坏继承和历史引用；备份目标时需包含整个 `goals/`。状态通过 Pi `setStatus` 展示，未加载 codex-ui 时使用默认 footer；加载后在原 codex-ui footer 下增加目标行，不替换原 editor/footer。
+
+三个模型工具为 `get_goal`、`create_goal`、`update_goal`，schema 和提示固定于 Codex 0.153.4。完成、blocked、usage_limited 和 paused 都不会自动续跑。模型运行中 Esc 会暂停；原生重试等待中 Esc 取消后按 C12 记为 blocked，保留目标与统计，可用 `/goal resume` 恢复。关闭编辑或确认弹窗不会暂停。原生压缩失败后停止目标，显式输入或手动压缩仍可继续。写入或权威检查失败后停止自动推进，修复存储后显式 resume。
+
+C11 限制：取消尚未发出的失效自有 goal 续跑时，公开 `ctx.abort()` 会清除其他扩展尚未处理的排队消息，用户追加文字可能退回编辑器，需要重发。已有聊天记录和保存目标保留。不为此包装 provider、重建 editor 或修改 Pi 核心。
+
+主代理按 Pi 归一化 `usage.input + usage.output` 结算，不重复扣缓存或加 reasoning；原生压缩可见 usage 同样结算。创建前不计入，编辑/恢复不清零；缺失 usage 显示统计不完整。active 时间使用单调时钟，离线不计时。达到预算只向当前回合提醒一次收尾，继续记录实际超额用量，不硬杀、也不启动下一自动回合。
+
+可选配置为 `getAgentDir()` 目录下的 `goal.json`，例如 `{"maxGoalTokenBudget": 100000}`。扩展只读取，不创建或修改此配置。最大预算必须是正安全整数；配置上限同时作为创建时未指定预算的默认值，模型显式预算不能超限。未配置且未显式指定则无上限。非法配置阻止新建，修正后 `/reload`；`/goal --budget 100` 仍是目标文本，不是预算参数。
+
+加载本仓库 subagent 时，为根目标投递的直接子代理任务也计入同一预算。归属在投递前登记，子代理按请求捕获归属并上报累计值；根检查点去重，重复读取活动不重复收费。子代理关闭后报告保留供检查点和恢复使用，替换目标后旧报告不计入新目标。显式继承复制累计统计，但不订阅源会话的子代理。C13 保留 root → direct child，不支持孙代理或第三方代理计费；managed child 不安装独立 goal 工具或循环。
+
+#4 至 #9 的基础存储、生命周期、执行、预算、直接子代理和附件/UI 已由协调者验收。Pi 0.84.3/0.85.1 的实际 SDK、受管 OS 子进程和 InteractiveMode PTY 使用离线原生 adapter 或 faux provider 夹具，不包含付费在线调用，不宣称断电零丢失。受管子进程使用真实 tmux transport 与子端 CLI，IPC 夹具仅作补充；根端使用 SDK，原生根 TUI 输入另有 PTY 矩阵。最终工作区集成结果、准确基准和未执行项见 [Goal integration acceptance](docs/goal-integration-acceptance.md)，是否通关以协调者独立验收为准。分项证据见 [Goal attachments and UI acceptance](docs/goal-ui-acceptance.md)、[Goal direct child accounting](docs/goal-descendant-acceptance.md)、[Goal budget acceptance](docs/goal-budget-acceptance.md)、[Goal execution report](docs/goal-execution-report.md)、[Goal storage acceptance](docs/goal-storage-acceptance.md) 与 [Goal lifecycle acceptance](docs/goal-lifecycle-acceptance.md)。
 
 ## Codex Compact extension
 
@@ -92,7 +125,7 @@ Codex encrypted compaction item.
 
 - 使用 `pi v0.84.3` 官方 wordmark 的 header
 - 实色背景 composer
-- model、thinking、Fast Mode、cwd、git branch、context-left 和 permissions 单行 footer
+- model、thinking、Fast Mode、cwd、git branch、context-left 和 permissions 主状态行，另显示可选 goal 状态行
 - 普通 assistant 回复使用外层列表缩进，自动换行和后续段落保持对齐
 - 原生消息位置的单行思考摘要，流式与完成后保持同一规则
 - 隐藏 streaming working row；运行时窗口标题使用 80ms 单色转圈，正文思考状态仍保持静态
@@ -175,7 +208,7 @@ Read 在同一 assistant 消息内按调用顺序合并相邻读取，不跨 tex
 
 Footer 使用 ` ⋅ ` 分隔，并按 `model thinking ⋅ fast ⋅ cwd ⋅ git:branch ⋅ Context N% left ⋅ permissions` 排列。model 与 thinking 使用 Codex CLI 的 `#f6e2b7`，context 使用 `#f2b590`，Fast Mode 使用 `#c8a9ee`。终端变窄时会先缩短或移除 cwd 和 branch，再将 context 缩成 `N% left`；model、context 和 permissions 保留到最后。
 
-Footer 只消费 `pi-openai-fast-mode` 和 `permissions` 两个稳定 status。MCP、压缩进度、low-power 和其他临时 status 不显示。内置的 `openai-fast-mode` 不再创建 below-editor widget。由于 Pi 0.84.3 没有公开 weekly quota 数据源，本 profile 不显示 weekly quota。
+Footer 首行消费 `pi-openai-fast-mode` 和 `permissions` 两个稳定 status。有 `goal` status 时在第二行显示目标状态，内容变化使缓存失效，清除后移除第二行，首行布局不变。MCP、压缩进度、low-power 和其他临时 status 不显示。内置的 `openai-fast-mode` 不再创建 below-editor widget。由于 Pi 0.84.3 没有公开 weekly quota 数据源，本 profile 不显示 weekly quota。
 
 Ghostty 的窗口透明度、blur、字体和 titlebar 仍由 Ghostty 配置负责。Pi cell 只使用不透明 ANSI 颜色。
 
@@ -347,7 +380,21 @@ pnpm run prototype:tui
 pnpm run prototype:subagent-ui
 ```
 
-仓库有意提交 `dist/`。Pi 从 Git 安装 package 时只安装生产依赖，因此需要预构建文件。CI 会拒绝过期的生成文件。`prepack` 会重建六个扩展，发布包只包含编译产物、theme、README、license 和上游 attribution。
+仓库有意提交 `dist/`。Pi 从 Git 安装 package 时只安装生产依赖，因此需要预构建文件。CI 会拒绝过期的生成文件。`prepack` 会重建七个扩展，发布包只包含编译产物、theme、README、goal 验收报告、license 和上游 attribution。包同时包含 MIT 本地实现与 Apache-2.0 的 Codex goal 复制内容，metadata 使用 `MIT AND Apache-2.0`；具体文件归属见 `extensions/goal/UPSTREAM.md`、`LICENSE` 和 `NOTICE`，不把上游内容改授 MIT。
+
+验证本地工作区后，可安装解包目录，不必先发布到注册表：
+
+```sh
+pnpm run check
+pnpm pack --pack-destination .scratch/release
+mkdir -p .scratch/release/unpacked
+tar -xzf .scratch/release/pi-ext-0.1.0.tgz -C .scratch/release/unpacked
+cp pnpm-lock.yaml .scratch/release/unpacked/package/pnpm-lock.yaml
+pnpm --dir .scratch/release/unpacked/package install --frozen-lockfile --prod --ignore-scripts
+pi install "$(pwd)/.scratch/release/unpacked/package"
+```
+
+`pi install` 本地目录只记录路径，不复制目录或安装依赖。保持解包目录不动，重启 Pi 后从包 manifest 加载七个入口；正常安装会写当前用户的 Pi settings。已有安装不要重复加载同一插件。验收脚本另使用仓库内隔离 HOME/agent，不改真实配置。
 
 `pnpm run prototype:tui` 启动 Codex、Claude、Hybrid 三套一次性 HTML 原型。生产 extension 只实现 Codex 方向，另外两套原型保留供后续使用。
 

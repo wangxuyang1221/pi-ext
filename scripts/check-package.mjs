@@ -15,6 +15,7 @@ const expectedExtensionEntries = [
   "./extensions/codex-ui/dist/index.js",
   "./extensions/mcp/dist/index.js",
   "./extensions/subagent/dist/index.js",
+  "./extensions/goal/dist/index.js",
 ];
 const expectedThemeEntries = ["./themes/codex-pi.json"];
 const requiredPublishedEntries = [
@@ -25,6 +26,13 @@ const requiredPublishedEntries = [
   "extensions/openai-fast-mode/LICENSE",
   "extensions/openai-fast-mode/UPSTREAM.md",
   "extensions/mcp/dist",
+  "extensions/goal/dist",
+  "extensions/goal/LICENSE",
+  "extensions/goal/UPSTREAM.md",
+  "extensions/goal/NOTICE",
+  "docs/goal-descendant-acceptance.md",
+  "docs/goal-ui-acceptance.md",
+  "docs/goal-integration-acceptance.md",
 ];
 const requiredMcpRuntimeExports = new Map([
   ["diagnostics.js", [
