@@ -1,0 +1,21 @@
+PASS 0.84.3 normal-function-tools-anthropic (6 requests)
+PASS 0.84.3 normal-function-tools-private-goal (6 requests)
+PASS 0.84.3 normal-function-tools-custom-goal (6 requests)
+PASS 0.84.3 normal-function-tools-openai-codex (6 requests)
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Reload must preserve external tool disablement
+    at file:///Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/extensions/goal/__tests__/provider-runtime.mjs:168:12
+    at async scenario (file:///Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/extensions/goal/__tests__/provider-runtime.mjs:132:5)
+    at async file:///Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers/extensions/goal/__tests__/provider-runtime.mjs:163:3 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v22.22.2

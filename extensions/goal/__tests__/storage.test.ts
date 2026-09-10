@@ -11,6 +11,44 @@ async function store() {
   return new GoalStore(root);
 }
 
+it("persists tool recovery independently of status, attribution and inheritance deferral", async () => {
+  const disk = await store();
+  const lease = await disk.openSession({ ownerSessionId: "source", cwd: process.cwd(), sessionFile: "/source.jsonl" });
+  const original = await lease.replace("Keep attribution", lease.snapshot, 100);
+  const gated = await lease.requireToolRecovery(original);
+  expect(gated.goal).toEqual({ ...original.goal, toolRecoveryRequired: true });
+  const billed = await lease.account(original, { sourceId: "in-flight", tokens: 110, missing: false });
+  expect(billed.goal).toMatchObject({ tokensUsed: 110, status: "budget_limited", toolRecoveryRequired: true });
+  await lease.close();
+  const reopened = await disk.openSession(original);
+  expect(reopened.snapshot).toEqual(billed);
+  const child = await disk.openSession({ ownerSessionId: "child", cwd: process.cwd(), sessionFile: "/child.jsonl" });
+  const inherited = await child.inherit(billed);
+  const released = await child.releaseDeferral(inherited);
+  expect(released.goal!.toolRecoveryRequired).toBe(true);
+  await child.close();
+  const resumed = await reopened.control("resume", reopened.snapshot);
+  expect(resumed.goal).toMatchObject({ tokensUsed: 110, tokenBudget: 100, status: "budget_limited" });
+  expect(resumed.goal!.toolRecoveryRequired).toBeUndefined();
+  const replaced = await reopened.replace("Independent new goal", resumed);
+  expect(replaced.goal!.toolRecoveryRequired).toBeUndefined();
+  await expect(reopened.requireToolRecovery(billed)).rejects.toThrow(/stale/i);
+  const freshGate = await reopened.requireToolRecovery(replaced);
+  const cleared = await reopened.clear(freshGate);
+  expect(cleared.goal).toBeNull();
+  await reopened.close();
+});
+
+it("accepts pre-gate records and rejects malformed tool recovery flags", async () => {
+  const disk = await store();
+  const lease = await disk.openSession({ ownerSessionId: "legacy", cwd: process.cwd(), sessionFile: "/legacy.jsonl" });
+  const saved = await lease.replace("Legacy goal", lease.snapshot);
+  await lease.close();
+  expect(await disk.read(saved.recordId)).toEqual(saved);
+  await writeFile(resolve(disk.root, `${saved.recordId}.json`), JSON.stringify({ ...saved, goal: { ...saved.goal, toolRecoveryRequired: "true" } }));
+  await expect(disk.read(saved.recordId)).rejects.toThrow(/tool recovery gate/);
+});
+
 it("checkpoints and inherits a complete snapshot into an independent deferred record", async () => {
   const disk = await store();
   const source = await disk.openSession({ ownerSessionId: "source", cwd: process.cwd(), sessionFile: "/source.jsonl" });

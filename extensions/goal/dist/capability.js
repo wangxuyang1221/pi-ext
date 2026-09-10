@@ -3,7 +3,7 @@ export function goalCapability(ctx, child = !!process.env.PI_SUBAGENT_PARENT) {
     const reason = child ? "requires a root session"
         : ctx.mode !== "tui" ? "requires interactive TUI mode"
             : !ctx.sessionManager.getSessionFile() ? "requires a persistent session"
-                : ctx.model?.provider !== "openai-codex" ? "requires OpenAI Codex" : undefined;
+                : !ctx.model ? "requires a selected model" : undefined;
     return reason ? { supported: false, reason } : { supported: true };
 }
 //# sourceMappingURL=capability.js.map

@@ -23,6 +23,7 @@ export interface Goal {
     usageCheckpoint?: UsageCheckpoint;
     childUsage?: ChildUsageCheckpoint[];
     usageIncomplete?: boolean;
+    toolRecoveryRequired?: boolean;
     createdAt: string;
     updatedAt: string;
 }
@@ -71,6 +72,8 @@ export declare class GoalLease {
     checkpoint(expected: GoalRecord): Promise<GoalRecord>;
     /** Copy a checkpoint into a never-committed record, with a durable launch gate. */
     inherit(source: GoalRecord): Promise<GoalRecord>;
+    /** Stop new goal continuations without changing request attribution or status. */
+    requireToolRecovery(expected: GoalRecord): Promise<GoalRecord>;
     /** Release inheritance gating, without changing the goal's stop state. */
     releaseDeferral(expected: GoalRecord): Promise<GoalRecord>;
     replace(objective: string, expected: GoalRecord, tokenBudget?: number, content?: ContentReference): Promise<GoalRecord>;
@@ -82,7 +85,7 @@ export declare class GoalLease {
     accountChild(expected: GoalRecord, usage: UsageCheckpoint): Promise<GoalRecord>;
     /** Persist the diagnostic with the pause, never overwriting a terminal state. */
     pauseForLoop(expected: GoalRecord): Promise<GoalRecord>;
-    /** Resume and release inheritance gating in the same authoritative commit. */
+    /** Resume and release continuation gates in the same authoritative commit. */
     control(action: "resume" | "pause" | "edit" | "complete" | "blocked" | "usage_limited", expected: GoalRecord, objective?: string, content?: ContentReference): Promise<GoalRecord>;
     clear(expected: GoalRecord): Promise<GoalRecord>;
     close(): Promise<void>;

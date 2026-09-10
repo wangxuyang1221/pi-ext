@@ -54,13 +54,23 @@ export function registerGoalScheduler(pi, access) {
         const record = active(ctx, allowLimited);
         return !!ticket && !!record && ticket.instance === instance && ticket.ownerSessionId === record.ownerSessionId && ticket.goalId === record.goal.goalId && ticket.generation === record.generation && ticket.runGeneration === runGeneration;
     };
+    // Tool availability gates new continuations, not bound responses or wrap-up.
+    const runnable = (ctx) => {
+        const record = active(ctx);
+        return record && !record.goal?.toolRecoveryRequired && !access.missingTools?.().length ? record : undefined;
+    };
     const refresh = (ctx) => {
         const goal = access.snapshot()?.goal;
-        const limitation = suspended ? " | storage error: /goal resume" : !goalCapability(ctx).supported ? ` | ${goalCapability(ctx).reason}` : "";
+        const capability = goalCapability(ctx);
+        const missing = access.missingTools?.() ?? [];
+        const limitation = suspended ? " | storage error: /goal resume"
+            : !capability.supported ? ` | ${capability.reason}`
+                : missing.length ? ` | Missing goal tools: ${missing.join(", ")}. Restore tools, then /goal resume`
+                    : goal?.toolRecoveryRequired ? " | Requires explicit /goal resume" : "";
         ctx.ui.setStatus("goal", goal ? `Goal: ${goal.status} | ${goal.tokensUsed} tokens | ${goal.elapsedSeconds}s${limitation}` : undefined);
     };
     const start = (ctx, automatic = false) => {
-        const record = active(ctx);
+        const record = runnable(ctx);
         if (!record || (automatic && ctx.hasPendingMessages?.()))
             return;
         if (pending) {
@@ -112,7 +122,7 @@ export function registerGoalScheduler(pi, access) {
             await pauseLoop(ctx);
     };
     pi.on("before_agent_start", (_event, ctx) => {
-        const record = active(ctx);
+        const record = runnable(ctx);
         if (!record)
             return;
         return { message: { customType: GOAL_CONTEXT, content: renderGoalPrompt(record.goal, editedPending), display: false, details: ticket(record) } };
@@ -243,8 +253,9 @@ export function registerGoalScheduler(pi, access) {
     pi.on("session_start", (_event, ctx) => { live = true; refresh(ctx); });
     pi.on("model_select", (_event, ctx) => {
         refresh(ctx);
-        if (access.snapshot()?.goal && ctx.model?.provider !== "openai-codex")
-            ctx.ui.notify("Automatic goal execution requires an OpenAI Codex model. Your saved goal is unchanged.", "warning");
+        const capability = goalCapability(ctx);
+        if (access.snapshot()?.goal && !capability.supported)
+            ctx.ui.notify(`Automatic goal execution ${capability.reason}. Your saved goal is unchanged.`, "warning");
     });
     pi.on("session_shutdown", () => { resetLoop(); resetEmpty(); userDelivered = false; live = false; runGeneration++; pending = undefined; pendingBudget = undefined; edits.clear(); restartRequested = false; internalCancellation = false; });
     pi.on("context", async (event, ctx) => {
@@ -275,8 +286,8 @@ export function registerGoalScheduler(pi, access) {
         const matches = (message, queued) => !!queued && message.role === "custom" && message.details?.scheduleId === queued.scheduleId;
         const staleRequest = last?.role === "custom" && isOwned(last)
             && (matches(last, pending) || matches(last, pendingBudget) || edits.has(last.details?.scheduleId))
-            && !valid(last.details, ctx, last.customType === GOAL_BUDGET_CONTEXT);
-        const continuation = pending && valid(pending, ctx) && owned.some(message => matches(message, pending)) ? pending : undefined;
+            && (!valid(last.details, ctx, last.customType === GOAL_BUDGET_CONTEXT) || (last.customType !== GOAL_BUDGET_CONTEXT && !runnable(ctx)));
+        const continuation = pending && runnable(ctx) && valid(pending, ctx) && owned.some(message => matches(message, pending)) ? pending : undefined;
         if (continuation) {
             automaticRun = !!continuation.automatic && !userDelivered;
             activity = false;
@@ -336,7 +347,7 @@ export function registerGoalScheduler(pi, access) {
             editedPending = edited;
             recoverySuppressed = false;
             refresh(ctx);
-            const record = active(ctx);
+            const record = runnable(ctx);
             if (edited && record) {
                 restartRequested = false;
                 const update = ticket(record);

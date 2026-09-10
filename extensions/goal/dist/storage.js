@@ -27,6 +27,8 @@ function validate(record, recordId) {
         if (!Array.isArray(goal.childUsage) || goal.childUsage.some(child => !child || !text(child.sourceId) || !text(child.reportPath) || !isAbsolute(child.reportPath) || !integer(child.tokens) || typeof child.missing !== "boolean" || (child.lastReceipt !== undefined && (!text(child.lastReceipt) || child.lastReceipt.length > 128))) || new Set(goal.childUsage.map(child => child.sourceId)).size !== goal.childUsage.length)
             throw new Error(`Invalid child usage checkpoint: ${recordId}.`);
     }
+    if (goal?.toolRecoveryRequired !== undefined && typeof goal.toolRecoveryRequired !== "boolean")
+        throw new Error(`Invalid goal tool recovery gate: ${recordId}.`);
     if (goal?.usageIncomplete !== undefined && typeof goal.usageIncomplete !== "boolean")
         throw new Error(`Invalid goal usage visibility: ${recordId}.`);
     if (goal !== null && (!goal || !text(goal.goalId) || !text(goal.objective) || !goal.objective.trim()
@@ -239,6 +241,15 @@ export class GoalLease {
             return { ...record, goal, generation: source.generation, continuationDeferral: true };
         });
     }
+    /** Stop new goal continuations without changing request attribution or status. */
+    requireToolRecovery(expected) {
+        return this.mutate(expected, record => {
+            if (!record.goal)
+                throw new Error("No goal set.");
+            record.goal.toolRecoveryRequired = true;
+            return record;
+        }, true, true);
+    }
     /** Release inheritance gating, without changing the goal's stop state. */
     releaseDeferral(expected) {
         return this.mutate(expected, record => ({ ...record, continuationDeferral: false }));
@@ -333,7 +344,7 @@ export class GoalLease {
             return record;
         });
     }
-    /** Resume and release inheritance gating in the same authoritative commit. */
+    /** Resume and release continuation gates in the same authoritative commit. */
     control(action, expected, objective, content) {
         return this.mutate(expected, record => {
             const goal = record.goal;
@@ -363,8 +374,10 @@ export class GoalLease {
             if (goal.status !== previousStatus)
                 goal.activation = (goal.activation ?? 0) + 1;
             goal.updatedAt = new Date().toISOString();
-            if (action === "resume")
+            if (action === "resume") {
                 record.continuationDeferral = false;
+                delete goal.toolRecoveryRequired;
+            }
             return record;
         });
     }

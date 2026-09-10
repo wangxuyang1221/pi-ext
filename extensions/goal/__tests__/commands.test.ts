@@ -30,14 +30,14 @@ async function harness(config?: unknown) {
   return { pi, commands, root, disk, manager, notify, confirm, appendEntry, ctx, events, recover: () => commands.get("goal-recover")!.handler("", ctx), run: (args: string) => commands.get("goal")!.handler(args, ctx) };
 }
 
-it.each(["reload", "fork", "budget", "complete", "provider", "no-ui"])("does not offer automatic restoration for %s", async kind => {
+it.each(["reload", "fork", "budget", "complete", "no-model", "no-ui"])("does not offer automatic restoration for %s", async kind => {
   const h = await harness();
   await h.run("Saved state"); await h.run("pause");
   await h.events.get("session_shutdown")!({}, h.ctx);
   const saved = (await h.disk.records())[0]!;
   if (kind === "budget") { saved.goal!.tokenBudget = 10; saved.goal!.tokensUsed = 10; await h.disk.commit(saved); }
   if (kind === "complete") { saved.goal!.status = "complete"; await h.disk.commit(saved); }
-  if (kind === "provider") Object.assign(h.ctx, { model: { provider: "other" } });
+  if (kind === "no-model") Object.assign(h.ctx, { model: undefined });
   if (kind === "no-ui") Object.assign(h.ctx, { hasUI: false });
   h.confirm.mockClear(); vi.mocked(h.pi.sendMessage).mockClear();
   await h.events.get("session_start")!({ reason: kind === "reload" || kind === "fork" ? kind : "resume" }, h.ctx);
@@ -45,7 +45,7 @@ it.each(["reload", "fork", "budget", "complete", "provider", "no-ui"])("does not
   expect(h.confirm).not.toHaveBeenCalled();
   expect(h.pi.sendMessage).not.toHaveBeenCalled();
 });
-it.each(["shutdown", "replace", "revision", "budget", "provider"])("rejects a restored confirmation overtaken by %s", async kind => {
+it.each(["shutdown", "replace", "revision", "budget", "no-model"])("rejects a restored confirmation overtaken by %s", async kind => {
   const h = await harness();
   await h.run("Stale confirmation"); await h.run("pause");
   await h.events.get("session_shutdown")!({}, h.ctx);
@@ -53,7 +53,7 @@ it.each(["shutdown", "replace", "revision", "budget", "provider"])("rejects a re
   vi.mocked(h.pi.sendMessage).mockClear();
   h.confirm.mockImplementationOnce(async () => {
     if (kind === "shutdown") await h.events.get("session_shutdown")!({}, h.ctx);
-    else if (kind === "provider") Object.assign(h.ctx, { model: { provider: "other" } });
+    else if (kind === "no-model") Object.assign(h.ctx, { model: undefined });
     else {
       const row = (await h.disk.records())[0]!;
       if (kind === "replace") row.goal!.goalId = "replacement";
@@ -95,15 +95,15 @@ it("offers restored stopped goals a cancellable confirmation only after initiali
   await h.events.get("resources_discover")?.({ reason: "reload" }, h.ctx);
   expect(h.confirm).toHaveBeenCalledTimes(1);
 });
-it("does not assign new child tasks to a goal under an unsupported provider", async () => {
+it("assigns managed child tasks under a non-Codex provider", async () => {
   const h = await harness(); await h.run("Managed gate");
   Object.assign(h.ctx, { model: { provider: "other" } });
   const task = { parentSessionId: h.manager.getSessionId(), directory: resolve(h.root, "reports"), promises: [] as Promise<string | undefined>[] };
   h.pi.events.emit("pi-ext:goal:subagent-task", task);
-  expect((await Promise.all(task.promises)).filter(Boolean)).toEqual([]);
-  expect((await h.disk.records())[0]!.goal!.childUsage).toBeUndefined();
+  expect((await Promise.all(task.promises)).filter(Boolean)).toHaveLength(1);
+  expect((await h.disk.records())[0]!.goal!.childUsage).toHaveLength(1);
 });
-it("does not bind unsupported provider work to an existing active goal", async () => {
+it("accounts non-Codex root work against an existing active goal", async () => {
   const h = await harness(); await h.run("Supported only");
   Object.assign(h.ctx, { model: { provider: "other" } });
   await h.events.get("model_select")!({}, h.ctx);
@@ -111,20 +111,20 @@ it("does not bind unsupported provider work to an existing active goal", async (
   const message = { role: "assistant", provider: "other", model: "fixture", timestamp: 1, responseId: "unsupported", content: [], stopReason: "stop", usage: { input: 5, output: 5 } };
   await h.events.get("message_start")!({ message }, h.ctx);
   await h.events.get("message_end")!({ message }, h.ctx);
-  expect((await h.disk.records())[0]!.goal!.tokensUsed).toBe(0);
+  expect((await h.disk.records())[0]!.goal!.tokensUsed).toBe(10);
 });
-it("hides mutating tools on provider changes and rejects direct calls while preserving local stops", async () => {
+it("hides mutating tools without a selected model and rejects direct calls while preserving local stops", async () => {
   const h = await harness();
   Object.assign(h.ctx, { model: { provider: "openai-codex" } });
   await h.events.get("model_select")!({}, h.ctx);
   await h.run("Supported goal");
   const tools = new Map(vi.mocked(h.pi.registerTool).mock.calls.map(([tool]) => [tool.name, tool]));
-  Object.assign(h.ctx, { model: { provider: "other" } });
+  Object.assign(h.ctx, { model: undefined });
   await h.events.get("model_select")!({}, h.ctx);
   expect(h.pi.getActiveTools()).toEqual(["read", "other_extension", "get_goal"]);
   const saved = (await h.disk.records())[0]!;
   for (const [name, args] of [["create_goal", { objective: "Unsupported" }], ["update_goal", { status: "complete" }]] as const) {
-    await expect(tools.get(name)!.execute("call", args, undefined, undefined, h.ctx)).rejects.toThrow(/requires OpenAI Codex/);
+    await expect(tools.get(name)!.execute("call", args, undefined, undefined, h.ctx)).rejects.toThrow(/requires a selected model/);
   }
   const result = await tools.get("get_goal")!.execute("read", {}, undefined, undefined, h.ctx);
   expect((result.details as any).goal.objective).toBe("Supported goal");
@@ -139,6 +139,97 @@ it("hides mutating tools on provider changes and rejects direct calls while pres
   await h.events.get("model_select")!({}, h.ctx);
   expect(h.pi.getActiveTools()).toEqual(["read", "other_extension", "get_goal", "create_goal", "update_goal"]);
 });
+it.each(["create_goal", "get_goal", "update_goal"])("does not reactivate externally disabled %s on model switches", async name => {
+  const h = await harness();
+  await h.run("Keep tool choices");
+  h.pi.setActiveTools(h.pi.getActiveTools().filter(tool => tool !== name));
+  Object.assign(h.ctx, { model: { provider: "private-model" } });
+  await h.events.get("model_select")!({}, h.ctx);
+  expect(h.pi.getActiveTools()).not.toContain(name);
+  expect(h.pi.getActiveTools()).toContain("other_extension");
+});
+
+it.each(["create_goal", "get_goal", "update_goal"])("requires explicit resume after %s recovers, including input, edit and reload", async name => {
+  const h = await harness();
+  Object.assign(h.ctx, { abort: vi.fn(), signal: new AbortController().signal });
+  await h.run("Tool recovery");
+  await h.events.get("context")!({ messages: [{ role: "custom", ...vi.mocked(h.pi.sendMessage).mock.calls[0]![0] }] }, h.ctx);
+  vi.mocked(h.pi.sendMessage).mockClear();
+  const tools = h.pi.getActiveTools();
+  h.pi.setActiveTools(tools.filter(tool => tool !== name));
+  await h.events.get("agent_end")!({ messages: [{ role: "assistant", stopReason: "stop", content: [{ type: "text", text: "More work remains" }] }] }, h.ctx);
+  expect(h.pi.sendMessage).not.toHaveBeenCalled();
+  const gated = (await h.disk.records())[0]!;
+  expect(gated.goal).toMatchObject({ status: "active", toolRecoveryRequired: true });
+  expect(h.notify.mock.calls.some(([text]) => String(text).includes(`Missing goal tools: ${name}`))).toBe(true);
+  await h.run("resume");
+  expect(h.pi.sendMessage).not.toHaveBeenCalled();
+  expect(h.pi.getActiveTools()).not.toContain(name);
+  h.pi.setActiveTools(tools);
+  await h.events.get("input")!({ source: "interactive", text: "Ordinary input" }, h.ctx);
+  await h.events.get("message_end")!({ message: { role: "user", content: "Ordinary input" } }, h.ctx);
+  Object.assign(h.ctx, { model: { provider: "other" } });
+  await h.events.get("model_select")!({}, h.ctx);
+  vi.mocked(h.ctx.ui.editor).mockResolvedValueOnce("Edited goal");
+  await h.run("edit");
+  await h.events.get("session_shutdown")!({}, h.ctx);
+  await h.events.get("session_start")!({ reason: "reload" }, h.ctx);
+  await h.events.get("context")!({ messages: [{ role: "user", content: "Another input" }] }, h.ctx);
+  await h.events.get("agent_end")!({ messages: [{ role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Still more work" }] }] }, h.ctx);
+  expect(h.pi.sendMessage).not.toHaveBeenCalled();
+  expect((await h.disk.records())[0]!.goal).toMatchObject({ goalId: gated.goal!.goalId, toolRecoveryRequired: true, status: "active" });
+  await h.run("");
+  expect(h.notify.mock.calls.at(-1)?.[0]).toContain("explicit /goal resume");
+  await h.run("resume");
+  expect((await h.disk.records())[0]!.goal!.toolRecoveryRequired).toBeUndefined();
+  expect(h.pi.sendMessage).toHaveBeenCalledTimes(1);
+});
+
+it("does not repeat recovery writes or notices at unchanged lifecycle checkpoints", async () => {
+  const h = await harness();
+  await h.run("Stable recovery observation");
+  h.pi.setActiveTools(h.pi.getActiveTools().filter(name => name !== "get_goal"));
+  await h.events.get("model_select")!({}, h.ctx);
+  const saved = (await h.disk.records())[0]!;
+  const commits = vi.spyOn(h.disk, "commit");
+  h.notify.mockClear();
+  for (let i = 0; i < 20; i++) {
+    await h.events.get("model_select")!({}, h.ctx);
+    await h.events.get("before_agent_start")!({}, h.ctx);
+  }
+  expect(commits).not.toHaveBeenCalled();
+  expect(h.notify).not.toHaveBeenCalled();
+  expect((await h.disk.records())[0]).toEqual(saved);
+});
+
+it("releases the goal writer when saving reload tool choices fails", async () => {
+  const h = await harness();
+  await h.run("Reload cleanup");
+  h.pi.setActiveTools(h.pi.getActiveTools().filter(name => name !== "get_goal"));
+  await h.events.get("model_select")!({}, h.ctx);
+  h.appendEntry.mockImplementationOnce(() => { throw new Error("Tool choice mirror failure"); });
+  await h.events.get("session_shutdown")!({ reason: "reload" }, h.ctx);
+  const record = (await h.disk.records())[0]!;
+  const reopened = await h.disk.openSession(record);
+  expect(reopened.snapshot.goal!.toolRecoveryRequired).toBe(true);
+  await reopened.close();
+  expect(h.notify.mock.calls.some(([text]) => String(text).includes("Tool choice mirror failure"))).toBe(true);
+});
+
+it("does not offer a saved-goal dialog as a substitute for explicit tool recovery", async () => {
+  const h = await harness();
+  await h.run("Gated saved goal");
+  h.pi.setActiveTools(h.pi.getActiveTools().filter(name => name !== "get_goal"));
+  await h.run("pause");
+  await h.events.get("session_shutdown")!({}, h.ctx);
+  h.pi.setActiveTools([...h.pi.getActiveTools(), "get_goal"]);
+  h.confirm.mockClear();
+  await h.events.get("session_start")!({ reason: "resume" }, h.ctx);
+  await h.events.get("resources_discover")!({ reason: "startup" }, h.ctx);
+  expect(h.confirm).not.toHaveBeenCalled();
+  expect((await h.disk.records())[0]!.goal).toMatchObject({ status: "paused", toolRecoveryRequired: true });
+});
+
 it("materializes long TUI goals and restores their editable text after reopening", async () => {
   const h = await harness();
   const text = "Long objective 🧭\n".repeat(400);
@@ -483,7 +574,7 @@ it("checks authoritative storage before forming a goal request and cancels an in
   expect(h.ctx.abort).toHaveBeenCalledTimes(1);
   expect(h.notify.mock.calls.at(-1)?.[0]).toContain("Unreadable authoritative file");
 });
-it("refreshes minimal status and explains unsupported model providers without launching", async () => {
+it("refreshes status across providers without a Codex warning or a new request", async () => {
   const h = await harness();
   await h.run("Visible objective");
   vi.mocked(h.pi.sendMessage).mockClear();
@@ -491,7 +582,7 @@ it("refreshes minimal status and explains unsupported model providers without la
   await h.events.get("model_select")!({ model: h.ctx.model }, h.ctx);
   expect(h.ctx.ui.setStatus).toHaveBeenLastCalledWith("goal", expect.stringContaining("active"));
   await h.events.get("model_select")!({ model: h.ctx.model }, h.ctx);
-  expect(h.notify.mock.calls.at(-1)?.[0]).toContain("OpenAI Codex");
+  expect(h.notify.mock.calls.some(([text]) => String(text).includes("OpenAI Codex"))).toBe(false);
   await h.run("");
   expect(h.notify.mock.calls.at(-1)?.[0]).toContain("/goal resume");
   expect(h.notify.mock.calls.at(-1)?.[0]).not.toContain("Storage only");

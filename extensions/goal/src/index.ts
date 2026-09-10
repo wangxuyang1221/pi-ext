@@ -12,6 +12,8 @@ import { registerGoalTools } from "./tools.js";
 import { GOAL_LOOP_PAUSED, registerGoalScheduler } from "./scheduler.js";
 
 export const GOAL_MIRROR = "pi-ext-goal";
+const GOAL_TOOL_STATE = "pi-ext-goal-tools";
+const REQUIRED_TOOLS = ["create_goal", "get_goal", "update_goal"];
 const safe = (text: string) => text.replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, "");
 function owner(ctx: ExtensionContext): Owner {
   const sessionFile = ctx.sessionManager.getSessionFile();
@@ -22,7 +24,7 @@ function summary(record?: GoalRecord, expanded?: string): string {
   const goal = record?.goal;
   if (!goal) return "No goal set. Use /goal <objective> or /goal-recover.";
   const preview = expanded === undefined ? "" : `${safe([...expanded].slice(0, 1000).join(""))}${[...expanded].length > 1000 ? "\n[Preview truncated. Use /goal edit for the full objective.]" : ""}\nAttachments: ${goal.content?.attachments.length ?? 0}\n`;
-  return `Goal: ${goal.status}\n${preview}${safe(goal.objective)}\nElapsed: ${goal.elapsedSeconds}s | Tokens used: ${goal.tokensUsed}${goal.tokenBudget === undefined ? "" : ` | Budget: ${goal.tokenBudget} | Remaining: ${Math.max(0, goal.tokenBudget - goal.tokensUsed)}`}\n${goal.usageIncomplete ? "Usage is incomplete; tokens shown are observed usage only.\n" : ""}${goal.pauseReason === "repeated_tool_calls" ? `${GOAL_LOOP_PAUSED}\n` : ""}${record.continuationDeferral ? "Automatic continuation deferred until an explicit user turn or resume.\n" : ""}Commands: /goal <objective>, /goal edit, /goal pause, /goal resume, /goal clear, /goal-recover, /goal-fork`;
+  return `Goal: ${goal.status}\n${preview}${safe(goal.objective)}\nElapsed: ${goal.elapsedSeconds}s | Tokens used: ${goal.tokensUsed}${goal.tokenBudget === undefined ? "" : ` | Budget: ${goal.tokenBudget} | Remaining: ${Math.max(0, goal.tokenBudget - goal.tokensUsed)}`}\n${goal.usageIncomplete ? "Usage is incomplete; tokens shown are observed usage only.\n" : ""}${goal.pauseReason === "repeated_tool_calls" ? `${GOAL_LOOP_PAUSED}\n` : ""}${goal.toolRecoveryRequired ? "Automatic continuation requires restored goal tools and explicit /goal resume.\n" : ""}${record.continuationDeferral ? "Automatic continuation deferred until an explicit user turn or resume.\n" : ""}Commands: /goal <objective>, /goal edit, /goal pause, /goal resume, /goal clear, /goal-recover, /goal-fork`;
 }
 
 /** Register persistent goal controls and execution. The store is injectable for isolated tests. */
@@ -44,12 +46,45 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
     const capability = goalCapability(ctx);
     if (!capability.supported) throw new Error(`Goal execution ${capability.reason}.`);
   };
+  const hiddenTools = new Set<string>();
   const syncTools = (ctx: ExtensionContext) => {
     const mutable = ["create_goal", "update_goal"];
     const current = pi.getActiveTools();
-    const next = current.filter(name => !mutable.includes(name));
-    if (goalCapability(ctx).supported) next.push(...mutable);
+    let next = current;
+    if (goalCapability(ctx).supported) {
+      next = [...new Set([...current, ...hiddenTools])];
+      hiddenTools.clear();
+    } else {
+      for (const name of current) if (mutable.includes(name)) hiddenTools.add(name);
+      next = current.filter(name => !mutable.includes(name));
+    }
     if (JSON.stringify(next) !== JSON.stringify(current)) pi.setActiveTools(next);
+  };
+  const missingTools = () => {
+    const active = pi.getActiveTools();
+    return REQUIRED_TOOLS.filter(name => !active.includes(name));
+  };
+  const requireTools = () => {
+    const missing = missingTools();
+    if (missing.length) throw new Error(`Missing goal tools: ${missing.join(", ")}. Restore them before /goal resume.`);
+  };
+  let toolNotice: string | undefined;
+  const observeTools = async (ctx: ExtensionContext) => {
+    if (!live || sessionId !== ctx.sessionManager.getSessionId() || !lease?.snapshot.goal || !goalCapability(ctx).supported) return;
+    const missing = missingTools();
+    const expected = lease.snapshot;
+    if (missing.length && !expected.goal!.toolRecoveryRequired) {
+      try { await commit(ctx, expected, () => lease!.requireToolRecovery(expected)); mirror(ctx); }
+      catch (error) { report(ctx, error); return; }
+    }
+    const message = missing.length ? `Missing goal tools: ${missing.join(", ")}. Restore them, then use explicit /goal resume. No new automatic goal continuation will start.`
+      : lease.snapshot.goal?.toolRecoveryRequired ? "Goal tools are available again. Use explicit /goal resume to continue automatic goal execution." : undefined;
+    const notice = message ? `${expected.goal!.goalId}:${message}` : undefined;
+    if (notice !== toolNotice) {
+      toolNotice = notice;
+      if (message) ctx.ui.notify(message, "warning");
+    }
+    scheduler.refresh(ctx);
   };
   const assertCurrent = (ctx: ExtensionContext) => {
     if (!live || ctx.sessionManager.getSessionId() !== sessionId) throw new Error("Stale goal session context.");
@@ -105,6 +140,15 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
     epoch++;
     live = true;
     sessionId = ctx.sessionManager.getSessionId();
+    if (event.reason === "reload") {
+      // Pi reload enables all extension tools. Reapply only our tools' saved
+      // external exclusions, not the tools hidden by capability synchronization.
+      const saved = [...ctx.sessionManager.getEntries()].reverse().find(entry => entry.type === "custom" && entry.customType === GOAL_TOOL_STATE);
+      const disabled = saved?.type === "custom" ? saved.data : undefined;
+      if (Array.isArray(disabled) && disabled.every(name => REQUIRED_TOOLS.includes(name))) {
+        pi.setActiveTools(pi.getActiveTools().filter(name => !disabled.includes(name)));
+      }
+    }
     syncTools(ctx);
     try {
       if (options.configPath) {
@@ -119,19 +163,22 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
     }
     if (ctx.mode !== "tui" || !ctx.sessionManager.getSessionFile()) return;
     try {
-      await bind(ctx, false); await children.start(ctx);
+      await bind(ctx, false); await observeTools(ctx); await children.start(ctx);
       const saved = lease?.snapshot;
       const goal = saved?.goal;
       resumeCandidate = event.reason !== "reload" && event.reason !== "fork" && ctx.hasUI && goalCapability(ctx).supported && goal
-        && ["paused", "blocked", "usage_limited"].includes(goal.status)
+        && !goal.toolRecoveryRequired && ["paused", "blocked", "usage_limited"].includes(goal.status)
         && (goal.tokenBudget === undefined || goal.tokensUsed < goal.tokenBudget) ? saved : undefined;
     } catch (error) { report(ctx, error); }
   });
   const resumeGoal = async (ctx: ExtensionContext, expected: GoalRecord) => {
     assertCurrent(ctx); requireExecution(ctx);
+    await observeTools(ctx);
+    requireTools();
     await children.checkpoint(ctx);
     await accounting.checkpoint(ctx);
     assertCurrent(ctx); requireExecution(ctx);
+    requireTools();
     const current = lease?.snapshot;
     if (!current?.goal || current.recordId !== expected.recordId || current.goal.goalId !== expected.goal?.goalId || current.goal.activation !== expected.goal?.activation) throw new Error("Stale goal resume rejected.");
     scheduler.invalidate();
@@ -158,9 +205,14 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
     } catch (error) { if (started === epoch) report(ctx, error); }
     finally { if (resumeDialog === controller) resumeDialog = undefined; }
   });
-  pi.on("session_shutdown", async (_event, ctx) => {
+  pi.on("session_shutdown", async (event, ctx) => {
     resumeCandidate = undefined;
     resumeDialog?.abort(); resumeDialog = undefined;
+    await observeTools(ctx);
+    if (event.reason === "reload") {
+      try { pi.appendEntry(GOAL_TOOL_STATE, missingTools().filter(name => !hiddenTools.has(name))); }
+      catch (error) { report(ctx, error); }
+    }
     try { await children.stop(ctx); } catch (error) { report(ctx, error); }
     if (live && lease) {
       try { await accounting.checkpoint(ctx); await lease.checkpoint(lease.snapshot); }
@@ -173,7 +225,11 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
     lease = undefined;
     await previous?.close();
   });
-  pi.on("model_select", (_event, ctx) => { syncTools(ctx); });
+  pi.on("model_select", async (_event, ctx) => { syncTools(ctx); await observeTools(ctx); });
+  pi.on("before_agent_start", async (_event, ctx) => { await observeTools(ctx); });
+  pi.on("context", async (_event, ctx) => { await observeTools(ctx); });
+  pi.on("message_end", async (_event, ctx) => { await observeTools(ctx); });
+  pi.on("agent_end", async (_event, ctx) => { await observeTools(ctx); });
   pi.on("agent_settled", async (_event, ctx) => {
     if (live && lease && !busy) {
       try { await children.checkpoint(ctx); await accounting.checkpoint(ctx); await commit(ctx, lease.snapshot, () => lease!.checkpoint(lease!.snapshot)); mirror(ctx); }
@@ -182,6 +238,7 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
     }
   });
   pi.on("input", async (event, ctx) => {
+    await observeTools(ctx);
     if (!live || ctx.mode !== "tui" || event.source !== "interactive" || !lease?.snapshot.continuationDeferral) return;
     assertCurrent(ctx);
     const started = epoch;
@@ -199,7 +256,7 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
     if (busy) { ctx.ui.notify("Another goal operation is in progress.", "warning"); return; }
     busy = true;
     const started = epoch;
-    try { await children.checkpoint(ctx); await accounting.checkpoint(ctx); await handler(args.trim(), ctx, started); }
+    try { await observeTools(ctx); await children.checkpoint(ctx); await accounting.checkpoint(ctx); await handler(args.trim(), ctx, started); }
     catch (error) { if (started !== epoch) throw error; report(ctx, error); }
     finally { busy = false; }
   };
@@ -337,6 +394,7 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
         ? lease!.control("edit", expected, prepared.objective, prepared.content)
         : lease!.replace(prepared.objective, expected, budgetFor(), prepared.content));
       saved = true;
+      await observeTools(ctx);
       return true;
     } finally {
       if (!saved && prepared.content) {
@@ -433,6 +491,7 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
   pi.on("context", async (_event, ctx) => { await children.checkpoint(ctx); });
   const scheduler = registerGoalScheduler(pi, {
     snapshot: () => lease?.snapshot,
+    missingTools,
     checkpoint: async (expected, ctx) => {
       assertCurrent(ctx);
       if (!lease) throw new Error("Goal lease is unavailable.");
@@ -471,11 +530,12 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
       if (!lease) throw new Error("Goal could not bind to this session.");
       const expected = lease.snapshot;
       if (expected.goal && expected.goal.status !== "complete") throw new Error("Cannot create a new goal because this thread has an unfinished goal; complete the existing goal first.");
-      const saved = await commit(ctx, expected, () => lease!.replace(objective, expected, budgetFor(budget)));
+      await commit(ctx, expected, () => lease!.replace(objective, expected, budgetFor(budget)));
       scheduler.invalidate();
       scheduler.adopt(ctx);
+      await observeTools(ctx);
       mirror(ctx);
-      return saved;
+      return lease.snapshot;
     },
     update: async (ctx, status) => {
       assertCurrent(ctx);
