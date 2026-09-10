@@ -16,7 +16,7 @@
 
 - [Map #11](https://github.com/wangxuyang1221/adventure/issues/11) 管理进度与关卡关系。
 - [Spec #12](https://github.com/wangxuyang1221/adventure/issues/12) 是规格唯一维护位置，当前形成中。
-- [Planning #15](https://github.com/wangxuyang1221/adventure/issues/15) 是当前关卡，确定异常停止与恢复规则。
+- [Planning #16](https://github.com/wangxuyang1221/adventure/issues/16) 是当前关卡，确定 usage 缺失与预算语义。
 
 ## Evolution
 
@@ -26,15 +26,16 @@
 
 [Planning #14](https://github.com/wangxuyang1221/adventure/issues/14) 也已通关关闭。用户明确选择全部合规 Pi provider 的方案 1，而不是仅支持 OpenAI-compatible 的较轻首版。架构可行性已核验，支持边界与 extension-only 路线已移交 Spec；#15 与 #16 已解锁。
 
+[Planning #15](https://github.com/wangxuyang1221/adventure/issues/15) 已通关关闭。用户先排除额外纯文本循环保护，随后确认 length、必要工具关闭、deferred 和保守额度分类。固定源码与组合场景核对未发现规则冲突，有效要求已移交 Spec；新增实现的运行验证留待实施。
+
 ## Agreed Decisions and Constraints
 
-Planning #15 中途已确认：用户在得知 Codex 也无非空纯文本续跑上限后，明确表示“那我们也不考虑这个问题”。本次不新增连续纯文本、未调用工具的暂停或阻塞保护，不再追问该项阈值；现有空响应和重复工具调用保护保留。此决定不授权强制预算，完整规则在 #15 通关时再移交 Spec。
+异常规则完整内容见 Spec 的 Behavior、Design、Acceptance。接续必须保留以下核心决定：
 
-Planning #15 另已确认 length 方案：让 Pi 完成自身适用恢复，最终 settled 仍为未恢复的 length，且 goal 仍 active 时标为 blocked，保留目标供 /goal resume。保留已命中的 budget_limited，不复制 Codex 网络重试，不把未完成目标标为 complete。
-
-Planning #15 已确认必要工具关闭的方案 1：保留当前 goal 状态，停止新的自动续跑并提示缺失工具，不擅自重新启用。工具重新可用后，由用户显式 /goal resume 继续。该规则不等于检测模型是否选择调用工具。
-
-Planning #15 已确认 deferred 的方案 1：本次不新增异步取回流程。意外收到 deferred 且 Pi 最终 settled 仍没有正常结果时，将仍 active 的 goal 标为 blocked，保留目标并提示当前结果返回方式不支持，不覆盖预算限制，不盲目重提任务。
+- 不新增连续非空纯文本、未调用工具的暂停或阻塞保护。用户明确排除，不再追问阈值，也不为此强制预算；既有空响应、重复工具与执行失败保护保留。
+- 先让 Pi 完成自身适用恢复。最终 settled 仍为 length 或未取回正常结果的 deferred，且 goal 仍 active 时标为 blocked，保留目标供 /goal resume。普通错误和这两类结果均不覆盖 budget_limited，不复制 Codex 网络重试，不新增异步取回流程，不误标 complete。
+- 必要 goal 工具关闭时保留状态，停止新的自动续跑并提示缺失工具，不擅自重新启用。工具恢复后仍须显式 /goal resume，普通输入或模型切换不能自动解除。已经发出且归属目标的响应仍要结算，保留状态不排除实际 usage 触发预算限制。
+- 最后一次用户选择方案 1：只做内置保守额度识别，不增加自定义错误匹配配置。明确账户额度耗尽为 usage_limited，其他无法恢复或分类的最终错误为 blocked。裸 429 不证明账户额度耗尽。普通错误保留 budget_limited，明确账户额度错误可沿用现有优先级改为 usage_limited。
 
 沿用 Spec 的 Scope、Behavior 与 Working agreement。核心边界是复用 Pi 当前模型，不另存 base URL、API key；覆盖所有 Pi 已接入、支持普通 function tools 且履行消息/终止事件契约的 provider，不按名称设白名单。保留根会话、TUI、持久化会话要求，不改 Pi 核心，不由 goal 实现任意私有协议。不得把后续候选保护策略或旧调研建议当作已确认需求。
 
@@ -54,27 +55,24 @@ Planning #15 已确认 deferred 的方案 1：本次不新增异步取回流程�
 - 用户进一步要求核对 Codex 的单次输出上限行为。已核验 0.153.4、0.154.0 及 main 固定 SHA `eca63f0803aa334cd45908743b4696dec893b6ed`：response.incomplete/max_output_tokens 归为可重试 stream error；重试耗尽后关联且仍 Active 的 goal 转 Blocked，已命中的 BudgetLimited 不被普通错误覆盖。不会为该错误专门增大输出额度或压缩；未完成事件的 usage 不向 core 转交，预算存在观测边界。完整来源见 [codex-output-limit-review.md](./evidence/codex-output-limit-review.md)。Pi 将同类结果归一为 length，不能照搬 Codex 底层错误/transport 重试机制。
 - 剩余边界已核验，见 [remaining-execution-boundaries.md](./evidence/remaining-execution-boundaries.md)：Pi 默认交互请求未启用 deferred，已查内置生产 adapter 无已找到的 producer，普通 Agent loop 不自动取回；不能排除自定义 provider 返回。Codex goal tools 不可见时停止自身续跑但保持持久化 Active，不自动重新启用工具。ExecutionUnavailable 则指三轮实际 exec 失败，不能混同两者。
 - Node 22.22.2、pnpm 11.9.0。新 worktree 已运行 `pnpm install --frozen-lockfile --ignore-scripts` 和 `pnpm run check`，后者通过类型、测试、构建及发布包校验：1012 项测试通过、2 项 subagent 集成测试跳过，见 [baseline-check.log](./evidence/baseline-check.log)。这是未修改产品源码的基线结果，不是跨 provider 新功能验收。
-- Map 的子 Issues 为 Spec #12、Planning #13、#14、#15、#16。#14 原生依赖已关闭的 #13；#15 与 #16 均原生依赖现已关闭的 #14，两关均可推进，当前主线为 #15。
+- [异常规则场景核对](./evidence/exception-policy-review.md) 记录 #15 组合规则的静态验证及延期矩阵。已发现实现注意点：syncTools 不可无条件重加用户禁用工具；现有 continuationDeferral 会被普通用户输入释放，不能代表仅显式 resume 的新门控；工具执行门控不可混入计量 eligibility 导致最后一笔 usage 丢失。具体实现和实际 SDK 时序尚待测试，不应据此重问已确认行为。
+- Map 的子 Issues 为 Spec #12、Planning #13、#14、#15、#16。#13、#14、#15 已关闭；#16 是当前主线，其原生前置 #14 已完成。Spec 和 Map 保持 open。
 - 早期独立复核 subagents 已完成并关闭。Codex 输出上限复核 subagent `01a08ba1-72da-71f3-95ae-4f101e50f891` 已完成，报告已核对，保留给当前 Planning 的可能追问复用；使用前通过 subagent_list 核对是否仍存活，跨 session 不假定它存在。没有启动模型服务或需要接管的监听端口。
 
 继续前完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md` 及其 `references/issue-templates.md`。保存使用 `/Users/wangxuyang/.agents/skills/wangxuyang/handoff/SKILL.md`，存档固定写在本文件。
 
 ## Current Assumptions
 
-纯文本保护排除、length、必要工具关闭和 deferred 策略已确认，见 Agreed Decisions and Constraints。
+Planning #16 尚未作出预算行为决定。当前产品会对缺失、非法或未验证全零 usage 标记 usageIncomplete 并继续，tokensUsed 只反映已观测到的有效计量。推荐沿用此行为以兼容私有服务，但尚未获用户确认；另一候选是有预算目标遇到缺失 usage 时停止，无预算目标仍继续。
 
-最后待确认的 #15 候选为额度分类：推荐内置保守规则，只在明确账户额度耗尽时标记 usage_limited，其他无法恢复或无法分类的最终错误为 blocked。普通 429 不直接判作额度耗尽，仍先由 Pi 重试。普通错误保留 budget_limited，明确账户额度错误沿用现有可转 usage_limited 的优先级。匹配使用可验证的窄文案或标识，不依赖 billing 等含糊词。
-
-较广候选是额外提供用户自定义额度错误匹配配置，方便私有服务但增加配置校验和误判风险。两者尚未确认；不得把全部私有错误都能精确识别写成承诺。
-
-[Planning #15](https://github.com/wangxuyang1221/adventure/issues/15) 负责异常停止与恢复，[Planning #16](https://github.com/wangxuyang1221/adventure/issues/16) 负责 usage 缺失和预算语义。其他异常的状态、恢复规则、真实服务测试范围等均未确认；已排除纯文本保护，不再为它设计阈值或持久化。
+当前 token 公式 input + output + cacheWrite 排除 cacheRead，reasoning 已包含在 output，不重复相加。保留该公式与根响应、压缩、分支摘要、managed subagent 的归集范围是候选，不能仅因现状如此就视为用户确认。任何观测预算都不是远端费用硬上限，失败请求可能没有可用 usage。
 
 ## Continuation Point
 
-当前 #15 已确认不新增纯文本保护、length、必要工具关闭与 deferred 的规则，等待用户确认额度分类是否仅采用内置保守规则。#13 和 #14 均已关闭，不要重复询问已确认规则。#15 尚未通关，其中决定暂留本关，不提前移交 Spec。
+#15 已关闭并移交 Spec，当前进入 #16。首题等待用户决定缺失 usage 时是否沿用提示并继续，或对有预算目标增加停止规则。不要重问 #13 至 #15 已确认事项。
 
-1. 用户确认额度分类后，对照本关通关条件核对场景与证据；规则完整且无阻碍决定成立的分歧时，通关 #15、移交 Spec、保存并继续 #16。不要为已有排除项增加新的阈值或功能。一次只问一个问题；能由代码回答的事实自主查证，用户排除的范围不再扩大回来。
-2. 运行保护与预算语义按决策依赖逐题推进，复用现有证据，不重做已证明的契约调查；新方案按必要场景做离线验证，不要求密钥或真实服务。
+1. 一次只问一个预算决策。先明确缺失 usage 的继续或停止行为，再按依赖确定 token 口径、检查时机、恢复和提示。能由代码回答的事实自主核验，复用现有固定来源，不索要密钥或真实服务。
+2. #16 方案形成后按其通关条件验证缓存、reasoning、全零、非法 usage 和子代理归集例子，再通关移交 Spec、保存并继续。不得把静态场景推演记作新增功能已通过运行测试。
 3. 每关通关后维护 Issue 正文、Spec 和本存档，提交推送冒险分支并核对 Map。只有用户决策、真实阻塞、暂停或最终确认时停下。
-4. 规划收敛后读取 `/Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md` 提交切片审核，再按 adventure 派 worker 实施；worker 使用 write-todo-list 与 TDD。不得把当前证据提交视为用户已批准编码。
-5. 最终须运行 `pnpm run check` 并按 Spec 整体验收，完成延期验证和资源清理；Map 与 Spec 在用户确认交付前保持 open。产品文案语言仍待写入前询问。
+4. 规划收敛后读取 `/Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md` 提交切片审核。把 Spec 的延期矩阵分配给 Implementation 或整体验收，审核后按 adventure 派独立 worker，一次一关；worker 使用 write-todo-list 与 TDD。当前只修改资料，尚未获批编码。
+5. 最终须运行 `pnpm run check` 并按 Spec 整体验收，完成双版本延期验证和临时资源清理；Map 与 Spec 在用户确认交付前保持 open。产品文案语言仍须写入前询问。
