@@ -86,8 +86,11 @@ export class ChildUsageReporter {
                 return;
             }
             const value = usage;
-            const count = (value?.input ?? NaN) + (value?.output ?? NaN);
-            const valid = Number.isSafeInteger(value?.input) && Number.isSafeInteger(value?.output) && value.input >= 0 && value.output >= 0 && Number.isSafeInteger(count);
+            // Keep this formula aligned with goalTokens; the extensions build independently.
+            const cacheWrite = value?.cacheWrite === undefined ? 0 : value.cacheWrite;
+            const cacheRead = value?.cacheRead === undefined ? 0 : value.cacheRead;
+            const count = (value?.input ?? NaN) + (value?.output ?? NaN) + cacheWrite;
+            const valid = Number.isSafeInteger(value?.input) && Number.isSafeInteger(value?.output) && value.input >= 0 && value.output >= 0 && Number.isSafeInteger(cacheWrite) && cacheWrite >= 0 && Number.isSafeInteger(cacheRead) && cacheRead >= 0 && Number.isSafeInteger(count);
             const missing = !valid || (count === 0 && !value?.cacheRead && !value?.cacheWrite);
             const tokens = (saved?.tokens ?? 0) + (valid ? count : 0);
             if (!Number.isSafeInteger(tokens))

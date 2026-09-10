@@ -37,6 +37,15 @@ it.each(["active", "paused", "blocked", "usage_limited", "budget_limited", "comp
     status: ["complete", "budget_limited"].includes(status) ? "active" : status });
   await expect(lease.control("pause", before)).rejects.toThrow(/stale/i);
 });
+it("preserves budget-limited status when paused", async () => {
+  const { lease, store } = await fixture();
+  await lease.replace("Budget", lease.snapshot, 10);
+  await lease.account(lease.snapshot, { sourceId: "run", tokens: 10, missing: false });
+  const before = lease.snapshot;
+  const saved = await lease.control("pause", before);
+  expect(saved.goal).toMatchObject({ status: "budget_limited", goalId: before.goal!.goalId, tokensUsed: 10, tokenBudget: 10 });
+  expect(await store.read(saved.recordId)).toEqual(saved);
+});
 it("keeps an exhausted saved budget stopped on resume or edit", async () => {
   const { store, lease } = await fixture();
   const before = lease.snapshot;

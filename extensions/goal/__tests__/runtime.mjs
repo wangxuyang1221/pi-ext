@@ -15,7 +15,10 @@ const { GoalStore } = await import("../dist/storage.js");
 const version = JSON.parse(await readFile(join(sdkRoot, "package.json"), "utf8")).version;
 const disk = new GoalStore(join(root, "goals"));
 const { ModelRuntime, SettingsManager, SessionManager, createAgentSessionServices, createAgentSessionFromServices, createAgentSessionRuntime } = sdk;
-const faux = ai.fauxProvider({ provider: "goal-storage-test" });
+// Keep capability real; this storage fixture explicitly suppresses automatic turns.
+const faux = ai.fauxProvider({ provider: "openai-codex" });
+let networkAttempts = 0;
+globalThis.fetch = async () => { networkAttempts++; throw new Error("Storage fixture forbids network"); };
 const modelRuntime = await ModelRuntime.create({ credentials: new ai.InMemoryCredentialStore(), modelsStore: new ai.InMemoryModelsStore(), modelsPath: null, allowModelNetwork: false, refreshOnCreate: false });
 modelRuntime.registerNativeProvider(faux.provider);
 const notices = [];
@@ -32,6 +35,7 @@ const createRuntime = async ({ cwd, sessionManager, sessionStartEvent }) => {
       noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
       extensionFactories: [pi => {
         const proxy = new Proxy(pi, { get(target, name) {
+          if (name === "sendMessage") return () => {};
           if (name === "appendEntry") return (...args) => { if (mirrorFailure) throw new Error("Injected mirror failure"); return pi.appendEntry(...args); };
           return Reflect.get(target, name);
         } });
@@ -133,6 +137,7 @@ try {
   assert.equal((await disk.records())[0].goal, null);
   assert.equal(faux.state.callCount, 0);
   assert.deepEqual(errors, []);
+  assert.equal(networkAttempts, 0);
   results.push("clear-tombstone-survives-reload-and-restart");
   console.log(JSON.stringify({ version, results, modelRequests: faux.state.callCount, extensionErrors: errors }, null, 2));
 } finally {

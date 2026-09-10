@@ -3,7 +3,7 @@ import type { Goal, GoalRecord } from "./storage.js";
 export interface GoalToolAccess {
     get(ctx: ExtensionContext): Promise<GoalRecord | undefined>;
     create(ctx: ExtensionContext, objective: string, budget?: number): Promise<GoalRecord>;
-    update(ctx: ExtensionContext, status: "complete" | "blocked"): Promise<GoalRecord>;
+    update(ctx: ExtensionContext, status: "complete" | "blocked" | "paused"): Promise<GoalRecord>;
 }
 /** Render the pinned upstream template; replacements never reinterpret objective data. */
 export declare function renderGoalPrompt(goal: Goal, edited?: boolean, budget?: boolean): string;

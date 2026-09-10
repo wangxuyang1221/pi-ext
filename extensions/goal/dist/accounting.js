@@ -1,12 +1,15 @@
 import { createHash, randomUUID } from "node:crypto";
-/** Pi input already excludes cache reads and output already contains reasoning. */
+import { goalCapability } from "./capability.js";
+/** Pi input excludes cache reads/writes; output already contains reasoning. */
 export function goalTokens(usage) {
     if (!usage || typeof usage !== "object")
         return;
-    const { input, output } = usage;
-    if (typeof input !== "number" || typeof output !== "number" || !Number.isSafeInteger(input) || !Number.isSafeInteger(output) || input < 0 || output < 0 || !Number.isSafeInteger(input + output))
+    const { input, output, cacheWrite = 0, cacheRead = 0 } = usage;
+    if (typeof cacheRead !== "number" || !Number.isSafeInteger(cacheRead) || cacheRead < 0)
         return;
-    return input + output;
+    if (typeof input !== "number" || typeof output !== "number" || typeof cacheWrite !== "number" || !Number.isSafeInteger(input) || !Number.isSafeInteger(output) || !Number.isSafeInteger(cacheWrite) || input < 0 || output < 0 || cacheWrite < 0 || !Number.isSafeInteger(input + output + cacheWrite))
+        return;
+    return input + output + cacheWrite;
 }
 const identity = (message) => createHash("sha256").update(JSON.stringify(message.responseId ? [message.provider, message.responseId] : [message.provider, message.model, message.timestamp, message.content, message.stopReason])).digest("hex");
 /** Attribute finalized responses to the goal bound before that request, not the latest goal. */
@@ -19,9 +22,9 @@ export function registerGoalAccounting(pi, access) {
     let branchSummary;
     const starts = new Map();
     const seen = new Set();
-    const matches = (candidate, record = access.snapshot()) => !!candidate && !!record?.goal && record.ownerSessionId === candidate.ownerSessionId && record.goal.goalId === candidate.goalId && record.generation === candidate.generation;
+    const matches = (candidate, record = access.snapshot()) => !!candidate && !!record?.goal && record.ownerSessionId === candidate.ownerSessionId && record.goal.goalId === candidate.goalId && record.generation === candidate.generation && (record.goal.activation ?? 0) === candidate.activation;
     const eligible = (record) => record?.goal?.status === "active" || record?.goal?.status === "budget_limited";
-    const flush = async (candidate, ctx) => {
+    const flush = async (candidate, ctx, strict = false) => {
         const record = access.snapshot();
         if (!live || !matches(candidate, record) || !eligible(record) || record.ownerSessionId !== ctx.sessionManager.getSessionId())
             return;
@@ -36,16 +39,20 @@ export function registerGoalAccounting(pi, access) {
         catch (error) {
             if (live && matches(candidate) && access.snapshot()?.ownerSessionId === ctx.sessionManager.getSessionId())
                 access.error(error, ctx);
+            if (strict)
+                throw error;
         }
     };
-    const capture = () => {
+    const capture = (ctx) => {
+        if (!goalCapability(ctx).supported)
+            return;
         const record = access.snapshot();
         if (!eligible(record) || (record.goal.status === "budget_limited" && !wrapOpen))
             return;
         if (!matches(source, record)) {
             if (record.goal.status !== "active")
                 return;
-            source = { sourceId: randomUUID(), tokens: 0, missing: false, goalId: record.goal.goalId, generation: record.generation, ownerSessionId: record.ownerSessionId };
+            source = { sourceId: randomUUID(), tokens: 0, missing: false, goalId: record.goal.goalId, generation: record.generation, activation: record.goal.activation ?? 0, ownerSessionId: record.ownerSessionId };
         }
         return source;
     };
@@ -99,7 +106,7 @@ export function registerGoalAccounting(pi, access) {
         }
         if (record.goal.status === "active")
             wrapOpen = true;
-        request = capture();
+        request = capture(ctx);
     });
     pi.on("message_start", event => { if (event.message.role === "assistant")
         starts.set(event.message.timestamp, request); });
@@ -112,7 +119,7 @@ export function registerGoalAccounting(pi, access) {
         if (message.stopReason !== "error" && message.stopReason !== "aborted" && !ctx.signal?.aborted)
             access.budget(ctx);
     });
-    pi.on("session_before_compact", () => { compaction = capture(); });
+    pi.on("session_before_compact", (_event, ctx) => { compaction = capture(ctx); });
     pi.on("session_compact", async (event, ctx) => {
         await recordUsage(compaction, `compaction:${event.compactionEntry.id}`, event.compactionEntry.usage, ctx);
         compaction = undefined;
@@ -122,12 +129,12 @@ export function registerGoalAccounting(pi, access) {
         await recordUsage(compaction, `compaction-failed:${randomUUID()}`, undefined, ctx);
         compaction = undefined;
     });
-    pi.on("session_before_tree", event => { branchSummary = event.preparation.userWantsSummary ? capture() : undefined; });
+    pi.on("session_before_tree", (event, ctx) => { branchSummary = event.preparation.userWantsSummary ? capture(ctx) : undefined; });
     pi.on("session_tree", async (event, ctx) => {
         if (event.summaryEntry)
             await recordUsage(branchSummary, `branch-summary:${event.summaryEntry.id}`, event.summaryEntry.usage, ctx);
         branchSummary = undefined;
     });
-    return { checkpoint: (ctx) => flush(source, ctx) };
+    return { checkpoint: (ctx) => flush(source, ctx, true) };
 }
 //# sourceMappingURL=accounting.js.map

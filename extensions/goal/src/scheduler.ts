@@ -2,13 +2,14 @@ import { randomUUID } from "node:crypto";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { GoalRecord, Goal } from "./storage.js";
 import { GoalLoopDetector, LOOP_WINDOW } from "./loop.js";
+import { goalCapability } from "./capability.js";
 import { renderGoalPrompt } from "./tools.js";
 export const GOAL_CONTEXT = "pi-ext-goal-continuation";
 export const GOAL_BUDGET_CONTEXT = "pi-ext-goal-budget";
 export const GOAL_LOOP_CONTEXT = "pi-ext-goal-loop-warning";
 export const GOAL_LOOP_PAUSED = "Goal paused after repeated tool calls returned unchanged results. Review the last actions, then use /goal resume to continue.";
 const LOOP_WARNING = "Repeated tool calls are returning unchanged results. Reuse already verified evidence. If the objective is complete, call update_goal with status complete and deliver the result. Otherwise choose an action that yields new evidence, or wait on a verified live task handle. Continued repetition will pause this goal.";
-interface Ticket { instance: string; ownerSessionId: string; goalId: string; generation: number; runGeneration: number; scheduleId: string }
+interface Ticket { instance: string; ownerSessionId: string; goalId: string; generation: number; runGeneration: number; scheduleId: string; automatic?: boolean }
 interface Access { snapshot(): GoalRecord | undefined; checkpoint?(expected: GoalRecord, ctx: ExtensionContext): Promise<unknown>; stop(status: Goal["status"], expected: GoalRecord, ctx: ExtensionContext, reason?: "repeated_tool_calls"): Promise<void> }
 /** Coordinate only this extension's continuation requests through public Pi events. */
 export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
@@ -16,15 +17,23 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
   let live = false;
   let suspended = false;
   let editedPending = false;
+  let userDelivered = false;
   let runGeneration = 0;
   let pending: Ticket | undefined;
   let pendingBudget: Ticket | undefined;
+  const edits = new Map<string, Ticket>();
   let restartRequested = false;
+  let restartAutomatic = false;
   let internalCancellation = false;
   let failedBash = false;
   let successfulTool = false;
   let failedRuns = 0;
   let completedResponse = false;
+  let automaticRun = false;
+  let activity = false;
+  let emptyFinal = false;
+  let emptyRuns = 0;
+  const resetEmpty = () => { automaticRun = false; activity = false; emptyFinal = false; emptyRuns = 0; };
   let runEnded = false;
   let lastError: string | undefined;
   let bound: Ticket | undefined;
@@ -43,7 +52,7 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
   const ticket = (record: GoalRecord): Ticket => ({ instance, ownerSessionId: record.ownerSessionId, goalId: record.goal!.goalId, generation: record.generation, runGeneration, scheduleId: randomUUID() });
   const active = (ctx: ExtensionContext, allowLimited = false) => {
     const record = access.snapshot();
-    return live && !suspended && ctx.mode === "tui" && ctx.model?.provider === "openai-codex" && record?.ownerSessionId === ctx.sessionManager.getSessionId() && (record.goal?.status === "active" || (allowLimited && record.goal?.status === "budget_limited")) && !record.continuationDeferral ? record : undefined;
+    return live && !suspended && goalCapability(ctx).supported && record?.ownerSessionId === ctx.sessionManager.getSessionId() && (record.goal?.status === "active" || (allowLimited && record.goal?.status === "budget_limited")) && !record.continuationDeferral ? record : undefined;
   };
   const valid = (ticket: Ticket | undefined, ctx: ExtensionContext, allowLimited = false) => {
     const record = active(ctx, allowLimited);
@@ -51,15 +60,15 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
   };
   const refresh = (ctx: ExtensionContext) => {
     const goal = access.snapshot()?.goal;
-    const limitation = suspended ? " | storage error: /goal resume" : ctx.model?.provider !== "openai-codex" ? " | requires OpenAI Codex" : "";
+    const limitation = suspended ? " | storage error: /goal resume" : !goalCapability(ctx).supported ? ` | ${goalCapability(ctx).reason}` : "";
     ctx.ui.setStatus("goal", goal ? `Goal: ${goal.status} | ${goal.tokensUsed} tokens | ${goal.elapsedSeconds}s${limitation}` : undefined);
   };
-  const start = (ctx: ExtensionContext) => {
+  const start = (ctx: ExtensionContext, automatic = false) => {
     const record = active(ctx);
-    if (!record) return;
+    if (!record || (automatic && ctx.hasPendingMessages?.())) return;
     if (pending) { if (!valid(pending, ctx)) restartRequested = true; return; }
     restartRequested = false;
-    pending = ticket(record);
+    pending = { ...ticket(record), automatic };
     pi.sendMessage({ customType: GOAL_CONTEXT, content: renderGoalPrompt(record.goal!, editedPending), display: false, details: pending }, { deliverAs: "followUp", triggerTurn: true });
   };
   const pauseLoop = async (ctx: ExtensionContext) => {
@@ -80,7 +89,12 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
     failedRuns = failedBash && !successfulTool ? failedRuns + 1 : 0;
     failedBash = false;
     successfulTool = false;
-    if (failedRuns >= 3) await access.stop("blocked", record, ctx);
+    emptyRuns = automaticRun && emptyFinal && !activity ? emptyRuns + 1 : 0;
+    automaticRun = false; activity = false; emptyFinal = false;
+    if (emptyRuns >= 3) {
+      await access.stop("blocked", record, ctx);
+      ctx.ui.notify("Goal blocked after three empty automatic continuations. Use /goal resume to retry.", "warning");
+    } else if (failedRuns >= 3) await access.stop("blocked", record, ctx);
     else if (pausePending) await pauseLoop(ctx);
   };
   pi.on("before_agent_start", (_event, ctx) => {
@@ -89,11 +103,18 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
     return { message: { customType: GOAL_CONTEXT, content: renderGoalPrompt(record.goal!, editedPending), display: false, details: ticket(record) } };
   });
   pi.on("message_end", (event, ctx) => {
-    if (event.message.role === "user" || (event.message.role === "custom" && ![GOAL_CONTEXT, GOAL_BUDGET_CONTEXT, GOAL_LOOP_CONTEXT].includes(event.message.customType))) resetLoop();
+    if (event.message.role === "user") { userDelivered = true; resetEmpty(); }
+    if (event.message.role === "assistant") {
+      const parts = event.message.content;
+      if (parts.some(part => part.type === "toolCall" || (part.type === "text" ? part.text.trim() : part.thinking.trim()))) activity = true;
+      emptyFinal = event.message.stopReason === "stop" && !parts.some(part => part.type === "toolCall" || (part.type === "text" && part.text.trim()));
+    }
+    if (event.message.role === "user" || (event.message.role === "custom" && ![GOAL_CONTEXT, GOAL_BUDGET_CONTEXT, GOAL_LOOP_CONTEXT].includes(event.message.customType))) { resetLoop(); resetEmpty(); }
     if (event.message.role === "assistant") completionBatch = event.message.content.some(part => part.type === "toolCall" && part.name === "update_goal" && part.arguments.status === "complete");
     if (valid(bound, ctx) && event.message.role === "assistant" && event.message.stopReason === "stop" && !event.message.content.some(part => part.type === "toolCall")) completedResponse = true;
   });
   pi.on("tool_call", async (event, ctx) => {
+    activity = true;
     const snapshot = access.snapshot();
     const fenced = pauseFence && pauseFence.runGeneration === runGeneration && pauseFence.goalId === snapshot?.goal?.goalId && pauseFence.ownerSessionId === ctx.sessionManager.getSessionId();
     if (fenced) return { block: true, terminate: true, reason: GOAL_LOOP_PAUSED };
@@ -105,6 +126,7 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
     if (admitted.size < LOOP_WINDOW * 2) admitted.set(event.toolCallId, bound!);
   });
   pi.on("tool_result", (event, ctx) => {
+    activity = true;
     const origin = admitted.get(event.toolCallId);
     admitted.delete(event.toolCallId);
     if (!valid(bound, ctx) || ctx.signal?.aborted) return;
@@ -124,7 +146,7 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
     runEnded = true;
     if (internalCancellation) {
       internalCancellation = false;
-      if (restartRequested) start(ctx);
+      if (restartRequested) start(ctx, restartAutomatic);
       return;
     }
     const last = [...event.messages].reverse().find(message => message.role === "assistant");
@@ -132,10 +154,12 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
     lastError = last.stopReason === "error" ? last.errorMessage ?? "Model request failed." : undefined;
     const record = active(ctx, true);
     if (!record) return;
-    if (last.stopReason === "aborted" || boundSignal?.aborted) { await access.stop("paused", record, ctx); return; }
-    if (last.stopReason !== "stop") return;
+    if (last.stopReason === "aborted" || boundSignal?.aborted) { resetEmpty(); await access.stop("paused", record, ctx); return; }
+    if (last.stopReason !== "stop") { resetEmpty(); return; }
+    emptyFinal = last.content?.every(part => part.type !== "toolCall" && (part.type !== "text" || !part.text.trim())) ?? false;
+    if (last.content?.some(part => part.type === "thinking" && part.thinking.trim())) activity = true;
     await finishRun(ctx);
-    start(ctx);
+    start(ctx, true);
   });
   pi.on("agent_settled", async (_event, ctx) => {
     const record = active(ctx, true);
@@ -150,6 +174,7 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
     boundSignal = undefined;
   });
   pi.on("session_before_compact", event => {
+    resetEmpty();
     if (event.reason === "manual") recoverySuppressed = false;
     else if (recoverySuppressed) return { cancel: true };
   });
@@ -160,15 +185,20 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
     await access.stop(event.aborted ? "paused" : "blocked", record, ctx);
     ctx.ui.notify(`Goal stopped after compaction ${event.aborted ? "cancellation" : "failure"}. Use /goal resume to retry.`, "warning");
   });
-  pi.on("input", () => { recoverySuppressed = false; });
+  pi.on("input", () => { recoverySuppressed = false; resetEmpty(); });
+  pi.on("message_update", event => {
+    const update = event.assistantMessageEvent;
+    if ((update.type === "text_delta" || update.type === "thinking_delta") && update.delta.trim()) activity = true;
+  });
   pi.on("session_start", (_event, ctx) => { live = true; refresh(ctx); });
   pi.on("model_select", (_event, ctx) => {
     refresh(ctx);
     if (access.snapshot()?.goal && ctx.model?.provider !== "openai-codex") ctx.ui.notify("Automatic goal execution requires an OpenAI Codex model. Your saved goal is unchanged.", "warning");
   });
-  pi.on("session_shutdown", () => { resetLoop(); live = false; runGeneration++; pending = undefined; pendingBudget = undefined; restartRequested = false; internalCancellation = false; });
+  pi.on("session_shutdown", () => { resetLoop(); resetEmpty(); userDelivered = false; live = false; runGeneration++; pending = undefined; pendingBudget = undefined; edits.clear(); restartRequested = false; internalCancellation = false; });
   pi.on("context", async (event, ctx) => {
     // Follow-up inputs can begin another complete goal turn inside one agent run.
+    const finishedGoal = completedResponse && valid(bound, ctx);
     if (completedResponse) await finishRun(ctx);
     const expected = active(ctx);
     if (expected) {
@@ -188,15 +218,25 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
     const matches = (message: { role: string; details?: unknown }, queued: Ticket | undefined) =>
       !!queued && message.role === "custom" && (message.details as Ticket)?.scheduleId === queued.scheduleId;
     const staleRequest = last?.role === "custom" && isOwned(last)
-      && (matches(last, pending) || matches(last, pendingBudget))
+      && (matches(last, pending) || matches(last, pendingBudget) || edits.has((last.details as Ticket)?.scheduleId))
       && !valid(last.details as Ticket, ctx, last.customType === GOAL_BUDGET_CONTEXT);
+    const continuation = pending && valid(pending, ctx) && owned.some(message => matches(message, pending)) ? pending : undefined;
+    if (continuation) { automaticRun = !!continuation.automatic && !userDelivered; activity = false; emptyFinal = false; }
     if (owned.some(message => matches(message, pending))) pending = undefined;
     if (owned.some(message => matches(message, pendingBudget))) pendingBudget = undefined;
-    const messages = [...event.messages];
+    for (const message of owned) if (message.role === "custom") edits.delete((message.details as Ticket)?.scheduleId);
+    // Delivery retires ticket authority, not persisted history. Keep the same
+    // prefix on retries and native checkpoint replay, including mixed user batches.
+    const messages = event.messages;
+    const protectUser = userDelivered;
+    userDelivered = false;
     if (loopWarning && valid(loopWarning, ctx) && messages.some(message =>
       message.role === "custom" && message.customType === GOAL_LOOP_CONTEXT && (message.details as Ticket)?.scheduleId === loopWarning!.scheduleId,
     )) warningDelivered = true;
-    if (staleRequest) {
+    if (staleRequest && !protectUser) {
+      // The edited turn may have finished inside this same low-level run.
+      // Its stale queued predecessor must not consume the new goal's continuation.
+      if (finishedGoal && active(ctx)) { restartRequested = true; restartAutomatic = true; }
       internalCancellation = true;
       bound = undefined;
       ctx.abort();
@@ -219,8 +259,17 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
       pi.sendMessage({ customType: GOAL_BUDGET_CONTEXT, content: renderGoalPrompt(record.goal, false, true), display: false, details: pendingBudget }, { deliverAs: "steer" });
     },
     suspend: (ctx?: ExtensionContext) => { suspended = true; runGeneration++; restartRequested = false; if (ctx) refresh(ctx); },
-    resume: (ctx: ExtensionContext, edited = false) => { suspended = false; editedPending = edited; recoverySuppressed = false; refresh(ctx); start(ctx); },
-    invalidate: () => { resetLoop(); runGeneration++; completedResponse = false; failedRuns = 0; failedBash = false; successfulTool = false; lastError = undefined; },
+    resume: (ctx: ExtensionContext, edited = false) => {
+      restartAutomatic = false; resetEmpty(); suspended = false; editedPending = edited; recoverySuppressed = false; refresh(ctx);
+      const record = active(ctx);
+      if (edited && record) {
+        restartRequested = false;
+        const update = ticket(record);
+        edits.set(update.scheduleId, update);
+        pi.sendMessage({ customType: GOAL_CONTEXT, content: renderGoalPrompt(record.goal!, true), display: false, details: update }, { deliverAs: "steer", triggerTurn: true });
+      } else start(ctx);
+    },
+    invalidate: () => { resetLoop(); resetEmpty(); runGeneration++; completedResponse = false; failedRuns = 0; failedBash = false; successfulTool = false; lastError = undefined; },
     adopt: (ctx: ExtensionContext) => { suspended = false; const record = active(ctx); bound = record ? ticket(record) : undefined; modelGeneration = runGeneration; },
     assertModelGoal: (ctx: ExtensionContext) => { if (modelGeneration !== runGeneration || (bound && !valid(bound, ctx, true))) throw new Error("Stale goal tool invocation."); },
   };

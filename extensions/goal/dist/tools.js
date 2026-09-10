@@ -43,11 +43,11 @@ export function registerGoalTools(pi, access) {
             return response(await access.create(ctx, args.objective.trim(), args.token_budget));
         } });
     pi.registerTool({ name: "update_goal", label: "Update goal", description: UPDATE_DESCRIPTION,
-        parameters: Type.Object({ status: StringEnum(["complete", "blocked"], { description: STATUS_DESCRIPTION }) }, { additionalProperties: false }),
+        parameters: Type.Object({ status: StringEnum(["complete", "blocked", "paused"], { description: STATUS_DESCRIPTION }) }, { additionalProperties: false }),
         execute: async (_id, args, signal, _update, ctx) => {
             validateCall(args, ["status"], signal);
-            if (args.status !== "complete" && args.status !== "blocked")
-                throw new Error("Goal status must be complete or blocked.");
+            if (args.status !== "complete" && args.status !== "blocked" && args.status !== "paused")
+                throw new Error("Goal status must be complete, blocked, or paused.");
             return response(await access.update(ctx, args.status), args.status === "complete");
         } });
 }

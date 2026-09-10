@@ -6,7 +6,7 @@ interface Access {
     budget(ctx: ExtensionContext): void;
     error(error: unknown, ctx: ExtensionContext): void;
 }
-/** Pi input already excludes cache reads and output already contains reasoning. */
+/** Pi input excludes cache reads/writes; output already contains reasoning. */
 export declare function goalTokens(usage: unknown): number | undefined;
 /** Attribute finalized responses to the goal bound before that request, not the latest goal. */
 export declare function registerGoalAccounting(pi: ExtensionAPI, access: Access): {

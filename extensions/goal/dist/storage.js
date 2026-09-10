@@ -18,6 +18,8 @@ function validate(record, recordId) {
         validateContent(goal.content);
     if (goal?.pauseReason !== undefined && (goal.pauseReason !== "repeated_tool_calls" || goal.status !== "paused"))
         throw new Error(`Invalid goal pause reason: ${recordId}.`);
+    if (goal?.activation !== undefined && !integer(goal.activation))
+        throw new Error(`Invalid goal activation: ${recordId}.`);
     const usage = goal?.usageCheckpoint;
     if (usage !== undefined && (!usage || !text(usage.sourceId) || !integer(usage.tokens) || typeof usage.missing !== "boolean" || (usage.lastReceipt !== undefined && (!text(usage.lastReceipt) || usage.lastReceipt.length > 128))))
         throw new Error(`Invalid goal usage checkpoint: ${recordId}.`);
@@ -199,7 +201,7 @@ export class GoalLease {
             if (!saved && this.current.revision > 0)
                 throw new Error("Authoritative goal record is missing. Explicit recovery is required.");
             const record = saved ?? this.current;
-            if (record.recordId !== expected.recordId || (!cumulative && record.revision !== expected.revision) || record.generation !== expected.generation || record.goal?.goalId !== expected.goal?.goalId || record.ownerSessionId !== expected.ownerSessionId)
+            if (record.recordId !== expected.recordId || (!cumulative && record.revision !== expected.revision) || record.generation !== expected.generation || record.goal?.goalId !== expected.goal?.goalId || record.goal?.activation !== expected.goal?.activation || record.ownerSessionId !== expected.ownerSessionId)
                 throw new Error("Stale goal mutation rejected.");
             const now = this.store.now();
             const timing = record.goal?.status === "active" || (record.goal?.status === "budget_limited" && this.budgetInFlight);
@@ -298,7 +300,8 @@ export class GoalLease {
                 throw new Error("Unregistered child usage source.");
             if (!Number.isSafeInteger(usage.tokens) || usage.tokens < child.tokens || typeof usage.missing !== "boolean")
                 throw new Error("Invalid child usage checkpoint.");
-            const total = goal.tokensUsed + usage.tokens - child.tokens;
+            const charging = goal.status === "active" || (goal.status === "budget_limited" && this.budgetInFlight);
+            const total = goal.tokensUsed + (charging ? usage.tokens - child.tokens : 0);
             if (!Number.isSafeInteger(total))
                 throw new Error("Goal token usage exceeds safe integer precision.");
             goal.tokensUsed = total;
@@ -308,11 +311,13 @@ export class GoalLease {
                 delete child.lastReceipt;
             else
                 child.lastReceipt = usage.lastReceipt;
-            if (usage.missing)
+            // A cumulative missing flag cannot prove resumed reports are complete.
+            if (charging && usage.missing)
                 goal.usageIncomplete = true;
             if (goal.status === "active" && goal.tokenBudget !== undefined && total >= goal.tokenBudget)
                 goal.status = "budget_limited";
-            goal.updatedAt = new Date().toISOString();
+            if (charging)
+                goal.updatedAt = new Date().toISOString();
             return record;
         }, true, true);
     }
@@ -321,6 +326,7 @@ export class GoalLease {
         return this.mutate(expected, record => {
             if (record.goal?.status !== "active")
                 throw new Error("Loop pause requires an active goal.");
+            record.goal.activation = (record.goal.activation ?? 0) + 1;
             record.goal.status = "paused";
             record.goal.pauseReason = "repeated_tool_calls";
             record.goal.updatedAt = new Date().toISOString();
@@ -333,6 +339,7 @@ export class GoalLease {
             const goal = record.goal;
             if (!goal)
                 throw new Error("No goal set.");
+            const previousStatus = goal.status;
             delete goal.pauseReason;
             if (action === "edit") {
                 if (!objective?.trim())
@@ -346,11 +353,15 @@ export class GoalLease {
                     goal.status = "active";
             }
             else {
-                goal.status = action === "resume" ? "active" : action === "pause" ? "paused" : action;
+                if (!(goal.status === "budget_limited" && (action === "pause" || action === "blocked"))) {
+                    goal.status = action === "resume" ? "active" : action === "pause" ? "paused" : action;
+                }
             }
             // Reopening an already exhausted saved budget never grants new budget.
             if (goal.status === "active" && goal.tokenBudget !== undefined && goal.tokensUsed >= goal.tokenBudget)
                 goal.status = "budget_limited";
+            if (goal.status !== previousStatus)
+                goal.activation = (goal.activation ?? 0) + 1;
             goal.updatedAt = new Date().toISOString();
             if (action === "resume")
                 record.continuationDeferral = false;

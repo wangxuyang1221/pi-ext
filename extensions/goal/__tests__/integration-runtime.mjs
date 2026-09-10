@@ -46,6 +46,7 @@ models.registerNativeProvider(unsupported.provider);
 models.registerNativeProvider(fixture.provider);
 const errors = [], notices = [], contexts = [], stages = [];
 let runtime, selectedModel = unsupported.getModel(), editorValue;
+let suppressAutomatic = true;
 let previousEditor;
 const original = "INTEGRATION_LONG_OBJECTIVE " + "界😀".repeat(2400);
 const observer = pi => {
@@ -59,12 +60,17 @@ const factory = async ({ cwd, sessionManager, sessionStartEvent }) => {
   });
   return { ...await sdk.createAgentSessionFromServices({ services, sessionManager, sessionStartEvent, model: selectedModel }), services, diagnostics: services.diagnostics };
 };
-const bind = session => session.bindExtensions({ mode: "tui", uiContext: {
+const bind = session => {
+  const sendCustomMessage = session.sendCustomMessage.bind(session);
+  // The pre-reply recovery stage intentionally creates no model request.
+  session.sendCustomMessage = (message, options) => suppressAutomatic && message.customType?.startsWith("pi-ext-goal-")
+    ? Promise.resolve() : sendCustomMessage(message, options);
+  return session.bindExtensions({ mode: "tui", uiContext: {
   theme: themes.theme, getAllThemes: () => [], getTheme: () => themes.loadThemeFromPath(join(distribution, "themes/codex-pi.json")), setTheme: () => ({ success: true }),
   notify: (text, level) => notices.push({ text, level }), setStatus() {}, setWidget() {}, setFooter() {}, setHeader() {}, setTitle() {},
   setEditorComponent() {}, getEditorComponent: () => undefined, setEditorText() {}, getEditorText: () => "",
   setWorkingMessage() {}, setWorkingIndicator() {}, setWorkingVisible() {},
-  confirm: async () => true,
+  confirm: async title => title !== "Resume saved goal?",
   select: async (title, choices) => title === "Inherit current goal" ? choices[1] : choices[0],
   editor: async (_title, prefill) => { previousEditor = prefill; return editorValue; },
 }, commandContextActions: {
@@ -72,6 +78,7 @@ const bind = session => session.bindExtensions({ mode: "tui", uiContext: {
   fork: (id, options) => runtime.fork(id, options), navigateTree: (id, options) => runtime.session.navigateTree(id, options),
   waitForIdle: () => runtime.session.waitForIdle(), reload: () => runtime.session.reload(),
 }, onError: error => errors.push(error) });
+};
 const start = async manager => {
   runtime = await sdk.createAgentSessionRuntime(factory, { cwd: root, agentDir: join(root, "agent"), sessionManager: manager });
   runtime.setRebindSession(bind); await bind(runtime.session);
@@ -84,6 +91,12 @@ const start = async manager => {
 const current = async () => (await store.records()).find(record => record.ownerSessionId === runtime.session.sessionId);
 try {
   await start(sdk.SessionManager.create(root, join(root, "sessions")));
+  await runtime.session.prompt(`/goal ${original}`);
+  assert.equal(await current(), undefined);
+  assert.ok(runtime.session.getActiveToolNames().includes("get_goal"));
+  assert.ok(!runtime.session.getActiveToolNames().includes("create_goal"));
+  selectedModel = fixture.model;
+  await runtime.session.setModel(fixture.model);
   await runtime.session.prompt(`/goal ${original}`);
   const first = await current();
   assert.equal(existsSync(runtime.session.sessionFile), false);
@@ -104,6 +117,7 @@ try {
   selectedModel = fixture.model;
   await runtime.session.setModel(fixture.model);
   assert.equal(fixture.calls(), 0);
+  suppressAutomatic = false;
   await runtime.session.prompt("/goal resume");
   await reached;
   await runtime.session.abort();

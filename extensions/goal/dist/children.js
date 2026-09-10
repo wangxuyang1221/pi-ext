@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { constants, watch } from "node:fs";
 import { mkdir, open } from "node:fs/promises";
 import { dirname, isAbsolute, join } from "node:path";
+import { goalCapability } from "./capability.js";
 /** Only explicitly subscribed files are read; observations never manufacture tool usage. */
 export function registerChildAccounting(pi, access) {
     let context;
@@ -92,13 +93,13 @@ export function registerChildAccounting(pi, access) {
             return;
         request.promises.push(serialize(async () => {
             const expected = access.snapshot();
-            if (!expected?.goal || context !== ctx || (expected.goal.status !== "active" && !(expected.goal.status === "budget_limited" && !ctx.isIdle())))
+            if (!expected?.goal || context !== ctx || !goalCapability(ctx).supported || (expected.goal.status !== "active" && !(expected.goal.status === "budget_limited" && !ctx.isIdle())))
                 return;
             if (!isAbsolute(request.directory))
                 throw new Error("Invalid managed report directory.");
             const sourceId = randomUUID();
             await mkdir(request.directory, { recursive: true, mode: 0o700 });
-            if (!same(expected) || context !== ctx)
+            if (!same(expected) || context !== ctx || !goalCapability(ctx).supported)
                 return;
             await access.subscribe(access.snapshot(), { sourceId, reportPath: join(request.directory, `${sourceId}.json`), tokens: 0, missing: false }, ctx);
             refresh();

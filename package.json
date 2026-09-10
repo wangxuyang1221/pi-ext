@@ -50,6 +50,7 @@
     "docs/goal-descendant-acceptance.md",
     "docs/goal-ui-acceptance.md",
     "docs/goal-integration-acceptance.md",
+    "docs/goal-parity-acceptance.md",
     "docs/goal-storage-acceptance.md",
     "docs/goal-lifecycle-acceptance.md",
     "docs/goal-execution-report.md",

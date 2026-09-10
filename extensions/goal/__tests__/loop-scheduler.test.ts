@@ -9,7 +9,7 @@ function harness() {
   const history: any[] = [];
   const queued: any[] = [];
   const sendMessage = vi.fn((message: any) => queued.push({ role: "custom", ...message }));
-  const ctx = { mode: "tui", model: { provider: "openai-codex" }, isIdle: () => false, sessionManager: { getSessionId: () => "s" }, abort: vi.fn(), ui: { notify: vi.fn(), setStatus: vi.fn() } } as unknown as ExtensionContext;
+  const ctx = { mode: "tui", model: { provider: "openai-codex" }, isIdle: () => false, sessionManager: { getSessionId: () => "s", getSessionFile: () => "/test/s" }, abort: vi.fn(), ui: { notify: vi.fn(), setStatus: vi.fn() } } as unknown as ExtensionContext;
   const emit = async (type: string, event: any = {}) => { let value; for (const handler of handlers.get(type) ?? []) value = await handler(event, ctx); return value; };
   const stop = vi.fn(async (status: any) => { record.goal!.status = status; });
   const scheduler = registerGoalScheduler({ on: (name: string, handler: Function) => handlers.set(name, [...handlers.get(name) ?? [], handler]), sendMessage } as unknown as ExtensionAPI, { snapshot: () => record, stop });

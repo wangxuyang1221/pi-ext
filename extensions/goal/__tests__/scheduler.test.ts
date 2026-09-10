@@ -10,7 +10,7 @@ function harness() {
   let record: GoalRecord = { schemaVersion: 1, recordId: "r", ownerSessionId: "s", cwd: "/test", sessionFile: "/test/s", revision: 1, generation: 1, continuationDeferral: false, recoveredFrom: null, goal: { goalId: "g", generation: 1, objective: "Objective", status: "active", tokensUsed: 0, elapsedSeconds: 0, createdAt: "2026-01-01", updatedAt: "2026-01-01" } };
   const handlers = new Map<string, Function[]>();
   const sendMessage = vi.fn();
-  const ctx = { mode: "tui", model: { provider: "openai-codex" }, isIdle: () => false, sessionManager: { getSessionId: () => "s" }, abort: vi.fn(), ui: { notify: vi.fn(), setStatus: vi.fn() } } as unknown as ExtensionContext;
+  const ctx = { mode: "tui", model: { provider: "openai-codex" }, isIdle: () => false, sessionManager: { getSessionId: () => "s", getSessionFile: () => "/test/s" }, abort: vi.fn(), ui: { notify: vi.fn(), setStatus: vi.fn() } } as unknown as ExtensionContext;
   const emit = async (type: string, event: any = {}) => { let result; for (const fn of handlers.get(type) ?? []) result = await fn(event, ctx); return result; };
   const scheduler = registerGoalScheduler({ on: (type: string, fn: Function) => handlers.set(type, [...handlers.get(type) ?? [], fn]), sendMessage } as unknown as ExtensionAPI, {
     snapshot: () => record,
@@ -18,6 +18,75 @@ function harness() {
   });
   return { scheduler, ctx, emit, sendMessage, get record() { return record; } };
 }
+it("does not enqueue automatic work ahead of pending user messages", async () => {
+  const h = harness(); await h.emit("session_start");
+  await h.emit("context", { messages: [{ role: "user", content: "Work" }] });
+  Object.assign(h.ctx, { hasPendingMessages: () => true });
+  await h.emit("agent_end", { messages: [{ role: "assistant", content: [], stopReason: "stop" }] });
+  expect(h.sendMessage).not.toHaveBeenCalled();
+});
+it("does not count queued-but-unadmitted work or repeated context retries as empty continuations", async () => {
+  const h = harness(); await h.emit("session_start");
+  const empty = { role: "assistant", content: [], stopReason: "stop" };
+  for (let n = 0; n < 5; n++) {
+    const user = { role: "user", content: `Explicit ${n}` };
+    await h.emit("message_end", { message: user });
+    await h.emit("context", { messages: [user] });
+    await h.emit("message_end", { message: empty });
+    await h.emit("agent_end", { messages: [empty] });
+  }
+  expect(h.record.goal!.status).toBe("active");
+  expect(h.sendMessage).toHaveBeenCalledTimes(1);
+  const queued = { role: "custom", ...h.sendMessage.mock.calls[0]![0] };
+  for (let retry = 0; retry < 5; retry++) await h.emit("context", { messages: [queued] });
+  await h.emit("message_end", { message: empty }); await h.emit("agent_end", { messages: [empty] });
+  expect(h.record.goal!.status).toBe("active");
+  expect(h.sendMessage).toHaveBeenCalledTimes(2);
+});
+it("does not schedule a goal in a non-persistent session", async () => {
+  const h = harness();
+  Object.assign(h.ctx.sessionManager, { getSessionFile: () => undefined });
+  await h.emit("session_start");
+  h.scheduler.start(h.ctx);
+  expect(h.sendMessage).not.toHaveBeenCalled();
+});
+it("blocks after three admitted empty automatic continuations without scheduling a fourth", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  await h.emit("context", { messages: [{ role: "user", content: "Work" }] });
+  const answer = { role: "assistant", content: [], stopReason: "stop" };
+  await h.emit("agent_end", { messages: [answer] });
+  for (let turn = 0; turn < 3; turn++) {
+    const queued = { role: "custom", ...h.sendMessage.mock.calls.at(-1)![0] };
+    await h.emit("context", { messages: [queued] });
+    await h.emit("message_end", { message: answer });
+    await h.emit("agent_end", { messages: [answer] });
+  }
+  expect(h.record.goal!.status).toBe("blocked");
+  expect(h.sendMessage).toHaveBeenCalledTimes(3);
+});
+it.each(["text", "thinking", "tool", "failed-tool", "stream", "custom", "input", "compaction", "edit", "resume", "error"])("resets empty auditing on %s activity", async kind => {
+  const h = harness();
+  await h.emit("session_start");
+  const empty = { role: "assistant", content: [{ type: "text", text: " \n " }], stopReason: "stop" };
+  await h.emit("context", { messages: [{ role: "user", content: "Work" }] });
+  await h.emit("agent_end", { messages: [empty] });
+  const admit = async () => h.emit("context", { messages: [{ role: "custom", ...h.sendMessage.mock.calls.at(-1)![0] }] });
+  const finish = async () => { await h.emit("message_end", { message: empty }); await h.emit("agent_end", { messages: [empty] }); };
+  for (let n = 0; n < 2; n++) { await admit(); await finish(); }
+  await admit();
+  if (kind === "text" || kind === "thinking") await h.emit("message_end", { message: { ...empty, stopReason: "toolUse", content: [kind === "text" ? { type: "text", text: "Progress" } : { type: "thinking", thinking: "Reasoning" }] } });
+  if (kind === "tool" || kind === "failed-tool") await h.emit("tool_result", { toolName: "read", toolCallId: "activity", content: [], isError: kind === "failed-tool" });
+  if (kind === "stream") await h.emit("message_update", { assistantMessageEvent: { type: "thinking_delta", delta: "Reasoning" } });
+  if (kind === "custom") await h.emit("message_end", { message: { role: "custom", customType: "external-question", content: "Question" } });
+  if (kind === "input") await h.emit("input", { source: "interactive", text: "Continue" });
+  if (kind === "compaction") await h.emit("session_before_compact", { reason: "threshold" });
+  if (kind === "edit" || kind === "resume") { h.scheduler.invalidate(); h.scheduler.resume(h.ctx, kind === "edit"); await admit(); }
+  if (kind === "error") { await h.emit("agent_end", { messages: [{ ...empty, stopReason: "error" }] }); await h.emit("context", { messages: [] }); }
+  await finish();
+  expect(h.record.goal!.status).toBe("active");
+  for (let n = 0; n < 2; n++) { await admit(); await finish(); expect(h.record.goal!.status).toBe("active"); }
+});
 it("keeps a continuation at its original history position across tool responses and user steering", async () => {
   const h = harness();
   await h.emit("session_start");
@@ -180,6 +249,64 @@ it("resets failed-turn auditing on successful tools and ignores rejected or canc
   for (let n = 0; n < 2; n++) { await turn(["Command exited with code 2"]); expect(h.record.goal!.status).toBe("active"); }
   await turn(["Command exited with code 3"]);
   expect(h.record.goal!.status).toBe("blocked");
+});
+it("steers a live edit past an obsolete pending continuation", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  h.scheduler.start(h.ctx);
+  const old = { role: "custom", ...h.sendMessage.mock.calls[0]![0] };
+  h.scheduler.invalidate();
+  h.record.goal!.objective = "Revised";
+  h.scheduler.resume(h.ctx, true);
+  expect(h.sendMessage).toHaveBeenCalledTimes(2);
+  expect(h.sendMessage.mock.calls[1]![1]).toEqual({ deliverAs: "steer", triggerTurn: true });
+  const revised = { role: "custom", ...h.sendMessage.mock.calls[1]![0] };
+  await h.emit("context", { messages: [revised] });
+  expect(h.ctx.abort).not.toHaveBeenCalled();
+  const final = { role: "assistant", stopReason: "stop", content: [{ type: "text", text: "Revised progress" }] };
+  await h.emit("message_end", { message: final });
+  await h.emit("context", { messages: [revised, final, old] });
+  expect(h.ctx.abort).toHaveBeenCalledTimes(1);
+  await h.emit("agent_end", { messages: [final, { role: "assistant", stopReason: "aborted" }] });
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe("active");
+  expect(h.sendMessage).toHaveBeenCalledTimes(3);
+  const next = { role: "custom", ...h.sendMessage.mock.calls[2]![0] };
+  expect(next.content).toContain("Revised");
+  await h.emit("context", { messages: [revised, final, old, next] });
+  expect(h.ctx.abort).toHaveBeenCalledTimes(1);
+});
+it("does not cancel user input delivered beside an obsolete edit ticket", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  h.scheduler.resume(h.ctx, true);
+  const old = { role: "custom", ...h.sendMessage.mock.calls[0]![0] };
+  h.scheduler.invalidate();
+  h.record.goal!.objective = "Latest";
+  await h.emit("input", { source: "interactive", text: "User work" });
+  const user = { role: "user", content: "User work" };
+  await h.emit("message_end", { message: user });
+  const result = await h.emit("context", { messages: [user, old] });
+  expect(h.ctx.abort).not.toHaveBeenCalled();
+  expect(result.messages).toContainEqual(user);
+  expect(result.messages).toEqual([user, old]);
+  const replay = await h.emit("context", { messages: [user, old] });
+  expect(replay.messages).toEqual(result.messages);
+  const model = { provider: "openai-codex", api: "openai-codex-responses", id: "gpt-6-astra", reasoning: true, contextWindow: 200_000 } as Model<any>;
+  const branch = [{ type: "message", id: "user", parentId: null, message: user },
+    { type: "custom_message", id: "discarded", parentId: "user", ...old },
+    { type: "custom", id: "checkpoint", parentId: "discarded", customType: NATIVE_COMPACTION_KIND, data: {
+      kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: "openai-codex:openai-codex-responses:gpt-6-astra",
+      replacementHistory: [{ type: "compaction", encrypted_content: "stable-checkpoint" }],
+    } }] as unknown as SessionEntry[];
+  const createCheckpoint = vi.fn(async () => { throw new Error("Unexpected remote compaction"); });
+  const coordinator = createSessionCoordinator({ getBranch: () => branch, getAllTools: () => [], createCheckpoint, appendCheckpoint: vi.fn(), shouldAutoCompact: () => false });
+  Object.assign(h.ctx, { getSystemPrompt: () => "", modelRegistry: { find: () => model } });
+  const inputs = [result, replay].map(projected => fullInputForBranch({ model, tools: [], branch: projected.messages.map((message: any, index: number) => message.role === "custom"
+    ? { type: "custom_message", id: String(index), ...message } : { type: "message", id: String(index), message }) as SessionEntry[] }));
+  expect(inputs[1]).toEqual(inputs[0]);
+  for (const input of inputs) expect((await coordinator.prepareRequest(model, h.ctx, input))?.[0]).toEqual({ type: "compaction", encrypted_content: "stable-checkpoint" });
+  expect(createCheckpoint).not.toHaveBeenCalled();
 });
 it("sends the pinned objective-updated instruction exactly once after an edit", async () => {
   const h = harness();

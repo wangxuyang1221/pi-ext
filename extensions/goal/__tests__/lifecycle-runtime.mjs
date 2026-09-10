@@ -15,7 +15,9 @@ const { GoalStore } = await import("../dist/storage.js");
 const version = JSON.parse(await readFile(join(sdkRoot, "package.json"), "utf8")).version;
 const disk = new GoalStore(join(root, "goals"));
 const { ModelRuntime, SettingsManager, SessionManager, createAgentSessionServices, createAgentSessionFromServices, createAgentSessionRuntime } = sdk;
-const faux = ai.fauxProvider({ provider: "goal-lifecycle-test" });
+const faux = ai.fauxProvider({ provider: "openai-codex", tokensPerSecond: 100000 });
+let networkAttempts = 0;
+globalThis.fetch = async () => { networkAttempts++; throw new Error("Lifecycle fixture forbids network"); };
 const modelRuntime = await ModelRuntime.create({ credentials: new ai.InMemoryCredentialStore(), modelsStore: new ai.InMemoryModelsStore(), modelsPath: null, allowModelNetwork: false, refreshOnCreate: false });
 modelRuntime.registerNativeProvider(faux.provider);
 const notices = [];
@@ -35,7 +37,12 @@ const createRuntime = async ({ cwd, sessionManager, sessionStartEvent }) => {
     resourceLoaderOptions: {
       noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
       extensionFactories: [pi => {
-        registerGoal(pi, disk);
+        // Lifecycle assertions control explicit prompts; automatic execution is
+        // covered separately without weakening the production capability gate.
+        registerGoal(new Proxy(pi, { get(target, name) {
+          if (name === "sendMessage") return () => {};
+          return Reflect.get(target, name);
+        } }), disk);
         pi.on("session_before_fork", () => cancelFork ? { cancel: true } : undefined);
         pi.registerCommand("capture-context", { handler: async (_args, ctx) => { captured = { ctx, pi }; } });
       }],
@@ -45,7 +52,7 @@ const createRuntime = async ({ cwd, sessionManager, sessionStartEvent }) => {
 };
 const bind = async session => session.bindExtensions({ mode: "tui", uiContext: {
   notify: (text, level) => notices.push({ text, level }),
-  confirm: async () => true,
+  confirm: async title => title !== "Resume saved goal?",
   select: async (title, choices) => {
     if (selection === "cancel" || (selection === "cancel-history" && title === "Fork before user message")) return undefined;
     if (title === "Inherit current goal") return choices[selection === "clone" ? 1 : 0];
@@ -294,6 +301,7 @@ try {
   results.push("host-rejects-unsaved-clone-without-losing-pre-reply-goal");
 
   assert.equal(faux.state.callCount, 8);
+  assert.equal(networkAttempts, 0);
   assert.equal(errors.length, 2);
   console.log(JSON.stringify({ version, results, explicitFixtureModelRequests: faux.state.callCount, expectedExtensionErrors: errors }, null, 2));
 } finally {

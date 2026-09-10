@@ -11,7 +11,7 @@ interface Access {
 }
 /** Coordinate only this extension's continuation requests through public Pi events. */
 export declare function registerGoalScheduler(pi: ExtensionAPI, access: Access): {
-    start: (ctx: ExtensionContext) => void;
+    start: (ctx: ExtensionContext, automatic?: boolean) => void;
     refresh: (ctx: ExtensionContext) => void;
     budget: (ctx: ExtensionContext) => void;
     suspend: (ctx?: ExtensionContext) => void;

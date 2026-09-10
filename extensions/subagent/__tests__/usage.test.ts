@@ -3,6 +3,32 @@ import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { ChildUsageReporter, assignUsage } from "../src/usage.js";
 
+it("matches root normalization for cache writes and rejects invalid or overflowing counts", async () => {
+  const { goalTokens } = await import("../../goal/src/accounting.js");
+  const root = await mkdtemp(resolve(".subagent-test-"));
+  try {
+    const reporter = new ChildUsageReporter(root);
+    const values = [
+      { input: 50, cacheRead: 20, cacheWrite: 30, output: 10, reasoning: 8 },
+      { input: 3, output: 4 }, { input: 0, output: 0, cacheRead: 20 },
+      { input: 0, output: 0, cacheWrite: 10 },
+      undefined, {}, { input: -1, output: 2 }, { input: 1.5, output: 2 },
+      { input: 1, output: NaN }, { input: Infinity, output: 1 },
+      { input: 1, output: 1, cacheWrite: -1 }, { input: 1, output: 1, cacheWrite: "3" },
+      { input: 1, output: 1, cacheWrite: null }, { input: Number.MAX_SAFE_INTEGER, output: 1 },
+      { input: Number.MAX_SAFE_INTEGER, output: 0, cacheWrite: 1 },
+      ...[-1, 1.5, NaN, Infinity, "3", null].map(cacheRead => ({ input: 0, output: 0, cacheRead })),
+    ];
+    for (const [index, usage] of values.entries()) {
+      const source = `source-${index}`;
+      await reporter.record(source, `receipt-${index}`, usage);
+      await reporter.record(source, `receipt-${index}`, usage);
+      const saved = JSON.parse(await readFile(join(root, `${source}.json`), "utf8"));
+      expect(saved.tokens).toBe(goalTokens(usage) ?? 0);
+      expect(saved.missing).toBe(goalTokens(usage) === undefined);
+    }
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
 it("retries an observed report at settlement after a transient filesystem failure", async () => {
   const root = await mkdtemp(resolve(".subagent-test-"));
   try {

@@ -3,6 +3,7 @@ import { constants, watch, type FSWatcher } from "node:fs";
 import { mkdir, open } from "node:fs/promises";
 import { dirname, isAbsolute, join } from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { goalCapability } from "./capability.js";
 import type { ChildUsageCheckpoint, GoalRecord, UsageCheckpoint } from "./storage.js";
 
 interface Access {
@@ -78,11 +79,11 @@ export function registerChildAccounting(pi: ExtensionAPI, access: Access) {
     if (!ctx || request.parentSessionId !== ctx.sessionManager.getSessionId()) return;
     request.promises.push(serialize(async () => {
       const expected = access.snapshot();
-      if (!expected?.goal || context !== ctx || (expected.goal.status !== "active" && !(expected.goal.status === "budget_limited" && !ctx.isIdle()))) return;
+      if (!expected?.goal || context !== ctx || !goalCapability(ctx).supported || (expected.goal.status !== "active" && !(expected.goal.status === "budget_limited" && !ctx.isIdle()))) return;
       if (!isAbsolute(request.directory)) throw new Error("Invalid managed report directory.");
       const sourceId = randomUUID();
       await mkdir(request.directory, { recursive: true, mode: 0o700 });
-      if (!same(expected) || context !== ctx) return;
+      if (!same(expected) || context !== ctx || !goalCapability(ctx).supported) return;
       await access.subscribe(access.snapshot()!, { sourceId, reportPath: join(request.directory, `${sourceId}.json`), tokens: 0, missing: false }, ctx);
       refresh();
       return sourceId;

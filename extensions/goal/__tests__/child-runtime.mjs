@@ -85,7 +85,7 @@ if (childMode) {
   let lastCtx;
   const transport = {
     async launch(spec) {
-      const worker = fork(fileURLToPath(import.meta.url), ["--child"], { cwd: process.cwd(), env: { PATH: process.env.PATH, HOME: root, GOAL_CHILD_EVIDENCE: root, GOAL_CHILD_SCENARIO: scenario, GOAL_CHILD_PI: packageRoot, GOAL_CHILD_LAUNCH: JSON.stringify(spec) }, stdio: ["ignore", "pipe", "pipe", "ipc"] });
+      const worker = fork(fileURLToPath(import.meta.url), ["--child"], { cwd: process.cwd(), env: { PATH: process.env.PATH, HOME: root, TMPDIR: process.env.TMPDIR, GOAL_CHILD_EVIDENCE: root, GOAL_CHILD_SCENARIO: scenario, GOAL_CHILD_PI: packageRoot, GOAL_CHILD_LAUNCH: JSON.stringify(spec) }, stdio: ["ignore", "pipe", "pipe", "ipc"] });
       const entry = { worker, ready: false, requested: false, settled: false, text: "", stdout: "", stderr: "" };
       processes.push(entry);
       worker.stdout.on("data", data => { entry.stdout += data; }); worker.stderr.on("data", data => { entry.stderr += data; });
@@ -158,7 +158,10 @@ if (childMode) {
     else assert.equal(saved.goal.childUsage[0].tokens, 100);
     assert.equal(observed.status, scenario === "late" ? "active" : "budget_limited");
     assert.equal(fixture.calls(), 4);
-    assert.equal(contexts.flat().filter(message => message.customType === "pi-ext-goal-budget").length, scenario === "late" ? 0 : 1);
+    // A delivered reminder remains in subsequent contexts at its history position.
+    const budgetMessages = contexts.flat().filter(message => message.customType === "pi-ext-goal-budget");
+    assert.equal(new Set(budgetMessages.map(message => message.details.scheduleId)).size, scenario === "late" ? 0 : 1);
+    assert.equal(runtime.session.messages.filter(message => message.customType === "pi-ext-goal-budget").length, scenario === "late" ? 0 : 1);
     await runtime.session.prompt("/reload");
     await runtime.session.prompt("/goal");
     assert.equal((await store.records())[0].goal.tokensUsed, scenario === "late" ? 10 : 130);

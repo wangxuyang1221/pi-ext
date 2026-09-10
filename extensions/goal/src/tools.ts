@@ -7,7 +7,7 @@ import { GET_DESCRIPTION, CREATE_DESCRIPTION, UPDATE_DESCRIPTION, OBJECTIVE_DESC
 export interface GoalToolAccess {
   get(ctx: ExtensionContext): Promise<GoalRecord | undefined>;
   create(ctx: ExtensionContext, objective: string, budget?: number): Promise<GoalRecord>;
-  update(ctx: ExtensionContext, status: "complete" | "blocked"): Promise<GoalRecord>;
+  update(ctx: ExtensionContext, status: "complete" | "blocked" | "paused"): Promise<GoalRecord>;
 }
 /** Render the pinned upstream template; replacements never reinterpret objective data. */
 export function renderGoalPrompt(goal: Goal, edited = false, budget = false): string {
@@ -47,10 +47,10 @@ export function registerGoalTools(pi: ExtensionAPI, access: GoalToolAccess): voi
       return response(await access.create(ctx, args.objective.trim(), args.token_budget));
     } });
   pi.registerTool({ name: "update_goal", label: "Update goal", description: UPDATE_DESCRIPTION,
-    parameters: Type.Object({ status: StringEnum(["complete", "blocked"] as const, { description: STATUS_DESCRIPTION }) }, { additionalProperties: false }),
+    parameters: Type.Object({ status: StringEnum(["complete", "blocked", "paused"] as const, { description: STATUS_DESCRIPTION }) }, { additionalProperties: false }),
     execute: async (_id, args, signal, _update, ctx) => {
       validateCall(args, ["status"], signal);
-      if (args.status !== "complete" && args.status !== "blocked") throw new Error("Goal status must be complete or blocked.");
+      if (args.status !== "complete" && args.status !== "blocked" && args.status !== "paused") throw new Error("Goal status must be complete, blocked, or paused.");
       return response(await access.update(ctx, args.status), args.status === "complete");
     } });
 }

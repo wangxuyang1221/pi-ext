@@ -1,21 +1,23 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { goalCapability } from "./capability.js";
 import type { GoalRecord, UsageCheckpoint } from "./storage.js";
 
-interface Source extends UsageCheckpoint { goalId: string; generation: number; ownerSessionId: string }
+interface Source extends UsageCheckpoint { goalId: string; generation: number; activation: number; ownerSessionId: string }
 interface Access {
   snapshot(): GoalRecord | undefined;
   account(expected: GoalRecord, usage: UsageCheckpoint, ctx: ExtensionContext): Promise<void>;
   budget(ctx: ExtensionContext): void;
   error(error: unknown, ctx: ExtensionContext): void;
 }
-/** Pi input already excludes cache reads and output already contains reasoning. */
+/** Pi input excludes cache reads/writes; output already contains reasoning. */
 export function goalTokens(usage: unknown): number | undefined {
   if (!usage || typeof usage !== "object") return;
-  const { input, output } = usage as { input?: unknown; output?: unknown };
-  if (typeof input !== "number" || typeof output !== "number" || !Number.isSafeInteger(input) || !Number.isSafeInteger(output) || input < 0 || output < 0 || !Number.isSafeInteger(input + output)) return;
-  return input + output;
+  const { input, output, cacheWrite = 0, cacheRead = 0 } = usage as { input?: unknown; output?: unknown; cacheWrite?: unknown; cacheRead?: unknown };
+  if (typeof cacheRead !== "number" || !Number.isSafeInteger(cacheRead) || cacheRead < 0) return;
+  if (typeof input !== "number" || typeof output !== "number" || typeof cacheWrite !== "number" || !Number.isSafeInteger(input) || !Number.isSafeInteger(output) || !Number.isSafeInteger(cacheWrite) || input < 0 || output < 0 || cacheWrite < 0 || !Number.isSafeInteger(input + output + cacheWrite)) return;
+  return input + output + cacheWrite;
 }
 const identity = (message: AssistantMessage) => createHash("sha256").update(JSON.stringify(message.responseId ? [message.provider, message.responseId] : [message.provider, message.model, message.timestamp, message.content, message.stopReason])).digest("hex");
 /** Attribute finalized responses to the goal bound before that request, not the latest goal. */
@@ -28,23 +30,27 @@ export function registerGoalAccounting(pi: ExtensionAPI, access: Access) {
   let branchSummary: Source | undefined;
   const starts = new Map<number, Source | undefined>();
   const seen = new Set<string>();
-  const matches = (candidate: Source | undefined, record = access.snapshot()) => !!candidate && !!record?.goal && record.ownerSessionId === candidate.ownerSessionId && record.goal.goalId === candidate.goalId && record.generation === candidate.generation;
+  const matches = (candidate: Source | undefined, record = access.snapshot()) => !!candidate && !!record?.goal && record.ownerSessionId === candidate.ownerSessionId && record.goal.goalId === candidate.goalId && record.generation === candidate.generation && (record.goal.activation ?? 0) === candidate.activation;
   const eligible = (record: GoalRecord | undefined) => record?.goal?.status === "active" || record?.goal?.status === "budget_limited";
-  const flush = async (candidate: Source | undefined, ctx: ExtensionContext) => {
+  const flush = async (candidate: Source | undefined, ctx: ExtensionContext, strict = false) => {
     const record = access.snapshot();
     if (!live || !matches(candidate, record) || !eligible(record) || record!.ownerSessionId !== ctx.sessionManager.getSessionId()) return;
     const checkpoint = record!.goal!.usageCheckpoint;
     if (checkpoint?.sourceId === candidate!.sourceId && checkpoint.tokens === candidate!.tokens && checkpoint.missing === candidate!.missing && checkpoint.lastReceipt === candidate!.lastReceipt) return;
     if (!candidate!.tokens && !candidate!.missing && !candidate!.lastReceipt) return;
     try { await access.account(record!, candidate!, ctx); }
-    catch (error) { if (live && matches(candidate) && access.snapshot()?.ownerSessionId === ctx.sessionManager.getSessionId()) access.error(error, ctx); }
+    catch (error) {
+      if (live && matches(candidate) && access.snapshot()?.ownerSessionId === ctx.sessionManager.getSessionId()) access.error(error, ctx);
+      if (strict) throw error;
+    }
   };
-  const capture = () => {
+  const capture = (ctx: ExtensionContext) => {
+    if (!goalCapability(ctx).supported) return;
     const record = access.snapshot();
     if (!eligible(record) || (record!.goal!.status === "budget_limited" && !wrapOpen)) return;
     if (!matches(source, record)) {
       if (record!.goal!.status !== "active") return;
-      source = { sourceId: randomUUID(), tokens: 0, missing: false, goalId: record!.goal!.goalId, generation: record!.generation, ownerSessionId: record!.ownerSessionId };
+      source = { sourceId: randomUUID(), tokens: 0, missing: false, goalId: record!.goal!.goalId, generation: record!.generation, activation: record!.goal!.activation ?? 0, ownerSessionId: record!.ownerSessionId };
     }
     return source;
   };
@@ -82,7 +88,7 @@ export function registerGoalAccounting(pi: ExtensionAPI, access: Access) {
     if (!live || record?.ownerSessionId !== ctx.sessionManager.getSessionId() || !eligible(record)) { request = undefined; return; }
     if (record!.goal!.status === "budget_limited" && !wrapOpen) { request = undefined; return; }
     if (record!.goal!.status === "active") wrapOpen = true;
-    request = capture();
+    request = capture(ctx);
   });
   pi.on("message_start", event => { if (event.message.role === "assistant") starts.set(event.message.timestamp, request); });
   pi.on("message_end", async (event, ctx) => {
@@ -92,7 +98,7 @@ export function registerGoalAccounting(pi: ExtensionAPI, access: Access) {
     await recordUsage(candidate, identity(message), message.usage, ctx);
     if (message.stopReason !== "error" && message.stopReason !== "aborted" && !ctx.signal?.aborted) access.budget(ctx);
   });
-  pi.on("session_before_compact", () => { compaction = capture(); });
+  pi.on("session_before_compact", (_event, ctx) => { compaction = capture(ctx); });
   pi.on("session_compact", async (event, ctx) => {
     await recordUsage(compaction, `compaction:${event.compactionEntry.id}`, event.compactionEntry.usage, ctx);
     compaction = undefined;
@@ -102,10 +108,10 @@ export function registerGoalAccounting(pi: ExtensionAPI, access: Access) {
     await recordUsage(compaction, `compaction-failed:${randomUUID()}`, undefined, ctx);
     compaction = undefined;
   });
-  pi.on("session_before_tree", event => { branchSummary = event.preparation.userWantsSummary ? capture() : undefined; });
+  pi.on("session_before_tree", (event, ctx) => { branchSummary = event.preparation.userWantsSummary ? capture(ctx) : undefined; });
   pi.on("session_tree", async (event, ctx) => {
     if (event.summaryEntry) await recordUsage(branchSummary, `branch-summary:${event.summaryEntry.id}`, event.summaryEntry.usage, ctx);
     branchSummary = undefined;
   });
-  return { checkpoint: (ctx: ExtensionContext) => flush(source, ctx) };
+  return { checkpoint: (ctx: ExtensionContext) => flush(source, ctx, true) };
 }

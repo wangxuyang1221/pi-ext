@@ -12,6 +12,7 @@ export interface ChildUsageCheckpoint extends UsageCheckpoint {
 export interface Goal {
     goalId: string;
     generation: number;
+    activation?: number;
     objective: string;
     content?: ContentReference;
     status: "active" | "paused" | "blocked" | "usage_limited" | "budget_limited" | "complete";

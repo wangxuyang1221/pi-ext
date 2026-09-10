@@ -39,11 +39,11 @@ Pi package 以当前用户的完整系统权限运行。安装第三方 package 
 
 ## Goal extension
 
-在持久化交互 TUI 中使用 `/goal <objective>` 创建目标、`/goal` 查看摘要、`/goal clear` 清除。替换未完成目标需要确认，新目标重新计数。只有整个 trimmed 参数等于控制词时才按控制词处理，因此 `/goal pause now` 是目标文本。`/goal edit` 编辑目标且保留统计，`/goal pause` 暂停，`/goal resume` 显式恢复并解除继承门禁。OpenAI Codex 模型下可自动续跑；其他 provider 保留目标但不自动执行。
+在持久化交互 TUI 中使用 `/goal <objective>` 创建目标、`/goal` 查看摘要、`/goal clear` 清除。替换未完成目标需要确认，新目标重新计数。只有整个 trimmed 参数等于控制词时才按控制词处理，因此 `/goal pause now` 是目标文本。`/goal edit` 编辑目标且保留统计，`/goal pause` 暂停，`/goal resume` 显式恢复并解除继承门禁。执行范围为持久 TUI、OpenAI Codex 模型和 root 会话。其他 provider 保留目标与受限原因，允许本地查看、pause、clear 和只读 `get_goal`，不允许创建、编辑、恢复或模型更新目标。切换回支持的模型不会自行发起请求。
 
 权威状态保存在公开 `getAgentDir()` 返回目录下的 `goals/`。新会话首条模型回复前也能保存，不依赖 Pi JSONL 已经落盘。历史 custom entry 只是镜像，失败不会回滚权威记录，下次摘要、绑定或 settled 检查点会重试。清除写入 tombstone，不从旧镜像复活。
 
-`/goal-recover` 列出当前 cwd 中没有活跃写入者占用的目标，由用户选择。原会话文件存在时切换到该会话；不存在时先说明无法恢复未落盘对话，再在新持久化会话接管同一条记录和统计。恢复不发送模型请求，也不撤销文件或数据库副作用。`--no-session` 和非 TUI 不支持这些入口。
+`/goal-recover` 列出当前 cwd 中没有活跃写入者占用的目标，由用户选择。原会话文件存在时切换到该会话；不存在时先说明无法恢复未落盘对话，再在新持久化会话接管同一条记录和统计。恢复本身不发送模型请求，也不撤销文件或数据库副作用。重开 paused、blocked、usage_limited 目标时，在初始化完成后提供一次恢复确认；只有接受后才启动。reload、fork、预算已耗尽或执行环境不受支持时不提示。`--no-session` 和非 TUI 不支持这些入口。
 
 锁使用进程、主机、实例和唯一 owner 文件标识，不按超时夺锁。同一主机明确已退出的进程可回收锁；身份不明、跨主机或 PID 已复用时不抢占。若提示锁身份不明，先退出所有相关 Pi 实例并备份 `goals/`，人工核验后只移除对应 `.lock` 目录，再运行恢复入口。不要在写入者存活时删除锁。损坏或未知版本的权威 JSON 需要从已核验的权威备份修复，不能用历史镜像自动代替。
 
@@ -57,17 +57,19 @@ Pi 原生粘贴图片会在编辑器中插入 `pi-clipboard-<UUID>.<ext>` 临时
 
 每次编辑生成独立不可变内容包，继承的旧快照不被修改。失败只清理本次且确认未提交的包，不确定提交保留文件供修复。成功保存的旧包不会随 edit、replace 或 clear 自动删除，以免损坏继承和历史引用；备份目标时需包含整个 `goals/`。状态通过 Pi `setStatus` 展示，未加载 codex-ui 时使用默认 footer；加载后在原 codex-ui footer 下增加目标行，不替换原 editor/footer。
 
-三个模型工具为 `get_goal`、`create_goal`、`update_goal`，schema 和提示固定于 Codex 0.153.4。完成、blocked、usage_limited 和 paused 都不会自动续跑。模型运行中 Esc 会暂停；原生重试等待中 Esc 取消后按 C12 记为 blocked，保留目标与统计，可用 `/goal resume` 恢复。关闭编辑或确认弹窗不会暂停。原生压缩失败后停止目标，显式输入或手动压缩仍可继续。写入或权威检查失败后停止自动推进，修复存储后显式 resume。
+三个模型工具为 `get_goal`、`create_goal`、`update_goal`，工具描述与三个模板固定于 Codex main `b348fc26674189f758d5941cdab3f78f258b2aa7`。`update_goal` 允许用户明确要求的 paused，不允许模型自行决定暂停；返回实际持久状态，预算耗尽不被 pause/blocked 覆盖。完成、blocked、usage_limited 和 paused 都不会自动续跑。模型运行中 Esc 会暂停；原生重试等待中 Esc 取消后按 C12 记为 blocked，保留目标与统计，可用 `/goal resume` 恢复。关闭编辑或确认弹窗不会暂停。原生压缩失败后停止目标，显式输入或手动压缩仍可继续。写入或权威检查失败后停止自动推进，修复存储后显式 resume。
 
-Goal 提示采用 Codex CLI 的历史保留方式：新工作回合记录一次提示，后续工具调用和重试不重新生成。已投递的续跑、预算与循环警告消息保留原文和位置，由统一压缩处理；目标编辑、暂停、清除或 `/reload` 不过滤旧提示，压缩后也不动态补插。只有当前运行实例仍在排队的失效请求会被取消，历史提示本身不会触发取消。
+Goal 提示采用 Codex CLI 的历史保留方式：新工作回合记录一次提示，后续工具调用和重试不重新生成。已投递的续跑、预算与循环警告消息保留原文和位置，由统一压缩处理；目标编辑、暂停、清除或 `/reload` 不过滤旧提示，压缩后也不动态补插。只有当前运行实例仍在排队的失效请求会被取消，历史提示本身不会触发取消。运行中编辑通过 steer 在当前工具批次后送达新目标；空闲编辑启动一次。连续三个已接纳的自动续跑若 final 空白且整轮没有文本、reasoning、工具或外部活动，目标变为 blocked；显式用户工作不计入，该保护独立于重复工具检测。
 
 C11 限制：取消尚未发出的失效自有 goal 续跑时，公开 `ctx.abort()` 会清除其他扩展尚未处理的排队消息，用户追加文字可能退回编辑器，需要重发。已有聊天记录和保存目标保留。不为此包装 provider、重建 editor 或修改 Pi 核心。
 
-主代理按 Pi 归一化 `usage.input + usage.output` 结算，不重复扣缓存或加 reasoning；原生压缩可见 usage 同样结算。创建前不计入，编辑/恢复不清零；缺失 usage 显示统计不完整。active 时间使用单调时钟，离线不计时。达到预算只向当前回合提醒一次收尾，继续记录实际超额用量，不硬杀、也不启动下一自动回合。
+主、子代理按 Pi 归一化 `usage.input + usage.cacheWrite + usage.output` 结算，缺失的 cacheWrite 按零处理，不计 cacheRead、不重复加 reasoning；原生压缩可见 usage 同样结算。创建前不计入，编辑/恢复不清零；缺失 usage 显示统计不完整。active 时间使用单调时钟，离线不计时。达到预算只向当前回合提醒一次收尾，继续记录实际超额用量，不硬杀、也不启动下一自动回合。
 
 可选配置为 `getAgentDir()` 目录下的 `goal.json`，例如 `{"maxGoalTokenBudget": 100000}`。扩展只读取，不创建或修改此配置。最大预算必须是正安全整数；配置上限同时作为创建时未指定预算的默认值，模型显式预算不能超限。未配置且未显式指定则无上限。非法配置阻止新建，修正后 `/reload`；`/goal --budget 100` 仍是目标文本，不是预算参数。
 
-加载本仓库 subagent 时，为根目标投递的直接子代理任务也计入同一预算。归属在投递前登记，子代理按请求捕获归属并上报累计值；根检查点去重，重复读取活动不重复收费。子代理关闭后报告保留供检查点和恢复使用，替换目标后旧报告不计入新目标。显式继承复制累计统计，但不订阅源会话的子代理。C13 保留 root → direct child，不支持孙代理或第三方代理计费；managed child 不安装独立 goal 工具或循环。
+加载本仓库 subagent 时，为根目标投递的直接子代理任务也计入同一预算。归属在投递前登记，子代理按请求捕获归属并上报累计值；根检查点去重，重复读取活动不重复收费。子代理关闭后报告保留供检查点和恢复使用，替换目标后旧报告不计入新目标。paused、blocked、usage_limited、complete 后冻结目标统计；预算收尾继续计费至结束。停止期 child 报告只推进 baseline，恢复前先 checkpoint，不补收停止期用量。主代理使用 activation fence，暂停前发起的响应不因恢复而重新收费。暂停目标不会杀子代理。显式继承复制累计统计，但不订阅源会话的子代理。C13 保留 root → direct child，不支持孙代理或第三方代理计费；managed child 不安装独立 goal 工具或循环。
+
+本次研究排名 1–7、9 已通过主代理独立验收，实施范围、离线 SDK 结果和限制见 [Goal parity acceptance](docs/goal-parity-acceptance.md)。以下为此前基线验收记录。
 
 #4 至 #9 的基础存储、生命周期、执行、预算、直接子代理和附件/UI 已由协调者验收。Pi 0.84.3/0.85.1 的实际 SDK、受管 OS 子进程和 InteractiveMode PTY 使用离线原生 adapter 或 faux provider 夹具，不包含付费在线调用，不宣称断电零丢失。受管子进程使用真实 tmux transport 与子端 CLI，IPC 夹具仅作补充；根端使用 SDK，原生根 TUI 输入另有 PTY 矩阵。最终工作区集成结果、准确基准和未执行项见 [Goal integration acceptance](docs/goal-integration-acceptance.md)，是否通关以协调者独立验收为准。分项证据见 [Goal attachments and UI acceptance](docs/goal-ui-acceptance.md)、[Goal direct child accounting](docs/goal-descendant-acceptance.md)、[Goal budget acceptance](docs/goal-budget-acceptance.md)、[Goal execution report](docs/goal-execution-report.md)、[Goal storage acceptance](docs/goal-storage-acceptance.md) 与 [Goal lifecycle acceptance](docs/goal-lifecycle-acceptance.md)。
 
