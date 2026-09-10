@@ -45,21 +45,22 @@ Planning #15 中途已确认：用户在得知 Codex 也无非空纯文本续跑
 - 旧评估已过时：当前有重复工具调用和空响应保护；token 公式是 input + output + cacheWrite，不是旧报告的 input + output。
 - 独立源码复核确认非空纯文本 stop 仍可能无限自动续跑，最终 settled 后的 length/deferred 可能留下 active 且无续跑。证据见 [terminal-contract-review.md](./evidence/terminal-contract-review.md)。未做真实模型端到端验证。
 - 用户追问 Codex 是否也存在该风险。在线核对本机 0.153.4、latest release 0.154.0，以及 main 固定 SHA `968835997714baaff199cfed5f89a2c65d8ca77d`：三者均无非空纯文本自动续跑次数上限；main 三轮空响应保护将非空文本记为 activity。原生依赖模型主动更新状态及预算/最终错误/外部控制等独立停止条件。证据见 [codex-text-loop-review.md](./evidence/codex-text-loop-review.md)。这是源码容许的执行路径，不是具体模型动态复现。
+- 用户进一步要求核对 Codex 的单次输出上限行为。已核验 0.153.4、0.154.0 及 main 固定 SHA `eca63f0803aa334cd45908743b4696dec893b6ed`：response.incomplete/max_output_tokens 归为可重试 stream error；重试耗尽后关联且仍 Active 的 goal 转 Blocked，已命中的 BudgetLimited 不被普通错误覆盖。不会为该错误专门增大输出额度或压缩；未完成事件的 usage 不向 core 转交，预算存在观测边界。完整来源见 [codex-output-limit-review.md](./evidence/codex-output-limit-review.md)。Pi 将同类结果归一为 length，不能照搬 Codex 底层错误/transport 重试机制。
 - Node 22.22.2、pnpm 11.9.0。新 worktree 已运行 `pnpm install --frozen-lockfile --ignore-scripts` 和 `pnpm run check`，后者通过类型、测试、构建及发布包校验：1012 项测试通过、2 项 subagent 集成测试跳过，见 [baseline-check.log](./evidence/baseline-check.log)。这是未修改产品源码的基线结果，不是跨 provider 新功能验收。
 - Map 的子 Issues 为 Spec #12、Planning #13、#14、#15、#16。#14 原生依赖已关闭的 #13；#15 与 #16 均原生依赖现已关闭的 #14，两关均可推进，当前主线为 #15。
-- research skill 安排的独立复核 subagent 已完成并关闭，报告已核对。没有需要后续接管的本任务后台服务。
+- 早期独立复核 subagents 已完成并关闭。Codex 输出上限复核 subagent `01a08ba1-72da-71f3-95ae-4f101e50f891` 已完成，报告已核对，保留给当前 Planning 的可能追问复用；使用前通过 subagent_list 核对是否仍存活，跨 session 不假定它存在。没有启动模型服务或需要接管的监听端口。
 
 继续前完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md` 及其 `references/issue-templates.md`。保存使用 `/Users/wangxuyang/.agents/skills/wangxuyang/handoff/SKILL.md`，存档固定写在本文件。
 
 ## Current Assumptions
 
-下一候选已写在 Planning #15：单次输出达到长度限制，且 Pi 已用完适用的恢复并最终 settled 时，停止自动推进、标记 blocked 并保留目标供 /goal resume。另一候选是仍自动发起下一轮，代价是可能重复触及限制。两者未确认，不能在 agent_end 抢先阻断宿主恢复。
+下一候选已写在 Planning #15：单次输出达到长度限制，且 Pi 已用完适用的恢复并最终 settled 时，停止自动推进、标记 blocked 并保留目标供 /goal resume。另一候选是仍自动发起下一轮，代价是可能重复触及限制。两者未确认，不能在 agent_end 抢先阻断宿主恢复。Codex 对照支持推荐最终 blocked，并保留先命中的预算限制，但不支持在 goal 中复制 Codex transport 重试或丢弃 incomplete usage。用户本轮只要求调查，没有批准本项目的 length 策略。
 
 [Planning #15](https://github.com/wangxuyang1221/adventure/issues/15) 负责异常停止与恢复，[Planning #16](https://github.com/wangxuyang1221/adventure/issues/16) 负责 usage 缺失和预算语义。其他异常的状态、恢复规则、真实服务测试范围等均未确认；已排除纯文本保护，不再为它设计阈值或持久化。
 
 ## Continuation Point
 
-当前 #15 已记录不新增纯文本保护，等待用户选择最终未恢复长度限制的处理。#13 和 #14 均已关闭，不要重复询问接入职责、支持范围或纯文本保护。#15 尚未通关，其中决定暂留本关，不提前移交 Spec。
+当前 #15 已记录不新增纯文本保护，并补充 Codex 输出截断的调查结论，等待用户选择最终未恢复长度限制的处理。#13 和 #14 均已关闭，不要重复询问接入职责、支持范围或纯文本保护。#15 尚未通关，其中决定暂留本关，不提前移交 Spec。
 
 1. 用户确认 length 的最终处理后，继续 deferred、工具缺失和额度分类等必要异常规则。一次只问一个问题；能由代码回答的事实自主查证，用户排除的范围不再扩大回来。
 2. 运行保护与预算语义按决策依赖逐题推进，复用现有证据，不重做已证明的契约调查；新方案按必要场景做离线验证，不要求密钥或真实服务。
