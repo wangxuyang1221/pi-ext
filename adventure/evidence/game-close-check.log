@@ -1,0 +1,112 @@
+$ pnpm run typecheck && pnpm test && pnpm run build && pnpm run package:check
+$ tsc -p ./extensions/codex-compact/tsconfig.json --noEmit && tsc -p ./extensions/openai-fast-mode/tsconfig.json --noEmit && tsc -p ./extensions/codex-ui/tsconfig.json --noEmit && tsc -p ./extensions/mcp/tsconfig.json --noEmit && tsc -p ./extensions/permissions/tsconfig.json --noEmit && tsc -p ./extensions/subagent/tsconfig.json --noEmit && tsc -p ./extensions/goal/tsconfig.json --noEmit
+$ vitest run
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext
+
+ ✓ extensions/mcp/__tests__/pi-modes-smoke.test.ts (1 test) 1238ms
+   ✓ MCP real Pi mode isolation > exercises a bounded HTTP failure without contaminating JSON, RPC, or print output  1238ms
+ ✓ extensions/goal/__tests__/child-budget.test.ts (5 tests) 1245ms
+   ✓ keeps independent child checkpoints across root usage, replay, and reopen  442ms
+ ✓ extensions/goal/__tests__/controls.test.ts (11 tests) 1324ms
+ ✓ extensions/subagent/__tests__/manager-races.test.ts (16 tests) 1444ms
+ ✓ extensions/codex-search/__tests__/codex.test.ts (36 tests) 856ms
+   ✓ codex helpers > summarizes Cloudflare challenge HTML errors  751ms
+ ✓ extensions/codex-ui/__tests__/rendering-pipeline.test.ts (7 tests) 906ms
+   ✓ stable tail updates never resend offscreen history for short rows or long tokens  519ms
+ ✓ extensions/goal/__tests__/storage.test.ts (16 tests) 1893ms
+   ✓ persists tool recovery independently of status, attribution and inheritance deferral  325ms
+ ✓ extensions/goal/__tests__/content.test.ts (9 tests) 508ms
+ ✓ extensions/mcp/__tests__/transport-fixtures.test.ts (9 tests) 515ms
+ ✓ extensions/subagent/__tests__/session-reader-performance.test.ts (1 test) 417ms
+   ✓ measures a single turn with twenty 64 KiB assistant messages  417ms
+ ✓ extensions/codex-ui/__tests__/grouped-bash.test.ts (15 tests) 504ms
+   ✓ captured output, truncation warnings and custom key hints remain visible and width-safe  419ms
+ ✓ extensions/subagent/__tests__/session-reader.test.ts (22 tests) 463ms
+ ✓ extensions/subagent/__tests__/manager-close.test.ts (7 tests) 364ms
+ ✓ extensions/goal/__tests__/budget.test.ts (4 tests) 408ms
+ ✓ extensions/subagent/__tests__/manager-operations.test.ts (8 tests) 402ms
+ ✓ extensions/subagent/__tests__/manager-capacity.test.ts (10 tests) 435ms
+ ✓ extensions/subagent/__tests__/usage.test.ts (3 tests) 315ms
+ ✓ extensions/subagent/__tests__/manager.test.ts (4 tests) 212ms
+ ✓ extensions/codex-ui/__tests__/grouped-bash-cache.test.ts (18 tests) 418ms
+   ✓ 50 KiB command tokens wrap without truncating captured command text  350ms
+ ✓ extensions/mcp/__tests__/status-ui.test.ts (13 tests) 169ms
+ ✓ extensions/mcp/__tests__/renderers.test.ts (15 tests) 210ms
+ ✓ extensions/codex-search/__tests__/config.test.ts (24 tests) 227ms
+ ✓ extensions/mcp/__tests__/diagnostics.test.ts (36 tests) 127ms
+ ✓ extensions/subagent/__tests__/state-store.test.ts (4 tests) 75ms
+ ✓ extensions/codex-ui/__tests__/reasoning.test.ts (4 tests) 218ms
+ ✓ extensions/openai-fast-mode/__tests__/extension.test.ts (13 tests) 302ms
+ ✓ extensions/mcp/__tests__/client.test.ts (43 tests) 97ms
+ ✓ extensions/codex-compact/__tests__/native-compaction.test.ts (99 tests) 3056ms
+   ✓ Codex compaction history > does not switch models for usage-limit SSE errors  3004ms
+ ✓ extensions/codex-ui/__tests__/layout.test.ts (7 tests) 164ms
+ ✓ extensions/codex-ui/__tests__/tools.test.ts (38 tests) 168ms
+ ✓ extensions/goal/__tests__/children.test.ts (1 test) 85ms
+ ✓ extensions/subagent/__tests__/delivery-receipt.test.ts (1 test) 100ms
+ ✓ extensions/mcp/__tests__/index.test.ts (24 tests) 127ms
+ ✓ extensions/codex-ui/__tests__/reasoning-inline.test.ts (3 tests) 60ms
+stdout | extensions/codex-search/__tests__/renderers.test.ts > records a repeatable collapsed and expanded rendering baseline
+{"benchmark":"search-render","collapsed300Ms":18.02,"expanded20Ms":60.14}
+
+ ✓ extensions/codex-search/__tests__/renderers.test.ts (9 tests) 143ms
+ ✓ extensions/mcp/__tests__/status-ui-prototype.test.ts (12 tests) 62ms
+ ✓ extensions/mcp/__tests__/tool-summary-host.test.ts (2 tests) 159ms
+ ✓ extensions/codex-compact/__tests__/index.test.ts (61 tests) 94ms
+ ✓ extensions/codex-ui/__tests__/grouped-read.test.ts (10 tests) 108ms
+ ✓ extensions/codex-ui/__tests__/bash-group-layout.test.ts (3 tests) 68ms
+ ✓ extensions/codex-ui/__tests__/reasoning-summary.test.ts (4 tests) 32ms
+ ✓ extensions/codex-ui/__tests__/reply-markdown.test.ts (6 tests) 89ms
+ ✓ extensions/subagent/__tests__/tmux-runtime.test.ts (9 tests) 55ms
+ ✓ extensions/codex-compact/__tests__/presentation.test.ts (2 tests) 8ms
+ ✓ extensions/goal/__tests__/loop-scheduler.test.ts (10 tests) 25ms
+ ✓ extensions/openai-fast-mode/__tests__/config.test.ts (16 tests) 11ms
+ ✓ extensions/codex-ui/__tests__/index.test.ts (9 tests) 34ms
+ ✓ extensions/mcp/__tests__/integration.test.ts (1 test) 66ms
+ ✓ extensions/goal/__tests__/loop.test.ts (6 tests) 18ms
+ ✓ extensions/mcp/__tests__/resilience-baseline.test.ts (5 tests) 10ms
+ ✓ extensions/mcp/__tests__/retry.test.ts (41 tests) 17ms
+ ✓ extensions/goal/__tests__/commands.test.ts (66 tests) 4624ms
+ ✓ extensions/codex-ui/__tests__/theme.test.ts (1 test) 3ms
+ ✓ extensions/mcp/__tests__/config.test.ts (13 tests) 20ms
+ ✓ extensions/subagent/__tests__/runtime-host.test.ts (1 test) 21ms
+ ✓ extensions/codex-ui/__tests__/terminal-title.test.ts (4 tests) 3ms
+ ✓ extensions/codex-compact/__tests__/session-coordinator.test.ts (42 tests) 23ms
+ ✓ extensions/subagent/__tests__/renderers.test.ts (6 tests) 3ms
+ ✓ extensions/subagent/__tests__/ownership.test.ts (2 tests) 2ms
+ ✓ extensions/goal/__tests__/tools.test.ts (4 tests) 8ms
+ ✓ extensions/openai-fast-mode/__tests__/commands.test.ts (6 tests) 4ms
+ ✓ extensions/subagent/__tests__/index.test.ts (3 tests) 31ms
+ ✓ extensions/goal/__tests__/scheduler.test.ts (81 tests) 51ms
+ ✓ extensions/subagent/__tests__/tools.test.ts (14 tests) 68ms
+ ✓ extensions/subagent/__tests__/provider-compatibility.test.ts (2 tests) 65ms
+ ✓ extensions/codex-ui/__tests__/exact-visual-tail.test.ts (1 test) 63ms
+ ✓ extensions/mcp/__tests__/schema.test.ts (11 tests) 4ms
+ ✓ extensions/codex-ui/__tests__/render-cache.test.ts (5 tests) 2ms
+ ✓ extensions/subagent/__tests__/cursor.test.ts (4 tests) 3ms
+ ✓ extensions/codex-ui/__tests__/bash-refresh-scheduler.test.ts (1 test) 4ms
+ ✓ extensions/goal/__tests__/accounting.test.ts (7 tests) 2ms
+ ✓ extensions/codex-compact/__tests__/scheduler.test.ts (10 tests) 2ms
+ ✓ extensions/goal/__tests__/capability.test.ts (8 tests) 2ms
+ ✓ extensions/permissions/__tests__/permission-policy.test.ts (9 tests) 12ms
+ ✓ extensions/subagent/__tests__/wait.test.ts (3 tests) 3ms
+ ✓ extensions/codex-compact/__tests__/capabilities.test.ts (1 test) 3ms
+ ✓ extensions/subagent/__tests__/lifecycle.test.ts (2 tests) 2ms
+ ✓ extensions/subagent/__tests__/runtime-state.test.ts (1 test) 2ms
+ ✓ extensions/codex-ui/__tests__/components.test.ts (7 tests) 39ms
+ ✓ extensions/codex-ui/__tests__/responsive-lines.test.ts (3 tests) 4ms
+ ↓ extensions/subagent/__tests__/isolated-integration.test.ts (1 test | 1 skipped)
+ ↓ extensions/subagent/__tests__/integration.test.ts (1 test | 1 skipped)
+ ✓ extensions/openai-fast-mode/__tests__/payload-status.test.ts (19 tests) 3ms
+ ✓ extensions/codex-compact/__tests__/config.test.ts (2 tests) 1ms
+
+ Test Files  82 passed | 2 skipped (84)
+      Tests  1072 passed | 2 skipped (1074)
+   Start at  10:57:09
+   Duration  7.30s (transform 1.68s, setup 0ms, collect 24.16s, tests 25.13s, environment 9ms, prepare 3.80s)
+
+$ pnpm run clean && tsc -p ./extensions/codex-compact/tsconfig.json && tsc -p ./extensions/openai-fast-mode/tsconfig.json && tsc -p ./extensions/codex-ui/tsconfig.json && tsc -p ./extensions/mcp/tsconfig.json && tsc -p ./extensions/permissions/tsconfig.json && tsc -p ./extensions/subagent/tsconfig.json && tsc -p ./extensions/goal/tsconfig.json
+$ node ./scripts/clean.mjs
+$ node ./scripts/check-package.mjs
+Verified 7 compiled Pi extension entries, 1 theme entry, 10 MCP generated modules, required MCP runtime exports, and package exclusion boundaries.
