@@ -12,11 +12,11 @@
 
 ## Current Goal or Problem
 
-goal 多 provider 与私有化模型适配已完成本地分支实施和验收。三关 Implementation 均由独立 worker 交付并通过协调者第一次验收，最后一关的同一 worker 已完成完整 Spec 整体验收。当前等待用户实际试用并确认交付，停止自动推进。用户已授权安装，Pi全局本地包来源已切至冒险worktree；尚未替用户重载当前会话。
+goal 多 provider 与私有化模型适配已完成本地分支实施和验收。三关 Implementation 均由独立 worker 交付并通过协调者第一次验收，最后一关的同一 worker 已完成完整 Spec 整体验收。用户要求手动保存游戏进度，本次保存后停止推进，停在已配置安装、等待用户试用及最终交付确认的位置。Pi全局本地包来源已切至冒险worktree；代理没有重载当前会话，用户是否已自行重载尚未核实。
 
 - [Map #11](https://github.com/wangxuyang1221/adventure/issues/11) 与 [Spec #12](https://github.com/wangxuyang1221/adventure/issues/12) 保持 open，用户确认后才关闭。Spec 是完整规格唯一维护位置。
 - [Implementation #17](https://github.com/wangxuyang1221/adventure/issues/17)、[#18](https://github.com/wangxuyang1221/adventure/issues/18)、[#19](https://github.com/wangxuyang1221/adventure/issues/19) 均验收通过。
-- 产品提交为 `7bff254d732c769d2e88474da645bf911fc5f6f8`，随后存档提交只增加协调者验收与本文件。
+- 产品提交为 `7bff254d732c769d2e88474da645bf911fc5f6f8`，安装记录检查点为 `61b2041cbc469b6447cba0f7ab44341ef9440a87`；之后只更新资料，本次未修改产品源码或Pi安装配置。
 - [完整交付审计](./evidence/slice-3-spec-audit.md)、[最终协调者验收](./evidence/slice-3-coordinator-acceptance.md)、[正式使用说明](../docs/goal-provider-support.md) 为主要入口。
 
 无需继续派发新的 Implementation，也不因没有真实远端模型实测就自行扩大范围。用户提出具体修改时再恢复对应关卡。
@@ -36,6 +36,8 @@ goal 多 provider 与私有化模型适配已完成本地分支实施和验收�
 所有局部发现都在获批切片范围内解决，没有更改业务规格，也没有重开 Planning。
 
 最终验收存档 `4bb1225` 后，用户要求安装以自行验收。代理核对原安装来自main工作区，说明只替换全局packages中的pi-ext本地路径及回退方式，用户回复“同意”。已切至冒险worktree，pi list核对通过，未重载当前会话，也未将安装授权当作交付确认。详见 [user-installation.md](./evidence/user-installation.md)。
+
+用户随后要求“保存游戏进度”。核对本地与远端均为 `61b2041`、工作区干净，安装来源仍为冒险worktree，当前没有存活或待创建worker。按手动保存更新本文件与Map，保留三关已关闭、Map/Spec等待用户确认的状态。此次保存不代表用户已经完成验收，不派发新任务或自动重载Pi。
 
 ## Agreed Decisions and Constraints
 
@@ -65,6 +67,7 @@ Adventure由主代理协调，一次一关，worker新上下文、不再委派�
 - #18 scheduler复核响应/运行/目标归属，settled异步存储前后再次核对。quota分类器只有固定来源的精确码和锚定文案。`You have hit your ChatGPT usage limit.` 可能由Codex adapter对裸429生成，不作为明确账户额度证据。详见 [slice-2-final-outcomes.md](./evidence/slice-2-final-outcomes.md#classification-sources)。
 - #19只在child计量成功提交后首次完整→不完整时通知，没有改公式、冻结或计费路径。Google两版原生cacheWrite为0，实际90样本是80+10+0，其他家族及公式测试验证50+10+30。未伪造Google字段。
 - Node22.22.2、pnpm11.9.0；依赖Pi0.84.3、宿主0.85.1。Context7 `/earendil-works/pi` 只有main，固定版本依据官方源码/已安装包。两版共12份adapter源码与source map逐字节核对，见 [source hashes](./evidence/slice-3-fixed-sources.json)。
+- 本次手动保存重新运行 `env -u PI_SUBAGENT_PARENT pnpm run check`，1067测试通过、2项默认跳过，类型/构建/包校验通过；本地存档引用均可访问，检查后没有遗留测试进程。日志 [manual-save-check.log](./evidence/manual-save-check.log)。
 - 最终worker与协调者check均1067测试通过、2项默认跳过，类型/构建/包校验通过。隔离subagent integration由worker另行1项通过，默认在线项未运行，不能计为通过。协调者日志 [slice-3-coordinator-check.log](./evidence/slice-3-coordinator-check.log)。
 - 两版原生根计量各74场景/288请求、真实受管IPC各16场景/16child；协调者独立重跑均通过。worker另跑两版tmux late/pending各2场景。真实进程有生产投递/报告/close，不是只伪造报告文件。
 - worker实际InteractiveMode PTY两版×根/child×无预算/1000共8组通过。协调者另抽验0.84.3根无预算与0.85.1 child预算1000，通过，edit/reload/resume后7token与旧缺口可见。
@@ -83,7 +86,7 @@ Adventure由主代理协调，一次一关，worker新上下文、不再委派�
 
 ### Cleanup and limits
 
-三名本场worker runtime已关闭，不应尝试使用旧agentId继续派发。所有结果已经入库并在Issue正文记录。协调者核对78个测试/worker PID均退出；无任务监听端口、`.goal-*`、`.slice-3*`、`.coordinator-*`临时目录。未停止用户原有宿主服务。PTY必要依赖pyte0.8.2已按依赖安装例外装入既有conda `codex-py312`，没有写Pi全局配置。
+三名本场worker runtime已关闭，不应尝试使用旧agentId继续派发。本次手动保存再次核对subagent列表为空，无须等待或中止实施。所有结果已经入库并在Issue正文记录。协调者核对78个测试/worker PID均退出；无任务监听端口、`.goal-*`、`.slice-3*`、`.coordinator-*`临时目录。未停止用户原有宿主服务。PTY必要依赖pyte0.8.2已按依赖安装例外装入既有conda `codex-py312`，没有写Pi全局配置。
 
 未运行真实远端/付费模型、所有私有额度文案、Windows/Linux实际TUI、断电恢复或默认在线subagent integration。没有精确远端费用/硬封顶、未暴露服务端用量或孙代理账单保证。上述范围不属于本次必需验收；不能因离线矩阵通过宣称远端全部实测。
 
@@ -93,7 +96,7 @@ Adventure由主代理协调，一次一关，worker新上下文、不再委派�
 
 ## Continuation Point
 
-当前停点是新版已配置安装，等待用户 `/reload` 或重启后试用并确认交付。安装授权不等于验收通过，不是暂停在编码途中或等待切片审核。试用期间不要删除worktree；用户若反馈问题，先确认其运行实例是否已重载。
+本次为用户要求的手动存档，保存并核对远端后停止。暂停位置是新版已配置安装，等待用户试用和最终交付确认；不是编码途中或切片审核。代理没有执行 `/reload`，用户是否自行重载尚未核实。安装授权和“保存游戏进度”均不等于验收通过。试用期间不要删除worktree；用户若反馈问题，先确认其运行实例是否已重载。
 
 1. 读取Map及用户最新回复。用户明确确认交付后，更新Spec状态和Map下一步，关闭Map/Spec，并用 `/Users/wangxuyang/.agents/skills/wangxuyang/handoff/SKILL.md` 更新本文件、提交推送、核对远端。只读查看或模糊的继续不等于批准PR、合并或部署。
 2. 用户提出修改时，按受影响规则恢复对应关卡。先读本文件引用的当前实现/验收证据，不重做已完成调研或重问已确认规格。旧worker已关闭，需要时依adventure安排新的独立worker，执行前完整读取write-todo-list/TDD技能绝对路径及引用。修订切片须用户审核，业务规则失效重开Planning。
