@@ -146,7 +146,11 @@ Codex encrypted compaction item.
 
 这消除了思考延迟补入导致的工具行位移，不代表整个 Pi 零重绘。新增工具、回复、输入和 resize 仍会正常改变布局。实现、缓存边界和性能差异见 [Inline reasoning](docs/plans/codex-ui-inline-reasoning.md#results)。更新后请重启 Pi 并恢复会话，不要只依赖 `/reload` 更新模块。
 
-Write 写入中只显示黄色圆点和路径，成功后圆点变绿并显示最终总行数。失败保留红色圆点与错误正文；不显示累计行数、字节摘要或第二行 Written。完整模式与 low-power 共用此状态规则，Ctrl+O 不展开 Write 文件内容。
+Write / Edit 进行中只显示淡黄色静态 `◌ Writing / Editing` 与路径，目录弱化、文件名突出，不计行或展示中间内容，Ctrl+O 不增加进行中内容。成功点保持灰色，失败标题使用红色 `✗ Write failed / Edit failed`，错误正文不重复加叉。
+
+本地 Write 在内置文件队列中采集旧内容，新建成功显示 `Added`，覆盖显示 `Edited`。普通模式复用 Edit 的行号、增删统计与 diff 样式，默认显示 12 个 diff 行，灰色省略提示紧随正文，Ctrl+O 展开已保存的 diff。low-power 只识别新建或覆盖，不读取旧正文、不生成 Write diff。缺少变化元数据的旧 Write 结果暂时保留原有总行数摘要，不推测新建或覆盖。
+
+Write diff 采集限制为旧、新文本各 1 MiB，合计 4000 行，保存的 patch 不超过 2 MiB。不可读或超限时保留真实成功标题，普通模式显示 `Diff unavailable`，不编造增删数。Write / Edit 每行只高亮前 4096 个 UTF-16 单元，其余内容保留。已通过 Pi 0.84.3 与 0.85.1 的普通、全屏 CLI 验收；测试及性能边界见 [Write / Edit validation](docs/codex-ui-write-edit-validation.md)。
 
 ### Assistant reply layout
 
@@ -206,7 +210,7 @@ pi-codex() {
 
 仓库不会自动修改 Shell 配置，也不提供一个假定 `pi install` 会加入 `PATH` 的 package bin。
 
-`read`、`edit`、`write`、`bash` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。`write` 只显示路径、行数和字节数，不伪造 old/new diff。Bash 使用 `renderShell: "self"`。full 模式下，同一 assistant 消息中连续的 Bash 调用组成一组，不跨 text、thinking、其他工具或消息合并；无法确认归属时独立显示。`Bash` 标签缩进两格，与 `Read`、`Edited` 对齐。标题显示调用数与状态，命令始终可见：收起时单行显示，按可用宽度截断，命令正文最多 120 个显示列，包含末尾的 `...`；展开后显示完整命令并正常换行。
+`read`、`edit`、`write`、`bash` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。full 模式下，同一 assistant 消息中连续的 Bash 调用组成一组，不跨 text、thinking、其他工具或消息合并；无法确认归属时独立显示。`Bash` 标签缩进两格，与 `Read`、`Edited` 对齐。标题显示调用数与状态，命令始终可见：收起时单行显示，按可用宽度截断，命令正文最多 120 个显示列，包含末尾的 `...`；展开后显示完整命令并正常换行。
 
 结果默认折叠，包括成功、错误和运行日志；命令、可确认的状态及截断警告不隐藏。全局 `app.tools.expand` 快捷键切换结果展示，同时展开完整命令，默认是 `Ctrl+O`，提示跟随实际绑定。展开显示本次捕获的全部输出，保留日志原有空行，命令块之间仅加一条连接线。执行完成不会覆盖用户的展开选择。运行耗时集中在展开组底部，避免每秒修改离屏命令而重绘历史；恢复历史不补造耗时、退出码或结束原因。截断时显示真实 `fullOutputPath`，不读取文件来补齐输出。low-power 仍保留原有有界轻量展示。
 

@@ -172,6 +172,104 @@ function createRenderContext(overrides: Record<string, unknown> = {}) {
   };
 }
 
+test("write and edit keep partial output static and private even when expanded", () => {
+  vi.useFakeTimers();
+  const invalidate = vi.fn();
+  for (const lowPower of [false, true]) {
+    const registered: ToolDefinition[] = [];
+    registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => lowPower });
+    for (const name of ["write", "edit"]) {
+      const tool = registered.find(tool => tool.name === name)!;
+      const args = { path: "src/components/中文.ts" };
+      for (const key of ["content", "edits"]) Object.defineProperty(args, key, {
+        get() { throw new Error("Pending content must not be read"); },
+      });
+      const context = createRenderContext({ args, argsComplete: false, isPartial: true, invalidate });
+      const call = tool.renderCall!(args, theme, context as never);
+      const details = Object.defineProperty({}, "patch", {
+        get() { throw new Error("Pending diff must not be read"); },
+      });
+      const result = tool.renderResult!({ content: [], details }, { expanded: true, isPartial: true }, theme, context as never);
+      const verb = name === "write" ? "Writing" : "Editing";
+      assert.equal(stripTerminalSequences(call.render(92)[0]!), `◌ ${verb}  src/components/中文.ts`);
+      assert.ok(call.render(92)[0]!.includes(theme.fg("warning", "◌")));
+      assert.ok(call.render(92)[0]!.includes(theme.fg("dim", "src/components/")));
+      assert.ok(call.render(92)[0]!.includes(theme.fg("text", theme.bold("中文.ts"))));
+      for (const width of [1, 8, 16, 24, 40, 60, 92, 160]) {
+        assert.ok(call.render(width).every(line => visibleWidth(line) <= width));
+        assert.deepEqual(result.render(width), []);
+      }
+    }
+  }
+  vi.advanceTimersByTime(30_000);
+  assert.equal(vi.getTimerCount(), 0);
+  assert.equal(invalidate.mock.calls.length, 0);
+  assert.equal(highlightCodeMock.mock.calls.length, 0);
+});
+
+test("write and edit show one red failure marker and never render a failed diff", () => {
+  for (const lowPower of [false, true]) {
+    const registered: ToolDefinition[] = [];
+    registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => lowPower });
+    for (const name of ["write", "edit"]) {
+      const tool = registered.find(tool => tool.name === name)!;
+      const args = { path: "src/app.ts", content: "ignored", edits: [] };
+      const context = createRenderContext({ args });
+      const call = tool.renderCall!(args, theme, context as never);
+      const result = tool.renderResult!({
+        content: [{ type: "text", text: "Operation aborted" }],
+        details: { get patch() { throw new Error("Failed diff must not be read"); } },
+      }, { expanded: true, isPartial: false }, theme, { ...context, isError: true } as never);
+      const title = call.render(92)[0]!;
+      assert.equal(stripTerminalSequences(title), `✗ ${name === "write" ? "Write" : "Edit"} failed src/app.ts`);
+      assert.ok(title.includes(theme.fg("error", "✗")));
+      assert.deepEqual(result.render(92).map(stripTerminalSequences), ["  Operation aborted"]);
+    }
+  }
+  assert.equal(highlightCodeMock.mock.calls.length, 0);
+});
+
+test("write restores persisted changes with the same settled ANSI layout as edit", () => {
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const write = registered.find(tool => tool.name === "write")!;
+  const edit = registered.find(tool => tool.name === "edit")!;
+  const patch = "--- a/src/app.ts\n+++ b/src/app.ts\n@@ -1 +1 @@\n-old\n+new\n";
+  for (const action of ["Added", "Edited"]) {
+    const args = { path: "src/app.ts", get content() { throw new Error("Persisted changes must not rescan arguments"); } };
+    const context = createRenderContext({ args, argsComplete: false });
+    const call = write.renderCall!(args, theme, context as never);
+    const details = JSON.parse(JSON.stringify({ codexWrite: { version: 1, action, patch } }));
+    const body = write.renderResult!({ content: [], details }, { expanded: false, isPartial: false }, theme, context as never);
+    const editContext = createRenderContext({ args: { path: args.path, edits: [] } });
+    const editCall = edit.renderCall!(editContext.args, theme, editContext as never);
+    const editBody = edit.renderResult!({ content: [], details: { diff: "", patch } }, { expanded: false, isPartial: false }, theme, editContext as never);
+    assert.equal(stripTerminalSequences(call.render(92)[0]!), `• ${action} src/app.ts (+1 -1)`);
+    assert.ok(call.render(92)[0]!.startsWith("\x1b[4m\x1b[2m•\x1b[22m"));
+    for (const width of [1, 8, 16, 24, 40, 60, 92, 160]) {
+      assert.deepEqual(body.render(width), editBody.render(width));
+    }
+    if (action === "Edited") assert.deepEqual(call.render(92), editCall.render(92));
+  }
+});
+
+test("write reports unavailable diffs without inventing a change count or operation", () => {
+  for (const lowPower of [false, true]) {
+    const registered: ToolDefinition[] = [];
+    registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => lowPower });
+    const write = registered.find(tool => tool.name === "write")!;
+    for (const action of [undefined, "Added", "Edited"]) {
+      const args = { path: "file.ts", content: "new" };
+      const context = createRenderContext({ args });
+      const call = write.renderCall!(args, theme, context as never);
+      const body = write.renderResult!({ content: [], details: { codexWrite: { version: 1, action } } },
+        { expanded: true, isPartial: false }, theme, context as never);
+      assert.equal(stripTerminalSequences(call.render(92)[0]!), `• ${action ?? "Write"} file.ts`);
+      assert.deepEqual(body.render(92), lowPower ? [] : [theme.fg("dim", "  Diff unavailable")]);
+    }
+  }
+});
+
 test("write streams without counts and restores final counts before argsComplete", () => {
   initTheme("dark", false);
   for (const lowPower of [false, true]) {
@@ -182,7 +280,7 @@ test("write streams without counts and restores final counts before argsComplete
       { showImages: false }, write, { requestRender() {} }, "/repo");
     for (const count of [0, 3, 10, 20]) {
       row.updateArgs({ path: "src/new.ts", content: Array.from({ length: count }, () => "text").join("\n") });
-      assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["• Write src/new.ts"]);
+      assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["◌ Writing  src/new.ts"]);
     }
     row.updateResult({ content: [{ type: "text", text: "Successfully wrote file." }], isError: false });
     assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["• Write src/new.ts (20 lines)"]);
@@ -222,7 +320,7 @@ test("write scans final content once and colors pending, success and failure mar
       const scanned = () => search.mock.contexts.filter(value => String(value) === args.content).length;
       for (const width of [0, 1, 2, 24, 60, 120]) call.render(width);
       assert.equal(scanned(), 0);
-      assert.ok(call.render(120)[0]!.includes(theme.fg("warning", "•")));
+      assert.ok(call.render(120)[0]!.includes(theme.fg("warning", "◌")));
       for (let index = 0; index < 3; index++) {
         call = write.renderCall!(args, theme, { ...context, lastComponent: call, isPartial: false } as never);
         write.renderResult!({ content: [], details: undefined }, { expanded: index % 2 === 0, isPartial: false }, theme,
@@ -234,10 +332,10 @@ test("write scans final content once and colors pending, success and failure mar
       }
       assert.equal(scanned(), 4);
       assert.equal(bytes.mock.calls.filter(([value]) => value === args.content).length, 0);
-      assert.ok(call.render(120)[0]!.includes(theme.fg("success", "•")));
+      assert.ok(call.render(120)[0]!.includes("\x1b[2m•\x1b[22m"));
       const failed = write.renderResult!({ content: [{ type: "text", text: "Cancelled" }], details: undefined },
         { expanded: false, isPartial: false }, theme, { ...context, isError: true, isPartial: false } as never);
-      assert.ok(call.render(120)[0]!.includes(theme.fg("error", "•")));
+      assert.ok(call.render(120)[0]!.includes(theme.fg("error", "✗")));
       assert.doesNotMatch(stripTerminalSequences(call.render(120)[0]!), /lines/u);
       assert.match(stripTerminalSequences(failed.render(120)[0]!), /Cancelled/u);
       assert.equal(scanned(), 4);
@@ -300,6 +398,35 @@ test("display diff renderer separates signs, highlights content, and fills chang
   assert.ok((lines[1] ?? "").includes("\x1b[31m-\x1b[39m \x1b[2m"));
   assert.ok((lines[2] ?? "").includes("\x1b[32m+\x1b[39m "));
   assert.ok((lines[0] ?? "").includes("\x1b[38;5;189m"));
+});
+
+test("mutation diff highlighting bounds long lines without discarding the remaining text", () => {
+  highlightCodeMock.mockImplementation((text: string) => [text]);
+  try {
+    const text = "x".repeat(4095) + "🙂" + "x".repeat(50 * 1024) + "END";
+    const patch = `--- a/file.ts\n+++ b/file.ts\n@@ -0,0 +1 @@\n+${text}\n`;
+    const registered: ToolDefinition[] = [];
+    registerToolsForTest(registered);
+    for (const name of ["write", "edit"]) {
+      const tool = registered.find(tool => tool.name === name)!;
+      const details = name === "write" ? { codexWrite: { version: 1, action: "Added", patch } } : { patch, diff: "" };
+      const args = { path: "file.ts", content: text, edits: [] };
+      const context = createRenderContext({ args });
+      tool.renderCall!(args, theme, context as never);
+      const body = tool.renderResult!({ content: [], details }, { expanded: true, isPartial: false }, theme, context as never);
+      body.render(92);
+      assert.ok(stripTerminalSequences(body.render(60_000)[0]!).includes(text));
+      const count = highlightCodeMock.mock.calls.length;
+      body.invalidate(); body.render(92);
+      assert.equal(highlightCodeMock.mock.calls.length, count);
+    }
+    assert.ok(stripTerminalSequences(renderDisplayDiff(parseDisplayDiff(`+1 ${text}`), theme, 60_000, "file.ts")[0]!).includes(text));
+    assert.ok(highlightCodeMock.mock.calls.length > 0);
+    for (const [input] of highlightCodeMock.mock.calls) {
+      assert.ok(input.length <= 4096);
+      assert.ok(!/[\uD800-\uDBFF]$/u.test(input), "Highlight prefixes must not split a surrogate pair");
+    }
+  } finally { highlightCodeMock.mockReset(); }
 });
 
 test("display diff line-number width handles row counts beyond argument limits", () => {
@@ -450,7 +577,7 @@ test("read renderer combines the success marker, filename, range and preview in 
   );
   assert.equal(
     stripTerminalSequences(writeCall.render(80).join("\n")),
-    "• Write src/new.ts",
+    "◌ Writing  src/new.ts",
   );
 });
 
@@ -635,7 +762,7 @@ test("low-power edit renderer skips edit arguments and bounds the raw patch prev
 
   assert.equal(stripTerminalSequences(call.render(80).join("\n")), "• Edited src/app.ts");
   assert.ok(!call.render(80).join("\n").includes("\x1b[4m"));
-  assert.equal(stripTerminalSequences(partial.render(80).join("\n")), "  … Editing");
+  assert.deepEqual(partial.render(80), []);
   assert.deepEqual(expandedLines, [
     "    --- a/src/app.ts",
     "    +++ b/src/app.ts",
@@ -687,8 +814,8 @@ test("low-power edit errors stay bounded without reading patch details", () => {
   const lines = result.render(24);
   const output = stripTerminalSequences(lines.join("\n"));
 
-  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "• Edit failed src/app.ts");
-  assert.match(output, /^  ✗ failed /u);
+  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "✗ Edit failed src/app.ts");
+  assert.match(output, /^  failed /u);
   assert.ok(!output.includes("\u0000"));
   assert.ok(!output.includes("second line"));
   assert.equal(textReads, 1);
@@ -710,7 +837,7 @@ test("edit renderer refreshes its title and renders the patch with Codex styling
   const state = {};
   const callContext = createRenderContext({ args, state });
   const call = edit.renderCall(args, theme, callContext as never);
-  assert.equal(stripTerminalSequences(call.render(60).join("\n")), "• Edit src/app.ts");
+  assert.equal(stripTerminalSequences(call.render(60).join("\n")), "◌ Editing  src/app.ts");
 
   const resultContext = createRenderContext({ args, state });
   const result = edit.renderResult(
@@ -789,10 +916,10 @@ test("edit underlines only nonempty settled diff titles and fits narrow widths",
   }
 });
 
-test("collapsed edit diff separates and fills its hidden-lines footer", () => {
+test("collapsed edit diff shows a compact footer immediately after twelve rows", () => {
   for (const [totalLines, hiddenLabel] of [
-    [13, "1 line"],
-    [14, "2 lines"],
+    [13, "1 more lines"],
+    [14, "2 more lines"],
   ] as const) {
     const registered: ToolDefinition[] = [];
     registerToolsForTest(registered);
@@ -822,11 +949,11 @@ test("collapsed edit diff separates and fills its hidden-lines footer", () => {
     const footer = lines.at(-1) ?? "";
     const plainFooter = stripTerminalSequences(footer);
 
-    assert.equal(stripTerminalSequences(lines.at(-2) ?? ""), "");
-    assert.match(plainFooter, new RegExp(`^    ── ${hiddenLabel} hidden ─+$`, "u"));
-    assert.equal(visibleWidth(footer), 48);
-    assert.ok(footer.startsWith("\x1b[2m"));
-    assert.ok(footer.endsWith("\x1b[22m"));
+    assert.equal(lines.length, 13);
+    assert.match(stripTerminalSequences(lines.at(-2) ?? ""), /line 12/u);
+    assert.equal(plainFooter, `  │     … ${hiddenLabel}`);
+    assert.ok(visibleWidth(footer) < 48);
+    assert.equal(footer, theme.fg("dim", `  │     … ${hiddenLabel}`));
 
     const narrowFooter = component.render(10).at(-1) ?? "";
     assert.equal(visibleWidth(narrowFooter), 10);
@@ -1161,7 +1288,7 @@ test("low-power write skips pending metrics and counts only the final content", 
     createRenderContext({ args, state, argsComplete: false, isPartial: true }) as never,
   );
   assert.equal(contentReads, 0);
-  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "• Write src/new.ts");
+  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "◌ Writing  src/new.ts");
   const completed = write.renderResult(
     { content: [{ type: "text", get text() { throw new Error("success result must stay hidden"); } }], details: undefined },
     { expanded: true, isPartial: false },
@@ -1240,7 +1367,7 @@ test("low-power write errors keep one sanitized bounded line", () => {
   );
   const output = stripTerminalSequences(component.render(10_000).join("\n"));
 
-  assert.match(output, /^  ✗ failure /u);
+  assert.match(output, /^  failure /u);
   assert.ok(!output.includes("\u0000"));
   assert.ok(!output.includes("\r"));
   assert.ok(!output.includes("second line"));
@@ -1354,7 +1481,7 @@ test("write pending paints do not scan any argument snapshot", () => {
       call = write.renderCall!(args, theme, createRenderContext({ args, state, argsComplete: false, lastComponent: call }) as never);
     }
     assert.equal(scanned().size, 0);
-    assert.equal(stripTerminalSequences(call!.render(80).join("\n")), "• Write fixture.ts");
+    assert.equal(stripTerminalSequences(call!.render(80).join("\n")), "◌ Writing  fixture.ts");
     assert.deepEqual([...scanned()], []);
     assert.equal(characterSpy.mock.contexts.filter(value => String(value).startsWith("WRITE-BODY")).length, 0);
   } finally {
@@ -1384,7 +1511,7 @@ test("write streaming metrics avoid split arrays and final result recounting", (
         isPartial: true,
       }) as never,
     );
-    assert.equal(stripTerminalSequences(call.render(80).join("\n")), "• Write src/new.ts");
+    assert.equal(stripTerminalSequences(call.render(80).join("\n")), "◌ Writing  src/new.ts");
 
     const finalArgs = { path: "src/new.ts", content: "one\ntwo\n" };
     call = write.renderCall(
@@ -1398,7 +1525,7 @@ test("write streaming metrics avoid split arrays and final result recounting", (
         isPartial: false,
       }) as never,
     );
-    assert.equal(stripTerminalSequences(call.render(80).join("\n")), "• Write src/new.ts");
+    assert.equal(stripTerminalSequences(call.render(80).join("\n")), "◌ Writing  src/new.ts");
 
     assert.equal(byteLengthSpy.mock.calls.filter(([value]) => value === finalArgs.content).length, 0);
     const result = write.renderResult(

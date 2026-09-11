@@ -1,4 +1,4 @@
-import { isAbsolute, relative, sep } from "node:path";
+import { basename, dirname, isAbsolute, relative, sep } from "node:path";
 import { createBashToolDefinition, createEditToolDefinition, createReadToolDefinition, createWriteToolDefinition, DEFAULT_MAX_BYTES, formatSize, getLanguageFromPath, highlightCode, keyHint, keyText, } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, } from "@earendil-works/pi-tui";
 import { BashRefreshScheduler } from "./bash-refresh-scheduler.js";
@@ -9,7 +9,9 @@ import { renderReadGroup } from "./read-group-layout.js";
 import { fitToWidth, formatHomePath, normalizeWidth, paintBackground, } from "./layout.js";
 import { ResponsiveLinesComponent } from "./responsive-lines.js";
 import { ToolRenderCache } from "./render-cache.js";
+import { createObservedWriteDefinition } from "./write-changes.js";
 const COLLAPSED_DIFF_LINES = 12;
+const MAX_DIFF_HIGHLIGHT_CHARS = 4096;
 const BASH_DURATION_REFRESH_MS = 1000;
 const LOW_POWER_ERROR_PREVIEW_CHARS = 4 * 1024;
 const LOW_POWER_EDIT_PATCH_PREVIEW_CHARS = 4 * 1024;
@@ -48,7 +50,10 @@ const DEFAULT_FACTORIES = {
 export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services = {}) {
     const getReadDefinition = createDefinitionCache(factories.read);
     const getEditDefinition = createDefinitionCache(factories.edit);
-    const getWriteDefinition = createDefinitionCache(factories.write);
+    // Injected factories may target remote filesystems; never probe local paths for them.
+    const getWriteDefinition = createDefinitionCache((cwd) => factories.write === createWriteToolDefinition
+        ? createObservedWriteDefinition(cwd, services.isLowPowerEnabled)
+        : factories.write(cwd));
     const getBashDefinition = createDefinitionCache(factories.bash);
     const bashRefreshScheduler = new BashRefreshScheduler(BASH_DURATION_REFRESH_MS);
     const renderCache = services.renderCache ?? new ToolRenderCache();
@@ -141,10 +146,11 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
                 state.path = path;
                 state.settledTitle = undefined;
             }
-            state.initialTitle = formatEditTitle("Edit", path, theme);
             const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
             state.callComponent = component;
-            component.setRenderer((width) => [fitToWidth(state.settledTitle ?? state.initialTitle ?? "", width)], lowPower
+            component.setRenderer((width) => [state.settledTitle === undefined
+                    ? formatPendingMutationTitle("Editing", path, theme, width)
+                    : fitToWidth(state.settledTitle, width)], lowPower
                 ? {
                     linesAlreadyFit: true,
                     cacheKey: `low-power\0edit\0call\0${getLowPowerThemeFingerprint(theme)}\0${path}`,
@@ -155,65 +161,7 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
         renderResult(result, options, theme, context) {
             const state = context.state;
             const path = state.path ?? formatToolPath(context.args.path, context.cwd);
-            const details = result.details;
-            if (getToolRenderMode(state, services) === "low-power") {
-                const error = !options.isPartial && context.isError
-                    ? getLowPowerError(result.content, "Edit failed")
-                    : undefined;
-                const preview = !options.isPartial && error === undefined
-                    ? getLowPowerEditPreview(state, details)
-                    : [];
-                const nextTitle = options.isPartial
-                    ? formatEditTitle("Editing", path, theme, `${ANSI_DIM}…${ANSI_INTENSITY_RESET}`)
-                    : error !== undefined
-                        ? formatEditTitle("Edit failed", path, theme)
-                        : formatEditTitle("Edited", path, theme);
-                if (state.settledTitle !== nextTitle) {
-                    state.settledTitle = nextTitle;
-                    state.callComponent?.invalidate();
-                }
-                const status = options.isPartial ? "partial" : error !== undefined ? "error" : "success";
-                const cacheKey = [
-                    "low-power",
-                    "edit",
-                    "result",
-                    getLowPowerThemeFingerprint(theme),
-                    status,
-                    error ?? "",
-                    preview.join("\n"),
-                ].join("\0");
-                return updateComponent(context.lastComponent, (width) => renderLowPowerEditResult(preview, options.isPartial, error, theme, width), cacheKey);
-            }
-            state.cache ??= renderCache.scope();
-            const preparedDiff = !options.isPartial
-                && !context.isError
-                && details
-                && (details.patch || details.diff)
-                ? getPreparedEditDiff(state, details, path, theme)
-                : undefined;
-            let nextTitle;
-            if (options.isPartial) {
-                nextTitle = formatEditTitle("Editing", path, theme, `${ANSI_DIM}…${ANSI_INTENSITY_RESET}`);
-            }
-            else if (context.isError) {
-                nextTitle = formatEditTitle("Edit failed", path, theme);
-            }
-            else if (preparedDiff) {
-                const stats = state.preparedStats ?? countDiffStats(preparedDiff);
-                state.preparedStats = stats;
-                const suffix = `(${namedGreen(`+${stats.added}`)} ${namedRed(`-${stats.removed}`)})`;
-                nextTitle = formatEditTitle("Edited", path, theme, suffix);
-                if (preparedDiff.length > 0)
-                    nextTitle = theme.underline(nextTitle);
-            }
-            else {
-                nextTitle = formatEditTitle("Edited", path, theme);
-            }
-            if (state.settledTitle !== nextTitle) {
-                state.settledTitle = nextTitle;
-                state.callComponent?.invalidate();
-            }
-            return updateComponent(context.lastComponent, (width) => getEditResultLayout(state, result, preparedDiff, options, path, theme, context.isError, width));
+            return renderMutationResult(state, result, result.details, options, path, "Edited", "edit", theme, context, services, renderCache);
         },
     };
     pi.registerTool(editTool);
@@ -232,12 +180,17 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
             if (!lowPower && context.argsComplete && typeof args.content !== "string")
                 throw new TypeError();
             state.callComponent = updateComponent(context.lastComponent, (width) => {
+                if (!state.status || state.status === "pending") {
+                    return [formatPendingMutationTitle("Writing", path, theme, width)];
+                }
+                if (state.status === "error")
+                    return [fitToWidth(formatMutationFailureTitle("Write failed", path, theme), width)];
+                if (state.settledTitle !== undefined)
+                    return [fitToWidth(state.settledTitle, width)];
                 const suffix = state.status === "success" && state.metrics
                     ? theme.fg("dim", `(${formatLineCount(state.metrics.lineCount)})`)
                     : "";
-                return [fitToWidth(formatToolTitle("Write", path, theme, suffix, {
-                        glyph: "•", color: state.status === "success" ? "success" : state.status === "error" ? "error" : "warning",
-                    }), width)];
+                return [fitToWidth(formatEditTitle("Write", path, theme, suffix), width)];
             });
             return state.callComponent;
         },
@@ -245,6 +198,12 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
             const state = context.state;
             const lowPower = getToolRenderMode(state, services) === "low-power";
             state.status = options.isPartial ? "pending" : context.isError ? "error" : "success";
+            const change = result.details?.codexWrite;
+            if (state.status === "success" && change?.version === 1) {
+                state.metrics = undefined;
+                return renderMutationResult(state, result, change, options, formatToolPath(context.args.path, context.cwd), change.action ?? "Write", "write", theme, context, services, renderCache);
+            }
+            state.settledTitle = undefined;
             if (state.status === "success") {
                 const content = context.args.content;
                 state.metrics = typeof content === "string" ? getWriteMetrics(state, content) : undefined;
@@ -255,7 +214,7 @@ export function registerCodexTools(pi, factories = DEFAULT_FACTORIES, services =
                 : undefined;
             return updateComponent(context.lastComponent, (width) => error === undefined
                 ? []
-                : [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)]);
+                : [fitToWidth(theme.fg("error", `  ${error}`), width)]);
         },
     };
     pi.registerTool(writeTool);
@@ -390,6 +349,14 @@ export function parseUnifiedPatch(patch) {
     }
     return parsed;
 }
+function highlightDiffLine(text, language) {
+    let end = Math.min(text.length, MAX_DIFF_HIGHLIGHT_CHARS);
+    const last = text.charCodeAt(end - 1);
+    if (end < text.length && last >= 0xd800 && last <= 0xdbff)
+        end--;
+    const prefix = text.slice(0, end);
+    return (highlightCode(prefix, language)[0] ?? prefix) + text.slice(end);
+}
 export function renderDisplayDiff(lines, theme, width, path = "", highlightedLines) {
     const safeWidth = normalizeWidth(width);
     if (safeWidth === 0)
@@ -411,7 +378,7 @@ export function renderDisplayDiff(lines, theme, width, path = "", highlightedLin
                 ? namedRed("-")
                 : " ";
         const highlighted = highlightedLines?.[index] ?? line.highlightedText ?? (language
-            ? (highlightCode(line.text, language)[0] ?? line.text)
+            ? highlightDiffLine(line.text, language)
             : line.text);
         const codeWithDefault = applyCodeForeground(highlighted, codeForeground);
         const code = line.kind === "removed"
@@ -477,21 +444,70 @@ function updateComponent(previous, renderer, cacheKey) {
         : { linesAlreadyFit: true, cacheKey });
     return component;
 }
+function renderMutationResult(state, result, details, options, path, action, tool, theme, context, services, renderCache) {
+    const setTitle = (title) => {
+        if (state.settledTitle !== title) {
+            state.settledTitle = title;
+            state.callComponent?.invalidate();
+        }
+    };
+    if (options.isPartial) {
+        setTitle(undefined);
+        return updateComponent(context.lastComponent, () => []);
+    }
+    const failure = tool === "write" ? "Write failed" : "Edit failed";
+    const lowPower = getToolRenderMode(state, services) === "low-power";
+    const error = context.isError
+        ? lowPower ? getLowPowerError(result.content, failure) : firstLine(extractText(result.content)) || failure
+        : undefined;
+    if (error !== undefined) {
+        setTitle(formatMutationFailureTitle(failure, path, theme));
+        return updateComponent(context.lastComponent, (width) => [fitToWidth(theme.fg("error", `  ${error}`), width)]);
+    }
+    if (lowPower) {
+        setTitle(formatEditTitle(action, path, theme));
+        if (tool === "write")
+            return updateComponent(context.lastComponent, () => []);
+        const preview = getLowPowerEditPreview(state, details);
+        const key = ["low-power", tool, getLowPowerThemeFingerprint(theme), preview.join("\n")].join("\0");
+        return updateComponent(context.lastComponent, (width) => renderLowPowerEditResult(preview, false, undefined, theme, width), key);
+    }
+    state.cache ??= renderCache.scope();
+    const diff = details && (details.patch || details.diff) ? getPreparedEditDiff(state, details, path, theme) : undefined;
+    let title = formatEditTitle(action, path, theme);
+    if (diff) {
+        const stats = state.preparedStats ?? countDiffStats(diff);
+        state.preparedStats = stats;
+        title = formatEditTitle(action, path, theme, `(${namedGreen(`+${stats.added}`)} ${namedRed(`-${stats.removed}`)})`);
+        if (diff.length > 0)
+            title = theme.underline(title);
+    }
+    setTitle(title);
+    if (tool === "write" && !diff) {
+        return updateComponent(context.lastComponent, (width) => [fitToWidth(theme.fg("dim", "  Diff unavailable"), width)]);
+    }
+    return updateComponent(context.lastComponent, (width) => getEditResultLayout(state, result, diff, options, path, theme, false, width));
+}
+function formatPendingMutationTitle(action, path, theme, width) {
+    const prefix = `${theme.fg("warning", "◌")} ${theme.fg("muted", action)}  `;
+    const filename = basename(path);
+    const directory = dirname(path) === "." ? "" : `${dirname(path)}/`;
+    const room = width - visibleWidth(prefix);
+    const available = room - visibleWidth(filename);
+    const name = theme.fg("text", theme.bold(filename));
+    const pathText = available < 2 ? fitToWidth(name, Math.max(0, room))
+        : theme.fg("dim", visibleWidth(directory) <= available ? directory
+            : `${fitToWidth(directory, available - 1)}/`) + name;
+    return fitToWidth(prefix + pathText, width);
+}
+function formatMutationFailureTitle(action, path, theme) {
+    return `${theme.fg("error", "✗")} ${theme.bold(action)} ${path || "(unknown path)"}`;
+}
 function formatEditTitle(action, path, theme, suffix = "") {
     const parts = [
         `${ANSI_DIM}•${ANSI_INTENSITY_RESET}`,
         theme.bold(action),
         path || "(unknown path)",
-    ];
-    if (suffix)
-        parts.push(suffix);
-    return parts.join(" ");
-}
-function formatToolTitle(action, path, theme, suffix = "", marker = { glyph: "•", color: "dim" }) {
-    const parts = [
-        theme.fg(marker.color, marker.glyph),
-        theme.fg("toolTitle", theme.bold(action)),
-        theme.fg("accent", path || "(unknown path)"),
     ];
     if (suffix)
         parts.push(suffix);
@@ -553,7 +569,7 @@ function renderLowPowerEditResult(preview, isPartial, error, theme, width) {
         return [fitToWidth(theme.fg("warning", "  … Editing"), width)];
     }
     if (error !== undefined) {
-        return [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)];
+        return [fitToWidth(theme.fg("error", `  ${error}`), width)];
     }
     if (preview.length === 0) {
         return [fitToWidth(theme.fg("success", "  └ Applied"), width)];
@@ -566,7 +582,7 @@ function renderEditResult(result, diffLines, options, path, theme, isError, widt
     }
     if (isError) {
         const error = firstLine(extractText(result.content)) || "Edit failed";
-        return [fitToWidth(theme.fg("error", `  ✗ ${error}`), width)];
+        return [fitToWidth(theme.fg("error", `  ${error}`), width)];
     }
     if (!diffLines) {
         return [fitToWidth(theme.fg("success", "  └ Applied"), width)];
@@ -576,22 +592,17 @@ function renderEditResult(result, diffLines, options, path, theme, isError, widt
     const language = getLanguageFromPath(path);
     const highlighted = cache.prefix(["edit-syntax", cache.identity(diffLines), path, syntaxFingerprint].join("\0"), visible.length, (index) => {
         const line = visible[index];
-        return line.kind !== "hunk" && language ? (highlightCode(line.text, language)[0] ?? line.text) : line.text;
+        return line.kind !== "hunk" && language ? highlightDiffLine(line.text, language) : line.text;
     });
     const lines = renderDisplayDiff(visible, theme, width, path, highlighted);
     const remaining = diffLines.length - visible.length;
     if (remaining > 0) {
-        lines.push("", renderDiffTruncationFooter(remaining, width));
+        lines.push(renderDiffTruncationFooter(remaining, theme, width));
     }
     return lines;
 }
-function renderDiffTruncationFooter(remaining, width) {
-    const safeWidth = normalizeWidth(width);
-    if (safeWidth === 0)
-        return "";
-    const label = `${DIFF_INDENT}── ${remaining} ${remaining === 1 ? "line" : "lines"} hidden `;
-    const rule = "─".repeat(Math.max(0, safeWidth - visibleWidth(label)));
-    return fitToWidth(`${ANSI_DIM}${label}${rule}${ANSI_INTENSITY_RESET}`, safeWidth);
+function renderDiffTruncationFooter(remaining, theme, width) {
+    return fitToWidth(theme.fg("dim", `  │     … ${remaining} more lines`), width);
 }
 function updateBashLifecycle(state, context, scheduler, trackRefresh = true) {
     const nextStatus = context.isError
@@ -896,7 +907,7 @@ function parseEditDiff(details) {
         if (parsed.length > 0)
             return parsed;
     }
-    return parseDisplayDiff(details.diff);
+    return parseDisplayDiff(details.diff ?? "");
 }
 function getPreparedEditDiff(state, details, path, theme) {
     if (state.preparedDiff

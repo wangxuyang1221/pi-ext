@@ -251,7 +251,7 @@ test("lowpower command affects newly rendered write calls without re-registering
     invalidate() {},
   } as never);
 
-  assert.equal(component.render(80).join("\n"), "• Write src/new.ts");
+  assert.equal(component.render(80).join("\n"), "◌ Writing  src/new.ts");
   assert.equal(registeredTools.length, 4);
 });
 
