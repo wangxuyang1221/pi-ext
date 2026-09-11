@@ -12,7 +12,7 @@
 
 ## Current Goal or Problem
 
-goal 多 provider 与私有化模型适配已完成本地分支实施和验收。三关 Implementation 均由独立 worker 交付并通过协调者第一次验收，最后一关的同一 worker 已完成完整 Spec 整体验收。当前等待用户确认交付，停止自动推进。
+goal 多 provider 与私有化模型适配已完成本地分支实施和验收。三关 Implementation 均由独立 worker 交付并通过协调者第一次验收，最后一关的同一 worker 已完成完整 Spec 整体验收。当前等待用户实际试用并确认交付，停止自动推进。用户已授权安装，Pi全局本地包来源已切至冒险worktree；尚未替用户重载当前会话。
 
 - [Map #11](https://github.com/wangxuyang1221/adventure/issues/11) 与 [Spec #12](https://github.com/wangxuyang1221/adventure/issues/12) 保持 open，用户确认后才关闭。Spec 是完整规格唯一维护位置。
 - [Implementation #17](https://github.com/wangxuyang1221/adventure/issues/17)、[#18](https://github.com/wangxuyang1221/adventure/issues/18)、[#19](https://github.com/wangxuyang1221/adventure/issues/19) 均验收通过。
@@ -35,6 +35,8 @@ goal 多 provider 与私有化模型适配已完成本地分支实施和验收�
 
 所有局部发现都在获批切片范围内解决，没有更改业务规格，也没有重开 Planning。
 
+最终验收存档 `4bb1225` 后，用户要求安装以自行验收。代理核对原安装来自main工作区，说明只替换全局packages中的pi-ext本地路径及回退方式，用户回复“同意”。已切至冒险worktree，pi list核对通过，未重载当前会话，也未将安装授权当作交付确认。详见 [user-installation.md](./evidence/user-installation.md)。
+
 ## Agreed Decisions and Constraints
 
 完整行为以 Spec 为准，接续不要重问以下决定：
@@ -48,7 +50,7 @@ goal 多 provider 与私有化模型适配已完成本地分支实施和验收�
 - 软预算允许实际110/100，不强杀当前运行、工具或子代理，不再发后续goal自动续跑。根已结束后迟到预算不另开提示回合。停止或预算收尾结束后child只推进基线，恢复前刷新，不补计冻结时已观察到的增量。10→50→60最终贡献20，不保证按真实发生时间精确切账。
 - 同目标保留用量、预算和缺口，耗尽预算不能靠resume/edit重置或追加。继承累计快照但不继承活动child订阅，新目标独立计量，旧事件不能污染新目标。
 
-用户已批准操作范围：代码仓库 `wangxuyang1221/pi-ext`，分支 `adventure/goal-all-providers`，worktree `/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers`；允许该主工作目录之外worktree写入、`wangxuyang1221/adventure` Issues更新及冒险分支提交推送。不得改main、PR/合并/部署/registry发布、Pi核心、真实凭据或全局用户配置。其他工作区外副作用仍须批准，必要依赖安装例外。
+用户已批准操作范围：代码仓库 `wangxuyang1221/pi-ext`，分支 `adventure/goal-all-providers`，worktree `/Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers`；允许该主工作目录之外worktree写入、`wangxuyang1221/adventure` Issues更新及冒险分支提交推送。不得改main、PR/合并/部署/registry发布、Pi核心、真实凭据或全局用户配置。后续用户另行明确批准试用安装，只将 `/Users/wangxuyang/.pi/agent/settings.json` 的pi-ext包来源切至冒险worktree；该项为全局配置限制的已批准例外。其他工作区外副作用仍须批准，必要依赖安装例外。
 
 遵循 `docs/agents/repository-language-policy.md`。本次新增/修改产品提示英文已确认；文档正文中文、标题英文，代码/测试名/注释英文，提交信息中文。`dist/` 只能构建生成，完成前 `pnpm run check`。
 
@@ -58,6 +60,7 @@ Adventure由主代理协调，一次一关，worker新上下文、不再委派�
 
 ### Product and verification
 
+- Pi日常安装来源已从 `../../Code/t3code/pi-ext` 切为 `../../Code/t3code/pi-ext-goal-all-providers`，配置位于 `~/.pi/agent/settings.json`。其余package条目及配置保留，特别是独立codex-search仍从main路径加载。切换后pi list与7extension/1theme入口核验通过，check再跑1067通过/2默认跳过。当前会话需用户 `/reload` 或重启才能加载，代理未自动重载；本地安装直接引用worktree，不是固定提交副本。详情和回退见 [user-installation.md](./evidence/user-installation.md)。
 - #17的权威goal快照新增可选 `toolRecoveryRequired`，旧记录兼容。它与普通输入可解除的继承continuationDeferral不同。reload通过 `pi-ext-goal-tools` session custom entry保存必要工具外部排除项。写入失败会报错并释放writer，但不能保证失败写入下的禁用项跨reload保存。公开检查点之间关闭又恢复且从未被观察到的瞬时变化不可追溯。
 - #18 scheduler复核响应/运行/目标归属，settled异步存储前后再次核对。quota分类器只有固定来源的精确码和锚定文案。`You have hit your ChatGPT usage limit.` 可能由Codex adapter对裸429生成，不作为明确账户额度证据。详见 [slice-2-final-outcomes.md](./evidence/slice-2-final-outcomes.md#classification-sources)。
 - #19只在child计量成功提交后首次完整→不完整时通知，没有改公式、冻结或计费路径。Google两版原生cacheWrite为0，实际90样本是80+10+0，其他家族及公式测试验证50+10+30。未伪造Google字段。
@@ -90,7 +93,7 @@ Adventure由主代理协调，一次一关，worker新上下文、不再委派�
 
 ## Continuation Point
 
-当前停点是等待用户确认本地分支交付，不是暂停在编码途中，也不是等待切片审核。
+当前停点是新版已配置安装，等待用户 `/reload` 或重启后试用并确认交付。安装授权不等于验收通过，不是暂停在编码途中或等待切片审核。试用期间不要删除worktree；用户若反馈问题，先确认其运行实例是否已重载。
 
 1. 读取Map及用户最新回复。用户明确确认交付后，更新Spec状态和Map下一步，关闭Map/Spec，并用 `/Users/wangxuyang/.agents/skills/wangxuyang/handoff/SKILL.md` 更新本文件、提交推送、核对远端。只读查看或模糊的继续不等于批准PR、合并或部署。
 2. 用户提出修改时，按受影响规则恢复对应关卡。先读本文件引用的当前实现/验收证据，不重做已完成调研或重问已确认规格。旧worker已关闭，需要时依adventure安排新的独立worker，执行前完整读取write-todo-list/TDD技能绝对路径及引用。修订切片须用户审核，业务规则失效重开Planning。
