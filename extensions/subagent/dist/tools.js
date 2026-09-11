@@ -56,6 +56,7 @@ const readAfter = Type.Optional(Type.String({
     description: "上次同一 agent、epoch 和 view 返回的 cursor；本次只读取其后的活动。",
     minLength: 1,
 }));
+// DeepSeek requires an explicit object root; keep the union for strict view validation.
 const readParameters = Type.Union([
     Type.Object({
         agentId: readAgentId,
@@ -116,7 +117,7 @@ const readParameters = Type.Union([
             minLength: 1,
         })),
     }, { additionalProperties: false }),
-]);
+], { type: "object" });
 const waitParameters = Type.Object({
     agentId: Type.String({
         description: "要等待的 subagent sessionId。",

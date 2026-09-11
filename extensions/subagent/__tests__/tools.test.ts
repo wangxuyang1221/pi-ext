@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { validateToolArguments } from "@earendil-works/pi-ai";
 import { test, vi } from "vitest";
 import { Check } from "typebox/value";
 
@@ -24,6 +25,13 @@ test("registers the fixed public subagent tool surface", () => {
     assert.equal(typeof tool.promptSnippet, "string");
     assert.ok(Array.isArray(tool.promptGuidelines));
     assert.ok((tool.promptGuidelines as unknown[]).length > 0);
+  }
+});
+
+test("publishes explicit object roots for provider tool schemas", () => {
+  for (const tool of registerTools()) {
+    const schema = JSON.parse(JSON.stringify(tool.parameters));
+    assert.equal(schema.type, "object", `${tool.name} must declare an object root`);
   }
 });
 
@@ -104,6 +112,103 @@ test("uses strict read view variants with lightweight recent defaults", () => {
   assert.equal(recent.properties.assistantLimit.maximum, 10);
   assert.equal(recent.properties.toolLimit.default, 1);
   assert.equal(recent.properties.toolLimit.maximum, 20);
+});
+
+test("preserves read defaults, limits and cursors through preparation and execution", async () => {
+  const cases = [
+    { input: {}, options: { view: "recent_activity" } },
+    {
+      input: { view: "recent_activity", assistantLimit: 1, toolLimit: 1 },
+      options: { view: "recent_activity", assistantLimit: 1, toolLimit: 1 },
+    },
+    {
+      input: { view: "recent_activity", assistantLimit: 10, toolLimit: 20, after: "cursor-a" },
+      options: { view: "recent_activity", assistantLimit: 10, toolLimit: 20, after: "cursor-a" },
+    },
+    {
+      input: { view: "recent_activity", assistantLimit: "2" },
+      options: { view: "recent_activity", assistantLimit: 2 },
+    },
+    { input: { view: "turns" }, options: { view: "turns" } },
+    { input: { view: "turns", limit: 1 }, options: { view: "turns", limit: 1 } },
+    {
+      input: { view: "turns", limit: 200, after: "cursor-a", pageCursor: "page-a" },
+      options: { view: "turns", limit: 200, after: "cursor-a", pageCursor: "page-a" },
+    },
+    {
+      input: { view: "activity_detail", activityId: "entry-a", section: "tool_result" },
+      options: { view: "activity_detail", activityId: "entry-a", section: "tool_result" },
+    },
+    ...["assistant_text", "assistant_error", "user_text", "tool_arguments", "tool_result"].map((section) => ({
+      input: { view: "activity_detail", activityId: "entry-a", section, detailCursor: "detail-a" },
+      options: { view: "activity_detail", activityId: "entry-a", section, detailCursor: "detail-a" },
+    })),
+  ];
+  for (const { input, options } of cases) {
+    const payload = options.view === "recent_activity"
+      ? { view: options.view, activity: [], cursor: "next-activity", hasMore: false, returnedBytes: 0 }
+      : options.view === "turns"
+        ? { view: options.view, turns: [], cursor: "next-activity", hasMore: true, nextPageCursor: "next-page" }
+        : {
+            view: options.view,
+            activityId: "entry-a",
+            section: "section" in options ? options.section : undefined,
+            content: "Detail",
+            originalBytes: 20,
+            returnedBytes: 6,
+            truncated: true,
+            hasMore: true,
+            nextDetailCursor: "next-detail",
+          };
+    const readMock = vi.fn().mockResolvedValue(payload);
+    const read = registerTools({ read: readMock }).find((tool) => tool.name === "subagent_read")!;
+    const result = await executeRead(read, { agentId: "child-a", ...input });
+    assert.deepEqual(readMock.mock.calls, [["parent-a", "child-a", options]]);
+    assert.equal(result.content[0].text, JSON.stringify(payload));
+  }
+});
+
+test("rejects invalid read arguments before manager access", async () => {
+  const readMock = vi.fn();
+  const read = registerTools({ read: readMock }).find((tool) => tool.name === "subagent_read")!;
+  const recent = { agentId: "child-a", view: "recent_activity" };
+  const turns = { agentId: "child-a", view: "turns" };
+  const detail = { agentId: "child-a", view: "activity_detail", activityId: "entry-a", section: "tool_result" };
+  const inputs: unknown[] = [
+    undefined, null, [], "input", 1, false, {},
+    { view: "recent_activity" }, { ...recent, agentId: "" }, { ...recent, agentId: null },
+    { ...recent, view: "all_entries" }, { ...recent, view: null },
+    { agentId: "child-a", view: "activity_detail", activityId: "entry-a" },
+    { agentId: "child-a", view: "activity_detail", section: "tool_result" },
+    { ...detail, section: "unknown" },
+  ];
+  for (const base of [recent, turns, detail]) inputs.push({ ...base, unknown: true });
+  const fieldValues = {
+    assistantLimit: 1, toolLimit: 1, limit: 20, after: "cursor-a", pageCursor: "page-a",
+    activityId: "entry-a", section: "tool_result", detailCursor: "detail-a",
+  };
+  for (const [base, fields] of [
+    [recent, ["limit", "pageCursor", "activityId", "section", "detailCursor"]],
+    [turns, ["assistantLimit", "toolLimit", "activityId", "section", "detailCursor"]],
+    [detail, ["assistantLimit", "toolLimit", "limit", "after", "pageCursor"]],
+  ] as const) {
+    for (const field of fields) inputs.push({ ...base, [field]: fieldValues[field] });
+  }
+  for (const [base, field, maximum] of [
+    [recent, "assistantLimit", 10], [recent, "toolLimit", 20], [turns, "limit", 200],
+  ] as const) {
+    for (const value of [-1, 0, maximum + 1, 1.5, null, "invalid"]) inputs.push({ ...base, [field]: value });
+  }
+  for (const [base, field] of [
+    [recent, "after"], [turns, "after"], [turns, "pageCursor"],
+    [detail, "activityId"], [detail, "section"], [detail, "detailCursor"],
+  ] as const) {
+    for (const value of ["", null]) inputs.push({ ...base, [field]: value });
+  }
+  for (const input of inputs) {
+    await assert.rejects(executeRead(read, input), /Validation failed for tool "subagent_read"/u, JSON.stringify(input));
+    assert.equal(readMock.mock.calls.length, 0);
+  }
 });
 
 test("forwards turns continuation separately from the incremental cursor", async () => {
@@ -511,6 +616,16 @@ test("encodes reuse, delivery, observation, wait, and close boundaries", () => {
   assert.equal(timeoutSchema.default, 30_000);
   assert.equal(timeoutSchema.maximum, 600_000);
 });
+
+async function executeRead(tool: Record<string, unknown>, input: unknown) {
+  const prepare = tool.prepareArguments as (args: unknown) => Record<string, unknown>;
+  const params = validateToolArguments(tool as never, {
+    type: "toolCall", id: "call-a", name: "subagent_read", arguments: prepare(input),
+  });
+  return (tool.execute as (...args: any[]) => Promise<any>)("call-a", params, undefined, undefined, {
+    sessionManager: { getSessionFile: () => "parent.jsonl", getSessionId: () => "parent-a" },
+  });
+}
 
 function registerTools(
   managerOverrides: Record<string, unknown> = {},

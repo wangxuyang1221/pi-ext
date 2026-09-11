@@ -86,6 +86,7 @@ const readAfter = Type.Optional(Type.String({
   minLength: 1,
 }));
 
+// DeepSeek requires an explicit object root; keep the union for strict view validation.
 const readParameters = Type.Union([
   Type.Object({
     agentId: readAgentId,
@@ -146,7 +147,7 @@ const readParameters = Type.Union([
       minLength: 1,
     })),
   }, { additionalProperties: false }),
-]);
+], { type: "object" });
 
 type ReadParameters = Static<typeof readParameters>;
 
