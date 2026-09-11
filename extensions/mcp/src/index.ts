@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import {
   DEFAULT_MAX_BYTES,
   DEFAULT_MAX_LINES,
+  getAgentDir,
   truncateHead,
   type ExtensionAPI,
   type ExtensionCommandContext,
@@ -28,6 +29,9 @@ import {
   renderMcpToolCall,
   renderMcpToolResult,
 } from "./renderers.js";
+import { collectHistoryIdentities, readHistoryIdentities, type HistoryIdentity } from "./history.js";
+import { HistoryHandoff } from "./history-handoff.js";
+import { historyTool } from "./history-tool.js";
 import { jsonSchemaToTypeBox } from "./schema.js";
 import { inventoryComponent, inventoryServer, type McpInventory } from "./status-ui.js";
 import { McpStartup } from "./startup-ui.js";
@@ -116,6 +120,44 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
   const manager = new Manager({ diagnostics });
   const registeredTools = new Map<string, RegisteredTool>();
   const availableTools = new Map<string, McpTool>();
+  const historyNames = new Set<string>();
+  const handoff = new HistoryHandoff(getAgentDir());
+  let historyFailure = false;
+  const historyError = (error: unknown, ctx?: ExtensionContext): void => {
+    diagnostics.record({ level: "warn", message: "MCP history display restoration failed", error });
+    if (ctx) notifyForMode(ctx, "MCP history display could not be fully restored. Some calls may use the default style. See /mcp logs.", "warning");
+    else historyFailure = true;
+  };
+  const registerHistory = (identities: readonly HistoryIdentity[]): void => {
+    for (const identity of identities) {
+      if (registeredTools.has(identity.fullName) || historyNames.has(identity.fullName)) continue;
+      pi.registerTool(historyTool(identity));
+      historyNames.add(identity.fullName);
+    }
+  };
+  // Factory registration must not call bound session actions or start connections.
+  try { registerHistory(handoff.consume()); } catch (error) { historyError(error); }
+
+  let onlineNames = new Set<string>();
+  const activationChoices = new Map<string, boolean>();
+  const rememberActiveChoices = (): void => {
+    const current = new Set(pi.getActiveTools());
+    for (const name of onlineNames) activationChoices.set(name, current.has(name));
+  };
+  const reconcileActive = (observeChoices = true): void => {
+    const online = new Set([...registeredTools].filter(([name, tool]) =>
+      availableTools.has(name) && manager.isServerConnected(tool.serverName)).map(([name]) => name));
+    const current = pi.getActiveTools();
+    // Observe user choices before our own removals or host registration refreshes.
+    if (observeChoices) rememberActiveChoices();
+    const next = current.filter((name) => !(historyNames.has(name) || registeredTools.has(name))
+      || (online.has(name) && activationChoices.get(name) !== false));
+    for (const name of online) {
+      if (!onlineNames.has(name) && activationChoices.get(name) !== false && !next.includes(name)) next.push(name);
+    }
+    onlineNames = online;
+    if (current.length !== next.length || current.some((name, index) => name !== next[index])) pi.setActiveTools(next);
+  };
   let lifecycleGeneration = 0;
   let activeSession: ActiveSession | undefined;
   let unsubscribeManager: (() => void) | undefined;
@@ -141,6 +183,7 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
   ): void => {
     if (!isCurrent(session)) return;
 
+    rememberActiveChoices();
     const nextTools = deduplicateTools(tools);
     const nextNames = new Set<string>();
     for (const tool of nextTools) {
@@ -173,11 +216,15 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
         availableTools.delete(fullName);
       }
     }
+    reconcileActive(false);
   };
 
   const handleManagerEvent = (event: McpManagerEvent, session: ActiveSession): void => {
     if (!isCurrent(session)) return;
 
+    // Keep the current live catalog for queued calls and the manager's safe
+    // reconnect policy. Offline tools are inactive, not history placeholders.
+    if (event.type === "state") reconcileActive();
     if (event.type === "tools") {
       syncServerTools(event.serverName, event.tools, session);
     }
@@ -212,6 +259,15 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
       await pendingCleanup;
     }
     if (generation !== lifecycleGeneration) return;
+
+    availableTools.clear();
+    try { registerHistory(collectHistoryIdentities(ctx.sessionManager.getEntries())); }
+    catch (error) { historyError(error, ctx); }
+    reconcileActive();
+    if (historyFailure) {
+      historyFailure = false;
+      notifyForMode(ctx, "MCP history display could not be fully restored. Some calls may use the default style. See /mcp logs.", "warning");
+    }
 
     const configResult = loadMcpConfigResult(ctx.cwd, diagnostics, {
       allowProjectConfig: ctx.isProjectTrusted(),
@@ -316,15 +372,26 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
     await startConnections();
   });
 
-  pi.on("session_shutdown", async () => {
+  pi.on("session_shutdown", async (event, ctx) => {
     lifecycleGeneration += 1;
     activeSession?.startup?.dispose();
     activeSession = undefined;
     unsubscribeManager?.();
     unsubscribeManager = undefined;
     availableTools.clear();
-    await clearManager();
-    await diagnostics.close();
+    try {
+      handoff.clear();
+      if (event.reason === "resume") {
+        if (!event.targetSessionFile) throw new Error("Missing MCP history target session file");
+        handoff.publish(readHistoryIdentities(event.targetSessionFile));
+      } else if (event.reason === "reload" || event.reason === "fork") {
+        handoff.publish(collectHistoryIdentities(ctx.sessionManager.getEntries()));
+      }
+    } catch (error) { historyError(error, ctx); }
+    finally {
+      try { await clearManager(); }
+      finally { await diagnostics.close(); }
+    }
   });
 
   pi.on("tool_result", (event) => {

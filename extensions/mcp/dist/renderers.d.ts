@@ -13,10 +13,12 @@ interface ResultRenderOptions {
     expanded: boolean;
     isPartial: boolean;
 }
-interface McpToolNames {
+type McpToolNames = {
     serverName: string;
     toolName: string;
-}
+} | {
+    fullName: string;
+};
 export declare function renderMcpToolCall(args: unknown, names: McpToolNames, theme: Theme, context: RendererContext): Component;
 export declare function renderMcpToolResult(result: unknown, options: ResultRenderOptions, theme: Theme, context: RendererContext): Component;
 export {};

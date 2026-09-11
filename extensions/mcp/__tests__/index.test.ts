@@ -1,3 +1,5 @@
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
@@ -135,6 +137,8 @@ vi.mock("../src/client.js", () => {
 import registerMcpExtension from "../src/index.js";
 
 interface PiMock {
+  getActiveTools(): string[];
+  setActiveTools(names: string[]): void;
   on: ReturnType<typeof vi.fn>;
   registerCommand: ReturnType<typeof vi.fn>;
   registerTool: ReturnType<typeof vi.fn>;
@@ -150,7 +154,10 @@ function createPiMock(): PiMock {
   const handlers = new Map<string, Array<(...args: any[]) => unknown>>();
   const commands = new Map<string, any>();
   const tools = new Map<string, any>();
+  let active = ["read", "other-extension"];
   const pi: PiMock = {
+    getActiveTools: () => [...active],
+    setActiveTools: (names) => { active = [...names]; },
     handlers,
     commands,
     tools,
@@ -160,7 +167,10 @@ function createPiMock(): PiMock {
       handlers.set(event, current);
     }),
     registerCommand: vi.fn((name: string, command: unknown) => commands.set(name, command)),
-    registerTool: vi.fn((tool: any) => tools.set(tool.name, tool)),
+    registerTool: vi.fn((tool: any) => {
+      if (!tools.has(tool.name)) active.push(tool.name);
+      tools.set(tool.name, tool);
+    }),
     registerEntryRenderer: vi.fn(),
     appendEntry: vi.fn(),
     async emit(event: string, payload: unknown, ctx?: unknown) {
@@ -247,6 +257,7 @@ function createContext(
   const hasUI = options.hasUI ?? (mode === "tui" || mode === "rpc");
   const ctx = {
     cwd: "/tmp/project",
+    sessionManager: { getEntries: vi.fn((): any[] => []) },
     mode,
     hasUI,
     isProjectTrusted: vi.fn(() => options.trusted ?? true),
@@ -311,14 +322,23 @@ function stripAnsi(value: string): string {
 }
 
 let inheritedPiSubagent: string | undefined;
+let inheritedAgentDir: string | undefined;
+let historyAgentDir: string;
 
 describe("MCP Pi integration", () => {
   beforeEach(() => {
+    inheritedAgentDir = process.env.PI_CODING_AGENT_DIR;
+    mkdirSync(".tmp", { recursive: true });
+    historyAgentDir = mkdtempSync(join(process.cwd(), ".tmp/mcp-index-"));
+    process.env.PI_CODING_AGENT_DIR = historyAgentDir;
     inheritedPiSubagent = process.env.PI_SUBAGENT;
     delete process.env.PI_SUBAGENT;
   });
 
   afterEach(() => {
+    rmSync(historyAgentDir, { recursive: true, force: true });
+    if (inheritedAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+    else process.env.PI_CODING_AGENT_DIR = inheritedAgentDir;
     vi.restoreAllMocks();
     vi.useRealTimers();
     mocks.loadMcpConfigResult.mockReset();
@@ -327,6 +347,148 @@ describe("MCP Pi integration", () => {
     mocks.managerInstances.length = 0;
     if (inheritedPiSubagent === undefined) delete process.env.PI_SUBAGENT;
     else process.env.PI_SUBAGENT = inheritedPiSubagent;
+  });
+
+  it("bootstraps cold history before background connections and replaces it with current live definitions", async () => {
+    process.env.PI_SUBAGENT = "1";
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({ docs: { command: "docs-mcp" } }));
+    const pending = deferred<any>();
+    mocks.connectServerImpl.mockImplementation(() => pending.promise);
+    const pi = createPiMock();
+    const ctx = createContext();
+    ctx.sessionManager.getEntries.mockReturnValue([{ type: "message", message: { role: "assistant", content: [{ type: "toolCall", name: "mcp__docs__query" }] } }]);
+    registerMcpExtension(pi as never);
+    await pi.emit("session_start", {}, ctx);
+    const placeholder = pi.tools.get("mcp__docs__query");
+    expect(placeholder?.renderShell).toBe("self");
+    expect(pi.getActiveTools()).toEqual(["read", "other-extension"]);
+    pi.setActiveTools([...pi.getActiveTools(), "mcp__docs__query"]);
+    await expect(placeholder.execute("id", {})).rejects.toThrow("history-only");
+    expect(manager().callTool).not.toHaveBeenCalled();
+    pending.resolve(makeState("docs"));
+    await flushPromises();
+    await flushPromises();
+    expect(pi.tools.get("mcp__docs__query")).not.toBe(placeholder);
+    expect(pi.tools.get("mcp__docs__query").description).toContain("query description");
+    expect(pi.getActiveTools()).toEqual(["read", "other-extension", "mcp__docs__query"]);
+    manager().emit({ type: "state", serverName: "docs", state: makeState("docs", { connected: false, status: "offline" }), source: "background" });
+    expect(pi.getActiveTools()).toEqual(["read", "other-extension"]);
+    await expect(placeholder.execute("id", {})).rejects.toThrow("history-only");
+    expect(manager().callTool).not.toHaveBeenCalled();
+    await pi.emit("session_shutdown", { reason: "quit" }, ctx);
+  });
+
+  it("lets an already queued live call use the manager safe reconnect path while offline", async () => {
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({ docs: { command: "docs-mcp" } }));
+    mocks.connectServerImpl.mockResolvedValue(makeState("docs"));
+    const pi = createPiMock();
+    const ctx = createContext();
+    registerMcpExtension(pi as never);
+    await pi.emit("session_start", {}, ctx);
+    const live = pi.tools.get("mcp__docs__query");
+    manager().emit({ type: "state", serverName: "docs", state: makeState("docs", { connected: false, status: "offline" }), source: "background" });
+    expect(pi.getActiveTools()).toEqual(["read", "other-extension"]);
+    await expect(live.execute("queued-id", {})).resolves.toMatchObject({ content: [{ type: "text", text: "ok" }] });
+    expect(manager().callTool).toHaveBeenCalledTimes(1);
+    manager().emit({ type: "tools", serverName: "docs", tools: [], source: "background" });
+    await expect(live.execute("deleted-id", {})).rejects.toThrow("no longer available");
+    expect(manager().callTool).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not re-enable a user-disabled live tool on duplicate discovery", async () => {
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({ docs: { command: "docs-mcp" } }));
+    mocks.connectServerImpl.mockResolvedValue(makeState("docs"));
+    const pi = createPiMock();
+    const ctx = createContext();
+    registerMcpExtension(pi as never);
+    await pi.emit("session_start", {}, ctx);
+    pi.setActiveTools(["read", "other-extension"]);
+    manager().emit({ type: "tools", serverName: "docs", tools: [makeTool("query")], source: "background" });
+    expect(pi.getActiveTools()).toEqual(["read", "other-extension"]);
+    manager().emit({ type: "tools", serverName: "docs", tools: [], source: "background" });
+    manager().emit({ type: "tools", serverName: "docs", tools: [makeTool("query")], source: "background" });
+    expect(pi.getActiveTools()).toEqual(["read", "other-extension"]);
+  });
+
+  it("preserves a user choice when host allowlist refresh reactivates definitions during registration", async () => {
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({ docs: { command: "docs-mcp" } }));
+    mocks.connectServerImpl.mockResolvedValue(makeState("docs"));
+    const pi = createPiMock();
+    registerMcpExtension(pi as never);
+    await pi.emit("session_start", {}, createContext());
+    pi.setActiveTools(["read", "other-extension"]);
+    const register = pi.registerTool.getMockImplementation()!;
+    pi.registerTool.mockImplementation((tool) => {
+      register(tool);
+      pi.setActiveTools([...new Set([...pi.getActiveTools(), "mcp__docs__query"])]);
+    });
+    manager().emit({ type: "tools", serverName: "docs", tools: [makeTool("query", { description: "changed" })], source: "background" });
+    expect(pi.getActiveTools()).toEqual(["read", "other-extension"]);
+  });
+
+  it("preserves user deactivation across offline recovery while restoring auto-paused tools", async () => {
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({ docs: { command: "docs-mcp" } }));
+    mocks.connectServerImpl.mockResolvedValue(makeState("docs", { tools: [makeTool("query"), makeTool("other")] }));
+    const pi = createPiMock();
+    registerMcpExtension(pi as never);
+    await pi.emit("session_start", {}, createContext());
+    pi.setActiveTools(["read", "other-extension", "mcp__docs__other"]);
+    manager().emit({ type: "state", serverName: "docs", state: makeState("docs", { connected: false }), source: "background" });
+    expect(pi.getActiveTools()).toEqual(["read", "other-extension"]);
+    manager().emit({ type: "state", serverName: "docs", state: makeState("docs"), source: "background" });
+    expect(pi.getActiveTools()).toEqual(["read", "other-extension", "mcp__docs__other"]);
+  });
+
+  it.each(["resume", "fork", "reload", "new", "quit"])("handles %s handoff sources without reading target configuration", async (reason) => {
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult());
+    const pi = createPiMock();
+    const ctx = createContext();
+    const entry = (name: string) => ({ type: "message", message: { role: "assistant", content: [{ type: "toolCall", name }] } });
+    ctx.sessionManager.getEntries.mockReturnValue([entry("mcp__old__tool")]);
+    const path = join(historyAgentDir, "target.jsonl");
+    registerMcpExtension(pi as never);
+    await pi.emit("session_start", {}, ctx);
+    await pi.emit("session_before_switch", { reason: "resume", targetSessionFile: path }, ctx);
+    expect(existsSync(join(historyAgentDir, "mcp-history"))).toBe(false);
+    writeFileSync(path, JSON.stringify(entry("mcp__target__tool")));
+    await pi.emit("session_shutdown", { reason, targetSessionFile: path }, ctx);
+    const next = createPiMock();
+    registerMcpExtension(next as never);
+    expect([...next.tools.keys()]).toEqual(reason === "resume" ? ["mcp__target__tool"] : reason === "new" || reason === "quit" ? [] : ["mcp__old__tool"]);
+    expect(mocks.loadMcpConfigResult).toHaveBeenCalledTimes(1);
+    expect(manager().connectServer).not.toHaveBeenCalled();
+    const directory = join(historyAgentDir, "mcp-history");
+    if (existsSync(directory)) expect(readdirSync(directory)).toEqual([]);
+  });
+
+  it("diagnoses handoff I/O failures without skipping MCP cleanup", async () => {
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult());
+    const pi = createPiMock();
+    const ctx = createContext();
+    registerMcpExtension(pi as never);
+    await pi.emit("session_start", {}, ctx);
+    const oldManager = manager();
+    mkdirSync(join(historyAgentDir, "mcp-history"), { mode: 0o755 });
+    chmodSync(join(historyAgentDir, "mcp-history"), 0o755);
+    await pi.emit("session_shutdown", { reason: "resume", targetSessionFile: "missing" }, ctx);
+    expect(oldManager.shutdown).toHaveBeenCalledOnce();
+    expect(ctx.ui.notify).toHaveBeenCalledWith(expect.stringContaining("default style"), "warning");
+  });
+
+  it("passes reload history to the next factory without action API calls or connections", async () => {
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult());
+    const pi = createPiMock();
+    const ctx = createContext();
+    ctx.sessionManager.getEntries.mockReturnValue([{ type: "message", message: { role: "assistant", content: [{ type: "toolCall", name: "mcp__offline__old-tool" }] } }]);
+    registerMcpExtension(pi as never);
+    await pi.emit("session_start", {}, ctx);
+    await pi.emit("session_shutdown", { reason: "reload" }, ctx);
+    expect(manager().shutdown).toHaveBeenCalledOnce();
+    const next = createPiMock();
+    next.getActiveTools = () => { throw new Error("Factory actions are unavailable"); };
+    registerMcpExtension(next as never);
+    expect(next.tools.get("mcp__offline__old-tool")?.renderShell).toBe("self");
+    expect(manager().connectServer).not.toHaveBeenCalled();
   });
 
   it("shares one diagnostics service with the config loader and manager", async () => {

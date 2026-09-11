@@ -280,7 +280,7 @@ pi \
 
 MCP 成功结果默认显示最多五个视觉行的灰色预览，超限以 `...` 收尾；成功仅圆点变绿，不再显示 Completed、类型或字节摘要。Ctrl+O 展开灰色详情，仍受展示上限约束。失败保留明确错误正文。
 
-Pi 0.84.3 与本机 0.85.1 的 `/reload` 会先重建历史行，再注册动态 MCP 工具，历史 MCP 行可能退回默认渲染。变更前快照也能复现；重新启动 Pi 并恢复会话可恢复新样式。验收证据与限制见[实施计划](docs/plans/codex-ui-tool-summary.md#implementation-results)。
+MCP 历史现在独立于连接恢复显示。冷恢复扫描全部分支；进程内 resume/import/fork/clone/reload 通过短寿命、仅含显示 identity 的交接文件提前注册 renderer。历史占位始终拒绝执行，实时 discovery 仍使用当前 schema；离线时停用实时工具，但已排队的实时调用保留原有安全重连路径。首次从没有交接 hook 的旧版本部署时，请重启 Pi 后恢复会话。用户级安装可跨 cwd 恢复；项目级插件在目标 cwd 不再加载、host 明确过滤工具定义或历史读取超限时，可能显示默认样式。具体限制和 Pi 0.85.1 验收见 [MCP resume UI acceptance](docs/mcp-resume-ui-acceptance.md)。
 
 内存 diagnostics 使用每服务器有界 ring buffer，并对控制字符、常见凭据和过长字段进行清理。文件日志默认关闭；启用后写入有界 JSONL，并保留一个 `.1` 轮转备份。Stdio stderr 使用 pipe 捕获到 diagnostics，不直接写入 Pi 终端。脱敏是降低风险的措施，不是保存或分享日志的安全保证。
 

@@ -60,12 +60,13 @@ function getResponsiveComponent(previous) {
 }
 function formatMcpCallLine(names, argumentSummary, isPartial, isError, theme, width) {
     const action = isError ? "Call failed for" : isPartial ? "Calling" : "Called";
-    const safeServerName = sanitizeDiagnosticText(names.serverName, DEFAULT_FIELD_BYTES);
-    const safeToolName = sanitizeDiagnosticText(names.toolName, DEFAULT_FIELD_BYTES);
+    const displayName = "fullName" in names
+        ? sanitizeDiagnosticText(names.fullName, DEFAULT_FIELD_BYTES)
+        : `${sanitizeDiagnosticText(names.serverName, DEFAULT_FIELD_BYTES)} / ${sanitizeDiagnosticText(names.toolName, DEFAULT_FIELD_BYTES)}`;
     const base = [
         theme.fg(isError ? "error" : isPartial ? "dim" : "success", "•"),
         theme.fg("toolTitle", theme.bold(action)),
-        theme.fg("accent", theme.bold(`${safeServerName} / ${safeToolName}`)),
+        theme.fg("accent", theme.bold(displayName)),
     ].join(" ");
     const summaryWidth = getSummaryWidth(width);
     if (!argumentSummary) {

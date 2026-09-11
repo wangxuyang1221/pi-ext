@@ -84,7 +84,10 @@ function createPiHarness() {
   const handlers = new Map<string, Array<(...args: any[]) => unknown>>();
   const commands = new Map<string, any>();
   const tools = new Map<string, any>();
+  let active: string[] = [];
   const api = {
+    getActiveTools: () => active,
+    setActiveTools: (names: string[]) => { active = names; },
     on: vi.fn((event: string, handler: (...args: any[]) => unknown) => {
       handlers.set(event, [...(handlers.get(event) ?? []), handler]);
     }),
@@ -111,6 +114,7 @@ function createTuiContext(cwd: string) {
   };
   return {
     cwd,
+    sessionManager: { getEntries: () => [] },
     mode: "tui" as const,
     hasUI: true,
     isProjectTrusted: vi.fn(() => true),
