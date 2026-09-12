@@ -138,7 +138,7 @@ Codex encrypted compaction item.
 - 原生消息位置的单行思考摘要，流式与完成后保持同一规则
 - 隐藏 streaming working row；运行时窗口标题使用 80ms 单色转圈，正文思考状态仍保持静态
 - Read 连续文件分组与每文件三行短预览，以及 `edit`、`write` 的紧凑 renderer
-- Bash 分组标题与 `Read`、`Edited` 对齐，命令始终可见，结果默认折叠，按 `Ctrl+O` 展开
+- Bash 逐条显示 `⏺ Bash(command)` 与前三行输出，按 `Ctrl+O` 原位展开完整命令和已捕获输出
 
 每段连续 Thinking 从第一个完整、独占源文本行的 `**标题**` 出现时，就在原生消息位置显示 `• 标题`。后续完整标题原地替换，尚未闭合的标题不覆盖上一条；超长标题截断为一行，无标题正文不充当摘要。输入框上方不再安装思考 widget，也不预留它的空白区。
 
@@ -210,11 +210,13 @@ pi-codex() {
 
 仓库不会自动修改 Shell 配置，也不提供一个假定 `pi install` 会加入 `PATH` 的 package bin。
 
-`read`、`edit`、`write`、`bash` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。full 模式下，同一 assistant 消息中连续的 Bash 调用组成一组，不跨 text、thinking、其他工具或消息合并；无法确认归属时独立显示。`Bash` 标签缩进两格，与 `Read`、`Edited` 对齐。标题显示调用数与状态，命令始终可见：收起时单行显示，按可用宽度截断，命令正文最多 120 个显示列，包含末尾的 `...`；展开后显示完整命令并正常换行。
+`read`、`edit`、`write`、`bash` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。full 模式下，每个已执行调用显示一条 `⏺ Bash(command)`，`Bash` 文字仍与 `Read`、`Edited` 对齐。尚未执行的 pending 调用暂不显示，错误或完成结果不会被隐藏。内部仍按同一 assistant 消息中的连续 Bash 维护归属，不跨 text、thinking、其他工具、缺失组件或消息合并；重复 ID 的额外组件独立显示。取消旧统计标题、命令树和耗时列。长命令默认按当前宽度单行省略，展开保留完整命令及逻辑换行。
 
-结果默认折叠，包括成功、错误和运行日志；命令、可确认的状态及截断警告不隐藏。全局 `app.tools.expand` 快捷键切换结果展示，同时展开完整命令，默认是 `Ctrl+O`，提示跟随实际绑定。展开显示本次捕获的全部输出，保留日志原有空行，命令块之间仅加一条连接线。执行完成不会覆盖用户的展开选择。运行耗时集中在展开组底部，避免每秒修改离屏命令而重绘历史；恢复历史不补造耗时、退出码或结束原因。截断时显示真实 `fullOutputPath`，不读取文件来补齐输出。low-power 仍保留原有有界轻量展示。
+默认预览前三个终端显示行，超出时显示精确的 `… +N lines` 和实际展开绑定。正常正文使用 `text` 色，输出前缀灰色，失败正文红色；已核验的取消与超时使用警告色。无输出时分别显示 `Running…`、`(No content)` 或 `Command failed`。只在宿主明确标记失败且尾部诊断匹配时，才把退出码、取消或超时诊断提到预览首行，不根据日志中的 `Error` 判断失败。
 
-更新后请重启 Pi 并恢复会话，确保加载新版代码；不要仅凭 `/reload` 成功判断旧进程已完成代码升级。分组只改变显示，不重新执行 Bash，也不修改持久化结果或用户 `!` Bash。当前契约与验证记录见 [Grouped Bash implementation plan](docs/plans/codex-ui-grouped-bash.md#current-revision)。
+全局 `app.tools.expand` 默认绑定 `Ctrl+O`，原位展开全部已捕获输出，保留原有空行和宿主错误原文；执行完成不覆盖展开选择。截断提示保持可见，包括宿主失败结果丢失 details 后保留在文本中的截断 footer；不读取 `fullOutputPath` 补齐输出，也不把捕获内容称为完整日志。缓存按调用内容版本、宽度和样式失效，未变化调用不重复清理、计数或着色。full-mode Bash 不再创建耗时刷新计时器；low-power 保留原有有界轻量展示。
+
+更新后请重启 Pi 并恢复会话，确保加载新版代码；不要仅凭 `/reload` 成功判断旧进程已完成代码升级。分组只改变显示，不重新执行 Bash，也不修改持久化结果或用户 `!` Bash。当前契约、真实 CLI 和性能验证记录见 [Claude-style Bash implementation checklist](docs/plans/codex-ui-claude-bash.md#results)。
 
 Read 在同一 assistant 消息内按调用顺序合并相邻读取，不跨 text、thinking、其他工具或消息边界。每个文件显示不加粗的主题 `accent` 文件名、暗灰目录和实际返回范围，默认附最多三屏幕行预览及余量提示。预览每行最多提取 512 个 UTF-16 代码单元，长行裁剪而不换行。全局 `app.tools.expand` 快捷键展开完整输入路径和最多 40 行源码，再次按键恢复短预览。错误、取消和续读提示保留；图片及归属不明的调用独立显示，避免宿主附件与文件名错位。分组不改执行、权限或持久化结果，不提供原型的配色与布局切换命令。双版本验证及预览开销见 [Read UI validation](docs/research/codex-ui-read-validation.md)。
 

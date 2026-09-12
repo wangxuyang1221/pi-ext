@@ -12,7 +12,7 @@ import { registerCodexTools } from "../../../extensions/codex-ui/src/tools.js";
 
 import { fixtureGroup, renderPolish, POLISH_VARIANTS } from "../src/polish.js";
 import { renderBashGroup } from "../src/original-bash-group-layout.js";
-import { renderBashGroup as renderProduction } from "../../../extensions/codex-ui/src/bash-group-layout.js";
+import { renderBashGroup as renderFrozen } from "../src/frozen-bash-group-layout.js";
 
 import { TitleAnimator, TITLE_FRAMES } from "../src/title-spinner.js";
 
@@ -53,7 +53,7 @@ function harness(expandKey: "ctrl+o" | "ctrl+shift+o" = "ctrl+o", polish = false
   return { controller, tool, rows, events, commands, shortcuts, dispose: () => events.get("session_shutdown")?.() };
 }
 
-test("polish variants preserve production command bodies while styling both metadata regions", () => {
+test("polish variants preserve frozen command bodies while styling both metadata regions", () => {
   const group = fixtureGroup([{ ...fixturesFor("success")[0]!, durationMs: 100 }]);
   const hint = theme.fg("dim", "ctrl+o") + theme.fg("muted", " expand");
   const baseline = renderBashGroup(group, false, theme, 180, hint);
@@ -71,7 +71,7 @@ test("polish variants preserve production command bodies while styling both meta
   }
   assert.match(plain(renderPolish(group, false, theme, 180, hint, "instrument")), /command 1   succeeded 1/u);
   assert(renderPolish(group, false, theme, 180, hint, "keycap")[0]!.includes(theme.bg("selectedBg", theme.fg("muted", " ctrl+o "))));
-  assert.deepEqual(renderPolish(group, false, theme, 180, hint, "keycap"), renderProduction(group, false, theme, 180, "ctrl+o"));
+  assert.deepEqual(renderPolish(group, false, theme, 180, hint, "keycap"), renderFrozen(group, false, theme, 180, "ctrl+o"));
 });
 
 test("polish survives narrow widths, expanded output, live states, and custom keybindings", () => {

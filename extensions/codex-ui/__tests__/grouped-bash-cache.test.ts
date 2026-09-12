@@ -53,7 +53,7 @@ for (const change of ["append", "replace-tail", "replace-prefix", "replace-all",
       const rendered = text(a);
       for (const line of output.split("\n")) if (line) assert.ok(rendered.includes(line));
       assert.equal(reads, previous);
-      if (!output) assert.ok(rendered.includes("(no output)"));
+      if (!output) assert.ok(rendered.includes("(No content)"));
     } finally { h.dispose(); }
   });
 }
@@ -66,7 +66,7 @@ test("reload discovers already-created fresh rows before first session_start", (
     a.updateResult(result("first")); b.updateResult(result("second"));
     assert.match(text(b), /second/u);
     h.emit("session_start", { reason: "reload" });
-    assert.match(text(a), /2 commands  ·  2 succeeded/u);
+    assert.equal(text(a).match(/⏺ Bash\(/gu)?.length, 2);
     assert.match(text(a), /second/u);
     assert.deepEqual(b.render(120), []);
     h.emit("session_shutdown");
@@ -82,7 +82,7 @@ test("superseded snapshots are not cleaned before the next frame", () => {
     for (let index = 0; index < 20; index++) row.updateResult({ content: [{ type: "text", get text() { reads++; return `${index}`; } }], isError: false });
     assert.equal(reads, 0);
     assert.match(text(row), /19/u);
-    assert.equal(reads, 2);
+    assert.equal(reads, 1);
   } finally { h.dispose(); }
 });
 
@@ -121,7 +121,7 @@ test("50 KiB command tokens wrap without truncating captured command text", () =
   const h = setup();
   try {
     const row = h.row("a"); const command = "q".repeat(50 * 1024);
-    row.updateArgs({ command });
+    row.updateArgs({ command }); row.markExecutionStarted();
     const rendered = text(row, 1);
     assert.equal(rendered.match(/q/gu)?.length, command.length);
     assert.ok(row.render(1).every(line => visibleWidth(line) <= 1));
@@ -146,13 +146,15 @@ test("changing source separators reassigns already bound rows without swallowing
   const h = setup();
   try {
     h.declare([call("a"), call("b"), call("c")]);
-    const a = h.row("a"); const b = h.row("b"); const c = h.row("c"); text(a);
+    const a = h.row("a"); const b = h.row("b"); const c = h.row("c");
+    [a, b, c].forEach(row => row.markExecutionStarted()); text(a);
     h.declare([call("a"), { type: "text", text: "break" }, call("b"), call("c")]);
-    assert.match(text(a), /1 command/u);
-    assert.match(text(b), /2 commands/u);
+    assert.match(text(a), /Bash\(printf a\)/u);
+    assert.doesNotMatch(text(a), /printf b|printf c/u);
+    assert.equal(text(b).match(/⏺ Bash\(/gu)?.length, 2);
     assert.equal(c.render(120).length, 0);
     h.declare([call("a"), call("b"), call("c")]);
-    assert.match(text(a), /3 commands/u);
+    assert.equal(text(a).match(/⏺ Bash\(/gu)?.length, 3);
     assert.equal(b.render(120).length, 0);
   } finally { h.dispose(); }
 });
@@ -160,11 +162,25 @@ test("changing source separators reassigns already bound rows without swallowing
 test("missing leaders and duplicate IDs remain independently visible", () => {
   const h = setup();
   try {
-    h.declare([call("a"), call("b")]); const b = h.row("b");
+    h.declare([call("a"), call("b")]); const b = h.row("b"); b.markExecutionStarted();
     assert.match(text(b), /printf b/u);
-    const a = h.row("a"); assert.match(text(a), /2 commands/u);
-    const duplicate = h.row("b"); assert.match(text(duplicate), /printf b/u);
+    const a = h.row("a"); a.markExecutionStarted(); assert.equal(text(a).match(/⏺ Bash\(/gu)?.length, 2);
+    const duplicate = h.row("b"); duplicate.markExecutionStarted(); assert.match(text(duplicate), /printf b/u);
     assert.equal(b.render(120).length, 0);
+  } finally { h.dispose(); }
+});
+
+test("duplicate IDs in source content never duplicate another component's capture", () => {
+  const h = setup();
+  try {
+    h.declare([call("a"), call("b"), call("b"), call("c")]);
+    const a = h.row("a"); const b = h.row("b"); const duplicate = h.row("b"); const c = h.row("c");
+    a.updateResult(result("capture-a")); b.updateResult(result("capture-b-first"));
+    duplicate.updateResult(result("capture-b-second")); c.updateResult(result("capture-c"));
+    const rendered = [a, b, duplicate, c].map(row => text(row)).join("\n");
+    for (const capture of ["capture-a", "capture-b-first", "capture-b-second", "capture-c"]) assert.equal(rendered.split(capture).length - 1, 1);
+    assert(rendered.indexOf("capture-b-first") < rendered.indexOf("capture-b-second"));
+    assert(rendered.indexOf("capture-b-second") < rendered.indexOf("capture-c"));
   } finally { h.dispose(); }
 });
 
@@ -180,7 +196,7 @@ for (const lifecycle of ["session_start", "session_tree", "session_compact", "se
       text(current); const stats = h.cache.stats().layouts.chargedBytes;
       old.updateResult(result("late old result")); old.invalidate(); text(old);
       assert.equal(h.cache.stats().layouts.chargedBytes, stats);
-      assert.equal(vi.getTimerCount(), 1);
+      assert.equal(vi.getTimerCount(), 0);
       assert.match(text(current), /new/u);
     } finally { h.dispose(); }
   });
@@ -193,9 +209,9 @@ test("recovery follows the host compaction projection instead of inventing hidde
       retainedTail: [{ role: "assistant", content: [call("kept-a"), call("kept-b")], timestamp: 0, stopReason: "toolUse" }] });
     h.emit("session_start");
     const a = h.row("kept-a"); const b = h.row("kept-b");
-    a.updateResult(result("kept"));
+    a.updateResult(result("kept")); b.updateResult(result("kept-b"));
     const projectsTail = sessionEntryToContextMessages(h.entries[0]).some(message => message.role === "assistant");
-    assert.match(text(a), projectsTail ? /2 commands/u : /1 command/u);
+    assert.equal(text(a).match(/⏺ Bash\(/gu)?.length, projectsTail ? 2 : 1);
     assert.equal(b.render(120).length === 0, projectsTail);
     assert.doesNotMatch(text(a), /\d+\.\d+s/u);
   } finally { h.dispose(); }

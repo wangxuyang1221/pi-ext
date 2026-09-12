@@ -1,6 +1,5 @@
 import { sessionEntryToContextMessages, type BashToolDetails, type ExtensionContext, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
-import type { BashRefreshScheduler } from "./bash-refresh-scheduler.js";
 import type { RenderCacheScope, ToolRenderCache } from "./render-cache.js";
 
 type ToolRenderContext = Parameters<NonNullable<ToolDefinition["renderCall"]>>[2];
@@ -16,16 +15,11 @@ export interface BashMember {
   status: BashStatus;
   content?: Array<{ type: string; text?: string }>;
   details?: BashToolDetails;
-  startedAt?: number;
-  endedAt?: number;
   component?: Component;
   invalidate?: () => void;
 }
 export interface BashGroup {
-  timerKey: string;
   members: BashMember[];
-  counts: Record<BashStatus, number>;
-  running: Set<BashMember>;
 }
 export interface BashGroupRowState { bashMember?: BashMember }
 interface Candidate { ids: string[] }
@@ -38,14 +32,12 @@ export class BashGroups {
   private readonly membership = new Map<string, string>();
   private activeCandidates: string[] = [];
   private notifying = false;
-  private nextGroup = 0;
 
-  constructor(private readonly cache: ToolRenderCache, private readonly scheduler: BashRefreshScheduler) {}
+  constructor(private readonly cache: ToolRenderCache) {}
 
   reset(ctx?: ExtensionContext, preserveBound = false): void {
     if (!preserveBound) {
       for (const member of this.members.values()) {
-        this.scheduler.untrack(member.group.timerKey);
         member.invalidate = undefined;
       }
       this.members.clear();
@@ -125,16 +117,8 @@ export class BashGroups {
     const status: BashStatus = context.isError ? "failed" : !context.isPartial ? "completed"
       : context.executionStarted ? "running" : "pending";
     if (status !== member.status) {
-      member.group.counts[member.status]--;
-      member.group.counts[status]++;
-      member.group.running.delete(member);
-      if (status === "running") {
-        member.startedAt ??= Date.now();
-        member.group.running.add(member);
-      } else if (member.startedAt !== undefined) member.endedAt ??= Date.now();
       member.status = status;
       changed = true;
-      this.schedule(member.group);
     }
     if (changed) this.changed(member);
   }
@@ -150,7 +134,12 @@ export class BashGroups {
   private reflow(key: string): void {
     let segment: BashMember[] = [];
     const flush = () => { if (segment.length) this.assign(segment); segment = []; };
+    const seen = new Set<string>();
     for (const id of this.candidates.get(key)?.ids ?? []) {
+      // Extra rows with ambiguous IDs bind independently. Never reuse the first
+      // row's member for a second source occurrence or group across that row.
+      if (seen.has(id)) { flush(); continue; }
+      seen.add(id);
       const member = this.members.get(id);
       if (member) segment.push(member);
       else flush(); // Unbound or low-power rows remain visible barriers.
@@ -159,20 +148,9 @@ export class BashGroups {
   }
 
   private assign(members: BashMember[]): void {
-    for (const member of members) if (member.group) this.scheduler.untrack(member.group.timerKey);
-    const group: BashGroup = { timerKey: `group-${this.nextGroup++}`, members,
-      counts: { pending: 0, running: 0, completed: 0, failed: 0 }, running: new Set() };
-    for (const member of members) {
-      member.group = group; group.counts[member.status]++;
-      if (member.status === "running") group.running.add(member);
-    }
-    this.schedule(group);
+    const group: BashGroup = { members };
+    for (const member of members) member.group = group;
     for (const member of members) this.notify(member);
-  }
-
-  private schedule(group: BashGroup): void {
-    if (group.running.size) this.scheduler.track(group.timerKey, () => this.notify(group.members[0]!));
-    else this.scheduler.untrack(group.timerKey);
   }
 
   private changed(member: BashMember): void {

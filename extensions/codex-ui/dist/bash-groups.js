@@ -2,21 +2,17 @@ import { sessionEntryToContextMessages } from "@earendil-works/pi-coding-agent";
 /** Session-local ownership. Only bound full-mode rows may hide behind another row. */
 export class BashGroups {
     cache;
-    scheduler;
     members = new Map();
     candidates = new Map();
     membership = new Map();
     activeCandidates = [];
     notifying = false;
-    nextGroup = 0;
-    constructor(cache, scheduler) {
+    constructor(cache) {
         this.cache = cache;
-        this.scheduler = scheduler;
     }
     reset(ctx, preserveBound = false) {
         if (!preserveBound) {
             for (const member of this.members.values()) {
-                this.scheduler.untrack(member.group.timerKey);
                 member.invalidate = undefined;
             }
             this.members.clear();
@@ -116,18 +112,8 @@ export class BashGroups {
         const status = context.isError ? "failed" : !context.isPartial ? "completed"
             : context.executionStarted ? "running" : "pending";
         if (status !== member.status) {
-            member.group.counts[member.status]--;
-            member.group.counts[status]++;
-            member.group.running.delete(member);
-            if (status === "running") {
-                member.startedAt ??= Date.now();
-                member.group.running.add(member);
-            }
-            else if (member.startedAt !== undefined)
-                member.endedAt ??= Date.now();
             member.status = status;
             changed = true;
-            this.schedule(member.group);
         }
         if (changed)
             this.changed(member);
@@ -148,7 +134,15 @@ export class BashGroups {
         let segment = [];
         const flush = () => { if (segment.length)
             this.assign(segment); segment = []; };
+        const seen = new Set();
         for (const id of this.candidates.get(key)?.ids ?? []) {
+            // Extra rows with ambiguous IDs bind independently. Never reuse the first
+            // row's member for a second source occurrence or group across that row.
+            if (seen.has(id)) {
+                flush();
+                continue;
+            }
+            seen.add(id);
             const member = this.members.get(id);
             if (member)
                 segment.push(member);
@@ -158,26 +152,11 @@ export class BashGroups {
         flush();
     }
     assign(members) {
+        const group = { members };
         for (const member of members)
-            if (member.group)
-                this.scheduler.untrack(member.group.timerKey);
-        const group = { timerKey: `group-${this.nextGroup++}`, members,
-            counts: { pending: 0, running: 0, completed: 0, failed: 0 }, running: new Set() };
-        for (const member of members) {
             member.group = group;
-            group.counts[member.status]++;
-            if (member.status === "running")
-                group.running.add(member);
-        }
-        this.schedule(group);
         for (const member of members)
             this.notify(member);
-    }
-    schedule(group) {
-        if (group.running.size)
-            this.scheduler.track(group.timerKey, () => this.notify(group.members[0]));
-        else
-            this.scheduler.untrack(group.timerKey);
     }
     changed(member) {
         const owner = member.group.members[0];

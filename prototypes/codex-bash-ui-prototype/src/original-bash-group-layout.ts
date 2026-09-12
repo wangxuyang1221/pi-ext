@@ -1,7 +1,7 @@
 // PROTOTYPE: Frozen pre-polish renderer for the original/type/instrument comparisons only.
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
-import type { BashGroup, BashMember, BashStatus } from "../../../extensions/codex-ui/src/bash-groups.js";
+import type { BashGroup, BashMember, BashStatus } from "./frozen-bash-types.js";
 import { fitToWidth, normalizeWidth } from "../../../extensions/codex-ui/src/layout.js";
 
 const presentation = {

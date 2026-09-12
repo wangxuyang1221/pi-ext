@@ -1,10 +1,26 @@
 # Grouped Bash Prototype
 
+## Current production boundary
+
+正式 full-mode Bash 已改为 Claude 样式。本目录的默认分组、polish 和 Hybrid 保留原有视觉，作为历史对照；以下关于分组与排印接入生产的描述记录的是前轮状态，不代表当前生产 UI。polish 的方案 3 与 Hybrid 改为调用 `src/frozen-bash-group-layout.ts`，相关输入类型也冻结在原型目录内。生产不依赖这些副本。原有 20 项原型测试与 13 项 CLI 样式测试按原视觉契约验证。
+
 ## Question
 
 当前原型中，`Bash` 标题向右缩进两格，与生产 `Read`、`Edited` 标签对齐；命令始终可见，收起时单行预览，结果默认折叠；`Ctrl+O` 展开完整命令与结果。用户已确认这一效果并要求更新生产，本目录继续保留为 fixture 设计参考。
 
 默认入口仍只保留已确认的分组样式。历史上的四种布局变体、`/bash-logs` 和日志弹层不恢复。新增 `--polish` 隔离试验只比较两个辅助信息区域，见下节。统计与快捷键沿用英文；本次新增方案名称与操作说明使用已获用户确认的中文。
+
+## CLI references
+
+三个入口比较 Codex CLI、Claude Code，以及紧凑标题与现有命令树结合的 Hybrid；不改变下面的默认分组原型或生产 UI。
+
+```sh
+pnpm run prototype:bash-codex
+pnpm run prototype:bash-claude
+pnpm run prototype:bash-hybrid
+```
+
+进入后 `Alt+1` / `Alt+2` / `Alt+3` 可直接切换，`Ctrl+O` 展开；`/bash-scene mixed` 查看多命令。`/bash-scene long` 查看长单行和多行命令，配合 `Alt+R` 重播、`Alt+P` 暂停观察执行中。版本依据、实机核验、限制与检查见 [Bash CLI style prototypes](CLI-STYLES.md)。
 
 ## Metadata Polish Experiment
 
@@ -29,7 +45,7 @@ pnpm run prototype:bash-ui --polish
 
 - `Target`：`extensions/codex-ui/src/bash-group-layout.ts` 的标题统计及右侧提示、耗时。方案 3 已在此正式实现，`tools.ts` 传入真实绑定的原始按键文本。
 - `Context`：真实 Pi 0.84.3 CLI、生产 Codex UI、主题、工具组件、命令分支、预览截断、展开输出、编辑器和页脚。无需独立网页或模拟卡片。
-- `Contract`：fixture 转为生产 `BashGroup`。方案 3 直接调用正式 `renderBashGroup()`，不再执行原型的 ANSI 尾部替换。原版、方案 1 和方案 2 使用 `src/original-bash-group-layout.ts` 中接入前的冻结副本；它只用于对照，不发布。通过真实 `context.invalidate()` 刷新，展开状态继续由 Pi 管理。
+- `Contract`：fixture 转为冻结的 `BashGroup`。方案 3 调用 `src/frozen-bash-group-layout.ts` 的 `renderBashGroup()`，不执行原型的 ANSI 尾部替换。原版、方案 1 和方案 2 使用 `src/original-bash-group-layout.ts` 中接入前的冻结副本；它只用于对照，不发布。通过真实 `context.invalidate()` 刷新，展开状态继续由 Pi 管理。
 
 ### Fixtures and Limits
 

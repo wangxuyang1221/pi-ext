@@ -1807,7 +1807,7 @@ test("low-power bash preserves failed status and fits sanitized narrow rows", ()
   }
 });
 
-test("bash calls lock their render mode and isolate the full-mode refresh timer", () => {
+test("bash calls lock their render mode without creating full-mode refresh timers", () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(0));
 
@@ -1833,7 +1833,7 @@ test("bash calls lock their render mode and isolate the full-mode refresh timer"
       isPartial: true,
     }) as never,
   );
-  assert.equal(vi.getTimerCount(), 1);
+  assert.equal(vi.getTimerCount(), 0);
 
   lowPowerEnabled = true;
   const lowPowerArgs = { command: "printf low" };
@@ -1851,7 +1851,7 @@ test("bash calls lock their render mode and isolate the full-mode refresh timer"
       isPartial: true,
     }) as never,
   );
-  assert.equal(vi.getTimerCount(), 1);
+  assert.equal(vi.getTimerCount(), 0);
 
   lowPowerEnabled = false;
   bash.renderCall(
@@ -1868,10 +1868,10 @@ test("bash calls lock their render mode and isolate the full-mode refresh timer"
     }) as never,
   );
   assert.match(stripTerminalSequences(lowPowerCall.render(80).join("\n")), /Bash running/u);
-  assert.equal(vi.getTimerCount(), 1);
+  assert.equal(vi.getTimerCount(), 0);
 
   vi.advanceTimersByTime(1_000);
-  assert.equal(fullInvalidate.mock.calls.length, 1);
+  assert.equal(fullInvalidate.mock.calls.length, 0);
   assert.equal(lowPowerInvalidate.mock.calls.length, 0);
 
   bash.renderCall(
@@ -1887,7 +1887,7 @@ test("bash calls lock their render mode and isolate the full-mode refresh timer"
       isPartial: false,
     }) as never,
   );
-  assert.equal(vi.getTimerCount(), 1);
+  assert.equal(vi.getTimerCount(), 0);
 
   lowPowerEnabled = true;
   bash.renderCall(

@@ -1,6 +1,5 @@
 import { type BashToolDetails, type ExtensionContext, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
-import type { BashRefreshScheduler } from "./bash-refresh-scheduler.js";
 import type { RenderCacheScope, ToolRenderCache } from "./render-cache.js";
 type ToolRenderContext = Parameters<NonNullable<ToolDefinition["renderCall"]>>[2];
 export type BashStatus = "pending" | "running" | "completed" | "failed";
@@ -17,16 +16,11 @@ export interface BashMember {
         text?: string;
     }>;
     details?: BashToolDetails;
-    startedAt?: number;
-    endedAt?: number;
     component?: Component;
     invalidate?: () => void;
 }
 export interface BashGroup {
-    timerKey: string;
     members: BashMember[];
-    counts: Record<BashStatus, number>;
-    running: Set<BashMember>;
 }
 export interface BashGroupRowState {
     bashMember?: BashMember;
@@ -38,14 +32,12 @@ interface SourceMessage {
 /** Session-local ownership. Only bound full-mode rows may hide behind another row. */
 export declare class BashGroups {
     private readonly cache;
-    private readonly scheduler;
     private readonly members;
     private readonly candidates;
     private readonly membership;
     private activeCandidates;
     private notifying;
-    private nextGroup;
-    constructor(cache: ToolRenderCache, scheduler: BashRefreshScheduler);
+    constructor(cache: ToolRenderCache);
     reset(ctx?: ExtensionContext, preserveBound?: boolean): void;
     discover(message: SourceMessage, start?: boolean): void;
     bind(context: ToolRenderContext & {
@@ -58,7 +50,6 @@ export declare class BashGroups {
     }): void;
     private reflow;
     private assign;
-    private schedule;
     private changed;
     private notify;
 }

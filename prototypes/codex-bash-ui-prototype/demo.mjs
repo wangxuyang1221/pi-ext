@@ -14,15 +14,19 @@ const option = name => {
   const index = args.indexOf(`--${name}`);
   return index < 0 ? undefined : args[index + 1];
 };
+const cliStyle = option("cli-style");
+if (args.includes("--cli-style") && !cliStyle) throw new Error("--cli-style requires codex, claude, or hybrid.");
+if (cliStyle && !["codex", "claude", "hybrid"].includes(cliStyle)) throw new Error(`Invalid CLI style: ${cliStyle}`);
 const titleSpinner = args.includes("--title-spinner");
 const polish = args.includes("--polish") || titleSpinner;
-const scene = option("scene") ?? (polish ? "single" : "mixed");
+if (cliStyle && polish) throw new Error("CLI style references cannot be combined with --polish or --title-spinner.");
+const scene = option("scene") ?? (polish || cliStyle ? "single" : "mixed");
 if (args.some(arg => arg === "--variant" || arg.startsWith("--variant="))) {
   throw new Error("Grouped is now the only layout. Remove --variant from the command.");
 }
 if (!["single", "mixed", "success", "long", "edge"].includes(scene)) throw new Error(`Invalid scene: ${scene}`);
 if (args.includes("--help")) {
-  console.log("pnpm run prototype:bash-ui [--polish] [--title-spinner] [--scene single|mixed|success|long|edge] [--fullscreen] [--smoke] [--pty-smoke]");
+  console.log("pnpm run prototype:bash-ui [--polish] [--title-spinner] [--cli-style codex|claude|hybrid] [--scene single|mixed|success|long|edge] [--fullscreen] [--smoke] [--pty-smoke]");
   process.exit(0);
 }
 
@@ -50,14 +54,15 @@ try {
   const compiled = join(build, "prototypes/codex-bash-ui-prototype");
   const env = isolatedEnvironment();
   if (args.includes("--smoke")) {
-    await child(process.execPath, ["--test", join(compiled, "__tests__/prototype.test.js")], { cwd: repository, env });
+    await child(process.execPath, ["--test", join(compiled, cliStyle ? "__tests__/cli-styles.test.js" : "__tests__/prototype.test.js")], { cwd: repository, env });
   } else {
-    const { fixturesFor } = await import(pathToFileURL(join(compiled, "src/fixtures.js")).href);
+    const fixturesModule = await import(pathToFileURL(join(compiled, cliStyle ? "src/cli-fixtures.js" : "src/fixtures.js")).href);
+    const fixturesFor = cliStyle ? fixturesModule.cliFixturesFor : fixturesModule.fixturesFor;
     const session = join(run, "sessions/fixture.jsonl");
     writeFileSync(session, sessionFixture(fixturesFor(scene)));
     writeFileSync(join(run, "agent/settings.json"), JSON.stringify({
       theme: "codex-pi", quietStartup: true,
-      defaultProvider: "bash-ui-fixture", defaultModel: "fixture",
+      defaultProvider: cliStyle ? "bash-cli-fixture" : "bash-ui-fixture", defaultModel: "fixture",
       terminal: { mode: args.includes("--fullscreen") ? "fullscreen" : "regular" },
     }));
     const packageRoot = resolve(dirname(fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"))), "..");
@@ -66,12 +71,13 @@ try {
     const cliArgs = [cli,
       "--offline", "--approve", "--no-extensions", "--no-skills", "--no-prompt-templates", "--no-context-files", "--no-themes",
       "--theme", join(repository, "themes/codex-pi.json"), "--use-theme", "codex-pi",
-      "--session", session, "--extension", join(compiled, "src/composed.js"),
+      "--session", session, "--extension", join(compiled, cliStyle ? "src/cli-composed.js" : "src/composed.js"),
       "--tui-mode", args.includes("--fullscreen") ? "fullscreen" : "regular",
     ];
-    console.log(`Pi ${pkg.version} · grouped · ${scene} · fixture-only, offline`);
+    console.log(`Pi ${pkg.version} · ${cliStyle ?? "grouped"} · ${scene} · fixture-only, offline`);
+    if (cliStyle) console.log("Alt+1 / Alt+2 / Alt+3 切换样式，Ctrl+O 展开，/bash-scene long 查看长命令，Alt+R 重播，Ctrl+D 退出。");
     if (args.includes("--pty-smoke")) {
-      const { smokePty } = await import(titleSpinner ? "./title-pty-smoke.mjs" : "./pty-smoke.mjs");
+      const { smokePty } = await import(cliStyle ? "./cli-pty-smoke.mjs" : titleSpinner ? "./title-pty-smoke.mjs" : "./pty-smoke.mjs");
       await smokePty({ run, repository, env, cliArgs });
     } else {
       if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error("Interactive prototype requires a terminal. Use --smoke for non-interactive checks.");
@@ -97,7 +103,7 @@ function isolatedEnvironment() {
     PI_CODING_AGENT_DIR: join(run, "agent"), PI_CODING_AGENT_SESSION_DIR: join(run, "sessions"),
     JITI_FS_CACHE: join(run, "cache"), PI_OFFLINE: "1", PI_SKIP_VERSION_CHECK: "1", PI_TELEMETRY: "0",
     PI_BASH_LAB_SCENE: scene, PI_BASH_LAB_REPOSITORY: repository, PI_BASH_LAB_POLISH: polish ? "1" : "0",
-    PI_TITLE_SPINNER_LAB: titleSpinner ? "1" : "0",
+    PI_TITLE_SPINNER_LAB: titleSpinner ? "1" : "0", PI_BASH_CLI_STYLE: cliStyle ?? "",
   };
 }
 
@@ -112,7 +118,7 @@ function sessionFixture(rows) {
   };
   const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } };
-  const assistant = content => ({ role: "assistant", content, provider: "bash-ui-fixture", model: "fixture", api: "openai-responses", usage, stopReason: "toolUse" });
+  const assistant = content => ({ role: "assistant", content, provider: cliStyle ? "bash-cli-fixture" : "bash-ui-fixture", model: "fixture", api: "openai-responses", usage, stopReason: "toolUse" });
   append({ role: "user", content: "Check the worktree and run the verification commands." });
   // Restored reference rows use production renderers; no files are read or edited.
   append(assistant([
@@ -124,7 +130,7 @@ function sessionFixture(rows) {
   append({ role: "toolResult", toolCallId: "alignment-edit", toolName: "edit", isError: false,
     content: [{ type: "text", text: "Successfully applied edit." }] });
   append(assistant([
-    { type: "text", text: "Grouped Bash prototype. Commands and logs are fixtures; nothing is executed." },
+    { type: "text", text: cliStyle ? "Bash CLI reference. Commands and logs are fixtures; nothing is executed." : "Grouped Bash prototype. Commands and logs are fixtures; nothing is executed." },
     { type: "thinking", thinking: "Inspecting the worktree and verification results" },
     ...rows.map(row => ({ type: "toolCall", id: row.id, name: "bash", arguments: { command: row.command, timeout: row.timeout } })),
   ]));

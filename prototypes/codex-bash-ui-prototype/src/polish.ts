@@ -1,9 +1,9 @@
-// PROTOTYPE: Use the production renderer; replace only the two metadata regions.
+// PROTOTYPE: Use the frozen pre-Claude renderer; replace only the two metadata regions.
 import { truncateTail, type Theme } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
-import { renderBashGroup } from "../../../extensions/codex-ui/src/bash-group-layout.js";
+import { renderBashGroup } from "./frozen-bash-group-layout.js";
 import { renderBashGroup as renderOriginal } from "./original-bash-group-layout.js";
-import type { BashGroup, BashStatus } from "../../../extensions/codex-ui/src/bash-groups.js";
+import type { BashGroup, BashStatus } from "./frozen-bash-types.js";
 import { ToolRenderCache } from "../../../extensions/codex-ui/src/render-cache.js";
 import { fitToWidth, normalizeWidth } from "../../../extensions/codex-ui/src/layout.js";
 import type { BashFixture } from "./fixtures.js";
@@ -21,7 +21,7 @@ export function fixtureGroup(rows: BashFixture[]): BashGroup {
     const status: BashStatus = row.status === "timeout" || row.status === "cancelled" ? "failed" : row.status;
     group.counts[status]++;
     return { id: row.id, group, cache: cache.scope(), command: row.command, commandRevision: 0, outputRevision: 0, status,
-      // Freeze clocks at the fixture frame; the production renderer still formats them.
+      // Freeze clocks at the fixture frame; the historical renderer formats them.
       startedAt: status === "pending" ? undefined : 0, endedAt: row.durationMs,
       details: row.truncated ? { truncation: truncateTail("omitted fixture line\ncaptured fixture tail", { maxLines: 1 }) } : undefined,
       get content() { return [{ type: "text", text: row.output.join("\n") }]; },
@@ -32,7 +32,7 @@ export function fixtureGroup(rows: BashFixture[]): BashGroup {
 }
 
 export function renderPolish(group: BashGroup, expanded: boolean, theme: Theme, availableWidth: number, toggleHint: string, variant: PolishVariant): string[] {
-  // The accepted variant runs production code, not the disposable ANSI adapter.
+  // The accepted historical variant runs the frozen renderer, not the ANSI adapter.
   if (variant === "keycap") {
     const keys = stripTerminalSequences(toggleHint).replace(/\s+(expand|collapse)$/u, "");
     return renderBashGroup(group, expanded, theme, availableWidth, keys);

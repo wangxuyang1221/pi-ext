@@ -24,7 +24,6 @@ import {
   type Component,
 } from "@earendil-works/pi-tui";
 
-import { BashRefreshScheduler } from "./bash-refresh-scheduler.js";
 import { BashGroups, type BashGroupRowState } from "./bash-groups.js";
 import { renderBashGroup } from "./bash-group-layout.js";
 import { ReadGroups, type ReadRowState } from "./read-groups.js";
@@ -41,7 +40,6 @@ import { createObservedWriteDefinition } from "./write-changes.js";
 
 const COLLAPSED_DIFF_LINES = 12;
 const MAX_DIFF_HIGHLIGHT_CHARS = 4096;
-const BASH_DURATION_REFRESH_MS = 1000;
 const LOW_POWER_ERROR_PREVIEW_CHARS = 4 * 1024;
 const LOW_POWER_EDIT_PATCH_PREVIEW_CHARS = 4 * 1024;
 const LOW_POWER_EDIT_PREVIEW_LINES = 6;
@@ -168,18 +166,11 @@ export function registerCodexTools(
     ? createObservedWriteDefinition(cwd, services.isLowPowerEnabled)
     : factories.write(cwd));
   const getBashDefinition = createDefinitionCache(factories.bash);
-  const bashRefreshScheduler = new BashRefreshScheduler(BASH_DURATION_REFRESH_MS);
   const renderCache = services.renderCache ?? new ToolRenderCache();
-  const bashGroups = new BashGroups(renderCache, bashRefreshScheduler);
+  const bashGroups = new BashGroups(renderCache);
   const readGroups = new ReadGroups(renderCache);
 
-  pi.on("tool_execution_end", (event) => {
-    if (event.toolName === "bash") {
-      bashRefreshScheduler.untrack(event.toolCallId);
-    }
-  });
   const resetRendering = () => {
-    bashRefreshScheduler.dispose();
     renderCache.clear();
     bashGroups.reset();
     readGroups.reset();
@@ -349,7 +340,7 @@ export function registerCodexTools(
       const lowPower = getToolRenderMode(state, services) === "low-power";
       if (lowPower) {
         state.cache ??= renderCache.scope();
-        updateBashLifecycle(state, context, state.cache.active ? bashRefreshScheduler : undefined, false);
+        updateBashLifecycle(state, context);
       }
 
       const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
@@ -844,8 +835,6 @@ function updateBashLifecycle(
     isError: boolean;
     invalidate(): void;
   },
-  scheduler: BashRefreshScheduler | undefined,
-  trackRefresh = true,
 ): void {
   const nextStatus: CodexBashStatus = context.isError
     ? "failed"
@@ -860,11 +849,6 @@ function updateBashLifecycle(
       state.startedAt = Date.now();
       state.endedAt = undefined;
     }
-    if (trackRefresh && state.status !== "running") {
-      scheduler?.track(context.toolCallId, context.invalidate);
-    } else if (!trackRefresh) {
-      scheduler?.untrack(context.toolCallId);
-    }
   } else {
     if (
       (nextStatus === "completed" || nextStatus === "failed")
@@ -873,15 +857,12 @@ function updateBashLifecycle(
     ) {
       state.endedAt = Date.now();
     }
-    scheduler?.untrack(context.toolCallId);
   }
 
   state.status = nextStatus;
-  if (!trackRefresh) {
-    state.lowPowerDurationMs = state.startedAt === undefined
-      ? undefined
-      : Math.max(0, (state.endedAt ?? Date.now()) - state.startedAt);
-  }
+  state.lowPowerDurationMs = state.startedAt === undefined
+    ? undefined
+    : Math.max(0, (state.endedAt ?? Date.now()) - state.startedAt);
 }
 
 function getLowPowerBashCommandPreview(
