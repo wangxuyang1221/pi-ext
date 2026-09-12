@@ -39,7 +39,11 @@ Pi package 以当前用户的完整系统权限运行。安装第三方 package 
 
 ## Goal extension
 
-在持久化交互 TUI 中使用 `/goal <objective>` 创建目标、`/goal` 查看摘要、`/goal clear` 清除。替换未完成目标需要确认，新目标重新计数。只有整个 trimmed 参数等于控制词时才按控制词处理，因此 `/goal pause now` 是目标文本。`/goal edit` 编辑目标且保留统计，`/goal pause` 暂停，`/goal resume` 显式恢复并解除继承门禁。执行范围为持久化交互 TUI 中的 root 会话。goal 复用 Pi 当前已选模型，不按 provider 名称限制。内置 provider、`models.json` 私有模型和扩展注册的 provider 均须支持普通 function tools，并履行 Pi 消息与终止事件契约。URL、API key 与鉴权仍由 Pi 管理，goal 不增加凭据配置或任意私有协议适配。无工具模型、不合规 adapter、非 TUI、临时会话和子会话不能保证 goal 执行。模型切换不会自行启动新请求。
+启用 codex-ui 时，footer 用两行显示目标和统计：目标预览，以及状态、分钟耗时、token 用量与可选预算。耗时显示 `<1m`、`12m`、`1h 05m`，只在累计耗时跨分钟时主动刷新，不运行秒级动画；状态和用量变化仍立即显示。未启用 codex-ui 时，通过 Pi 原生 footer 的单行状态显示同一份摘要，不接管 footer。
+
+`/goal` 详情显示打开时的精确秒数和用量快照，等待不会改变面板内容，关闭再打开才刷新。方向键和 PgUp/PgDn 滚动，`p` 暂停、`r` 恢复，仅在适用时显示；Esc 或 Enter 关闭，关闭本身不暂停。目标或会话已变时拒绝旧面板操作，需重新打开。存储异常、用量缺失和内容读取失败仍提供诊断；存储或工具恢复后使用 `/goal resume`。分钟显示不改变持久化频率、预算判定或 active 状态下的实际累计时间，不能把它理解为仅统计模型生成时间。实现与性能验收见 [Goal footer acceptance](docs/goal-footer-acceptance.md)。
+
+在持久化交互 TUI 中使用 `/goal <objective>` 创建目标、`/goal` 打开详情面板、`/goal clear` 清除。替换未完成目标需要确认，新目标重新计数。只有整个 trimmed 参数等于控制词时才按控制词处理，因此 `/goal pause now` 是目标文本。`/goal edit` 编辑目标且保留统计，`/goal pause` 暂停，`/goal resume` 显式恢复并解除继承门禁。执行范围为持久化交互 TUI 中的 root 会话。goal 复用 Pi 当前已选模型，不按 provider 名称限制。内置 provider、`models.json` 私有模型和扩展注册的 provider 均须支持普通 function tools，并履行 Pi 消息与终止事件契约。URL、API key 与鉴权仍由 Pi 管理，goal 不增加凭据配置或任意私有协议适配。无工具模型、不合规 adapter、非 TUI、临时会话和子会话不能保证 goal 执行。模型切换不会自行启动新请求。
 
 权威状态保存在公开 `getAgentDir()` 返回目录下的 `goals/`。新会话首条模型回复前也能保存，不依赖 Pi JSONL 已经落盘。历史 custom entry 只是镜像，失败不会回滚权威记录，下次摘要、绑定或 settled 检查点会重试。清除写入 tombstone，不从旧镜像复活。
 

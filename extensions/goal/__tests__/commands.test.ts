@@ -18,17 +18,40 @@ async function harness(config?: unknown) {
   const commands = new Map<string, { handler: (args: string, ctx: ExtensionCommandContext) => Promise<void> }>();
   const events = new Map<string, (event: unknown, ctx: ExtensionCommandContext) => Promise<void>>();
   const notify = vi.fn();
+  const details = vi.fn();
+  const custom = vi.fn(async factory => {
+    const theme = { fg: (_tone: string, text: string) => text, bold: (text: string) => text };
+    const panel = factory({ terminal: { rows: 200 }, requestRender() {} }, theme, {}, () => {});
+    details(panel.render(180).join("\n"));
+    return undefined;
+  });
   const confirm = vi.fn(async () => true);
   const appendEntry = vi.fn((name, data) => { manager.appendCustomEntry(name, data); });
   const bus = new EventEmitter();
   let activeTools = ["read", "other_extension", "get_goal", "create_goal", "update_goal"];
   const pi = { getActiveTools: () => activeTools, setActiveTools: (names: string[]) => { activeTools = names; }, events: { on: (name, handler) => { bus.on(name, handler); return () => bus.off(name, handler); }, emit: (name, data) => bus.emit(name, data) }, registerTool: vi.fn(), sendMessage: vi.fn(), registerCommand: (name, command) => commands.set(name, command), on: (name, handler) => { const previous = events.get(name); events.set(name, async (event, ctx) => { await previous?.(event, ctx); return handler(event, ctx); }); }, appendEntry } as unknown as ExtensionAPI;
-  const ctx = { mode: "tui", model: { provider: "openai-codex" }, hasUI: true, cwd: process.cwd(), sessionManager: manager, isIdle: () => true, ui: { notify, confirm, select: vi.fn(), editor: vi.fn(), setStatus: vi.fn() } } as unknown as ExtensionCommandContext;
+  const ctx = { mode: "tui", model: { provider: "openai-codex" }, hasUI: true, cwd: process.cwd(), sessionManager: manager, isIdle: () => true, ui: { notify, confirm, custom, select: vi.fn(), editor: vi.fn(), setStatus: vi.fn() } } as unknown as ExtensionCommandContext;
   registerGoal(pi, disk, { config, temporaryRoot: root });
   await events.get("session_start")!({}, ctx);
   cleanups.push(() => events.get("session_shutdown")!({}, ctx));
-  return { pi, commands, root, disk, manager, notify, confirm, appendEntry, ctx, events, recover: () => commands.get("goal-recover")!.handler("", ctx), run: (args: string) => commands.get("goal")!.handler(args, ctx) };
+  return { pi, commands, root, disk, manager, notify, details, custom, confirm, appendEntry, ctx, events, recover: () => commands.get("goal-recover")!.handler("", ctx), run: (args: string) => commands.get("goal")!.handler(args, ctx) };
 }
+
+it("opens a snapshot panel and rejects its action after the target changes", async () => {
+  const h = await harness();
+  await h.run("First goal");
+  await h.run("");
+  expect(h.details.mock.calls.at(-1)?.[0]).toContain("First goal");
+  expect(h.details.mock.calls.at(-1)?.[0]).toContain("opening snapshot");
+  h.custom.mockImplementationOnce(async () => {
+    await h.run("clear");
+    await h.run("Replacement goal");
+    return "pause" as never;
+  });
+  await h.run("");
+  expect((await h.disk.records())[0]!.goal).toMatchObject({ objective: "Replacement goal", status: "active" });
+  expect(h.notify.mock.calls.at(-1)?.[0]).toContain("Stale goal details");
+});
 
 it.each(["reload", "fork", "budget", "complete", "no-model", "no-ui"])("does not offer automatic restoration for %s", async kind => {
   const h = await harness();
@@ -222,7 +245,7 @@ it.each(["create_goal", "get_goal", "update_goal"])("requires explicit resume af
   expect(h.pi.sendMessage).not.toHaveBeenCalled();
   expect((await h.disk.records())[0]!.goal).toMatchObject({ goalId: gated.goal!.goalId, toolRecoveryRequired: true, status: "active" });
   await h.run("");
-  expect(h.notify.mock.calls.at(-1)?.[0]).toContain("explicit /goal resume");
+  expect(h.details.mock.calls.at(-1)?.[0]).toContain("explicit /goal resume");
   await h.run("resume");
   expect((await h.disk.records())[0]!.goal!.toolRecoveryRequired).toBeUndefined();
   expect(h.pi.sendMessage).toHaveBeenCalledTimes(1);
@@ -333,7 +356,7 @@ it("preserves saved content across cancelled attachment selection and failed rec
   expect(h.notify.mock.calls.at(-1)?.[0]).toContain("Record write failure");
   h.disk.beforeRename = undefined;
   await h.run("");
-  expect(h.notify.mock.calls.at(-1)?.[0]).toContain("Existing long objective");
+  expect(h.details.mock.calls.at(-1)?.[0]).toContain("Existing long objective");
 });
 
 it("retains content after an uncertain post-rename failure instead of deleting committed files", async () => {
@@ -624,12 +647,12 @@ it("refreshes status across providers without a Codex warning or a new request",
   vi.mocked(h.pi.sendMessage).mockClear();
   Object.assign(h.ctx, { model: { provider: "other" } });
   await h.events.get("model_select")!({ model: h.ctx.model }, h.ctx);
-  expect(h.ctx.ui.setStatus).toHaveBeenLastCalledWith("goal", expect.stringContaining("active"));
+  expect(h.ctx.ui.setStatus).toHaveBeenLastCalledWith("goal", expect.stringContaining("Active · <1m"));
   await h.events.get("model_select")!({ model: h.ctx.model }, h.ctx);
   expect(h.notify.mock.calls.some(([text]) => String(text).includes("OpenAI Codex"))).toBe(false);
   await h.run("");
-  expect(h.notify.mock.calls.at(-1)?.[0]).toContain("/goal resume");
-  expect(h.notify.mock.calls.at(-1)?.[0]).not.toContain("Storage only");
+  expect(h.details.mock.calls.at(-1)?.[0]).toContain("/goal resume");
+  expect(h.details.mock.calls.at(-1)?.[0]).not.toContain("Storage only");
   await h.run("clear");
   expect(h.ctx.ui.setStatus).toHaveBeenLastCalledWith("goal", undefined);
   expect(h.pi.sendMessage).not.toHaveBeenCalled();
@@ -827,7 +850,7 @@ it("creates, summarizes and clears without calling a model; mirrors follow autho
   expect((await h.disk.records())[0]?.goal?.objective).toBe("Ship it");
   expect(h.appendEntry).toHaveBeenCalledTimes(1);
   await h.run("");
-  expect(h.notify.mock.calls.at(-1)?.[0]).toContain("Ship it");
+  expect(h.details.mock.calls.at(-1)?.[0]).toContain("Ship it");
   await h.run("clear");
   expect((await h.disk.records())[0]?.goal).toBeNull();
 });

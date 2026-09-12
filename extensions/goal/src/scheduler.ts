@@ -11,7 +11,7 @@ export const GOAL_LOOP_CONTEXT = "pi-ext-goal-loop-warning";
 export const GOAL_LOOP_PAUSED = "Goal paused after repeated tool calls returned unchanged results. Review the last actions, then use /goal resume to continue.";
 const LOOP_WARNING = "Repeated tool calls are returning unchanged results. Reuse already verified evidence. If the objective is complete, call update_goal with status complete and deliver the result. Otherwise choose an action that yields new evidence, or wait on a verified live task handle. Continued repetition will pause this goal.";
 interface Ticket { instance: string; ownerSessionId: string; goalId: string; generation: number; runGeneration: number; scheduleId: string; automatic?: boolean }
-interface Access { snapshot(): GoalRecord | undefined; missingTools?(): string[]; checkpoint?(expected: GoalRecord, ctx: ExtensionContext): Promise<unknown>; stop(status: Goal["status"], expected: GoalRecord, ctx: ExtensionContext, reason?: "repeated_tool_calls"): Promise<void> }
+interface Access { display?(record: GoalRecord | undefined, ctx: ExtensionContext, limitation: string, suspended: boolean): void; snapshot(): GoalRecord | undefined; missingTools?(): string[]; checkpoint?(expected: GoalRecord, ctx: ExtensionContext): Promise<unknown>; stop(status: Goal["status"], expected: GoalRecord, ctx: ExtensionContext, reason?: "repeated_tool_calls"): Promise<void> }
 /** Coordinate only this extension's continuation requests through public Pi events. */
 export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
   const instance = randomUUID();
@@ -67,14 +67,16 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
     return record && !compactionFailed && !record.goal?.toolRecoveryRequired && !access.missingTools?.().length ? record : undefined;
   };
   const refresh = (ctx: ExtensionContext) => {
-    const goal = access.snapshot()?.goal;
+    const record = access.snapshot();
+    const goal = record?.goal;
     const capability = goalCapability(ctx);
     const missing = access.missingTools?.() ?? [];
     const limitation = suspended ? " | storage error: /goal resume"
       : !capability.supported ? ` | ${capability.reason}`
         : missing.length ? ` | Missing goal tools: ${missing.join(", ")}. Restore tools, then /goal resume`
           : goal?.toolRecoveryRequired ? " | Requires explicit /goal resume" : "";
-    ctx.ui.setStatus("goal", goal ? `Goal: ${goal.status} | ${goal.tokensUsed} tokens | ${goal.elapsedSeconds}s${limitation}` : undefined);
+    if (access.display) access.display(record, ctx, limitation.replace(/^ \| /, ""), suspended);
+    else ctx.ui.setStatus("goal", goal ? `Goal: ${goal.status} | ${goal.tokensUsed} tokens | ${goal.elapsedSeconds}s${limitation}` : undefined);
   };
   const start = (ctx: ExtensionContext, automatic = false) => {
     const record = runnable(ctx);

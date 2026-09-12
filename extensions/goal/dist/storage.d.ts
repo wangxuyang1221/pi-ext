@@ -1,5 +1,9 @@
 import { type ContentReference } from "./content.js";
 import { WriterLock } from "./lock.js";
+export interface GoalDisplayTiming {
+    elapsedSeconds: number;
+    nextUpdateMs?: number;
+}
 export interface UsageCheckpoint {
     sourceId: string;
     tokens: number;
@@ -63,10 +67,16 @@ export declare class GoalLease {
     private queue;
     private tick;
     private budgetInFlight;
+    private displayAt;
     constructor(store: GoalStore, current: GoalRecord, lock: WriterLock, assertCurrent?: (() => void) | undefined);
+    /** Display-only observer; exceptions cannot change an authoritative mutation's outcome. */
+    onDisplayChange?: () => void;
+    private notifyDisplay;
     /** Keep timing the already-running budget wrap-up, never an idle limited goal. */
     setBudgetInFlight(value: boolean): void;
     get snapshot(): GoalRecord;
+    /** Read-only display projection using the same clock and accounting baseline. */
+    get displayTiming(): GoalDisplayTiming | undefined;
     private mutate;
     /** Drain queued writes, verify authority, and commit whole active seconds if needed. */
     checkpoint(expected: GoalRecord): Promise<GoalRecord>;

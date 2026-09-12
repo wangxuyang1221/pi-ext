@@ -13,6 +13,8 @@ prototypes/*
 !prototypes/codex-read-ui-prototype/
 !prototypes/mcp-status-ui-prototype/
 !prototypes/goal-runtime-probe/
+!prototypes/goal-footer-prototype/
+prototypes/goal-footer-prototype/.tmp/
 prototypes/goal-runtime-probe/.isolated-agent/
 DECISIONS.md
 *.tgz

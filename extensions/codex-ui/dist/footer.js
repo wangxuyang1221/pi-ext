@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 import { stripTerminalSequences, truncateToWidth, visibleWidth, } from "@earendil-works/pi-tui";
 import { fitToWidth, formatHomePath, normalizeWidth, } from "./layout.js";
+import { renderGoalDisplay } from "./goal-display.js";
 const FAST_STATUS_KEY = "pi-openai-fast-mode";
 const PERMISSIONS_STATUS_KEY = "permissions";
 const ITEM_SEPARATOR = " ⋅ ";
@@ -17,6 +18,7 @@ export class CodexFooter {
     statusCache = new Map();
     unsubscribeBranch;
     cachedSnapshot;
+    combined;
     constructor(options) {
         this.options = options;
     }
@@ -28,16 +30,34 @@ export class CodexFooter {
         const safeWidth = normalizeWidth(width);
         if (safeWidth === 0)
             return [];
+        const statuses = this.options.getExtensionStatuses();
+        const base = this.renderBase(safeWidth, statuses);
+        const theme = this.options.getTheme();
+        const goal = this.readStatus(statuses, "goal");
+        const display = goal ? this.options.getGoalDisplay?.() : undefined;
+        const key = JSON.stringify([safeWidth, display ?? goal]);
+        if (this.combined?.base === base && this.combined.key === key && this.combined.theme === theme)
+            return this.combined.lines;
+        const lines = [...base];
+        if (display)
+            lines.push(...renderGoalDisplay(display, safeWidth, theme));
+        else if (goal)
+            lines.push(fitToWidth(theme.fg("muted", ` ${goal}`), safeWidth));
+        this.combined = { base, key, theme, lines };
+        return lines;
+    }
+    renderBase(width, statuses) {
+        const safeWidth = normalizeWidth(width);
+        if (safeWidth === 0)
+            return [];
         const theme = this.options.getTheme();
         const modelId = this.options.getModelId() ?? "No model";
         const thinking = this.options.getThinkingLevel();
         const branch = this.options.getBranch();
         const contextPercent = this.options.getContextUsage()?.percent;
-        const statuses = this.options.getExtensionStatuses();
         const fastStatus = this.readStatus(statuses, FAST_STATUS_KEY);
         const fast = fastStatus?.toLowerCase() === "fast" ? "fast" : undefined;
         const permissions = this.readStatus(statuses, PERMISSIONS_STATUS_KEY);
-        const goal = this.readStatus(statuses, "goal");
         const cached = this.cachedSnapshot;
         if (cached?.width === safeWidth
             && cached.theme === theme
@@ -46,8 +66,7 @@ export class CodexFooter {
             && cached.branch === branch
             && cached.contextPercent === contextPercent
             && cached.fast === fast
-            && cached.permissions === permissions
-            && cached.goal === goal) {
+            && cached.permissions === permissions) {
             return cached.lines;
         }
         const input = {
@@ -63,8 +82,6 @@ export class CodexFooter {
             theme,
         };
         const lines = [renderFooter(input)];
-        if (goal)
-            lines.push(fitToWidth(theme.fg("muted", ` ${goal}`), safeWidth));
         this.cachedSnapshot = {
             width: safeWidth,
             theme,
@@ -74,12 +91,12 @@ export class CodexFooter {
             contextPercent,
             fast,
             permissions,
-            goal,
             lines,
         };
         return lines;
     }
     invalidate() {
+        this.combined = undefined;
         this.cachedSnapshot = undefined;
     }
     dispose() {

@@ -79,6 +79,9 @@ for phase in ("create", "reopen"):
 
     try:
         wait(lambda: '"event":"ready"' in events(), "ready")
+        if phase == "reopen":
+            wait(lambda: b"Resume saved goal?" in output, "resume confirmation")
+            send(b"\x1b")
         time.sleep(0.3)
         command("/probe-begin")
         wait(lambda: '"event":"begin"' in events(), "baseline")
@@ -98,6 +101,8 @@ for phase in ("create", "reopen"):
         else:
             command("/goal")
             wait(lambda: b"GOAL_LONG_BEGIN" in output and b"Preview truncated" in output, "native summary")
+            send(b"\x1b")
+            time.sleep(0.2)
             command("/goal edit")
             wait(lambda: '"event":"native_editor"' in events(), "native editor")
             time.sleep(0.2)
@@ -110,7 +115,7 @@ for phase in ("create", "reopen"):
         records = [json.loads(line) for line in events().splitlines()]
         result = next(record for record in records if record["event"] == "result")
         results.append(result)
-        assert b"Goal: paused" in output
+        assert b"Paused" in output
         if phase == "reopen":
             editor = next(record for record in records if record["event"] == "native_editor")
             assert editor["prefill"] == json.loads((root / "saved.json").read_text())["expanded"]

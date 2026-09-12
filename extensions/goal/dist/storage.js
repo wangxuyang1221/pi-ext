@@ -185,6 +185,7 @@ export class GoalLease {
     queue = Promise.resolve();
     tick;
     budgetInFlight = false;
+    displayAt;
     constructor(store, current, lock, assertCurrent) {
         this.store = store;
         this.current = current;
@@ -192,9 +193,29 @@ export class GoalLease {
         this.assertCurrent = assertCurrent;
         this.tick = store.now();
     }
+    /** Display-only observer; exceptions cannot change an authoritative mutation's outcome. */
+    onDisplayChange;
+    notifyDisplay() { try {
+        this.onDisplayChange?.();
+    }
+    catch { /* UI is not authority. */ } }
     /** Keep timing the already-running budget wrap-up, never an idle limited goal. */
-    setBudgetInFlight(value) { this.budgetInFlight = value; }
+    setBudgetInFlight(value) {
+        if (this.budgetInFlight === value)
+            return;
+        this.budgetInFlight = value;
+        this.notifyDisplay();
+    }
     get snapshot() { return structuredClone(this.current); }
+    /** Read-only display projection using the same clock and accounting baseline. */
+    get displayTiming() {
+        const goal = this.current.goal;
+        if (!goal)
+            return;
+        const timing = goal.status === "active" || (goal.status === "budget_limited" && this.budgetInFlight);
+        const ms = goal.elapsedSeconds * 1000 + (timing ? Math.max(0, (this.displayAt ?? this.store.now()) - this.tick) : 0);
+        return { elapsedSeconds: Math.floor(ms / 1000), ...(timing && this.displayAt === undefined ? { nextUpdateMs: 60_000 - ms % 60_000 } : {}) };
+    }
     mutate(expected, change, persist = true, cumulative = false) {
         const run = this.queue.then(async () => {
             this.assertCurrent?.();
@@ -212,14 +233,22 @@ export class GoalLease {
             if (timed.goal && seconds > 0)
                 timed.goal.elapsedSeconds += seconds;
             const next = change(timed);
-            if (persist || seconds > 0) {
-                next.revision = record.revision + 1;
-                await this.store.commit(next, this.assertCurrent);
+            // Do not display seconds beyond a stop checkpoint while its fsync is pending.
+            this.displayAt = now;
+            try {
+                if (persist || seconds > 0) {
+                    next.revision = record.revision + 1;
+                    await this.store.commit(next, this.assertCurrent);
+                }
+                const stillTiming = next.goal?.status === "active" || (next.goal?.status === "budget_limited" && this.budgetInFlight);
+                this.tick = timing && stillTiming && record.goal?.goalId === next.goal?.goalId ? this.tick + seconds * 1000 : now;
+                this.current = next;
+                return this.snapshot;
             }
-            const stillTiming = next.goal?.status === "active" || (next.goal?.status === "budget_limited" && this.budgetInFlight);
-            this.tick = timing && stillTiming && record.goal?.goalId === next.goal?.goalId ? this.tick + seconds * 1000 : now;
-            this.current = next;
-            return this.snapshot;
+            finally {
+                this.displayAt = undefined;
+                this.notifyDisplay();
+            }
         });
         this.queue = run.catch(() => { });
         return run;
@@ -384,6 +413,6 @@ export class GoalLease {
     clear(expected) {
         return this.mutate(expected, record => ({ ...record, goal: null, generation: record.generation + 1, continuationDeferral: false }));
     }
-    async close() { await this.queue; await this.lock.close(); }
+    async close() { this.onDisplayChange = undefined; await this.queue; await this.lock.close(); }
 }
 //# sourceMappingURL=storage.js.map

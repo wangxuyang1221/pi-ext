@@ -3,6 +3,7 @@ import { CodexEditor, CodexFooter, CodexHeader } from "./components.js";
 import { registerCodexTools } from "./tools.js";
 import { ReasoningSummary } from "./reasoning-summary.js";
 import { registerTerminalTitleSpinner } from "./terminal-title.js";
+import { readGoalDisplay } from "./goal-display.js";
 export const CODEX_THEME_NAME = "codex-pi";
 const LOW_POWER_ARGUMENTS = ["on", "off", "status"];
 function hideInlineWorkingRow(ui) {
@@ -10,6 +11,8 @@ function hideInlineWorkingRow(ui) {
 }
 export default function codexUiExtension(pi) {
     let lowPowerEnabled = false;
+    let goalDisplay;
+    let unsubscribeGoal;
     let currentKeybindings;
     const reasoningSummary = new ReasoningSummary();
     const installTitleSpinner = registerTerminalTitleSpinner(pi);
@@ -68,11 +71,28 @@ export default function codexUiExtension(pi) {
         return `› ${markdown}`;
     });
     pi.on("session_tree", () => reasoningSummary.clear());
-    pi.on("session_shutdown", () => reasoningSummary.clear());
+    pi.on("session_shutdown", () => {
+        reasoningSummary.clear();
+        unsubscribeGoal?.();
+        unsubscribeGoal = undefined;
+        goalDisplay = undefined;
+    });
     pi.on("session_start", (_event, ctx) => {
         reasoningSummary.clear();
         if (ctx.mode !== "tui")
             return;
+        goalDisplay = undefined;
+        unsubscribeGoal?.();
+        unsubscribeGoal = pi.events?.on("pi-ext:goal-display:v1", data => {
+            if (data === undefined)
+                goalDisplay = undefined;
+            else {
+                const next = readGoalDisplay(data, ctx.sessionManager.getSessionId());
+                if (next)
+                    goalDisplay = next;
+            }
+        });
+        pi.events?.emit("pi-ext:goal-display:request", undefined);
         ctx.ui.setStatus("codex-ui-lowpower", lowPowerEnabled ? "Low power" : undefined);
         currentModelId = ctx.model?.id;
         if (ctx.ui.theme.name !== CODEX_THEME_NAME) {
@@ -111,6 +131,7 @@ export default function codexUiExtension(pi) {
                 getContextUsage: () => ctx.getContextUsage(),
                 getBranch: () => footerData.getGitBranch(),
                 getExtensionStatuses: () => footerData.getExtensionStatuses(),
+                getGoalDisplay: () => goalDisplay,
                 getTheme,
             });
             footer.setBranchSubscription(footerData.onBranchChange(() => {

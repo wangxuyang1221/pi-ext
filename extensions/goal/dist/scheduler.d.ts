@@ -5,6 +5,7 @@ export declare const GOAL_BUDGET_CONTEXT = "pi-ext-goal-budget";
 export declare const GOAL_LOOP_CONTEXT = "pi-ext-goal-loop-warning";
 export declare const GOAL_LOOP_PAUSED = "Goal paused after repeated tool calls returned unchanged results. Review the last actions, then use /goal resume to continue.";
 interface Access {
+    display?(record: GoalRecord | undefined, ctx: ExtensionContext, limitation: string, suspended: boolean): void;
     snapshot(): GoalRecord | undefined;
     missingTools?(): string[];
     checkpoint?(expected: GoalRecord, ctx: ExtensionContext): Promise<unknown>;

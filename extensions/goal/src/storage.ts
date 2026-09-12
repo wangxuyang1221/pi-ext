@@ -4,6 +4,7 @@ import { isAbsolute, join } from "node:path";
 import { validateContent, type ContentReference } from "./content.js";
 import { WriterLock } from "./lock.js";
 
+export interface GoalDisplayTiming { elapsedSeconds: number; nextUpdateMs?: number }
 export interface UsageCheckpoint { sourceId: string; tokens: number; missing: boolean; lastReceipt?: string }
 export interface ChildUsageCheckpoint extends UsageCheckpoint { reportPath: string }
 export interface Goal {
@@ -157,10 +158,26 @@ export class GoalLease {
   private queue: Promise<unknown> = Promise.resolve();
   private tick: number;
   private budgetInFlight = false;
+  private displayAt: number | undefined;
   constructor(private readonly store: GoalStore, private current: GoalRecord, private readonly lock: WriterLock, private readonly assertCurrent?: () => void) { this.tick = store.now(); }
+  /** Display-only observer; exceptions cannot change an authoritative mutation's outcome. */
+  onDisplayChange?: () => void;
+  private notifyDisplay(): void { try { this.onDisplayChange?.(); } catch { /* UI is not authority. */ } }
   /** Keep timing the already-running budget wrap-up, never an idle limited goal. */
-  setBudgetInFlight(value: boolean): void { this.budgetInFlight = value; }
+  setBudgetInFlight(value: boolean): void {
+    if (this.budgetInFlight === value) return;
+    this.budgetInFlight = value;
+    this.notifyDisplay();
+  }
   get snapshot(): GoalRecord { return structuredClone(this.current); }
+  /** Read-only display projection using the same clock and accounting baseline. */
+  get displayTiming(): GoalDisplayTiming | undefined {
+    const goal = this.current.goal;
+    if (!goal) return;
+    const timing = goal.status === "active" || (goal.status === "budget_limited" && this.budgetInFlight);
+    const ms = goal.elapsedSeconds * 1000 + (timing ? Math.max(0, (this.displayAt ?? this.store.now()) - this.tick) : 0);
+    return { elapsedSeconds: Math.floor(ms / 1000), ...(timing && this.displayAt === undefined ? { nextUpdateMs: 60_000 - ms % 60_000 } : {}) };
+  }
   private mutate(expected: GoalRecord, change: (record: GoalRecord) => GoalRecord, persist = true, cumulative = false): Promise<GoalRecord> {
     const run = this.queue.then(async () => {
       this.assertCurrent?.();
@@ -175,14 +192,18 @@ export class GoalLease {
       const timed = structuredClone(record);
       if (timed.goal && seconds > 0) timed.goal.elapsedSeconds += seconds;
       const next = change(timed);
-      if (persist || seconds > 0) {
-        next.revision = record.revision + 1;
-        await this.store.commit(next, this.assertCurrent);
-      }
-      const stillTiming = next.goal?.status === "active" || (next.goal?.status === "budget_limited" && this.budgetInFlight);
-      this.tick = timing && stillTiming && record.goal?.goalId === next.goal?.goalId ? this.tick + seconds * 1000 : now;
-      this.current = next;
-      return this.snapshot;
+      // Do not display seconds beyond a stop checkpoint while its fsync is pending.
+      this.displayAt = now;
+      try {
+        if (persist || seconds > 0) {
+          next.revision = record.revision + 1;
+          await this.store.commit(next, this.assertCurrent);
+        }
+        const stillTiming = next.goal?.status === "active" || (next.goal?.status === "budget_limited" && this.budgetInFlight);
+        this.tick = timing && stillTiming && record.goal?.goalId === next.goal?.goalId ? this.tick + seconds * 1000 : now;
+        this.current = next;
+        return this.snapshot;
+      } finally { this.displayAt = undefined; this.notifyDisplay(); }
     });
     this.queue = run.catch(() => {});
     return run;
@@ -317,5 +338,5 @@ export class GoalLease {
   clear(expected: GoalRecord): Promise<GoalRecord> {
     return this.mutate(expected, record => ({ ...record, goal: null, generation: record.generation + 1, continuationDeferral: false }));
   }
-  async close(): Promise<void> { await this.queue; await this.lock.close(); }
+  async close(): Promise<void> { this.onDisplayChange = undefined; await this.queue; await this.lock.close(); }
 }

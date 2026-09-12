@@ -10,6 +10,8 @@ import { registerChildAccounting } from "./children.js";
 import { GoalStore } from "./storage.js";
 import { registerGoalTools } from "./tools.js";
 import { GOAL_LOOP_PAUSED, registerGoalScheduler } from "./scheduler.js";
+import { GoalPresentation, GOAL_DISPLAY_EVENT, GOAL_DISPLAY_REQUEST, formatGoalSeconds } from "./presentation.js";
+import { GoalDetails } from "./details.js";
 export const GOAL_MIRROR = "pi-ext-goal";
 const GOAL_TOOL_STATE = "pi-ext-goal-tools";
 const REQUIRED_TOOLS = ["create_goal", "get_goal", "update_goal"];
@@ -20,12 +22,13 @@ function owner(ctx) {
         throw new Error("Goal requires a persistent session. Restart Pi without --no-session.");
     return { ownerSessionId: ctx.sessionManager.getSessionId(), cwd: ctx.cwd, sessionFile };
 }
-function summary(record, expanded) {
+function summary(record, expanded, elapsedSeconds) {
     const goal = record?.goal;
     if (!goal)
         return "No goal set. Use /goal <objective> or /goal-recover.";
-    const preview = expanded === undefined ? "" : `${safe([...expanded].slice(0, 1000).join(""))}${[...expanded].length > 1000 ? "\n[Preview truncated. Use /goal edit for the full objective.]" : ""}\nAttachments: ${goal.content?.attachments.length ?? 0}\n`;
-    return `Goal: ${goal.status}\n${preview}${safe(goal.objective)}\nElapsed: ${goal.elapsedSeconds}s | Tokens used: ${goal.tokensUsed}${goal.tokenBudget === undefined ? "" : ` | Budget: ${goal.tokenBudget} | Remaining: ${Math.max(0, goal.tokenBudget - goal.tokensUsed)}`}\n${goal.usageIncomplete ? "Usage is incomplete; tokens shown are observed usage only.\n" : ""}${goal.pauseReason === "repeated_tool_calls" ? `${GOAL_LOOP_PAUSED}\n` : ""}${goal.toolRecoveryRequired ? "Automatic continuation requires restored goal tools and explicit /goal resume.\n" : ""}${record.continuationDeferral ? "Automatic continuation deferred until an explicit user turn or resume.\n" : ""}Commands: /goal <objective>, /goal edit, /goal pause, /goal resume, /goal clear, /goal-recover, /goal-fork`;
+    const objective = expanded ?? goal.objective;
+    const preview = `${safe([...objective].slice(0, 1000).join(""))}${[...objective].length > 1000 ? "\n[Preview truncated. Use /goal edit for the full objective.]" : ""}\nAttachments: ${goal.content?.attachments.length ?? 0}\n`;
+    return `Goal: ${goal.status}\n${preview}Elapsed: ${formatGoalSeconds(elapsedSeconds ?? goal.elapsedSeconds)} | Tokens used: ${goal.tokensUsed}${goal.tokenBudget === undefined ? "" : ` | Budget: ${goal.tokenBudget} | Remaining: ${Math.max(0, goal.tokenBudget - goal.tokensUsed)}`}\n${goal.usageIncomplete ? "Usage is incomplete; tokens shown are observed usage only.\n" : ""}${goal.pauseReason === "repeated_tool_calls" ? `${GOAL_LOOP_PAUSED}\n` : ""}${goal.toolRecoveryRequired ? "Automatic continuation requires restored goal tools and explicit /goal resume.\n" : ""}${record.continuationDeferral ? "Automatic continuation deferred until an explicit user turn or resume.\n" : ""}Commands: /goal <objective>, /goal edit, /goal pause, /goal resume, /goal clear, /goal-recover, /goal-fork`;
 }
 /** Register persistent goal controls and execution. The store is injectable for isolated tests. */
 export function registerGoal(pi, store, options = {}) {
@@ -38,6 +41,19 @@ export function registerGoal(pi, store, options = {}) {
         return resolveGoalBudget(budget, config);
     };
     let lease;
+    let displayContext;
+    let displayLimitation = "";
+    const presentation = new GoalPresentation({
+        readTiming: () => lease?.displayTiming,
+        expand: goal => content.expand(goal),
+        publish: display => {
+            pi.events?.emit(GOAL_DISPLAY_EVENT, display);
+            displayContext?.ui.setStatus("goal", display ? `Goal: ${display.summary} · ${display.objective}` : undefined);
+        },
+    });
+    let displayUnsubscribe;
+    let panelToken;
+    let closePanel;
     let epoch = 0;
     let live = false;
     let sessionId;
@@ -168,12 +184,19 @@ export function registerGoal(pi, store, options = {}) {
             throw new Error("Goal session changed during binding.");
         }
         lease = opened;
+        opened.onDisplayChange = () => {
+            if (live && started === epoch && lease === opened)
+                scheduler.refresh(ctx);
+        };
         mirror(ctx);
     };
     pi.on("session_start", async (event, ctx) => {
         epoch++;
         live = true;
         sessionId = ctx.sessionManager.getSessionId();
+        displayContext = ctx.mode === "tui" ? ctx : undefined;
+        displayUnsubscribe?.();
+        displayUnsubscribe = pi.events?.on(GOAL_DISPLAY_REQUEST, () => pi.events.emit(GOAL_DISPLAY_EVENT, presentation.current));
         if (event.reason === "reload") {
             // Pi reload enables all extension tools. Reapply only our tools' saved
             // external exclusions, not the tools hidden by capability synchronization.
@@ -272,6 +295,9 @@ export function registerGoal(pi, store, options = {}) {
     });
     pi.on("session_shutdown", async (event, ctx) => {
         resumeCandidate = undefined;
+        panelToken = undefined;
+        closePanel?.();
+        closePanel = undefined;
         resumeDialog?.abort();
         resumeDialog = undefined;
         await observeTools(ctx);
@@ -298,6 +324,10 @@ export function registerGoal(pi, store, options = {}) {
                 report(ctx, error);
             }
         }
+        presentation.dispose();
+        displayContext = undefined;
+        displayUnsubscribe?.();
+        displayUnsubscribe = undefined;
         epoch++;
         live = false;
         sessionId = undefined;
@@ -571,77 +601,137 @@ export function registerGoal(pi, store, options = {}) {
             }
         }
     };
-    pi.registerCommand("goal", {
-        description: "Create, inspect, edit, pause, resume, or clear a goal",
-        handler: command(async (args, ctx, started) => {
-            if (args && !["pause", "clear"].includes(args.toLowerCase()))
-                requireExecution(ctx);
-            await bind(ctx, args.length > 0);
-            if (started !== epoch)
-                return;
-            if (!args) {
-                mirror(ctx);
-                const record = lease?.snapshot;
-                const expanded = record?.goal?.content ? await content.expand(record.goal) : undefined;
-                if (started === epoch)
-                    ctx.ui.notify(summary(record, expanded), "info");
-                return;
-            }
-            if (!lease)
-                throw new Error("Goal could not bind to this session.");
-            const expected = lease.snapshot;
-            if (args.toLowerCase() === "clear") {
-                scheduler.invalidate();
-                await commit(ctx, expected, () => lease.clear(expected));
-                if (started !== epoch)
-                    return;
-                mirror(ctx);
-                ctx.ui.notify("Goal cleared.", "info");
-                return;
-            }
-            const control = args.toLowerCase();
-            if (control === "edit" || control === "pause" || control === "resume") {
-                if (!expected.goal) {
-                    ctx.ui.notify("No goal set.", "info");
-                    return;
-                }
-                const objective = control === "edit" ? await ctx.ui.editor("Edit goal", await content.expand(expected.goal)) : undefined;
-                if (started !== epoch || (control === "edit" && objective === undefined))
-                    return;
-                if (control === "resume") {
-                    await resumeGoal(ctx, expected);
-                    return;
-                }
-                if (control === "edit") {
-                    if (!await saveObjective(objective, expected, ctx, started, true))
-                        return;
-                }
-                else {
-                    scheduler.invalidate();
-                    await commit(ctx, expected, () => lease.control(control, expected));
-                }
-                if (started !== epoch)
-                    return;
-                mirror(ctx);
-                ctx.ui.notify(`Goal ${control === "edit" ? "updated" : lease.snapshot.goal.status}.`, "info");
-                if (control !== "pause")
-                    scheduler.resume(ctx, control === "edit");
-                return;
-            }
-            if (expected.goal && expected.goal.status !== "complete") {
-                if (!await ctx.ui.confirm("Replace current goal?", "The new goal will reset the saved time and token counts."))
-                    return;
-            }
-            if (started !== epoch || !lease)
-                return;
-            if (!await saveObjective(args, expected, ctx, started, false))
-                return;
+    const executeGoalCommand = command(async (args, ctx, started) => {
+        if (args && !["pause", "clear"].includes(args.toLowerCase()))
+            requireExecution(ctx);
+        await bind(ctx, args.length > 0);
+        if (started !== epoch)
+            return;
+        if (!lease)
+            throw new Error("Goal could not bind to this session.");
+        const expected = lease.snapshot;
+        if (args.toLowerCase() === "clear") {
+            scheduler.invalidate();
+            await commit(ctx, expected, () => lease.clear(expected));
             if (started !== epoch)
                 return;
             mirror(ctx);
-            ctx.ui.notify("Goal saved.", "info");
-            scheduler.resume(ctx);
-        }),
+            ctx.ui.notify("Goal cleared.", "info");
+            return;
+        }
+        const control = args.toLowerCase();
+        if (control === "edit" || control === "pause" || control === "resume") {
+            if (!expected.goal) {
+                ctx.ui.notify("No goal set.", "info");
+                return;
+            }
+            const objective = control === "edit" ? await ctx.ui.editor("Edit goal", await content.expand(expected.goal)) : undefined;
+            if (started !== epoch || (control === "edit" && objective === undefined))
+                return;
+            if (control === "resume") {
+                await resumeGoal(ctx, expected);
+                return;
+            }
+            if (control === "edit") {
+                if (!await saveObjective(objective, expected, ctx, started, true))
+                    return;
+            }
+            else {
+                scheduler.invalidate();
+                await commit(ctx, expected, () => lease.control(control, expected));
+            }
+            if (started !== epoch)
+                return;
+            mirror(ctx);
+            ctx.ui.notify(`Goal ${control === "edit" ? "updated" : lease.snapshot.goal.status}.`, "info");
+            if (control !== "pause")
+                scheduler.resume(ctx, control === "edit");
+            return;
+        }
+        if (expected.goal && expected.goal.status !== "complete") {
+            if (!await ctx.ui.confirm("Replace current goal?", "The new goal will reset the saved time and token counts."))
+                return;
+        }
+        if (started !== epoch || !lease)
+            return;
+        if (!await saveObjective(args, expected, ctx, started, false))
+            return;
+        if (started !== epoch)
+            return;
+        mirror(ctx);
+        ctx.ui.notify("Goal saved.", "info");
+        scheduler.resume(ctx);
+    });
+    pi.registerCommand("goal", {
+        description: "Create, inspect, edit, pause, resume, or clear a goal",
+        handler: async (args, ctx) => {
+            if (args.trim())
+                return executeGoalCommand(args, ctx);
+            assertCurrent(ctx);
+            if (panelToken) {
+                ctx.ui.notify("Goal details are already open.", "info");
+                return;
+            }
+            const token = Symbol();
+            panelToken = token;
+            let captured;
+            try {
+                await command(async (_args, context, started) => {
+                    await bind(context, false);
+                    const initial = lease?.snapshot;
+                    let expanded;
+                    let contentError = "";
+                    if (initial?.goal?.content) {
+                        try {
+                            expanded = await content.expand(initial.goal);
+                        }
+                        catch (error) {
+                            expanded = "Goal content unavailable.";
+                            contentError = `\nContent error: ${safe(error instanceof Error ? error.message : String(error))}`;
+                        }
+                    }
+                    assertCurrent(context);
+                    const record = lease?.snapshot;
+                    if (started !== epoch || initial?.goal?.goalId !== record?.goal?.goalId || initial?.goal?.objective !== record?.goal?.objective || initial?.goal?.content?.bundleId !== record?.goal?.content?.bundleId)
+                        throw new Error("Stale goal details. Reopen /goal.");
+                    mirror(context);
+                    captured = { record, epoch: started, text: summary(record, expanded, lease?.displayTiming?.elapsedSeconds) + contentError + (displayLimitation ? `\n${displayLimitation}` : "") };
+                })("", ctx);
+                if (!captured || captured.epoch !== epoch)
+                    return;
+                const snapshot = captured;
+                const goal = snapshot.record?.goal;
+                const action = await ctx.ui.custom((tui, theme, _keys, done) => {
+                    closePanel = () => done(undefined);
+                    return new GoalDetails(snapshot.text, {
+                        pause: goal?.status === "active",
+                        resume: goalCapability(ctx).supported && missingTools().length === 0 && !!goal && goal.status !== "complete" && goal.status !== "budget_limited" && (goal.status !== "active" || !!goal.toolRecoveryRequired || !!snapshot.record?.continuationDeferral || !!displayLimitation),
+                    }, () => ctx.ui.theme ?? theme, () => Math.max(6, tui.terminal.rows - 5), done, () => tui.requestRender());
+                });
+                if (!action)
+                    return;
+                await command(async (_args, context) => {
+                    const current = lease?.snapshot;
+                    const expected = snapshot.record;
+                    if (snapshot.epoch !== epoch || !current?.goal || !expected?.goal || current.recordId !== expected.recordId || current.goal.goalId !== expected.goal.goalId || current.generation !== expected.generation || current.goal.activation !== expected.goal.activation || current.goal.status !== expected.goal.status || current.goal.objective !== expected.goal.objective || current.goal.content?.bundleId !== expected.goal.content?.bundleId)
+                        throw new Error("Stale goal details. Reopen /goal before changing its state.");
+                    if (action === "resume")
+                        await resumeGoal(context, current);
+                    else {
+                        scheduler.invalidate();
+                        await commit(context, current, () => lease.control("pause", current));
+                        mirror(context);
+                        context.ui.notify(`Goal ${lease.snapshot.goal.status}.`, "info");
+                    }
+                })("", ctx);
+            }
+            finally {
+                if (panelToken === token) {
+                    panelToken = undefined;
+                    closePanel = undefined;
+                }
+            }
+        },
     });
     const accounting = registerGoalAccounting(pi, {
         snapshot: () => lease?.snapshot,
@@ -683,6 +773,13 @@ export function registerGoal(pi, store, options = {}) {
     });
     pi.on("context", async (_event, ctx) => { await children.checkpoint(ctx); });
     const scheduler = registerGoalScheduler(pi, {
+        display: (record, ctx, limitation, suspended) => {
+            if (!live || ctx.mode !== "tui" || ctx.sessionManager.getSessionId() !== sessionId)
+                return;
+            displayContext = ctx;
+            displayLimitation = limitation;
+            presentation.update(record, limitation, suspended);
+        },
         snapshot: () => lease?.snapshot,
         missingTools,
         checkpoint: async (expected, ctx) => {

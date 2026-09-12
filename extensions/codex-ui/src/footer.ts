@@ -13,7 +13,10 @@ import {
   normalizeWidth,
 } from "./layout.js";
 
+import { renderGoalDisplay, type GoalFooterDisplay } from "./goal-display.js";
+
 export interface CodexFooterOptions {
+  getGoalDisplay?: () => GoalFooterDisplay | undefined;
   cwd: string;
   home?: string;
   getModelId: () => string | undefined;
@@ -75,9 +78,10 @@ export class CodexFooter implements Component {
     contextPercent: number | null | undefined;
     fast: string | undefined;
     permissions: string | undefined;
-    goal: string | undefined;
     lines: string[];
   } | undefined;
+
+  private combined: { base: string[]; key: string; theme: Theme; lines: string[] } | undefined;
 
   constructor(private readonly options: CodexFooterOptions) {}
 
@@ -89,17 +93,32 @@ export class CodexFooter implements Component {
   render(width: number): string[] {
     const safeWidth = normalizeWidth(width);
     if (safeWidth === 0) return [];
+    const statuses = this.options.getExtensionStatuses();
+    const base = this.renderBase(safeWidth, statuses);
+    const theme = this.options.getTheme();
+    const goal = this.readStatus(statuses, "goal");
+    const display = goal ? this.options.getGoalDisplay?.() : undefined;
+    const key = JSON.stringify([safeWidth, display ?? goal]);
+    if (this.combined?.base === base && this.combined.key === key && this.combined.theme === theme) return this.combined.lines;
+    const lines = [...base];
+    if (display) lines.push(...renderGoalDisplay(display, safeWidth, theme));
+    else if (goal) lines.push(fitToWidth(theme.fg("muted", ` ${goal}`), safeWidth));
+    this.combined = { base, key, theme, lines };
+    return lines;
+  }
+
+  private renderBase(width: number, statuses: ReadonlyMap<string, string>): string[] {
+    const safeWidth = normalizeWidth(width);
+    if (safeWidth === 0) return [];
 
     const theme = this.options.getTheme();
     const modelId = this.options.getModelId() ?? "No model";
     const thinking = this.options.getThinkingLevel();
     const branch = this.options.getBranch();
     const contextPercent = this.options.getContextUsage()?.percent;
-    const statuses = this.options.getExtensionStatuses();
     const fastStatus = this.readStatus(statuses, FAST_STATUS_KEY);
     const fast = fastStatus?.toLowerCase() === "fast" ? "fast" : undefined;
     const permissions = this.readStatus(statuses, PERMISSIONS_STATUS_KEY);
-    const goal = this.readStatus(statuses, "goal");
 
     const cached = this.cachedSnapshot;
     if (
@@ -111,7 +130,6 @@ export class CodexFooter implements Component {
       && cached.contextPercent === contextPercent
       && cached.fast === fast
       && cached.permissions === permissions
-      && cached.goal === goal
     ) {
       return cached.lines;
     }
@@ -129,7 +147,6 @@ export class CodexFooter implements Component {
       theme,
     };
     const lines = [renderFooter(input)];
-    if (goal) lines.push(fitToWidth(theme.fg("muted", ` ${goal}`), safeWidth));
     this.cachedSnapshot = {
       width: safeWidth,
       theme,
@@ -139,13 +156,13 @@ export class CodexFooter implements Component {
       contextPercent,
       fast,
       permissions,
-      goal,
       lines,
     };
     return lines;
   }
 
   invalidate(): void {
+    this.combined = undefined;
     this.cachedSnapshot = undefined;
   }
 

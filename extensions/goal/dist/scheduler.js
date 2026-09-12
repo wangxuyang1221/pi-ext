@@ -63,14 +63,18 @@ export function registerGoalScheduler(pi, access) {
         return record && !compactionFailed && !record.goal?.toolRecoveryRequired && !access.missingTools?.().length ? record : undefined;
     };
     const refresh = (ctx) => {
-        const goal = access.snapshot()?.goal;
+        const record = access.snapshot();
+        const goal = record?.goal;
         const capability = goalCapability(ctx);
         const missing = access.missingTools?.() ?? [];
         const limitation = suspended ? " | storage error: /goal resume"
             : !capability.supported ? ` | ${capability.reason}`
                 : missing.length ? ` | Missing goal tools: ${missing.join(", ")}. Restore tools, then /goal resume`
                     : goal?.toolRecoveryRequired ? " | Requires explicit /goal resume" : "";
-        ctx.ui.setStatus("goal", goal ? `Goal: ${goal.status} | ${goal.tokensUsed} tokens | ${goal.elapsedSeconds}s${limitation}` : undefined);
+        if (access.display)
+            access.display(record, ctx, limitation.replace(/^ \| /, ""), suspended);
+        else
+            ctx.ui.setStatus("goal", goal ? `Goal: ${goal.status} | ${goal.tokensUsed} tokens | ${goal.elapsedSeconds}s${limitation}` : undefined);
     };
     const start = (ctx, automatic = false) => {
         const record = runnable(ctx);

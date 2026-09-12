@@ -84,7 +84,7 @@ const observer = pi => {
       assert.equal(faux.state.callCount, 0);
     }
     const footer = originalFooter.render(120);
-    assert.ok(footer.join("\n").includes("Goal: paused"));
+    assert.ok(footer.join("\n").includes("Paused"));
     log("result", { version, codex, phase, goal: saved.goal, expandedLength: [...expanded].length, attachments, nativeReadImage: true, sameEditor: true, sameFooter: true, footer, calls: faux.state.callCount, networkAttempts });
     ctx.shutdown();
   } });
