@@ -25,6 +25,46 @@ afterEach(async () => {
 });
 
 describe("MCP Pi API and renderer integration", () => {
+  it.each(["cancelled", "timeout"])("renders a real HTTP %s diagnostic as warning after history serialization", async (outcome) => {
+    fixture = await LocalHttpMcpFixture.start({ toolCallFailures: [{ kind: "timeout" }] });
+    tempDirectory = mkdtempSync(join(process.cwd(), ".tmp-mcp-status-"));
+    mkdirSync(join(tempDirectory, ".pi"), { recursive: true });
+    writeFileSync(join(tempDirectory, ".pi", "mcp.json"), JSON.stringify({ mcpServers: {
+      remote: { type: "streamable-http", url: fixture.url, connectTimeout: 2000,
+        requestTimeout: outcome === "timeout" ? 50 : 2000, maxRequestTimeout: outcome === "timeout" ? 100 : 2000,
+        retry: { maxAttempts: 1, background: false } },
+    } }));
+    const pi = createPiHarness();
+    const ctx = createTuiContext(tempDirectory);
+    registerMcpExtension(pi.api as never);
+    try {
+      await pi.emit("session_start", {}, ctx);
+      const tool = pi.tools.get("mcp__remote__echo");
+      expect(tool).toBeDefined();
+      const controller = new AbortController();
+      const execution = tool.execute("call", { text: "hello" }, controller.signal).catch((error: Error) => error);
+      if (outcome === "cancelled") {
+        await vi.waitFor(() => expect(fixture!.count("tools/call")).toBe(1), { interval: 5 });
+        controller.abort();
+      }
+      const error = await execution;
+      expect(error).toBeInstanceOf(Error);
+      const result = JSON.parse(JSON.stringify({ content: [{ type: "text", text: error.message }], details: {} }));
+      const theme = { ...ctx.ui.theme, fg: (color: string, text: string) => color === "warning" ? `\x1b[33m${text}\x1b[39m` : text };
+      const renderContext = { state: {}, isError: true, isPartial: false, executionStarted: true, lastComponent: undefined };
+      const call = tool.renderCall({ text: "hello" }, theme, renderContext);
+      const body = tool.renderResult(result, { isPartial: false, expanded: true }, theme, renderContext);
+      expect(call.render(120)[0]).toContain("\x1b[33m⏺\x1b[39m");
+      expect(body.render(120).join("\n")).toContain(`\x1b[33m${outcome === "cancelled" ? "Interrupted" : "Timed out"}\x1b[39m`);
+      expect(fixture.count("tools/call")).toBe(1);
+    } finally {
+      await pi.emit("session_shutdown", {}, ctx);
+      await fixture.close();
+      expect(fixture.server.listening).toBe(false);
+      await vi.waitFor(() => expect(fixture!.sockets.size).toBe(0), { interval: 5 });
+    }
+  });
+
   it("keeps a local HTTP 520 failure bounded in TUI renderers and out of process logs", async () => {
     const privateBody = "private-cloudflare-body ".repeat(10_000);
     fixture = await LocalHttpMcpFixture.start({

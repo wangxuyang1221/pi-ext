@@ -30,7 +30,7 @@ import {
   type ResolvedConfig,
 } from "./config.ts";
 import { resolveCodexAccountId } from "./pi-auth.ts";
-import { createSearchRenderers } from "./renderers.ts";
+import { createSearchRenderers, type SearchFailureMetadata } from "./renderers.ts";
 import { SearchAnimations } from "./animation.ts";
 
 const OPENAI_CODEX_PROVIDER = "openai-codex";
@@ -230,7 +230,7 @@ function buildToolParameters(config: ResolvedConfig) {
     : buildSearchParametersSchema(config);
 }
 
-function buildTool(config: ResolvedConfig, animations: SearchAnimations) {
+function buildTool(config: ResolvedConfig, animations: SearchAnimations, saveFailure?: (id: string, failure: SearchFailureMetadata["searchFailure"]) => void) {
   const tool = defineTool({
     name: config.toolName,
     label: config.searchApi === "standalone" ? "Codex Standalone Web" : "Web Search",
@@ -609,20 +609,41 @@ function buildTool(config: ResolvedConfig, animations: SearchAnimations) {
     ...createSearchRenderers(config, buildCallLabels, animations),
   });
   const execute = tool.execute;
-  tool.execute = (...args) => animations.run(args[0], args[4].mode === "tui", args[2], () => execute(...args));
+  tool.execute = async (...args) => {
+    try {
+      return await animations.run(args[0], args[4].mode === "tui", args[2], () => execute(...args));
+    } catch (error) {
+      saveFailure?.(args[0], { kind: classifyError(error), cancelled: args[2]?.aborted === true });
+      throw error;
+    }
+  };
   return tool;
 }
 
 export default function codexWebSearchExtension(pi: ExtensionAPI) {
   const animations = new SearchAnimations();
+  const diagnostics = new Map<string, SearchFailureMetadata["searchFailure"]>();
+  let generation = 0;
   registerSettingsCommand(pi);
-  pi.on("session_shutdown", () => animations.dispose());
+  pi.on("session_shutdown", () => { generation++; diagnostics.clear(); animations.dispose(); });
+  pi.on("agent_settled", () => diagnostics.clear());
+  pi.on("tool_result", event => {
+    if (event.toolName !== "codex_search") return;
+    const failure = diagnostics.get(event.toolCallId);
+    diagnostics.delete(event.toolCallId);
+    if (!event.isError || !failure) return;
+    // Add renderer-only metadata without replacing tool text or changing error semantics.
+    return { details: { ...(event.details && typeof event.details === "object" ? event.details : {}), searchFailure: failure } };
+  });
 
   pi.on("session_start", async (_event, ctx) => {
     const config = await loadConfig(ctx.cwd, isProjectTrustedContext(ctx));
     if (!config.enabled) return;
 
-    pi.registerTool(buildTool({ ...config, searchApi: "responses", toolName: "codex_search" }, animations));
+    const current = ++generation;
+    pi.registerTool(buildTool({ ...config, searchApi: "responses", toolName: "codex_search" }, animations, (id, failure) => {
+      if (current === generation) diagnostics.set(id, failure);
+    }));
     if (config.standaloneEnabled) {
       pi.registerTool(
         buildTool({

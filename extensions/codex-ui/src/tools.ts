@@ -37,6 +37,7 @@ import {
 import { ResponsiveLinesComponent } from "./responsive-lines.js";
 import { ToolRenderCache, type RenderCacheScope } from "./render-cache.js";
 import { createObservedWriteDefinition } from "./write-changes.js";
+import { TOOL_STATUS_GLYPH, bashFailureStatus, fileFailureStatus, toolStatusColor, toolStatusMarker, type ToolFailureStatus } from "./tool-status.js";
 
 const COLLAPSED_DIFF_LINES = 12;
 const MAX_DIFF_HIGHLIGHT_CHARS = 4096;
@@ -62,12 +63,6 @@ const ANSI_NAMED_GREEN = "\x1b[32m";
 const ANSI_NAMED_RED = "\x1b[31m";
 const ANSI_FOREGROUND_RESET = /\x1b\[39m/gu;
 const ANSI_FULL_SGR_RESET = /\x1b\[(?:0)?m/gu;
-const BASH_STATUS_PRESENTATION = {
-  pending: { glyph: "○", color: "dim" },
-  running: { glyph: "•", color: "warning" },
-  completed: { glyph: "•", color: "success" },
-  failed: { glyph: "•", color: "error" },
-} as const;
 
 export interface CodexToolFactories {
   read: typeof createReadToolDefinition;
@@ -110,6 +105,7 @@ interface CodexWriteState extends CodexEditState {
 type MutationDiffDetails = Partial<EditToolDetails>;
 
 interface CodexEditState {
+  failureStatus?: ToolFailureStatus;
   renderMode?: CodexToolRenderMode;
   cache?: RenderCacheScope;
   path?: string;
@@ -129,6 +125,7 @@ type CodexBashStatus = "pending" | "running" | "completed" | "failed";
 interface LowPowerPreparedBashResult {
   outputLines: string[];
   warnings: string[];
+  failureStatus: ToolFailureStatus;
 }
 
 interface CodexBashState extends BashGroupRowState {
@@ -137,6 +134,7 @@ interface CodexBashState extends BashGroupRowState {
   startedAt?: number;
   endedAt?: number;
   status?: CodexBashStatus;
+  failureStatus?: ToolFailureStatus;
   lowPowerDurationMs?: number;
   lowPowerCommandCaptured?: boolean;
   lowPowerCommandPreview?: string;
@@ -255,12 +253,12 @@ export function registerCodexTools(
       state.callComponent = component;
       component.setRenderer(
         (width) => [state.settledTitle === undefined
-          ? formatPendingMutationTitle("Editing", path, theme, width)
+          ? formatPendingMutationTitle("Editing", path, theme, width, context.executionStarted)
           : fitToWidth(state.settledTitle, width)],
         lowPower
           ? {
             linesAlreadyFit: true,
-            cacheKey: `low-power\0edit\0call\0${getLowPowerThemeFingerprint(theme)}\0${path}`,
+            cacheKey: `low-power\0edit\0call\0${getLowPowerThemeFingerprint(theme)}\0${path}\0${context.executionStarted}`,
           }
           : { linesAlreadyFit: true },
       );
@@ -290,9 +288,9 @@ export function registerCodexTools(
       if (!lowPower && context.argsComplete && typeof args.content !== "string") throw new TypeError();
       state.callComponent = updateComponent(context.lastComponent, (width) => {
         if (!state.status || state.status === "pending") {
-          return [formatPendingMutationTitle("Writing", path, theme, width)];
+          return [formatPendingMutationTitle("Writing", path, theme, width, context.executionStarted)];
         }
-        if (state.status === "error") return [fitToWidth(formatMutationFailureTitle("Write failed", path, theme), width)];
+        if (state.status === "error") return [fitToWidth(formatMutationFailureTitle("Write failed", path, theme, state.failureStatus), width)];
         if (state.settledTitle !== undefined) return [fitToWidth(state.settledTitle, width)];
         const suffix = state.status === "success" && state.metrics
           ? theme.fg("dim", `(${formatLineCount(state.metrics.lineCount)})`)
@@ -318,12 +316,11 @@ export function registerCodexTools(
         state.metrics = typeof content === "string" ? getWriteMetrics(state, content) : undefined;
       }
       state.callComponent?.invalidate();
-      const error = state.status === "error"
-        ? lowPower ? getLowPowerError(result.content, "Write failed") : firstLine(extractText(result.content)) || "Write failed"
-        : undefined;
+      const error = state.status === "error" ? getMutationFailure(result.content, "Write failed", lowPower) : undefined;
+      state.failureStatus = error?.status;
       return updateComponent(context.lastComponent, (width) => error === undefined
         ? []
-        : [fitToWidth(theme.fg("error", `  ${error}`), width)]);
+        : [fitToWidth(theme.fg(toolStatusColor(error.status), `  ${error.text}`), width)]);
     },
   };
   pi.registerTool(writeTool);
@@ -358,6 +355,7 @@ export function registerCodexTools(
           "call",
           getLowPowerThemeFingerprint(theme),
           state.status ?? "pending",
+          state.failureStatus,
           duration,
           timeout,
           commandPreview,
@@ -401,13 +399,17 @@ export function registerCodexTools(
 
         const previousPrepared = state.lowPowerPreparedResult;
         const prepared = getLowPowerPreparedBashResult(state, result);
-        if (previousPrepared !== prepared || previousExpanded !== options.expanded) {
+        const failureStatus = context.isError ? prepared.failureStatus : undefined;
+        const failureChanged = state.failureStatus !== failureStatus;
+        state.failureStatus = failureStatus;
+        const color = failureStatus ? toolStatusColor(failureStatus) : "text";
+        if (failureChanged || previousPrepared !== prepared || previousExpanded !== options.expanded) {
           state.callComponent?.invalidate();
         }
         return updateComponent(
           context.lastComponent,
-          (width) => renderLowPowerBashResult(prepared, options.expanded, theme, width),
-          `${getLowPowerBashResultCacheKey(prepared, theme)}\0${options.expanded}`,
+          (width) => renderLowPowerBashResult(prepared, options.expanded, theme, width, color),
+          `${getLowPowerBashResultCacheKey(prepared, theme)}\0${options.expanded}\0${color}`,
         );
       }
 
@@ -561,6 +563,7 @@ function getLowPowerThemeFingerprint(theme: Theme): string {
   return [
     theme.fg("toolTitle", theme.bold("x")),
     theme.fg("toolOutput", "x"),
+    theme.fg("text", "x"),
     theme.fg("muted", "x"),
     theme.fg("dim", "x"),
     theme.fg("warning", "x"),
@@ -629,12 +632,12 @@ function renderMutationResult(
   }
   const failure = tool === "write" ? "Write failed" : "Edit failed";
   const lowPower = getToolRenderMode(state, services) === "low-power";
-  const error = context.isError
-    ? lowPower ? getLowPowerError(result.content, failure) : firstLine(extractText(result.content)) || failure
-    : undefined;
+  const error = context.isError ? getMutationFailure(result.content, failure, lowPower) : undefined;
+  state.failureStatus = error?.status;
   if (error !== undefined) {
-    setTitle(formatMutationFailureTitle(failure, path, theme));
-    return updateComponent(context.lastComponent, (width) => [fitToWidth(theme.fg("error", `  ${error}`), width)]);
+    setTitle(formatMutationFailureTitle(failure, path, theme, error.status));
+    const color = toolStatusColor(error.status);
+    return updateComponent(context.lastComponent, (width) => [fitToWidth(theme.fg(color, `  ${error.text}`), width)]);
   }
   if (lowPower) {
     setTitle(formatEditTitle(action, path, theme));
@@ -661,8 +664,18 @@ function renderMutationResult(
   ));
 }
 
-function formatPendingMutationTitle(action: string, path: string, theme: Theme, width: number): string {
-  const prefix = `${theme.fg("warning", "◌")} ${theme.fg("muted", action)}  `;
+function getMutationFailure(content: Array<{ type: string; text?: string }>, fallback: string, lowPower: boolean): { text: string; status: ToolFailureStatus } {
+  // Reuse the captured text for classification and preview; do not invoke result getters twice.
+  const single = content.length === 1 && content[0]?.type === "text" ? content[0].text : undefined;
+  const captured = single === undefined ? content : [{ type: "text", text: single }];
+  return {
+    status: fileFailureStatus(captured),
+    text: lowPower ? getLowPowerError(captured, fallback) : firstLine(extractText(captured)) || fallback,
+  };
+}
+
+function formatPendingMutationTitle(action: string, path: string, theme: Theme, width: number, executionStarted: boolean): string {
+  const prefix = `${toolStatusMarker(theme, executionStarted ? "running" : "pending")} ${theme.fg("toolTitle", theme.bold(action))} `;
   const filename = basename(path);
   const directory = dirname(path) === "." ? "" : `${dirname(path)}/`;
   const room = width - visibleWidth(prefix);
@@ -674,8 +687,8 @@ function formatPendingMutationTitle(action: string, path: string, theme: Theme, 
   return fitToWidth(prefix + pathText, width);
 }
 
-function formatMutationFailureTitle(action: string, path: string, theme: Theme): string {
-  return `${theme.fg("error", "✗")} ${theme.bold(action)} ${path || "(unknown path)"}`;
+function formatMutationFailureTitle(action: string, path: string, theme: Theme, status: ToolFailureStatus = "failed"): string {
+  return `${toolStatusMarker(theme, status)} ${theme.bold(action)} ${path || "(unknown path)"}`;
 }
 
 function formatEditTitle(
@@ -685,7 +698,7 @@ function formatEditTitle(
   suffix = "",
 ): string {
   const parts = [
-    `${ANSI_DIM}•${ANSI_INTENSITY_RESET}`,
+    toolStatusMarker(theme, "completed"),
     theme.bold(action),
     path || "(unknown path)",
   ];
@@ -944,6 +957,7 @@ function renderLowPowerBashCall(
     fields,
     theme,
     safeWidth,
+    state.failureStatus,
   );
   if (state.expanded) {
     lines.push("", renderBashDetailLine(
@@ -960,19 +974,19 @@ function renderBashTimelineSummary(
   fields: readonly BashSummaryField[],
   theme: Theme,
   width: number,
+  failureStatus?: ToolFailureStatus,
 ): string[] {
-  const presentation = BASH_STATUS_PRESENTATION[status];
-  const branch = width >= visibleWidth(`${BASH_TIMELINE_BRANCH}${presentation.glyph} Bash`)
+  const branch = width >= visibleWidth(`${BASH_TIMELINE_BRANCH}${TOOL_STATUS_GLYPH} Bash`)
     ? theme.fg("dim", BASH_TIMELINE_BRANCH)
     : "";
-  const prefix = `${branch}${theme.fg(presentation.color, presentation.glyph)} ${theme.fg("toolTitle", theme.bold("Bash"))} ${theme.fg("muted", status)}`;
+  const prefix = `${branch}${toolStatusMarker(theme, status === "failed" ? failureStatus ?? status : status)} ${theme.fg("toolTitle", theme.bold("Bash"))} ${theme.fg("muted", status)}`;
   const primaryWidth = getBashSummaryPrimaryWidth(width);
   const prefixWidth = visibleWidth(prefix);
   const primary = prefixWidth >= primaryWidth
     ? fitToWidth(prefix, primaryWidth)
     : fitToWidth(
       `${prefix} ${fitToWidth(
-        theme.fg("toolOutput", command),
+        theme.fg("text", command),
         Math.max(1, primaryWidth - prefixWidth - 1),
         { ellipsis: "..." },
       )}`,
@@ -1051,11 +1065,12 @@ function getLowPowerPreparedBashResult(
   const extracted = extractBoundedBashOutputTail(
     result.content,
     LOW_POWER_BASH_OUTPUT_PREVIEW_CHARS,
-  ).trim();
-  const output = removeLowPowerBashExecutionFooter(extracted, result.details);
-  const prepared = {
+  );
+  const output = removeLowPowerBashExecutionFooter(extracted.trim(), result.details);
+  const prepared: LowPowerPreparedBashResult = {
     outputLines: output ? output.split("\n").slice(-LOW_POWER_BASH_PREVIEW_LINES) : [],
     warnings: formatLowPowerBashWarnings(result.details),
+    failureStatus: bashFailureStatus(result.content.length === 1 ? [{ type: "text", text: extracted }] : []),
   };
   state.lowPowerPreparedContent = result.content;
   state.lowPowerPreparedDetails = result.details;
@@ -1082,12 +1097,13 @@ function renderLowPowerBashResult(
   expanded: boolean,
   theme: Theme,
   width: number,
+  color: "text" | "dim" | "warning" | "success" | "error",
 ): string[] {
   const safeWidth = normalizeWidth(width);
   if (!expanded || safeWidth === 0) return [];
 
   const lines = prepared.outputLines.map((line) => (
-    renderBashDetailLine(theme.fg("toolOutput", line), safeWidth)
+    renderBashDetailLine(theme.fg(color, line), safeWidth)
   ));
   if (prepared.warnings.length > 0) {
     if (lines.length > 0) lines.push("");

@@ -75,7 +75,7 @@ describe("MCP tool renderers", () => {
     expect(wrapSpy.mock.calls.every(([text]) => text.length <= 24 * 6)).toBe(true);
   });
 
-  it("keeps success detail dim and preserves image hints without exposing data", () => {
+  it("keeps success detail bright and preserves image hints without exposing data", () => {
     const color = vi.fn((_name: string, text: string) => text);
     const theme = { ...createTheme(), fg: color } as Theme;
     for (const expanded of [false, true]) for (const mixed of [false, true]) {
@@ -87,7 +87,8 @@ describe("MCP tool renderers", () => {
       const output = component.render(120).join("\n");
       expect(output).not.toContain("private-base64");
       expect(output).toContain(mixed ? "hello" : "Image");
-      expect(color.mock.calls.every(([name]) => name === "dim")).toBe(true);
+      expect(color.mock.calls).toContainEqual(["text", mixed ? "hello" : "Image"]);
+      expect(color.mock.calls.filter(([name]) => name === "dim").every(([, text]) => /^\s*[└]?\s*$/u.test(text))).toBe(true);
     }
   });
 
@@ -126,11 +127,11 @@ describe("MCP tool renderers", () => {
       renderMcpToolResult({ content: [{ type: "text", text: isError ? "denied" : "ok" }], details: { isError } },
         { isPartial: false, expanded: false }, theme, context);
       const title = call.render(128).join("\n");
-      expect(title).toContain(isError ? "<error>•</error>" : "<success>•</success>");
+      expect(title).toContain(isError ? "<error>⏺</error>" : "<success>⏺</success>");
       expect(title).toContain(isError ? "Call failed for" : "Called");
     }
   });
-  it("shows a dim compact JSON preview without a success summary", () => {
+  it("shows a compact JSON preview without a success summary", () => {
     const theme = createTheme();
     const url = "https://example.test/api/telemetry?page=1&pageSize=20";
     const state = {};
@@ -152,7 +153,7 @@ describe("MCP tool renderers", () => {
     );
 
     expect(stripAnsi(call.render(128).join("\n"))).toBe(
-      `• Called MultiFetch / fetch_json (${url})`,
+      `⏺ Called MultiFetch / fetch_json (${url})`,
     );
     const collapsed = stripAnsi(result.render(128).join("\n"));
     expect(collapsed).toBe('  └ {"items": [1, 2]}');
@@ -210,12 +211,12 @@ describe("MCP tool renderers", () => {
       { isError: true, isPartial: false, lastComponent: undefined },
     );
 
-    expect(stripAnsi(runningCall.render(128)[0] ?? "")).toContain("• Calling MultiFetch / fetch_json");
+    expect(stripAnsi(runningCall.render(128)[0] ?? "")).toContain("⏺ Calling MultiFetch / fetch_json");
     expect(stripAnsi(runningResult.render(128)[0] ?? "")).toBe(
       "  └ Running · waiting for response",
     );
     expect(stripAnsi(failedCall.render(128)[0] ?? "")).toContain(
-      "• Call failed for MultiFetch / fetch_json",
+      "⏺ Call failed for MultiFetch / fetch_json",
     );
     expect(stripAnsi(failedResult.render(128)[0] ?? "")).toContain(
       "  └ Failed · request timed out after 30s · ctrl+o expand",
@@ -261,7 +262,7 @@ describe("MCP tool renderers", () => {
     expect(output).toContain("[redacted]");
     expect(output).not.toContain("private-token");
     expect(output).not.toContain("also-private");
-    expect(output).toContain("• Calling MultiFetch / fetch_json");
+    expect(output).toContain("⏺ Calling MultiFetch / fetch_json");
   });
 
   it("uses structured content when an MCP result has no text blocks", () => {

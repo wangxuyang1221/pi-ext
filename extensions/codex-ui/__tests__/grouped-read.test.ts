@@ -212,7 +212,7 @@ test("limited Read preserves selected blank lines and empty files do not invent 
     const empty = h.row("empty"); empty.updateResult(result(""));
     assert.match(plain(empty), /0 lines/u); assert.equal(empty.render(120).length, 2);
     empty.updateResult(result("Operation aborted", true));
-    assert.match(plain(empty), /Failed\n.*Operation aborted/u);
+    assert.match(plain(empty), /Interrupted\n.*Operation aborted/u);
     assert.doesNotMatch(plain(empty), /✓|0 lines/u);
   } finally { h.dispose(); }
 });

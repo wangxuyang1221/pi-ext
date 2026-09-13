@@ -2,6 +2,7 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import type { BashGroup, BashMember } from "./bash-groups.js";
 import { fitToWidth, normalizeWidth } from "./layout.js";
+import { toolStatusMarker } from "./tool-status.js";
 
 function clean(text: string): string {
   return stripTerminalSequences(text)
@@ -47,8 +48,8 @@ function capture(member: BashMember, expanded: boolean): string[] {
   return [status.text, ...source.slice(0, Math.max(0, source.length - 2))];
 }
 function commandLines(member: BashMember, expanded: boolean, theme: Theme, width: number): string[] {
-  const color = member.status === "completed" ? "success" : member.status === "failed" && !diagnostic(member)?.warning ? "error" : "warning";
-  const prefix = width >= 8 ? `${theme.fg(color, "⏺")} ${theme.bold("Bash")}(` : "";
+  const status = member.status === "failed" && diagnostic(member)?.warning ? "interrupted" : member.status;
+  const prefix = width >= 8 ? `${toolStatusMarker(theme, status)} ${theme.bold("Bash")}(` : "";
   const continuation = width >= 8 ? "  " : "";
   const cache = member.cache;
   const key = ["group-command", cache.identity(member), member.commandRevision, expanded, width].join("\0");

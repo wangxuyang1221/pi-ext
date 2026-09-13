@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import { ToolExecutionComponent, type ExtensionAPI, type ExtensionContext, type Theme, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, type TUI } from "@earendil-works/pi-tui";
 import search from "../src/index.ts";
-import { runResponsesSearch } from "../src/codex.ts";
+import { CodexError, runResponsesSearch } from "../src/codex.ts";
 
 vi.mock("../src/config.ts", async importOriginal => ({
   ...await importOriginal<typeof import("../src/config.ts")>(),
@@ -20,7 +20,7 @@ vi.mock("../src/codex.ts", async importOriginal => ({
 const themePath = join(process.cwd(), "node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js");
 const themes = await import(pathToFileURL(themePath).href);
 const theme: Theme = themes.loadThemeFromPath(join(process.cwd(), "themes/codex-pi.json"), "truecolor");
-const green = "\x1b[38;2;120;217;154m";
+const green = "\x1b[38;2;77;255;136m";
 const params = { queries: ["first query", "second query"], freshness: "live", search_context_size: "medium" };
 function success(query = "first query", citations = 2, calls = 3) {
   return { query, text: "Fixture search body.", citations: Array.from({ length: citations }, (_, i) => ({ url: `https://example.com/${i}`, title: "Source" })),
@@ -44,21 +44,21 @@ async function harness() {
   const requestRender = vi.fn();
   const row = new ToolExecutionComponent(tool!.name, "search-test", params, { showImages: false }, tool!, { requestRender } as unknown as TUI, ctx.cwd);
   const output = (width = 130) => row.render(width).join("\n");
-  return { tool: tool!, ctx, row, output, requestRender, shutdown: () => events.get("session_shutdown")?.({}, ctx) };
+  return { tool: tool!, ctx, row, output, requestRender, resultHook: (...args: unknown[]) => events.get("tool_result")?.(...args), shutdown: () => events.get("session_shutdown")?.({}, ctx) };
 }
 beforeEach(() => { themes.setThemeInstance(theme); vi.mocked(runResponsesSearch).mockReset(); });
 afterEach(() => { vi.useRealTimers(); });
 
-test("production search uses the chosen background-free accent palette", async () => {
+test("production search uses the shared semantic palette without background padding", async () => {
   const { row, output } = await harness();
   row.updateResult(result());
   const raw = output();
   assert(!/\x1b\[48;/.test(raw), "Search must not inherit the green host background");
-  assert(raw.includes("\x1b[38;2;166;218;220mWeb Search\x1b[39m"));
-  assert(raw.includes("\x1b[38;2;168;204;236m3 sources\x1b[39m"));
-  assert(raw.includes(`${green}✓\x1b[39m`));
+  assert(raw.includes(theme.fg("toolTitle", theme.bold("Searched web"))));
+  assert(raw.includes(theme.fg("text", "3 sources")));
+  assert(raw.includes(theme.fg("success", "⏺")));
   assert.equal(raw.split(green).length - 1, 1);
-  assert.equal(stripTerminalSequences(raw).match(/responses\/medium\/live/g)?.length, 1);
+  assert.equal(stripTerminalSequences(raw).match(/responses\/medium\/live/g)?.length, undefined);
 });
 
 function deferred() {
@@ -68,7 +68,7 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-test("real execution drives progress and one timer, then settles without further redraws", async () => {
+test("real execution drives event-based progress with no periodic redraw timer", async () => {
   vi.useFakeTimers();
   const first = deferred();
   const second = deferred();
@@ -77,22 +77,22 @@ test("real execution drives progress and one timer, then settles without further
   row.markExecutionStarted();
   const pending = tool.execute("search-test", params, undefined, update => row.updateResult({ ...update, isError: false }, true), ctx);
   await vi.advanceTimersByTimeAsync(0);
-  assert.equal(vi.getTimerCount(), 1, "Exactly one UI timer must animate the active row");
-  assert(stripTerminalSequences(output()).includes("Searching 0/2"));
+  assert.equal(vi.getTimerCount(), 0, "Search must not start a periodic redraw timer");
+  assert(stripTerminalSequences(output()).includes("0/2 queries completed"));
   const before = output();
   await vi.advanceTimersByTimeAsync(100);
-  assert.notEqual(output(), before);
+  assert.equal(output(), before);
   first.resolve({ model: "fixture", ...success() });
   await vi.advanceTimersByTimeAsync(0);
-  assert(stripTerminalSequences(output()).includes("Searching 1/2"));
+  assert(stripTerminalSequences(output()).includes("1/2 queries completed"));
   await vi.advanceTimersByTimeAsync(1100);
   second.resolve({ model: "fixture", ...success("second query", 1, 2) });
   const value = await pending;
   row.updateResult({ ...value, isError: false });
   assert.equal(vi.getTimerCount(), 0);
-  assert(output().includes("✓"));
+  assert(output().includes("⏺"));
   assert(!output().includes("Searching"));
-  assert(stripTerminalSequences(output()).includes("in 1s"));
+  assert(stripTerminalSequences(output()).includes(" · 1s"));
   const calls = requestRender.mock.calls.length;
   await vi.advanceTimersByTimeAsync(5000);
   assert.equal(requestRender.mock.calls.length, calls);
@@ -108,7 +108,7 @@ test("abort stops animation immediately even when one query already succeeded", 
   const pending = tool.execute("search-test", params, controller.signal, update => row.updateResult({ ...update, isError: false }, true), ctx);
   const rejected = assert.rejects(pending);
   await vi.advanceTimersByTimeAsync(0);
-  assert.equal(vi.getTimerCount(), 1);
+  assert.equal(vi.getTimerCount(), 0);
   controller.abort();
   assert.equal(vi.getTimerCount(), 0);
   assert(output().includes("cancelled"));
@@ -127,8 +127,8 @@ test("single-query startup and session shutdown do not depend on text deltas", a
   row.updateArgs(args);
   const pending = tool.execute("search-test", args, undefined, update => row.updateResult({ ...update, isError: false }, true), ctx);
   await vi.advanceTimersByTimeAsync(1000);
-  assert(stripTerminalSequences(output()).includes("Searching 0/1 · 1s"));
-  assert.equal(vi.getTimerCount(), 1);
+  assert(stripTerminalSequences(output()).includes("0/1 queries completed · 0ms"));
+  assert.equal(vi.getTimerCount(), 0);
   shutdown();
   assert.equal(vi.getTimerCount(), 0);
   wait.resolve({ model: "fixture", ...success() });
@@ -142,10 +142,11 @@ test("partial failure keeps successful sources but never displays a success chec
   const { row, tool, ctx, output, shutdown } = await harness();
   const value = await tool.execute("search-test", params, undefined, update => row.updateResult({ ...update, isError: false }, true), ctx);
   row.updateResult({ ...value, isError: false });
-  assert(stripTerminalSequences(output()).includes("Did 1/2 searches"));
-  assert(output().includes("Fixture failure"));
+  assert(stripTerminalSequences(output()).includes("1/2 succeeded · 1 failed"));
+  assert(output().includes(theme.fg("warning", "⏺")));
   assert(!output().includes("✓"));
   row.setExpanded(true);
+  assert(output().includes("Fixture failure"));
   assert(output().includes("Failures (1)"));
   assert(output().includes("https://example.com/0"));
   assert.equal(vi.getTimerCount(), 0);
@@ -182,7 +183,7 @@ test("history, theme changes, expanded links, and narrow terminals preserve cont
   themes.setThemeInstance(light);
   row.invalidate();
   assert(!output().includes(green));
-  assert(output().includes(light.fg("success", "✓")));
+  assert(output().includes(light.fg("success", "⏺")));
   assert(!/\x1b\[48;/.test(output()));
   assert.equal(vi.getTimerCount(), 0);
 });
@@ -195,6 +196,48 @@ test("collapsed responses do not access full result bodies or search texts", asy
   const rendered = tool.renderResult!(value, { expanded: false, isPartial: false }, theme,
     { state: {}, args: params, isError: false } as never);
   assert(stripTerminalSequences(rendered.render(130).join("\n")).includes("3 sources"));
+});
+
+test("typed timeout metadata survives history reconstruction without changing error text", async () => {
+  vi.mocked(runResponsesSearch).mockRejectedValue(new CodexError("timeout", "Deadline exceeded"));
+  const { row, tool, ctx, resultHook, output } = await harness();
+  await assert.rejects(tool.execute("search-test", params, undefined, undefined, ctx), /Deadline exceeded/);
+  const content = [{ type: "text" as const, text: "Deadline exceeded" }];
+  const patch = resultHook({ toolCallId: "search-test", toolName: "codex_search", content, isError: true }, ctx);
+  assert.deepEqual(patch, { details: { searchFailure: { kind: "timeout", cancelled: false } } });
+  row.updateResult({ content, ...patch, isError: true });
+  assert(output().includes("Web search timed out"));
+  assert(output().includes("Deadline exceeded"));
+  const restored = new ToolExecutionComponent(tool.name, "restored-timeout", params, { showImages: false }, tool, { requestRender() {} } as unknown as TUI, ctx.cwd);
+  restored.updateResult({ content, ...patch, isError: true });
+  assert(restored.render(100).join("\n").includes("Web search timed out"));
+  assert.equal(resultHook({ toolCallId: "search-test", toolName: "codex_search", content, isError: true }, ctx), undefined);
+});
+
+test("pre-aborted execution persists cancellation rather than a timeout", async () => {
+  const { tool, ctx, resultHook, shutdown } = await harness();
+  const controller = new AbortController(); controller.abort();
+  await assert.rejects(tool.execute("search-test", params, controller.signal, undefined, ctx));
+  assert.deepEqual(resultHook({ toolCallId: "search-test", toolName: "codex_search", isError: true }, ctx)?.details?.searchFailure,
+    { kind: "timeout", cancelled: true });
+  assert.equal(vi.mocked(runResponsesSearch).mock.calls.length, 0);
+  shutdown();
+});
+
+test("shutdown detaches abort listeners and rejects stale diagnostic publication", async () => {
+  const wait = deferred(); vi.mocked(runResponsesSearch).mockReturnValue(wait.promise);
+  const { tool, ctx, shutdown, resultHook } = await harness();
+  const controller = new AbortController();
+  const add = vi.spyOn(controller.signal, "addEventListener");
+  const remove = vi.spyOn(controller.signal, "removeEventListener");
+  const pending = tool.execute("search-test", params, controller.signal, undefined, ctx);
+  const rejection = assert.rejects(pending);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  shutdown();
+  assert.equal(add.mock.calls.filter(call => call[0] === "abort").length, 1);
+  assert.equal(remove.mock.calls.filter(call => call[0] === "abort").length, 1);
+  wait.reject(new CodexError("timeout", "Late failure")); await rejection;
+  assert.equal(resultHook({ toolCallId: "search-test", toolName: "codex_search", isError: true }, ctx), undefined);
 });
 
 test("records a repeatable collapsed and expanded rendering baseline", async () => {

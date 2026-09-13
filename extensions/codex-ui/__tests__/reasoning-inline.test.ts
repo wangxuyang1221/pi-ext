@@ -34,7 +34,7 @@ test("inline summaries replace in place and keep the write row stationary throug
     const positions = () => {
       const rows = pipeline.screen.render(120).map(stripTerminalSequences);
       return { title: rows.findIndex(line => line.includes("Checking frame stability")),
-        tool: rows.findIndex(line => /(?:Writing {2}|Write )test\.ts/u.test(line)),
+        tool: rows.findIndex(line => /(?:Writing |Write )test\.ts/u.test(line)),
         editor: rows.findIndex(line => line.includes("Ask Pi")), height: rows.length };
     };
     pipeline.assistant.updateContent(message, true);

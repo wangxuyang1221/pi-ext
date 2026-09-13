@@ -17,11 +17,11 @@ export class SearchAnimations {
   private active = new Map<string, { activity: SearchActivity; timer?: ReturnType<typeof setInterval>; finish: (status: SearchStatus) => void }>();
 
   /** Attach one row invalidator. Repeated renders replace it rather than accumulating listeners. */
-  watch(id: string, invalidate: () => void): SearchActivity | undefined {
+  watch(id: string, invalidate: () => void, animate = true): SearchActivity | undefined {
     const entry = this.active.get(id);
     if (!entry) return undefined;
     entry.activity.invalidate = invalidate;
-    if (entry.timer === undefined && entry.activity.status === "running") {
+    if (animate && entry.timer === undefined && entry.activity.status === "running") {
       entry.timer = setInterval(() => entry.activity.invalidate?.(), 100);
       entry.timer.unref?.();
     }

@@ -1,5 +1,6 @@
 import { stripTerminalSequences, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { fitToWidth, normalizeWidth } from "./layout.js";
+import { toolStatusMarker } from "./tool-status.js";
 function clean(text) {
     return stripTerminalSequences(text)
         .replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f\ud800-\udfff\u202a-\u202e\u2066-\u2069\ufff9-\ufffb]/gu, "")
@@ -53,8 +54,8 @@ function capture(member, expanded) {
     return [status.text, ...source.slice(0, Math.max(0, source.length - 2))];
 }
 function commandLines(member, expanded, theme, width) {
-    const color = member.status === "completed" ? "success" : member.status === "failed" && !diagnostic(member)?.warning ? "error" : "warning";
-    const prefix = width >= 8 ? `${theme.fg(color, "⏺")} ${theme.bold("Bash")}(` : "";
+    const status = member.status === "failed" && diagnostic(member)?.warning ? "interrupted" : member.status;
+    const prefix = width >= 8 ? `${toolStatusMarker(theme, status)} ${theme.bold("Bash")}(` : "";
     const continuation = width >= 8 ? "  " : "";
     const cache = member.cache;
     const key = ["group-command", cache.identity(member), member.commandRevision, expanded, width].join("\0");

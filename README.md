@@ -150,7 +150,7 @@ Codex encrypted compaction item.
 
 这消除了思考延迟补入导致的工具行位移，不代表整个 Pi 零重绘。新增工具、回复、输入和 resize 仍会正常改变布局。实现、缓存边界和性能差异见 [Inline reasoning](docs/plans/codex-ui-inline-reasoning.md#results)。更新后请重启 Pi 并恢复会话，不要只依赖 `/reload` 更新模块。
 
-Write / Edit 进行中只显示淡黄色静态 `◌ Writing / Editing` 与路径，目录弱化、文件名突出，不计行或展示中间内容，Ctrl+O 不增加进行中内容。成功点保持灰色，失败标题使用红色 `✗ Write failed / Edit failed`，错误正文不重复加叉。
+Write / Edit 从参数生成到执行结束前，都显示黄色静态 `⏺ Writing / Editing` 与路径，目录弱化、文件名突出，不计行或展示中间内容，Ctrl+O 不增加进行中内容。成功圆点绿色，失败圆点红色，可靠识别的中断为黄色；错误正文不重复加叉。
 
 本地 Write 在内置文件队列中采集旧内容，新建成功显示 `Added`，覆盖显示 `Edited`。普通模式复用 Edit 的行号、增删统计与 diff 样式，默认显示 12 个 diff 行，灰色省略提示紧随正文，Ctrl+O 展开已保存的 diff。low-power 只识别新建或覆盖，不读取旧正文、不生成 Write diff。缺少变化元数据的旧 Write 结果暂时保留原有总行数摘要，不推测新建或覆盖。
 
@@ -213,6 +213,10 @@ pi-codex() {
 ```
 
 仓库不会自动修改 Shell 配置，也不提供一个假定 `pi install` 会加入 `PATH` 的 package bin。
+
+Bash、Read、Edit、Write 与 MCP 工具调用统一使用静态大圆点 `⏺`，标记后一个空格，工具标题加粗。参数生成、可见等待态和执行中统一黄色，成功绿色，失败红色；可靠识别的中断或超时用黄色并保留诊断。标记只随执行事件变化，不增加计时器、旋转或闪烁。Read、Bash 保留原生分组，Edit、Write、MCP 仍是独立调用，不新增 batch 卡片。
+
+Bash、Read、MCP 的正常正文统一使用 `text`，在 codex-pi 主题中为原 Bash 的亮灰 `#d6d6d6`。目录、行号、连接线与截断提示仍弱化，文件名强调色及 diff 增删色不变。未全局修改 `toolOutput`，因此 subagent、默认工具卡片和 MCP 连接状态不受影响。完整与低功耗模式均支持，低功耗 Bash 仍需展开查看正文。实现及验收见 [Tool status acceptance](docs/tool-status-acceptance.md)，正式代码的隔离 PTY 验收命令为 `pnpm run tool-status:check`。
 
 `read`、`edit`、`write`、`bash` 仍使用 Pi 0.84.3 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。full 模式下，每个已执行调用显示一条 `⏺ Bash(command)`，`Bash` 文字仍与 `Read`、`Edited` 对齐。尚未执行的 pending 调用暂不显示，错误或完成结果不会被隐藏。内部仍按同一 assistant 消息中的连续 Bash 维护归属，不跨 text、thinking、其他工具、缺失组件或消息合并；重复 ID 的额外组件独立显示。取消旧统计标题、命令树和耗时列。长命令默认按当前宽度单行省略，展开保留完整命令及逻辑换行。
 
@@ -288,7 +292,7 @@ pi \
 
 传给模型的 MCP text 与序列化非 text 内容合计限制为 50 KiB、2000 行，最多序列化 24 个非 text block；`details` 中的 structured output 也限制为 50 KiB。超限 raw 输出不会自动落盘。工具提示会要求 agent 缩小结果或使用 server pagination；需要完整数据时应按服务端 cursor/page/limit 分段获取。
 
-MCP 成功结果默认显示最多五个视觉行的灰色预览，超限以 `...` 收尾；成功仅圆点变绿，不再显示 Completed、类型或字节摘要。Ctrl+O 展开灰色详情，仍受展示上限约束。失败保留明确错误正文。
+MCP 成功结果默认显示最多五个视觉行的明亮正文，连接线与末尾截断标记 `...` 弱化；成功圆点变绿，不显示 Completed、类型或字节摘要。Ctrl+O 展开详情，正文亮度一致，仍受展示上限约束。失败保留红色错误正文；能匹配本扩展宿主诊断的取消、超时显示黄色及 `Interrupted`、`Timed out` 提示。服务器返回的普通错误文字不据此改判状态。MCP 不依赖 codex-ui，也使用相同的圆点与配色。
 
 MCP 历史现在独立于连接恢复显示。冷恢复扫描全部分支；进程内 resume/import/fork/clone/reload 通过短寿命、仅含显示 identity 的交接文件提前注册 renderer。历史占位始终拒绝执行，实时 discovery 仍使用当前 schema；离线时停用实时工具，但已排队的实时调用保留原有安全重连路径。首次从没有交接 hook 的旧版本部署时，请重启 Pi 后恢复会话。用户级安装可跨 cwd 恢复；项目级插件在目标 cwd 不再加载、host 明确过滤工具定义或历史读取超限时，可能显示默认样式。具体限制和 Pi 0.85.1 验收见 [MCP resume UI acceptance](docs/mcp-resume-ui-acceptance.md)。
 

@@ -24,21 +24,21 @@ describe("MCP production host composition", () => {
     initTheme("dark", false);
     const successful = createRow("success");
     expect(plain(successful).join("\n")).toContain("Calling");
-    expect(successful.render(120).join("\n")).not.toContain(theme.fg("success", "•"));
+    expect(successful.render(120).join("\n")).not.toContain(theme.fg("success", "⏺"));
     successful.markExecutionStarted();
     successful.updateResult({ content: [{ type: "text", text: "partial" }], isError: false }, true);
     expect(plain(successful).join("\n")).toContain("Running");
     successful.updateResult({ content: [{ type: "text", text: "one\ntwo" }], isError: false });
-    expect(plain(successful)).toEqual(["• Called fixture / preview (中文🙂)", "  └ one", "    two"]);
-    expect(successful.render(120)[1]).toContain(theme.fg("success", "•"));
+    expect(plain(successful)).toEqual(["⏺ Called fixture / preview (中文🙂)", "  └ one", "    two"]);
+    expect(successful.render(120)[1]).toContain(theme.fg("success", "⏺"));
     for (const detailsError of [false, true]) {
       const failed = createRow(`failure-${detailsError}`);
       failed.updateResult({ content: [{ type: "text", text: "Cancelled: denied" }], isError: !detailsError,
         details: { isError: detailsError } });
       expect(plain(failed).join("\n")).toContain("Failed");
       expect(plain(failed).join("\n")).toContain("Cancelled: denied");
-      expect(failed.render(120)[1]).toContain(theme.fg("error", "•"));
-      expect(failed.render(120)[1]).not.toContain(theme.fg("success", "•"));
+      expect(failed.render(120)[1]).toContain(theme.fg("error", "⏺"));
+      expect(failed.render(120)[1]).not.toContain(theme.fg("success", "⏺"));
     }
     expect(plain(successful)[0]).toContain("Called");
   });

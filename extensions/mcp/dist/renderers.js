@@ -15,12 +15,13 @@ class ResponsiveLinesComponent {
     renderer = () => [];
     // One bounded, unthemed result per host row. No width history or global cache.
     prepared;
-    prepare(result, isError) {
+    prepare(result, isError, names) {
         const record = asRecord(result);
         const details = asRecord(record?.details);
-        if (!this.prepared || this.prepared.content !== record?.content || this.prepared.structured !== details?.structuredContent) {
-            this.prepared = { content: record?.content, structured: details?.structuredContent,
-                presentation: prepareResultPresentation(result, isError) };
+        const hasDetails = !isHostErrorDetails(record?.details);
+        if (!this.prepared || this.prepared.content !== record?.content || this.prepared.structured !== details?.structuredContent || this.prepared.hasDetails !== hasDetails) {
+            this.prepared = { content: record?.content, structured: details?.structuredContent, hasDetails,
+                presentation: prepareResultPresentation(result, isError, names) };
         }
         this.prepared.presentation.error = isError || details?.isError === true;
         return this.prepared.presentation;
@@ -40,15 +41,17 @@ export function renderMcpToolCall(args, names, theme, context) {
     const component = getResponsiveComponent(context.lastComponent);
     const argumentSummary = formatMcpToolArguments(args);
     const state = context.state ?? {};
-    component.setRenderer((width) => [formatMcpCallLine(names, argumentSummary, context.isPartial || state.mcpStatus === undefined || state.mcpStatus === "pending", context.isError || state.mcpStatus === "error", theme, width)]);
+    state.mcpNames = names;
+    component.setRenderer((width) => [formatMcpCallLine(names, argumentSummary, context.isPartial || state.mcpStatus === undefined || state.mcpStatus === "pending", context.isError || state.mcpStatus === "error", state.mcpWarning === true, theme, width)]);
     return component;
 }
 export function renderMcpToolResult(result, options, theme, context) {
     const component = getResponsiveComponent(context.lastComponent);
-    const presentation = component.prepare(result, context.isError);
+    const presentation = component.prepare(result, context.isError, context.state?.mcpNames);
     const pending = options.isPartial || result == null;
     if (context.state) {
         context.state.mcpStatus = pending ? "pending" : presentation.error ? "error" : "success";
+        context.state.mcpWarning = !pending && presentation.error && Boolean(presentation.hostWarning);
     }
     component.setRenderer((width) => renderMcpResultLines(presentation, { ...options, isPartial: pending }, theme, width));
     return component;
@@ -58,13 +61,13 @@ function getResponsiveComponent(previous) {
         ? previous
         : new ResponsiveLinesComponent();
 }
-function formatMcpCallLine(names, argumentSummary, isPartial, isError, theme, width) {
+function formatMcpCallLine(names, argumentSummary, isPartial, isError, warning, theme, width) {
     const action = isError ? "Call failed for" : isPartial ? "Calling" : "Called";
     const displayName = "fullName" in names
         ? sanitizeDiagnosticText(names.fullName, DEFAULT_FIELD_BYTES)
         : `${sanitizeDiagnosticText(names.serverName, DEFAULT_FIELD_BYTES)} / ${sanitizeDiagnosticText(names.toolName, DEFAULT_FIELD_BYTES)}`;
     const base = [
-        theme.fg(isError ? "error" : isPartial ? "dim" : "success", "•"),
+        theme.fg(isError ? warning ? "warning" : "error" : isPartial ? "warning" : "success", "⏺"),
         theme.fg("toolTitle", theme.bold(action)),
         theme.fg("accent", theme.bold(displayName)),
     ].join(" ");
@@ -93,9 +96,12 @@ function renderMcpResultLines(presentation, options, theme, width) {
         const indent = summaryWidth >= 8 ? MCP_DETAIL_INDENT : "";
         const contentWidth = Math.max(1, summaryWidth - indent.length);
         const { lines, truncated } = previewLines(preview, contentWidth);
-        if (truncated)
-            lines[lines.length - 1] = `${truncateToWidth(lines[lines.length - 1], Math.max(0, contentWidth - 3), "")}...`;
-        return lines.map((line, index) => theme.fg("dim", `${indent && index === 0 ? MCP_RESULT_BRANCH : indent}${line}`));
+        return lines.map((line, index) => {
+            const tail = truncated && index === lines.length - 1;
+            const body = tail ? truncateToWidth(line, Math.max(0, contentWidth - 3), "") : line;
+            return theme.fg("dim", indent && index === 0 ? MCP_RESULT_BRANCH : indent)
+                + theme.fg("text", body) + (tail ? theme.fg("dim", "...") : "");
+        });
     }
     const expandable = presentation.detail.length > 0;
     const expandHint = expandable
@@ -111,7 +117,7 @@ function renderMcpResultLines(presentation, options, theme, width) {
             : []),
         ...(expandHint ? [{ text: expandHint, priority: 100, order: 20 }] : []),
     ];
-    const outcome = theme.fg("error", "Failed");
+    const outcome = theme.fg(presentation.hostWarning ? "warning" : "error", presentation.hostWarning ?? "Failed");
     const lines = [formatResultSummary(outcome, fields, theme, summaryWidth)];
     if (options.expanded && expandable) {
         lines.push(...renderExpandedDetail(presentation, theme, summaryWidth));
@@ -164,7 +170,7 @@ function renderExpandedDetail(presentation, theme, width) {
         ? MCP_DETAIL_INDENT
         : "";
     const contentWidth = Math.max(1, width - visibleWidth(indent));
-    const color = presentation.error ? "error" : "dim";
+    const color = presentation.error ? presentation.hostWarning ? "warning" : "error" : "text";
     const sourceLines = presentation.expandedDetail.split("\n");
     const output = [];
     let displayTruncated = false;
@@ -186,7 +192,7 @@ function renderExpandedDetail(presentation, theme, width) {
     }
     return output;
 }
-function prepareResultPresentation(result, contextIsError) {
+function prepareResultPresentation(result, contextIsError, names) {
     const record = asRecord(result);
     const details = asRecord(record?.details);
     const content = Array.isArray(record?.content)
@@ -226,7 +232,47 @@ function prepareResultPresentation(result, contextIsError) {
             expandedDetail = detail;
         }
     }
-    return { detail, preview, expandedDetail, error: contextIsError || details?.isError === true };
+    return { detail, preview, expandedDetail, error: contextIsError || details?.isError === true,
+        hostWarning: isHostErrorDetails(record?.details) && content.length === 1 && textParts.length === 1
+            ? hostWarningLabel(textParts[0], names) : undefined };
+}
+/** Pi serializes thrown errors with empty details; MCP server results always carry metadata. */
+function isHostErrorDetails(details) {
+    if (details === undefined)
+        return true;
+    if (!isRecord(details) || Array.isArray(details))
+        return false;
+    for (const _key in details)
+        return false;
+    return true;
+}
+/** Match this extension's error envelope, never server result prose or a bare timeout keyword. */
+function hostWarningLabel(text, names) {
+    if (!names)
+        return undefined;
+    const fullName = sanitizeDiagnosticText("fullName" in names ? names.fullName : `mcp__${names.serverName}__${names.toolName}`, DEFAULT_FIELD_BYTES);
+    if (text === `MCP tool "${fullName}" was cancelled.`)
+        return "Interrupted";
+    if (!("serverName" in names))
+        return undefined;
+    const server = sanitizeDiagnosticText(names.serverName, DEFAULT_FIELD_BYTES);
+    const errorServer = sanitizeDiagnosticText(names.serverName, 512);
+    const errorTool = sanitizeDiagnosticText(names.toolName, 512);
+    const prefixes = [
+        `MCP tool "${fullName}" failed: [MCP:${errorServer}/${errorTool}] `,
+        `MCP connection failed for "${server}": [MCP:${errorServer}] `,
+    ];
+    for (const prefix of prefixes) {
+        if (!text.startsWith(prefix))
+            continue;
+        // These category prefixes are produced by normalizeMcpError, not copied from a tool result.
+        const diagnostic = text.slice(prefix.length, prefix.length + 80);
+        if (/^Request cancelled(?:$|:| \()/u.test(diagnostic))
+            return "Interrupted";
+        if (/^Connection timed out(?:$|:| \(| after \d+ms)/u.test(diagnostic))
+            return "Timed out";
+    }
+    return undefined;
 }
 function compactJson(value) {
     // Match complete JSON strings before punctuation so escapes and string contents stay intact.

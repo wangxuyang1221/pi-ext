@@ -1,125 +1,167 @@
-import type { Theme, ToolDefinition } from "@earendil-works/pi-coding-agent";
-import { Box, Spacer, Text, type Component } from "@earendil-works/pi-tui";
+import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, keyHint, truncateHead, type Theme, type ToolDefinition } from "@earendil-works/pi-coding-agent";
+import { stripTerminalSequences, truncateToWidth, visibleWidth, wrapTextWithAnsi, type Component } from "@earendil-works/pi-tui";
 import type { ResolvedConfig } from "./config.ts";
 import type { WebSearchDetails } from "./index.ts";
-import { searchSpinner, type SearchActivity, type SearchAnimations } from "./animation.ts";
+import type { SearchActivity, SearchAnimations } from "./animation.ts";
+import { createStandaloneRenderers } from "./standalone-renderers.ts";
 
-const palette = {
-  title: "#A6DADC", number: "#E0E3E6", query: "#C1C7CE", body: "#B9C2CB",
-  meta: "#929DA8", mode: "#B8C0C8", sources: "#A8CCEC", success: "#78D99A",
-};
-type Role = keyof typeof palette;
-const fallback: Record<Role, Parameters<Theme["fg"]>[0]> = {
-  title: "accent", number: "text", query: "text", body: "text", meta: "dim", mode: "muted", sources: "accent", success: "success",
-};
-function color(theme: Theme, role: Role, text: string): string {
-  // Preserve theme semantics on light/unknown themes and non-truecolor terminals.
-  if (!["codex-pi", "dark"].includes(theme.name ?? "") || !theme.getFgAnsi("accent").includes("38;2;")) {
-    return theme.fg(fallback[role], text);
-  }
-  const hex = palette[role].slice(1);
-  return `\x1b[38;2;${hex.match(/../g)!.map(v => parseInt(v, 16)).join(";")}m${text}\x1b[39m`;
+type Status = "pending" | "running" | "completed" | "partial" | "failed" | "timed_out" | "interrupted" | "unknown";
+interface Summary { status: Status; total: number; completed: number; failed: number; sources: number; elapsedMs?: number; message?: string }
+interface RowState {
+  activity?: SearchActivity; summary?: Summary; details?: unknown; validDetails?: WebSearchDetails; content?: unknown; partial?: boolean; error?: boolean;
+  expanded?: { content: unknown; details: unknown; args: unknown; text: string };
 }
-function shell(content: string, top: boolean): Component {
-  const box = new Box(1, 0);
-  if (top) box.addChild(new Spacer(1));
-  box.addChild(new Text(content, 0, 0));
-  if (!top) box.addChild(new Spacer(1));
-  return box;
+interface SearchArgs { queries?: string[]; freshness?: string; search_context_size?: string }
+/** Persist only typed diagnostics; arbitrary result prose is never classified as a timeout. */
+export interface SearchFailureMetadata { searchFailure: { kind: string; cancelled: boolean } }
+function failureOf(value: unknown): SearchFailureMetadata["searchFailure"] | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const failure = (value as Partial<SearchFailureMetadata>).searchFailure;
+  return failure && typeof failure.kind === "string" && typeof failure.cancelled === "boolean" ? failure : undefined;
 }
-function inline(value: string, limit = 110): string {
-  const text = value.trim().replace(/\s+/g, " ");
-  return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
+const tones = { pending: "dim", running: "warning", completed: "success", partial: "warning", failed: "error", timed_out: "warning", interrupted: "warning", unknown: "dim" } as const;
+const titles: Record<Status, string> = { pending: "Searching web", running: "Searching web", completed: "Searched web", partial: "Searched web", failed: "Web search failed", timed_out: "Web search timed out", interrupted: "Web search interrupted", unknown: "Web search" };
+function resultStatus(details: WebSearchDetails | undefined, partial: boolean, error: boolean, failure: SearchFailureMetadata["searchFailure"] | undefined): Status {
+  if (error) return failure?.cancelled ? "interrupted" : failure?.kind === "timeout" ? "timed_out" : "failed";
+  if (partial) return "running";
+  if (!details) return "unknown";
+  if (details.failedQueryCount > 0) return details.successes.length ? "partial" : "failed";
+  return details.successes.length ? "completed" : "unknown";
 }
-function asArgs(value: unknown): Record<string, unknown> {
-  return value !== null && typeof value === "object" ? value as Record<string, unknown> : {};
+const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const clean = (value: string) => stripTerminalSequences(value).replace(/[\x00-\x1f\x7f-\x9f]/g, " ").replace(/\s+/g, " ").trim();
+const duration = (ms: number) => ms < 1000 ? `${Math.max(0, Math.round(ms))}ms` : `${Math.round(ms / 1000)}s`;
+class SearchComponent implements Component {
+  draw: (width: number) => string[];
+  constructor(draw: (width: number) => string[]) { this.draw = draw; }
+  render(width: number): string[] { return this.draw(Math.max(0, width)); }
+  invalidate(): void {}
 }
-function duration(ms: number | undefined): string {
-  if (ms === undefined) return "";
-  return ms < 1000 ? `${Math.max(0, Math.round(ms))}ms` : `${Math.max(1, Math.round(ms / 1000))}s`;
-}
-function firstLine(text: string, limit = 110): string {
-  // Scan only through the first non-empty line, never split a potentially large response.
-  const match = /\S[^\r\n]*/.exec(text);
-  return match ? inline(match[0].slice(0, limit + 1), limit) : "";
+function component(previous: Component | undefined, draw: (width: number) => string[]): SearchComponent {
+  const value = previous instanceof SearchComponent ? previous : new SearchComponent(draw);
+  value.draw = draw;
+  return value;
 }
 function detailsOf(value: unknown): WebSearchDetails | undefined {
   if (!value || typeof value !== "object") return undefined;
-  const details = value as WebSearchDetails;
-  return Array.isArray(details.successes) && Array.isArray(details.failures) && typeof details.queryCount === "number" ? details : undefined;
+  const d = value as WebSearchDetails;
+  return Array.isArray(d.successes) && d.successes.every(item => item && Array.isArray(item.citations))
+    && Array.isArray(d.failures) && d.failures.every(item => item && typeof item.message === "string")
+    && Number.isInteger(d.queryCount) && d.queryCount >= 0
+    && Number.isInteger(d.failedQueryCount) && d.failedQueryCount >= 0 && d.failedQueryCount <= d.queryCount ? d : undefined;
+}
+function currentSummary(state: RowState): Summary | undefined {
+  if (state.activity?.status === "cancelled") return { ...state.summary, total: state.summary?.total ?? 0, completed: 0, failed: 0, sources: 0, status: "interrupted", message: "Search cancelled" };
+  return state.summary;
+}
+function fit(primary: string, extras: string[], width: number, theme: Theme): string {
+  let text = primary;
+  for (const extra of extras) {
+    const next = text + theme.fg("dim", " · ") + extra;
+    if (visibleWidth(next) <= width) text = next;
+  }
+  return truncateToWidth(text, Math.max(0, width));
+}
+function expandHint(expanded: boolean, theme: Theme): string {
+  const label = expanded ? "collapse" : "expand";
+  try { return keyHint("app.tools.expand", label); }
+  catch { return theme.fg("dim", `ctrl+o ${label}`); }
 }
 
-/** Build search-only renderers without changing the global tool theme. */
+function expandedText(content: readonly { type: string; text?: string }[], details: WebSearchDetails | undefined, args: SearchArgs | undefined, config: ResolvedConfig): string {
+  function* sections(): Generator<string> {
+    yield "Queries";
+    const queries = Array.isArray(args?.queries) ? args.queries : Array.isArray(details?.queries) ? details.queries : [];
+    for (const [i, query] of queries.entries()) if (typeof query === "string") yield `${i + 1}. ${query}`;
+    yield "Settings";
+    yield `${details?.api ?? "responses"} · ${details?.searchContextSize ?? args?.search_context_size ?? config.defaultSearchContextSize} · ${details?.freshness ?? args?.freshness ?? config.defaultFreshness}`;
+    if (details?.model) yield `Model: ${details.model}`;
+    if (details?.failures.length) {
+      yield `Failures (${details.failures.length})`;
+      for (const item of details.failures) yield `[${item.kind}] ${item.query}: ${item.message}`;
+    }
+    yield "Results";
+    for (const part of content) if (part.type === "text" && part.text) yield part.text;
+  }
+  let raw = "";
+  let clipped = false;
+  for (const part of sections()) {
+    const remaining = DEFAULT_MAX_BYTES - raw.length;
+    if (remaining <= 0) { clipped = true; break; }
+    raw += part.slice(0, remaining) + "\n";
+    if (part.length > remaining) { clipped = true; break; }
+  }
+  const truncated = truncateHead(raw, { maxBytes: DEFAULT_MAX_BYTES, maxLines: DEFAULT_MAX_LINES });
+  const safe = stripTerminalSequences(truncated.content).replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, "").trimEnd();
+  return safe + (clipped || truncated.truncated ? "\n... display truncated" : "");
+}
+
+/** Render compact search rows; standalone actions retain their existing renderer. */
 export function createSearchRenderers(config: ResolvedConfig, labelsFor: (args: Record<string, unknown>) => string[], animations: SearchAnimations): Pick<ToolDefinition, "renderShell" | "renderCall" | "renderResult"> {
+  if (config.searchApi === "standalone") return createStandaloneRenderers(config, labelsFor, animations);
   return {
     renderShell: "self",
     renderCall(input, theme, context) {
-      const activity = animations.watch(context.toolCallId, context.invalidate) ?? context.state.searchActivity as SearchActivity | undefined;
-      if (activity) context.state.searchActivity = activity;
-      const args = asArgs(input);
-      const labels = labelsFor(args);
-      const displayName = config.searchApi === "standalone" ? "Codex Standalone Web" : "Web Search";
-      const label = labels.length === 1 ? inline(labels[0]!, 90) : `${labels.length} actions`;
-      const requested = args.search_context_size ?? config.defaultSearchContextSize;
-      const size = config.searchApi === "standalone" && requested === "low" ? "medium" : requested;
-      const mode = `${config.searchApi}/${size}${config.searchApi === "standalone" ? "" : `/${args.freshness ?? config.defaultFreshness}`}`;
-      let text = color(theme, "title", `${activity?.status === "running" ? searchSpinner(activity) : "●"} `) + color(theme, "title", displayName) + color(theme, "number", `(${label})`) +
-        ` ${color(theme, "meta", "[")}${color(theme, "mode", mode)}${color(theme, "meta", "]")}`;
-      if (labels.length > 1) text += "\n" + labels.map((query, index) =>
-        color(theme, "meta", `  ${index === labels.length - 1 ? "└" : "├"} `) + color(theme, "query", inline(query))).join("\n");
-      return shell(text, true);
+      const state = context.state as RowState;
+      state.activity = animations.watch(context.toolCallId, context.invalidate, false) ?? state.activity;
+      const args = input && typeof input === "object" ? input as Record<string, unknown> : {};
+      const queries = Array.isArray(args.queries) ? args.queries.filter((q): q is string => typeof q === "string") : [];
+      return component(context.lastComponent, width => {
+        const status = currentSummary(state)?.status ?? (context.executionStarted ? "running" : "pending");
+        const head = `${theme.fg(tones[status], "⏺")} ${theme.fg("toolTitle", theme.bold(titles[status]))}`;
+        const suffix = queries.length > 1 ? ` +${count(queries.length - 1, "query", "queries")}` : "";
+        const available = width - visibleWidth(head) - visibleWidth(suffix) - 3;
+        const preview = queries.length && available >= 5 ? ` (${truncateToWidth(clean(queries[0]!.slice(0, 512)) + (queries[0]!.length > 512 ? "…" : ""), available)}${suffix})`
+          : queries.length ? ` (${count(queries.length, "query", "queries")})` : "";
+        return [truncateToWidth(head + theme.fg("dim", preview), width)];
+      });
     },
     renderResult(result, { expanded, isPartial }, theme, context) {
-      const details = detailsOf(result.details);
-      const activity = context.state.searchActivity as SearchActivity | undefined;
-      if (activity?.status === "cancelled") return shell(theme.fg("warning", "Web search cancelled."), false);
-      if (isPartial) {
-        const completed = details?.completed ?? 0;
-        const total = details?.total ?? labelsFor(asArgs(context.args)).length;
-        const elapsed = activity ? Math.max(0, (activity.endedAt ?? Date.now()) - activity.startedAt) : details?.elapsedMs;
-        const time = elapsed === undefined ? "" : ` · ${Math.floor(elapsed / 1000)}s`;
-        return shell(color(theme, "body", `Searching ${completed}/${total}${time}${completed >= total && total > 0 ? " (finalizing)" : " …"}`), false);
+      const state = context.state as RowState;
+      const details = state.details === result.details && state.summary ? state.validDetails : detailsOf(result.details);
+      const args = context.args as SearchArgs | undefined;
+      const needsMessage = context.isError || !details;
+      const content = needsMessage ? result.content : undefined;
+      if (state.details !== result.details || state.content !== content || state.partial !== isPartial || state.error !== context.isError || !state.summary) {
+        state.details = result.details; state.validDetails = details; state.content = content; state.partial = isPartial; state.error = context.isError;
+        state.expanded = undefined;
+        const failure = failureOf(result.details) ?? (details?.failure ? { kind: details.failure.kind, cancelled: false } : undefined);
+        const status = resultStatus(details, isPartial, context.isError, failure);
+        state.summary = { status,
+          total: details?.total ?? details?.queryCount ?? (Array.isArray(args?.queries) ? args.queries.length : 0),
+          completed: details?.completed ?? 0, failed: details?.failedQueryCount ?? 0,
+          sources: details?.successes.reduce((n, item) => n + item.citations.length, 0) ?? 0,
+          elapsedMs: details?.elapsedMs,
+          message: content ? clean(content.slice(0, 24).find(item => item.type === "text")?.text?.slice(0, 1024) ?? "") : details?.failure?.message,
+        };
       }
-      if (!details || context.isError) {
-        const body = result.content.filter(part => part.type === "text").map(part => part.text).join("\n");
-        if (context.isError) return shell(theme.fg("warning", `⚠ Web search failed${body ? `: ${expanded ? body : firstLine(body)}` : ""}`), false);
-        // A legacy result with no metadata must not be labelled as verified success.
-        return shell(color(theme, "body", expanded ? body : firstLine(body)), false);
+      if (expanded && (state.expanded?.content !== result.content || state.expanded.details !== result.details || state.expanded.args !== args)) {
+        state.expanded = { content: result.content, details: result.details, args, text: expandedText(result.content, details, args, config) };
       }
-      const total = details.queryCount;
-      const failed = details.failedQueryCount;
-      const ok = Math.max(0, total - failed);
-      const webActions = details.successes.reduce((sum, item) => sum + item.searchCalls.length, 0);
-      const sources = details.successes.reduce((sum, item) => sum + item.citations.length, 0);
-      const operations = details.api === "standalone" ? webActions || total : total;
-      const noun = details.api === "standalone" ? "action" : "search";
-      const plural = details.api === "standalone" ? "actions" : "searches";
-      let text: string;
-      if (!ok) text = theme.fg("warning", `⚠ Web search failed (${details.failure?.kind ?? details.failures[0]?.kind ?? "unknown"})`);
-      else {
-        text = failed ? theme.fg("warning", "⚠ ") : color(theme, "success", "✓") + " ";
-        text += color(theme, "body", "Did ") + color(theme, "number", failed ? `${ok}/${total}` : `${operations}`) +
-          color(theme, "body", ` ${(failed ? total : operations) === 1 ? noun : plural}`);
-        if (details.elapsedMs !== undefined) text += color(theme, "body", " in ") + color(theme, "number", duration(details.elapsedMs));
-        if (details.api === "responses" && webActions) text += color(theme, "meta", " · ") + color(theme, "number", `${webActions}`) + color(theme, "body", ` web action${webActions === 1 ? "" : "s"}`);
-        if (sources) text += color(theme, "meta", " · ") + color(theme, "sources", `${sources} source${sources === 1 ? "" : "s"}`);
-      }
-      if (expanded) {
-        text += "\n" + color(theme, "mode", `Model: ${details.model}`);
-        if (failed) text += "\n" + theme.fg("warning", `Failures (${failed}):`) + "\n" + details.failures.map((item, i) =>
-          color(theme, "query", `  ${i + 1}. [${item.kind}] ${inline(item.query, 60)}: ${inline(item.message, 100)}`)).join("\n");
-        const body = result.content.filter(part => part.type === "text").map(part => part.text).join("\n");
-        if (body) text += "\n\n" + body.split("\n").map(line => color(theme, "body", line)).join("\n");
-      } else {
-        if (details.api === "standalone" && details.successes[0]?.text) {
-          const item = details.successes[0];
-          const action = item.searchCalls[0]?.actionType;
-          const label = action === "open_page" || action === "click" ? "Opened" : action === "find_in_page" ? "Found" : action === "screenshot" ? "Screenshot" : "Result";
-          text += "\n" + color(theme, "query", `${label}: ${firstLine(item.text, 120)}`);
+      return component(context.lastComponent, width => {
+        const data = currentSummary(state)!;
+        const problem = ["failed", "timed_out", "interrupted", "unknown"].includes(data.status);
+        const primary = data.status === "running" ? `${data.completed}/${data.total} queries completed`
+          : data.status === "partial" ? `${data.total - data.failed}/${data.total} succeeded · ${data.failed} failed`
+          : problem ? data.message || (data.status === "unknown" ? "Result unavailable" : "Search failed") : count(data.sources, "source");
+        const extras = problem || data.status === "running" ? [] : data.status === "partial" ? [count(data.sources, "source")] : [count(data.total, "query", "queries")];
+        if (!problem && data.elapsedMs !== undefined) extras.push(duration(data.elapsedMs));
+        const tone = data.status === "partial" || problem ? tones[data.status] : "text";
+        const text = fit(theme.fg(tone, primary), [...extras.map(item => theme.fg("text", item)), expandHint(expanded, theme)], width - 4, theme);
+        const lines = [truncateToWidth(theme.fg("dim", "  └ ") + text, width)];
+        if (expanded && state.expanded) {
+          const indent = " ".repeat(Math.min(4, Math.max(0, width - 1)));
+          for (const paragraph of state.expanded.text.split("\n")) {
+            const tone = /^(Queries|Settings|Results|Model:|\.\.\. display truncated)/.test(paragraph) ? "dim" : "text";
+            for (const line of wrapTextWithAnsi(theme.fg(tone, paragraph), Math.max(1, width - indent.length))) {
+              if (lines.length >= DEFAULT_MAX_LINES) break;
+              lines.push(truncateToWidth(indent + line, width));
+            }
+            if (lines.length >= DEFAULT_MAX_LINES) { lines.push(truncateToWidth(theme.fg("dim", indent + "... display truncated"), width)); break; }
+          }
         }
-        if (details.failures[0]) text += "\n" + color(theme, "query", inline(details.failures[0].message));
-      }
-      return shell(text, false);
+        return lines;
+      });
     },
   };
 }
