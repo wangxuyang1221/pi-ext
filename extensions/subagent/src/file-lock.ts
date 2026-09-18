@@ -40,7 +40,9 @@ export async function acquireFileLock(path: string, signal?: AbortSignal, timeou
           try { process.kill(previous.pid, 0); }
           catch (error) { absent = (error as NodeJS.ErrnoException).code === "ESRCH"; }
           if (absent) {
-            await unlink(stalePath).catch((error: NodeJS.ErrnoException) => { if (error.code !== "ENOENT") throw error; });
+            // Only the contender that removed this generation's owner may remove its directory.
+            // ENOENT must leave this block: the path may already contain a new initializing lock.
+            await unlink(stalePath);
             await rmdir(path).catch((error: NodeJS.ErrnoException) => {
               if (error.code !== "ENOENT" && error.code !== "ENOTEMPTY") throw error;
             });

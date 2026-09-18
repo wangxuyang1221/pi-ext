@@ -129,6 +129,8 @@ export declare class SubagentManager {
     private readonly operations;
     private runOperation;
     claimNamespace(sessionId: string, required?: boolean): Promise<boolean>;
+    private initializeController;
+    private synchronizeController;
     controllerGuard(sessionId: string): Promise<() => Promise<void>>;
     releaseNamespace(sessionId: string): Promise<void>;
     constructor(options: SubagentManagerOptions);

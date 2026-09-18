@@ -110,6 +110,7 @@ export declare class SessionStateStore {
     private readonly updateQueues;
     private readonly controllers;
     authorizeController(sessionId: string, assertOwned: () => Promise<void>): void;
+    rollbackControllerAuthorization(sessionId: string, assertOwned: () => Promise<void>): void;
     constructor(root: string);
     recordDelivery(parent: SessionState, child: SessionState, deliveryId: string, delivery: string): Promise<void>;
     statePath(sessionId: string): string;

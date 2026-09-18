@@ -153,6 +153,10 @@ export class SessionStateStore {
     this.controllers.set(sessionId, assertOwned);
   }
 
+  rollbackControllerAuthorization(sessionId: string, assertOwned: () => Promise<void>): void {
+    if (this.controllers.get(sessionId) === assertOwned) this.controllers.delete(sessionId);
+  }
+
   constructor(root: string) {
     this.root = root;
   }

@@ -100,6 +100,24 @@ test("failed namespace validation does not leak controller ownership after shutd
   } finally { await f.cleanup(); }
 });
 
+test("validation failure on an existing controller does not release its active ownership", async () => {
+  const f = await fixture();
+  try {
+    await f.manager.claimNamespace("root");
+    const guard = await f.manager.controllerGuard("root");
+    const original = await readFile(f.store.statePath("root"), "utf8");
+    await writeFile(f.store.statePath("root"), "{broken");
+    await assert.rejects(f.manager.claimNamespace("root"));
+    await guard();
+    const other = new SubagentManager({ store: new SessionStateStore(f.root), runtime: f.runtime,
+      stateRoot: f.root, nativeSessionRoot: f.root, extensionPath: "/extension.js", piPath: "pi", environment: {} });
+    assert.equal(await other.claimNamespace("root", false), false);
+    await writeFile(f.store.statePath("root"), original);
+    assert.equal((await f.manager.list("root")).capacity.active, 1);
+    await f.manager.releaseNamespace("root");
+  } finally { await f.cleanup(); }
+});
+
 test("a second controller can inspect but cannot close another controller's namespace", async () => {
   const f = await fixture();
   try {
@@ -121,6 +139,17 @@ test("a corrupt owned binding remains a diagnosed capacity occupant", async () =
     assert.equal(result.capacity.available, 0);
     assert.ok(result.diagnostics?.some((entry) => entry.agentId === "child"));
     await assert.rejects(f.manager.spawn("root", { task: "No oversell" }, { cwd: f.root }), /capacity reached/);
+  } finally { await f.cleanup(); }
+});
+
+test("single-target close cannot remove a terminal binding with no runtime locator", async () => {
+  const f = await fixture();
+  try {
+    await f.store.update("child", state => ({ ...state, runtime: { ...state.runtime, status: "closed", tmux: undefined } }));
+    await f.store.update("root", state => ({ ...state, processes: { process: { registrationToken: "reg", phase: "active" } } }));
+    await assert.rejects(f.manager.close("root", "child"), /locator.*unavailable/u);
+    assert.ok(await f.store.load("child"));
+    assert.equal((await f.manager.list("root")).capacity.available, 0);
   } finally { await f.cleanup(); }
 });
 

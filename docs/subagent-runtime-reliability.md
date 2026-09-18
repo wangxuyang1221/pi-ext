@@ -6,6 +6,8 @@
 
 状态协议升级为 v3，不能与 v2 写入者混用。升级前必须用旧扩展关闭 child，停止旧 root，再执行下文的离线转换。不要对仍管理 child 的旧 Pi 直接 `/reload`。
 
+后续锁回收修订仍使用 v3，无需再次转换状态文件，但所有写入者都必须更新。部署时先关闭 child、重启 root，不混用修复前后的锁回收实现。
+
 ## Identity and exit evidence
 
 新建 pane 登记随机 `processInstanceId`，同时记录 tmux server PID、启动时间、socket 路径、pane ID 与 pane PID。child 登记时核验当前 Pi PID 等于 pane PID。因此自定义 Pi wrapper 必须使用 `exec` 启动 Pi，不能另起子进程后自己等待。
@@ -31,9 +33,9 @@ PID 已被复用、server 身份无法核验或进程尚未退出时，结果可
 
 parent 不再把 `closing` 或 `interrupted` 写回 child 的 runtime。读取时将 parent 控制事实与 child 生命周期合并。生命周期事件按队列串行处理，跨进程记录锁保护完整读改写，过期快照不能降低同一进程实例的完成代次。
 
-`namespaceEpoch` 在同一持久化 root 会话重启时保留；`controllerEpoch` 随控制者接管变化。同一 namespace 的第二个 root 只能读取，不能 spawn、prompt 或 close。正常 shutdown 取消在途操作、释放控制锁；root 切换 session 也释放旧 namespace 的控制权。旧回调执行写入或 tmux 命令前必须通过控制权检查。
+`namespaceEpoch` 在同一持久化 root 会话重启时保留；`controllerEpoch` 随控制者接管变化。同一 namespace 的第二个 root 只能读取，不能 spawn、prompt 或 close。正常 shutdown 取消在途操作、释放控制锁；root 切换 session 也释放旧 namespace 的控制权。旧回调执行写入或 tmux 命令前必须通过控制权检查。首次取得锁后若 namespace 初始化失败，回滚本次锁与授权注册；并发调用共享整个初始化结果。已经持有控制权后的读取失败不会释放现有控制权。
 
-锁仅在本机 owner PID 明确不存在时回收，不按时间过期抢占。owner 丢失、损坏、属于其他主机或 PID 可能复用时，不自动接管。状态目录应放在本机文件系统，不支持多个主机共享 namespace。
+锁仅在本机 owner PID 明确不存在时回收，不按时间过期抢占。只有成功删除该代唯一 owner 文件的竞争者，才能继续删除其锁目录。删除 owner 得到 ENOENT 的竞争者必须重新竞争，不能删除另一个持有者正在初始化的目录。owner 丢失、损坏、属于其他主机或 PID 可能复用时，不自动接管。状态目录应放在本机文件系统，不支持多个主机共享 namespace。
 
 名额绑定 `processInstanceId`，不是 session 状态。会话交接期间即使旧 alias 已 closed、新 alias 尚未写入，也继续占位。空闲 child、未知进程和未完成关闭同样占位。只有明确未启动的过期 reservation 才能直接回收；已进入 launching 而结果不明的 reservation 不因 TTL 自动释放。
 
@@ -43,7 +45,7 @@ parent 不再把 `closing` 或 `interrupted` 写回 child 的 runtime。读取�
 
 `diagnostics[].agentId` 可以是会话 ID；没有可用绑定时也可能是进程 ID。状态记录大小上限为 1 MiB。`scan()` 只用于显式诊断，逐文件报告错误，不自动迁移或隔离文件。
 
-close 先持久化关闭意图，确认退出与资源清理后，先终结进程/关系再删除会话状态。重试重新核验资源，因此可继续清理已退出但尚有 pane 的 child。它不保存每次探测的完整历史。`close all` 保留 namespace 关闭意图，未完成时拒绝新 reservation。历史 alias 的单独删除不关闭仍承载其他 alias 的进程。
+close 先持久化关闭意图，确认退出与资源清理后，先终结进程/关系再删除会话状态。重试重新核验资源，因此可继续清理已退出但尚有 pane 的 child。它不保存每次探测的完整历史。`close all` 保留 namespace 关闭意图，未完成时拒绝新 reservation。历史 alias 的单独删除不关闭仍承载其他 alias 的进程。单目标 close 也必须检查终态 child 的终端资源，不能因 list 已将其标记 interrupted 就跳过 dead pane 清理。没有可核验 locator 时保留关闭意图和名额，不报告完成。
 
 若启动结果未知且没有 locator，`close all` 会报错并保留 reservation，不能承诺自动找回所有失联启动。此时检查独立 tmux server、reservation、绑定目录及原生 JSONL，确认进程和资源后再人工恢复。不要仅删除 reservation 或锁目录来获取空位。
 
@@ -56,6 +58,8 @@ close 先持久化关闭意图，确认退出与资源清理后，先终结进�
 扩展显式传入有效 `PI_CODING_AGENT_DIR`、`PI_SUBAGENT_TMUX_PATH`、`PI_SUBAGENT_PI_PATH`、管理元数据和状态根目录。tmux 提供新 pane 的 `TMUX`、`TMUX_PANE`，不复制父 pane 身份。扩展入口、cwd、模型和 thinking level 通过启动参数传递。路径建议使用绝对路径；独立 server 可通过使用 `exec tmux -S <socket> "$@"` 的 wrapper 固定。
 
 child 登记前校验协议版本、实例、agent directory 和 Pi/tmux 配置，parent 再核验登记配置后投递初始任务。握手不调用付费模型。
+
+child 查询时，实例标记可能尚未由 parent 安装。仅空标记允许每 25 ms 重查，单次 pane lookup 的全部查询和等待共用默认 5 秒 deadline，不为每次重试重置预算。已存在但错误的标记立即拒绝；等待期间 server 身份或 pane PID 改变也拒绝。这个预算属于 child 初始化握手，parent 的 spawn 总预算仍独立限制整次创建操作。
 
 API key 不进入允许列表、tmux 命令参数、管理状态或诊断。child 不再意外继承旧 tmux server 中的环境凭据；应使用 Pi agent directory 的既有凭据配置。这不是进程沙箱。
 

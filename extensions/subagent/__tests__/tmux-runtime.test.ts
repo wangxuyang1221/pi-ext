@@ -361,6 +361,42 @@ test("recovers when another spawn creates the tmux session concurrently", async 
   ]);
 });
 
+test.each(["wrong-marker", "changed-server", "changed-pid"])("identity installation rejects %s instead of waiting or accepting a replacement", async (kind) => {
+  let identityReads = 0;
+  const runtime = new TmuxRuntime({ tmuxPath: "tmux", sessionName: locator.sessionName, transferDirectory: "/unused",
+    execute: async (_command, args) => {
+      if (args.at(-1)?.endsWith("#{window_name}")) return { code: 0, stdout: "pi-subagents-test\t@7\t%9\t1234\tChild\n", stderr: "" };
+      identityReads++;
+      const marker = kind === "wrong-marker" ? "other-instance" : identityReads === 1 ? "" : "instance";
+      const serverPid = kind === "changed-server" && identityReads > 1 ? 901 : 900;
+      const panePid = kind === "changed-pid" && identityReads > 1 ? 5678 : 1234;
+      return { code: 0, stdout: `${serverPid}\t1000\t/socket\t${marker}\t1\t0\t%9\t${panePid}\n`, stderr: "" };
+    } });
+  await assert.rejects(runtime.locatePane("%9", "instance", { timeout: 1000 }), /identity handshake/u);
+  assert.equal(identityReads, kind === "wrong-marker" ? 1 : 2);
+});
+
+test.each(["deadline", "abort"])("pending identity installation stops every query on %s", async (kind) => {
+  const controller = new AbortController();
+  let identityReads = 0;
+  const budgets: number[] = [];
+  const runtime = new TmuxRuntime({ tmuxPath: "tmux", sessionName: locator.sessionName, transferDirectory: "/unused",
+    execute: async (_command, args, options) => {
+      budgets.push(options!.timeout!);
+      if (args.at(-1)?.endsWith("#{window_name}")) return { code: 0, stdout: "pi-subagents-test\t@7\t%9\t1234\tChild\n", stderr: "" };
+      identityReads++;
+      if (kind === "abort") controller.abort(new Error("Cancelled identity lookup"));
+      return { code: 0, stdout: "900\t1000\t/socket\t\t1\t0\t%9\t1234\n", stderr: "" };
+    } });
+  const started = performance.now();
+  await assert.rejects(runtime.locatePane("%9", "instance", { timeout: 50, signal: controller.signal }), /timed out|Cancelled identity lookup/u);
+  assert.ok(performance.now() - started < 1000);
+  assert.ok(budgets.length > 0 && budgets.every(budget => budget <= 50));
+  const finalReads = identityReads;
+  await new Promise(resolve => setTimeout(resolve, 50));
+  assert.equal(identityReads, finalReads);
+});
+
 test("locates the current child pane for self-registration", async () => {
   const execute: CommandExecution = async (_command, args) => {
     assert.deepEqual(args, [

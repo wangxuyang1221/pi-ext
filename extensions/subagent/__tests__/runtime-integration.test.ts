@@ -5,10 +5,57 @@ import { join } from "node:path";
 import { test } from "vitest";
 import { executeCommand } from "../src/command-executor.js";
 import { TmuxRuntime as SourceTmuxRuntime } from "../src/tmux-runtime.js";
+import { SubagentManager as SourceManager } from "../src/manager.js";
+import { createSessionState, SessionStateStore } from "../src/state-store.js";
+import { registerDirectChild } from "../src/ownership.js";
 
 const TmuxRuntime = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/tmux-runtime.js")).TmuxRuntime : SourceTmuxRuntime;
 
+const Manager = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/manager.js")).SubagentManager : SourceManager;
 const tmux = ["/opt/homebrew/bin/tmux", "/usr/bin/tmux"].find(existsSync);
+
+test.skipIf(!tmux)("manager single-target close removes a retained dead pane after list marks it interrupted", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-runtime-real-"));
+  const wrapper = join(root, "tmux");
+  const pids = new Set<number>();
+  const alive = () => [...pids].filter(pid => { try { process.kill(pid, 0); return true; } catch { return false; } });
+  let manager: InstanceType<typeof Manager> | undefined;
+  try {
+    await writeFile(wrapper, `#!/bin/sh\nexport LANG=en_US.UTF-8\nexec '${tmux}' -S '${join(root, "socket")}' -f /dev/null "$@"\n`, { mode: 0o700 });
+    const runtime = new TmuxRuntime({ execute: executeCommand, tmuxPath: wrapper, sessionName: "owned", transferDirectory: root });
+    const locator = await runtime.launch({ cwd: root, windowName: "child", command: process.execPath,
+      args: ["-e", "setInterval(()=>{},1000)"], environment: { PATH: "/usr/bin:/bin", PI_SUBAGENT_ID: "instance", HOME: root } });
+    pids.add(locator.panePid!); pids.add(locator.serverPid!);
+    assert.equal((await executeCommand(wrapper, ["set-option", "-w", "-t", locator.windowId, "remain-on-exit", "on"])).code, 0);
+    const store = new SessionStateStore(join(root, "state"));
+    const child = createSessionState({ sessionId: "child", epoch: "ce", cwd: root, sessionFile: join(root, "child.jsonl"), now: "now",
+      parent: { sessionId: "parent", epoch: "pe", registrationToken: "registration" },
+      launch: { processInstanceId: "instance", cwd: root, sessionDir: root, displayName: "Child" },
+      pid: locator.panePid, processInstanceId: "instance", tmux: locator });
+    await store.save(registerDirectChild(createSessionState({ sessionId: "parent", epoch: "pe", cwd: root, sessionFile: join(root, "parent.jsonl"), now: "now" }), child, "now"));
+    await store.save(child);
+    manager = new Manager({ store, runtime, stateRoot: store.root, nativeSessionRoot: root, extensionPath: "/unused", piPath: "pi", environment: {} });
+    process.kill(locator.panePid!, "SIGTERM");
+    const deadline = performance.now() + 2000;
+    while ((await runtime.observe(locator)).process !== "exited" && performance.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10));
+    const listed = await manager.list("parent");
+    assert.equal(listed.agents[0]?.status, "interrupted");
+    assert.equal((await runtime.observe(locator)).terminal, "present");
+    const closed = await manager.close("parent", "child");
+    assert.equal(closed[0]?.status, "closed");
+    assert.equal((await runtime.observe(locator)).terminal, "absent");
+    assert.equal(await store.load("child"), undefined);
+    assert.deepEqual((await store.load("parent"))?.processes, {});
+  } finally {
+    await manager?.releaseNamespace("parent");
+    await executeCommand(wrapper, ["kill-server"]).catch(() => undefined);
+    const deadline = performance.now() + 2000;
+    while (alive().length && performance.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10));
+    assert.deepEqual(alive(), []);
+    assert.notEqual((await executeCommand(wrapper, ["list-sessions"])).code, 0);
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test.skipIf(!tmux)("a restarted tmux server cannot make an old pane locator own a replacement", async () => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-runtime-real-"));

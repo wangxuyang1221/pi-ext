@@ -50,7 +50,8 @@ export declare class TmuxRuntime {
     launch(options: TmuxLaunchOptions): Promise<TmuxLocator>;
     private bindLocator;
     private readIdentity;
-    locatePane(paneId: string, instance?: string): Promise<TmuxLocator>;
+    locatePane(paneId: string, instance?: string, options?: RuntimeQueryOptions): Promise<TmuxLocator>;
+    private locatePaneInternal;
     capturePane(locator: TmuxLocator): Promise<string>;
     observe(locator: TmuxLocator, options?: RuntimeQueryOptions): Promise<RuntimeObservation>;
     isAlive(locator: TmuxLocator, options?: RuntimeQueryOptions): Promise<boolean>;

@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test, vi } from "vitest";
 
 import subagentExtension from "../src/index.js";
 import type { ManagedTmuxRuntime } from "../src/manager.js";
-import { SessionStateStore } from "../src/state-store.js";
+import { createSessionState, SessionStateStore } from "../src/state-store.js";
 
 const eventNames = [
   "session_start",
@@ -92,6 +92,33 @@ test("releases the previous namespace controller when the root switches sessions
     await assert.rejects(stat(join(root, "controllers", "first")), { code: "ENOENT" });
     assert.ok(await stat(join(root, "controllers", "second")));
     await handlers.get("session_shutdown")!({});
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test.each(["corrupt", "old-schema"])("production startup rolls back new control ownership after a %s root fails validation", async (kind) => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-index-test-"));
+  const store = new SessionStateStore(root);
+  const createExtension = () => {
+    const handlers = new Map<string, (...args: any[]) => unknown>();
+    subagentExtension({ on: (name: string, handler: any) => handlers.set(name, handler), registerTool() {} } as never,
+      { env: { PATH: "/usr/bin" }, stateRoot: root, store });
+    return handlers;
+  };
+  const ctx = { cwd: root, sessionManager: { getSessionId: () => "parent", getSessionFile: () => join(root, "parent.jsonl"), getLeafId: () => null, getEntries: () => [] } };
+  try {
+    await store.save(createSessionState({ sessionId: "parent", epoch: "e", cwd: root, sessionFile: join(root, "parent.jsonl"), now: "now" }));
+    const original = await readFile(store.statePath("parent"), "utf8");
+    await writeFile(store.statePath("parent"), kind === "corrupt" ? "{broken" : JSON.stringify({ ...JSON.parse(original), schemaVersion: 2 }));
+    const first = createExtension();
+    await assert.rejects(async () => first.get("session_start")!({}, ctx));
+    await first.get("session_shutdown")!({});
+    await assert.rejects(stat(join(root, "controllers", "parent")), { code: "ENOENT" });
+    await writeFile(store.statePath("parent"), original);
+    await store.update("parent", state => state);
+    const next = createExtension();
+    await next.get("session_start")!({}, ctx);
+    assert.ok((await store.load("parent"))?.control?.controllerEpoch);
+    await next.get("session_shutdown")!({});
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

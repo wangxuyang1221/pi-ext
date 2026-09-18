@@ -65,8 +65,10 @@ export class SubagentManager {
     async claimNamespace(sessionId, required = true) {
         this.store.statePath(sessionId);
         let pending = this.controllers.get(sessionId);
+        const newlyAcquired = !pending;
         if (!pending) {
-            pending = acquireFileLock(join(this.stateRoot, "controllers", sessionId), currentOperation()?.signal, 0);
+            // Share initialization as well as acquisition; no caller may use a half-initialized controller.
+            pending = this.initializeController(sessionId);
             this.controllers.set(sessionId, pending);
         }
         let lock;
@@ -80,19 +82,38 @@ export class SubagentManager {
                 return false;
             throw error;
         }
-        {
-            await lock.assertOwned();
-            this.store.authorizeController(sessionId, lock.assertOwned);
-            const state = await this.store.loadRuntime(sessionId);
-            if (state && state.control?.controllerEpoch !== lock.token) {
-                await this.store.update(sessionId, (latest) => ({ ...latest, control: {
-                        ...latest.control, children: latest.control?.children ?? {}, tombstones: latest.control?.tombstones ?? {}, controllerEpoch: lock.token,
-                    } }));
+        if (!newlyAcquired)
+            await this.synchronizeController(sessionId, lock);
+        const operation = currentOperation();
+        if (operation)
+            operation.assertAuthorized = lock.assertOwned;
+        return true;
+    }
+    async initializeController(sessionId) {
+        const lock = await acquireFileLock(join(this.stateRoot, "controllers", sessionId), currentOperation()?.signal, 0);
+        this.store.authorizeController(sessionId, lock.assertOwned);
+        try {
+            await this.synchronizeController(sessionId, lock);
+            return lock;
+        }
+        catch (error) {
+            this.store.rollbackControllerAuthorization(sessionId, lock.assertOwned);
+            try {
+                await lock.release();
             }
-            const operation = currentOperation();
-            if (operation)
-                operation.assertAuthorized = lock.assertOwned;
-            return true;
+            catch (cleanupError) {
+                throw new AggregateError([error, cleanupError], "Failed to release uninitialized subagent controller", { cause: error });
+            }
+            throw error;
+        }
+    }
+    async synchronizeController(sessionId, lock) {
+        await lock.assertOwned();
+        const state = await this.store.loadRuntime(sessionId);
+        if (state && state.control?.controllerEpoch !== lock.token) {
+            await this.store.update(sessionId, latest => ({ ...latest, control: {
+                    ...latest.control, children: latest.control?.children ?? {}, tombstones: latest.control?.tombstones ?? {}, controllerEpoch: lock.token,
+                } }));
         }
     }
     async controllerGuard(sessionId) {
@@ -387,8 +408,6 @@ export class SubagentManager {
                 || state.runtime.status === "running"
                 || state.runtime.status === "settled"
                 || state.runtime.status === "closing";
-            if (!hasActiveStatus && (!state.runtime.tmux || !await this.runtime.isAlive(state.runtime.tmux)))
-                continue;
             const processInstanceId = state.runtime.processInstanceId
                 ?? state.launch?.processInstanceId;
             const newerSiblingLiveness = processInstanceId === undefined
@@ -402,7 +421,13 @@ export class SubagentManager {
                         || sibling.runtime.status === "settled"
                         || sibling.runtime.status === "closing")
                     && sibling.runtime.tmux !== undefined))
-                    .map(async (sibling) => this.runtime.isAlive(sibling.runtime.tmux)));
+                    .map(async (sibling) => {
+                    const observed = await this.observeRuntime(sibling.runtime.tmux);
+                    if (observed.process === "unknown" || observed.identity === "mismatch") {
+                        throw new Error(observed.reason ?? "Shared process identity is unknown; management is retained");
+                    }
+                    return observed.identity === "matched" && observed.process === "alive";
+                }));
             const hasNewerLiveSibling = newerSiblingLiveness.some(Boolean);
             if (!hasNewerLiveSibling)
                 activeStates.push(state);
@@ -418,14 +443,14 @@ export class SubagentManager {
                     ?? state.sessionId;
                 if (closedProcessIds.has(processInstanceId))
                     continue;
-                const locator = state.runtime.tmux;
-                if (locator) {
-                    const observed = await this.observeRuntime(locator);
-                    if (observed.identity !== "matched" && observed.process !== "exited")
-                        throw new Error(observed.reason ?? "Close identity is unknown");
-                    await this.runtime.close(locator);
-                    await this.confirmClosed(locator);
-                }
+                const locator = state.runtime.tmux ?? parent.processes?.[processInstanceId]?.tmux;
+                if (!locator)
+                    throw new Error(`Subagent runtime locator is unavailable: ${processInstanceId}`);
+                const observed = await this.observeRuntime(locator);
+                if (observed.identity !== "matched" && observed.process !== "exited")
+                    throw new Error(observed.reason ?? "Close identity is unknown");
+                await this.runtime.close(locator);
+                await this.confirmClosed(locator);
                 closedProcessIds.add(processInstanceId);
             }
         }

@@ -10,7 +10,7 @@ import { SessionStateStore } from "../src/state-store.js";
 const quote = (value: string) => `'${value.replaceAll("'", `'"'"'`)}'`;
 const enabled = process.env.PI_SUBAGENT_ISOLATED_INTEGRATION === "1";
 
-test.skipIf(!enabled)("production parent entry overrides a stale tmux server before delivering to real Pi", async () => {
+test.skipIf(!enabled).each([false, true])("production parent entry overrides a stale server with delayed identity installation=%s", async (delayIdentity) => {
   const root = await mkdtemp(join(process.cwd(), ".sa-production-"));
   const home = join(root, "home");
   const agentDir = join(home, "agent");
@@ -25,7 +25,29 @@ test.skipIf(!enabled)("production parent entry overrides a stale tmux server bef
     await mkdir(agentDir, { recursive: true });
     await writeFile(join(agentDir, "settings.json"), JSON.stringify({ retry: { enabled: false }, compaction: { enabled: false } }));
     const tmux = (await executeCommand("/usr/bin/which", ["tmux"])).stdout.trim();
-    await writeFile(wrapper, `#!/bin/sh\nexport LANG=en_US.UTF-8\nexec ${quote(tmux)} -S ${quote(socket)} -f /dev/null "$@"\n`, { mode: 0o700 });
+    const handshakeStarted = join(root, "handshake-started");
+    const identityBarrier = delayIdentity ? `
+if [ "$1" = set-option ] && [ "$5" = @pi_subagent_instance ]; then
+  attempts=0
+  while [ ! -f ${quote(handshakeStarted)} ]; do
+    attempts=$((attempts + 1))
+    [ "$attempts" -lt 400 ] || exit 90
+    sleep 0.01
+  done
+  sleep 0.15
+fi
+if [ "$1" = display-message ]; then
+  case "$*" in
+    *'@pi_subagent_instance'*)
+      ${quote(tmux)} -S ${quote(socket)} -f /dev/null "$@"
+      result=$?
+      : > ${quote(handshakeStarted)}
+      exit "$result"
+      ;;
+  esac
+fi
+` : "";
+    await writeFile(wrapper, `#!/bin/sh\nexport LANG=en_US.UTF-8\n${identityBarrier}\nexec ${quote(tmux)} -S ${quote(socket)} -f /dev/null "$@"\n`, { mode: 0o700 });
     const cli = process.env.PI_SUBAGENT_TEST_CLI ?? resolve("node_modules/@earendil-works/pi-coding-agent/dist/cli.js");
     await writeFile(piPath, `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(cli)} --no-extensions --no-context-files --no-skills --no-prompt-templates --no-themes --no-builtin-tools --no-approve "$@"\n`, { mode: 0o700 });
     const started = await executeCommand("/usr/bin/env", ["PI_CODING_AGENT_DIR=/old/server", "PI_SUBAGENT_TMUX_PATH=/old/tmux", "SUBAGENT_STALE_SENTINEL=must-not-inherit",
@@ -58,9 +80,12 @@ export default async function(pi){
     assert.equal(effective.stale, undefined);
     const state = await new SessionStateStore(stateRoot).load(agent.agentId);
     assert.equal(state?.runtime.configuration?.agentDir, agentDir);
+    if (delayIdentity) assert.equal(await readFile(handshakeStarted, "utf8"), "");
     await tools.get("subagent_close").execute("close", { target: "all" }, undefined, undefined, ctx);
     await handlers.get("session_shutdown")!({});
   } finally {
+    const panes = await executeCommand(wrapper, ["list-panes", "-a", "-F", "#{pane_pid}"]).catch(() => undefined);
+    if (panes?.code === 0) for (const pid of panes.stdout.trim().split("\n").map(Number)) if (pid > 0) pids.add(pid);
     await executeCommand(wrapper, ["kill-server"]).catch(() => undefined);
     const alive = () => [...pids].filter((pid) => { try { process.kill(pid, 0); return true; } catch { return false; } });
     const deadline = performance.now() + 2000;

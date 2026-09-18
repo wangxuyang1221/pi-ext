@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 import type { TmuxLocator } from "./state-store.js";
-import { currentOperation } from "./operation.js";
+import { currentOperation, withOperation } from "./operation.js";
 
 export interface CommandExecutionResult {
   code: number;
@@ -146,16 +147,31 @@ export class TmuxRuntime {
     return this.readIdentity(locator, instance);
   }
 
-  private async readIdentity(locator: TmuxLocator, instance: string): Promise<TmuxLocator> {
-    const result = await this.runRequired(["display-message", "-p", "-t", locator.paneId, IDENTITY_FORMAT]);
-    const [serverPid, serverStartedAt, socketPath, processInstanceId] = result.stdout.trim().split("\t");
-    if (!Number.isSafeInteger(Number(serverPid)) || Number(serverPid) <= 0 || !serverStartedAt || !socketPath || processInstanceId !== instance) {
-      throw new Error("Subagent pane identity handshake failed");
+  private async readIdentity(locator: TmuxLocator, instance: string, waitForInstallation = false): Promise<TmuxLocator> {
+    let expectedServer: string | undefined;
+    while (true) {
+      const result = await this.runRequired(["display-message", "-p", "-t", locator.paneId, `${IDENTITY_FORMAT}\t#{pane_id}\t#{pane_pid}`]);
+      const [serverPid, serverStartedAt, socketPath, processInstanceId, _panes, _mode, paneId, panePid, ...extra] = result.stdout.replace(/\r?\n$/u, "").split("\t");
+      if (!Number.isSafeInteger(Number(serverPid)) || Number(serverPid) <= 0 || !serverStartedAt || !socketPath
+        || paneId !== locator.paneId || Number(panePid) !== locator.panePid || extra.length) {
+        throw new Error("Subagent pane identity handshake failed");
+      }
+      const server = `${serverPid}\t${serverStartedAt}\t${socketPath}`;
+      expectedServer ??= server;
+      if (server !== expectedServer) throw new Error("Subagent server changed during identity handshake");
+      if (processInstanceId === instance) return { ...locator, serverPid: Number(serverPid), serverStartedAt, socketPath, processInstanceId };
+      if (!waitForInstallation || processInstanceId !== "") throw new Error("Subagent pane identity handshake failed");
+      // A missing marker is transitional; every retry shares the original lookup deadline.
+      const operation = currentOperation()!;
+      await delay(Math.min(25, operation.remainingMs), undefined, { signal: operation.signal });
     }
-    return { ...locator, serverPid: Number(serverPid), serverStartedAt, socketPath, processInstanceId };
   }
 
-  async locatePane(paneId: string, instance?: string): Promise<TmuxLocator> {
+  async locatePane(paneId: string, instance?: string, options?: RuntimeQueryOptions): Promise<TmuxLocator> {
+    return withOperation(options?.timeout ?? 5_000, options?.signal, () => this.locatePaneInternal(paneId, instance));
+  }
+
+  private async locatePaneInternal(paneId: string, instance?: string): Promise<TmuxLocator> {
     const result = await this.runRequired([
       "display-message",
       "-p",
@@ -178,7 +194,7 @@ export class TmuxRuntime {
       throw new Error("tmux returned an invalid current pane locator");
     }
     const locator = { sessionName, windowId, paneId: actualPaneId, panePid, ...(windowName ? { windowName } : {}) };
-    return instance ? this.readIdentity(locator, instance) : locator;
+    return instance ? this.readIdentity(locator, instance, true) : locator;
   }
 
   async capturePane(locator: TmuxLocator): Promise<string> {

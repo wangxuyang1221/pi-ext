@@ -1,6 +1,67 @@
 # Subagent runtime reliability acceptance
 
-## Result
+## Follow-up review
+
+针对 `91745a52c8296a5e31e22121b6f05c4e59ad0807` 的四项复审意见均已核验，并补入本轮修复。用户提供的 ZIP 中，`file-lock.ts` 与 `command-executor.ts` 的 Git blob SHA 分别为 `d8c209ad428d4d3cd1789d623235c0dfd82b9d57` 和 `f3b13184cfa868977b7b98c0129cd9fcd2e1876b`，与基线一致。检查脚本后在仓库内隔离目录执行锁探针，复现两个持有者同时通过 assertOwned。
+
+| Finding | Reproduction and fix |
+| --- | --- |
+| Stale lock recovery | 屏障控制两个竞争者读取同一死 owner，并将 A 暂停在新目录已创建、owner 未发布处。原实现出现两个 owner；现在只有成功 unlink 旧 owner 的竞争者能继续 rmdir。增加同进程真实 FS 与两个独立 Node OS 进程回归。 |
+| Failed initialization | 经实际 `subagentExtension()` 入口，用损坏 JSON 和 v2 root 触发 session_start 失败，再触发 session_shutdown。原实现锁仍在；现在首次 acquisition 与初始化作为一个共享 Promise，失败回滚锁和授权。已经持有的控制权不会因后续读取失败释放。 |
+| Terminal single-target close | 真实 tmux 开启 remain-on-exit，进程退出后先 manager.list，再单目标 close。原实现返回 closed 但 pane 仍存在；现在终态对象也经过资源关闭和退出确认。另补无 locator 时不删除关系的回归，保留历史 alias 的独立分支。 |
+| Identity installation order | 真实 Pi/tmux 中暂停 parent 的 set-option，等 child 先查询空实例标记后再放行。原实现登记超时；现在空标记在单次默认 5 秒 lookup deadline 内重查，不重置预算。错误标记、等待期间 server 或 pane PID 改变仍拒绝，超时和取消后不继续查询。 |
+
+四项主要回归均经历明确的 Red → Green；新增保护用例继续覆盖已有控制权不被撤销、共享 alias 不误杀、超时不重发等边界。没有修改第 7、8 项。
+
+### Isolated verification
+
+使用仓库内独立 detached worktree，基线固定为 `91745a5`，仅叠加本轮 subagent 补丁。没有带入主工作区的 codex-compact 等未提交修改；依赖复用相同锁文件对应的 node_modules。Node.js 22.22.2、pnpm 11.9.0、tmux 3.6b、macOS，真实 child CLI 为 0.84.3/0.85.1，parent ExtensionAPI 仍由夹具提供。
+
+| Command | Follow-up result |
+| --- | --- |
+| `pnpm exec vitest run extensions/subagent/__tests__` | 179 通过、4 个 opt-in 场景默认跳过 |
+| `pnpm run check` | typecheck 通过；1,215 项测试通过、4 跳过；已有 MCP prototype suite 无法加载，未出现断言失败 |
+| `pnpm run build` | 独立全量构建通过 |
+| `pnpm run package:check` | 仍因已有 `docs/goal-descendant-acceptance.md` 缺失失败 |
+| 主工作区 subagent tsc 构建与独立构建比较 | 80 个生成文件逐字节一致 |
+
+隔离工作树全仓检查唯一的 suite 加载失败是 `extensions/mcp/__tests__/status-ui-prototype.test.ts` 引用不存在的 `prototypes/mcp-status-ui-prototype/src/codex-startup.js`。原工作区的 codex-compact 未提交测试未带入，因此本轮不能沿用首次验收的全仓测试计数或将两次失败集合混为一谈。
+
+### Follow-up runtime matrix
+
+在隔离工作树分别设置 `PI_SUBAGENT_FIXTURE_DIST=0/1`、`PI_SUBAGENT_ISOLATED_INTEGRATION=1` 及对应 CLI 的 `PI_SUBAGENT_TEST_CLI`，执行：
+
+```bash
+pnpm exec vitest run \
+  extensions/subagent/__tests__/file-lock.test.ts \
+  extensions/subagent/__tests__/runtime-integration.test.ts \
+  extensions/subagent/__tests__/isolated-integration.test.ts \
+  extensions/subagent/__tests__/production-integration.test.ts
+```
+
+| Child CLI | Extension | Result |
+| --- | --- | --- |
+| 0.84.3 | src | 9/9 |
+| 0.85.1 | src | 9/9 |
+| 0.84.3 | dist | 9/9 |
+| 0.85.1 | dist | 9/9 |
+
+编译产物矩阵中，独立 OS 锁竞争脚本实际导入 dist/file-lock.js，runtime 与 manager 及真实 child 均选择对应 dist；同进程锁调度测试固定调用源码。最后对锁断言再收紧后，源码和产物的锁测试各 2/2 通过。
+
+两个生产入口场景分别为立即安装标记与受控延迟安装。最终矩阵的生产入口和普通 Pi 集成均报告 `livePids: []`、`socketUnavailable: true`：
+
+| CLI / Extension | Production PIDs, immediate / delayed | Isolated fixture PIDs |
+| --- | --- | --- |
+| 0.84.3 / src | 16006, 16007, 16010 / 16283, 16285, 16288 | 15992, 15991 |
+| 0.85.1 / src | 16772, 16773, 16776 / 17019, 17020, 17023 | 16749, 16748 |
+| 0.84.3 / dist | 17501, 17502, 17506 / 17786, 17787, 17790 | 17477, 17476 |
+| 0.85.1 / dist | 18230, 18231, 18234 / 18527, 18528, 18532 | 18207, 18206 |
+
+锁进程测试确认两个 PID 不同，结束后均返回 ESRCH。真实 dead pane 测试经 manager 关闭链路验证 terminal=absent，并在 finally 关闭独立 server。未启动 TCP 服务。Linux 实机、所有进程终止排列和真实 pane 移动仍不在本次已运行矩阵中。
+
+Context7 查询不可用，测试调度替身的 `vi.mock` / `vi.hoisted` 用法改查 [Vitest v3 官方文档](https://v3.vitest.dev/api/vi.html)。以下保留首次验收记录，计数与矩阵不代表本次复审结果。
+
+## Initial result
 
 审查问题 1–6 的实现和针对性回归已落地。第 7 项计费归属和第 8 项 renderer 未修改。`dist/` 由构建生成，没有手工编辑。
 
