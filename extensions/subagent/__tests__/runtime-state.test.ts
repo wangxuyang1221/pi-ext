@@ -16,6 +16,14 @@ const launch: LaunchMetadata = {
   processInstanceId: "process-a",
 };
 
+test("refuses another process or unmanaged runtime taking over a managed binding", () => {
+  const options = { sessionId: "child-a", cwd: "/repo", sessionFile: "/sessions/child-a.jsonl", now: "now", parent, launch, pid: 101, createEpoch: () => "epoch-a" };
+  const existing = activateSession(undefined, options);
+  assert.throws(() => activateSession(existing, { ...options, launch: { ...launch, processInstanceId: "different" } }), /managed.*instance/u);
+  assert.throws(() => activateSession(existing, { ...options, parent: undefined, launch: undefined }), /owner/u);
+  assert.throws(() => activateSession(existing, { ...options, pid: 202 }), /managed.*instance/u);
+});
+
 test("preserves an epoch on reactivation and creates one after a session switch", () => {
   const first = activateSession(undefined, {
     sessionId: "child-a",
@@ -35,9 +43,9 @@ test("preserves an epoch on reactivation and creates one after a session switch"
     cwd: "/repo",
     sessionFile: "/sessions/child-a.jsonl",
     now: "2026-08-27T02:01:00.000Z",
-    parent: { ...parent, registrationToken: "registration-b" },
-    launch: { ...launch, processInstanceId: "process-b" },
-    pid: 202,
+    parent,
+    launch,
+    pid: 101,
     createEpoch: () => "must-not-be-used",
   });
 
@@ -46,8 +54,8 @@ test("preserves an epoch on reactivation and creates one after a session switch"
   assert.equal(reactivated.runtime.settledGeneration, 2);
   assert.equal(reactivated.runtime.status, "running");
   assert.equal(reactivated.runtime.busy, false);
-  assert.equal(reactivated.parent?.registrationToken, "registration-b");
-  assert.equal(reactivated.runtime.pid, 202);
+  assert.equal(reactivated.parent?.registrationToken, "registration-a");
+  assert.equal(reactivated.runtime.pid, 101);
 
   const switched = activateSession(undefined, {
     sessionId: "child-b",

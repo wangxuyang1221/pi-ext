@@ -4,6 +4,7 @@ import {
 } from "./cursor.js";
 import type { SessionState } from "./state-store.js";
 import { DeliveryReceiptReader } from "./delivery-receipt.js";
+import { DeadlineExceeded, Operation } from "./operation.js";
 
 export type WaitOutcome = "settled" | "interrupted" | "closed" | "timeout";
 
@@ -13,9 +14,9 @@ export interface WaitForSettledOptions {
   timeoutMs: number;
   pollIntervalMs?: number;
   signal?: AbortSignal;
-  readState: () => Promise<SessionState | undefined>;
-  wasClosed?: () => Promise<boolean>;
-  isAlive: (state: SessionState) => Promise<boolean>;
+  readState: (signal?: AbortSignal) => Promise<SessionState | undefined>;
+  wasClosed?: (signal?: AbortSignal) => Promise<boolean>;
+  isAlive: (state: SessionState, signal?: AbortSignal) => Promise<boolean>;
   now?: () => number;
   sleep?: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
 }
@@ -30,19 +31,22 @@ export interface WaitForSettledResult {
 export async function waitForSettled(
   options: WaitForSettledOptions,
 ): Promise<WaitForSettledResult> {
-  const now = options.now ?? Date.now;
+  const now = options.now ?? (() => performance.now());
   const sleep = options.sleep ?? delay;
   const startedAt = now();
   let expectedGeneration: number | undefined;
   let lastGeneration = 0;
   const receiptReader = new DeliveryReceiptReader();
 
+  // A zero timeout still permits one bounded snapshot, but never another poll.
+  const operation = new Operation(options.timeoutMs === 0 ? 250 : options.timeoutMs, options.signal);
+  try {
   while (true) {
-    options.signal?.throwIfAborted();
-    const state = await options.readState();
+    operation.signal.throwIfAborted();
+    const state = await operation.run((signal) => options.readState(signal));
     const durationMs = Math.max(0, now() - startedAt);
     if (!state) {
-      if (await options.wasClosed?.() === true) {
+      if (options.wasClosed && await operation.run((signal) => options.wasClosed!(signal))) {
         return {
           outcome: "closed",
           generation: lastGeneration,
@@ -59,9 +63,9 @@ export async function waitForSettled(
     expectedGeneration ??= decodedCursor.generation;
 
     const consumedGeneration = decodedCursor.deliveryId
-      ? await receiptReader.read(state.runtime.sessionFile, {
-          agentId: options.agentId, epoch: state.epoch, deliveryId: decodedCursor.deliveryId,
-        })
+      ? await operation.run((signal) => receiptReader.read(state.runtime.sessionFile, {
+          agentId: options.agentId, epoch: state.epoch, deliveryId: decodedCursor.deliveryId!,
+        }, signal))
       : undefined;
     const settled = decodedCursor.deliveryId
       ? consumedGeneration !== undefined && state.runtime.settledGeneration >= consumedGeneration
@@ -78,7 +82,7 @@ export async function waitForSettled(
         }),
       };
     }
-    if (state.runtime.status === "closed" || await options.wasClosed?.() === true) {
+    if (state.runtime.status === "closed" || (options.wasClosed && await operation.run((signal) => options.wasClosed!(signal)))) {
       return {
         outcome: "closed",
         generation: state.runtime.generation,
@@ -92,14 +96,14 @@ export async function waitForSettled(
         durationMs,
       };
     }
-    if (state.runtime.status !== "closing" && !await options.isAlive(state)) {
+    if (state.runtime.status !== "closing" && !await operation.run((signal) => options.isAlive(state, signal))) {
       return {
         outcome: "interrupted",
         generation: state.runtime.generation,
         durationMs,
       };
     }
-    if (durationMs >= options.timeoutMs) {
+    if (now() - startedAt >= options.timeoutMs) {
       return {
         outcome: "timeout",
         generation: state.runtime.generation,
@@ -107,8 +111,14 @@ export async function waitForSettled(
       };
     }
 
-    const remaining = options.timeoutMs - durationMs;
-    await sleep(Math.min(options.pollIntervalMs ?? 100, remaining), options.signal);
+    const remaining = options.timeoutMs - (now() - startedAt);
+    await operation.run((signal) => sleep(Math.min(options.pollIntervalMs ?? 100, remaining), signal));
+  }
+  } catch (error) {
+    if (!(error instanceof DeadlineExceeded)) throw error;
+    return { outcome: "timeout", generation: lastGeneration, durationMs: Math.max(0, now() - startedAt) };
+  } finally {
+    operation.dispose();
   }
 }
 

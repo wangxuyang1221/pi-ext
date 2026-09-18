@@ -3,6 +3,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { encodeActivityCursor, encodeSettledCursor } from "./cursor.js";
+import { currentOperation, DeadlineExceeded, withOperation } from "./operation.js";
+import { acquireFileLock, type FileLock } from "./file-lock.js";
 import {
   getDirectChild,
   registerDirectChild,
@@ -10,6 +12,7 @@ import {
 } from "./ownership.js";
 import {
   readSessionView,
+  readSessionSnapshot,
   hasPersistedPrompt,
   type ReadSessionViewOptions,
   type SessionActivity,
@@ -23,10 +26,12 @@ import type {
   SpawnReservation,
   TmuxLocator,
 } from "./state-store.js";
-import { SessionStateStore } from "./state-store.js";
+import { SessionStateStore, SESSION_STATE_SCHEMA_VERSION } from "./state-store.js";
 import type {
   PromptDelivery,
   TmuxLaunchOptions,
+  RuntimeObservation,
+  RuntimeQueryOptions,
 } from "./tmux-runtime.js";
 import {
   waitForSettled,
@@ -44,8 +49,9 @@ export interface ManagedTmuxRuntime {
   launch(options: TmuxLaunchOptions): Promise<TmuxLocator>;
   sendPrompt(locator: TmuxLocator, text: string, delivery: PromptDelivery): Promise<void>;
   capturePane(locator: TmuxLocator): Promise<string>;
-  isAlive(locator: TmuxLocator): Promise<boolean>;
-  close(locator: TmuxLocator): Promise<void>;
+  isAlive(locator: TmuxLocator, options?: RuntimeQueryOptions): Promise<boolean>;
+  observe?(locator: TmuxLocator, options?: RuntimeQueryOptions): Promise<RuntimeObservation>;
+  close(locator: TmuxLocator, options?: RuntimeQueryOptions): Promise<void>;
 }
 
 export interface SubagentManagerOptions {
@@ -106,6 +112,7 @@ export interface SubagentCapacity {
 export interface ManagedAgentList {
   agents: ManagedAgent[];
   capacity: SubagentCapacity;
+  diagnostics?: Array<{ agentId: string; reason: string }>;
 }
 
 export type PromptConfirmation =
@@ -122,8 +129,8 @@ export interface ManagedPromptResult {
 export class DeliveryUnconfirmedError extends Error {
   readonly code = "delivery_unconfirmed";
 
-  constructor(readonly deliveryId: string) {
-    super("delivery_unconfirmed: Child Pi may already have accepted the prompt");
+  constructor(readonly deliveryId: string, cause?: unknown) {
+    super(`delivery_unconfirmed: Child Pi may already have accepted the prompt (deliveryId: ${deliveryId})`, { cause });
     this.name = "DeliveryUnconfirmedError";
   }
 }
@@ -170,6 +177,65 @@ export class SubagentManager {
   private readonly promptLocks = new Map<string, Promise<void>>();
   private readonly inFlightSpawns = new Map<string, Set<Promise<ManagedAgent>>>();
   private readonly closingNamespaces = new Set<string>();
+  private readonly controllers = new Map<string, Promise<FileLock>>();
+  private readonly controllerSignals = new Map<string, AbortController>();
+  private readonly operations = new Map<string, Set<Promise<unknown>>>();
+
+  private runOperation<T>(sessionId: string, timeout: number, signal: AbortSignal | undefined, work: () => Promise<T>): Promise<T> {
+    let controller = this.controllerSignals.get(sessionId);
+    if (!controller) { controller = new AbortController(); this.controllerSignals.set(sessionId, controller); }
+    const pending = withOperation(timeout, signal ? AbortSignal.any([signal, controller.signal]) : controller.signal, work);
+    const active = this.operations.get(sessionId) ?? new Set<Promise<unknown>>();
+    active.add(pending); this.operations.set(sessionId, active);
+    const untrack = () => { active.delete(pending); if (!active.size) this.operations.delete(sessionId); };
+    void pending.then(untrack, untrack);
+    return pending;
+  }
+
+  async claimNamespace(sessionId: string, required = true): Promise<boolean> {
+    this.store.statePath(sessionId);
+    let pending = this.controllers.get(sessionId);
+    if (!pending) {
+      pending = acquireFileLock(join(this.stateRoot, "controllers", sessionId), currentOperation()?.signal, 0);
+      this.controllers.set(sessionId, pending);
+    }
+    let lock: Awaited<typeof pending>;
+    try { lock = await pending; }
+    catch (error) {
+      if (this.controllers.get(sessionId) === pending) this.controllers.delete(sessionId);
+      if (!required && error instanceof Error && error.message.startsWith("Subagent control lock unavailable:")) return false;
+      throw error;
+    }
+    {
+      await lock.assertOwned();
+      this.store.authorizeController(sessionId, lock.assertOwned);
+      const state = await this.store.loadRuntime(sessionId);
+      if (state && state.control?.controllerEpoch !== lock.token) {
+        await this.store.update(sessionId, (latest) => ({ ...latest, control: {
+          ...latest.control, children: latest.control?.children ?? {}, tombstones: latest.control?.tombstones ?? {}, controllerEpoch: lock.token,
+        } }));
+      }
+      const operation = currentOperation();
+      if (operation) operation.assertAuthorized = lock.assertOwned;
+      return true;
+    }
+  }
+
+  async controllerGuard(sessionId: string): Promise<() => Promise<void>> {
+    const pending = this.controllers.get(sessionId);
+    if (!pending) throw new Error("Subagent namespace has no active controller");
+    return (await pending).assertOwned;
+  }
+
+  async releaseNamespace(sessionId: string): Promise<void> {
+    const pending = this.controllers.get(sessionId);
+    if (!pending) return;
+    this.controllerSignals.get(sessionId)?.abort(new Error("Subagent controller stopped"));
+    await Promise.allSettled([...(this.operations.get(sessionId) ?? [])]);
+    await (await pending).release();
+    this.controllers.delete(sessionId);
+    this.controllerSignals.delete(sessionId);
+  }
 
   constructor(options: SubagentManagerOptions) {
     this.store = options.store;
@@ -205,8 +271,10 @@ export class SubagentManager {
     parentSessionId: string,
     options: SpawnSubagentOptions,
     defaults: SpawnDefaults,
+    signal?: AbortSignal,
   ): Promise<ManagedAgent> {
-    const operation = this.spawnInternal(parentSessionId, options, defaults);
+    const operation = this.runOperation(parentSessionId, this.registrationTimeoutMs + this.promptAckTimeoutMs + 5_000, signal,
+      () => this.spawnInternal(parentSessionId, options, defaults));
     const inFlight = this.inFlightSpawns.get(parentSessionId) ?? new Set();
     inFlight.add(operation);
     this.inFlightSpawns.set(parentSessionId, inFlight);
@@ -223,6 +291,7 @@ export class SubagentManager {
     options: SpawnSubagentOptions,
     defaults: SpawnDefaults,
   ): Promise<ManagedAgent> {
+    await this.claimNamespace(parentSessionId);
     if (this.closingNamespaces.has(parentSessionId)) {
       throw new Error(`Subagent namespace is closing: ${parentSessionId}`);
     }
@@ -240,6 +309,7 @@ export class SubagentManager {
       processInstanceId,
       createdAt: this.now(),
       expiresAt: new Date(this.nowMs() + this.reservationTtlMs).toISOString(),
+      launchState: "reserved",
     };
     await this.reserveSpawn(parent.sessionId, reservation);
     const displayName = options.name?.trim() || `Subagent ${parent.children.length + 1}`;
@@ -254,6 +324,12 @@ export class SubagentManager {
       registrationToken,
     };
     const launch: LaunchMetadata = {
+      ...(this.environment.PI_CODING_AGENT_DIR && this.environment.PI_SUBAGENT_TMUX_PATH ? { configuration: {
+        protocolVersion: SESSION_STATE_SCHEMA_VERSION,
+        agentDir: this.environment.PI_CODING_AGENT_DIR,
+        tmuxPath: this.environment.PI_SUBAGENT_TMUX_PATH,
+        piPath: this.piPath,
+      } } : {}),
       cwd,
       sessionDir,
       ...(model ? { model } : {}),
@@ -276,9 +352,13 @@ export class SubagentManager {
 
     let locator: TmuxLocator | undefined;
     let registeredChild: SessionState | undefined;
+    let launchAttempted = false;
     try {
       await mkdir(sessionDir, { recursive: true });
       await writeFile(sessionFile, "", { encoding: "utf8", mode: 0o600, flag: "wx" });
+      await this.store.update(parent.sessionId, (latest) => ({ ...latest, reservations: latest.reservations.map((entry) =>
+        entry.reservationId === registrationToken ? { ...entry, launchState: "launching" } : entry) }));
+      launchAttempted = true;
       locator = await this.runtime.launch({
         cwd,
         windowName: normalizeWindowName(displayName),
@@ -288,6 +368,7 @@ export class SubagentManager {
           ...this.environment,
           PI_SUBAGENT: "1",
           PI_SUBAGENT_ID: processInstanceId,
+          PI_SUBAGENT_PI_PATH: this.piPath,
           [PI_SUBAGENT_STATE_ROOT]: this.stateRoot,
           [PI_SUBAGENT_PARENT]: JSON.stringify(parentOwnership),
           [PI_SUBAGENT_LAUNCH]: JSON.stringify(launch),
@@ -296,6 +377,9 @@ export class SubagentManager {
       await this.attachReservationLocator(parent.sessionId, parent.epoch, reservation, locator);
       const child = await this.waitForRegistration(parent, { ...reservation, tmux: locator });
       this.assertManagedLeaf(child);
+      if (launch.configuration && JSON.stringify(child.runtime.configuration) !== JSON.stringify(launch.configuration)) {
+        throw new Error("Subagent launch configuration handshake failed before initial delivery");
+      }
       registeredChild = child;
       await this.store.update(parent.sessionId, (latestParent) => ({
         ...registerDirectChild(latestParent, child, this.now()),
@@ -311,6 +395,7 @@ export class SubagentManager {
       );
       return initialDelivery.agent;
     } catch (error) {
+      if (launchAttempted && !locator) throw error;
       if (locator) {
         try {
           await this.runtime.close(locator);
@@ -322,7 +407,7 @@ export class SubagentManager {
           );
         }
       }
-      const failedChildren = (await this.store.list()).filter((state) => (
+      const failedChildren = (await this.store.listOwned(parent)).filter((state) => (
         state.parent?.sessionId === parent.sessionId
         && state.parent.epoch === parent.epoch
         && state.parent.registrationToken === registrationToken
@@ -335,6 +420,7 @@ export class SubagentManager {
         failedChildren.push(registeredChild);
       }
       const failedChildIds = new Set(failedChildren.map((state) => state.sessionId));
+      await this.retireProcesses(parent.sessionId, new Set([processInstanceId]));
       await this.store.update(parent.sessionId, (latestParent) => ({
         ...removeDirectChildren(latestParent, failedChildIds),
         reservations: latestParent.reservations.filter(
@@ -348,7 +434,14 @@ export class SubagentManager {
     }
   }
 
-  close(
+  close(parentSessionId: string, target: string, signal?: AbortSignal): Promise<ManagedAgent[]> {
+    return this.runOperation(parentSessionId, this.closeTimeoutMs, signal, async () => {
+      await this.claimNamespace(parentSessionId);
+      return this.closeInternal(parentSessionId, target);
+    });
+  }
+
+  private closeInternal(
     parentSessionId: string,
     target: string,
   ): Promise<ManagedAgent[]> {
@@ -363,17 +456,30 @@ export class SubagentManager {
   }
 
   private async closeAll(parentSessionId: string): Promise<ManagedAgent[]> {
+    await this.store.update(parentSessionId, (parent) => ({ ...parent, control: {
+      ...parent.control, children: parent.control?.children ?? {}, tombstones: parent.control?.tombstones ?? {}, closingAll: true,
+    } }));
     const inFlight = [...(this.inFlightSpawns.get(parentSessionId) ?? [])];
     await Promise.allSettled(inFlight);
     await this.reconcileOwnedSessions(parentSessionId);
     await this.closeReservations(parentSessionId);
-    return this.closeDirect(parentSessionId, "all");
+    const affected = await this.closeDirect(parentSessionId, "all");
+    const parent = await this.requireSession(parentSessionId);
+    for (const [processId, managed] of Object.entries(parent.processes ?? {})) {
+      if (!managed.tmux) throw new Error(`Managed process locator is unavailable: ${processId}`);
+      await this.runtime.close(managed.tmux);
+      await this.confirmClosed(managed.tmux);
+      await this.retireProcesses(parentSessionId, new Set([processId]));
+    }
+    await this.store.update(parentSessionId, (latest) => ({ ...latest, control: { ...latest.control!, closingAll: false } }));
+    return affected;
   }
 
   private async closeReservations(parentSessionId: string): Promise<void> {
     const parent = await this.requireSession(parentSessionId);
     this.assertRootNamespace(parent);
     const childProcessIds = new Set<string>();
+    const registeredChildren: SessionState[] = [];
     for (const link of parent.children) {
       const child = await this.store.load(link.agentId);
       if (child?.epoch !== link.epoch) continue;
@@ -381,7 +487,7 @@ export class SubagentManager {
         child.runtime.processInstanceId ?? link.launch.processInstanceId,
       );
     }
-    for (const child of await this.store.list()) {
+    for (const child of await this.store.listOwned(parent)) {
       if (
         child.parent?.sessionId !== parent.sessionId
         || child.parent.epoch !== parent.epoch
@@ -391,6 +497,7 @@ export class SubagentManager {
         continue;
       }
       this.assertManagedLeaf(child);
+      registeredChildren.push(child);
       childProcessIds.add(
         child.runtime.processInstanceId ?? child.launch.processInstanceId,
       );
@@ -407,6 +514,8 @@ export class SubagentManager {
       if (reservation.tmux) {
         await this.runtime.close(reservation.tmux);
         await this.confirmClosed(reservation.tmux);
+      } else if (reservation.launchState !== "reserved") {
+        throw new Error(`Subagent launch outcome is unknown; locator unavailable: ${reservation.processInstanceId}`);
       }
       closedProcessIds.add(reservation.processInstanceId);
     }
@@ -415,7 +524,7 @@ export class SubagentManager {
       reservation.reservationId
     )));
     await this.store.update(parentSessionId, (latestParent) => ({
-      ...latestParent,
+      ...registeredChildren.reduce((state, child) => registerDirectChild(state, child, this.now()), latestParent),
       reservations: latestParent.reservations.filter(
         (reservation) => !reservationIds.has(reservation.reservationId),
       ),
@@ -478,14 +587,7 @@ export class SubagentManager {
       if (!hasNewerLiveSibling) activeStates.push(state);
     }
     for (const state of activeStates) {
-      await this.store.update(state.sessionId, (latest) => ({
-        ...latest,
-        runtime: {
-          ...latest.runtime,
-          status: "closing",
-          updatedAt: this.now(),
-        },
-      }));
+      await this.recordControlStatus(state, "closing");
     }
 
     const closedProcessIds = new Set<string>();
@@ -497,6 +599,8 @@ export class SubagentManager {
         if (closedProcessIds.has(processInstanceId)) continue;
         const locator = state.runtime.tmux;
         if (locator) {
+          const observed = await this.observeRuntime(locator);
+          if (observed.identity !== "matched" && observed.process !== "exited") throw new Error(observed.reason ?? "Close identity is unknown");
           await this.runtime.close(locator);
           await this.confirmClosed(locator);
         }
@@ -504,22 +608,21 @@ export class SubagentManager {
       }
     } catch (error) {
       for (const state of activeStates) {
-        await this.store.update(state.sessionId, (latest) => ({
-          ...latest,
-          runtime: {
-            ...latest.runtime,
-            status: "closing",
-            updatedAt: this.now(),
-          },
-        })).catch(() => undefined);
+        await this.recordControlStatus(state, "closing").catch(() => undefined);
       }
       throw error;
     }
 
+    await this.retireProcesses(parentSessionId, closedProcessIds);
     const agentIds = new Set(states.map((state) => state.sessionId));
-    await this.store.update(parent.sessionId, (latestParent) => (
-      removeDirectChildren(latestParent, agentIds)
-    ));
+    await this.store.update(parent.sessionId, (latestParent) => ({
+      ...removeDirectChildren(latestParent, agentIds),
+      control: {
+        ...latestParent.control,
+        children: latestParent.control?.children ?? {},
+        tombstones: { ...latestParent.control?.tombstones, ...Object.fromEntries(states.map((state) => [state.sessionId, state.epoch])) },
+      },
+    }));
     for (const state of states) {
       await this.store.delete(state.sessionId);
     }
@@ -532,11 +635,27 @@ export class SubagentManager {
     options: WaitManagedOptions,
     signal?: AbortSignal,
   ): Promise<ManagedWaitResult> {
-    const initial = await this.requireDirectSession(parentSessionId, agentId);
+    const startedAt = performance.now();
+    let initial: { parent: SessionState; child: SessionState } | undefined;
+    try {
+      return await this.runOperation(parentSessionId, options.timeoutMs === 0 ? 250 : options.timeoutMs, signal, async () => {
+        initial = await this.requireDirectSession(parentSessionId, agentId);
+        return this.waitInternal(parentSessionId, agentId, options, currentOperation()!.signal, initial);
+      });
+    } catch (error) {
+      if (!(error instanceof DeadlineExceeded) || !initial) throw error;
+      return finalizeManagedWaitResult({ outcome: "timeout", generation: initial.child.runtime.generation,
+        durationMs: performance.now() - startedAt, agent: toManagedAgent(initial.child), activity: [],
+        assistantCount: 0, toolCount: 0, omittedAssistant: 0, omittedTools: 0, hasMore: false });
+    }
+  }
+
+  private async waitInternal(parentSessionId: string, agentId: string, options: WaitManagedOptions, signal: AbortSignal,
+    initial: { parent: SessionState; child: SessionState }): Promise<ManagedWaitResult> {
     const result = await waitForSettled({
       agentId,
       afterSettled: options.afterSettled,
-      timeoutMs: options.timeoutMs,
+      timeoutMs: Math.min(options.timeoutMs, currentOperation()?.remainingMs ?? options.timeoutMs),
       pollIntervalMs: this.pollIntervalMs,
       signal,
       readState: () => this.store.load(agentId),
@@ -545,8 +664,10 @@ export class SubagentManager {
         return parent !== undefined
           && !parent.children.some((child) => child.agentId === agentId);
       },
-      isAlive: async (state) => state.runtime.tmux !== undefined
-        && this.runtime.isAlive(state.runtime.tmux),
+      isAlive: async (state, querySignal) => {
+        const observed = await this.observeRuntime(state.runtime.tmux, { signal: querySignal });
+        return observed.process !== "exited";
+      },
       sleep: this.sleep,
     });
     let currentChild = await this.store.load(agentId);
@@ -583,9 +704,11 @@ export class SubagentManager {
       });
     }
 
+    const snapshot = await readSessionSnapshot(child.runtime.sessionFile);
     let maximumBytes = WAIT_PAYLOAD_MAX_BYTES;
     while (true) {
       const recent = await readSessionView({
+        snapshot,
         sessionFile: child.runtime.sessionFile,
         agentId,
         epoch: child.epoch,
@@ -625,46 +748,56 @@ export class SubagentManager {
       ReadSessionViewOptions,
       "sessionFile" | "agentId" | "epoch" | "leafId" | "leafPosition"
     >,
+    signal?: AbortSignal,
   ): Promise<SessionViewResult> {
-    const { child } = await this.requireDirectSession(parentSessionId, agentId);
-    return readSessionView({
-      ...options,
-      sessionFile: child.runtime.sessionFile,
-      agentId,
-      epoch: child.epoch,
-      ...readLeafOptions(child),
+    return this.runOperation(parentSessionId, 5_000, signal, async () => {
+      const { child } = await this.requireDirectSession(parentSessionId, agentId);
+      return readSessionView({ ...options, sessionFile: child.runtime.sessionFile,
+        agentId, epoch: child.epoch, ...readLeafOptions(child) });
     });
   }
 
-  async list(parentSessionId: string): Promise<ManagedAgentList> {
-    await this.reconcileOwnedSessions(parentSessionId);
-    const parent = await this.store.update(parentSessionId, async (latestParent) => (
+  list(parentSessionId: string, signal?: AbortSignal): Promise<ManagedAgentList> {
+    return this.runOperation(parentSessionId, 5_000, signal, () => this.listInternal(parentSessionId));
+  }
+
+  private async listInternal(parentSessionId: string): Promise<ManagedAgentList> {
+    const controller = await this.claimNamespace(parentSessionId, false);
+    if (controller) await this.reconcileOwnedSessions(parentSessionId);
+    const parent = controller ? await this.store.update(parentSessionId, async (latestParent) => (
       this.reapExpiredReservations(latestParent)
-    ));
+    )) : await this.requireSession(parentSessionId);
     this.assertRootNamespace(parent);
+    const diagnostics: Array<{ agentId: string; reason: string }> = [];
+    const observations = new Map<string, Promise<RuntimeObservation>>();
+    const interruptions: SessionState[] = [];
     const entries = await Promise.all(parent.children.map(async (link) => {
-      const child = await this.store.load(link.agentId);
+      const child = await this.store.load(link.agentId, parent).catch((error: unknown) => {
+        currentOperation()?.signal.throwIfAborted();
+        diagnostics.push({ agentId: link.agentId, reason: String(error) });
+        return undefined;
+      });
       if (!child || child.epoch !== link.epoch) {
+        if (!diagnostics.some((entry) => entry.agentId === link.agentId)) diagnostics.push({ agentId: link.agentId, reason: "Managed binding is missing or its epoch changed; capacity is retained" });
         return {
           agent: managedAgentFromLink(link, "interrupted"),
-          activeProcessId: undefined,
+          activeProcessId: link.launch.processInstanceId,
         };
       }
       this.assertDirectOwnership(parent, link, child);
       this.assertManagedLeaf(child);
-      if (
-        child.runtime.status === "closed"
-        || child.runtime.status === "interrupted"
-        || child.runtime.status === "errored"
-      ) {
-        return { agent: toManagedAgent(child), activeProcessId: undefined };
+      const processId = child.runtime.processInstanceId ?? link.launch.processInstanceId;
+      let observation = observations.get(processId);
+      if (!observation) {
+        observation = this.observeRuntime(child.runtime.tmux);
+        observations.set(processId, observation);
       }
-      const alive = child.runtime.status === "closing" || (
-        child.runtime.tmux !== undefined
-        && await this.runtime.isAlive(child.runtime.tmux)
-      );
+      const observed = await observation;
+      if (observed.reason && observed.process === "unknown") diagnostics.push({ agentId: child.sessionId, reason: observed.reason });
+      const alive = child.runtime.status === "closing" || observed.process !== "exited";
       if (!alive) {
-        const interrupted = await this.markInterrupted(child);
+        if (controller && child.runtime.status !== "interrupted") interruptions.push(child);
+        const interrupted = await this.markInterrupted(child, false);
         return {
           agent: toManagedAgent(interrupted),
           activeProcessId: undefined,
@@ -675,9 +808,24 @@ export class SubagentManager {
         activeProcessId: child.runtime.processInstanceId ?? link.launch.processInstanceId,
       };
     }));
+    if (interruptions.length) await this.store.update(parentSessionId, latest => ({
+      ...latest,
+      control: { ...latest.control, tombstones: latest.control?.tombstones ?? {}, children: {
+        ...latest.control?.children,
+        ...Object.fromEntries(interruptions.filter(child => !latest.control?.tombstones[child.sessionId]
+          && latest.control?.children[child.sessionId]?.status !== "closing")
+          .map(child => [child.sessionId, { epoch: child.epoch, status: "interrupted" as const, updatedAt: this.now() }])),
+      } },
+    }));
     const activeProcessIds = new Set(entries.flatMap((entry) => (
       entry.activeProcessId ? [entry.activeProcessId] : []
     )));
+    for (const [processId, managed] of Object.entries(parent.processes ?? {})) {
+      if (observations.has(processId)) continue;
+      const observed = await this.observeRuntime(managed.tmux);
+      if (managed.phase === "closing" || observed.process !== "exited") activeProcessIds.add(processId);
+      if (observed.reason) diagnostics.push({ agentId: processId, reason: observed.reason });
+    }
     const pendingProcessIds = new Set(parent.reservations.flatMap((reservation) => (
       activeProcessIds.has(reservation.processInstanceId)
         ? []
@@ -686,6 +834,7 @@ export class SubagentManager {
     const used = activeProcessIds.size + pendingProcessIds.size;
     return {
       agents: entries.map((entry) => entry.agent),
+      ...(diagnostics.length ? { diagnostics } : {}),
       capacity: {
         active: activeProcessIds.size,
         pending: pendingProcessIds.size,
@@ -700,10 +849,11 @@ export class SubagentManager {
     agentId: string,
     text: string,
     delivery: PromptDelivery,
+    signal?: AbortSignal,
   ): Promise<ManagedPromptResult> {
-    return this.withPromptLock(agentId, () => (
+    return this.runOperation(parentSessionId, this.promptAckTimeoutMs + 5_000, signal, () => this.withPromptLock(agentId, () => (
       this.deliverPrompt(parentSessionId, agentId, text, delivery)
-    ));
+    )));
   }
 
   private async deliverPrompt(
@@ -712,8 +862,9 @@ export class SubagentManager {
     text: string,
     delivery: PromptDelivery,
   ): Promise<ManagedPromptResult> {
+    await this.claimNamespace(parentSessionId);
     const { wireText, deliveryId, marker } = createPromptEnvelope(text);
-    const { child } = await this.requireDirectSession(parentSessionId, agentId);
+    const { child, parent } = await this.requireDirectSession(parentSessionId, agentId);
     if (child.runtime.status !== "running" && child.runtime.status !== "settled") {
       throw new Error(`Managed child is not running: ${agentId}`);
     }
@@ -724,15 +875,19 @@ export class SubagentManager {
     }
 
     const baselineCursor = await this.readPromptBaseline(child);
+    await this.store.recordDelivery(parent, child, deliveryId, delivery);
     await this.beforePrompt?.(parentSessionId, child);
-    await this.runtime.sendPrompt(locator, wireText, delivery);
-    const confirmation = await this.waitForPromptConfirmation({
-      child,
-      locator,
-      deliveryId,
-      marker,
-      after: baselineCursor,
-    });
+    const operation = currentOperation();
+    if (operation) operation.interruptionError = (reason) => new DeliveryUnconfirmedError(deliveryId, reason);
+    let confirmation: PromptConfirmation;
+    try {
+      if (operation) await operation.run(() => this.runtime.sendPrompt(locator, wireText, delivery));
+      else await this.runtime.sendPrompt(locator, wireText, delivery);
+      confirmation = await this.waitForPromptConfirmation({ child, locator, deliveryId, marker, after: baselineCursor });
+    } catch (error) {
+      if (error instanceof DeliveryUnconfirmedError) throw error;
+      throw new DeliveryUnconfirmedError(deliveryId, error);
+    }
     return {
       agent: {
         ...toManagedAgent(child),
@@ -852,6 +1007,7 @@ export class SubagentManager {
         throw new Error(`Subagent namespace is closing: ${parentSessionId}`);
       }
       this.assertRootNamespace(parent);
+      if (parent.control?.closingAll) throw new Error(`Subagent namespace is closing: ${parentSessionId}`);
       const cleanedParent = await this.reapExpiredReservations(parent);
       const activeProcessIds = await this.activeProcessIds(cleanedParent);
       const pendingProcessIds = new Set(cleanedParent.reservations.flatMap((candidate) => (
@@ -873,7 +1029,7 @@ export class SubagentManager {
   }
 
   private async reapExpiredReservations(parent: SessionState): Promise<SessionState> {
-    const registered = await this.store.list();
+    const registered = await this.store.listOwned(parent);
     const retained: SpawnReservation[] = [];
     for (const reservation of parent.reservations) {
       const expiresAt = Date.parse(reservation.expiresAt);
@@ -887,7 +1043,10 @@ export class SubagentManager {
         retained.push(reservation);
         continue;
       }
-      if (!reservation.tmux) continue;
+      if (!reservation.tmux) {
+        if (reservation.launchState !== "reserved") retained.push(reservation);
+        continue;
+      }
       try {
         await this.runtime.close(reservation.tmux);
         await this.confirmClosed(reservation.tmux);
@@ -915,7 +1074,7 @@ export class SubagentManager {
         candidate.reservationId === reservationId
         && candidate.processInstanceId === reservation.processInstanceId
       ))) {
-        const child = (await this.store.list()).find((state) => (
+        const child = (await this.store.listOwned(parent)).find((state) => (
           matchesReservation(state, parent, { ...reservation, tmux: locator })
         ));
         if (!child) throw new Error(`Spawn reservation is no longer active: ${reservationId}`);
@@ -934,13 +1093,14 @@ export class SubagentManager {
   }
 
   private async activeProcessIds(parent: SessionState): Promise<Set<string>> {
+    const unknown = new Set<string>();
     const candidates = new Map<string, {
       child: SessionState;
       processInstanceId: string;
     }>();
     for (const link of parent.children) {
-      const child = await this.store.load(link.agentId);
-      if (!child || child.epoch !== link.epoch) continue;
+      const child = await this.store.load(link.agentId, parent).catch(() => undefined);
+      if (!child || child.epoch !== link.epoch) { unknown.add(link.launch.processInstanceId); continue; }
       this.assertDirectOwnership(parent, link, child);
       this.assertManagedLeaf(child);
       candidates.set(child.sessionId, {
@@ -949,7 +1109,7 @@ export class SubagentManager {
           ?? link.launch.processInstanceId,
       });
     }
-    for (const child of await this.store.list()) {
+    for (const child of await this.store.listOwned(parent)) {
       if (
         candidates.has(child.sessionId)
         || child.parent?.sessionId !== parent.sessionId
@@ -966,32 +1126,63 @@ export class SubagentManager {
       });
     }
 
-    const active = new Set<string>();
+    const active = new Set<string>(unknown);
+    const observations = new Map<string, RuntimeObservation>();
     for (const { child, processInstanceId } of candidates.values()) {
       if (child.runtime.status === "closing") {
         active.add(processInstanceId);
         continue;
       }
-      if (
-        child.runtime.status !== "starting"
-        && child.runtime.status !== "running"
-        && child.runtime.status !== "settled"
-      ) {
-        continue;
-      }
-      if (child.runtime.tmux && await this.runtime.isAlive(child.runtime.tmux)) {
+      if (active.has(processInstanceId)) continue;
+      const observation = observations.get(processInstanceId) ?? await this.observeRuntime(child.runtime.tmux);
+      observations.set(processInstanceId, observation);
+      if (observation.process !== "exited") {
         active.add(processInstanceId);
       } else {
-        await this.markInterrupted(child);
+        await this.markInterrupted(child, false);
       }
+    }
+    const bound = new Set([...candidates.values()].map((entry) => entry.processInstanceId));
+    for (const [processId, managed] of Object.entries(parent.processes ?? {})) {
+      if (bound.has(processId) || active.has(processId)) continue;
+      if (managed.phase === "closing" || (await this.observeRuntime(managed.tmux)).process !== "exited") active.add(processId);
     }
     return active;
   }
 
+  private async retireProcesses(parentId: string, processIds: ReadonlySet<string>): Promise<void> {
+    if (!processIds.size) return;
+    await this.store.update(parentId, (parent) => ({
+      ...parent,
+      processes: Object.fromEntries(Object.entries(parent.processes ?? {}).filter(([id]) => !processIds.has(id))),
+      control: { ...parent.control, children: parent.control?.children ?? {}, tombstones: parent.control?.tombstones ?? {},
+        retiredProcesses: { ...parent.control?.retiredProcesses, ...Object.fromEntries([...processIds].map((id) => [id, true as const])) } },
+    }));
+  }
+
+  private async observeRuntime(locator?: TmuxLocator, options?: RuntimeQueryOptions): Promise<RuntimeObservation> {
+    if (!locator) return { identity: "unknown", process: "unknown", terminal: "unknown", promptReady: false, reason: "Runtime locator is unavailable" };
+    const operation = currentOperation();
+    const queryOptions = { ...options, signal: options?.signal ?? operation?.signal, timeout: operation?.remainingMs };
+    if (this.runtime.observe) return operation
+      ? operation.run(() => this.runtime.observe!(locator, queryOptions))
+      : this.runtime.observe(locator, queryOptions);
+    try {
+      const alive = await (operation ? operation.run(() => this.runtime.isAlive(locator, queryOptions)) : this.runtime.isAlive(locator, queryOptions));
+      return { identity: "matched", process: alive ? "alive" : "exited", terminal: alive ? "present" : "absent", promptReady: alive, locator };
+    } catch (error) {
+      queryOptions.signal?.throwIfAborted();
+      return { identity: "unknown", process: "unknown", terminal: "unknown", promptReady: false, reason: String(error) };
+    }
+  }
+
   private async confirmClosed(locator: TmuxLocator): Promise<void> {
-    const deadline = Date.now() + this.closeTimeoutMs;
-    while (await this.runtime.isAlive(locator)) {
-      if (Date.now() >= deadline) {
+    const deadline = performance.now() + this.closeTimeoutMs;
+    while (true) {
+      const observed = await this.observeRuntime(locator);
+      if (observed.process === "exited" && observed.terminal === "absent") return;
+      if (observed.identity !== "matched" && observed.terminal !== "absent") throw new Error(observed.reason ?? "Close outcome is unknown; capacity is retained");
+      if (performance.now() >= deadline) {
         throw new Error(`Timed out waiting for tmux window to close: ${locator.windowId}`);
       }
       await this.sleep(this.pollIntervalMs);
@@ -1002,9 +1193,12 @@ export class SubagentManager {
     parentSessionId: string,
     agentId: string,
   ): Promise<{ parent: SessionState; child: SessionState }> {
-    await this.reconcileOwnedSessions(parentSessionId);
-    const parent = await this.requireSession(parentSessionId);
+    let parent = await this.requireSession(parentSessionId);
     this.assertRootNamespace(parent);
+    if (!parent.children.some((link) => link.agentId === agentId) && await this.claimNamespace(parentSessionId, false)) {
+      await this.reconcileOwnedSessions(parentSessionId);
+      parent = await this.requireSession(parentSessionId);
+    }
     const link = getDirectChild(parent, agentId);
     const child = await this.requireSession(agentId);
     this.assertDirectOwnership(parent, link, child);
@@ -1017,12 +1211,12 @@ export class SubagentManager {
     this.assertRootNamespace(parent);
     const linkedIds = new Set(parent.children.map((child) => child.agentId));
     for (const link of parent.children) {
-      const child = await this.store.load(link.agentId);
+      const child = await this.store.load(link.agentId, parent).catch(() => undefined);
       if (!child || child.epoch !== link.epoch) continue;
       this.assertDirectOwnership(parent, link, child);
       this.assertManagedLeaf(child);
     }
-    const discovered = (await this.store.list()).filter((state) => (
+    const discovered = (await this.store.listOwned(parent)).filter((state) => (
       !linkedIds.has(state.sessionId)
       && state.parent?.sessionId === parent.sessionId
       && state.parent.epoch === parent.epoch
@@ -1048,25 +1242,25 @@ export class SubagentManager {
     });
   }
 
-  private async markInterrupted(child: SessionState): Promise<SessionState> {
-    return this.store.update(child.sessionId, (latest) => {
-      if (
-        latest.epoch !== child.epoch
-        || (
-          latest.runtime.status !== "starting"
-          && latest.runtime.status !== "running"
-          && latest.runtime.status !== "settled"
-        )
-      ) {
-        return latest;
-      }
+  private async markInterrupted(child: SessionState, persist = true): Promise<SessionState> {
+    // Exit observations are parent facts, not child lifecycle events.
+    if (persist && child.parent && await this.claimNamespace(child.parent.sessionId, false)) await this.recordControlStatus(child, "interrupted");
+    return { ...child, runtime: { ...child.runtime, status: "interrupted", busy: false } };
+  }
+
+  private async recordControlStatus(child: SessionState, status: "closing" | "interrupted"): Promise<void> {
+    if (!child.parent) throw new Error("Missing managed child ownership");
+    await this.store.update(child.parent.sessionId, (parent) => {
+      if (parent.epoch !== child.parent!.epoch) throw new Error("Subagent namespace epoch changed");
       return {
-        ...latest,
-        runtime: {
-          ...latest.runtime,
-          status: "interrupted",
-          busy: false,
-          updatedAt: this.now(),
+        ...parent,
+        ...(status === "closing" && child.launch && parent.processes?.[child.launch.processInstanceId] ? {
+          processes: { ...parent.processes, [child.launch.processInstanceId]: { ...parent.processes[child.launch.processInstanceId]!, phase: "closing" as const } },
+        } : {}),
+        control: {
+          ...parent.control,
+          tombstones: parent.control?.tombstones ?? {},
+          children: { ...parent.control?.children, [child.sessionId]: { epoch: child.epoch, status, updatedAt: this.now() } },
         },
       };
     });
@@ -1112,7 +1306,7 @@ export class SubagentManager {
   ): Promise<SessionState> {
     const deadline = Date.now() + this.registrationTimeoutMs;
     while (true) {
-      const matches = (await this.store.list()).filter((state) => (
+      const matches = (await this.store.listOwned(parent)).filter((state) => (
         matchesReservation(state, parent, reservation)
       ));
       if (matches.length > 0) {

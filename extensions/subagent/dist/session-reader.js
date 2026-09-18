@@ -1,4 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { setImmediate as yieldToLoop } from "node:timers/promises";
+import { currentOperation } from "./operation.js";
 import { CursorError, decodeTurnsPageCursor, encodeTurnsPageCursor, decodeActivityCursor, decodeDetailCursor, encodeActivityCursor, encodeDetailCursor, } from "./cursor.js";
 const ASSISTANT_TEXT_MAX_BYTES = 64 * 1024;
 const DETAIL_PAGE_MAX_BYTES = 16 * 1024;
@@ -8,7 +10,7 @@ const SUMMARY_WARNING_LIMIT = 20;
 const SUMMARY_WARNING_MAX_BYTES = 512;
 /** Confirms native user persistence without applying presentation limits or pagination. */
 export async function hasPersistedPrompt(options) {
-    const { header, entries } = await readCompleteEntries(options.sessionFile);
+    const { header, entries } = await readSessionSnapshot(options.sessionFile);
     if (header.version !== 3)
         throw new Error(`Unsupported Pi session version: ${String(header.version)}`);
     if (header.id !== options.agentId)
@@ -21,7 +23,10 @@ export async function hasPersistedPrompt(options) {
     });
 }
 export async function readSessionView(options) {
-    const { header, entries, warnings } = await readCompleteEntries(options.sessionFile);
+    const signal = options.signal ?? currentOperation()?.signal;
+    signal?.throwIfAborted();
+    const { header, entries, warnings } = options.snapshot ?? await readSessionSnapshot(options.sessionFile, signal);
+    signal?.throwIfAborted();
     if (header.version !== 3) {
         throw new Error(`Unsupported Pi session version: ${String(header.version)}`);
     }
@@ -204,38 +209,58 @@ function readActivityDetail(options) {
             : {}),
     };
 }
-async function readCompleteEntries(sessionFile) {
-    const content = await readFile(sessionFile, "utf8");
-    const segments = content.split("\n");
-    if (!content.endsWith("\n"))
-        segments.pop();
-    const lines = segments.filter((line) => line.trim().length > 0);
-    if (lines.length === 0)
-        throw new Error("Pi session has no complete header");
-    const values = lines.map((line, index) => {
-        try {
-            const value = JSON.parse(line);
-            if (!isRecord(value))
-                throw new Error("entry is not an object");
-            return value;
+export async function readSessionSnapshot(sessionFile, signal = currentOperation()?.signal) {
+    signal?.throwIfAborted();
+    const stream = createReadStream(sessionFile, { encoding: "utf8", highWaterMark: 64 * 1024, signal });
+    let pending = "";
+    let header;
+    let lineNumber = 0;
+    const entries = [], warnings = [];
+    try {
+        for await (const chunk of stream) {
+            signal?.throwIfAborted();
+            pending += chunk;
+            let newline;
+            while ((newline = pending.indexOf("\n")) >= 0) {
+                const line = pending.slice(0, newline);
+                pending = pending.slice(newline + 1);
+                if (!line.trim())
+                    continue;
+                lineNumber++;
+                let value;
+                try {
+                    const parsed = JSON.parse(line);
+                    if (!isRecord(parsed))
+                        throw new Error("entry is not an object");
+                    value = parsed;
+                }
+                catch (error) {
+                    throw new Error(`Invalid Pi session JSONL at complete line ${lineNumber}`, { cause: error });
+                }
+                if (!header) {
+                    if (value.type !== "session" || typeof value.id !== "string")
+                        throw new Error("Invalid Pi session header");
+                    header = value;
+                }
+                else {
+                    if (!isKnownEntryType(value.type))
+                        warnings.push(`Unknown Pi session entry type: ${String(value.type)}`);
+                    validateEntryBase(value, entries.length + 1);
+                    entries.push({ value, position: entries.length + 1 });
+                }
+                if (lineNumber % 64 === 0) {
+                    await yieldToLoop(undefined, { signal });
+                    signal?.throwIfAborted();
+                }
+            }
         }
-        catch (error) {
-            throw new Error(`Invalid Pi session JSONL at complete line ${index + 1}`, { cause: error });
-        }
-    });
-    const header = values[0];
-    if (header.type !== "session" || typeof header.id !== "string") {
-        throw new Error("Invalid Pi session header");
+        if (!header)
+            throw new Error("Pi session has no complete header");
+        return { header, entries, warnings };
     }
-    const warnings = [];
-    const entries = values.slice(1).map((value, index) => {
-        if (!isKnownEntryType(value.type)) {
-            warnings.push(`Unknown Pi session entry type: ${String(value.type)}`);
-        }
-        validateEntryBase(value, index + 1);
-        return { value, position: index + 1 };
-    });
-    return { header, entries, warnings };
+    finally {
+        stream.destroy();
+    }
 }
 function selectActiveBranch(entries, leafId) {
     if (entries.length === 0 || leafId === null)

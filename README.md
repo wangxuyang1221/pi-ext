@@ -329,7 +329,7 @@ subagent_wait
 subagent_close
 ```
 
-managed child 仍加载 lifecycle hooks 并写入 runtime state，但不注册 subagent 编排工具。合法管理拓扑只有 root 到 direct child；`target: "all"` 也只处理当前 root 的 direct children。每个 child 固定对应一个 tmux window 和一个 pane；投递前会验证登记的 session、window、pane、进程和 pane 模式仍一致。
+managed child 仍加载 lifecycle hooks 并写入 runtime state，但不注册 subagent 编排工具。合法管理拓扑只有 root 到 direct child；`target: "all"` 也只处理当前 root 的 direct children。每个 child 固定对应一个 tmux window 和一个 pane；投递前会验证 server、pane、进程实例和 pane 模式。session 改名或 pane 移动只有在实例证据仍匹配时才被接受，位置不匹配不等于进程死亡。
 
 初始 task 和后续 prompt 都采用 at-least-once 投递。每条消息会在首行加入 `[subagent:<12-char-id>]`，该标识会进入 child 模型上下文；只有 Pi 原生 session 出现对应 user turn，或 TUI 显示对应 `Steering:`/`Follow-up:` pending 项时才算成功。`subagent_prompt` 成功结果会附带 `deliveryId` 和 `confirmation`。返回的 `settledCursor` 绑定本次投递；child 消费对应 user 消息时，把运行代次 receipt 写入原生 session 的 custom entry。`subagent_wait` 只在该代次完成后返回 settled，不会把投递期间上一轮的结束当成本次完成。提交后 1 秒仍无证据时返回 `delivery_unconfirmed`，但 child 可能已经接受消息；扩展不会自动重试，调用方重试可能产生重复任务。
 
@@ -337,7 +337,7 @@ managed child 仍加载 lifecycle hooks 并写入 runtime state，但不注册 s
 
 每个 root namespace 默认最多占用 3 个 slot。`pending`、`starting`、`running`、`settled` 和 `closing` 均占用 slot；已确认进程死亡的 `interrupted` 不占用。并发 spawn 使用持久化 reservation 防止超卖；同一 Pi 进程切换 session 产生的 direct-child aliases 按 `processInstanceId` 去重。可通过正整数环境变量 `PI_SUBAGENT_MAX_ACTIVE` 调整上限。
 
-`subagent_list` 返回 `{ agents, capacity }`，其中容量结构为：
+`subagent_list` 返回 `{ agents, capacity, diagnostics? }`。会话切换、身份未知和当前成员损坏均保留进程名额；无关 namespace 的坏记录不阻断当前管理。容量结构为：
 
 ```json
 {
@@ -356,7 +356,7 @@ managed child 仍加载 lifecycle hooks 并写入 runtime state，但不注册 s
 
 `subagent_close` 是终结操作：先停止并确认 Pi 进程与 tmux window 已退出，再解除 direct-child 关系并删除 Extension 状态，从而释放 slot。关闭失败或确认超时时保留关系、状态和 slot，以便重试。终态 child 若重新可达，单目标 close 仍核验并关闭对应 runtime；共享进程的历史 alias 不得关闭活跃 sibling。未知 tmux 查询错误会向上传递，不当作死亡证明。成功关闭不会删除或修改 Pi 原生 session JSONL、session 目录或项目文件。
 
-扩展要求当前 parent 使用持久化 Pi session；`--no-session` 模式下工具会明确拒绝。默认管理快照位于 Pi agent directory 的 `subagents/sessions/<sessionId>/state.json`，每个 session 独立原子写入。可使用以下环境变量：
+扩展要求当前 parent 使用持久化 Pi session；`--no-session` 模式下工具会明确拒绝。默认管理快照位于 Pi agent directory 的 `subagents/sessions/<sessionId>/state.json`。parent 控制事实与 child 生命周期分开写入，跨进程锁保护更新；同一 namespace 只允许一个管理控制者。状态协议已升级到 v3，升级前必须关闭旧 child、停止旧写入者。离线转换、回退、环境契约和超时边界见 [runtime reliability](docs/subagent-runtime-reliability.md)。可使用以下环境变量：
 
 ```text
 PI_SUBAGENT_MAX_ACTIVE

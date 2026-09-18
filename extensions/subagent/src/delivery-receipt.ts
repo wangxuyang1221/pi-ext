@@ -1,4 +1,5 @@
 import { open } from "node:fs/promises";
+import { currentOperation } from "./operation.js";
 
 export const DELIVERY_RECEIPT_TYPE = "subagent_delivery";
 
@@ -20,12 +21,14 @@ export class DeliveryReceiptReader {
   private oversized = false;
   private generation?: number;
 
-  async read(sessionFile: string, expected: Omit<DeliveryReceipt, "generation">): Promise<number | undefined> {
+  async read(sessionFile: string, expected: Omit<DeliveryReceipt, "generation">, signal = currentOperation()?.signal): Promise<number | undefined> {
+    signal?.throwIfAborted();
     if (this.generation !== undefined) return this.generation;
     const file = await open(sessionFile, "r");
     try {
       const buffer = Buffer.alloc(64 * 1024);
       while (true) {
+        signal?.throwIfAborted();
         const { bytesRead } = await file.read(buffer, 0, buffer.length, this.position);
         if (bytesRead === 0) return undefined;
         this.position += bytesRead;

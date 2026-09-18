@@ -6,7 +6,9 @@ import { createProvider, createAssistantMessageEventStream, type AssistantMessag
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import subagentExtension from "../../src/index.js";
 
-export default function offlineChild(pi: ExtensionAPI): void {
+export default async function offlineChild(pi: ExtensionAPI): Promise<void> {
+  const extension = process.env.PI_SUBAGENT_FIXTURE_DIST === "1"
+    ? (await import("../../dist/index.js")).default : subagentExtension;
   // This fixture has no network transport and cannot use stored credentials.
   globalThis.fetch = async () => { throw new Error("Network disabled in offline fixture"); };
   const model: Model<any> = { id: "deterministic", name: "Offline fixture", provider: "subagent-fixture",
@@ -45,5 +47,5 @@ export default function offlineChild(pi: ExtensionAPI): void {
   pi.registerProvider(createProvider({ id: model.provider, models: [model],
     auth: { apiKey: { name: "Offline", resolve: async () => ({ auth: {} }) } },
     api: { stream, streamSimple: stream } }));
-  subagentExtension(pi);
+  extension(pi);
 }

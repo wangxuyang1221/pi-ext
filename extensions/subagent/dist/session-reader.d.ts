@@ -25,6 +25,8 @@ export interface ToolActivity {
 }
 export type SessionActivity = AssistantActivity | ToolActivity;
 export interface ReadSessionViewOptions {
+    signal?: AbortSignal;
+    snapshot?: Awaited<ReturnType<typeof readSessionSnapshot>>;
     sessionFile: string;
     agentId: string;
     epoch: string;
@@ -89,6 +91,10 @@ export interface ActivityDetailViewResult {
     nextDetailCursor?: string;
 }
 export type SessionViewResult = RecentActivityViewResult | TurnsViewResult | ActivityDetailViewResult;
+interface ParsedEntry {
+    value: Record<string, unknown>;
+    position: number;
+}
 /** Confirms native user persistence without applying presentation limits or pagination. */
 export declare function hasPersistedPrompt(options: {
     sessionFile: string;
@@ -98,4 +104,9 @@ export declare function hasPersistedPrompt(options: {
     marker: string;
 }): Promise<boolean>;
 export declare function readSessionView(options: ReadSessionViewOptions): Promise<SessionViewResult>;
+export declare function readSessionSnapshot(sessionFile: string, signal?: AbortSignal | undefined): Promise<{
+    header: Record<string, unknown>;
+    entries: ParsedEntry[];
+    warnings: string[];
+}>;
 //# sourceMappingURL=session-reader.d.ts.map

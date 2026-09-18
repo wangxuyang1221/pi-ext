@@ -2,7 +2,7 @@ import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { type ManagedTmuxRuntime } from "./manager.js";
 import { SessionStateStore, type TmuxLocator } from "./state-store.js";
 type RuntimeWithPaneLookup = ManagedTmuxRuntime & {
-    locatePane?: (paneId: string) => Promise<TmuxLocator>;
+    locatePane?: (paneId: string, processInstanceId?: string) => Promise<TmuxLocator>;
 };
 export interface SubagentExtensionOptions {
     env?: Record<string, string | undefined>;

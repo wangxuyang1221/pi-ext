@@ -43,6 +43,8 @@
     "extensions/mcp/dist",
     "extensions/permissions/dist",
     "extensions/subagent/dist",
+    "docs/subagent-runtime-reliability.md",
+    "docs/subagent-runtime-reliability-acceptance.md",
     "extensions/goal/dist",
     "extensions/goal/UPSTREAM.md",
     "extensions/goal/LICENSE",

@@ -6,7 +6,7 @@ import { waitForSettled } from "../src/wait.js";
 import type { SessionState } from "../src/state-store.js";
 
 const baseState: SessionState = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   sessionId: "agent-a",
   epoch: "epoch-a",
   runtime: {
@@ -21,6 +21,20 @@ const baseState: SessionState = {
   children: [],
   reservations: [],
 };
+
+test("times out a hanging query and propagates cancellation to it", async () => {
+  let querySignal: AbortSignal | undefined;
+  const waiting = waitForSettled({
+    agentId: "agent-a", afterSettled: encodeSettledCursor({ agentId: "agent-a", epoch: "epoch-a", generation: 1 }),
+    timeoutMs: 10, readState: async () => baseState,
+    isAlive: async (_state, signal?: AbortSignal) => { querySignal = signal; return new Promise<boolean>(() => {}); },
+  });
+  let timer: ReturnType<typeof setTimeout>;
+  const result = await Promise.race([waiting, new Promise<undefined>(resolve => { timer = setTimeout(resolve, 100); })]);
+  clearTimeout(timer!);
+  assert.equal(result?.outcome, "timeout");
+  assert.equal(querySignal?.aborted, true);
+});
 
 test("waits for a newer settled generation", async () => {
   const snapshots: SessionState[] = [

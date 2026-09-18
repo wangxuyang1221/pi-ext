@@ -31,6 +31,10 @@ test("lists switched sessions as direct children without including descendants",
       sessionFile: "/sessions/parent-a.jsonl",
       now: "2026-08-27T02:00:00.000Z",
     }));
+    await store.update("parent-a", (state) => ({ ...state, reservations: [{
+      reservationId: "registration-a", processInstanceId: "process-a",
+      createdAt: "2026-08-27T02:00:00.000Z", expiresAt: "2099-01-01T00:00:00.000Z", tmux: locator,
+    }] }));
     for (const agentId of ["child-old", "child-new"]) {
       await store.save(createSessionState({
         sessionId: agentId,
@@ -456,7 +460,7 @@ test("persists an interruption observed while waiting", async () => {
         epoch: "child-epoch",
         generation: 0,
       }),
-      timeoutMs: 100,
+      timeoutMs: 1_000,
     });
 
     assert.equal(result.outcome, "interrupted");

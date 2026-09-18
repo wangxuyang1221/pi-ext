@@ -8,6 +8,17 @@ export class SessionRuntimeHost {
     createEpoch;
     now;
     activeSessionId;
+    queue = Promise.resolve();
+    assertController;
+    setControllerGuard(guard) { this.assertController = guard; }
+    enqueue(work) {
+        const operation = this.queue.catch(() => undefined).then(async () => {
+            await this.assertController?.();
+            return work();
+        });
+        this.queue = operation;
+        return operation;
+    }
     constructor(options) {
         this.store = options.store;
         this.parent = options.parent;
@@ -18,30 +29,35 @@ export class SessionRuntimeHost {
     getActiveSessionId() {
         return this.activeSessionId;
     }
-    async startSession(options) {
+    startSession(options) {
+        return this.enqueue(() => this.startSessionInternal(options));
+    }
+    async startSessionInternal(options) {
         if (this.activeSessionId && this.activeSessionId !== options.sessionId) {
-            await this.shutdown();
+            await this.shutdownInternal();
         }
-        const existing = await this.store.load(options.sessionId);
-        let state = activateSession(existing, {
-            sessionId: options.sessionId,
-            cwd: options.cwd,
-            sessionFile: options.sessionFile,
-            now: this.now(),
-            ...(this.parent ? { parent: this.parent } : {}),
-            ...(this.launch ? { launch: this.launch } : {}),
-            ...(options.pid === undefined ? {} : { pid: options.pid }),
-            ...(this.launch ? { processInstanceId: this.launch.processInstanceId } : {}),
-            ...(options.tmux ? { tmux: options.tmux } : {}),
-            createEpoch: this.createEpoch,
+        await this.store.mutate(options.sessionId, (existing) => {
+            let state = activateSession(existing, {
+                sessionId: options.sessionId,
+                cwd: options.cwd,
+                sessionFile: options.sessionFile,
+                now: this.now(),
+                ...(this.parent ? { parent: this.parent } : {}),
+                ...(this.launch ? { launch: this.launch } : {}),
+                ...(options.pid === undefined ? {} : { pid: options.pid }),
+                ...(this.launch ? { processInstanceId: this.launch.processInstanceId } : {}),
+                ...(options.tmux ? { tmux: options.tmux } : {}),
+                createEpoch: this.createEpoch,
+            });
+            const { leafId: _oldLeafId, ...runtime } = state.runtime;
+            state = { ...state, runtime: { ...runtime,
+                    ...(options.leafId === null ? {} : { leafId: options.leafId }),
+                    leafPinned: true,
+                    leafPosition: options.leafPosition,
+                    ...(options.configuration ? { configuration: options.configuration } : {}),
+                } };
+            return state;
         });
-        const { leafId: _oldLeafId, ...runtime } = state.runtime;
-        state = { ...state, runtime: { ...runtime,
-                ...(options.leafId === null ? {} : { leafId: options.leafId }),
-                leafPinned: true,
-                leafPosition: options.leafPosition,
-            } };
-        await this.store.save(state);
         this.activeSessionId = options.sessionId;
     }
     async agentStarted() {
@@ -51,7 +67,7 @@ export class SessionRuntimeHost {
         const deliveryId = promptDeliveryId(text);
         if (!this.parent || !this.activeSessionId || !deliveryId)
             return undefined;
-        const state = await this.store.load(this.activeSessionId);
+        const state = await this.store.loadRuntime(this.activeSessionId);
         if (!state || !state.runtime.busy || state.runtime.generation < 1)
             return undefined;
         return {
@@ -79,7 +95,8 @@ export class SessionRuntimeHost {
             };
         });
     }
-    async shutdown() {
+    shutdown() { return this.enqueue(() => this.shutdownInternal()); }
+    async shutdownInternal() {
         if (!this.activeSessionId)
             return;
         const sessionId = this.activeSessionId;
@@ -87,9 +104,11 @@ export class SessionRuntimeHost {
         this.activeSessionId = undefined;
     }
     async updateActive(updater) {
-        if (!this.activeSessionId)
-            return;
-        await this.store.update(this.activeSessionId, updater);
+        await this.enqueue(async () => {
+            if (!this.activeSessionId)
+                return;
+            await this.store.update(this.activeSessionId, updater);
+        });
     }
 }
 //# sourceMappingURL=runtime-host.js.map

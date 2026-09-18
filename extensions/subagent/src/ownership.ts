@@ -40,7 +40,15 @@ export function registerDirectChild(
     ? parent.children.map((candidate) => candidate.agentId === child.sessionId ? link : candidate)
     : [...parent.children, link];
 
-  return { ...parent, children };
+  const processId = child.launch.processInstanceId;
+  if (parent.control?.tombstones[child.sessionId] || parent.control?.retiredProcesses?.[processId]) {
+    throw new Error("Cannot register a terminally removed subagent instance");
+  }
+  const previousProcess = parent.processes?.[processId];
+  return { ...parent, children, processes: {
+    ...parent.processes,
+    [processId]: { registrationToken: child.parent.registrationToken, tmux: child.runtime.tmux ?? previousProcess?.tmux, phase: previousProcess?.phase ?? "active" },
+  } };
 }
 
 export function getDirectChild(parent: SessionState, agentId: string): ChildLink {

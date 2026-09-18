@@ -172,7 +172,7 @@ export function registerSubagentTools(pi, manager) {
                 cwd: ctx.cwd,
                 model: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
                 thinkingLevel: ctx.thinkingLevel,
-            });
+            }, _signal);
             const details = {
                 operation: "spawn",
                 ok: true,
@@ -196,7 +196,7 @@ export function registerSubagentTools(pi, manager) {
         parameters: promptParameters,
         async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
             const delivery = params.delivery ?? "follow_up";
-            const { agent, deliveryId, confirmation, } = await manager.prompt(currentSessionId(ctx), params.agentId, params.text, delivery);
+            const { agent, deliveryId, confirmation, } = await manager.prompt(currentSessionId(ctx), params.agentId, params.text, delivery, _signal);
             const details = {
                 operation: "prompt",
                 ok: true,
@@ -218,14 +218,14 @@ export function registerSubagentTools(pi, manager) {
         promptGuidelines: ["需要查找可复用的 subagent，或已有信息不足以判断状态和剩余容量时使用 subagent_list。不要通过反复调用 subagent_list 等待任务完成；需要等待时使用 subagent_wait。"],
         parameters: listParameters,
         async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
-            const { agents, capacity } = await manager.list(currentSessionId(ctx));
+            const { agents, capacity, diagnostics } = await manager.list(currentSessionId(ctx), _signal);
             const details = {
                 operation: "list",
                 ok: true,
                 agents: agents.map(toAgentDisplay),
                 capacity,
             };
-            return toolResult({ agents, capacity }, details);
+            return toolResult({ agents, capacity, ...(diagnostics ? { diagnostics } : {}) }, details);
         },
     }));
     pi.registerTool(withRenderer("read", {
@@ -266,7 +266,7 @@ export function registerSubagentTools(pi, manager) {
                         section: params.section,
                         ...(params.detailCursor === undefined ? {} : { detailCursor: params.detailCursor }),
                     };
-            const result = await manager.read(currentSessionId(ctx), params.agentId, readOptions);
+            const result = await manager.read(currentSessionId(ctx), params.agentId, readOptions, _signal);
             const summarizedActivity = result.view === "recent_activity"
                 ? result.activity
                 : result.view === "turns"
@@ -356,7 +356,7 @@ export function registerSubagentTools(pi, manager) {
         ],
         parameters: targetParameters,
         async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-            const affected = await manager.close(currentSessionId(ctx), params.target);
+            const affected = await manager.close(currentSessionId(ctx), params.target, _signal);
             const displays = affected.map(toAgentDisplay);
             const details = {
                 operation: "close",

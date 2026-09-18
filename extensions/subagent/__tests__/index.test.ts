@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { test, vi } from "vitest";
 
@@ -76,6 +76,49 @@ test("wires the public tools to Pi session lifecycle events", async () => {
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("releases the previous namespace controller when the root switches sessions", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-index-test-"));
+  const handlers = new Map<string, (...args: any[]) => unknown>();
+  try {
+    subagentExtension({ on: (name: string, handler: any) => handlers.set(name, handler), registerTool() {} } as never,
+      { env: { PATH: "/usr/bin" }, stateRoot: root });
+    let sessionId = "first";
+    const ctx = { cwd: root, sessionManager: { getSessionId: () => sessionId, getSessionFile: () => join(root, `${sessionId}.jsonl`), getLeafId: () => null, getEntries: () => [] } };
+    await handlers.get("session_start")!({}, ctx);
+    sessionId = "second";
+    await handlers.get("session_start")!({}, ctx);
+    await assert.rejects(stat(join(root, "controllers", "first")), { code: "ENOENT" });
+    assert.ok(await stat(join(root, "controllers", "second")));
+    await handlers.get("session_shutdown")!({});
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("production entry forwards effective agent and tmux configuration without parent pane or credentials", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-index-test-"));
+  try {
+    const handlers = new Map<string, (...args: any[]) => unknown>();
+    const tools = new Map<string, any>();
+    let environment: Record<string, string> | undefined;
+    const runtime: ManagedTmuxRuntime = {
+      async launch(options) { environment = options.environment; throw new Error("Captured launch"); },
+      async sendPrompt() {}, async capturePane() { return ""; }, async isAlive() { return false; }, async close() {},
+    };
+    const pi = { on: (name: string, handler: any) => handlers.set(name, handler), registerTool: (tool: any) => tools.set(tool.name, tool) };
+    subagentExtension(pi as never, { store: new SessionStateStore(root), stateRoot: root, nativeSessionRoot: join(root, "native"), runtime,
+      env: { PATH: "/usr/bin", PI_CODING_AGENT_DIR: join(root, "agent"), TMUX_PANE: "%parent", OPENAI_API_KEY: "do-not-transfer" },
+      tmuxPath: "./custom/tmux", piPath: "./custom/pi",
+    });
+    const ctx = { cwd: root, sessionManager: { getSessionId: () => "parent", getSessionFile: () => join(root, "parent.jsonl"), getLeafId: () => null, getEntries: () => [] } };
+    await handlers.get("session_start")!({}, ctx);
+    await tools.get("subagent_spawn").execute("call", { task: "Test" }, undefined, undefined, ctx).catch(() => undefined);
+    assert.equal(environment?.PI_CODING_AGENT_DIR, join(root, "agent"));
+    assert.equal(environment?.PI_SUBAGENT_TMUX_PATH, join(process.cwd(), "custom/tmux"));
+    assert.equal(environment?.PI_SUBAGENT_PI_PATH, join(process.cwd(), "custom/pi"));
+    assert.equal(environment?.TMUX_PANE, undefined);
+    assert.equal(environment?.OPENAI_API_KEY, undefined);
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test("fails fast when PI_SUBAGENT_MAX_ACTIVE is not a positive integer", () => {

@@ -6,6 +6,7 @@ import { test } from "vitest";
 import {
   SessionStateStore,
   createSessionState,
+  parseSessionState,
 } from "../src/state-store.js";
 
 test("writes each session state to its own atomic partition", async () => {
@@ -90,6 +91,64 @@ test("deletes only Extension state while preserving native Pi sessions", async (
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("rejects stale saves that would erase a completed generation", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-state-test-"));
+  try {
+    const store = new SessionStateStore(root);
+    const stale = createSessionState({ sessionId: "a", epoch: "e", cwd: root, sessionFile: "/a.jsonl", now: "now" });
+    await store.save(stale);
+    await store.update("a", (state) => ({ ...state, runtime: { ...state.runtime, generation: 1, settledGeneration: 1 } }));
+    await assert.rejects(new SessionStateStore(root).save(stale), /generation.*regress/);
+    assert.equal((await store.load("a"))?.runtime.settledGeneration, 1);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("rejects malformed process and control authority at the storage boundary", () => {
+  const state = createSessionState({ sessionId: "a", epoch: "e", cwd: "/repo", sessionFile: "/a.jsonl", now: "now" });
+  for (const fields of [
+    { processes: { p: { phase: "retired", registrationToken: "token" } } },
+    { processes: { p: { phase: "active" } } },
+    { control: { children: { child: { epoch: "e", status: "running", updatedAt: "now" } }, tombstones: {} } },
+    { control: { children: {}, tombstones: { child: false } } },
+    { control: { children: {}, tombstones: {}, closingAll: "false" } },
+  ]) assert.throws(() => parseSessionState({ ...state, ...fields }, "a"), /Invalid subagent state/u);
+});
+
+test("rejects malformed runtime counters at the storage boundary", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-state-test-"));
+  try {
+    const store = new SessionStateStore(root);
+    const state = createSessionState({ sessionId: "a", epoch: "e", cwd: "/repo", sessionFile: "/a.jsonl", now: "now" });
+    await store.save(state);
+    await writeFile(store.statePath("a"), JSON.stringify({ ...state, runtime: { ...state.runtime, generation: -1 } }));
+    await assert.rejects(store.load("a"), /Invalid subagent state/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("preserves completed generations across independent stores", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-state-test-"));
+  try {
+    const parent = new SessionStateStore(root);
+    const child = new SessionStateStore(root);
+    await parent.save(createSessionState({ sessionId: "a", epoch: "e", cwd: "/repo", sessionFile: "/a.jsonl", now: "now" }));
+    let entered!: () => void;
+    const reading = new Promise<void>((resolve) => { entered = resolve; });
+    let release!: () => void;
+    const barrier = new Promise<void>((resolve) => { release = resolve; });
+    const closing = parent.update("a", async (state) => {
+      entered();
+      await barrier;
+      return { ...state, runtime: { ...state.runtime, status: "closing" } };
+    });
+    await reading;
+    const settling = child.update("a", (state) => ({ ...state, runtime: { ...state.runtime, generation: 1, settledGeneration: 1 } }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    release();
+    await Promise.all([closing, settling]);
+    assert.equal((await parent.load("a"))?.runtime.settledGeneration, 1);
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test("serializes concurrent updates for one session", async () => {

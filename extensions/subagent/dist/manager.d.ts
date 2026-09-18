@@ -1,7 +1,7 @@
 import { type ReadSessionViewOptions, type SessionActivity, type SessionViewResult } from "./session-reader.js";
 import type { SessionState, TmuxLocator } from "./state-store.js";
 import { SessionStateStore } from "./state-store.js";
-import type { PromptDelivery, TmuxLaunchOptions } from "./tmux-runtime.js";
+import type { PromptDelivery, TmuxLaunchOptions, RuntimeObservation, RuntimeQueryOptions } from "./tmux-runtime.js";
 import { type WaitForSettledResult } from "./wait.js";
 export declare const PI_SUBAGENT_MAX_ACTIVE = "PI_SUBAGENT_MAX_ACTIVE";
 export declare const PI_SUBAGENT_STATE_ROOT = "PI_SUBAGENT_STATE_ROOT";
@@ -11,8 +11,9 @@ export interface ManagedTmuxRuntime {
     launch(options: TmuxLaunchOptions): Promise<TmuxLocator>;
     sendPrompt(locator: TmuxLocator, text: string, delivery: PromptDelivery): Promise<void>;
     capturePane(locator: TmuxLocator): Promise<string>;
-    isAlive(locator: TmuxLocator): Promise<boolean>;
-    close(locator: TmuxLocator): Promise<void>;
+    isAlive(locator: TmuxLocator, options?: RuntimeQueryOptions): Promise<boolean>;
+    observe?(locator: TmuxLocator, options?: RuntimeQueryOptions): Promise<RuntimeObservation>;
+    close(locator: TmuxLocator, options?: RuntimeQueryOptions): Promise<void>;
 }
 export interface SubagentManagerOptions {
     store: SessionStateStore;
@@ -67,6 +68,10 @@ export interface SubagentCapacity {
 export interface ManagedAgentList {
     agents: ManagedAgent[];
     capacity: SubagentCapacity;
+    diagnostics?: Array<{
+        agentId: string;
+        reason: string;
+    }>;
 }
 export type PromptConfirmation = "session" | "steering_queue" | "follow_up_queue";
 export interface ManagedPromptResult {
@@ -77,7 +82,7 @@ export interface ManagedPromptResult {
 export declare class DeliveryUnconfirmedError extends Error {
     readonly deliveryId: string;
     readonly code = "delivery_unconfirmed";
-    constructor(deliveryId: string);
+    constructor(deliveryId: string, cause?: unknown);
 }
 export interface WaitManagedOptions {
     afterSettled: string;
@@ -119,17 +124,27 @@ export declare class SubagentManager {
     private readonly promptLocks;
     private readonly inFlightSpawns;
     private readonly closingNamespaces;
+    private readonly controllers;
+    private readonly controllerSignals;
+    private readonly operations;
+    private runOperation;
+    claimNamespace(sessionId: string, required?: boolean): Promise<boolean>;
+    controllerGuard(sessionId: string): Promise<() => Promise<void>>;
+    releaseNamespace(sessionId: string): Promise<void>;
     constructor(options: SubagentManagerOptions);
-    spawn(parentSessionId: string, options: SpawnSubagentOptions, defaults: SpawnDefaults): Promise<ManagedAgent>;
+    spawn(parentSessionId: string, options: SpawnSubagentOptions, defaults: SpawnDefaults, signal?: AbortSignal): Promise<ManagedAgent>;
     private spawnInternal;
-    close(parentSessionId: string, target: string): Promise<ManagedAgent[]>;
+    close(parentSessionId: string, target: string, signal?: AbortSignal): Promise<ManagedAgent[]>;
+    private closeInternal;
     private closeAll;
     private closeReservations;
     private closeDirect;
     wait(parentSessionId: string, agentId: string, options: WaitManagedOptions, signal?: AbortSignal): Promise<ManagedWaitResult>;
-    read(parentSessionId: string, agentId: string, options: Omit<ReadSessionViewOptions, "sessionFile" | "agentId" | "epoch" | "leafId" | "leafPosition">): Promise<SessionViewResult>;
-    list(parentSessionId: string): Promise<ManagedAgentList>;
-    prompt(parentSessionId: string, agentId: string, text: string, delivery: PromptDelivery): Promise<ManagedPromptResult>;
+    private waitInternal;
+    read(parentSessionId: string, agentId: string, options: Omit<ReadSessionViewOptions, "sessionFile" | "agentId" | "epoch" | "leafId" | "leafPosition">, signal?: AbortSignal): Promise<SessionViewResult>;
+    list(parentSessionId: string, signal?: AbortSignal): Promise<ManagedAgentList>;
+    private listInternal;
+    prompt(parentSessionId: string, agentId: string, text: string, delivery: PromptDelivery, signal?: AbortSignal): Promise<ManagedPromptResult>;
     private deliverPrompt;
     private withPromptLock;
     private readPromptBaseline;
@@ -138,10 +153,13 @@ export declare class SubagentManager {
     private reapExpiredReservations;
     private attachReservationLocator;
     private activeProcessIds;
+    private retireProcesses;
+    private observeRuntime;
     private confirmClosed;
     private requireDirectSession;
     private reconcileOwnedSessions;
     private markInterrupted;
+    private recordControlStatus;
     private assertRootNamespace;
     private assertManagedLeaf;
     private assertDirectOwnership;

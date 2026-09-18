@@ -38,7 +38,7 @@ async function fixture() {
   };
   const manager = new SubagentManager({ store, runtime, stateRoot: root, nativeSessionRoot: root,
     extensionPath: "unused", piPath: "unused", environment: {}, pollIntervalMs: 1,
-    promptAckTimeoutMs: 10, closeTimeoutMs: 10, registrationTimeoutMs: 10, maxActive: 1 });
+    promptAckTimeoutMs: 10, closeTimeoutMs: 1_000, registrationTimeoutMs: 10, maxActive: 1 });
   return { root, store, child, parent, sessionFile, runtime, manager,
     setAlive(value: boolean) { alive = value; }, getCloses: () => closes,
     cleanup: () => rm(root, { recursive: true, force: true }),
@@ -221,7 +221,7 @@ test("retains persisted progress in every view after interruption", async () => 
 test("keeps a registered spawn alive when list takes over before launch returns", async () => {
   const f = await fixture();
   try {
-    await f.store.update("parent", (parent) => ({ ...parent, children: [] }));
+    await f.store.update("parent", (parent) => ({ ...parent, children: [], processes: {} }));
     await f.store.delete("child");
     f.runtime.launch = async (options) => {
       const parent = JSON.parse(options.environment.PI_SUBAGENT_PARENT);
@@ -251,7 +251,7 @@ test("keeps a registered spawn alive when list takes over before launch returns"
 test.each(["process", "locator"])("rejects a registered spawn with mismatched runtime %s identity", async (mismatch) => {
   const f = await fixture();
   try {
-    await f.store.update("parent", (state) => ({ ...state, children: [] }));
+    await f.store.update("parent", (state) => ({ ...state, children: [], processes: {} }));
     await f.store.delete("child");
     f.runtime.launch = async (options) => {
       const parent = JSON.parse(options.environment.PI_SUBAGENT_PARENT);

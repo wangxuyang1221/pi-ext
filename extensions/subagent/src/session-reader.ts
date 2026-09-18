@@ -1,4 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { setImmediate as yieldToLoop } from "node:timers/promises";
+import { currentOperation } from "./operation.js";
 
 import {
   type ActivityDetailSection,
@@ -73,6 +75,8 @@ interface RawToolActivity {
 type RawSessionActivity = RawAssistantActivity | RawToolActivity;
 
 export interface ReadSessionViewOptions {
+  signal?: AbortSignal;
+  snapshot?: Awaited<ReturnType<typeof readSessionSnapshot>>;
   sessionFile: string;
   agentId: string;
   epoch: string;
@@ -186,7 +190,7 @@ interface ToolResultRecord {
 export async function hasPersistedPrompt(options: {
   sessionFile: string; agentId: string; epoch: string; after: string; marker: string;
 }): Promise<boolean> {
-  const { header, entries } = await readCompleteEntries(options.sessionFile);
+  const { header, entries } = await readSessionSnapshot(options.sessionFile);
   if (header.version !== 3) throw new Error(`Unsupported Pi session version: ${String(header.version)}`);
   if (header.id !== options.agentId) throw new Error("Session header id does not match the requested agent");
   const after = decodeActivityCursor(options.after, { ...options, view: "turns" }).position;
@@ -200,7 +204,10 @@ export async function hasPersistedPrompt(options: {
 export async function readSessionView(
   options: ReadSessionViewOptions,
 ): Promise<SessionViewResult> {
-  const { header, entries, warnings } = await readCompleteEntries(options.sessionFile);
+  const signal = options.signal ?? currentOperation()?.signal;
+  signal?.throwIfAborted();
+  const { header, entries, warnings } = options.snapshot ?? await readSessionSnapshot(options.sessionFile, signal);
+  signal?.throwIfAborted();
   if (header.version !== 3) {
     throw new Error(`Unsupported Pi session version: ${String(header.version)}`);
   }
@@ -402,40 +409,45 @@ function readActivityDetail(options: {
   };
 }
 
-async function readCompleteEntries(sessionFile: string): Promise<{
-  header: Record<string, unknown>;
-  entries: ParsedEntry[];
-  warnings: string[];
+export async function readSessionSnapshot(sessionFile: string, signal = currentOperation()?.signal): Promise<{
+  header: Record<string, unknown>; entries: ParsedEntry[]; warnings: string[];
 }> {
-  const content = await readFile(sessionFile, "utf8");
-  const segments = content.split("\n");
-  if (!content.endsWith("\n")) segments.pop();
-  const lines = segments.filter((line) => line.trim().length > 0);
-  if (lines.length === 0) throw new Error("Pi session has no complete header");
-
-  const values = lines.map((line, index) => {
-    try {
-      const value: unknown = JSON.parse(line);
-      if (!isRecord(value)) throw new Error("entry is not an object");
-      return value;
-    } catch (error) {
-      throw new Error(`Invalid Pi session JSONL at complete line ${index + 1}`, { cause: error });
+  signal?.throwIfAborted();
+  const stream = createReadStream(sessionFile, { encoding: "utf8", highWaterMark: 64 * 1024, signal });
+  let pending = "";
+  let header: Record<string, unknown> | undefined;
+  let lineNumber = 0;
+  const entries: ParsedEntry[] = [], warnings: string[] = [];
+  try {
+    for await (const chunk of stream) {
+      signal?.throwIfAborted();
+      pending += chunk;
+      let newline: number;
+      while ((newline = pending.indexOf("\n")) >= 0) {
+        const line = pending.slice(0, newline);
+        pending = pending.slice(newline + 1);
+        if (!line.trim()) continue;
+        lineNumber++;
+        let value: Record<string, unknown>;
+        try {
+          const parsed: unknown = JSON.parse(line);
+          if (!isRecord(parsed)) throw new Error("entry is not an object");
+          value = parsed;
+        } catch (error) { throw new Error(`Invalid Pi session JSONL at complete line ${lineNumber}`, { cause: error }); }
+        if (!header) {
+          if (value.type !== "session" || typeof value.id !== "string") throw new Error("Invalid Pi session header");
+          header = value;
+        } else {
+          if (!isKnownEntryType(value.type)) warnings.push(`Unknown Pi session entry type: ${String(value.type)}`);
+          validateEntryBase(value, entries.length + 1);
+          entries.push({ value, position: entries.length + 1 });
+        }
+        if (lineNumber % 64 === 0) { await yieldToLoop(undefined, { signal }); signal?.throwIfAborted(); }
+      }
     }
-  });
-  const header = values[0];
-  if (header.type !== "session" || typeof header.id !== "string") {
-    throw new Error("Invalid Pi session header");
-  }
-
-  const warnings: string[] = [];
-  const entries = values.slice(1).map((value, index) => {
-    if (!isKnownEntryType(value.type)) {
-      warnings.push(`Unknown Pi session entry type: ${String(value.type)}`);
-    }
-    validateEntryBase(value, index + 1);
-    return { value, position: index + 1 };
-  });
-  return { header, entries, warnings };
+    if (!header) throw new Error("Pi session has no complete header");
+    return { header, entries, warnings };
+  } finally { stream.destroy(); }
 }
 
 function selectActiveBranch(entries: ParsedEntry[], leafId?: string | null): ParsedEntry[] {

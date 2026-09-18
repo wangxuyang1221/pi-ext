@@ -6,9 +6,9 @@ export interface WaitForSettledOptions {
     timeoutMs: number;
     pollIntervalMs?: number;
     signal?: AbortSignal;
-    readState: () => Promise<SessionState | undefined>;
-    wasClosed?: () => Promise<boolean>;
-    isAlive: (state: SessionState) => Promise<boolean>;
+    readState: (signal?: AbortSignal) => Promise<SessionState | undefined>;
+    wasClosed?: (signal?: AbortSignal) => Promise<boolean>;
+    isAlive: (state: SessionState, signal?: AbortSignal) => Promise<boolean>;
     now?: () => number;
     sleep?: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
 }

@@ -488,6 +488,8 @@ test("retains relationship, state, and slot when process close fails", async () 
       "child-a",
     ]);
     assert.equal((await store.load("child-a"))?.runtime.status, "closing");
+    const rawChild = JSON.parse(await readFile(store.statePath("child-a"), "utf8"));
+    assert.equal(rawChild.runtime.status, "running", "parent close intent must not overwrite child runtime");
     assert.deepEqual((await manager.list("parent-a")).capacity, {
       active: 1,
       pending: 0,

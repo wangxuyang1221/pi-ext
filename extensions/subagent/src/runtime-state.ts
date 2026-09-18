@@ -40,15 +40,17 @@ export function activateSession(
   if (existing.sessionId !== options.sessionId) {
     throw new Error("Cannot activate state from another Pi session");
   }
-  if (
-    existing.parent
-    && options.parent
-    && (
+  if (Boolean(existing.parent) !== Boolean(options.parent)
+    || (existing.parent && options.parent && (
       existing.parent.sessionId !== options.parent.sessionId
       || existing.parent.epoch !== options.parent.epoch
-    )
-  ) {
+      || existing.parent.registrationToken !== options.parent.registrationToken
+    ))) {
     throw new Error("Cannot change the owner of a managed Pi session");
+  }
+  if (existing.parent && (existing.launch?.processInstanceId !== options.launch?.processInstanceId
+    || existing.runtime.pid !== options.pid)) {
+    throw new Error("Cannot change the process of a managed session instance");
   }
 
   const {

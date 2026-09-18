@@ -163,7 +163,7 @@ test("preserves read defaults, limits and cursors through preparation and execut
     const readMock = vi.fn().mockResolvedValue(payload);
     const read = registerTools({ read: readMock }).find((tool) => tool.name === "subagent_read")!;
     const result = await executeRead(read, { agentId: "child-a", ...input });
-    assert.deepEqual(readMock.mock.calls, [["parent-a", "child-a", options]]);
+    assert.deepEqual(readMock.mock.calls, [["parent-a", "child-a", options, undefined]]);
     assert.equal(result.content[0].text, JSON.stringify(payload));
   }
 });

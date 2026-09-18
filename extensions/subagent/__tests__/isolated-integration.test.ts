@@ -29,10 +29,15 @@ test.skipIf(!enabled)("uses real Pi and an offline provider on an isolated tmux 
   const socket = join(root, "tmux.sock");
   const tmuxWrapper = join(root, "tmux");
   const piWrapper = join(root, "pi");
-  const store = new SessionStateStore(join(root, "state"));
+  const compiled = process.env.PI_SUBAGENT_FIXTURE_DIST === "1";
+  const Store = compiled ? (await import("../dist/state-store.js")).SessionStateStore : SessionStateStore;
+  const Manager = compiled ? (await import("../dist/manager.js")).SubagentManager : SubagentManager;
+  const Runtime = compiled ? (await import("../dist/tmux-runtime.js")).TmuxRuntime : TmuxRuntime;
+  const store = new Store(join(root, "state"));
   const childPids = new Set<number>();
   const env = { PATH: process.env.PATH!, HOME: home, SHELL: "/bin/sh", TERM: "xterm-256color", LANG: "en_US.UTF-8",
-    TMPDIR: root, PI_CODING_AGENT_DIR: agentDir, PI_SUBAGENT_TMUX_PATH: tmuxWrapper };
+    TMPDIR: root, PI_CODING_AGENT_DIR: agentDir, PI_SUBAGENT_TMUX_PATH: tmuxWrapper,
+    PI_SUBAGENT_FIXTURE_DIST: compiled ? "1" : "0" };
   const execute: CommandExecution = async (command, args) => {
     try {
       const result = await exec(command, args, { env, cwd: root, timeout: 5000 });
@@ -48,11 +53,11 @@ test.skipIf(!enabled)("uses real Pi and an offline provider on an isolated tmux 
     await mkdir(agentDir, { recursive: true });
     await writeFile(join(agentDir, "settings.json"), JSON.stringify({ retry: { enabled: false }, compaction: { enabled: false } }));
     await writeFile(tmuxWrapper, `#!/bin/sh\nexec ${quote(tmuxPath)} -S ${quote(socket)} -f /dev/null "$@"\n`);
-    const cli = resolve("node_modules/@earendil-works/pi-coding-agent/dist/cli.js");
+    const cli = process.env.PI_SUBAGENT_TEST_CLI ?? resolve("node_modules/@earendil-works/pi-coding-agent/dist/cli.js");
     await writeFile(piWrapper, `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(cli)} --no-extensions --no-context-files --no-skills --no-prompt-templates --no-themes --no-builtin-tools --no-approve "$@"\n`);
     await chmod(tmuxWrapper, 0o700);
     await chmod(piWrapper, 0o700);
-    const runtime = new TmuxRuntime({ execute, tmuxPath: tmuxWrapper, sessionName: "isolated-subagent", transferDirectory: join(root, "transfer") });
+    const runtime = new Runtime({ execute, tmuxPath: tmuxWrapper, sessionName: "isolated-subagent", transferDirectory: join(root, "transfer") });
     const originalLaunch = runtime.launch.bind(runtime);
     runtime.launch = async (options) => {
       const locator = await originalLaunch(options);
@@ -64,7 +69,7 @@ test.skipIf(!enabled)("uses real Pi and an offline provider on an isolated tmux 
     };
     await store.save(createSessionState({ sessionId: "parent", epoch: "parent-epoch", cwd: root,
       sessionFile: join(root, "parent.jsonl"), now: new Date().toISOString() }));
-    manager = new SubagentManager({ store, runtime, stateRoot: store.root, nativeSessionRoot: join(root, "native"),
+    manager = new Manager({ store, runtime, stateRoot: store.root, nativeSessionRoot: join(root, "native"),
       extensionPath: resolve("extensions/subagent/__tests__/fixtures/offline-child.ts"), piPath: piWrapper,
       environment: env, pollIntervalMs: 20, registrationTimeoutMs: 15000, promptAckTimeoutMs: 5000 });
     const child = await manager.spawn("parent", { task: "hold:old", model: "subagent-fixture/deterministic" }, { cwd: root });

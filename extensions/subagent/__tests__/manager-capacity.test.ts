@@ -181,7 +181,7 @@ test("replaces a reservation with a discovered registered child", async () => {
   }
 });
 
-test("reclaims expired reservations with no registered or live runtime", async () => {
+test("reclaims reservations proven not launched and retains the subsequent unknown launch",  async () => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-capacity-test-"));
   const store = new SessionStateStore(root);
   let launches = 0;
@@ -197,6 +197,7 @@ test("reclaims expired reservations with no registered or live runtime", async (
     parent.reservations = [1, 2, 3].map((index) => ({
       reservationId: `stale-${index}`,
       processInstanceId: `stale-process-${index}`,
+      launchState: "reserved",
       createdAt: "2026-08-27T01:00:00.000Z",
       expiresAt: "2026-08-27T01:01:00.000Z",
     }));
@@ -219,7 +220,10 @@ test("reclaims expired reservations with no registered or live runtime", async (
       /new launch attempted/u,
     );
     assert.equal(launches, 1);
-    assert.deepEqual((await store.load("parent-a"))?.reservations, []);
+    const retained = (await store.load("parent-a"))!.reservations;
+    assert.equal(retained.length, 1);
+    assert.equal(retained[0]!.launchState, "launching");
+    assert.equal(retained.some((reservation) => reservation.reservationId.startsWith("stale-")), false);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -229,6 +233,10 @@ test("uses persistent reservations to reject a fourth parallel spawn", async () 
   const root = await mkdtemp(join(process.cwd(), ".subagent-capacity-test-"));
   const store = new SessionStateStore(root);
   const rejectLaunches: Array<(error: Error) => void> = [];
+  let markReady!: () => void;
+  const ready = new Promise<void>(resolve => { markReady = resolve; });
+  let settling: Promise<unknown> | undefined;
+  let manager: SubagentManager | undefined;
 
   try {
     await store.save(createSessionState({
@@ -241,19 +249,20 @@ test("uses persistent reservations to reject a fourth parallel spawn", async () 
     const runtime: ManagedTmuxRuntime = {
       launch: () => new Promise((_resolve, reject) => {
         rejectLaunches.push(reject);
+        if (rejectLaunches.length === 3) markReady();
       }),
       async sendPrompt() {},
       async isAlive() { return false; },
       async close() {},
     };
-    const manager = createManager(root, store, runtime);
-    const spawns = [1, 2, 3].map((index) => manager.spawn(
+    manager = createManager(root, store, runtime);
+    const spawns = [1, 2, 3].map((index) => manager!.spawn(
       "parent-a",
       { task: `Task ${index}` },
       { cwd: "/repo" },
     ));
-    const settling = Promise.allSettled(spawns);
-    await waitUntil(() => rejectLaunches.length === 3);
+    settling = Promise.allSettled(spawns);
+    await ready;
 
     await assert.rejects(
       manager.spawn("parent-a", { task: "Task 4" }, { cwd: "/repo" }),
@@ -269,8 +278,12 @@ test("uses persistent reservations to reject a fourth parallel spawn", async () 
 
     for (const reject of rejectLaunches) reject(new Error("launch failed"));
     await settling;
-    assert.deepEqual((await store.load("parent-a"))?.reservations, []);
+    assert.equal((await store.load("parent-a"))?.reservations.length, 3);
+    assert.equal((await manager.list("parent-a")).capacity.available, 0);
   } finally {
+    for (const reject of rejectLaunches) reject(new Error("Test cleanup"));
+    await manager?.releaseNamespace("parent-a");
+    await settling;
     await rm(root, { recursive: true, force: true });
   }
 });
@@ -308,11 +321,15 @@ test("counts an owned child that registers between reconciliation and reservatio
       processInstanceId: "process-existing",
       tmux: baseLocator,
     }));
-    const listStates = store.list.bind(store);
+    await store.update("parent-a", (state) => ({ ...state, reservations: [{
+      reservationId: "registration-existing", processInstanceId: "process-existing",
+      createdAt: "2026-08-27T02:00:00.000Z", expiresAt: "2099-01-01T00:00:00.000Z", tmux: baseLocator,
+    }] }));
+    const listStates = store.listOwned.bind(store);
     let listCalls = 0;
-    store.list = async () => {
+    store.listOwned = async (parent) => {
       listCalls += 1;
-      const states = await listStates();
+      const states = await listStates(parent);
       return listCalls === 1
         ? states.filter((state) => state.sessionId !== "child-racing")
         : states;
@@ -495,11 +512,11 @@ test("deduplicates a child that registers while close-all is reconciling reserva
       processInstanceId: "process-a",
       tmux: baseLocator,
     }));
-    const listStates = store.list.bind(store);
+    const listStates = store.listOwned.bind(store);
     let listCalls = 0;
-    store.list = async () => {
+    store.listOwned = async (parent) => {
       listCalls += 1;
-      const states = await listStates();
+      const states = await listStates(parent);
       return listCalls === 1
         ? states.filter((state) => state.sessionId !== "child-racing")
         : states;
@@ -635,14 +652,6 @@ test("counts live settled processes and persists confirmed interruptions", async
     await rm(root, { recursive: true, force: true });
   }
 });
-
-async function waitUntil(predicate: () => boolean): Promise<void> {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    if (predicate()) return;
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  }
-  throw new Error("Timed out waiting for test condition");
-}
 
 function createManager(
   root: string,

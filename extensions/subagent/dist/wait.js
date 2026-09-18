@@ -1,82 +1,95 @@
 import { decodeSettledCursor, encodeSettledCursor, } from "./cursor.js";
 import { DeliveryReceiptReader } from "./delivery-receipt.js";
+import { DeadlineExceeded, Operation } from "./operation.js";
 export async function waitForSettled(options) {
-    const now = options.now ?? Date.now;
+    const now = options.now ?? (() => performance.now());
     const sleep = options.sleep ?? delay;
     const startedAt = now();
     let expectedGeneration;
     let lastGeneration = 0;
     const receiptReader = new DeliveryReceiptReader();
-    while (true) {
-        options.signal?.throwIfAborted();
-        const state = await options.readState();
-        const durationMs = Math.max(0, now() - startedAt);
-        if (!state) {
-            if (await options.wasClosed?.() === true) {
+    // A zero timeout still permits one bounded snapshot, but never another poll.
+    const operation = new Operation(options.timeoutMs === 0 ? 250 : options.timeoutMs, options.signal);
+    try {
+        while (true) {
+            operation.signal.throwIfAborted();
+            const state = await operation.run((signal) => options.readState(signal));
+            const durationMs = Math.max(0, now() - startedAt);
+            if (!state) {
+                if (options.wasClosed && await operation.run((signal) => options.wasClosed(signal))) {
+                    return {
+                        outcome: "closed",
+                        generation: lastGeneration,
+                        durationMs,
+                    };
+                }
+                throw new Error(`Subagent state disappeared while waiting: ${options.agentId}`);
+            }
+            lastGeneration = state.runtime.generation;
+            const decodedCursor = decodeSettledCursor(options.afterSettled, {
+                agentId: options.agentId,
+                epoch: state.epoch,
+            });
+            expectedGeneration ??= decodedCursor.generation;
+            const consumedGeneration = decodedCursor.deliveryId
+                ? await operation.run((signal) => receiptReader.read(state.runtime.sessionFile, {
+                    agentId: options.agentId, epoch: state.epoch, deliveryId: decodedCursor.deliveryId,
+                }, signal))
+                : undefined;
+            const settled = decodedCursor.deliveryId
+                ? consumedGeneration !== undefined && state.runtime.settledGeneration >= consumedGeneration
+                : state.runtime.settledGeneration > expectedGeneration;
+            if (settled) {
+                return {
+                    outcome: "settled",
+                    generation: state.runtime.settledGeneration,
+                    durationMs,
+                    settledCursor: encodeSettledCursor({
+                        agentId: options.agentId,
+                        epoch: state.epoch,
+                        generation: state.runtime.settledGeneration,
+                    }),
+                };
+            }
+            if (state.runtime.status === "closed" || (options.wasClosed && await operation.run((signal) => options.wasClosed(signal)))) {
                 return {
                     outcome: "closed",
-                    generation: lastGeneration,
+                    generation: state.runtime.generation,
                     durationMs,
                 };
             }
-            throw new Error(`Subagent state disappeared while waiting: ${options.agentId}`);
+            if (state.runtime.status === "interrupted" || state.runtime.status === "errored") {
+                return {
+                    outcome: "interrupted",
+                    generation: state.runtime.generation,
+                    durationMs,
+                };
+            }
+            if (state.runtime.status !== "closing" && !await operation.run((signal) => options.isAlive(state, signal))) {
+                return {
+                    outcome: "interrupted",
+                    generation: state.runtime.generation,
+                    durationMs,
+                };
+            }
+            if (now() - startedAt >= options.timeoutMs) {
+                return {
+                    outcome: "timeout",
+                    generation: state.runtime.generation,
+                    durationMs,
+                };
+            }
+            const remaining = options.timeoutMs - (now() - startedAt);
+            await operation.run((signal) => sleep(Math.min(options.pollIntervalMs ?? 100, remaining), signal));
         }
-        lastGeneration = state.runtime.generation;
-        const decodedCursor = decodeSettledCursor(options.afterSettled, {
-            agentId: options.agentId,
-            epoch: state.epoch,
-        });
-        expectedGeneration ??= decodedCursor.generation;
-        const consumedGeneration = decodedCursor.deliveryId
-            ? await receiptReader.read(state.runtime.sessionFile, {
-                agentId: options.agentId, epoch: state.epoch, deliveryId: decodedCursor.deliveryId,
-            })
-            : undefined;
-        const settled = decodedCursor.deliveryId
-            ? consumedGeneration !== undefined && state.runtime.settledGeneration >= consumedGeneration
-            : state.runtime.settledGeneration > expectedGeneration;
-        if (settled) {
-            return {
-                outcome: "settled",
-                generation: state.runtime.settledGeneration,
-                durationMs,
-                settledCursor: encodeSettledCursor({
-                    agentId: options.agentId,
-                    epoch: state.epoch,
-                    generation: state.runtime.settledGeneration,
-                }),
-            };
-        }
-        if (state.runtime.status === "closed" || await options.wasClosed?.() === true) {
-            return {
-                outcome: "closed",
-                generation: state.runtime.generation,
-                durationMs,
-            };
-        }
-        if (state.runtime.status === "interrupted" || state.runtime.status === "errored") {
-            return {
-                outcome: "interrupted",
-                generation: state.runtime.generation,
-                durationMs,
-            };
-        }
-        if (state.runtime.status !== "closing" && !await options.isAlive(state)) {
-            return {
-                outcome: "interrupted",
-                generation: state.runtime.generation,
-                durationMs,
-            };
-        }
-        if (durationMs >= options.timeoutMs) {
-            return {
-                outcome: "timeout",
-                generation: state.runtime.generation,
-                durationMs,
-            };
-        }
-        const remaining = options.timeoutMs - durationMs;
-        await sleep(Math.min(options.pollIntervalMs ?? 100, remaining), options.signal);
+    }
+    catch (error) {
+        if (!(error instanceof DeadlineExceeded))
+            throw error;
+        return { outcome: "timeout", generation: lastGeneration, durationMs: Math.max(0, now() - startedAt) };
+    }
+    finally {
+        operation.dispose();
     }
 }
 async function delay(milliseconds, signal) {

@@ -18,6 +18,18 @@ export interface TmuxRuntimeOptions {
     nowMs?: () => number;
 }
 export type PromptDelivery = "steer" | "follow_up";
+export interface RuntimeObservation {
+    identity: "matched" | "mismatch" | "unknown";
+    process: "alive" | "exited" | "unknown";
+    terminal: "present" | "absent" | "unknown";
+    promptReady: boolean;
+    locator?: TmuxLocator;
+    reason?: string;
+}
+export interface RuntimeQueryOptions {
+    signal?: AbortSignal;
+    timeout?: number;
+}
 export interface TmuxLaunchOptions {
     cwd: string;
     windowName: string;
@@ -27,6 +39,7 @@ export interface TmuxLaunchOptions {
 }
 export declare class TmuxRuntime {
     private readonly execute;
+    private readonly cleanupExecute;
     private readonly tmuxPath;
     private readonly sessionName;
     private readonly transferDirectory;
@@ -35,11 +48,15 @@ export declare class TmuxRuntime {
     private readonly lastClearAtByPane;
     constructor(options: TmuxRuntimeOptions);
     launch(options: TmuxLaunchOptions): Promise<TmuxLocator>;
-    locatePane(paneId: string): Promise<TmuxLocator>;
+    private bindLocator;
+    private readIdentity;
+    locatePane(paneId: string, instance?: string): Promise<TmuxLocator>;
     capturePane(locator: TmuxLocator): Promise<string>;
-    isAlive(locator: TmuxLocator): Promise<boolean>;
-    close(locator: TmuxLocator): Promise<void>;
+    observe(locator: TmuxLocator, options?: RuntimeQueryOptions): Promise<RuntimeObservation>;
+    isAlive(locator: TmuxLocator, options?: RuntimeQueryOptions): Promise<boolean>;
+    close(locator: TmuxLocator, options?: RuntimeQueryOptions): Promise<void>;
     sendPrompt(locator: TmuxLocator, text: string, delivery: PromptDelivery): Promise<void>;
+    private deliverPrompt;
     private waitForClearCooldown;
     private assertPromptReady;
     private runRequired;

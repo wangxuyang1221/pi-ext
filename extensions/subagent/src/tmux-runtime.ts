@@ -3,6 +3,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { TmuxLocator } from "./state-store.js";
+import { currentOperation } from "./operation.js";
 
 export interface CommandExecutionResult {
   code: number;
@@ -27,6 +28,17 @@ export interface TmuxRuntimeOptions {
 
 export type PromptDelivery = "steer" | "follow_up";
 
+export interface RuntimeObservation {
+  identity: "matched" | "mismatch" | "unknown";
+  process: "alive" | "exited" | "unknown";
+  terminal: "present" | "absent" | "unknown";
+  promptReady: boolean;
+  locator?: TmuxLocator;
+  reason?: string;
+}
+
+export interface RuntimeQueryOptions { signal?: AbortSignal; timeout?: number }
+
 export interface TmuxLaunchOptions {
   cwd: string;
   windowName: string;
@@ -36,10 +48,13 @@ export interface TmuxLaunchOptions {
 }
 
 const LOCATOR_FORMAT = "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_pid}";
+const OBSERVATION_FORMAT = "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_dead}\t#{pane_pid}";
+const IDENTITY_FORMAT = "#{pid}\t#{start_time}\t#{socket_path}\t#{@pi_subagent_instance}\t#{window_panes}\t#{pane_in_mode}";
 const PROMPT_READY_FORMAT = "#{session_name}\t#{window_id}\t#{pane_id}\t#{window_panes}\t#{pane_dead}\t#{pane_pid}\t#{pane_in_mode}";
 
 export class TmuxRuntime {
   private readonly execute: CommandExecution;
+  private readonly cleanupExecute: CommandExecution;
   private readonly tmuxPath: string;
   private readonly sessionName: string;
   private readonly transferDirectory: string;
@@ -48,7 +63,18 @@ export class TmuxRuntime {
   private readonly lastClearAtByPane = new Map<string, number>();
 
   constructor(options: TmuxRuntimeOptions) {
-    this.execute = options.execute;
+    this.cleanupExecute = options.execute;
+    this.execute = async (command, args, execOptions) => {
+      const operation = currentOperation();
+      operation?.signal.throwIfAborted();
+      await operation?.assertAuthorized?.();
+      const pending = options.execute(command, args, {
+        ...execOptions,
+        signal: execOptions?.signal ?? operation?.signal,
+        timeout: Math.min(execOptions?.timeout ?? 5_000, operation?.remainingMs ?? 5_000),
+      });
+      return operation ? operation.trackResource(pending) : pending;
+    };
     this.tmuxPath = options.tmuxPath;
     this.sessionName = options.sessionName;
     this.transferDirectory = options.transferDirectory;
@@ -83,7 +109,7 @@ export class TmuxRuntime {
 
     if (hasSession.code === 0) {
       const result = await this.runRequired(newWindowArgs);
-      return parseLocator(result.stdout);
+      return this.bindLocator(parseLocator(result.stdout), options.environment.PI_SUBAGENT_ID);
     }
 
     const newSessionArgs = [
@@ -101,7 +127,7 @@ export class TmuxRuntime {
       shellCommand,
     ];
     const created = await this.execute(this.tmuxPath, newSessionArgs);
-    if (created.code === 0) return parseLocator(created.stdout);
+    if (created.code === 0) return this.bindLocator(parseLocator(created.stdout), options.environment.PI_SUBAGENT_ID);
 
     const concurrentlyCreated = await this.execute(this.tmuxPath, hasSessionArgs);
     if (concurrentlyCreated.code !== 0) {
@@ -111,10 +137,25 @@ export class TmuxRuntime {
     }
 
     const result = await this.runRequired(newWindowArgs);
-    return parseLocator(result.stdout);
+    return this.bindLocator(parseLocator(result.stdout), options.environment.PI_SUBAGENT_ID);
   }
 
-  async locatePane(paneId: string): Promise<TmuxLocator> {
+  private async bindLocator(locator: TmuxLocator, instance?: string): Promise<TmuxLocator> {
+    if (!instance) return locator;
+    await this.runRequired(["set-option", "-p", "-t", locator.paneId, "@pi_subagent_instance", instance]);
+    return this.readIdentity(locator, instance);
+  }
+
+  private async readIdentity(locator: TmuxLocator, instance: string): Promise<TmuxLocator> {
+    const result = await this.runRequired(["display-message", "-p", "-t", locator.paneId, IDENTITY_FORMAT]);
+    const [serverPid, serverStartedAt, socketPath, processInstanceId] = result.stdout.trim().split("\t");
+    if (!Number.isSafeInteger(Number(serverPid)) || Number(serverPid) <= 0 || !serverStartedAt || !socketPath || processInstanceId !== instance) {
+      throw new Error("Subagent pane identity handshake failed");
+    }
+    return { ...locator, serverPid: Number(serverPid), serverStartedAt, socketPath, processInstanceId };
+  }
+
+  async locatePane(paneId: string, instance?: string): Promise<TmuxLocator> {
     const result = await this.runRequired([
       "display-message",
       "-p",
@@ -136,13 +177,8 @@ export class TmuxRuntime {
     ) {
       throw new Error("tmux returned an invalid current pane locator");
     }
-    return {
-      sessionName,
-      windowId,
-      paneId: actualPaneId,
-      panePid,
-      ...(windowName ? { windowName } : {}),
-    };
+    const locator = { sessionName, windowId, paneId: actualPaneId, panePid, ...(windowName ? { windowName } : {}) };
+    return instance ? this.readIdentity(locator, instance) : locator;
   }
 
   async capturePane(locator: TmuxLocator): Promise<string> {
@@ -156,38 +192,99 @@ export class TmuxRuntime {
     return result.stdout;
   }
 
-  async isAlive(locator: TmuxLocator): Promise<boolean> {
-    const result = await this.execute(this.tmuxPath, [
+  async observe(locator: TmuxLocator, options?: RuntimeQueryOptions): Promise<RuntimeObservation> {
+    let result: CommandExecutionResult;
+    try { result = await this.execute(this.tmuxPath, [
       "display-message",
       "-p",
       "-t",
       locator.paneId,
-      "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_dead}\t#{pane_pid}",
-    ]);
+      locator.processInstanceId ? `${OBSERVATION_FORMAT}\t${IDENTITY_FORMAT}` : OBSERVATION_FORMAT,
+    ], options); } catch (error) {
+      options?.signal?.throwIfAborted();
+      return { identity: "unknown", process: "unknown", terminal: "unknown", promptReady: false, reason: String(error) };
+    }
     if (result.code !== 0) {
-      if (/^(?:can't find (?:pane|window|session):|no server running on |error connecting to .+ \(No such file or directory\))/u.test(result.stderr.trim())) return false;
-      assertCommandSucceeded(["display-message"], result);
+      const absent = /^(?:can't find (?:pane|window|session):|no server running on |error connecting to .+ \(No such file or directory\))/u.test(result.stderr.trim());
+      let processExited = false;
+      if (absent && locator.panePid !== undefined) {
+        try { process.kill(locator.panePid, 0); }
+        catch (error) { processExited = (error as NodeJS.ErrnoException).code === "ESRCH"; }
+      }
+      let terminalAbsent = false;
+      if (absent && locator.serverPid !== undefined) {
+        try { process.kill(locator.serverPid, 0); }
+        catch (error) { terminalAbsent = (error as NodeJS.ErrnoException).code === "ESRCH"; }
+        if (!terminalAbsent && result.stderr.trim().startsWith("can't find ")) {
+          const server = await this.execute(this.tmuxPath, ["display-message", "-p", "#{pid}\t#{start_time}\t#{socket_path}"], options);
+          terminalAbsent = server.code === 0 && server.stdout.trim() === `${locator.serverPid}\t${locator.serverStartedAt}\t${locator.socketPath}`;
+        }
+      }
+      return {
+        identity: "unknown", process: processExited ? "exited" : "unknown",
+        terminal: terminalAbsent ? "absent" : "unknown", promptReady: false,
+        reason: `tmux display-message failed: ${result.stderr.trim() || `exit ${result.code}`}`,
+      };
     }
     const [sessionName, windowId, paneId, paneDead, panePidText, ...extra] = result.stdout
-      .trim()
+      .replace(/\r?\n$/u, "")
       .split("\t");
-    if (extra.length > 0) return false;
-    return sessionName === locator.sessionName
-      && windowId === locator.windowId
-      && paneId === locator.paneId
-      && paneDead === "0"
-      && (locator.panePid === undefined || Number(panePidText) === locator.panePid);
-  }
-
-  async close(locator: TmuxLocator): Promise<void> {
-    if (!await this.isAlive(locator)) return;
-    const result = await this.execute(this.tmuxPath, ["kill-window", "-t", locator.windowId]);
-    if (result.code !== 0 && await this.isAlive(locator)) {
-      throw new Error(`tmux kill-window failed: ${result.stderr.trim() || `exit ${result.code}`}`);
+    const [serverPid, serverStartedAt, socketPath, instance, windowPanes, paneInMode] = extra;
+    const sameServer = locator.processInstanceId !== undefined && extra.length === 6
+      && Number(serverPid) === locator.serverPid && serverStartedAt === locator.serverStartedAt && socketPath === locator.socketPath;
+    const stableIdentity = sameServer && instance === locator.processInstanceId;
+    // display-message may fall back to the active pane after its target disappears.
+    // Verify absence on the same server rather than mistaking that fallback for a replacement.
+    if (sameServer && paneId !== locator.paneId) {
+      const panes = await this.execute(this.tmuxPath, ["list-panes", "-a", "-F", "#{pane_id}"], options);
+      if (panes.code === 0 && !panes.stdout.trim().split("\n").includes(locator.paneId)) {
+        let exited = false;
+        if (locator.panePid) {
+          try { process.kill(locator.panePid, 0); }
+          catch (error) { exited = (error as NodeJS.ErrnoException).code === "ESRCH"; }
+        }
+        return { identity: "unknown", process: exited ? "exited" : "unknown", terminal: "absent", promptReady: false,
+          ...(exited ? {} : { reason: "Owned pane is absent; process exit is not yet confirmed" }) };
+      }
     }
+    if ((locator.processInstanceId ? !stableIdentity : extra.length > 0 || sessionName !== locator.sessionName || windowId !== locator.windowId)
+      || paneId !== locator.paneId || (locator.panePid !== undefined && Number(panePidText) !== locator.panePid)) {
+      return { identity: "mismatch", process: "unknown", terminal: "present", promptReady: false,
+        reason: "Subagent runtime identity mismatch; management and capacity are retained" };
+    }
+    if (paneDead !== "0" && paneDead !== "1") {
+      return { identity: "unknown", process: "unknown", terminal: "present", promptReady: false, reason: "Invalid tmux process observation" };
+    }
+    return { identity: "matched", process: paneDead === "0" ? "alive" : "exited", terminal: "present",
+      promptReady: stableIdentity && paneDead === "0" && windowPanes === "1" && paneInMode === "0",
+      locator: { ...locator, sessionName: sessionName!, windowId: windowId! },
+      ...(stableIdentity && windowPanes !== "1" ? { reason: "Managed window contains unowned panes" } : {}),
+    };
   }
 
-  async sendPrompt(
+  async isAlive(locator: TmuxLocator, options?: RuntimeQueryOptions): Promise<boolean> {
+    const observed = await this.observe(locator, options);
+    if (observed.identity === "mismatch" || observed.process === "unknown") throw new Error(observed.reason ?? "Subagent runtime state is unknown");
+    return observed.process === "alive";
+  }
+
+  async close(locator: TmuxLocator, options?: RuntimeQueryOptions): Promise<void> {
+    const observed = await this.observe(locator, options);
+    if (observed.process === "exited" && observed.terminal === "absent") return;
+    if (observed.identity !== "matched" || observed.terminal !== "present") {
+      throw new Error(observed.reason ?? "Cannot close an unidentified subagent runtime");
+    }
+    if (observed.reason) throw new Error(observed.reason);
+    const result = await this.execute(this.tmuxPath, ["kill-window", "-t", observed.locator!.windowId], options);
+    assertCommandSucceeded(["kill-window"], result);
+  }
+
+  async sendPrompt(locator: TmuxLocator, text: string, delivery: PromptDelivery): Promise<void> {
+    const pending = this.deliverPrompt(locator, text, delivery);
+    return currentOperation()?.trackResource(pending) ?? pending;
+  }
+
+  private async deliverPrompt(
     locator: TmuxLocator,
     text: string,
     delivery: PromptDelivery,
@@ -199,12 +296,18 @@ export class TmuxRuntime {
     const id = randomUUID();
     const path = join(this.transferDirectory, `prompt-${id}.txt`);
     const buffer = `subagent-${id.replaceAll("-", "")}`;
-    let loaded = false;
+    let bufferAttempted = false;
+    const failures: unknown[] = [];
+    const cleanupFailed = (error: unknown) => {
+      failures.push(error);
+      const operation = currentOperation();
+      if (operation?.signal.aborted) operation.reportCleanupError(error);
+    };
 
     try {
       await writeFile(path, `${text} `, { encoding: "utf8", mode: 0o600 });
+      bufferAttempted = true;
       await this.runRequired(["load-buffer", "-b", buffer, path]);
-      loaded = true;
       try {
         await this.runRequired(["send-keys", "-H", "-t", locator.paneId, "03"]);
       } finally {
@@ -229,12 +332,23 @@ export class TmuxRuntime {
         locator.paneId,
         ...(delivery === "follow_up" ? ["1b", "0d"] : ["0d"]),
       ]);
-    } finally {
-      await rm(path, { force: true });
-      if (loaded) {
-        await this.execute(this.tmuxPath, ["delete-buffer", "-b", buffer]).catch(() => undefined);
+    } catch (error) { failures.push(error); }
+    finally {
+      await rm(path, { force: true }).catch(cleanupFailed);
+      if (bufferAttempted) {
+        // Cleanup owns only this UUID buffer, not the child. It must outlive caller cancellation.
+        try {
+          const result = await this.cleanupExecute(this.tmuxPath, ["delete-buffer", "-b", buffer], {
+            signal: AbortSignal.timeout(200), timeout: 200,
+          });
+          if (result.code !== 0 && !/no buffer|unknown buffer|can't find buffer/u.test(result.stderr)) {
+            assertCommandSucceeded(["delete-buffer"], result);
+          }
+        } catch (error) { cleanupFailed(error); }
       }
     }
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1) throw new AggregateError(failures, "Prompt delivery failed; cleanup also failed", { cause: failures[0] });
   }
 
   private async waitForClearCooldown(paneId: string): Promise<void> {
@@ -250,6 +364,11 @@ export class TmuxRuntime {
   private async assertPromptReady(locator: TmuxLocator): Promise<void> {
     if (locator.panePid === undefined) {
       throw new Error("tmux pane is not ready for prompt delivery");
+    }
+    if (locator.processInstanceId) {
+      const observed = await this.observe(locator);
+      if (!observed.promptReady) throw new Error(observed.reason ?? "tmux pane is not ready for prompt delivery");
+      return;
     }
     const result = await this.runRequired([
       "display-message",
@@ -311,6 +430,9 @@ function buildShellCommand(
   return [
     "exec",
     "/usr/bin/env",
+    "-i",
+    'TMUX="${TMUX-}"',
+    'TMUX_PANE="${TMUX_PANE-}"',
     ...assignments,
     quoteShellWord(command),
     ...args.map(quoteShellWord),

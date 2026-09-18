@@ -12,7 +12,7 @@ export declare class DeliveryReceiptReader {
     private line;
     private oversized;
     private generation?;
-    read(sessionFile: string, expected: Omit<DeliveryReceipt, "generation">): Promise<number | undefined>;
+    read(sessionFile: string, expected: Omit<DeliveryReceipt, "generation">, signal?: AbortSignal | undefined): Promise<number | undefined>;
     private add;
     private match;
 }

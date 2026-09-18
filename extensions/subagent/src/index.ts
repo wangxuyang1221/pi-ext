@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { homedir } from "node:os";
 
 import {
   getAgentDir,
@@ -20,10 +21,12 @@ import { DELIVERY_RECEIPT_TYPE } from "./delivery-receipt.js";
 import {
   SessionStateStore,
   type LaunchMetadata,
+  SESSION_STATE_SCHEMA_VERSION,
   type ParentOwnership,
   type TmuxLocator,
 } from "./state-store.js";
 import { TmuxRuntime } from "./tmux-runtime.js";
+import { executeCommand } from "./command-executor.js";
 import { registerSubagentTools } from "./tools.js";
 import { assignUsage, GOAL_TASK_EVENT, registerChildUsage, usageDirectory } from "./usage.js";
 
@@ -31,7 +34,7 @@ const PI_SUBAGENT_TMUX_PATH = "PI_SUBAGENT_TMUX_PATH";
 const PI_SUBAGENT_PI_PATH = "PI_SUBAGENT_PI_PATH";
 
 type RuntimeWithPaneLookup = ManagedTmuxRuntime & {
-  locatePane?: (paneId: string) => Promise<TmuxLocator>;
+  locatePane?: (paneId: string, processInstanceId?: string) => Promise<TmuxLocator>;
 };
 
 export interface SubagentExtensionOptions {
@@ -54,19 +57,21 @@ export default function subagentExtension(
   options: SubagentExtensionOptions = {},
 ): void {
   const env = options.env ?? process.env;
-  const agentDir = getAgentDir();
-  const stateRoot = options.stateRoot
+  const configuredAgentDir = env.PI_CODING_AGENT_DIR ?? getAgentDir();
+  const agentDir = resolve(configuredAgentDir === "~" ? (env.HOME ?? homedir())
+    : configuredAgentDir.startsWith("~/") ? join(env.HOME ?? homedir(), configuredAgentDir.slice(2)) : configuredAgentDir);
+  const stateRoot = resolve(options.stateRoot
     ?? env[PI_SUBAGENT_STATE_ROOT]
-    ?? join(agentDir, "subagents");
-  const nativeSessionRoot = options.nativeSessionRoot
-    ?? join(agentDir, "sessions", "subagents");
-  const extensionPath = options.extensionPath ?? fileURLToPath(import.meta.url);
-  const tmuxPath = options.tmuxPath ?? env[PI_SUBAGENT_TMUX_PATH] ?? "tmux";
-  const piPath = options.piPath ?? env[PI_SUBAGENT_PI_PATH] ?? "pi";
+    ?? join(agentDir, "subagents"));
+  const nativeSessionRoot = resolve(options.nativeSessionRoot
+    ?? join(agentDir, "sessions", "subagents"));
+  const extensionPath = resolve(options.extensionPath ?? fileURLToPath(import.meta.url));
+  const tmuxPath = resolveProgramPath(options.tmuxPath ?? env[PI_SUBAGENT_TMUX_PATH] ?? "tmux");
+  const piPath = resolveProgramPath(options.piPath ?? env[PI_SUBAGENT_PI_PATH] ?? "pi");
   const tmuxSessionName = options.tmuxSessionName ?? defaultTmuxSessionName(stateRoot);
   const store = options.store ?? new SessionStateStore(stateRoot);
   const runtime = options.runtime ?? new TmuxRuntime({
-    execute: async (command, args, execOptions) => pi.exec(command, args, execOptions),
+    execute: executeCommand,
     tmuxPath,
     sessionName: tmuxSessionName,
     transferDirectory: join(stateRoot, "tmp", "prompt-transfer"),
@@ -91,7 +96,12 @@ export default function subagentExtension(
     nativeSessionRoot,
     extensionPath,
     piPath,
-    environment: childEnvironment(env),
+    environment: {
+      ...childEnvironment(env),
+      PI_CODING_AGENT_DIR: agentDir,
+      [PI_SUBAGENT_TMUX_PATH]: tmuxPath,
+      [PI_SUBAGENT_PI_PATH]: piPath,
+    },
     beforePrompt: async (parentSessionId, child) => {
       const processId = child.launch?.processInstanceId;
       if (!processId) throw new Error("Managed child has no process identity.");
@@ -114,9 +124,19 @@ export default function subagentExtension(
     registerChildUsage(pi, usageDirectory(stateRoot, launch.processInstanceId));
   }
 
+  let controlledSessionId: string | undefined;
   pi.on("session_start", async (_event, ctx) => {
     const sessionFile = ctx.sessionManager.getSessionFile();
     if (!sessionFile) return;
+    if (!parent) {
+      if (controlledSessionId && controlledSessionId !== ctx.sessionManager.getSessionId()) {
+        try { await host.shutdown(); }
+        finally { await manager.releaseNamespace(controlledSessionId); controlledSessionId = undefined; }
+      }
+      if (!await manager.claimNamespace(ctx.sessionManager.getSessionId(), false)) return;
+      controlledSessionId = ctx.sessionManager.getSessionId();
+      host.setControllerGuard(await manager.controllerGuard(controlledSessionId));
+    }
 
     let tmux: TmuxLocator | undefined;
     if (parent) {
@@ -124,7 +144,11 @@ export default function subagentExtension(
       if (!paneId || !runtime.locatePane) {
         throw new Error("Managed child could not locate its tmux pane");
       }
-      tmux = await runtime.locatePane(paneId);
+      tmux = await runtime.locatePane(paneId, launch?.processInstanceId);
+      if (tmux.processInstanceId && tmux.panePid !== process.pid) throw new Error("Child Pi process does not match its registered pane process");
+      if (launch?.configuration && JSON.stringify(launch.configuration) !== JSON.stringify({
+        protocolVersion: SESSION_STATE_SCHEMA_VERSION, agentDir, tmuxPath, piPath,
+      })) throw new Error("Subagent launch configuration handshake failed");
     }
     await host.startSession({
       sessionId: ctx.sessionManager.getSessionId(),
@@ -134,7 +158,9 @@ export default function subagentExtension(
       leafPosition: ctx.sessionManager.getEntries().length,
       pid: process.pid,
       ...(tmux ? { tmux } : {}),
+      ...(parent ? { configuration: { protocolVersion: SESSION_STATE_SCHEMA_VERSION, agentDir, tmuxPath, piPath } } : {}),
     });
+    if (controlledSessionId) await manager.claimNamespace(controlledSessionId);
   });
 
   pi.on("agent_start", async () => {
@@ -160,7 +186,11 @@ export default function subagentExtension(
   });
 
   pi.on("session_shutdown", async () => {
-    await host.shutdown();
+    try { await host.shutdown(); }
+    finally {
+      if (controlledSessionId) await manager.releaseNamespace(controlledSessionId);
+      controlledSessionId = undefined;
+    }
   });
 }
 
@@ -194,7 +224,15 @@ function parseLaunchMetadata(value: string | undefined): LaunchMetadata | undefi
   ) {
     throw new Error(`Invalid ${PI_SUBAGENT_LAUNCH}`);
   }
+  if (parsed.configuration !== undefined) {
+    const configuration = parsed.configuration as Record<string, unknown>;
+    if (!configuration || configuration.protocolVersion !== SESSION_STATE_SCHEMA_VERSION
+      || typeof configuration.agentDir !== "string" || typeof configuration.tmuxPath !== "string" || typeof configuration.piPath !== "string") {
+      throw new Error("Invalid subagent launch configuration");
+    }
+  }
   return {
+    ...(parsed.configuration ? { configuration: parsed.configuration as LaunchMetadata["configuration"] } : {}),
     cwd: parsed.cwd,
     sessionDir: parsed.sessionDir,
     displayName: parsed.displayName,
@@ -216,6 +254,10 @@ function parseJsonObject(value: string, name: string): Record<string, unknown> {
   } catch (error) {
     throw new Error(`Invalid ${name}`, { cause: error });
   }
+}
+
+function resolveProgramPath(path: string): string {
+  return path.includes("/") ? resolve(path) : path;
 }
 
 function childEnvironment(

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "vitest";
+import { executeCommand } from "../src/command-executor.js";
+import { withOperation } from "../src/operation.js";
 
 import {
   TmuxRuntime,
@@ -14,6 +16,57 @@ const locator = {
   paneId: "%9",
   panePid: 1234,
 };
+
+test("an unreachable socket does not prove that a live server lost its terminal resources", async () => {
+  const runtime = new TmuxRuntime({
+    execute: async () => ({ code: 1, stdout: "", stderr: "no server running on /missing-socket" }),
+    tmuxPath: "tmux", sessionName: locator.sessionName, transferDirectory: "/unused",
+  });
+  const observed = await runtime.observe({ ...locator, serverPid: process.pid, serverStartedAt: "old", socketPath: "/missing-socket", processInstanceId: "owned" });
+  assert.equal(observed.terminal, "unknown");
+  await assert.rejects(runtime.close({ ...locator, serverPid: process.pid, serverStartedAt: "old", socketPath: "/missing-socket", processInstanceId: "owned" }));
+});
+
+test("launch command discards stale server configuration while preserving the new pane identity", async () => {
+  let command = "";
+  const runtime = new TmuxRuntime({
+    execute: async (_command, args) => {
+      if (args[0] === "has-session") return { code: 1, stdout: "", stderr: "missing" };
+      command = args.at(-1)!;
+      return { code: 0, stdout: "pi-subagents-test\t@7\t%9\t1234\n", stderr: "" };
+    }, tmuxPath: "tmux", sessionName: locator.sessionName, transferDirectory: "/unused",
+  });
+  await runtime.launch({ cwd: process.cwd(), windowName: "test", command: process.execPath,
+    args: ["-e", "console.log(JSON.stringify({stale:process.env.PI_CODING_AGENT_DIR,pane:process.env.TMUX_PANE}))"], environment: {} });
+  const result = await executeCommand("/usr/bin/env", ["PI_CODING_AGENT_DIR=/stale/server", "TMUX_PANE=%new", "/bin/sh", "-c", command]);
+  assert.deepEqual(JSON.parse(result.stdout), { pane: "%new" });
+});
+
+test("follows a renamed and moved pane only with matching server and instance evidence", async () => {
+  const tagged = { ...locator, serverPid: 900, serverStartedAt: "1000", socketPath: "/socket", processInstanceId: "instance-a" };
+  const runtime = new TmuxRuntime({
+    execute: async () => ({ code: 0, stdout: "renamed\t@99\t%9\t0\t1234\t900\t1000\t/socket\tinstance-a\t1\t0\n", stderr: "" }),
+    tmuxPath: "tmux", sessionName: locator.sessionName, transferDirectory: "/unused",
+  });
+  const observed = await runtime.observe(tagged);
+  assert.equal(observed.identity, "matched");
+  assert.equal(observed.process, "alive");
+  assert.equal(observed.locator?.windowId, "@99");
+  assert.equal(observed.promptReady, true);
+});
+
+test("cleans up an owned dead pane instead of treating process exit as terminal removal", async () => {
+  const calls: string[][] = [];
+  const runtime = new TmuxRuntime({
+    execute: async (_command, args) => {
+      calls.push(args);
+      return { code: 0, stdout: "pi-subagents-test\t@7\t%9\t1\t1234\n", stderr: "" };
+    },
+    tmuxPath: "tmux", sessionName: locator.sessionName, transferDirectory: "/unused",
+  });
+  await runtime.close(locator);
+  assert.equal(calls.filter((args) => args[0] === "kill-window").length, 1);
+});
 
 test("rejects prompt injection when the registered pane is not ready", async () => {
   for (const output of [
@@ -113,6 +166,54 @@ test("delivers follow-up prompts with raw clear and submit bytes", async () => {
   }
 });
 
+test("cancellation removes a possibly loaded buffer before the operation returns", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-tmux-test-"));
+  const controller = new AbortController();
+  const calls: string[][] = [];
+  let transfer = "";
+  const runtime = new TmuxRuntime({
+    tmuxPath: "tmux", sessionName: locator.sessionName, transferDirectory: root,
+    execute: async (_command, args, options) => {
+      calls.push(args);
+      if (args[0] === "display-message") return { code: 0, stdout: "pi-subagents-test\t@7\t%9\t1\t0\t1234\t0\n", stderr: "" };
+      if (args[0] === "load-buffer") {
+        transfer = args.at(-1)!;
+        controller.abort(new Error("Cancelled after buffer creation"));
+        throw controller.signal.reason;
+      }
+      assert.equal(options?.signal?.aborted, false);
+      return { code: 0, stdout: "", stderr: "" };
+    },
+  });
+  try {
+    await assert.rejects(withOperation(1_000, controller.signal, () => runtime.sendPrompt(locator, "Task", "follow_up")), /Cancelled after buffer creation/u);
+    assert.equal(calls.filter(args => args[0] === "delete-buffer").length, 1);
+    await assert.rejects(stat(transfer), { code: "ENOENT" });
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("reports buffer cleanup failure alongside prompt cancellation", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-tmux-test-"));
+  const controller = new AbortController();
+  const original = new Error("Original cancellation");
+  const runtime = new TmuxRuntime({
+    tmuxPath: "tmux", sessionName: locator.sessionName, transferDirectory: root,
+    execute: async (_command, args) => {
+      if (args[0] === "display-message") return { code: 0, stdout: "pi-subagents-test\t@7\t%9\t1\t0\t1234\t0\n", stderr: "" };
+      if (args[0] === "load-buffer") { controller.abort(original); throw original; }
+      throw new Error("Buffer cleanup failed");
+    },
+  });
+  try {
+    await assert.rejects(withOperation(1_000, controller.signal, () => runtime.sendPrompt(locator, "Task", "follow_up")), (error: unknown) => {
+      assert.ok(error instanceof AggregateError);
+      assert.equal(error.cause, original);
+      assert.match(String(error), /cleanup/u);
+      return true;
+    });
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test("keeps automatic clears for one pane at least 600ms apart", async () => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-tmux-test-"));
   const clearTimes: number[] = [];
@@ -209,7 +310,7 @@ test("launches a child with quoted argv and parses its tmux locator", async () =
     ]);
     assert.equal(
       launchArgs[11],
-      "exec /usr/bin/env 'PATH=/custom/bin' 'PI_SUBAGENT_TOKEN=token'\"'\"'quoted' '/path/pi' '--session-dir' '/tmp/a'\"'\"'b'",
+      "exec /usr/bin/env -i TMUX=\"${TMUX-}\" TMUX_PANE=\"${TMUX_PANE-}\" 'PATH=/custom/bin' 'PI_SUBAGENT_TOKEN=token'\"'\"'quoted' '/path/pi' '--session-dir' '/tmp/a'\"'\"'b'",
     );
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -323,6 +424,20 @@ test("does not report unknown tmux query failures as a dead runtime", async () =
   assert.equal(await runtime.isAlive(locator), false);
 });
 
+test("does not classify a renamed live pane as an exited process", async () => {
+  const calls: string[][] = [];
+  const runtime = new TmuxRuntime({
+    execute: async (_command, args) => {
+      calls.push(args);
+      return { code: 0, stdout: "renamed\t@7\t%9\t0\t1234\n", stderr: "" };
+    },
+    tmuxPath: "unused", sessionName: locator.sessionName, transferDirectory: "/unused",
+  });
+  await assert.rejects(runtime.isAlive(locator), /identity.*mismatch/iu);
+  await assert.rejects(runtime.close(locator), /identity.*mismatch/iu);
+  assert.equal(calls.some(args => args[0] === "kill-window"), false);
+});
+
 test("validates locator identity before treating or closing a pane", async () => {
   const calls: string[][] = [];
   let identity = "pi-subagents-test\t@7\t%9\t0\t1234\n";
@@ -344,8 +459,8 @@ test("validates locator identity before treating or closing a pane", async () =>
   await runtime.close(locator);
 
   identity = "pi-subagents-test\t@8\t%9\t0\t1234\n";
-  assert.equal(await runtime.isAlive(locator), false);
-  await runtime.close(locator);
+  await assert.rejects(runtime.isAlive(locator), /identity mismatch/u);
+  await assert.rejects(runtime.close(locator), /identity mismatch/u);
 
   assert.deepEqual(calls.filter((args) => args[0] === "kill-window"), [
     ["kill-window", "-t", "@7"],

@@ -8,6 +8,7 @@ import { promptDeliveryId, type DeliveryReceipt } from "./delivery-receipt.js";
 import {
   SessionStateStore,
   type LaunchMetadata,
+  type LaunchConfiguration,
   type ParentOwnership,
   type TmuxLocator,
 } from "./state-store.js";
@@ -28,6 +29,7 @@ export interface StartRuntimeSessionOptions {
   leafPosition?: number;
   pid?: number;
   tmux?: TmuxLocator;
+  configuration?: LaunchConfiguration;
 }
 
 export class SessionRuntimeHost {
@@ -37,6 +39,19 @@ export class SessionRuntimeHost {
   private readonly createEpoch: () => string;
   private readonly now: () => string;
   private activeSessionId?: string;
+  private queue: Promise<unknown> = Promise.resolve();
+  private assertController?: () => Promise<void>;
+
+  setControllerGuard(guard: () => Promise<void>): void { this.assertController = guard; }
+
+  private enqueue<T>(work: () => Promise<T>): Promise<T> {
+    const operation = this.queue.catch(() => undefined).then(async () => {
+      await this.assertController?.();
+      return work();
+    });
+    this.queue = operation;
+    return operation;
+  }
 
   constructor(options: SessionRuntimeHostOptions) {
     this.store = options.store;
@@ -50,11 +65,15 @@ export class SessionRuntimeHost {
     return this.activeSessionId;
   }
 
-  async startSession(options: StartRuntimeSessionOptions): Promise<void> {
+  startSession(options: StartRuntimeSessionOptions): Promise<void> {
+    return this.enqueue(() => this.startSessionInternal(options));
+  }
+
+  private async startSessionInternal(options: StartRuntimeSessionOptions): Promise<void> {
     if (this.activeSessionId && this.activeSessionId !== options.sessionId) {
-      await this.shutdown();
+      await this.shutdownInternal();
     }
-    const existing = await this.store.load(options.sessionId);
+    await this.store.mutate(options.sessionId, (existing) => {
     let state = activateSession(existing, {
       sessionId: options.sessionId,
       cwd: options.cwd,
@@ -72,8 +91,10 @@ export class SessionRuntimeHost {
       ...(options.leafId === null ? {} : { leafId: options.leafId }),
       leafPinned: true,
       leafPosition: options.leafPosition,
+      ...(options.configuration ? { configuration: options.configuration } : {}),
     } };
-    await this.store.save(state);
+    return state;
+    });
     this.activeSessionId = options.sessionId;
   }
 
@@ -84,7 +105,7 @@ export class SessionRuntimeHost {
   async consumePrompt(text: string): Promise<DeliveryReceipt | undefined> {
     const deliveryId = promptDeliveryId(text);
     if (!this.parent || !this.activeSessionId || !deliveryId) return undefined;
-    const state = await this.store.load(this.activeSessionId);
+    const state = await this.store.loadRuntime(this.activeSessionId);
     if (!state || !state.runtime.busy || state.runtime.generation < 1) return undefined;
     return {
       agentId: state.sessionId,
@@ -116,7 +137,9 @@ export class SessionRuntimeHost {
     });
   }
 
-  async shutdown(): Promise<void> {
+  shutdown(): Promise<void> { return this.enqueue(() => this.shutdownInternal()); }
+
+  private async shutdownInternal(): Promise<void> {
     if (!this.activeSessionId) return;
     const sessionId = this.activeSessionId;
     await this.store.update(sessionId, (state) => (
@@ -128,7 +151,9 @@ export class SessionRuntimeHost {
   private async updateActive(
     updater: Parameters<SessionStateStore["update"]>[1],
   ): Promise<void> {
-    if (!this.activeSessionId) return;
-    await this.store.update(this.activeSessionId, updater);
+    await this.enqueue(async () => {
+      if (!this.activeSessionId) return;
+      await this.store.update(this.activeSessionId, updater);
+    });
   }
 }

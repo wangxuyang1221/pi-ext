@@ -1,4 +1,5 @@
 import { open } from "node:fs/promises";
+import { currentOperation } from "./operation.js";
 export const DELIVERY_RECEIPT_TYPE = "subagent_delivery";
 export function promptDeliveryId(text) {
     return /^\[subagent:([a-f0-9]{12})\](?:\n|$)/u.exec(text)?.[1];
@@ -9,13 +10,15 @@ export class DeliveryReceiptReader {
     line = "";
     oversized = false;
     generation;
-    async read(sessionFile, expected) {
+    async read(sessionFile, expected, signal = currentOperation()?.signal) {
+        signal?.throwIfAborted();
         if (this.generation !== undefined)
             return this.generation;
         const file = await open(sessionFile, "r");
         try {
             const buffer = Buffer.alloc(64 * 1024);
             while (true) {
+                signal?.throwIfAborted();
                 const { bytesRead } = await file.read(buffer, 0, buffer.length, this.position);
                 if (bytesRead === 0)
                     return undefined;
