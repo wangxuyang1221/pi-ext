@@ -3,9 +3,12 @@ import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test, vi } from "vitest";
 
-import subagentExtension from "../src/index.js";
+import sourceExtension from "../src/index.js";
 import type { ManagedTmuxRuntime } from "../src/manager.js";
-import { createSessionState, SessionStateStore } from "../src/state-store.js";
+import { createSessionState, SessionStateStore as SourceStore } from "../src/state-store.js";
+
+const SessionStateStore = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/state-store.js")).SessionStateStore : SourceStore;
+const subagentExtension = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/index.js")).default : sourceExtension;
 
 const eventNames = [
   "session_start",
@@ -93,6 +96,40 @@ test("releases the previous namespace controller when the root switches sessions
     assert.ok(await stat(join(root, "controllers", "second")));
     await handlers.get("session_shutdown")!({});
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test.each(["shutdown", "session switch"])("%s releases ownership acquired by a tool after a read-only startup", async (action) => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-index-test-"));
+  const create = () => {
+    const handlers = new Map<string, (...args: any[]) => Promise<unknown>>();
+    const tools = new Map<string, any>();
+    const store = new SessionStateStore(root);
+    subagentExtension({ on: (name: string, handler: any) => handlers.set(name, handler), registerTool: (tool: any) => tools.set(tool.name, tool) } as never,
+      { env: { PATH: "/usr/bin" }, stateRoot: root, store });
+    return { handlers, tools, store };
+  };
+  const ctx = { cwd: root, sessionManager: { getSessionId: () => "parent", getSessionFile: () => join(root, "parent.jsonl"), getLeafId: () => null, getEntries: () => [] } };
+  const a = create(); const b = create(); const c = create();
+  try {
+    await a.handlers.get("session_start")!({}, ctx);
+    const firstEpoch = (await a.store.loadRuntime("parent"))!.control!.controllerEpoch;
+    await b.handlers.get("session_start")!({}, ctx);
+    assert.equal((await b.store.loadRuntime("parent"))!.control!.controllerEpoch, firstEpoch);
+    await a.handlers.get("session_shutdown")!({});
+    await b.tools.get("subagent_list").execute("list", {}, undefined, undefined, ctx);
+    const secondEpoch = (await b.store.loadRuntime("parent"))!.control!.controllerEpoch;
+    assert.notEqual(secondEpoch, firstEpoch);
+    if (action === "shutdown") await b.handlers.get("session_shutdown")!({});
+    else await b.handlers.get("session_start")!({}, { ...ctx, sessionManager: {
+      ...ctx.sessionManager, getSessionId: () => "next", getSessionFile: () => join(root, "next.jsonl"),
+    } });
+    await assert.rejects(stat(join(root, "controllers", "parent")), { code: "ENOENT" });
+    await c.handlers.get("session_start")!({}, ctx);
+    assert.notEqual((await c.store.loadRuntime("parent"))!.control!.controllerEpoch, secondEpoch);
+  } finally {
+    for (const instance of [a, b, c]) await instance.handlers.get("session_shutdown")!({}).catch(() => {});
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test.each(["corrupt", "old-schema"])("production startup rolls back new control ownership after a %s root fails validation", async (kind) => {

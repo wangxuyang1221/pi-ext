@@ -53,7 +53,7 @@ export class TmuxRuntime {
             options.windowName,
             "-c",
             options.cwd,
-            shellCommand,
+            "/bin/sh", "-c", shellCommand,
         ];
         if (hasSession.code === 0) {
             const result = await this.runRequired(newWindowArgs);
@@ -71,7 +71,7 @@ export class TmuxRuntime {
             options.windowName,
             "-c",
             options.cwd,
-            shellCommand,
+            "/bin/sh", "-c", shellCommand,
         ];
         const created = await this.execute(this.tmuxPath, newSessionArgs);
         if (created.code === 0)

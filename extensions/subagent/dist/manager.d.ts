@@ -127,12 +127,16 @@ export declare class SubagentManager {
     private readonly controllers;
     private readonly controllerSignals;
     private readonly operations;
+    private controllersStopped;
+    private releasingControllers?;
     private runOperation;
     claimNamespace(sessionId: string, required?: boolean): Promise<boolean>;
     private initializeController;
     private synchronizeController;
     controllerGuard(sessionId: string): Promise<() => Promise<void>>;
     releaseNamespace(sessionId: string): Promise<void>;
+    releaseAllNamespaces(): Promise<void>;
+    resumeControllers(): Promise<void>;
     constructor(options: SubagentManagerOptions);
     spawn(parentSessionId: string, options: SpawnSubagentOptions, defaults: SpawnDefaults, signal?: AbortSignal): Promise<ManagedAgent>;
     private spawnInternal;

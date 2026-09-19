@@ -1,5 +1,45 @@
 # Subagent runtime reliability acceptance
 
+## Late takeover and fish follow-up
+
+针对 `0f591a23f45c4235d665bd915634dda74c0d1e09` 补齐两项：只读实例后来通过工具接管的控制权收尾，以及 fish 默认 shell 的启动兼容性。此处 fish 问题与下文历史记录中的身份标记安装时序是两个不同问题，不以审查编号替代问题描述。未修改 goal 记账或 renderer。
+
+| Finding | Red and green evidence |
+| --- | --- |
+| Late takeover | 直接通过扩展入口启动 A/B，B 初始只读；A shutdown 后 B 用 subagent_list 接管。旧实现 B shutdown 后锁仍在，修复后锁目录消失，C 可接管。会话切换路径也先失败、后通过。 |
+| Shutdown race | 同一轮中先提交 list、立即收尾，原实现仍能取得锁；现在先关闭接管入口、取消已排队操作。另用初始化屏障验证收尾等待回滚，并验证显式恢复后能够重新取得锁。回滚清理失败不得被吞掉。 |
+| Fish startup | 在独立 tmux server 设置 default-shell=fish，分别走 new-session 和 new-window。修复前 pane 输出 `${TMUX-}` 处语法错误并退出，修复后正常启动，child PID 与 pane PID 一致，TMUX_PANE 属于新 pane，复杂引号参数不变，default-shell 仍为 fish。 |
+
+验证使用仓库内独立 detached worktree，基线为 `0f591a2`，仅叠加本轮 subagent 补丁，未带入其他模块的未提交修改。Node.js 22.22.2、pnpm 11.9.0、tmux 3.6b、fish 4.9.3，宿主为 macOS。为运行真实 fish 测试安装了 fish，没有修改登录 shell 或现有 tmux server 配置。
+
+| Command | Result |
+| --- | --- |
+| `pnpm exec vitest run extensions/subagent/__tests__` | 186 通过、5 个 opt-in 场景默认跳过；主工作区和隔离工作树均通过 |
+| `pnpm run check` | typecheck 通过；1,222 测试通过、5 跳过；已有 MCP prototype suite 无法加载，无断言失败 |
+| `pnpm run build` | 隔离工作树全量构建通过 |
+| `pnpm run package:check` | 已有 `docs/goal-descendant-acceptance.md` 缺失，仍未通过 |
+
+MCP 阻断文件仍为 `prototypes/mcp-status-ui-prototype/src/codex-startup.js`，不是 subagent 失败。未修改这些无关文件。
+
+### Takeover and shell matrix
+
+设置 `PI_SUBAGENT_ISOLATED_INTEGRATION=1`、`PI_SUBAGENT_FIXTURE_DIST=0/1` 及对应 `PI_SUBAGENT_TEST_CLI`，运行：
+
+```bash
+pnpm exec vitest run extensions/subagent/__tests__/{index,reliability,file-lock,runtime-integration,production-integration,isolated-integration}.test.ts
+```
+
+| Child CLI | Extension | Result |
+| --- | --- | --- |
+| 0.84.3 | src | 38/38 |
+| 0.84.3 | dist | 38/38 |
+| 0.85.1 | src | 38/38 |
+| 0.85.1 | dist | 38/38 |
+
+index 与 reliability 测试现在也按矩阵选择源码或产物，manager 与 store 使用同一版本。生产入口场景包含即时标记、延迟标记、fish 默认 shell；parent ExtensionAPI 由夹具提供，child 为真实 Pi TUI 和离线 provider，不调用付费模型。fish 路径验证了真实 Pi 登记、任务投递、关闭及新 pane 环境，不等同于完整 parent TUI 的 reload 人工验收。
+
+四格的生产入口与普通 Pi 集成均报告 `livePids: []`、`socketUnavailable: true`；真实 tmux 测试也断言跟踪的 server/pane PID 已退出、socket 不可连接。没有启动 TCP 服务。测试状态、HOME、socket 均位于仓库内临时目录，结束后清理。Linux、真实 parent TUI reload 及前序记录列出的完整故障注入矩阵仍未运行。
+
 ## Follow-up review
 
 针对 `91745a52c8296a5e31e22121b6f05c4e59ad0807` 的四项复审意见均已核验，并补入本轮修复。用户提供的 ZIP 中，`file-lock.ts` 与 `command-executor.ts` 的 Git blob SHA 分别为 `d8c209ad428d4d3cd1789d623235c0dfd82b9d57` 和 `f3b13184cfa868977b7b98c0129cd9fcd2e1876b`，与基线一致。检查脚本后在仓库内隔离目录执行锁探针，复现两个持有者同时通过 assertOwned。

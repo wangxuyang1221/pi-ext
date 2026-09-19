@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "vitest";
 import { executeCommand } from "../src/command-executor.js";
@@ -13,6 +13,50 @@ const TmuxRuntime = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import
 
 const Manager = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/manager.js")).SubagentManager : SourceManager;
 const tmux = ["/opt/homebrew/bin/tmux", "/usr/bin/tmux"].find(existsSync);
+const fish = [process.env.PI_SUBAGENT_TEST_FISH, "/opt/homebrew/bin/fish", "/usr/bin/fish"].find((path): path is string => !!path && existsSync(path));
+const quote = (value: string) => `'${value.replaceAll("'", `'"'"'`)}'`;
+
+test.skipIf(!tmux || !fish).each(["new-session", "new-window"])("%s starts a child with its own pane under a fish default shell", async (mode) => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-fish-"));
+  const wrapper = join(root, "tmux");
+  const pids = new Set<number>();
+  const alive = () => [...pids].filter(pid => { try { process.kill(pid, 0); return true; } catch { return false; } });
+  try {
+    const config = join(root, "tmux.conf");
+    await writeFile(config, `set -g default-shell ${quote(fish!)}\nset -g remain-on-exit on\n`);
+    await writeFile(wrapper, `#!/bin/sh\nexport LANG=en_US.UTF-8 HOME=${quote(root)} TMPDIR=${quote(root)} XDG_CONFIG_HOME=${quote(root)} XDG_DATA_HOME=${quote(root)} XDG_CACHE_HOME=${quote(root)}\nexec ${quote(tmux!)} -S ${quote(join(root, "socket"))} -f ${quote(config)} "$@"\n`, { mode: 0o700 });
+    const keeper = await executeCommand(wrapper, ["new-session", "-d", "-s", mode === "new-window" ? "owned" : "keeper", "-P", "-F", "#{pid}\\t#{pane_pid}", "/bin/sleep", "60"]);
+    assert.equal(keeper.code, 0, keeper.stderr);
+    for (const value of keeper.stdout.trim().split("\\t")) pids.add(Number(value));
+    assert.equal((await executeCommand(wrapper, ["show-options", "-gv", "default-shell"])).stdout.trim(), fish);
+    const runtime = new TmuxRuntime({ execute: executeCommand, tmuxPath: wrapper, sessionName: "owned", transferDirectory: root });
+    const output = join(root, "effective.json");
+    const argument = `a 'quote' "double" $d ;`;
+    const locator = await runtime.launch({ cwd: root, windowName: "child", command: process.execPath,
+      args: ["-e", `require('node:fs').writeFileSync(${JSON.stringify(output)}, JSON.stringify({pid:process.pid,pane:process.env.TMUX_PANE,tmux:process.env.TMUX,arg:process.argv[1]}));setInterval(()=>{},1000)`, argument],
+      environment: { PATH: "/usr/bin:/bin", HOME: root, PI_SUBAGENT_ID: "fish-child" } });
+    pids.add(locator.panePid!);
+    const deadline = performance.now() + 2000;
+    while (!existsSync(output) && performance.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10));
+    assert.equal(existsSync(output), true, await runtime.capturePane(locator));
+    const effective = JSON.parse(await readFile(output, "utf8"));
+    assert.equal(effective.pane, locator.paneId);
+    assert.equal(effective.pid, locator.panePid);
+    assert.ok(effective.tmux.startsWith(join(root, "socket")));
+    assert.equal(effective.arg, argument);
+    assert.equal((await executeCommand(wrapper, ["show-options", "-gv", "default-shell"])).stdout.trim(), fish);
+    await runtime.close(locator);
+  } finally {
+    const panes = await executeCommand(wrapper, ["list-panes", "-a", "-F", "#{pane_pid}"]).catch(() => undefined);
+    if (panes?.code === 0) for (const value of panes.stdout.trim().split("\n")) pids.add(Number(value));
+    await executeCommand(wrapper, ["kill-server"]).catch(() => undefined);
+    const deadline = performance.now() + 2000;
+    while (alive().length && performance.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10));
+    assert.deepEqual(alive(), []);
+    assert.notEqual((await executeCommand(wrapper, ["list-sessions"])).code, 0);
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test.skipIf(!tmux)("manager single-target close removes a retained dead pane after list marks it interrupted", async () => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-runtime-real-"));

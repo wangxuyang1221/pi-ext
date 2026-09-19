@@ -47,7 +47,11 @@ export class SubagentManager {
     controllers = new Map();
     controllerSignals = new Map();
     operations = new Map();
+    controllersStopped = false;
+    releasingControllers;
     runOperation(sessionId, timeout, signal, work) {
+        if (this.controllersStopped)
+            return Promise.reject(new Error("Subagent controller stopped"));
         let controller = this.controllerSignals.get(sessionId);
         if (!controller) {
             controller = new AbortController();
@@ -63,6 +67,9 @@ export class SubagentManager {
         return pending;
     }
     async claimNamespace(sessionId, required = true) {
+        currentOperation()?.signal.throwIfAborted();
+        if (this.controllersStopped)
+            throw new Error("Subagent controller stopped");
         this.store.statePath(sessionId);
         let pending = this.controllers.get(sessionId);
         const newlyAcquired = !pending;
@@ -124,13 +131,42 @@ export class SubagentManager {
     }
     async releaseNamespace(sessionId) {
         const pending = this.controllers.get(sessionId);
-        if (!pending)
-            return;
         this.controllerSignals.get(sessionId)?.abort(new Error("Subagent controller stopped"));
         await Promise.allSettled([...(this.operations.get(sessionId) ?? [])]);
-        await (await pending).release();
-        this.controllers.delete(sessionId);
+        // Initialization rolls back its acquisition; aggregate cleanup failures must remain visible.
+        const lock = await pending?.catch((error) => {
+            if (error instanceof AggregateError)
+                throw error;
+            return undefined;
+        });
+        await lock?.release();
+        if (this.controllers.get(sessionId) === pending)
+            this.controllers.delete(sessionId);
         this.controllerSignals.delete(sessionId);
+    }
+    releaseAllNamespaces() {
+        this.controllersStopped = true;
+        if (this.releasingControllers)
+            return this.releasingControllers;
+        for (const controller of this.controllerSignals.values())
+            controller.abort(new Error("Subagent controller stopped"));
+        const sessionIds = new Set([...this.controllers.keys(), ...this.controllerSignals.keys()]);
+        const pending = Promise.allSettled([...sessionIds].map(sessionId => this.releaseNamespace(sessionId))).then(outcomes => {
+            const failures = outcomes.filter((outcome) => outcome.status === "rejected");
+            if (failures.length)
+                throw new AggregateError(failures.map(outcome => outcome.reason), "Failed to release subagent controllers");
+        });
+        this.releasingControllers = pending;
+        const clear = () => { if (this.releasingControllers === pending)
+            this.releasingControllers = undefined; };
+        void pending.then(clear, clear);
+        return pending;
+    }
+    async resumeControllers() {
+        await this.releasingControllers;
+        if (this.controllersStopped && this.controllers.size)
+            throw new Error("Subagent controller cleanup is incomplete");
+        this.controllersStopped = false;
     }
     constructor(options) {
         this.store = options.store;

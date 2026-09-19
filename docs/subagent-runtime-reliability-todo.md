@@ -75,6 +75,8 @@
 
 ### Execution results
 
+针对 `0f591a2` 已补齐只读实例通过工具接管后的 shutdown/会话切换收尾，禁止旧生命周期的迟到接管，并固定 `/bin/sh -c` 以支持 fish 默认 shell。两项有实际 Red → Green。隔离工作树 subagent 186 通过、5 跳过；src/dist × Pi 0.84.3/0.85.1 四格各 38/38，包含真实 fish/tmux 和 Pi child。全仓检查 1,222 测试通过，仍被已有 MCP prototype suite 缺失阻断；全量构建通过，发布包检查仍缺 goal 文档。详情见验收记录的 Late takeover and fish follow-up。
+
 针对 `91745a5` 的后续复审已补齐锁回收互斥、首次初始化失败回滚、终态 child 单目标终端清理，以及身份标记延迟安装的有界握手。四项均有直接反例及修复后回归。独立工作树只叠加本轮补丁，subagent 为 179 通过、4 跳过；src/dist × Pi 0.84.3/0.85.1 四格各 9/9 通过。干净基线全仓检查仅剩已有 MCP prototype suite 缺失，全量构建通过，发布包检查仍被已有 goal 文档缺失阻断。详情见验收记录的 Follow-up review，以下保留首次交付结果。
 
 - subagent 测试 167 通过、3 个 opt-in 场景默认跳过；其中真实 Pi 两项另以 CLI 0.84.3/0.85.1 × src/dist 四格运行，每格加上真实 tmux 测试均为 5/5 通过。旧的非隔离 integration 未启用。

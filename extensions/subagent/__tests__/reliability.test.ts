@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "vitest";
-import { createSessionState, SessionStateStore } from "../src/state-store.js";
+import { createSessionState, SessionStateStore as SourceStore } from "../src/state-store.js";
 import { registerDirectChild } from "../src/ownership.js";
 import { encodeSettledCursor } from "../src/cursor.js";
-import { SubagentManager, type ManagedTmuxRuntime } from "../src/manager.js";
+import { SubagentManager as SourceManager, type ManagedTmuxRuntime } from "../src/manager.js";
+
+const SessionStateStore = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/state-store.js")).SessionStateStore : SourceStore;
+const SubagentManager = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/manager.js")).SubagentManager : SourceManager;
 
 async function fixture(closeTimeoutMs = 1000) {
   const root = await mkdtemp(join(process.cwd(), ".subagent-reliability-"));
@@ -70,6 +73,63 @@ test("controller handoff cancels old I/O and fences old callbacks without changi
     assert.equal(parent!.epoch, "root-e");
     assert.notEqual(parent!.control!.controllerEpoch, oldEpoch);
   } finally { await f.cleanup(); }
+});
+
+test("controller shutdown cancels queued acquisitions and rejects late tools", async () => {
+  const f = await fixture();
+  try {
+    const listing = f.manager.list("root").catch((error: unknown) => error);
+    await f.manager.releaseAllNamespaces();
+    assert.ok(await listing instanceof Error);
+    await assert.rejects(stat(join(f.root, "controllers", "root")), { code: "ENOENT" });
+    await assert.rejects(f.manager.list("root"), /controller.*stopped/u);
+  } finally { await f.cleanup(); }
+});
+
+test("controller shutdown drains an acquisition already initializing and allows explicit resume", async () => {
+  const f = await fixture();
+  const originalLoad = f.store.loadRuntime.bind(f.store);
+  let entered!: () => void; let unblock!: () => void;
+  const initializing = new Promise<void>(resolve => { entered = resolve; });
+  const barrier = new Promise<void>(resolve => { unblock = resolve; });
+  let first = true;
+  f.store.loadRuntime = async id => {
+    if (id === "root" && first) { first = false; entered(); await barrier; }
+    return originalLoad(id);
+  };
+  try {
+    const listing = f.manager.list("root").catch((error: unknown) => error);
+    await initializing;
+    const shutdown = f.manager.releaseAllNamespaces();
+    unblock();
+    await shutdown;
+    assert.ok(await listing instanceof Error);
+    await assert.rejects(stat(join(f.root, "controllers", "root")), { code: "ENOENT" });
+    await f.manager.resumeControllers();
+    assert.equal((await f.manager.list("root")).capacity.active, 1);
+    await f.manager.releaseAllNamespaces();
+  } finally { unblock(); await f.cleanup(); }
+});
+
+test("controller shutdown reports an initialization rollback cleanup failure", async () => {
+  const f = await fixture();
+  let entered!: () => void; let unblock!: () => void;
+  const initializing = new Promise<void>(resolve => { entered = resolve; });
+  const barrier = new Promise<void>(resolve => { unblock = resolve; });
+  f.store.loadRuntime = async () => {
+    await writeFile(join(f.root, "controllers", "root", "unexpected"), "test");
+    entered(); await barrier;
+    throw new Error("Root validation failed");
+  };
+  try {
+    const claiming = f.manager.claimNamespace("root").catch((error: unknown) => error);
+    await initializing;
+    const shutdown = f.manager.releaseAllNamespaces();
+    const failure = assert.rejects(shutdown, /Failed to release subagent controllers/u);
+    unblock();
+    await failure;
+    assert.ok(await claiming instanceof AggregateError);
+  } finally { unblock(); await f.cleanup(); }
 });
 
 test("process capacity survives an empty session binding set", async () => {

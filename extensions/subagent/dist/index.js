@@ -82,25 +82,26 @@ export default function subagentExtension(pi, options = {}) {
     else if (launch) {
         registerChildUsage(pi, usageDirectory(stateRoot, launch.processInstanceId));
     }
-    let controlledSessionId;
+    let rootSessionId;
     pi.on("session_start", async (_event, ctx) => {
         const sessionFile = ctx.sessionManager.getSessionFile();
         if (!sessionFile)
             return;
         if (!parent) {
-            if (controlledSessionId && controlledSessionId !== ctx.sessionManager.getSessionId()) {
+            if (rootSessionId && rootSessionId !== ctx.sessionManager.getSessionId()) {
                 try {
                     await host.shutdown();
                 }
                 finally {
-                    await manager.releaseNamespace(controlledSessionId);
-                    controlledSessionId = undefined;
+                    await manager.releaseAllNamespaces();
+                    rootSessionId = undefined;
                 }
             }
-            if (!await manager.claimNamespace(ctx.sessionManager.getSessionId(), false))
+            await manager.resumeControllers();
+            rootSessionId = ctx.sessionManager.getSessionId();
+            if (!await manager.claimNamespace(rootSessionId, false))
                 return;
-            controlledSessionId = ctx.sessionManager.getSessionId();
-            host.setControllerGuard(await manager.controllerGuard(controlledSessionId));
+            host.setControllerGuard(await manager.controllerGuard(rootSessionId));
         }
         let tmux;
         if (parent) {
@@ -126,8 +127,8 @@ export default function subagentExtension(pi, options = {}) {
             ...(tmux ? { tmux } : {}),
             ...(parent ? { configuration: { protocolVersion: SESSION_STATE_SCHEMA_VERSION, agentDir, tmuxPath, piPath } } : {}),
         });
-        if (controlledSessionId)
-            await manager.claimNamespace(controlledSessionId);
+        if (rootSessionId)
+            await manager.claimNamespace(rootSessionId);
     });
     pi.on("agent_start", async () => {
         await host.agentStarted();
@@ -155,9 +156,8 @@ export default function subagentExtension(pi, options = {}) {
             await host.shutdown();
         }
         finally {
-            if (controlledSessionId)
-                await manager.releaseNamespace(controlledSessionId);
-            controlledSessionId = undefined;
+            await manager.releaseAllNamespaces();
+            rootSessionId = undefined;
         }
     });
 }

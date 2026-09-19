@@ -105,7 +105,7 @@ export class TmuxRuntime {
       options.windowName,
       "-c",
       options.cwd,
-      shellCommand,
+      "/bin/sh", "-c", shellCommand,
     ];
 
     if (hasSession.code === 0) {
@@ -125,7 +125,7 @@ export class TmuxRuntime {
       options.windowName,
       "-c",
       options.cwd,
-      shellCommand,
+      "/bin/sh", "-c", shellCommand,
     ];
     const created = await this.execute(this.tmuxPath, newSessionArgs);
     if (created.code === 0) return this.bindLocator(parseLocator(created.stdout), options.environment.PI_SUBAGENT_ID);

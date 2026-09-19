@@ -35,6 +35,8 @@ parent 不再把 `closing` 或 `interrupted` 写回 child 的 runtime。读取�
 
 `namespaceEpoch` 在同一持久化 root 会话重启时保留；`controllerEpoch` 随控制者接管变化。同一 namespace 的第二个 root 只能读取，不能 spawn、prompt 或 close。正常 shutdown 取消在途操作、释放控制锁；root 切换 session 也释放旧 namespace 的控制权。旧回调执行写入或 tmux 命令前必须通过控制权检查。首次取得锁后若 namespace 初始化失败，回滚本次锁与授权注册；并发调用共享整个初始化结果。已经持有控制权后的读取失败不会释放现有控制权。
 
+只读实例在原控制者释放后，可由后续工具调用取得控制权。shutdown 和 root 会话切换按 manager 实际持有的控制权统一收尾，不依赖 session_start 是否曾取得锁。收尾先停止新操作、取消排队与在途操作，等待正在初始化的锁完成或回滚，再释放全部已取得的锁；清理失败必须报错。旧生命周期的迟到工具调用不能重新取得控制权，下一次 session_start 才显式恢复管理入口。收尾控制者不终止仍受管的 child。
+
 锁仅在本机 owner PID 明确不存在时回收，不按时间过期抢占。只有成功删除该代唯一 owner 文件的竞争者，才能继续删除其锁目录。删除 owner 得到 ENOENT 的竞争者必须重新竞争，不能删除另一个持有者正在初始化的目录。owner 丢失、损坏、属于其他主机或 PID 可能复用时，不自动接管。状态目录应放在本机文件系统，不支持多个主机共享 namespace。
 
 名额绑定 `processInstanceId`，不是 session 状态。会话交接期间即使旧 alias 已 closed、新 alias 尚未写入，也继续占位。空闲 child、未知进程和未完成关闭同样占位。只有明确未启动的过期 reservation 才能直接回收；已进入 launching 而结果不明的 reservation 不因 TTL 自动释放。
@@ -53,7 +55,7 @@ close 先持久化关闭意图，确认退出与资源清理后，先终结进�
 
 ## Environment contract
 
-启动命令用 `/usr/bin/env -i` 清除 tmux server 遗留变量，再传入明确的父端配置。允许继承 PATH、HOME、SHELL、TERM、COLORTERM、LANG、LC_*、TMPDIR、XDG_*、Pi 权限模式及容量设置。
+`new-session` 与 `new-window` 均通过 tmux 多参数执行形式传入 `/bin/sh`、`-c` 和启动字符串，固定 POSIX 解释器，不依赖用户的 `default-shell`。即使默认 shell 为 fish，也不改变该设置。启动命令用 `/usr/bin/env -i` 清除 tmux server 遗留变量，再传入明确的父端配置。允许继承 PATH、HOME、SHELL、TERM、COLORTERM、LANG、LC_*、TMPDIR、XDG_*、Pi 权限模式及容量设置。
 
 扩展显式传入有效 `PI_CODING_AGENT_DIR`、`PI_SUBAGENT_TMUX_PATH`、`PI_SUBAGENT_PI_PATH`、管理元数据和状态根目录。tmux 提供新 pane 的 `TMUX`、`TMUX_PANE`，不复制父 pane 身份。扩展入口、cwd、模型和 thinking level 通过启动参数传递。路径建议使用绝对路径；独立 server 可通过使用 `exec tmux -S <socket> "$@"` 的 wrapper 固定。
 
@@ -103,5 +105,7 @@ JS
 ## References
 
 - [tmux manual](https://man.openbsd.org/tmux.1)：对象 ID、环境继承及 remain-on-exit。
+- [tmux 3.6b spawn.c](https://github.com/tmux/tmux/blob/3.6b/spawn.c)：单命令字符串交给 default-shell，多参数通过 execvp 直接执行。
+- [fish variable defaults](https://fishshell.com/docs/current/fish_for_bash_users.html#variable-defaults)：fish 不支持 POSIX 默认值参数展开。
 - [Node.js 22 child processes](https://nodejs.org/download/release/v22.19.0/docs/api/child_process.html)：signal、timeout、exit 与 close。
 - [Acceptance record](subagent-runtime-reliability-acceptance.md)：本轮实测矩阵和未验证项。

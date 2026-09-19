@@ -124,18 +124,19 @@ export default function subagentExtension(
     registerChildUsage(pi, usageDirectory(stateRoot, launch.processInstanceId));
   }
 
-  let controlledSessionId: string | undefined;
+  let rootSessionId: string | undefined;
   pi.on("session_start", async (_event, ctx) => {
     const sessionFile = ctx.sessionManager.getSessionFile();
     if (!sessionFile) return;
     if (!parent) {
-      if (controlledSessionId && controlledSessionId !== ctx.sessionManager.getSessionId()) {
+      if (rootSessionId && rootSessionId !== ctx.sessionManager.getSessionId()) {
         try { await host.shutdown(); }
-        finally { await manager.releaseNamespace(controlledSessionId); controlledSessionId = undefined; }
+        finally { await manager.releaseAllNamespaces(); rootSessionId = undefined; }
       }
-      if (!await manager.claimNamespace(ctx.sessionManager.getSessionId(), false)) return;
-      controlledSessionId = ctx.sessionManager.getSessionId();
-      host.setControllerGuard(await manager.controllerGuard(controlledSessionId));
+      await manager.resumeControllers();
+      rootSessionId = ctx.sessionManager.getSessionId();
+      if (!await manager.claimNamespace(rootSessionId, false)) return;
+      host.setControllerGuard(await manager.controllerGuard(rootSessionId));
     }
 
     let tmux: TmuxLocator | undefined;
@@ -160,7 +161,7 @@ export default function subagentExtension(
       ...(tmux ? { tmux } : {}),
       ...(parent ? { configuration: { protocolVersion: SESSION_STATE_SCHEMA_VERSION, agentDir, tmuxPath, piPath } } : {}),
     });
-    if (controlledSessionId) await manager.claimNamespace(controlledSessionId);
+    if (rootSessionId) await manager.claimNamespace(rootSessionId);
   });
 
   pi.on("agent_start", async () => {
@@ -188,8 +189,8 @@ export default function subagentExtension(
   pi.on("session_shutdown", async () => {
     try { await host.shutdown(); }
     finally {
-      if (controlledSessionId) await manager.releaseNamespace(controlledSessionId);
-      controlledSessionId = undefined;
+      await manager.releaseAllNamespaces();
+      rootSessionId = undefined;
     }
   });
 }

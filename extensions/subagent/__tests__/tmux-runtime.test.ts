@@ -308,10 +308,10 @@ test("launches a child with quoted argv and parses its tmux locator", async () =
       "-c",
       "/repo with spaces",
     ]);
-    assert.equal(
-      launchArgs[11],
+    assert.deepEqual(launchArgs.slice(11), [
+      "/bin/sh", "-c",
       "exec /usr/bin/env -i TMUX=\"${TMUX-}\" TMUX_PANE=\"${TMUX_PANE-}\" 'PATH=/custom/bin' 'PI_SUBAGENT_TOKEN=token'\"'\"'quoted' '/path/pi' '--session-dir' '/tmp/a'\"'\"'b'",
-    );
+    ]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -359,6 +359,7 @@ test("recovers when another spawn creates the tmux session concurrently", async 
     "has-session",
     "new-window",
   ]);
+  for (const args of [calls[1], calls[3]]) assert.deepEqual(args.slice(-3, -1), ["/bin/sh", "-c"]);
 });
 
 test.each(["wrong-marker", "changed-server", "changed-pid"])("identity installation rejects %s instead of waiting or accepting a replacement", async (kind) => {
