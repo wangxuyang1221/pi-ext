@@ -21,18 +21,24 @@
 
 ## Install
 
-从 GitHub 安装整个 package：
+先克隆源码并构建，再安装本地 package。仓库不再提交 `dist/`，不能直接使用 Git package 安装方式：
 
 ```bash
-pi install git:github.com/wangxuyang1221/pi-ext
+git clone https://github.com/wangxuyang1221/pi-ext.git
+cd pi-ext
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm run build
+pi install "$PWD"
 ```
+
+本地安装引用此目录，不会复制文件。更新源码后需重新运行 `pnpm run build`。
 
 安装后重启 Pi。使用 `pi config` 可以单独停用任一扩展或主题，而不必删除 package。
 
 如需临时测试且不写入 settings：
 
 ```bash
-pi -e git:github.com/wangxuyang1221/pi-ext
+pi -e "$PWD"
 ```
 
 Pi package 以当前用户的完整系统权限运行。安装第三方 package 前应检查源码。
@@ -411,7 +417,7 @@ pnpm run prototype:tui
 pnpm run prototype:subagent-ui
 ```
 
-仓库有意提交 `dist/`。Pi 从 Git 安装 package 时只安装生产依赖，因此需要预构建文件。CI 会拒绝过期的生成文件。`prepack` 会重建七个扩展，发布包只包含编译产物、theme、README、goal 验收报告、license 和上游 attribution。包同时包含 MIT 本地实现与 Apache-2.0 的 Codex goal 复制内容，metadata 使用 `MIT AND Apache-2.0`；具体文件归属见 `extensions/goal/UPSTREAM.md`、`LICENSE` 和 `NOTICE`，不把上游内容改授 MIT。
+仓库不提交 `dist/`、编译缓存或本地运行日志。CI 从源码构建，并检查是否有被忽略的文件仍受 Git 跟踪。`extensions/codex-compact/src/media/` 中的预编译 WASM、manifest、许可证和第三方源码包是普通构建的输入，继续纳入版本控制；普通构建只校验并复制这些资源，不调用 Rust。`prepack` 会重建七个扩展，发布包只包含编译产物、theme、README、goal 验收报告、license 和上游 attribution。包同时包含 MIT 本地实现与 Apache-2.0 的 Codex goal 复制内容，metadata 使用 `MIT AND Apache-2.0`；具体文件归属见 `extensions/goal/UPSTREAM.md`、`LICENSE` 和 `NOTICE`，不把上游内容改授 MIT。
 
 验证本地工作区后，可安装解包目录，不必先发布到注册表：
 

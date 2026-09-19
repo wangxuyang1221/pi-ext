@@ -1,2 +1,0 @@
-$ pnpm run clean && tsc -p ./extensions/codex-compact/tsconfig.json && tsc -p ./extensions/openai-fast-mode/tsconfig.json && tsc -p ./extensions/codex-ui/tsconfig.json && tsc -p ./extensions/mcp/tsconfig.json && tsc -p ./extensions/permissions/tsconfig.json && tsc -p ./extensions/subagent/tsconfig.json && tsc -p ./extensions/goal/tsconfig.json
-$ node ./scripts/clean.mjs

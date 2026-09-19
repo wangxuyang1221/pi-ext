@@ -1,9 +1,0 @@
-
- RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-goal-all-providers
-
-·························································································································································································
-
- Test Files  13 passed (13)
-      Tests  185 passed (185)
-   Start at  01:08:37
-   Duration  4.21s (transform 375ms, setup 0ms, collect 2.05s, tests 10.59s, environment 1ms, prepare 622ms)

@@ -32,8 +32,14 @@ jobs:
       - name: Check source, tests, and build
         run: pnpm run check
 
-      - name: Verify committed build artifacts
-        run: git diff --exit-code -- extensions/codex-compact/dist extensions/mcp/dist extensions/permissions/dist
+      - name: Verify ignored files are not tracked
+        shell: bash
+        run: |
+          tracked_ignored=$(git ls-files --cached --ignored --exclude-standard)
+          if [ -n "$tracked_ignored" ]; then
+            printf '%s\n' "$tracked_ignored"
+            exit 1
+          fi
 
       - name: Inspect package contents
         run: pnpm pack --dry-run

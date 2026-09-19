@@ -1,2 +1,0 @@
-$ node ./scripts/check-package.mjs
-Verified 7 compiled Pi extension entries, 1 theme entry, 10 MCP generated modules, required MCP runtime exports, and package exclusion boundaries.
