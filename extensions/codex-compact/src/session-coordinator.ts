@@ -10,6 +10,7 @@ import {
 	effectiveInputForBranch,
 	findNativeCheckpoint,
 	fullInputForBranch,
+	toolsWithRequestFormats,
 	isContextWindowCompactionError,
 	isFailClosedCompactionError,
 	piContextInputForBranch,
@@ -389,6 +390,12 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 	const transitionBySession = new Map<string, Promise<void>>();
 	const automaticCompactionBySession = new Map<string, Promise<void>>();
 	let generation = 0;
+	const ensureCurrent = (ctx: ExtensionContext, targetModelKey: string, startGeneration: number, signal?: AbortSignal): void => {
+		ensureNotAborted(signal);
+		if (generation !== startGeneration || (ctx.model && modelKey(ctx.model) !== targetModelKey)) {
+			throw new Error("The session changed while Codex model-transition compaction was running.");
+		}
+	};
 
 	const clear = (): void => {
 		generation++;
@@ -423,7 +430,9 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		startGeneration: number,
 		leafId: string | undefined,
 	): void => {
-		if (ctx.signal?.aborted || generation !== startGeneration || conversationLeafId(deps.getBranch(ctx)) !== leafId) return;
+		if (ctx.signal?.aborted || generation !== startGeneration
+			|| (ctx.model && modelKey(ctx.model) !== modelKey(model))
+			|| conversationLeafId(deps.getBranch(ctx)) !== leafId) return;
 		pendingBySession.delete(ctx.sessionManager.getSessionId());
 		if (!gateEntryId) return;
 		try {
@@ -450,13 +459,14 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 	): Promise<void> => {
 		const operationSignal = signal ?? ctx.signal;
 		for (let attempt = 0; attempt < 3; attempt++) {
+			ensureCurrent(ctx, targetModelKey, startGeneration, operationSignal);
 			const branch = deps.getBranch(ctx);
 			const leafId = conversationLeafId(branch);
 			const compactionBranch = branchBeforeCurrentUser(branch, requestInput);
 			const input = effectiveInputForBranch({
 				branch: compactionBranch,
 				model: previousModel,
-				tools: deps.getAllTools(),
+				tools: toolsWithRequestFormats(deps.getAllTools(), basePayload, requestInput),
 				allowCheckpointModelMismatch: true,
 				excludeLastAssistantError,
 			});
@@ -470,6 +480,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 					signal: operationSignal,
 				});
 			} catch (firstError) {
+				ensureCurrent(ctx, targetModelKey, startGeneration, operationSignal);
 				if (
 					(modelKey(currentModel) === modelKey(previousModel) && compactionHash(currentModel) === compactionHash(previousModel))
 					|| !shouldRetryWithCurrentModel(firstError)
@@ -481,7 +492,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 						input: effectiveInputForBranch({
 							branch: compactionBranch,
 							model: currentModel,
-							tools: deps.getAllTools(),
+							tools: toolsWithRequestFormats(deps.getAllTools(), basePayload, requestInput),
 							allowCheckpointModelMismatch: true,
 							excludeLastAssistantError,
 						}),
@@ -492,8 +503,8 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 					throw fallbackError;
 				}
 			}
-			ensureNotAborted(operationSignal);
-			if (generation !== startGeneration || conversationLeafId(deps.getBranch(ctx)) !== leafId) continue;
+			ensureCurrent(ctx, targetModelKey, startGeneration, operationSignal);
+			if (conversationLeafId(deps.getBranch(ctx)) !== leafId) continue;
 			deps.appendCheckpoint(rebindCheckpoint(
 				preserveCurrentUser(native.details, branch, requestInput),
 				targetModelKey,
@@ -533,7 +544,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			const input = effectiveInputForBranch({
 				branch: branchBeforeCurrentUser(deps.getBranch(ctx), requestInput),
 				model,
-				tools: deps.getAllTools(),
+				tools: toolsWithRequestFormats(deps.getAllTools(), basePayload, requestInput),
 				allowCheckpointModelMismatch: true,
 				excludeLastAssistantError,
 			});
@@ -554,15 +565,15 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 				input: effectiveInputForBranch({
 					branch: branchBeforeCurrentUser(branch, requestInput),
 					model,
-					tools: deps.getAllTools(),
+					tools: toolsWithRequestFormats(deps.getAllTools(), basePayload, requestInput),
 					allowCheckpointModelMismatch: true,
 					excludeLastAssistantError,
 				}),
 				basePayload,
 				signal: operationSignal,
 			});
-			ensureNotAborted(operationSignal);
-			if (generation !== startGeneration || conversationLeafId(deps.getBranch(ctx)) !== leafId) {
+			ensureCurrent(ctx, modelKey(model), startGeneration, operationSignal);
+			if (conversationLeafId(deps.getBranch(ctx)) !== leafId) {
 				throw new Error("The session changed while Codex model-transition compaction was running.");
 			}
 			deps.appendCheckpoint(rebindCheckpoint(
@@ -585,7 +596,10 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 	};
 
 	const selectModel = async (event: ModelSelectLike, ctx: ExtensionContext): Promise<void> => {
+		generation++;
 		const sessionId = ctx.sessionManager.getSessionId();
+		transitionBySession.delete(sessionId);
+		automaticCompactionBySession.delete(sessionId);
 		const previousModel = event.previousModel;
 		if (!isOpenAICodexModel(event.model) || !previousModel) {
 			pendingBySession.delete(sessionId);
@@ -626,6 +640,10 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		skipAutomaticCompaction = false,
 	): Promise<ResponseItem[] | undefined> => {
 		const sessionId = ctx.sessionManager.getSessionId();
+		const requestGeneration = generation;
+		const requestSignal = ctx.signal;
+		const ensureRequestCurrent = () => ensureCurrent(ctx, modelKey(model), requestGeneration, requestSignal);
+		ensureRequestCurrent();
 		const originalRequestInput = requestInput;
 		requestInput = requestInputWithoutFailedRequests(requestInput, activeFailedRequests(rawGetBranch(ctx)));
 		const requestInputWasSanitized = requestInput !== originalRequestInput;
@@ -633,6 +651,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		const activeTransition = transitionBySession.get(sessionId);
 		if (activeTransition) {
 			await activeTransition;
+			ensureRequestCurrent();
 			return prepareRequest(model, ctx, requestInput, basePayload, false);
 		}
 		const branchBefore = deps.getBranch(ctx);
@@ -663,7 +682,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		const historyModel = pending?.previousModel
 			?? (checkpointModelKey && checkpointModelKey !== modelKey(model) ? resolveModel(ctx, checkpointModelKey) : undefined)
 			?? model;
-		const tools = deps.getAllTools();
+		const tools = toolsWithRequestFormats(deps.getAllTools(), basePayload, requestInput);
 		const historyBranch = branchBeforeCurrentUser(branchBefore, requestInput);
 		const historyInput = effectiveInputForBranch({
 			branch: historyBranch,
@@ -673,14 +692,17 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		});
 		const rawHistoryInput = fullInputForBranch({ branch: historyBranch, model: historyModel, tools });
 		const piContextInput = piContextInputForBranch({ branch: historyBranch, model: historyModel, tools });
-		const currentHistoryInput = effectiveInputForBranch({
+		// Reuse views only within this synchronous snapshot. Later awaits may change
+		// the branch or checkpoint, so subsequent phases rebuild from current facts.
+		const sameHistoryModel = isDeepStrictEqual(historyModel, model);
+		const currentHistoryInput = sameHistoryModel ? historyInput : effectiveInputForBranch({
 			branch: historyBranch,
 			model,
 			tools,
 			allowCheckpointModelMismatch: true,
 		});
-		const currentRawHistoryInput = fullInputForBranch({ branch: historyBranch, model, tools });
-		const currentPiContextInput = piContextInputForBranch({ branch: historyBranch, model, tools });
+		const currentRawHistoryInput = sameHistoryModel ? rawHistoryInput : fullInputForBranch({ branch: historyBranch, model, tools });
+		const currentPiContextInput = sameHistoryModel ? piContextInput : piContextInputForBranch({ branch: historyBranch, model, tools });
 		const systemPrompt = ctx.getSystemPrompt();
 		const supportsDeveloperRole = (model.compat as { supportsDeveloperRole?: boolean } | undefined)?.supportsDeveloperRole;
 		const systemPromptInput: ResponseItem[] = systemPrompt
@@ -728,6 +750,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 					try {
 						native = await createCheckpointFor(historyModel);
 					} catch (firstError) {
+						ensureRequestCurrent();
 						if (
 							(modelKey(model) === modelKey(historyModel) && compactionHash(model) === compactionHash(historyModel))
 							|| !shouldRetryWithCurrentModel(firstError)
@@ -738,7 +761,10 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 							throw fallbackError;
 						}
 					}
-					ensureNotAborted(ctx.signal);
+					ensureRequestCurrent();
+					if (conversationLeafId(deps.getBranch(ctx)) !== gateLeafId) {
+						throw new Error("The session changed while Codex model-transition compaction was running.");
+					}
 					const details = rebindCheckpoint(
 						preserveRequestUser(native.details, requestInput!),
 						modelKey(model),
@@ -760,6 +786,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		const activeAutomaticCompaction = automaticCompactionBySession.get(sessionId);
 		if (activeAutomaticCompaction) {
 			await activeAutomaticCompaction;
+			ensureRequestCurrent();
 			return prepareRequest(model, ctx, requestInput, basePayload, true);
 		}
 		if (pending && pending.targetModelKey === modelKey(model)) {
@@ -777,6 +804,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 				transitionBySession.set(sessionId, transition);
 				try {
 					await transition;
+					ensureRequestCurrent();
 					transitionCompactionCompleted = true;
 				} catch (transitionError) {
 					if (!isContextWindowCompactionError(transitionError)) {
@@ -791,6 +819,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		}
 
 		await recoverCurrentModel(model, ctx, basePayload, requestInput);
+		ensureRequestCurrent();
 		const recoveredCheckpoint = findNativeCheckpoint(deps.getBranch(ctx), modelKey(model));
 		if (recoveredCheckpoint.status === "valid" && recoveredCheckpoint.checkpoint.details.modelKey !== modelKey(model)) {
 			const checkpointHash = recoveredCheckpoint.checkpoint.details.compHash;
@@ -803,17 +832,19 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			const activeTransition = transitionBySession.get(sessionId);
 			if (activeTransition) {
 				await activeTransition;
+				ensureRequestCurrent();
 				return prepareRequest(model, ctx, requestInput, basePayload, false);
 			}
 			const activeAutomaticCompaction = automaticCompactionBySession.get(sessionId);
 			if (activeAutomaticCompaction) {
 				await activeAutomaticCompaction;
+				ensureRequestCurrent();
 			} else if (!skipAutomaticCompaction) {
 				const compactionBranch = branchBeforeCurrentUser(branch, requestInput);
 				const currentHistory = effectiveInputForBranch({
 					branch: compactionBranch,
 					model,
-					tools: deps.getAllTools(),
+					tools,
 					allowCheckpointModelMismatch: true,
 				});
 				if (
@@ -830,8 +861,8 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 							basePayload,
 							signal: ctx.signal,
 						});
-						ensureNotAborted(ctx.signal);
-						if (generation !== startGeneration || conversationLeafId(deps.getBranch(ctx)) !== leafId) {
+						ensureCurrent(ctx, modelKey(model), startGeneration, requestSignal);
+						if (conversationLeafId(deps.getBranch(ctx)) !== leafId) {
 							throw new Error("The session changed while Codex automatic compaction was running.");
 						}
 						deps.appendCheckpoint(preserveCurrentUser(
@@ -845,6 +876,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 					try {
 						await automaticCompaction;
 					} catch (automaticError) {
+						ensureRequestCurrent();
 						const unchangedInput = [...currentHistory, ...tail];
 						if (
 							ctx.signal?.aborted
@@ -889,7 +921,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			...effectiveInputForBranch({
 				branch: branchBeforeCurrentUser(branch, requestInput),
 				model,
-				tools: deps.getAllTools(),
+				tools,
 				allowCheckpointModelMismatch: true,
 			}),
 			...tail,
@@ -901,6 +933,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		ctx: ExtensionContext,
 		excludeLastAssistantError = false,
 		signal?: AbortSignal,
+		basePayload?: JsonObject,
 	): Promise<ResponseItem[]> => {
 		if (!isOpenAICodexModel(model)) return [];
 		const operationSignal = signal ?? ctx.signal;
@@ -912,7 +945,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		return effectiveInputForBranch({
 			branch: currentBranch,
 			model,
-			tools: deps.getAllTools(),
+			tools: toolsWithRequestFormats(deps.getAllTools(), basePayload),
 			allowCheckpointModelMismatch: true,
 			excludeLastAssistantError,
 		});

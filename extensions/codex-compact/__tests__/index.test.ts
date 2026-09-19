@@ -323,6 +323,8 @@ test.each(["session_tree", "session_start"])("does not clear or abort a newer re
 	try {
 		await starts[0];
 		await handlers.get(eventName)!({ model, previousModel: model }, ctx);
+		expect(ctx.abort).toHaveBeenCalledTimes(1);
+		ctx.signal = new AbortController().signal;
 		second = handlers.get("before_provider_request")!({ payload: payload() }, ctx) as Promise<unknown>;
 		await starts[1];
 		const activeWidget = setWidget.mock.calls.at(-1)?.[1];
@@ -330,7 +332,7 @@ test.each(["session_tree", "session_start"])("does not clear or abort a newer re
 		pending[0]!(overflow());
 		await first;
 		expect(setWidget.mock.calls.at(-1)?.[1]).toBe(activeWidget);
-		expect(ctx.abort).not.toHaveBeenCalled();
+		expect(ctx.abort).toHaveBeenCalledTimes(1);
 		expect(notify).not.toHaveBeenCalled();
 	} finally {
 		for (const resolve of pending) resolve(overflow());
@@ -338,7 +340,7 @@ test.each(["session_tree", "session_start"])("does not clear or abort a newer re
 		vi.unstubAllGlobals();
 	}
 	expect(setWidget.mock.calls.at(-1)?.[1]).toBeUndefined();
-	expect(ctx.abort).toHaveBeenCalledTimes(1);
+	expect(ctx.abort).toHaveBeenCalledTimes(2);
 });
 
 test("filters Pi compaction summaries after a valid V2 checkpoint", () => {
@@ -999,7 +1001,7 @@ test.each([
 		handlers.get("before_provider_headers")?.({ headers: stableHeaders }, ctx);
 		expect(stableHeaders["x-codex-turn-state"]).toBe("compact-state");
 
-		handlers.get("turn_end")?.({}, ctx);
+		handlers.get("message_start")?.({ message: { role: "user", content: "next" } }, ctx);
 		const nextHeaders: Record<string, string | null> = {};
 		handlers.get("before_provider_headers")?.({ headers: nextHeaders }, ctx);
 		expect(nextHeaders["x-codex-turn-state"]).toBeUndefined();

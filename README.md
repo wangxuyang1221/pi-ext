@@ -113,11 +113,11 @@ Codex encrypted compaction item.
 
 有效窗口默认为原始窗口的 95%，用于调度判断和压缩请求的工具输出裁剪预算。`effectiveContextWindowPercent` 接受大于 0 且不超过 100 的有限数值；若模型配置里的窗口已经扣除了余量，可设为 100，避免重复扣除。这个配置不会改变默认 90% 自动压缩阈值，也不会修改 Pi 自身的压缩调度。本地估算超窗不再直接阻止远端压缩，最终由服务端判断。
 
-插件观察到成功普通回复且历史覆盖边界仍有效时，自动压缩使用服务端 total usage 加未覆盖增量；模型、分支、前缀或检查点变化时回退本地估算。多媒体估算、特殊轮次边界及完整 Rust 差分尚未全部对齐；加载在本扩展之后的 payload 转换也无法完整观测。实现范围和真实 90% 验证见 [Codex compact accounting](docs/codex-compact-accounting.md)。
+插件观察到成功普通回复且历史覆盖边界仍有效时，自动压缩使用服务端 total usage 加未覆盖增量；模型、分支、前缀或检查点变化时回退本地估算。多媒体估算、特殊轮次边界及完整 Rust 差分尚未全部对齐；加载在本扩展之后的 payload 转换也无法完整观测。默认测试不依赖历史在线实验材料，也不以本地估算证明服务端 90% 阈值；报告重建入口见 [Codex compact quality validation](docs/codex-compact-quality-validation.md)。
 
 压缩请求超过有效窗口时，扩展仍可裁剪工具输出，但不再丢弃旧 user turn 后只压缩最新一段；服务端明确拒绝完整历史时会直接失败，不提交新 checkpoint，也不进入额外的超窗恢复循环。诊断保留原始错误分类，`recoveryAttempted` 为 `false`；网络重试及 Pi 普通请求超窗后发起压缩的流程不变。保留历史的 64k 预算计入图片，并原子保留或删除图片及相邻标签。文本边界采用 UTF-8 首尾保留截断。Pi 发起压缩时，如系统提示已改变，扩展会刷新缓存指令。
 
-当前 V2 路径不消费 `/compact focus text` 的 focus text，也不执行分段压缩。验证方法与限制见 [Codex compact validation](docs/codex-compact-validation.md)。
+当前 V2 路径不消费 `/compact focus text` 的 focus text，也不执行分段压缩。离线验证方法与历史证据要求见 [Codex compact quality validation](docs/codex-compact-quality-validation.md)。
 
 不要同时加载本扩展和独立的 `npm:@yeungkc/pi-codex-compact@0.0.6`，否则同一组 hooks 会执行两次。迁移现有安装时，应先验证本 package，再从 Pi settings 停用独立 npm entry 并重启或 reload。
 

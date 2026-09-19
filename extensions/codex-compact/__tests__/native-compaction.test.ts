@@ -127,7 +127,7 @@ describe("Codex compaction history", () => {
 					},
 					sessionManager: { getSessionId: () => "session" },
 				} as never,
-				model: { id: "gpt", provider: "openai-codex", api: "openai-codex-responses", contextWindow: 160 } as never,
+				model: { id: "gpt", provider: "openai-codex", api: "openai-codex-responses", reasoning: true, contextWindow: 160 } as never,
 				input: [{ type: "function_call_output", call_id: "1", output: "x".repeat(400) }],
 				basePayload,
 				allTools: [],

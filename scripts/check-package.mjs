@@ -1,6 +1,7 @@
 import { access, readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { assertSafePublishedPath } from "./package-paths.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const packageJson = JSON.parse(await readFile(join(repositoryRoot, "package.json"), "utf8"));
@@ -55,38 +56,9 @@ const requiredMcpRuntimeExports = new Map([
     "shouldRetryMcpError",
   ]],
 ]);
-const forbiddenDirectoryNames = new Set([
-  "__tests__",
-  "test",
-  "tests",
-  "fixture",
-  "fixtures",
-  "log",
-  "logs",
-]);
-
 function assertExactEntries(actual, expected, label) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(`Unexpected ${label}: ${JSON.stringify(actual)}`);
-  }
-}
-
-function assertSafePublishedPath(relativePath) {
-  const normalized = relativePath.replaceAll("\\", "/");
-  const segments = normalized.split("/").filter(Boolean);
-  const forbiddenDirectory = segments.find((segment) =>
-    forbiddenDirectoryNames.has(segment.toLowerCase())
-  );
-  if (forbiddenDirectory) {
-    throw new Error(`Test fixture or log path must not be published: ${normalized}`);
-  }
-
-  const basename = segments.at(-1) ?? "";
-  if (
-    /\.(?:log|jsonl|ndjson)(?:\.|$)/i.test(basename) ||
-    /(?:^|[._-])fixtures?(?:[._-]|$)/i.test(basename)
-  ) {
-    throw new Error(`Test fixture or log file must not be published: ${normalized}`);
   }
 }
 

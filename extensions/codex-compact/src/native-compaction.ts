@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { responseItemEstimationView } from "./response-item-estimation.js";
 import { setTimeout as sleep } from "node:timers/promises";
 import { audioTokenCount, contentTokens, imageBytes, inlineAudioPayload, inlineImagePayload, textTokens, truncateImageMessage, truncateText } from "./token-estimation.js";
@@ -360,8 +359,8 @@ export function estimateCompactionWindowPrefillTokens(params: {
 }
 
 // Pi's extension loader does not expose Pi AI's internal Responses converter.
-function shortHash(value: string): string {
-	return createHash("sha256").update(value).digest("hex").slice(0, 16);
+function sanitizeUnicode(value: string): string {
+	return value.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
 }
 
 /** Matches Pi AI's deterministic shortHash for cross-provider Responses item IDs. */
@@ -386,25 +385,42 @@ function normalizedItemId(value: string | undefined): string | undefined {
 
 function textSignature(value: unknown): { id?: string; phase?: "commentary" | "final_answer" } {
 	if (typeof value !== "string" || !value) return {};
-	try {
-		const parsed = JSON.parse(value) as JsonObject;
-		return {
-			id: typeof parsed.id === "string" ? parsed.id : undefined,
-			phase: parsed.phase === "commentary" || parsed.phase === "final_answer" ? parsed.phase : undefined,
-		};
-	} catch {
-		return { id: value };
+	if (value.startsWith("{")) {
+		try {
+			const parsed = JSON.parse(value) as JsonObject;
+			if (parsed.v === 1 && typeof parsed.id === "string") return {
+				id: parsed.id,
+				phase: parsed.phase === "commentary" || parsed.phase === "final_answer" ? parsed.phase : undefined,
+			};
+		} catch {}
 	}
+	return { id: value };
+}
+
+function imageAwareContent(content: unknown, model: Model<any>, placeholder: string): unknown {
+	if (!Array.isArray(content) || model.input?.includes("image") !== false) return content;
+	const result: unknown[] = [];
+	let previousWasPlaceholder = false;
+	for (const part of content) {
+		if (isJsonObject(part) && part.type === "image") {
+			if (!previousWasPlaceholder) result.push({ type: "text", text: placeholder });
+			previousWasPlaceholder = true;
+		} else {
+			result.push(part);
+			previousWasPlaceholder = isJsonObject(part) && part.text === placeholder;
+		}
+	}
+	return result;
 }
 
 function contentToUserParts(content: unknown): unknown[] {
-	if (typeof content === "string") return content ? [{ type: "input_text", text: content }] : [];
+	if (typeof content === "string") return [{ type: "input_text", text: sanitizeUnicode(content) }];
 	if (!Array.isArray(content)) return [];
 	const parts: unknown[] = [];
 	for (const part of content) {
 		if (!isJsonObject(part)) continue;
 		if (part.type === "text" && typeof part.text === "string") {
-			parts.push({ type: "input_text", text: part.text });
+			parts.push({ type: "input_text", text: sanitizeUnicode(part.text) });
 		} else if (part.type === "image" && typeof part.data === "string" && typeof part.mimeType === "string") {
 			parts.push({ type: "input_image", detail: "auto", image_url: `data:${part.mimeType};base64,${part.data}` });
 		}
@@ -413,9 +429,10 @@ function contentToUserParts(content: unknown): unknown[] {
 }
 
 function toolResultOutput(message: JsonObject, model: Model<any>): unknown {
-	const content = Array.isArray(message.content) ? message.content : [];
+	const compatibleContent = imageAwareContent(message.content, model, "(tool image omitted: model does not support images)");
+	const content = Array.isArray(compatibleContent) ? compatibleContent : [];
 	const text = content
-		.flatMap((part) => isJsonObject(part) && part.type === "text" && typeof part.text === "string" ? [part.text] : [])
+		.flatMap((part) => isJsonObject(part) && part.type === "text" && typeof part.text === "string" ? [sanitizeUnicode(part.text)] : [])
 		.join("\n");
 	const images = content.filter((part) => isJsonObject(part) && part.type === "image");
 	if (images.length === 0 || !model.input.includes("image")) {
@@ -431,7 +448,32 @@ function toolResultOutput(message: JsonObject, model: Model<any>): unknown {
 	];
 }
 
+type ResponseToolInfo = ToolInfo & { responseFormat?: JsonObject };
+
+/** Recover wire tool formats omitted by Pi's public ToolInfo metadata. */
+export function toolsWithRequestFormats(tools: ToolInfo[], basePayload?: JsonObject, input?: ResponseItem[]): ToolInfo[] {
+	const formats = new Map<string, JsonObject>();
+	const remember = (values: unknown) => {
+		if (!Array.isArray(values)) return;
+		for (const value of values) {
+			if (isJsonObject(value) && typeof value.name === "string") formats.set(value.name, value);
+		}
+	};
+	remember(basePayload?.tools);
+	for (const item of input ?? []) {
+		if (item.type === "additional_tools" || item.type === "tool_search_output") remember(item.tools);
+	}
+	return tools.map((tool): ResponseToolInfo => ({ ...tool,
+		...(formats.has(tool.name) ? { responseFormat: formats.get(tool.name) } : {}),
+	}));
+}
+
 function responseTool(tool: ToolInfo, deferLoading: boolean, supportsStrictMode: boolean): JsonObject {
+	const observed = (tool as ResponseToolInfo).responseFormat;
+	if (observed) {
+		const { defer_loading: _deferred, ...format } = observed;
+		return { ...format, ...(deferLoading ? { defer_loading: true } : {}) };
+	}
 	return {
 		type: "function",
 		name: tool.name,
@@ -454,17 +496,29 @@ function messagesToResponseItems(
 	const supportsAdditionalTools = compat?.supportsAdditionalTools === true;
 	const supportsToolSearch = compat?.supportsToolSearch === true;
 	const supportsStrictMode = compat?.supportsStrictMode !== false;
-	const pendingToolCalls = new Map<string, string>();
+	const pendingToolCalls = new Map<string, { callId: string; custom: boolean }>();
+	const normalizedCallIds = new Map<string, string>();
+	const grammarToolNames = new Set<string>();
+	const supportsGrammar = (model.compat as { supportsOpenAIGrammarTools?: boolean } | undefined)?.supportsOpenAIGrammarTools === true;
+	for (const tool of tools as ResponseToolInfo[]) {
+		if (supportsGrammar && tool.responseFormat?.type === "custom") grammarToolNames.add(tool.name);
+	}
 	const usedToolNames = new Set<string>();
+	const deferredToolNames = new Set<string>();
 	for (const message of messages as unknown as JsonObject[]) {
-		if (message.role !== "assistant" || !Array.isArray(message.content)) continue;
-		for (const block of message.content) {
-			if (isJsonObject(block) && block.type === "toolCall" && typeof block.name === "string") usedToolNames.add(block.name);
+		if (message.role === "assistant" && Array.isArray(message.content)) {
+			for (const block of message.content) {
+				if (isJsonObject(block) && block.type === "toolCall" && typeof block.name === "string") usedToolNames.add(block.name);
+			}
+		} else if ((supportsAdditionalTools || supportsToolSearch) && message.role === "toolResult" && Array.isArray(message.addedToolNames)) {
+			for (const name of message.addedToolNames) {
+				if (typeof name === "string" && !usedToolNames.has(name) && toolsByName.has(name)) deferredToolNames.add(name);
+			}
 		}
 	}
 	const flushOrphanedToolCalls = () => {
-		for (const callId of pendingToolCalls.values()) {
-			items.push({ type: "function_call_output", call_id: callId, output: "No result provided" });
+		for (const { callId, custom } of pendingToolCalls.values()) {
+			items.push({ type: custom ? "custom_tool_call_output" : "function_call_output", call_id: callId, output: "No result provided" });
 			messageIndex++;
 		}
 		pendingToolCalls.clear();
@@ -475,7 +529,7 @@ function messagesToResponseItems(
 		const itemCountBefore = items.length;
 		if (message.role === "user") {
 			flushOrphanedToolCalls();
-			const content = contentToUserParts(message.content);
+			const content = contentToUserParts(imageAwareContent(message.content, model, "(image omitted: model does not support images)"));
 			if (content.length === 0) continue;
 			items.push({ role: "user", content });
 		} else if (message.role === "assistant" && Array.isArray(message.content)) {
@@ -504,7 +558,7 @@ function messagesToResponseItems(
 							id,
 							status: "completed",
 							phase: undefined,
-							content: [{ type: "output_text", text: block.thinking, annotations: [] }],
+							content: [{ type: "output_text", text: sanitizeUnicode(block.thinking), annotations: [] }],
 						});
 					}
 					continue;
@@ -514,42 +568,54 @@ function messagesToResponseItems(
 					const fallbackId = textIndex === 0 ? `msg_pi_${messageIndex}` : `msg_pi_${messageIndex}_${textIndex}`;
 					textIndex++;
 					const rawId = signature.id || fallbackId;
-					const id = rawId.length <= 64 ? rawId : `msg_${shortHash(rawId)}`;
+					const id = rawId.length <= 64 ? rawId : `msg_${piShortHash(rawId)}`;
 					items.push({
 						type: "message",
 						role: "assistant",
 						id,
 						status: "completed",
-						content: [{ type: "output_text", text: block.text, annotations: [] }],
+						content: [{ type: "output_text", text: sanitizeUnicode(block.text), annotations: [] }],
 						phase: signature.phase,
 					});
 					continue;
 				}
 				if (block.type === "toolCall" && typeof block.id === "string") {
-					const [callId, rawItemId] = block.id.split("|");
-					pendingToolCalls.set(block.id, callId);
-					const itemId = sameProviderApi && !sameModel
-						? undefined
-						: message.provider !== model.provider || message.api !== model.api
-							? (rawItemId ? `fc_${piShortHash(rawItemId)}` : undefined)
-							: normalizedItemId(rawItemId);
+					const idParts = block.id.split("|");
+					let callId = idParts[0]!;
+					let itemId: string | undefined = idParts[1];
+					const custom = grammarToolNames.has(String(block.name));
+					if (!sameModel) {
+						callId = callId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64).replace(/_+$/, "");
+						itemId = !sameProviderApi ? (itemId ? `fc_${piShortHash(itemId)}` : undefined) : normalizedItemId(itemId);
+					}
+					if ((sameProviderApi && !sameModel && itemId?.startsWith("fc_")) || (!custom && !itemId?.startsWith("fc_"))) itemId = undefined;
+					pendingToolCalls.set(block.id, { callId, custom });
+					normalizedCallIds.set(block.id, callId);
+					const args = isJsonObject(block.arguments) ? block.arguments : {};
+					const tool = toolsByName.get(String(block.name));
+					const required = (tool?.parameters as JsonObject | undefined)?.required;
+					const property = Array.isArray(required) && required.length === 1 ? String(required[0]) : Object.keys(args)[0];
+					if (custom && (property === undefined || typeof args[property] !== "string")) {
+						throw new Error(`Grammar tool call "${block.name}" requires argument "${property}" to be a string.`);
+					}
 					items.push({
-						type: "function_call",
+						type: custom ? "custom_tool_call" : "function_call",
 						call_id: callId,
 						id: itemId,
 						name: String(block.name ?? ""),
-						arguments: JSON.stringify(block.arguments ?? {}),
+						...(custom ? { input: sanitizeUnicode(args[property!] as string) } : { arguments: JSON.stringify(block.arguments ?? {}) }),
+						...((sameModel || deferredToolNames.has(String(block.name))) && typeof block.namespace === "string" ? { namespace: block.namespace } : {}),
 					});
 				}
 			}
 		} else if (message.role === "toolResult" && typeof message.toolCallId === "string") {
-			const [callId] = message.toolCallId.split("|");
+			const callId = normalizedCallIds.get(message.toolCallId) ?? message.toolCallId.split("|")[0];
 			pendingToolCalls.delete(message.toolCallId);
-			items.push({ type: "function_call_output", call_id: callId, output: toolResultOutput(message, model) });
+			items.push({ type: grammarToolNames.has(String(message.toolName)) ? "custom_tool_call_output" : "function_call_output", call_id: callId, output: toolResultOutput(message, model) });
 
 			const addedTools = (supportsAdditionalTools || supportsToolSearch) && Array.isArray(message.addedToolNames)
 				? message.addedToolNames.flatMap((name) => {
-					if (typeof name !== "string" || usedToolNames.has(name) || loadedToolNames.has(name)) return [];
+					if (typeof name !== "string" || !deferredToolNames.has(name) || loadedToolNames.has(name)) return [];
 					const tool = toolsByName.get(name);
 					if (!tool) return [];
 					loadedToolNames.add(name);

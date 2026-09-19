@@ -1,6 +1,10 @@
 import { expect, test } from "vitest";
 import * as report from "../../../scripts/codex-compact-quality-development-report.mjs";
 import fs from "node:fs";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { assertSafePublishedPath } from "../../../scripts/package-paths.mjs";
+import { chainEvidence, chainReport, developmentEvidence, developmentReport, pilotAudit } from "./fixtures/quality-report.js";
 
 test("keeps compaction cycles inside one task and reports unknown retry usage as a lower bound", () => {
   const phase = () => ({ status: "completed", requestsAttempted: 1, responses: [{ input_tokens: 100, output_tokens: 10, total_tokens: 110 }], elapsedMs: 20 });
@@ -57,7 +61,7 @@ test("reports first request occupancy separately from cumulative usage and keeps
 });
 
 test("keeps failed attempts and partial usage without treating missing evaluation as a passing or zero-cost run", () => {
-  const original = JSON.parse(fs.readFileSync("docs/fixtures/codex-quality-development-evidence.json", "utf8"));
+  const original = developmentEvidence();
   const input = structuredClone(original.armInputs[0]);
   input.result.status = "failed";
   input.result.requestsAttempted = input.responses.length + 1;
@@ -77,31 +81,27 @@ test("keeps failed attempts and partial usage without treating missing evaluatio
   expect(() => report.summarizeDevelopmentArm(input)).toThrow(/evaluation/);
 });
 
-test("rebuilds the published report from non-sensitive evidence without private session files", () => {
-  expect(typeof report.rebuildDevelopmentReport).toBe("function");
-  for (const name of ["development", "fixed", "kubediff", "native"]) {
-    const evidence = JSON.parse(fs.readFileSync(`docs/fixtures/codex-quality-${name}-evidence.json`, "utf8"));
-    const published = JSON.parse(fs.readFileSync(`docs/fixtures/codex-quality-${name}-results.json`, "utf8"));
-    expect(report.rebuildDevelopmentReport(evidence)).toEqual(published);
-    const serialized = JSON.stringify(evidence);
-    for (const key of ["encrypted_content", "apiKey", "access_token", "refresh_token", "attribution", "workspaceFingerprint"]) expect(serialized).not.toContain(`\"${key}\"`);
-  }
+test("rebuilds a synthetic report without historical evidence or private session files", () => {
+  const evidence = developmentEvidence();
+  expect(report.rebuildDevelopmentReport(evidence)).toEqual(developmentReport());
+  const serialized = JSON.stringify(evidence);
+  for (const key of ["encrypted_content", "apiKey", "access_token", "refresh_token", "attribution", "workspaceFingerprint"]) expect(serialized).not.toContain(`\"${key}\"`);
 });
 
 test("rebuilds the longitudinal development report without raw checkpoint or session data", () => {
-  const evidence = JSON.parse(fs.readFileSync("docs/fixtures/codex-quality-chain-evidence.json", "utf8"));
-  expect(report.rebuildChainReport(evidence)).toEqual(JSON.parse(fs.readFileSync("docs/fixtures/codex-quality-chain-results.json", "utf8")));
+  const evidence = chainEvidence();
+  expect(report.rebuildChainReport(evidence)).toEqual(chainReport());
   const serialized = JSON.stringify(evidence);
   for (const key of ["encrypted_content", "apiKey", "access_token", "refresh_token", "workspacePath", "workspaceFingerprint"])
     expect(serialized).not.toContain(`"${key}"`);
 });
 
 test("keeps pilot structural candidates separate from evaluated quality or server-threshold samples", () => {
-  const audit = JSON.parse(fs.readFileSync("docs/fixtures/codex-quality-pilot-corpus-audit.json", "utf8"));
+  const audit = pilotAudit();
   const tokens = audit.records.filter((row: any) => row.longestImportablePrefix).map((row: any) => row.longestImportablePrefix.localEstimatedTokens).sort((a: number, b: number) => a - b);
   expect(audit.records).toHaveLength(audit.candidateCount);
   expect(new Set(audit.records.map((row: any) => row.instanceId)).size).toBe(audit.candidateCount);
-  expect(audit.candidateCount).toBe(120);
+  expect(audit.candidateCount).toBe(3);
   expect(audit.parseablePrefixes).toBe(tokens.length);
   expect(audit.maxLocalEstimatedTokens).toBe(tokens.at(-1));
   expect(audit.medianLocalEstimatedTokens).toBe(tokens[Math.floor(tokens.length / 2)]);
@@ -118,21 +118,45 @@ test("keeps pilot structural candidates separate from evaluated quality or serve
   expect(audit.records.every((row: any) => row.serverUsage === null && row.natural90PercentEvidence === false && row.workspaceReplay === "not_validated")).toBe(true);
 });
 
-test("includes linked quality documents and non-sensitive evidence in the package allowlist", () => {
+test("keeps the package allowlist consistent with the fixture and log exclusion policy", () => {
   const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-  for (const name of ["docs/codex-compact-quality-methods.md", "docs/codex-compact-quality-corpus.md", "docs/codex-compact-quality-development.md", "docs/fixtures/codex-quality-development-results.json", "docs/fixtures/codex-quality-development-evidence.json", "docs/fixtures/codex-quality-replay-results.json", "docs/fixtures/codex-quality-cli-adapter-results.json", "docs/fixtures/codex-quality-fixed-evidence.json", "docs/fixtures/codex-quality-fixed-results.json", "docs/fixtures/codex-quality-kubediff-evidence.json", "docs/fixtures/codex-quality-kubediff-results.json", "docs/fixtures/codex-quality-corpus-audit.json", "docs/fixtures/codex-quality-native-evidence.json", "docs/fixtures/codex-quality-native-results.json", "docs/fixtures/codex-quality-recovery-results.json", "docs/fixtures/codex-quality-chain-evidence.json", "docs/fixtures/codex-quality-chain-results.json", "docs/fixtures/codex-quality-chain-diagnostic-results.json", "docs/fixtures/codex-quality-pilot-corpus-audit.json", "docs/codex-compact-long-context-corpus-research.md"]) {
-    expect(pkg.files).toContain(name);
+  for (const name of pkg.files) expect(() => assertSafePublishedPath(name)).not.toThrow();
+  for (const name of pkg.files.filter((name: string) => name.startsWith("docs/codex"))) {
     expect(fs.existsSync(name)).toBe(true);
+  }
+  for (const name of ["docs/fixtures/evidence.json", "extensions/x/__tests__/case.ts", "docs/LOGS/output.txt", "docs/run.jsonl", "docs/test-fixture.json"]) {
+    expect(() => assertSafePublishedPath(name)).toThrow(/must not be published/);
+  }
+});
+
+test.each(["--evidence", "--chain-evidence"])("requires explicit archive evidence and refuses divergent reports: %s", (mode) => {
+  fs.mkdirSync(".tmp", { recursive: true });
+  const directory = fs.mkdtempSync(path.resolve(".tmp/quality-report-"));
+  const evidence = path.join(directory, "evidence.json");
+  const output = path.join(directory, "report.json");
+  const run = () => spawnSync(process.execPath, ["scripts/codex-compact-quality-development-report.mjs", mode, evidence, output], { encoding: "utf8" });
+  try {
+    expect(run().status).not.toBe(0);
+    expect(fs.existsSync(output)).toBe(false);
+    fs.writeFileSync(evidence, JSON.stringify(mode === "--evidence" ? developmentEvidence() : chainEvidence()));
+    expect(run().status).toBe(0);
+    expect(JSON.parse(fs.readFileSync(output, "utf8"))).toEqual(mode === "--evidence" ? developmentReport() : chainReport());
+    expect(run().status).toBe(0);
+    fs.writeFileSync(output, "{}");
+    expect(run().status).not.toBe(0);
+    expect(fs.readFileSync(output, "utf8")).toBe("{}");
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
   }
 });
 
 test("rejects missing requests, duplicated arms, missing probes and contradictory passing grades", () => {
-  const original = JSON.parse(fs.readFileSync("docs/fixtures/codex-quality-development-evidence.json", "utf8"));
+  const original = developmentEvidence();
   for (const mutate of [
     (value: any) => value.armInputs[0].responses.pop(),
     (value: any) => value.armInputs[1].arm = "old",
-    (value: any) => delete value.armInputs[0].counterexamples.candidate.numpy_false,
-    (value: any) => value.armInputs[0].grade.executable.tests["zarr/tests/test_util.py::test_normalize_fill_value"] = "failed",
+    (value: any) => delete value.armInputs[0].counterexamples.candidate.probe,
+    (value: any) => value.armInputs[0].grade.executable.tests.synthetic = "failed",
   ]) {
     const evidence = structuredClone(original); mutate(evidence);
     expect(() => report.rebuildDevelopmentReport(evidence)).toThrow();

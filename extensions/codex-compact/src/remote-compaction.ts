@@ -1,5 +1,5 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import type { Model } from "@earendil-works/pi-ai";
+import { clampThinkingLevel, type Model } from "@earendil-works/pi-ai";
 import { compactionHash } from "./capabilities.js";
 import { effectiveContextWindow, loadConfig } from "./config.js";
 import {
@@ -56,9 +56,15 @@ function compactionBasePayload(params: NativeCheckpointRequest): JsonObject {
 		delete base.text;
 		delete base.temperature;
 	}
-	if (!Object.hasOwn(base, "reasoning") && params.ctx.thinkingLevel) {
-		const effort = params.model.thinkingLevelMap?.[params.ctx.thinkingLevel] ?? params.ctx.thinkingLevel;
-		if (effort) base.reasoning = { effort, summary: "auto" };
+	const thinkingLevel = params.ctx.thinkingLevel;
+	if (thinkingLevel === "off" || params.model.reasoning === false) {
+		delete base.reasoning;
+	} else if (!Object.hasOwn(base, "reasoning") && thinkingLevel) {
+		const level = clampThinkingLevel(params.model, thinkingLevel);
+		if (level !== "off") {
+			const effort = params.model.thinkingLevelMap?.[level] ?? level;
+			base.reasoning = { effort, summary: "auto" };
+		}
 	}
 	return base;
 }

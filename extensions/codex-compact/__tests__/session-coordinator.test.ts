@@ -111,6 +111,34 @@ function createCoordinator(
 }
 
 describe("Codex session coordinator", () => {
+	test("invalidates an old transition before retrying or committing after model selection", async () => {
+		const old = model("old"), target = model("new"), next = model("other");
+		const branch = [customEntry(details(modelKey(old))), userEntry("continue")];
+		const ctx = context([old, target, next]);
+		let release!: () => void;
+		let started!: () => void;
+		const ready = new Promise<void>((resolve) => { started = resolve; });
+		const gate = new Promise<void>((resolve) => { release = resolve; });
+		let calls = 0;
+		const coordinator = createCoordinator(branch, async (selected) => {
+			calls++;
+			started();
+			await gate;
+			return details(modelKey(selected));
+		});
+		await coordinator.selectModel({ model: target, previousModel: old }, ctx);
+		const request = coordinator.prepareRequest(target, ctx, [
+			{ type: "compaction", encrypted_content: "opaque" }, userInput("continue"),
+		]);
+		const outcome = request.then(() => "committed", (error: Error) => error.message);
+		await ready;
+		branch.push({ id: "new-model", type: "model_change", provider: next.provider, modelId: next.id } as SessionEntry);
+		await coordinator.selectModel({ model: next, previousModel: target }, ctx);
+		release();
+		expect(await outcome).not.toBe("committed");
+		expect(calls).toBe(1);
+		expect(branch.filter((entry) => entry.type === "custom")).toHaveLength(1);
+	});
 	test("does not persist failed request input while filtering its retry", async () => {
 		const currentModel = model("new");
 		const secret = "sk-live-user-input-secret";

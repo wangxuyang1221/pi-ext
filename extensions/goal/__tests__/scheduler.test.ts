@@ -463,7 +463,7 @@ it("does not cancel user input delivered beside an obsolete edit ticket", async 
     } }] as unknown as SessionEntry[];
   const createCheckpoint = vi.fn(async () => { throw new Error("Unexpected remote compaction"); });
   const coordinator = createSessionCoordinator({ getBranch: () => branch, getAllTools: () => [], createCheckpoint, appendCheckpoint: vi.fn(), shouldAutoCompact: () => false });
-  Object.assign(h.ctx, { getSystemPrompt: () => "", modelRegistry: { find: () => model } });
+  Object.assign(h.ctx, { model, getSystemPrompt: () => "", modelRegistry: { find: () => model } });
   const inputs = [result, replay].map(projected => fullInputForBranch({ model, tools: [], branch: projected.messages.map((message: any, index: number) => message.role === "custom"
     ? { type: "custom_message", id: String(index), ...message } : { type: "message", id: String(index), message }) as SessionEntry[] }));
   expect(inputs[1]).toEqual(inputs[0]);
@@ -565,7 +565,7 @@ it("reuses a native checkpoint across goal history, tool follow-ups, and clear w
   } });
   const createCheckpoint = vi.fn(async () => { throw new Error("Unexpected remote compaction"); });
   const coordinator = createSessionCoordinator({ getBranch: () => branch, getAllTools: () => [], createCheckpoint, appendCheckpoint: vi.fn(), shouldAutoCompact: () => false });
-  Object.assign(h.ctx, { getSystemPrompt: () => "", modelRegistry: { find: () => model } });
+  Object.assign(h.ctx, { model, getSystemPrompt: () => "", modelRegistry: { find: () => model } });
   for (let step = 0; step < 4; step++) {
     if (step === 0 || step === 2) {
       if (step === 2) { h.record.goal = null; h.scheduler.invalidate(); }

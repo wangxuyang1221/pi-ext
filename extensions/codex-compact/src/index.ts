@@ -113,7 +113,15 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		});
 	};
 	const baseSystemPromptBySession = new Map<string, string>();
-	const turnStateBySession = new Map<string, string>();
+	const turnStateBySession = new Map<string, { value?: string }>();
+	const currentTurnState = (sessionId: string) => {
+		let turn = turnStateBySession.get(sessionId);
+		if (!turn) {
+			turn = {};
+			turnStateBySession.set(sessionId, turn);
+		}
+		return turn;
+	};
 	const remoteCompactionPresentationBySession = new Map<string, RemoteCompactionPresentation>();
 	const activePiCompactionSessions = new Set<string>();
 	const activePiCompactionControllerBySession = new Map<string, AbortController>();
@@ -127,6 +135,23 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		tokensBefore: number;
 		willRetry: boolean;
 	}>();
+	const preparingRequests = new Set<{
+		sessionId: string;
+		ctx: ExtensionContext;
+		requestSignal: AbortSignal | undefined;
+		controller: AbortController;
+	}>();
+	const cancelPreparingRequests = (sessionId?: string): void => {
+		for (const request of preparingRequests) {
+			if (sessionId !== undefined && request.sessionId !== sessionId) continue;
+			request.controller.abort();
+			// Context getters are live. Never abort a newer run through a stale context.
+			safely(() => {
+				if (!request.requestSignal?.aborted && request.ctx.signal === request.requestSignal) request.ctx.abort();
+			});
+			preparingRequests.delete(request);
+		}
+	};
 	let lifecycleGeneration = 0;
 	const deferredPiCompactionNotices = new Map<ReturnType<typeof setTimeout>, string>();
 	const clearDeferredPiCompactionNotices = (sessionId?: string): void => {
@@ -162,7 +187,8 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		deferredPiCompactionNotices.set(timer, sessionId);
 	};
 	const rememberTurnState = (sessionId: string, state: string): void => {
-		if (!turnStateBySession.has(sessionId)) turnStateBySession.set(sessionId, state);
+		const turn = currentTurnState(sessionId);
+		turn.value ??= state;
 	};
 	const clearRemoteCompactionPresentation = (
 		sessionId: string,
@@ -207,12 +233,15 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 			// Cached request transformations remain valid only while their source prompt is unchanged.
 			basePayload = { ...basePayload, instructions: params.ctx.getSystemPrompt() };
 		}
+		const turn = currentTurnState(sessionId);
 		return createNativeCheckpoint({
 			...params,
 			basePayload,
-			turnState: turnStateBySession.get(sessionId),
+			turnState: turn.value,
 			onTurnState: (state) => {
-				if (lifecycleGeneration === lifecycleGenerationAtStart) rememberTurnState(sessionId, state);
+				if (lifecycleGeneration === lifecycleGenerationAtStart && !params.signal?.aborted && turnStateBySession.get(sessionId) === turn) {
+					rememberTurnState(sessionId, state);
+				}
 			},
 			allTools: pi.getAllTools(),
 			activeToolNames: pi.getActiveTools(),
@@ -283,6 +312,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 	};
 	const clearTransient = () => {
 		lifecycleGeneration++;
+		cancelPreparingRequests();
 		clearDeferredPiCompactionNotices();
 		for (const controller of activePiCompactionControllerBySession.values()) controller.abort();
 		activePiCompactionControllerBySession.clear();
@@ -300,14 +330,18 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 	pi.on("session_start", clearTransient);
 	pi.on("session_shutdown", clearTransient);
 	pi.on("session_tree", clearTransient);
-	const clearTurnState = (_event: unknown, ctx: { sessionManager: { getSessionId(): string } }) => {
-		turnStateBySession.delete(ctx.sessionManager.getSessionId());
-	};
-	pi.on("turn_start", clearTurnState);
-	pi.on("turn_end", clearTurnState);
+	// A queued input is not a delivered user message. Retries emit no user message;
+	// steering/follow-ups do, even when they remain in the same low-level agent run.
+	pi.on("message_start", (event, ctx) => {
+		if (event.message.role === "user") turnStateBySession.delete(ctx.sessionManager.getSessionId());
+	});
+	pi.on("agent_settled", (_event, ctx) => {
+		if (ctx.isIdle?.() !== false) turnStateBySession.delete(ctx.sessionManager.getSessionId());
+	});
 	pi.on("model_select", (event, ctx) => {
 		lifecycleGeneration++;
 		const sessionId = ctx.sessionManager.getSessionId();
+		cancelPreparingRequests(sessionId);
 		clearDeferredPiCompactionNotices(sessionId);
 		abortPiCompaction(sessionId);
 		clearRemoteCompactionPresentation(sessionId);
@@ -344,12 +378,12 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		const existingFeatureHeader = Object.entries(event.headers)
 			.find(([name]) => name.toLowerCase() === "x-codex-beta-features");
 		event.headers[existingFeatureHeader?.[0] ?? "x-codex-beta-features"] = mergeFeatureHeader(existingFeatureHeader?.[1]);
-		const turnState = turnStateBySession.get(ctx.sessionManager.getSessionId());
+		const turnState = turnStateBySession.get(ctx.sessionManager.getSessionId())?.value;
 		if (turnState) event.headers["x-codex-turn-state"] = turnState;
 	});
 
 	pi.on("after_provider_response", (event, ctx) => {
-		if (!isOpenAICodexModel(ctx.model)) return;
+		if (!isOpenAICodexModel(ctx.model) || !ctx.signal || ctx.signal.aborted) return;
 		const turnState = Object.entries(event.headers).find(([name]) => name.toLowerCase() === "x-codex-turn-state")?.[1];
 		if (turnState) rememberTurnState(ctx.sessionManager.getSessionId(), turnState);
 	});
@@ -370,8 +404,16 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		baseSystemPromptBySession.set(sessionId, ctx.getSystemPrompt());
 		const lifecycleGenerationAtStart = lifecycleGeneration;
 		const requestSignal = ctx.signal;
+		const controller = new AbortController();
+		const request = { sessionId, ctx, requestSignal, controller };
+		preparingRequests.add(request);
+		// Freeze this operation's signal while retaining live session/model getters.
+		const operationContext: ExtensionContext = Object.create(ctx);
+		Object.defineProperty(operationContext, "signal", {
+			value: requestSignal ? AbortSignal.any([requestSignal, controller.signal]) : controller.signal,
+		});
 		try {
-			const input = await coordinator.prepareRequest(model, ctx, requestInput, basePayload);
+			const input = await coordinator.prepareRequest(model, operationContext, requestInput, basePayload);
 			if (lifecycleGeneration !== lifecycleGenerationAtStart || requestSignal?.aborted) return undefined;
 			const payload = input ? { ...stripInputFromPayload(event.payload), input } : event.payload;
 			const accounting = usageBySession.get(sessionId) ?? new WindowUsageAccounting();
@@ -401,6 +443,8 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 			// The abort signal stops Pi's provider call. A synthetic `input: null`
 			// would create a second protocol error.
 			return undefined;
+		} finally {
+			preparingRequests.delete(request);
 		}
 	});
 
@@ -433,6 +477,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 						ctx,
 						excludeLastAssistantError,
 						operationSignal,
+						basePayloadBySession.get(sessionId),
 					);
 					if (lifecycleGeneration !== lifecycleGenerationAtStart) return { cancel: true };
 					native = await createCheckpoint({ ctx, model, input, signal: operationSignal });
