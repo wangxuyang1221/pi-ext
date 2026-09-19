@@ -77,6 +77,22 @@ test.each([true, false])("replays cross-model deferred namespaces and tool defin
   ], tools);
 });
 
+test.each([
+  ["openai", "gpt-5.5", "call_load|fc_1"],
+  ["openai", "gpt-5.5", "call:load|item:1"],
+  ["openai-codex", "gpt-5.6-sol", "call:load|item:1"],
+])("replays normalized deferred tool search behind a valid checkpoint: %s %s %s", async (provider, sourceId, id) => {
+  const target = model("gpt-5.5");
+  const source = getBuiltinModel(provider, sourceId)!;
+  const tools = ["load", "read"].map(name => ({ name, description: name, parameters: { type: "object", properties: {} } }));
+  expect(target.compat?.supportsToolSearch).toBe(true);
+  expect(target.compat?.supportsAdditionalTools).not.toBe(true);
+  await replay(target, [
+    assistant(source, [{ type: "toolCall", id, name: "load", arguments: {} }]),
+    { role: "toolResult", toolCallId: id, toolName: "load", content: [{ type: "text", text: "loaded" }], addedToolNames: ["read"], timestamp: 0 },
+  ], tools);
+});
+
 test.each(["x".repeat(80), '{"id":"not-a-v1-signature"}', '"literal"'])("matches Pi text signature IDs: %s", async (textSignature) => {
   const m = model();
   await replay(m, [assistant(m, [{ type: "text", text: "answer", textSignature }])]);

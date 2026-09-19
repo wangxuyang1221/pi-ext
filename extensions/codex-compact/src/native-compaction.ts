@@ -497,7 +497,7 @@ function messagesToResponseItems(
 	const supportsToolSearch = compat?.supportsToolSearch === true;
 	const supportsStrictMode = compat?.supportsStrictMode !== false;
 	const pendingToolCalls = new Map<string, { callId: string; custom: boolean }>();
-	const normalizedCallIds = new Map<string, string>();
+	const normalizedToolCallIds = new Map<string, string>();
 	const grammarToolNames = new Set<string>();
 	const supportsGrammar = (model.compat as { supportsOpenAIGrammarTools?: boolean } | undefined)?.supportsOpenAIGrammarTools === true;
 	for (const tool of tools as ResponseToolInfo[]) {
@@ -588,9 +588,10 @@ function messagesToResponseItems(
 						callId = callId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64).replace(/_+$/, "");
 						itemId = !sameProviderApi ? (itemId ? `fc_${piShortHash(itemId)}` : undefined) : normalizedItemId(itemId);
 					}
+					// Tool-search IDs use Pi's full normalized ID, even when the wire call omits its item ID.
+					normalizedToolCallIds.set(block.id, sameModel ? block.id : itemId === undefined ? callId : `${callId}|${itemId}`);
 					if ((sameProviderApi && !sameModel && itemId?.startsWith("fc_")) || (!custom && !itemId?.startsWith("fc_"))) itemId = undefined;
 					pendingToolCalls.set(block.id, { callId, custom });
-					normalizedCallIds.set(block.id, callId);
 					const args = isJsonObject(block.arguments) ? block.arguments : {};
 					const tool = toolsByName.get(String(block.name));
 					const required = (tool?.parameters as JsonObject | undefined)?.required;
@@ -609,7 +610,8 @@ function messagesToResponseItems(
 				}
 			}
 		} else if (message.role === "toolResult" && typeof message.toolCallId === "string") {
-			const callId = normalizedCallIds.get(message.toolCallId) ?? message.toolCallId.split("|")[0];
+			const normalizedToolCallId = normalizedToolCallIds.get(message.toolCallId) ?? message.toolCallId;
+			const callId = normalizedToolCallId.split("|")[0];
 			pendingToolCalls.delete(message.toolCallId);
 			items.push({ type: grammarToolNames.has(String(message.toolName)) ? "custom_tool_call_output" : "function_call_output", call_id: callId, output: toolResultOutput(message, model) });
 
@@ -629,7 +631,7 @@ function messagesToResponseItems(
 					tools: addedTools.map((tool) => responseTool(tool, false, supportsStrictMode)),
 				});
 			} else if (addedTools.length > 0 && supportsToolSearch) {
-				const searchCallId = `pi_tool_load_${piShortHash(`${message.toolCallId}:${addedTools.map((tool) => tool.name).join(",")}`)}`;
+				const searchCallId = `pi_tool_load_${piShortHash(`${normalizedToolCallId}:${addedTools.map((tool) => tool.name).join(",")}`)}`;
 				items.push({
 					type: "tool_search_call",
 					call_id: searchCallId,

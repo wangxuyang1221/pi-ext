@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import * as continuation from "../../../scripts/codex-compact-quality-continuation.mjs";
@@ -7,11 +7,29 @@ import { continuationTools, creationContinuationTools, fingerprintWorkspace } fr
 const wire = (items: unknown[]) => [...items.map(item => ({ type: "response.output_item.done", item })), { type: "response.completed", response: { status: "completed", output: [], usage: { input_tokens: 100, output_tokens: 10, total_tokens: 110 } } }].map(event => `data: ${JSON.stringify(event)}\n\n`).join("");
 const message = { type: "message", role: "assistant", content: [{ type: "output_text", text: "已修改。" }] };
 function fixture() {
-  const root = fs.mkdtempSync(path.join(process.cwd(), ".tmp/quality-continuation-"));
+  const parent = path.join(process.cwd(), ".tmp");
+  fs.mkdirSync(parent, { recursive: true });
+  const root = fs.mkdtempSync(path.join(parent, "quality-continuation-"));
   const sourceWorkspace = path.join(root, "source"); fs.mkdirSync(sourceWorkspace); fs.writeFileSync(path.join(sourceWorkspace, "code.txt"), "before");
   const directory = path.join(root, "job"); fs.mkdirSync(directory);
   return { root, options: { directory, sourceWorkspace, expectedWorkspaceFingerprint: fingerprintWorkspace(sourceWorkspace), initialHistory: [], instructions: "继续任务。", request: "修改 code.txt。", allowedPaths: ["code.txt"] } };
 }
+
+test("creates its temporary parent in a clean working directory", () => {
+  const parent = path.join(process.cwd(), ".tmp");
+  fs.mkdirSync(parent, { recursive: true });
+  const sandbox = fs.mkdtempSync(path.join(parent, "quality-continuation-isolation-"));
+  const cwd = vi.spyOn(process, "cwd").mockReturnValue(sandbox);
+  try {
+    expect(fs.existsSync(path.join(sandbox, ".tmp"))).toBe(false);
+    const { root, options } = fixture();
+    expect(path.dirname(root)).toBe(path.join(sandbox, ".tmp"));
+    expect(fs.readFileSync(path.join(options.sourceWorkspace, "code.txt"), "utf8")).toBe("before");
+  } finally {
+    cwd.mockRestore();
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
 
 test("continues from an isolated copy using real controlled file tools and retained request evidence", async () => {
   expect(typeof continuation.runContinuation).toBe("function");
