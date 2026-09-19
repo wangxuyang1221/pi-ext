@@ -1,7 +1,7 @@
 import { expect, test, vi } from "vitest";
 import type { SessionEntry } from "@earendil-works/pi-coding-agent";
 import codexCompactionExtension from "../src/index.js";
-import { FAILED_REQUEST_KIND, NATIVE_COMPACTION_KIND } from "../src/native-compaction.js";
+import { effectiveInputForBranch, FAILED_REQUEST_KIND, NATIVE_COMPACTION_KIND } from "../src/native-compaction.js";
 
 type Handler = (event: any, ctx: any) => unknown;
 
@@ -97,6 +97,55 @@ async function flushPostCompactionNotices(): Promise<void> {
 	await new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
 
+test.each([
+	{ name: "avoids premature compaction for an inflated estimate", length: 40000, usage: 130, compact: false, invalidate: "" },
+	{ name: "compacts when server usage reaches 90 percent despite a small estimate", length: 100, usage: 9000, compact: true, invalidate: "" },
+	...["session_tree", "session_start", "model_select", "system_prompt"].map((invalidate) => ({ name: `falls back after ${invalidate}`, length: 40000, usage: 130, compact: true, invalidate })),
+])("observed usage $name", async ({ length, usage, compact, invalidate }) => {
+	const text = "x".repeat(length);
+	const branch = [{ type: "message", id: "u", parentId: null, timestamp: "2026-01-01", message: { role: "user", content: text } }] as SessionEntry[];
+	const { handlers, ctx, model } = installExtension(branch, false, 10000);
+	const input = [{ role: "user", content: [{ type: "input_text", text }] }];
+	await handlers.get("before_provider_request")?.({ payload: { input } }, ctx);
+	const message = {
+		role: "assistant", provider: model.provider, api: model.api, model: model.id,
+		content: [{ type: "text", text: "ok" }], stopReason: "stop", timestamp: 1,
+		usage: { input: usage - 50, output: 20, cacheRead: 30, cacheWrite: 0, totalTokens: usage },
+	};
+	await handlers.get("message_end")?.({ message }, ctx);
+	branch.push({ type: "message", id: "a", parentId: "u", timestamp: "2026-01-01", message } as SessionEntry);
+	branch.push({ type: "message", id: "next", parentId: "a", timestamp: "2026-01-01", message: { role: "user", content: "next", timestamp: 2 } });
+	if (invalidate === "system_prompt") ctx.getSystemPrompt = () => "changed instructions";
+	else if (invalidate) await handlers.get(invalidate)?.({ model, previousModel: model }, ctx);
+	stubSuccessfulCompaction();
+	const fetchSpy = vi.spyOn(globalThis, "fetch");
+	try {
+		await handlers.get("before_provider_request")?.({ payload: { input: effectiveInputForBranch({ branch, model: model as never, tools: [] }) } }, ctx);
+		expect(fetchSpy).toHaveBeenCalledTimes(compact ? 1 : 0);
+		expect(ctx.abort).not.toHaveBeenCalled();
+	} finally {
+		vi.unstubAllGlobals();
+	}
+});
+
+test.each(["instructions", "tools"])("counts the observed %s prefix when no usage baseline exists", async (field) => {
+	const branch = [
+		{ type: "message", id: "u", parentId: null, timestamp: "2026-01-01", message: { role: "user", content: "task" } },
+		{ type: "message", id: "a", parentId: "u", timestamp: "2026-01-01", message: { role: "assistant", provider: "openai-codex", api: "openai-codex-responses", model: "gpt", content: [{ type: "text", text: "done" }], stopReason: "stop", timestamp: 1, usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0 } } },
+		{ type: "message", id: "next", parentId: "a", timestamp: "2026-01-01", message: { role: "user", content: "continue", timestamp: 2 } },
+	] as SessionEntry[];
+	const { handlers, ctx, model } = installExtension(branch, false, 10000);
+	const input = effectiveInputForBranch({ branch, model: model as never, tools: [] });
+	const prefix = field === "instructions" ? { instructions: "x".repeat(36000) } : { tools: [{ type: "function", name: "inspect", description: "x".repeat(36000), parameters: { type: "object" } }] };
+	stubSuccessfulCompaction();
+	const fetchSpy = vi.spyOn(globalThis, "fetch");
+	try {
+		await handlers.get("before_provider_request")?.({ payload: { ...prefix, input } }, ctx);
+		expect(fetchSpy).toHaveBeenCalledTimes(1);
+		expect(ctx.abort).not.toHaveBeenCalled();
+	} finally { vi.unstubAllGlobals(); }
+});
+
 test("removes unsupported prompt cache retention from Codex requests", async () => {
 	const { handlers, ctx } = installExtension();
 	const payload = { input: [], prompt_cache_retention: "24h" };
@@ -105,7 +154,7 @@ test("removes unsupported prompt cache retention from Codex requests", async () 
 	expect(payload).not.toHaveProperty("prompt_cache_retention");
 });
 
-test("returns sanitized input after filtering a stale failed marker", async () => {
+test.each([false, true])("reads legacy failure diagnostics with recoveryAttempted=%s without rewriting the marker", async (recoveryAttempted) => {
 	const secret = "stale-failed-input";
 	const branch = [
 		{
@@ -121,10 +170,11 @@ test("returns sanitized input after filtering a stale failed marker", async () =
 			timestamp: new Date().toISOString(),
 			type: "custom",
 			customType: FAILED_REQUEST_KIND,
-			data: { kind: FAILED_REQUEST_KIND, entryId: "failed-user" },
+			data: { kind: FAILED_REQUEST_KIND, entryId: "failed-user", diagnostics: { phase: "before_provider_request", code: "context_window_exceeded", recoveryAttempted } },
 		},
 	] as never;
-	const { handlers, ctx } = installExtension(branch);
+	const before = structuredClone(branch);
+	const { handlers, ctx, appendEntry } = installExtension(branch);
 	const result = await handlers.get("before_provider_request")?.({
 		payload: {
 			input: [
@@ -137,17 +187,20 @@ test("returns sanitized input after filtering a stale failed marker", async () =
 	expect(result).toEqual({ input: [{ role: "user", content: [{ type: "input_text", text: "retry" }] }] });
 	expect(JSON.stringify(result)).not.toContain(secret);
 	expect(ctx.abort).not.toHaveBeenCalled();
+	expect(branch).toEqual(before);
+	expect(appendEntry).not.toHaveBeenCalled();
 });
 
-test("keeps one presentation through request-side overflow recovery", async () => {
-	const branch = [{
+test("clears presentation and aborts rather than retrying a history suffix", async () => {
+	const branch = [checkpointEntry(), {
 		id: "history",
-		parentId: null,
+		parentId: "checkpoint",
 		timestamp: new Date().toISOString(),
 		type: "message",
-		message: { role: "user", content: [{ type: "text", text: "branch" }] },
-	} as never, checkpointEntry()];
-	const { handlers, ctx, notify, setStatus, setWidget } = installExtension(branch, true);
+		message: { role: "user", content: [{ type: "text", text: "branch".repeat(1000) }] },
+	} as never];
+	const before = structuredClone(branch);
+	const { handlers, ctx, notify, setStatus, setWidget, appendEntry } = installExtension(branch, true, 1000);
 	const fetchMock = vi.fn()
 		.mockResolvedValueOnce(new Response(
 			JSON.stringify({ error: { code: "context_length_exceeded", message: "retry with a shorter history" } }),
@@ -162,8 +215,7 @@ test("keeps one presentation through request-side overflow recovery", async () =
 		await handlers.get("before_provider_request")?.({
 			payload: {
 				input: [
-					{ role: "user", content: [{ type: "input_text", text: "older" }] },
-					{ role: "user", content: [{ type: "input_text", text: "old" }] },
+					...effectiveInputForBranch({ branch, model: ctx.model as never, tools: [] }),
 					{ role: "user", content: [{ type: "input_text", text: "current" }] },
 				],
 			},
@@ -172,7 +224,10 @@ test("keeps one presentation through request-side overflow recovery", async () =
 		vi.unstubAllGlobals();
 	}
 
-	expect(fetchMock).toHaveBeenCalledTimes(2);
+	expect(fetchMock).toHaveBeenCalledTimes(1);
+	expect(ctx.abort).toHaveBeenCalledTimes(1);
+	expect(branch).toEqual(before);
+	expect(appendEntry).not.toHaveBeenCalledWith(NATIVE_COMPACTION_KIND, expect.anything());
 	expect(setStatus).not.toHaveBeenCalled();
 	expect(setWidget).toHaveBeenCalledTimes(2);
 	expect(setWidget).toHaveBeenNthCalledWith(
@@ -196,18 +251,19 @@ test("keeps one presentation through request-side overflow recovery", async () =
 		"⠋ Compacting context... (esc to cancel)",
 		"",
 	]);
-	expect(notify).toHaveBeenCalledWith("Codex context compacted (context overflow recovery).", "info");
+	expect(notify).toHaveBeenCalledWith(expect.stringContaining("code=context_length_exceeded; model=gpt; recoveryAttempted=false; outcome=request_aborted; next=shorten the request or start a new session"), "error");
+	expect(notify).not.toHaveBeenCalledWith(expect.stringContaining("Codex context compacted"), "info");
 });
 
 test("clears an active request-side presentation when the session tree changes", async () => {
-	const branch = [{
+	const branch = [checkpointEntry(), {
 		id: "history",
-		parentId: null,
+		parentId: "checkpoint",
 		timestamp: new Date().toISOString(),
 		type: "message",
-		message: { role: "user", content: [{ type: "text", text: "branch" }] },
-	} as never, checkpointEntry()];
-	const { handlers, ctx, setWidget } = installExtension(branch, true);
+		message: { role: "user", content: [{ type: "text", text: "branch".repeat(1000) }] },
+	} as never];
+	const { handlers, ctx, setWidget } = installExtension(branch, true, 1000);
 	let resolveFetch!: (response: Response) => void;
 	let markFetchStarted!: () => void;
 	const fetchStarted = new Promise<void>((resolve) => {
@@ -223,7 +279,7 @@ test("clears an active request-side presentation when the session tree changes",
 	const request = handlers.get("before_provider_request")?.({
 		payload: {
 			input: [
-				{ role: "user", content: [{ type: "input_text", text: "older" }] },
+				...effectiveInputForBranch({ branch, model: ctx.model as never, tools: [] }),
 				{ role: "user", content: [{ type: "input_text", text: "current" }] },
 			],
 		},
@@ -245,6 +301,44 @@ test("clears an active request-side presentation when the session tree changes",
 		await request;
 		vi.unstubAllGlobals();
 	}
+});
+
+test.each(["session_tree", "session_start"])("does not clear or abort a newer request when stale compaction fails after %s", async (eventName) => {
+	const branch = [checkpointEntry(), {
+		id: "history", parentId: "checkpoint", timestamp: "2026-01-01", type: "message",
+		message: { role: "user", content: "history".repeat(1000) },
+	}] as SessionEntry[];
+	const { handlers, ctx, model, setWidget, notify } = installExtension(branch, true, 1000);
+	const pending: Array<(response: Response) => void> = [];
+	const started: Array<() => void> = [];
+	const starts = [0, 1].map(() => new Promise<void>((resolve) => started.push(resolve)));
+	vi.stubGlobal("fetch", () => new Promise<Response>((resolve) => {
+		pending.push(resolve);
+		started[pending.length - 1]!();
+	}));
+	const payload = () => ({ input: [...effectiveInputForBranch({ branch, model: model as never, tools: [] }), { role: "user", content: [{ type: "input_text", text: "continue" }] }] });
+	const first = handlers.get("before_provider_request")!({ payload: payload() }, ctx) as Promise<unknown>;
+	let second: Promise<unknown> | undefined;
+	const overflow = () => new Response(JSON.stringify({ error: { code: "context_length_exceeded", message: "too large" } }), { status: 400 });
+	try {
+		await starts[0];
+		await handlers.get(eventName)!({ model, previousModel: model }, ctx);
+		second = handlers.get("before_provider_request")!({ payload: payload() }, ctx) as Promise<unknown>;
+		await starts[1];
+		const activeWidget = setWidget.mock.calls.at(-1)?.[1];
+		expect(activeWidget).toBeTypeOf("function");
+		pending[0]!(overflow());
+		await first;
+		expect(setWidget.mock.calls.at(-1)?.[1]).toBe(activeWidget);
+		expect(ctx.abort).not.toHaveBeenCalled();
+		expect(notify).not.toHaveBeenCalled();
+	} finally {
+		for (const resolve of pending) resolve(overflow());
+		await Promise.all([first, second]);
+		vi.unstubAllGlobals();
+	}
+	expect(setWidget.mock.calls.at(-1)?.[1]).toBeUndefined();
+	expect(ctx.abort).toHaveBeenCalledTimes(1);
 });
 
 test("filters Pi compaction summaries after a valid V2 checkpoint", () => {
@@ -397,15 +491,16 @@ test("persists safe diagnostics without request input or raw error text", async 
 			message: { role: "user", content: [{ type: "text", text: "older history" }] },
 		},
 		checkpointEntry(),
+		{ id: "long-history", parentId: "checkpoint", timestamp: new Date().toISOString(), type: "message", message: { role: "user", content: "history".repeat(1000) } },
 		{
 			id: "failed-user",
-			parentId: "checkpoint",
+			parentId: "long-history",
 			timestamp: new Date().toISOString(),
 			type: "message",
 			message: { role: "user", content: [{ type: "text", text: secret }] },
 		},
 	] as never;
-	const { handlers, ctx, notify, appendEntry } = installExtension(branch, true);
+	const { handlers, ctx, notify, appendEntry } = installExtension(branch, true, 1000);
 	const fetchMock = vi.fn(async () => new Response(
 		JSON.stringify({ error: { code: "credential_bearer_secret", message: "Authorization Bearer secret" } }),
 		{ status: 400 },
@@ -413,7 +508,7 @@ test("persists safe diagnostics without request input or raw error text", async 
 	vi.stubGlobal("fetch", fetchMock);
 	try {
 		await handlers.get("before_provider_request")?.({
-			payload: { input: [{ role: "user", content: [{ type: "input_text", text: secret }] }] },
+			payload: { input: effectiveInputForBranch({ branch, model: ctx.model as never, tools: [] }) },
 		}, ctx);
 	} finally {
 		vi.unstubAllGlobals();
@@ -708,7 +803,7 @@ test.each([
 	expect(notice).toContain(`next=${nextStep}.`);
 });
 
-test("keeps the previous encrypted checkpoint during compaction overflow recovery", async () => {
+test.each(["manual", "threshold", "overflow"])("cancels %s compaction overflow without replacing the previous checkpoint", async (reason) => {
 	const branch = [
 		{
 			id: "old",
@@ -741,7 +836,8 @@ test("keeps the previous encrypted checkpoint during compaction overflow recover
 			message: { role: "user", content: [{ type: "text", text: "current tail" }] },
 		},
 	] as never;
-	const { handlers, ctx } = installExtension(branch);
+	const before = structuredClone(branch);
+	const { handlers, ctx, notify, appendEntry } = installExtension(branch, true);
 	const requestBodies: Array<{ input?: Array<Record<string, unknown>> }> = [];
 	const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
 		requestBodies.push(JSON.parse(String(init?.body)) as { input?: Array<Record<string, unknown>> });
@@ -759,17 +855,96 @@ test("keeps the previous encrypted checkpoint during compaction overflow recover
 	vi.stubGlobal("fetch", fetchMock);
 	try {
 		await expect(handlers.get("session_before_compact")?.(
-			piCompactionEvent(branch),
+			piCompactionEvent(branch, reason),
 			ctx,
-		)).resolves.toHaveProperty("compaction");
+		)).resolves.toEqual({ cancel: true });
 	} finally {
 		vi.unstubAllGlobals();
 	}
 
-	expect(fetchMock).toHaveBeenCalledTimes(2);
-	expect(requestBodies[1]?.input).toEqual(expect.arrayContaining([
+	expect(fetchMock).toHaveBeenCalledTimes(1);
+	expect(branch).toEqual(before);
+	expect(appendEntry).not.toHaveBeenCalledWith(NATIVE_COMPACTION_KIND, expect.anything());
+	expect(notify).toHaveBeenCalledWith(expect.stringContaining("code=context_length_exceeded; model=gpt; recoveryAttempted=false; outcome=compaction_cancelled; next=shorten the request or start a new session"), "error");
+	expect(requestBodies[0]?.input).toEqual(expect.arrayContaining([
 		expect.objectContaining({ type: "compaction", encrypted_content: "previous-checkpoint" }),
 	]));
+});
+
+test("preserves earlier replies when Pi compacts after an ordinary request overflow", async () => {
+	const assistant = (text: string, stopReason: "stop" | "error") => ({
+		role: "assistant", provider: "openai-codex", api: "openai-codex-responses", model: "gpt",
+		content: [{ type: "text", text }], stopReason, timestamp: 1,
+		usage: { input: 10, output: 10, cacheRead: 0, cacheWrite: 0, totalTokens: 20 },
+	});
+	const branch = [
+		{ id: "u", parentId: null, timestamp: "2026-01-01", type: "message", message: { role: "user", content: "task" } },
+		{ id: "a", parentId: "u", timestamp: "2026-01-01", type: "message", message: assistant("completed work", "stop") },
+		{ id: "next", parentId: "a", timestamp: "2026-01-01", type: "message", message: { role: "user", content: "continue" } },
+		{ id: "error", parentId: "next", timestamp: "2026-01-01", type: "message", message: assistant("failed response", "error") },
+	] as SessionEntry[];
+	const before = structuredClone(branch);
+	const { handlers, ctx } = installExtension(branch);
+	let input: unknown;
+	vi.stubGlobal("fetch", async (_url: string, init?: RequestInit) => {
+		input = JSON.parse(String(init?.body)).input;
+		return new Response('data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"opaque"}}\n\ndata: {"type":"response.completed","response":{"id":"r"}}\n\n');
+	});
+	try {
+		expect(await handlers.get("session_before_compact")!(piCompactionEvent(branch, "overflow", true), ctx)).toHaveProperty("compaction");
+		expect(JSON.stringify(input)).toContain("completed work");
+		expect(JSON.stringify(input)).toContain("continue");
+		expect(JSON.stringify(input)).not.toContain("failed response");
+		expect(branch).toEqual(before);
+	} finally {
+		await handlers.get("session_compact_failed")!({}, ctx);
+		vi.unstubAllGlobals();
+	}
+});
+
+test.each(["provider", "pi"])("allows a fresh %s attempt after repeated terminal overflows", async (entrypoint) => {
+	const branch = [checkpointEntry(), {
+		id: "history", parentId: "checkpoint", timestamp: "2026-01-01", type: "message",
+		message: { role: "user", content: "history".repeat(1000) },
+	}] as SessionEntry[];
+	const { handlers, ctx, model, appendEntry, setWidget } = installExtension(branch, true, 1000);
+	const before = structuredClone(branch);
+	const fetchMock = vi.fn(async () => fetchMock.mock.calls.length <= 2
+		? new Response(JSON.stringify({ error: { code: "context_window_exceeded", message: "too large" } }), { status: 400 })
+		: new Response('data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"fresh"}}\n\ndata: {"type":"response.completed","response":{"id":"r"}}\n\n'));
+	vi.stubGlobal("fetch", fetchMock);
+	const attempt = () => entrypoint === "pi"
+		? handlers.get("session_before_compact")!(piCompactionEvent(branch), ctx)
+		: handlers.get("before_provider_request")!({ payload: { input: [...effectiveInputForBranch({ branch, model: model as never, tools: [] }), { role: "user", content: [{ type: "input_text", text: "continue" }] }] } }, ctx);
+	try {
+		for (let index = 0; index < 2; index++) {
+			expect(await attempt()).toEqual(entrypoint === "pi" ? { cancel: true } : undefined);
+			expect(fetchMock).toHaveBeenCalledTimes(index + 1);
+			expect(branch).toEqual(before);
+			expect(appendEntry).not.toHaveBeenCalledWith(NATIVE_COMPACTION_KIND, expect.anything());
+			if (entrypoint === "provider") expect(setWidget.mock.calls.at(-1)?.[1]).toBeUndefined();
+		}
+		expect(await attempt()).toHaveProperty(entrypoint === "pi" ? "compaction" : "input");
+		expect(fetchMock).toHaveBeenCalledTimes(3);
+	} finally {
+		await handlers.get("session_compact_failed")!({}, ctx);
+		vi.unstubAllGlobals();
+	}
+});
+
+test("refreshes changed system instructions instead of reusing a stale request prefix", async () => {
+	const { handlers, ctx, model } = installExtension([]);
+	await handlers.get("before_provider_request")?.({ payload: { model: model.id, input: [], instructions: "old project policy" } }, ctx);
+	ctx.getSystemPrompt = () => "current project policy: never change the database";
+	let body: Record<string, unknown> | undefined;
+	vi.stubGlobal("fetch", async (_url: string, init?: RequestInit) => {
+		body = JSON.parse(String(init?.body));
+		return new Response('data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"opaque"}}\n\ndata: {"type":"response.completed","response":{"id":"r"}}\n\n');
+	});
+	try {
+		await handlers.get("session_before_compact")?.(piCompactionEvent([]), ctx);
+		expect(body?.instructions).toBe("current project policy: never change the database");
+	} finally { vi.unstubAllGlobals(); }
 });
 
 test.each([
@@ -1373,6 +1548,37 @@ test("cancels a second Pi compaction while the first attempt awaits commit", asy
 		await expect(handlers.get("session_before_compact")?.(event, ctx)).resolves.toEqual({ cancel: true });
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	} finally {
+		vi.unstubAllGlobals();
+	}
+});
+
+test("keeps the newer Pi compaction occupied when a stale operation finishes", async () => {
+	const { handlers, ctx } = installExtension([], true);
+	const pending: Array<(response: Response) => void> = [];
+	const started: Array<() => void> = [];
+	const starts = [0, 1].map(() => new Promise<void>((resolve) => started.push(resolve)));
+	const success = () => new Response('data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"opaque"}}\n\ndata: {"type":"response.completed","response":{"id":"r"}}\n\n');
+	const fetchMock = vi.fn(() => pending.length >= 2 ? Promise.resolve(success()) : new Promise<Response>((resolve) => {
+		pending.push(resolve);
+		started[pending.length - 1]!();
+	}));
+	vi.stubGlobal("fetch", fetchMock);
+	const compact = () => handlers.get("session_before_compact")!(piCompactionEvent([]), ctx) as Promise<unknown>;
+	const first = compact();
+	let second: Promise<unknown> | undefined;
+	try {
+		await starts[0];
+		await handlers.get("session_start")!({}, ctx);
+		second = compact();
+		await starts[1];
+		pending[0]!(success());
+		await expect(first).resolves.toEqual({ cancel: true });
+		await expect(compact()).resolves.toEqual({ cancel: true });
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+	} finally {
+		for (const resolve of pending) resolve(success());
+		await Promise.all([first, second]);
+		await handlers.get("session_compact_failed")!({}, ctx);
 		vi.unstubAllGlobals();
 	}
 });

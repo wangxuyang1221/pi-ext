@@ -2,6 +2,13 @@ import { describe, expect, test } from "vitest";
 import { autoCompactTokenLimit, parseConfig } from "../src/config.js";
 
 describe("Codex compaction config", () => {
+	test("accepts a bounded effective-window percentage override", () => {
+		expect(parseConfig({ effectiveContextWindowPercent: 95 })).toEqual({ effectiveContextWindowPercent: 95 });
+		for (const value of [0, -1, 101, Infinity, NaN, "95"]) {
+			expect(parseConfig({ effectiveContextWindowPercent: value })).toEqual({});
+		}
+	});
+
 	test("parses supported settings", () => {
 		expect(parseConfig({
 			autoCompactTokenLimit: 128_000,

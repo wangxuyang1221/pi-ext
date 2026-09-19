@@ -17,7 +17,7 @@ vi.mock("node:timers/promises", () => ({
 }));
 
 import { createNativeCheckpoint } from "../src/remote-compaction.js";
-import { approximateResponseItemTokens, isContextWindowCompactionError, compactionFailureClassification, estimateCompactionWindowPrefillTokens, buildCodexHeaders, buildCompactionRequestBody, buildReplacementHistory, buildToolPayload, callRemoteCompaction, effectiveInputForBranch, findNativeCheckpoint, fullInputForBranch, NATIVE_COMPACTION_BYPASS_KIND, NATIVE_COMPACTION_BYPASS_VERSION, NATIVE_COMPACTION_KIND, NATIVE_COMPACTION_VERSION, parseNativeCompactionDetails, piContextInputForBranch, retainRecentMessages, latestRemoteCompactionSuffix, trimFunctionCallHistoryToFitContextWindow } from "../src/native-compaction.js";
+import { approximateResponseItemTokens, isContextWindowCompactionError, compactionFailureClassification, estimateCompactionWindowPrefillTokens, buildCodexHeaders, buildCompactionRequestBody, buildReplacementHistory, buildToolPayload, callRemoteCompaction, effectiveInputForBranch, findNativeCheckpoint, fullInputForBranch, NATIVE_COMPACTION_BYPASS_KIND, NATIVE_COMPACTION_BYPASS_VERSION, NATIVE_COMPACTION_KIND, NATIVE_COMPACTION_VERSION, parseNativeCompactionDetails, piContextInputForBranch, retainRecentMessages, trimFunctionCallHistoryToFitContextWindow } from "../src/native-compaction.js";
 
 afterEach(() => vi.useRealTimers());
 
@@ -890,10 +890,10 @@ describe("Codex compaction history", () => {
 			version: NATIVE_COMPACTION_VERSION,
 			strategy: "v2",
 			modelKey: "openai-codex:openai-codex-responses:gpt",
-			replacementHistory: [{ type: "compaction", encrypted_content: "opaque" }],
+			replacementHistory: [{ type: "compaction", encrypted_content: "x".repeat(4000) }],
 	} }] as never;
 
-		expect(estimateCompactionWindowPrefillTokens({ branch, stablePrefixTokens: 10 })).toBeGreaterThan(10);
+		expect(estimateCompactionWindowPrefillTokens({ branch, stablePrefixTokens: 10 })).toBe(598);
 	});
 
 	test("keeps an unstructured HTTP 400 fail-closed", async () => {
@@ -1281,17 +1281,15 @@ describe("Codex compaction history", () => {
 		expect(result).toHaveLength(1);
 	});
 
-	test("keeps retained images outside Codex's text budget", () => {
+	test("charges retained images to Codex's content budget", () => {
 		expect(approximateResponseItemTokens([{ type: "message", role: "user", content: [{ type: "input_image", image_url: "data:image/png;base64,x" }] }])).toBeGreaterThanOrEqual(1_200);
-		expect(approximateResponseItemTokens([{ type: "function_call_output", output: [{ type: "input_image" }, { type: "input_image" }] }])).toBeGreaterThanOrEqual(2_400);
+		expect(approximateResponseItemTokens([{ type: "function_call_output", output: [{ type: "input_image", image_url: "data:image/png;base64,x" }, { type: "input_image", image_url: "data:image/png;base64,x" }] }])).toBeGreaterThanOrEqual(3_688);
 		expect(approximateResponseItemTokens([{ type: "function_call_output", output: [{ type: "input_image", image_url: `data:image/png;base64,${"x".repeat(40_000)}` }] }])).toBeLessThan(2_000);
-		expect(retainRecentMessages([{ type: "message", role: "user", content: [{ type: "input_image" }] }], 1_199)).toEqual([
-			{ type: "message", role: "user", content: [{ type: "input_image" }] },
-		]);
+		expect(retainRecentMessages([{ type: "message", role: "user", content: [{ type: "input_image" }] }], 1_199)).toEqual([]);
 		expect(retainRecentMessages([
 			{ type: "message", role: "user", content: [{ type: "input_image", image_url: "old" }] },
 			{ type: "message", role: "user", content: [{ type: "input_image", image_url: "new" }] },
-		], 1)).toEqual([
+		], 1_844)).toEqual([
 			{ type: "message", role: "user", content: [{ type: "input_image", image_url: "new" }] },
 		]);
 	});
@@ -1300,7 +1298,7 @@ describe("Codex compaction history", () => {
 		const result = retainRecentMessages([
 			{ type: "message", role: "user", content: [{ type: "input_text", text: "abcdefghij" }] },
 		], 1);
-		expect(result[0]?.content).toEqual([{ type: "input_text", text: "abcd" }]);
+		expect(result[0]?.content).toEqual([{ type: "input_text", text: "ab…2 tokens truncated…ij" }]);
 	});
 
 	test("replaces an oversized function output with Codex's marker", () => {
@@ -1356,37 +1354,6 @@ describe("Codex compaction history", () => {
 		const invalidPromptError = new Error("invalid_prompt: context_length_exceeded");
 		Object.defineProperty(invalidPromptError, "compactionCode", { value: "context_length_exceeded" });
 		expect(isContextWindowCompactionError(invalidPromptError)).toBe(false);
-	});
-
-	test("retains a preceding compaction at source index zero during overflow recovery", () => {
-		const result = latestRemoteCompactionSuffix([
-			{ type: "compaction", encrypted_content: "opaque" },
-			{ type: "message", role: "user", content: [{ type: "input_text", text: "new" }] },
-		], 1_000);
-
-		expect(result).toEqual([
-			{ type: "compaction", encrypted_content: "opaque" },
-			{ type: "message", role: "user", content: [{ type: "input_text", text: "new" }] },
-		]);
-	});
-
-	test("keeps the newest complete user turn for overflow recovery", () => {
-		const items = [
-			{ type: "message", role: "user", content: [{ type: "input_text", text: "old" }] },
-			{ type: "message", role: "assistant", content: [{ type: "output_text", text: "old answer" }] },
-			{ type: "message", role: "user", content: [{ type: "input_text", text: "new" }] },
-			{ type: "function_call", call_id: "call", name: "shell", arguments: "{}" },
-			{ type: "function_call_output", call_id: "call", output: "new result" },
-		];
-		const original = structuredClone(items);
-		const result = latestRemoteCompactionSuffix(items, 1_000);
-
-		expect(items).toEqual(original);
-		expect(result).toEqual([
-			{ type: "message", role: "user", content: [{ type: "input_text", text: "new" }] },
-			{ type: "function_call", call_id: "call", name: "shell", arguments: "{}" },
-			{ type: "function_call_output", call_id: "call", output: "new result" },
-		]);
 	});
 
 	test("trims the newest function output first", () => {

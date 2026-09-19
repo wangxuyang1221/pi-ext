@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
+import { responseItemEstimationView } from "./response-item-estimation.js";
 import { setTimeout as sleep } from "node:timers/promises";
+import { audioTokenCount, contentTokens, imageBytes, inlineAudioPayload, inlineImagePayload, textTokens, truncateImageMessage, truncateText } from "./token-estimation.js";
 import {
 	convertToLlm,
 	sessionEntryToContextMessages,
@@ -75,9 +77,6 @@ export function isFailClosedCompactionError(message: string): boolean {
 export function isContextWindowCompactionError(error: unknown): boolean {
 	const message = error instanceof Error ? error.message : String(error);
 	if (isFailClosedCompactionError(message) || USAGE_LIMIT_MESSAGE_PATTERN.test(message) || /invalid_prompt/i.test(message)) return false;
-	if (typeof error === "object" && error !== null && "contextOverflowRecovery" in error) {
-		return (error as { contextOverflowRecovery?: unknown }).contextOverflowRecovery === true;
-	}
 	const code = compactionErrorCode(error);
 	if (code !== undefined) return code === "context_length_exceeded" || code === "context_window_exceeded";
 	if (compactionRetry(error) !== undefined) return false;
@@ -704,44 +703,9 @@ export function effectiveInputForBranch(params: {
 	return piContextInputForBranch({ branch, model: params.model, tools: params.tools });
 }
 
-function contentText(content: unknown): string {
-	if (typeof content === "string") return content;
-	if (!Array.isArray(content)) return "";
-	return content
-		.flatMap((part) => {
-			if (!isJsonObject(part)) return [];
-			if (typeof part.text === "string") return [part.text];
-			if (typeof part.encrypted_content === "string") return [part.encrypted_content];
-			return [];
-		})
-		.join("");
-}
-
-function textOnly(value: unknown): string {
-	if (typeof value === "string") return value;
-	if (Array.isArray(value)) return value.map(textOnly).join("");
-	if (!isJsonObject(value)) return "";
-	if (value.type === "input_image" || value.type === "image_url") return "";
-	if (typeof value.text === "string") return value.text;
-	if (typeof value.encrypted_content === "string") return value.encrypted_content;
-	return Object.values(value).map(textOnly).join("");
-}
-
-function responseItemText(item: ResponseItem): string {
-	if (item.type === "message" || item.type === "agent_message" || item.type === undefined) {
-		return contentText(item.content);
-	}
-	if (item.type === "function_call_output") {
-		if (typeof item.output === "string") return item.output;
-		return imagePartCount(item.output) > 0 ? textOnly(item.output) : JSON.stringify(item.output ?? "");
-	}
-	if (item.type === "function_call") return typeof item.arguments === "string" ? item.arguments : "";
-	return "";
-}
-
 export function approximateTokenCount(value: unknown): number {
 	const encoded = JSON.stringify(value);
-	return Math.max(1, Math.ceil((encoded?.length ?? 0) / 4));
+	return Math.ceil(Buffer.byteLength(encoded ?? "", "utf8") / 4);
 }
 
 function imagePartCount(value: unknown): number {
@@ -751,20 +715,58 @@ function imagePartCount(value: unknown): number {
 	return Object.values(value).reduce<number>((total, part) => total + imagePartCount(part), 0);
 }
 
-function approximateTokens(item: ResponseItem): number {
-	const imageTokens = imagePartCount(item) * 1_200;
-	if (imageTokens > 0) return imageTokens + Math.max(0, Math.ceil(responseItemText(item).length / 4));
-	if (item.type === "reasoning" || item.type === "compaction" || item.type === "context_compaction") {
-		return approximateTokenCount(item);
+const I64_MAX = (1n << 63n) - 1n;
+const I64_MIN = -(1n << 63n);
+const saturatingI64 = (value: bigint): bigint => value > I64_MAX ? I64_MAX : value < I64_MIN ? I64_MIN : value;
+const tokensFromBytes = (bytes: bigint): bigint => bytes <= 0n ? 0n : (bytes + 3n) / 4n;
+
+function approximateTokensInteger(input: ResponseItem): bigint {
+	const item = responseItemEstimationView(input);
+	if ((item.type === "reasoning" || item.type === "compaction" || item.type === "context_compaction")
+		&& typeof item.encrypted_content === "string") {
+		return tokensFromBytes(BigInt(Buffer.byteLength(item.encrypted_content)) * 3n / 4n - 650n);
 	}
-	if (item.type === "function_call" || (typeof item.type === "string" && item.type.includes("tool") && item.type !== "function_call_output")) {
-		return Math.max(1, Math.ceil(JSON.stringify(item).length / 4));
+	let bytes = BigInt(Buffer.byteLength(JSON.stringify(item), "utf8"));
+	let imagePayload = 0n, imageReplacement = 0n;
+	let audioPayload = 0n, audioReplacement = 0n;
+	let encryptedPayload = 0n, encryptedReplacement = 0n;
+	const content = Array.isArray(item.content) ? item.content : Array.isArray(item.output) ? item.output : [];
+	const hasMedia = item.type === "message" || item.type === undefined || item.type === "function_call_output" || item.type === "custom_tool_call_output";
+	for (const part of content) {
+		if (!isJsonObject(part)) continue;
+		if (hasMedia && (part.type === "input_image" || part.type === "image_url") && typeof part.image_url === "string") {
+			const inline = inlineImagePayload(part.image_url);
+			if (inline) {
+				imagePayload = saturatingI64(imagePayload + BigInt(Buffer.byteLength(inline.payload)));
+				imageReplacement = saturatingI64(imageReplacement + BigInt(imageBytes(part)));
+			}
+		}
+		if (hasMedia && part.type === "input_audio" && typeof part.audio_url === "string") {
+			const inline = inlineAudioPayload(part.audio_url);
+			if (inline) {
+				audioPayload = saturatingI64(audioPayload + BigInt(Buffer.byteLength(inline.payload)));
+				audioReplacement = saturatingI64(audioReplacement + saturatingI64(audioTokenCount(part.audio_url) * 4n));
+			}
+		}
+		if ((item.type === "function_call_output" || item.type === "agent_message") && typeof part.encrypted_content === "string") {
+			const length = BigInt(Buffer.byteLength(part.encrypted_content));
+			encryptedPayload = saturatingI64(encryptedPayload + length);
+			encryptedReplacement = saturatingI64(encryptedReplacement + (length * 9n + 15n) / 16n);
+		}
 	}
-	return Math.max(1, Math.ceil(responseItemText(item).length / 4));
+	// Preserve upstream's grouped adjustment order: saturation is not associative.
+	bytes = saturatingI64(saturatingI64(bytes - imagePayload) + imageReplacement);
+	bytes = saturatingI64(saturatingI64(bytes - audioPayload) + audioReplacement);
+	bytes = saturatingI64(saturatingI64(bytes - encryptedPayload) + encryptedReplacement);
+	return tokensFromBytes(bytes);
+}
+
+function approximateTokens(input: ResponseItem): number {
+	return Number(approximateTokensInteger(input));
 }
 
 export function approximateResponseItemTokens(items: ResponseItem[]): number {
-	return items.reduce((total, item) => total + approximateTokens(item), 0);
+	return Number(items.reduce((total, item) => saturatingI64(total + approximateTokensInteger(item)), 0n));
 }
 
 export function approximateCompactionRequestTokens(params: {
@@ -817,19 +819,20 @@ export function trimFunctionCallHistoryToFitContextWindow(
 function truncateMessage(item: ResponseItem, maxTokens: number): ResponseItem | undefined {
 	if ((item.type !== "message" && item.type !== undefined) || maxTokens <= 0) return undefined;
 	const copy = structuredClone(item);
-	let remainingCharacters = maxTokens * 4;
+	let remaining = maxTokens;
 
 	if (typeof copy.content === "string") {
-		copy.content = copy.content.slice(0, Math.max(0, remainingCharacters));
+		copy.content = truncateText(copy.content, remaining);
 		return copy.content ? copy : undefined;
 	}
 	if (!Array.isArray(copy.content)) return copy;
 
 	const truncatedContent = copy.content.flatMap((part) => {
 		if (!isJsonObject(part) || typeof part.text !== "string") return [part];
-		if (remainingCharacters <= 0) return [];
-		const text = part.text.slice(0, Math.max(0, remainingCharacters));
-		remainingCharacters -= text.length;
+		if (remaining <= 0) return [];
+		const cost = textTokens(part.text);
+		const text = cost <= remaining ? part.text : truncateText(part.text, remaining);
+		remaining = Math.max(0, remaining - cost);
 		return text ? [{ ...part, text }] : [];
 	});
 	copy.content = truncatedContent;
@@ -928,12 +931,9 @@ function isDescendantProgressAgentMessage(item: ResponseItem): boolean {
 }
 
 function retainedMessageTokens(item: ResponseItem): number {
-	if (typeof item.content === "string") return Math.max(1, Math.ceil(item.content.length / 4));
+	if (typeof item.content === "string") return Math.max(1, textTokens(item.content));
 	if (!Array.isArray(item.content)) return 1;
-	return Math.max(1, item.content.reduce((total, part) => {
-		if (!isJsonObject(part) || (part.type !== "input_text" && part.type !== "output_text") || typeof part.text !== "string") return total;
-		return total + Math.ceil(part.text.length / 4);
-	}, 0));
+	return Math.max(1, item.content.reduce((total, part) => total + (isJsonObject(part) ? contentTokens(part) : 0), 0));
 }
 
 function retainedItemTokens(item: ResponseItem): number {
@@ -973,26 +973,6 @@ function retainedMessageGroups(items: ResponseItem[]): RetainedMessageGroup[] {
 	return groups;
 }
 
-/** Keeps the newest complete user turn for a confirmed overflow recovery. */
-export function latestRemoteCompactionSuffix(
-	items: ResponseItem[],
-	maxTokens: number,
-	reservedTokens = 0,
-): ResponseItem[] {
-	const budget = Math.max(0, maxTokens - reservedTokens);
-	const userStarts = items.flatMap((item, index) => item.role === "user" ? [index] : []);
-	if (userStarts.length === 0) return [];
-	const candidateStart = userStarts.at(-1)!;
-	const candidate = trimFunctionCallHistoryToFitContextWindow(items.slice(candidateStart), maxTokens, reservedTokens);
-	if (approximateResponseItemTokens(candidate) > budget) return [];
-	if (candidateStart === 0 && userStarts.length === 1 && JSON.stringify(candidate) === JSON.stringify(items)) return [];
-	if (candidateStart > 0 && (items[candidateStart - 1]?.type === "compaction" || items[candidateStart - 1]?.type === "context_compaction")) {
-		const withCheckpoint = trimFunctionCallHistoryToFitContextWindow(items.slice(candidateStart - 1), maxTokens, reservedTokens);
-		if (approximateResponseItemTokens(withCheckpoint) <= budget) return withCheckpoint;
-	}
-	return candidate;
-}
-
 function retainedByCodex(item: ResponseItem): boolean {
 	if (item.type === "agent_message") {
 		return !isDescendantProgressAgentMessage(item)
@@ -1018,10 +998,15 @@ export function retainRecentMessages(items: ResponseItem[], maxTokens = RETAINED
 			remaining -= tokens;
 			continue;
 		}
-		if (remaining <= noticeTokens) continue;
+		const hasImages = imagePartCount(group.source) > 0;
+		if (remaining <= noticeTokens) {
+			if (hasImages) remaining = 0;
+			continue;
+		}
 		const sourceBudget = remaining - noticeTokens;
+		if (hasImages) remaining = 0;
 		const truncated = (group.source.type === "message" || group.source.type === undefined)
-			? truncateMessage(group.source, sourceBudget)
+			? hasImages ? truncateImageMessage(group.source, sourceBudget) : truncateMessage(group.source, sourceBudget)
 			: undefined;
 		if (truncated) {
 			if (group.notice) retained.push(structuredClone(group.notice));
@@ -1163,11 +1148,6 @@ export function markFallbackEligibility(error: Error, eligible: boolean): Error 
 	return error as Error & { retryWithCurrentModel: boolean };
 }
 
-export function markContextOverflowRecovery(error: Error): Error & { contextOverflowRecovery: boolean; retryWithCurrentModel: boolean } {
-	Object.defineProperty(error, "contextOverflowRecovery", { value: true, enumerable: false, configurable: true });
-	return markFallbackEligibility(markCompactionRetry(error, "none"), false) as Error & { contextOverflowRecovery: boolean; retryWithCurrentModel: boolean };
-}
-
 type CompactionRetry = "none" | "automatic" | "explicit";
 
 function compactionRetry(error: unknown): CompactionRetry | undefined {
@@ -1247,7 +1227,6 @@ export function compactionFailureClassification(error: unknown): string {
 		const normalized = normalizedErrorCode(code);
 		if (CANONICAL_COMPACTION_ERROR_CODES.has(normalized)) return normalized;
 	}
-	if (typeof error === "object" && error !== null && "contextOverflowRecovery" in error) return "context_window_exceeded";
 	const message = error instanceof Error ? error.message : String(error);
 	const status = /\((\d{3})\):/.exec(message)?.[1];
 	if (status) return `http_${status}`;

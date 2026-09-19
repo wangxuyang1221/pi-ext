@@ -1,0 +1,515 @@
+{
+  "commit": "6b9826e3aa83b1a5947db50f4332cb9c65f1b340",
+  "rustc": "rustc 1.97.0 (2d8144b78 2026-07-07)",
+  "sources": {
+    "truncation": {
+      "path": "codex-rs/utils/string/src/truncate.rs",
+      "sha256": "51a22c8252db01b668f312e17c87c43c1abd96fc46ac3cfca0a85d45f6dc4d71",
+      "url": "https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/utils/string/src/truncate.rs"
+    },
+    "history": {
+      "path": "codex-rs/core/src/context_manager/history.rs",
+      "sha256": "25fe60c3dd785723c953ab134c3bbdeb529833a87dff2f2eed4f37a07a16645b",
+      "url": "https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/core/src/context_manager/history.rs"
+    },
+    "images": {
+      "path": "codex-rs/core/src/compact_remote_v2_image_budget_tests.rs",
+      "sha256": "ee9b53a7bc86af890173f22c255059c2d71d655010e06f4622bf94bcb053d0bc",
+      "url": "https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/core/src/compact_remote_v2_image_budget_tests.rs"
+    }
+  },
+  "vectors": [
+    {
+      "operation": "count",
+      "text": "",
+      "budget": 0,
+      "expected": 0
+    },
+    {
+      "operation": "truncate",
+      "text": "",
+      "budget": 0,
+      "expected": ""
+    },
+    {
+      "operation": "truncate",
+      "text": "",
+      "budget": 1,
+      "expected": ""
+    },
+    {
+      "operation": "truncate",
+      "text": "",
+      "budget": 2,
+      "expected": ""
+    },
+    {
+      "operation": "truncate",
+      "text": "",
+      "budget": 4,
+      "expected": ""
+    },
+    {
+      "operation": "truncate",
+      "text": "",
+      "budget": 16,
+      "expected": ""
+    },
+    {
+      "operation": "truncate",
+      "text": "",
+      "budget": 100,
+      "expected": ""
+    },
+    {
+      "operation": "count",
+      "text": "abcdefghijklmnop",
+      "budget": 0,
+      "expected": 4
+    },
+    {
+      "operation": "truncate",
+      "text": "abcdefghijklmnop",
+      "budget": 0,
+      "expected": "…4 tokens truncated…"
+    },
+    {
+      "operation": "truncate",
+      "text": "abcdefghijklmnop",
+      "budget": 1,
+      "expected": "ab…3 tokens truncated…op"
+    },
+    {
+      "operation": "truncate",
+      "text": "abcdefghijklmnop",
+      "budget": 2,
+      "expected": "abcd…2 tokens truncated…mnop"
+    },
+    {
+      "operation": "truncate",
+      "text": "abcdefghijklmnop",
+      "budget": 4,
+      "expected": "abcdefghijklmnop"
+    },
+    {
+      "operation": "truncate",
+      "text": "abcdefghijklmnop",
+      "budget": 16,
+      "expected": "abcdefghijklmnop"
+    },
+    {
+      "operation": "truncate",
+      "text": "abcdefghijklmnop",
+      "budget": 100,
+      "expected": "abcdefghijklmnop"
+    },
+    {
+      "operation": "count",
+      "text": "earlier text",
+      "budget": 0,
+      "expected": 3
+    },
+    {
+      "operation": "truncate",
+      "text": "earlier text",
+      "budget": 0,
+      "expected": "…3 tokens truncated…"
+    },
+    {
+      "operation": "truncate",
+      "text": "earlier text",
+      "budget": 1,
+      "expected": "ea…2 tokens truncated…xt"
+    },
+    {
+      "operation": "truncate",
+      "text": "earlier text",
+      "budget": 2,
+      "expected": "earl…1 tokens truncated…text"
+    },
+    {
+      "operation": "truncate",
+      "text": "earlier text",
+      "budget": 4,
+      "expected": "earlier text"
+    },
+    {
+      "operation": "truncate",
+      "text": "earlier text",
+      "budget": 16,
+      "expected": "earlier text"
+    },
+    {
+      "operation": "truncate",
+      "text": "earlier text",
+      "budget": 100,
+      "expected": "earlier text"
+    },
+    {
+      "operation": "count",
+      "text": "中文约束：不修改数据库。",
+      "budget": 0,
+      "expected": 9
+    },
+    {
+      "operation": "truncate",
+      "text": "中文约束：不修改数据库。",
+      "budget": 0,
+      "expected": "…9 tokens truncated…"
+    },
+    {
+      "operation": "truncate",
+      "text": "中文约束：不修改数据库。",
+      "budget": 1,
+      "expected": "…8 tokens truncated…"
+    },
+    {
+      "operation": "truncate",
+      "text": "中文约束：不修改数据库。",
+      "budget": 2,
+      "expected": "中…7 tokens truncated…。"
+    },
+    {
+      "operation": "truncate",
+      "text": "中文约束：不修改数据库。",
+      "budget": 4,
+      "expected": "中文…5 tokens truncated…库。"
+    },
+    {
+      "operation": "truncate",
+      "text": "中文约束：不修改数据库。",
+      "budget": 16,
+      "expected": "中文约束：不修改数据库。"
+    },
+    {
+      "operation": "truncate",
+      "text": "中文约束：不修改数据库。",
+      "budget": 100,
+      "expected": "中文约束：不修改数据库。"
+    },
+    {
+      "operation": "count",
+      "text": "🙂中a🙂tail",
+      "budget": 0,
+      "expected": 4
+    },
+    {
+      "operation": "truncate",
+      "text": "🙂中a🙂tail",
+      "budget": 0,
+      "expected": "…4 tokens truncated…"
+    },
+    {
+      "operation": "truncate",
+      "text": "🙂中a🙂tail",
+      "budget": 1,
+      "expected": "…3 tokens truncated…il"
+    },
+    {
+      "operation": "truncate",
+      "text": "🙂中a🙂tail",
+      "budget": 2,
+      "expected": "🙂…2 tokens truncated…tail"
+    },
+    {
+      "operation": "truncate",
+      "text": "🙂中a🙂tail",
+      "budget": 4,
+      "expected": "🙂中a🙂tail"
+    },
+    {
+      "operation": "truncate",
+      "text": "🙂中a🙂tail",
+      "budget": 16,
+      "expected": "🙂中a🙂tail"
+    },
+    {
+      "operation": "truncate",
+      "text": "🙂中a🙂tail",
+      "budget": 100,
+      "expected": "🙂中a🙂tail"
+    },
+    {
+      "operation": "count",
+      "text": "{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"中文🙂\"}]}",
+      "budget": 0,
+      "expected": 22
+    },
+    {
+      "operation": "truncate",
+      "text": "{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"中文🙂\"}]}",
+      "budget": 0,
+      "expected": "…22 tokens truncated…"
+    },
+    {
+      "operation": "truncate",
+      "text": "{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"中文🙂\"}]}",
+      "budget": 1,
+      "expected": "{\"…21 tokens truncated…]}"
+    },
+    {
+      "operation": "truncate",
+      "text": "{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"中文🙂\"}]}",
+      "budget": 2,
+      "expected": "{\"ty…20 tokens truncated…\"}]}"
+    },
+    {
+      "operation": "truncate",
+      "text": "{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"中文🙂\"}]}",
+      "budget": 4,
+      "expected": "{\"type\":…18 tokens truncated…🙂\"}]}"
+    },
+    {
+      "operation": "truncate",
+      "text": "{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"中文🙂\"}]}",
+      "budget": 16,
+      "expected": "{\"type\":\"message\",\"role\":\"user\",…6 tokens truncated…put_text\",\"text\":\"中文🙂\"}]}"
+    },
+    {
+      "operation": "truncate",
+      "text": "{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"中文🙂\"}]}",
+      "budget": 100,
+      "expected": "{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"中文🙂\"}]}"
+    },
+    {
+      "operation": "reasoning",
+      "text": "",
+      "budget": 0,
+      "expected": 0
+    },
+    {
+      "operation": "output",
+      "text": "",
+      "budget": 0,
+      "expected": 0
+    },
+    {
+      "operation": "reasoning",
+      "text": "",
+      "budget": 6,
+      "expected": 0
+    },
+    {
+      "operation": "output",
+      "text": "",
+      "budget": 6,
+      "expected": 4
+    },
+    {
+      "operation": "reasoning",
+      "text": "",
+      "budget": 866,
+      "expected": 0
+    },
+    {
+      "operation": "output",
+      "text": "",
+      "budget": 866,
+      "expected": 488
+    },
+    {
+      "operation": "reasoning",
+      "text": "",
+      "budget": 867,
+      "expected": 0
+    },
+    {
+      "operation": "output",
+      "text": "",
+      "budget": 867,
+      "expected": 488
+    },
+    {
+      "operation": "reasoning",
+      "text": "",
+      "budget": 868,
+      "expected": 1
+    },
+    {
+      "operation": "output",
+      "text": "",
+      "budget": 868,
+      "expected": 489
+    },
+    {
+      "operation": "reasoning",
+      "text": "",
+      "budget": 4000,
+      "expected": 588
+    },
+    {
+      "operation": "output",
+      "text": "",
+      "budget": 4000,
+      "expected": 2250
+    },
+    {
+      "operation": "reasoning",
+      "text": "",
+      "budget": 100000,
+      "expected": 18588
+    },
+    {
+      "operation": "output",
+      "text": "",
+      "budget": 100000,
+      "expected": 56250
+    }
+  ],
+  "imageVectors": [
+    {
+      "test": "image_only_boundary_is_atomic_and_does_not_backfill_older_messages",
+      "budget": 1845,
+      "input": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "old"
+            }
+          ]
+        },
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_image",
+              "image_url": "data:image/png;base64,abc"
+            }
+          ]
+        },
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "new"
+            }
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_image",
+              "image_url": "data:image/png;base64,abc"
+            }
+          ]
+        },
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "new"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "test": "image_only_boundary_is_atomic_and_does_not_backfill_older_messages",
+      "budget": 1844,
+      "input": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "old"
+            }
+          ]
+        },
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_image",
+              "image_url": "data:image/png;base64,abc"
+            }
+          ]
+        },
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "new"
+            }
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "new"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "test": "image_only_boundary_is_atomic_and_does_not_backfill_older_messages",
+      "budget": 1,
+      "input": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "old"
+            }
+          ]
+        },
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_image",
+              "image_url": "data:image/png;base64,abc"
+            }
+          ]
+        },
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "new"
+            }
+          ]
+        }
+      ],
+      "expected": [
+        {
+          "type": "message",
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "new"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -5,7 +5,7 @@ export type ModelSelectLike = {
     model: Model<any>;
     previousModel?: Model<any>;
 };
-export type RemoteCompactionReason = "manual" | "automatic" | "model-transition" | "context-overflow-recovery" | "context-recovery";
+export type RemoteCompactionReason = "manual" | "automatic" | "model-transition" | "context-recovery";
 export type CheckpointFactory = (params: {
     ctx: ExtensionContext;
     model: Model<any>;
@@ -36,7 +36,7 @@ export declare function createSessionCoordinator(deps: SessionCoordinatorDeps): 
     recordFailedRequest: (ctx: ExtensionContext, requestInput: ResponseItem[] | undefined, diagnostics?: FailedRequestDiagnostics) => void;
     selectModel: (event: ModelSelectLike, ctx: ExtensionContext) => Promise<void>;
     recoverCurrentModel: (model: Model<any>, ctx: ExtensionContext, basePayload?: JsonObject, requestInput?: ResponseItem[], excludeLastAssistantError?: boolean, signal?: AbortSignal) => Promise<void>;
-    prepareRequest: (model: Model<any>, ctx: ExtensionContext, requestInput: ResponseItem[] | undefined, basePayload?: JsonObject, skipAutomaticCompaction?: boolean, recovery?: "context-overflow") => Promise<ResponseItem[] | undefined>;
-    prepareCompaction: (model: Model<any>, ctx: ExtensionContext, requestInput?: ResponseItem[], excludeLastAssistantError?: boolean, signal?: AbortSignal, recovery?: "context-overflow", basePayload?: JsonObject) => Promise<ResponseItem[]>;
+    prepareRequest: (model: Model<any>, ctx: ExtensionContext, requestInput: ResponseItem[] | undefined, basePayload?: JsonObject, skipAutomaticCompaction?: boolean) => Promise<ResponseItem[] | undefined>;
+    prepareCompaction: (model: Model<any>, ctx: ExtensionContext, excludeLastAssistantError?: boolean, signal?: AbortSignal) => Promise<ResponseItem[]>;
 };
 //# sourceMappingURL=session-coordinator.d.ts.map

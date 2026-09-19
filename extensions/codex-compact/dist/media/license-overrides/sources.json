@@ -1,0 +1,22 @@
+{
+  "fax@0.2.6": {
+    "files": ["fax-LICENSE.txt"],
+    "url": "https://api.github.com/repos/pdf-rs/fax/git/blobs/16bcf2c47e0a476e50d87d68fa5d84af8b92ff63",
+    "note": "该版本 crate 和对应 commit 未附 LICENSE 文件，但 Cargo.toml 明确声明 MIT；这里保留同一项目后来补充的 MIT 许可证原文。"
+  },
+  "fax_derive@0.2.0": {
+    "files": ["fax-LICENSE.txt"],
+    "url": "https://api.github.com/repos/pdf-rs/fax/git/blobs/16bcf2c47e0a476e50d87d68fa5d84af8b92ff63",
+    "note": "与 fax 同仓库、同发布 commit，使用同一许可证。"
+  },
+  "zune-core@0.4.12": {
+    "files": ["zune-core-LICENSE.md", "LICENSE-APACHE"],
+    "url": "https://raw.githubusercontent.com/etemesi254/zune-image/f8fbb123d5ed04441e8324a555bfcda0cb1bd28f/LICENSE.md",
+    "note": "crate 漏打包许可证，使用 .cargo_vcs_info.json 指定 commit 的原始归属声明，并附声明引用的 Apache-2.0 全文。"
+  },
+  "zune-jpeg@0.4.21": {
+    "files": ["zune-jpeg-LICENSE.md", "LICENSE-APACHE"],
+    "url": "https://raw.githubusercontent.com/etemesi254/zune-image/fa2c767a01d7d9373911d0bf63e0588553d67e0e/LICENSE.md",
+    "note": "crate 漏打包许可证，使用 .cargo_vcs_info.json 指定 commit 的原始归属声明，并附声明引用的 Apache-2.0 全文。"
+  }
+}

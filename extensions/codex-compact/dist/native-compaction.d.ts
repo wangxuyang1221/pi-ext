@@ -101,8 +101,6 @@ export declare function approximateCompactionRequestTokens(params: {
 }): number;
 /** Codex rewrites the newest truncatable tool output before an oversized request. */
 export declare function trimFunctionCallHistoryToFitContextWindow(items: ResponseItem[], maxTokens: number, reservedTokens?: number): ResponseItem[];
-/** Keeps the newest complete user turn for a confirmed overflow recovery. */
-export declare function latestRemoteCompactionSuffix(items: ResponseItem[], maxTokens: number, reservedTokens?: number): ResponseItem[];
 /** Mirrors current Codex V2's retained message whitelist and 64k newest-first budget. */
 export declare function retainRecentMessages(items: ResponseItem[], maxTokens?: number): ResponseItem[];
 export declare function buildReplacementHistory(preCompactionInput: ResponseItem[], compactionItem: ResponseItem): ResponseItem[];
@@ -123,10 +121,6 @@ export declare function buildCodexHeaders(params: {
     turnState?: string;
 }): Headers;
 export declare function markFallbackEligibility(error: Error, eligible: boolean): Error & {
-    retryWithCurrentModel: boolean;
-};
-export declare function markContextOverflowRecovery(error: Error): Error & {
-    contextOverflowRecovery: boolean;
     retryWithCurrentModel: boolean;
 };
 export declare function compactionFailureClassification(error: unknown): string;

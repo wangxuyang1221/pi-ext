@@ -1,5 +1,6 @@
 import { compactionHash } from "./capabilities.js";
-import { buildCodexHeaders, buildCompactionRequestBody, buildReplacementHistory, buildToolPayload, callRemoteCompaction, loadedToolNamesFromItems, modelKey, approximateCompactionRequestTokens, markContextOverflowRecovery, markFallbackEligibility, NATIVE_COMPACTION_KIND, NATIVE_COMPACTION_VERSION, trimFunctionCallHistoryToFitContextWindow, } from "./native-compaction.js";
+import { effectiveContextWindow, loadConfig } from "./config.js";
+import { buildCodexHeaders, buildCompactionRequestBody, buildReplacementHistory, buildToolPayload, callRemoteCompaction, loadedToolNamesFromItems, modelKey, approximateCompactionRequestTokens, markFallbackEligibility, NATIVE_COMPACTION_KIND, NATIVE_COMPACTION_VERSION, trimFunctionCallHistoryToFitContextWindow, } from "./native-compaction.js";
 const DEFAULT_CODEX_BASE_URL = "https://chatgpt.com/backend-api";
 function resolveCodexResponsesUrl(baseUrl) {
     const normalized = (baseUrl?.trim() || DEFAULT_CODEX_BASE_URL).replace(/\/+$/, "");
@@ -51,14 +52,11 @@ export async function createNativeCheckpoint(params) {
         instructions,
         tools,
     });
-    const input = trimFunctionCallHistoryToFitContextWindow(params.input, params.model.contextWindow, reservedTokens);
-    if (approximateCompactionRequestTokens({
-        input,
-        instructions,
-        tools,
-    }) > params.model.contextWindow) {
-        throw markContextOverflowRecovery(new Error(`OpenAI Codex compaction input exceeds this model's ${params.model.contextWindow} token context window after tool-output trimming.`));
-    }
+    const config = loadConfig(params.ctx.cwd ?? "", params.ctx.isProjectTrusted?.() ?? false);
+    const contextWindow = effectiveContextWindow(config, params.model.contextWindow);
+    const input = trimFunctionCallHistoryToFitContextWindow(params.input, contextWindow, reservedTokens);
+    // A local estimate is not proof that the request exceeds the server window.
+    // Like Codex V2, send the retained history and let the server decide.
     const headers = buildCodexHeaders({
         apiKey: auth.apiKey,
         headers: auth.headers,

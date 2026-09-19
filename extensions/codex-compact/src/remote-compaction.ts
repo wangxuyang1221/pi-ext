@@ -1,6 +1,7 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { Model } from "@earendil-works/pi-ai";
 import { compactionHash } from "./capabilities.js";
+import { effectiveContextWindow, loadConfig } from "./config.js";
 import {
 	buildCodexHeaders,
 	buildCompactionRequestBody,
@@ -10,7 +11,6 @@ import {
 	loadedToolNamesFromItems,
 	modelKey,
 	approximateCompactionRequestTokens,
-	markContextOverflowRecovery,
 	markFallbackEligibility,
 	NATIVE_COMPACTION_KIND,
 	NATIVE_COMPACTION_VERSION,
@@ -96,20 +96,15 @@ export async function createNativeCheckpoint(params: NativeCheckpointRequest): P
 		instructions,
 		tools,
 	});
+	const config = loadConfig(params.ctx.cwd ?? "", params.ctx.isProjectTrusted?.() ?? false);
+	const contextWindow = effectiveContextWindow(config, params.model.contextWindow);
 	const input = trimFunctionCallHistoryToFitContextWindow(
 		params.input,
-		params.model.contextWindow,
+		contextWindow,
 		reservedTokens,
 	);
-	if (approximateCompactionRequestTokens({
-		input,
-		instructions,
-		tools,
-	}) > params.model.contextWindow) {
-		throw markContextOverflowRecovery(new Error(
-			`OpenAI Codex compaction input exceeds this model's ${params.model.contextWindow} token context window after tool-output trimming.`,
-		));
-	}
+	// A local estimate is not proof that the request exceeds the server window.
+	// Like Codex V2, send the retained history and let the server decide.
 	const headers = buildCodexHeaders({
 		apiKey: auth.apiKey,
 		headers: auth.headers,

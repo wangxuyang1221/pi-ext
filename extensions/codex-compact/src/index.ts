@@ -1,20 +1,19 @@
 import { isDeepStrictEqual } from "node:util";
-import { sessionEntryToContextMessages, type ExtensionAPI, type SessionEntry } from "@earendil-works/pi-coding-agent";
+import { sessionEntryToContextMessages, type ExtensionAPI, type ExtensionContext, type SessionEntry } from "@earendil-works/pi-coding-agent";
+import { accountingFingerprint, WindowUsageAccounting } from "./usage-accounting.js";
 import { shouldAutoCompact } from "./scheduler.js";
 import { createCompactionWidget, type CompactionWidgetFactory } from "./presentation.js";
-import { autoCompactTokenLimit, loadConfig } from "./config.js";
+import { autoCompactTokenLimit, effectiveContextWindow, loadConfig } from "./config.js";
 import { createNativeCheckpoint, type NativeCheckpointRequest } from "./remote-compaction.js";
 import { createSessionCoordinator, type RemoteCompactionReason } from "./session-coordinator.js";
 import {
 	estimateCompactionWindowPrefillTokens,
 	FAILED_REQUEST_KIND,
 	findNativeCheckpoint,
-	fullInputForBranch,
 	isJsonObject,
 	isOpenAICodexModel,
 	mergeFeatureHeader,
 	approximateResponseItemTokens,
-	isContextWindowCompactionError,
 	compactionFailureClassification,
 	approximateTokenCount,
 	buildToolPayload,
@@ -53,21 +52,20 @@ type RemoteCompactionPresentation = {
 	ctx: CompactionNoticeContext;
 };
 
-function failureNextStep(code: string, recoveryAttempted: boolean): string {
+function failureNextStep(code: string): string {
 	if (code === "authentication" || AUTHENTICATION_FAILURE_CODE_PATTERN.test(code)) {
 		return "check Codex authentication and retry manually";
 	}
 	if (code === "policy_or_quota" || POLICY_OR_QUOTA_FAILURE_CODE_PATTERN.test(code)) {
 		return "check Codex plan, permissions, quota, and billing before retrying manually";
 	}
-	if (code === "context_window_exceeded" || recoveryAttempted) return "shorten the request or start a new session";
+	if (code === "context_window_exceeded" || code === "context_length_exceeded") return "shorten the request or start a new session";
 	if (code === "network" || code === "timeout") return "check the connection and retry manually";
 	return "retry manually or start a new session";
 }
 
 function remoteCompactionReasonLabel(reason: RemoteCompactionReason): string {
 	if (reason === "model-transition") return "model transition";
-	if (reason === "context-overflow-recovery") return "context overflow recovery";
 	if (reason === "context-recovery") return "context recovery";
 	return reason;
 }
@@ -85,14 +83,15 @@ function reportCompactionFailure(
 	model: { id?: unknown } | undefined,
 	error: unknown,
 	phase: FailurePhase,
-	recoveryAttempted: boolean,
 	outcome: FailureOutcome,
 ): string {
 	const code = compactionFailureClassification(error);
 	const modelId = typeof model?.id === "string" && /^[a-zA-Z0-9_.:-]{1,64}$/.test(model.id) ? model.id : "unknown";
 	const next = outcome === "compaction_skipped"
 		? "request continues without compaction"
-		: failureNextStep(code, recoveryAttempted);
+		: failureNextStep(code);
+	// Preserve the legacy diagnostic field without implying a removed recovery attempt.
+	const recoveryAttempted = false;
 	const notice = `OpenAI Codex failure: phase=${phase}; code=${code}; model=${modelId}; recoveryAttempted=${recoveryAttempted}; outcome=${outcome}; next=${next}.`;
 	if (ctx.hasUI) safely(() => ctx.ui.notify(notice, outcome === "compaction_skipped" ? "warning" : "error"));
 	else safely(() => console.error(notice));
@@ -101,6 +100,19 @@ function reportCompactionFailure(
 
 export default function codexCompactionExtension(pi: ExtensionAPI): void {
 	const basePayloadBySession = new Map<string, JsonObject>();
+	const usageBySession = new Map<string, WindowUsageAccounting>();
+	const requestFingerprint = (ctx: ExtensionContext): string => {
+		const checkpoint = findNativeCheckpoint(ctx.sessionManager.getBranch() as SessionEntry[], ctx.model && modelKey(ctx.model));
+		return accountingFingerprint({
+			model: ctx.model && modelKey(ctx.model),
+			checkpoint: checkpoint.status === "valid" ? checkpoint.checkpoint.entryId : checkpoint.status,
+			system: ctx.getSystemPrompt(),
+			tools: pi.getAllTools(),
+			activeTools: pi.getActiveTools(),
+			payload: basePayloadBySession.get(ctx.sessionManager.getSessionId()),
+		});
+	};
+	const baseSystemPromptBySession = new Map<string, string>();
 	const turnStateBySession = new Map<string, string>();
 	const remoteCompactionPresentationBySession = new Map<string, RemoteCompactionPresentation>();
 	const activePiCompactionSessions = new Set<string>();
@@ -170,39 +182,34 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		completed: (result: T) => boolean = () => true,
 	): Promise<T> => {
 		const sessionId = ctx.sessionManager.getSessionId();
-		const existingPresentation = remoteCompactionPresentationBySession.get(sessionId);
-		const resumesOverflowRecovery = reason === "context-overflow-recovery"
-			&& existingPresentation !== undefined;
-		let presentation = resumesOverflowRecovery ? existingPresentation : undefined;
-		if (!resumesOverflowRecovery) {
-			clearRemoteCompactionPresentation(sessionId);
-			if (ctx.hasUI) {
-				presentation = { ctx };
-				remoteCompactionPresentationBySession.set(sessionId, presentation);
-				safely(() => ctx.ui.setWidget("codex-compact", createCompactionWidget(), COMPACTION_WIDGET_OPTIONS));
-			}
+		clearRemoteCompactionPresentation(sessionId);
+		const presentation = ctx.hasUI ? { ctx } : undefined;
+		if (presentation) {
+			remoteCompactionPresentationBySession.set(sessionId, presentation);
+			safely(() => ctx.ui.setWidget("codex-compact", createCompactionWidget(), COMPACTION_WIDGET_OPTIONS));
 		}
 		const label = remoteCompactionReasonLabel(reason);
-		let retainForOverflowRecovery = false;
 		try {
 			const result = await operation();
-			if (ctx.hasUI && completed(result)) safely(() => ctx.ui.notify(`Codex context compacted (${label}).`, "info"));
-			return result;
-		} catch (error) {
-			retainForOverflowRecovery = !resumesOverflowRecovery && isContextWindowCompactionError(error);
-			throw error;
-		} finally {
-			if (!retainForOverflowRecovery && presentation) {
-				clearRemoteCompactionPresentation(sessionId, presentation);
+			if (presentation && remoteCompactionPresentationBySession.get(sessionId) === presentation && completed(result)) {
+				safely(() => ctx.ui.notify(`Codex context compacted (${label}).`, "info"));
 			}
+			return result;
+		} finally {
+			if (presentation) clearRemoteCompactionPresentation(sessionId, presentation);
 		}
 	};
 	const createCheckpoint = (params: Pick<NativeCheckpointRequest, "ctx" | "model" | "input" | "basePayload" | "signal">) => {
 		const lifecycleGenerationAtStart = lifecycleGeneration;
 		const sessionId = params.ctx.sessionManager.getSessionId();
+		let basePayload = params.basePayload ?? basePayloadBySession.get(sessionId);
+		if (!params.basePayload && basePayload && baseSystemPromptBySession.get(sessionId) !== params.ctx.getSystemPrompt()) {
+			// Cached request transformations remain valid only while their source prompt is unchanged.
+			basePayload = { ...basePayload, instructions: params.ctx.getSystemPrompt() };
+		}
 		return createNativeCheckpoint({
 			...params,
-			basePayload: params.basePayload ?? basePayloadBySession.get(sessionId),
+			basePayload,
 			turnState: turnStateBySession.get(sessionId),
 			onTurnState: (state) => {
 				if (lifecycleGeneration === lifecycleGenerationAtStart) rememberTurnState(sessionId, state);
@@ -225,19 +232,29 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 				failureCtx.model,
 				error,
 				"before_provider_request",
-				false,
 				"compaction_skipped",
 			);
 		},
 		shouldAutoCompact: ({ ctx, model, input, reason }) => {
 			const config = loadConfig(ctx.cwd, ctx.isProjectTrusted());
-			// Pi exposes assistant usage but not Codex's window counters; estimate the stable prefix.
+			// Fall back locally unless a successful observed request covers this exact history.
 			const supportsStrictMode = (model.compat as { supportsStrictMode?: boolean } | undefined)?.supportsStrictMode !== false;
-			const estimatedStablePrefixTokens = approximateTokenCount({
+			const observedPayload = basePayloadBySession.get(ctx.sessionManager.getSessionId());
+			const estimatedStablePrefixTokens = approximateTokenCount(observedPayload ? {
+				instructions: observedPayload.instructions,
+				tools: observedPayload.tools,
+			} : {
 				instructions: ctx.getSystemPrompt(),
 				tools: buildToolPayload(pi.getAllTools(), pi.getActiveTools(), supportsStrictMode),
 			});
-			const activeContextTokens = approximateResponseItemTokens(input) + estimatedStablePrefixTokens;
+			const branch = ctx.sessionManager.getBranch() as SessionEntry[];
+			const lastAssistant = branch.findLast((entry) => entry.type === "message" && entry.message.role === "assistant");
+			const accounted = usageBySession.get(ctx.sessionManager.getSessionId())?.estimate(
+				requestFingerprint(ctx), input,
+				lastAssistant?.type === "message" ? lastAssistant.message : undefined,
+				approximateResponseItemTokens,
+			);
+			const activeContextTokens = accounted ?? approximateResponseItemTokens(input) + estimatedStablePrefixTokens;
 			const prefillTokens = config.autoCompactScope === "bodyAfterPrefix"
 				? estimateCompactionWindowPrefillTokens({
 						branch: ctx.sessionManager.getBranch() as SessionEntry[],
@@ -249,7 +266,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 			return shouldAutoCompact({
 				status: {
 					activeContextTokens,
-					contextWindow: model.contextWindow,
+					contextWindow: effectiveContextWindow(config, model.contextWindow),
 					...(prefillTokens !== undefined ? { prefillTokens } : {}),
 				},
 				limit,
@@ -276,6 +293,8 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		activePiCompactionSessions.clear();
 		pendingPiCompactionBySession.clear();
 		basePayloadBySession.clear();
+		usageBySession.clear();
+		baseSystemPromptBySession.clear();
 		turnStateBySession.clear();
 	};
 	pi.on("session_start", clearTransient);
@@ -294,6 +313,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		clearRemoteCompactionPresentation(sessionId);
 		activePiCompactionSessions.delete(sessionId);
 		pendingPiCompactionBySession.delete(sessionId);
+		usageBySession.delete(sessionId);
 		return coordinator.selectModel(event, ctx);
 	});
 
@@ -334,6 +354,11 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		if (turnState) rememberTurnState(ctx.sessionManager.getSessionId(), turnState);
 	});
 
+	pi.on("message_end", (event, ctx) => {
+		if (!isOpenAICodexModel(ctx.model)) return;
+		usageBySession.get(ctx.sessionManager.getSessionId())?.observeResponse(event.message);
+	});
+
 	pi.on("before_provider_request", async (event, ctx) => {
 		const model = ctx.model;
 		if (!isOpenAICodexModel(model) || !isJsonObject(event.payload)) return undefined;
@@ -342,55 +367,40 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		const requestInput = Array.isArray(event.payload.input) ? event.payload.input : undefined;
 		const basePayload = stripInputFromPayload(event.payload);
 		basePayloadBySession.set(sessionId, basePayload);
-		let recovery: "context-overflow" | undefined;
-		for (;;) {
+		baseSystemPromptBySession.set(sessionId, ctx.getSystemPrompt());
+		const lifecycleGenerationAtStart = lifecycleGeneration;
+		const requestSignal = ctx.signal;
+		try {
+			const input = await coordinator.prepareRequest(model, ctx, requestInput, basePayload);
+			if (lifecycleGeneration !== lifecycleGenerationAtStart || requestSignal?.aborted) return undefined;
+			const payload = input ? { ...stripInputFromPayload(event.payload), input } : event.payload;
+			const accounting = usageBySession.get(sessionId) ?? new WindowUsageAccounting();
+			usageBySession.set(sessionId, accounting);
+			accounting.observeRequest(requestFingerprint(ctx), Array.isArray(payload.input) ? payload.input : []);
+			return payload;
+		} catch (error) {
+			if (lifecycleGeneration !== lifecycleGenerationAtStart || requestSignal?.aborted) return undefined;
+			const code = compactionFailureClassification(error);
 			try {
-				const input = await coordinator.prepareRequest(
-					model,
-					ctx,
-					requestInput,
-					basePayload,
-					false,
-					recovery,
-				);
-				if (!input) return event.payload;
-				const payload = stripInputFromPayload(event.payload);
-				payload.input = input;
-				return payload;
-			} catch (error) {
-				if (ctx.signal?.aborted) {
-					clearRemoteCompactionPresentation(sessionId);
-					return undefined;
-				}
-				if (recovery === undefined && isContextWindowCompactionError(error)) {
-					recovery = "context-overflow";
-					continue;
-				}
-				const recoveryAttempted = recovery !== undefined;
-				const code = compactionFailureClassification(error);
-				clearRemoteCompactionPresentation(sessionId);
-				try {
-					ctx.abort();
-				} catch {}
-				reportCompactionFailure(
-					ctx,
-					model,
-					error,
-					"before_provider_request",
-					recoveryAttempted,
-					"request_aborted",
-				);
-				try {
-					coordinator.recordFailedRequest(ctx, requestInput, {
-						phase: "before_provider_request",
-						code,
-						recoveryAttempted,
-					});
-				} catch {}
-				// The abort signal stops Pi's provider call. A synthetic `input: null`
-				// would create a second protocol error.
-				return undefined;
-			}
+				ctx.abort();
+			} catch {}
+			reportCompactionFailure(
+				ctx,
+				model,
+				error,
+				"before_provider_request",
+				"request_aborted",
+			);
+			try {
+				coordinator.recordFailedRequest(ctx, requestInput, {
+					phase: "before_provider_request",
+					code,
+					recoveryAttempted: false,
+				});
+			} catch {}
+			// The abort signal stops Pi's provider call. A synthetic `input: null`
+			// would create a second protocol error.
+			return undefined;
 		}
 	});
 
@@ -414,55 +424,24 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 						.filter((entry) => entry.type === "compaction")
 						.map((entry) => entry.id),
 				);
-				const branch = event.branchEntries as SessionEntry[];
-				const requestInput = fullInputForBranch({
-					branch,
-					model,
-					tools: pi.getAllTools(),
-				});
 				const excludeLastAssistantError = event.reason === "overflow" && event.willRetry;
-				let recovery: "context-overflow" | undefined;
-				let native: Awaited<ReturnType<typeof createNativeCheckpoint>> | undefined;
-				let input: ResponseItem[] | undefined;
-				for (;;) {
-					try {
-						const resumesPreparedInput = recovery === "context-overflow" && input !== undefined;
-						input = await coordinator.prepareCompaction(
-							model,
-							ctx,
-							resumesPreparedInput ? input : requestInput,
-							resumesPreparedInput ? false : excludeLastAssistantError,
-							operationSignal,
-							recovery,
-							basePayloadBySession.get(sessionId),
-						);
-						if (lifecycleGeneration !== lifecycleGenerationAtStart) return { cancel: true };
-						native = await createCheckpoint({
-							ctx,
-							model,
-							input,
-							signal: operationSignal,
-						});
-						if (lifecycleGeneration !== lifecycleGenerationAtStart) return { cancel: true };
-						break;
-					} catch (error) {
-						if (lifecycleGeneration !== lifecycleGenerationAtStart || operationSignal.aborted) return { cancel: true };
-						if (recovery === undefined && isContextWindowCompactionError(error)) {
-							recovery = "context-overflow";
-							continue;
-						}
-						reportCompactionFailure(
-							ctx,
-							model,
-							error,
-							"session_before_compact",
-							recovery !== undefined,
-							"compaction_cancelled",
-						);
-						return { cancel: true };
-					}
+				let native: Awaited<ReturnType<typeof createNativeCheckpoint>>;
+				let input: ResponseItem[];
+				try {
+					input = await coordinator.prepareCompaction(
+						model,
+						ctx,
+						excludeLastAssistantError,
+						operationSignal,
+					);
+					if (lifecycleGeneration !== lifecycleGenerationAtStart) return { cancel: true };
+					native = await createCheckpoint({ ctx, model, input, signal: operationSignal });
+				} catch (error) {
+					if (lifecycleGeneration !== lifecycleGenerationAtStart || operationSignal.aborted) return { cancel: true };
+					reportCompactionFailure(ctx, model, error, "session_before_compact", "compaction_cancelled");
+					return { cancel: true };
 				}
-				if (lifecycleGeneration !== lifecycleGenerationAtStart || operationSignal.aborted || !native || !input) {
+				if (lifecycleGeneration !== lifecycleGenerationAtStart || operationSignal.aborted) {
 					return { cancel: true };
 				}
 				const requestUser = input.findLast((item) => item.role === "user");
@@ -498,8 +477,8 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 			} finally {
 				if (activePiCompactionControllerBySession.get(sessionId) === lifecycleController) {
 					activePiCompactionControllerBySession.delete(sessionId);
+					if (!pendingPiCompactionBySession.has(sessionId)) activePiCompactionSessions.delete(sessionId);
 				}
-				if (!pendingPiCompactionBySession.has(sessionId)) activePiCompactionSessions.delete(sessionId);
 			}
 		} catch (error) {
 			safely(() => {
@@ -513,7 +492,6 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 					model,
 					error,
 					"session_before_compact",
-					false,
 					"compaction_cancelled",
 				);
 			}
@@ -530,6 +508,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.on("session_compact", (event, ctx) => {
+		usageBySession.delete(ctx.sessionManager.getSessionId());
 		const sessionId = ctx.sessionManager.getSessionId();
 		const attempt = pendingPiCompactionBySession.get(sessionId);
 		if (!attempt) return;

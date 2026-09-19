@@ -1,0 +1,12 @@
+OpenAI Codex
+Copyright 2025 OpenAI
+
+本扩展的 token 估算、usage 增量计数、UTF-8 文本截断和保留图片预算算法适配自
+OpenAI Codex 0.154.0，commit
+6b9826e3aa83b1a5947db50f4332cb9c65f1b340，遵循 Apache License 2.0。
+许可证和修改说明见 CODEX-LICENSE 与 UPSTREAM.md。
+
+ResponseItem 序列化估算视图、多媒体估算适配层也源自上述 Codex 版本。
+预编译多媒体模块包含 image、Symphonia 和 Rust 标准库等第三方代码。
+其许可证、归属、版本及 MPL-2.0 对应源代码随 dist/media/ 一起分发，
+具体见 dist/media/README.md 和 dist/media/third-party/dependencies.json。

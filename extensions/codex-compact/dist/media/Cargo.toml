@@ -1,0 +1,23 @@
+[package]
+name = "codex-media-estimator"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+base64 = "=0.22.1"
+quick-xml = { version = "=0.41.0", features = ["serialize"] }
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = { version = "=1.0.149", features = ["arbitrary_precision", "preserve_order", "raw_value"] }
+image = { version = "=0.25.9", default-features = false, features = ["jpeg", "png", "gif", "webp", "tiff", "bmp"] }
+symphonia = { version = "=0.6.0", default-features = false, features = ["isomp4", "mkv", "mp3", "ogg", "wav"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

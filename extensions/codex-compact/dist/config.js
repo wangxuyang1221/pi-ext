@@ -9,6 +9,9 @@ export function parseConfig(input) {
         return {};
     const value = input;
     return {
+        ...(typeof value.effectiveContextWindowPercent === "number" && Number.isFinite(value.effectiveContextWindowPercent)
+            && value.effectiveContextWindowPercent > 0 && value.effectiveContextWindowPercent <= 100
+            ? { effectiveContextWindowPercent: value.effectiveContextWindowPercent } : {}),
         ...(typeof value.autoCompactTokenLimit === "number" && value.autoCompactTokenLimit > 0
             ? { autoCompactTokenLimit: value.autoCompactTokenLimit }
             : {}),
@@ -29,6 +32,10 @@ export function loadConfig(cwd, trusted) {
     const global = readConfig(join(getAgentDir(), "pi-codex-compact.json"));
     const project = trusted ? readConfig(join(cwd, CONFIG_DIR_NAME, "pi-codex-compact.json")) : {};
     return { ...DEFAULT_CONFIG, ...global, ...project };
+}
+/** Reserve Codex's default headroom without changing the raw-window auto threshold. */
+export function effectiveContextWindow(config, contextWindow) {
+    return Math.floor(contextWindow * (config.effectiveContextWindowPercent ?? 95) / 100);
 }
 /** Codex caps configured auto-compaction limits at 90% of the context window. */
 export function autoCompactTokenLimit(config, contextWindow) {

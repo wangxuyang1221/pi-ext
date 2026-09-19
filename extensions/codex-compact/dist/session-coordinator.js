@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import { compactionHash } from "./capabilities.js";
-import { FAILED_REQUEST_KIND, NATIVE_COMPACTION_BYPASS_KIND, NATIVE_COMPACTION_BYPASS_VERSION, effectiveInputForBranch, findNativeCheckpoint, fullInputForBranch, isContextWindowCompactionError, isFailClosedCompactionError, piContextInputForBranch, isOpenAICodexModel, isJsonObject, modelKey, markContextOverflowRecovery, approximateCompactionRequestTokens, latestRemoteCompactionSuffix, } from "./native-compaction.js";
+import { effectiveContextWindow, loadConfig } from "./config.js";
+import { FAILED_REQUEST_KIND, NATIVE_COMPACTION_BYPASS_KIND, NATIVE_COMPACTION_BYPASS_VERSION, effectiveInputForBranch, findNativeCheckpoint, fullInputForBranch, isContextWindowCompactionError, isFailClosedCompactionError, piContextInputForBranch, isOpenAICodexModel, isJsonObject, modelKey, approximateCompactionRequestTokens, } from "./native-compaction.js";
 function isModelDownshift(previousModel, currentModel) {
     return modelKey(previousModel) !== modelKey(currentModel)
         && typeof previousModel.contextWindow === "number"
@@ -22,22 +23,12 @@ function shouldRetryWithCurrentModel(error) {
         return false;
     return /(?:\b(?:400|403|408|409|429|5\d\d)\b|invalid request|unexpected status|context window|context_length_exceeded|invalid_prompt|usage limit|server overloaded|internal server|retry limit)/i.test(message);
 }
-function contextOverflowRecoveryError(model) {
-    return markContextOverflowRecovery(new Error(`OpenAI Codex context overflow recovery could not keep a complete history turn within this model's ${model.contextWindow} token context window. Shorten the current request or start a new session.`));
-}
-function compactionRequestReservedTokens(ctx, basePayload, tools) {
-    return approximateCompactionRequestTokens({
-        input: [],
-        instructions: typeof basePayload?.instructions === "string" ? basePayload.instructions : ctx.getSystemPrompt(),
-        tools: Array.isArray(basePayload?.tools) ? basePayload.tools : tools,
-    });
-}
 function fitsContextWindow(ctx, model, input, basePayload, tools) {
     return approximateCompactionRequestTokens({
         input,
         instructions: typeof basePayload?.instructions === "string" ? basePayload.instructions : ctx.getSystemPrompt(),
         tools: Array.isArray(basePayload?.tools) ? basePayload.tools : tools,
-    }) <= model.contextWindow;
+    }) <= effectiveContextWindow(loadConfig(ctx.cwd ?? "", ctx.isProjectTrusted?.() ?? false), model.contextWindow);
 }
 function conversationLeafId(branch) {
     return branch.findLast((entry) => entry.type !== "custom")?.id;
@@ -390,42 +381,6 @@ export function createSessionCoordinator(deps) {
         }
         throw new Error("The session changed while Codex model-transition compaction was running.");
     };
-    const recoverRequestAfterContextOverflow = async (model, ctx, requestInput, basePayload, signal) => {
-        if (!requestInput)
-            throw contextOverflowRecoveryError(model);
-        return runRemoteCompaction(ctx, "context-overflow-recovery", async () => {
-            const sessionId = ctx.sessionManager.getSessionId();
-            const branch = deps.getBranch(ctx);
-            const checkpoint = findNativeCheckpoint(branch, modelKey(model));
-            const pending = pendingBySession.get(sessionId);
-            const checkpointModel = checkpoint.status === "valid"
-                ? resolveModel(ctx, checkpoint.checkpoint.details.modelKey)
-                : undefined;
-            const compactionModel = pending?.previousModel
-                ?? (checkpointModel && isOpenAICodexModel(checkpointModel) ? checkpointModel : model);
-            const lastUserIndex = requestInput.findLastIndex((item) => item.role === "user");
-            const historyInput = lastUserIndex >= 0 ? requestInput.slice(0, lastUserIndex) : requestInput;
-            const reservedTokens = compactionRequestReservedTokens(ctx, basePayload, deps.getAllTools());
-            const input = latestRemoteCompactionSuffix(historyInput, compactionModel.contextWindow, reservedTokens);
-            if (input.length === 0)
-                throw contextOverflowRecoveryError(compactionModel);
-            const leafId = conversationLeafId(branch);
-            const startGeneration = generation;
-            const native = await deps.createCheckpoint({ ctx, model: compactionModel, input, basePayload, signal: signal ?? ctx.signal });
-            ensureNotAborted(signal ?? ctx.signal);
-            if (generation !== startGeneration || conversationLeafId(deps.getBranch(ctx)) !== leafId) {
-                throw new Error("The session changed while Codex context overflow recovery was running.");
-            }
-            const preservedInput = lastUserIndex >= 0 ? requestInput.slice(lastUserIndex) : [];
-            const details = rebindCheckpoint(appendPreservedInput(native.details, preservedInput), modelKey(model), compactionHash(model));
-            deps.appendCheckpoint(details);
-            pendingBySession.delete(ctx.sessionManager.getSessionId());
-            return [
-                ...details.replacementHistory,
-                ...(details.preservedInput ?? []),
-            ];
-        });
-    };
     const recoverCurrentModel = async (model, ctx, basePayload, requestInput, excludeLastAssistantError = false, signal) => {
         if (!isOpenAICodexModel(model))
             return;
@@ -531,14 +486,11 @@ export function createSessionCoordinator(deps) {
             reason: hashTransition ? "hash" : "downshift",
         });
     };
-    const prepareRequest = async (model, ctx, requestInput, basePayload, skipAutomaticCompaction = false, recovery) => {
+    const prepareRequest = async (model, ctx, requestInput, basePayload, skipAutomaticCompaction = false) => {
         const sessionId = ctx.sessionManager.getSessionId();
         const originalRequestInput = requestInput;
         requestInput = requestInputWithoutFailedRequests(requestInput, activeFailedRequests(rawGetBranch(ctx)));
         const requestInputWasSanitized = requestInput !== originalRequestInput;
-        if (recovery === "context-overflow") {
-            return recoverRequestAfterContextOverflow(model, ctx, requestInput, basePayload, ctx.signal);
-        }
         let transitionCompactionCompleted = false;
         const activeTransition = transitionBySession.get(sessionId);
         if (activeTransition) {
@@ -603,6 +555,10 @@ export function createSessionCoordinator(deps) {
             tail = requestTail(requestInput, [historyInput, piContextInput, rawHistoryInput, currentHistoryInput, currentPiContextInput, currentRawHistoryInput], systemPromptInput);
         }
         catch (error) {
+            // An unmatched Pi payload may contain only its retained tail, not the
+            // encrypted checkpoint. Recompacting it would silently erase history.
+            if (checkpoint.status === "valid")
+                throw error;
             if (checkpoint.status === "bypassed") {
                 if (!requestInput
                     || requestInput.some((item) => item.type === "compaction" || item.type === "context_compaction")
@@ -611,9 +567,9 @@ export function createSessionCoordinator(deps) {
                 }
                 return requestInput;
             }
-            if (!pending && checkpoint.status !== "valid")
+            if (!pending)
                 return requestInputWasSanitized ? requestInput : undefined;
-            const gateEntryId = checkpoint.status === "valid" ? checkpoint.checkpoint.entryId : conversationLeafId(branchBefore);
+            const gateEntryId = conversationLeafId(branchBefore);
             const gateGeneration = generation;
             const gateLeafId = conversationLeafId(branchBefore);
             try {
@@ -791,31 +747,15 @@ export function createSessionCoordinator(deps) {
             ...tail,
         ];
     };
-    const prepareCompaction = async (model, ctx, requestInput, excludeLastAssistantError = false, signal, recovery, basePayload) => {
+    const prepareCompaction = async (model, ctx, excludeLastAssistantError = false, signal) => {
         if (!isOpenAICodexModel(model))
             return [];
-        requestInput = requestInputWithoutFailedRequests(requestInput, activeFailedRequests(rawGetBranch(ctx)));
         const operationSignal = signal ?? ctx.signal;
         const sessionId = ctx.sessionManager.getSessionId();
         const activeTransition = transitionBySession.get(sessionId);
         if (activeTransition)
             await activeTransition;
         ensureNotAborted(operationSignal);
-        if (recovery === "context-overflow") {
-            if (!requestInput)
-                throw contextOverflowRecoveryError(model);
-            let recoveryInput = requestInput;
-            if (excludeLastAssistantError) {
-                const lastAssistantIndex = recoveryInput.findLastIndex((item) => item.role === "assistant");
-                if (lastAssistantIndex >= 0)
-                    recoveryInput = recoveryInput.filter((_item, index) => index !== lastAssistantIndex);
-            }
-            const reservedTokens = compactionRequestReservedTokens(ctx, basePayload, deps.getAllTools());
-            const input = latestRemoteCompactionSuffix(recoveryInput, model.contextWindow, reservedTokens);
-            if (input.length === 0)
-                throw contextOverflowRecoveryError(model);
-            return input;
-        }
         const currentBranch = deps.getBranch(ctx);
         return effectiveInputForBranch({
             branch: currentBranch,

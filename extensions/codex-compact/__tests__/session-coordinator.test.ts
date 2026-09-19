@@ -483,7 +483,7 @@ describe("Codex session coordinator", () => {
 		expect(compactedWith).toEqual([modelKey(oldModel), modelKey(currentModel)]);
 	});
 
-	test("keeps the terminal fallback error during context recovery", async () => {
+	test("rejects unmatched request history without replacing a valid checkpoint with a suffix", async () => {
 		const oldModel = model("old");
 		const currentModel = model("new");
 		const branch = [
@@ -503,8 +503,9 @@ describe("Codex session coordinator", () => {
 			throw error;
 		});
 
-		await expect(coordinator.prepareRequest(currentModel, context([oldModel, currentModel]), [userInput("different")])).rejects.toThrow("policy_violation");
-		expect(compactedWith).toEqual([modelKey(oldModel), modelKey(currentModel)]);
+		await expect(coordinator.prepareRequest(currentModel, context([oldModel, currentModel]), [userInput("different")])).rejects.toThrow("request changed");
+		expect(compactedWith).toEqual([]);
+		expect(branch).toHaveLength(2);
 	});
 
 	test("keeps unknown credential transition failures out of current-model fallback", async () => {
@@ -719,17 +720,29 @@ describe("Codex session coordinator", () => {
 		expect(calls).toBe(0);
 	});
 
-	test("recovers a context overflow with the newest complete history turn", async () => {
+	test("prepares the complete Pi compaction history even when its estimate exceeds the window", async () => {
+		const currentModel = model("old", "openai-codex", 100);
+		const branch = [userEntry("early constraint".repeat(100), "old"), userEntry("latest task", "new")];
+		const before = structuredClone(branch);
+		const coordinator = createCoordinator(branch);
+		const input = [userInput("early constraint".repeat(100)), userInput("latest task")];
+		await expect(coordinator.prepareCompaction(currentModel, context([currentModel]))).resolves.toEqual(input);
+		expect(branch).toEqual(before);
+	});
+
+	test("propagates the original automatic compaction overflow without retrying or dropping history", async () => {
 		const currentModel = model("old", "openai-codex", 100);
 		const oldText = "old ".repeat(100);
 		const newText = "new ".repeat(5);
-		const branch = [userEntry(oldText), userEntry(newText)];
-		let compactedInput: ResponseItem[] | undefined;
+		const branch = [userEntry(oldText, "old"), userEntry(newText, "new")];
+		const before = structuredClone(branch);
+		const failure = new Error("context_length_exceeded");
+		const compactedInputs: ResponseItem[][] = [];
 		const operations: RemoteCompactionReason[] = [];
 		const coordinator = createCoordinator(branch, async (_selectedModel, input) => {
-			compactedInput = input;
-			return details(modelKey(currentModel), "recovered");
-		}, undefined, (reason) => operations.push(reason));
+			compactedInputs.push(input);
+			throw failure;
+		}, () => true, (reason) => operations.push(reason));
 		const toolOutput = { type: "function_call_output", call_id: "call", output: "tool result" };
 		const request = [userInput(oldText), userInput(newText), userInput("current"), toolOutput];
 
@@ -737,20 +750,12 @@ describe("Codex session coordinator", () => {
 			currentModel,
 			context([currentModel]),
 			request,
-			undefined,
-			false,
-			"context-overflow",
-		)).resolves.toEqual([
-			{ type: "compaction", encrypted_content: "recovered" },
-			userInput("current"),
-			toolOutput,
-		]);
-		expect(compactedInput).toEqual([userInput(newText)]);
-		expect(operations).toEqual(["context-overflow-recovery"]);
+		)).rejects.toBe(failure);
+		expect(compactedInputs).toEqual([[userInput(oldText), userInput(newText)]]);
+		expect(operations).toEqual(["automatic"]);
+		expect(branch).toEqual(before);
 		expect(effectiveInputForBranch({ branch, model: currentModel, tools: [] })).toEqual([
-			{ type: "compaction", encrypted_content: "recovered" },
-			userInput("current"),
-			toolOutput,
+			userInput(oldText), userInput(newText),
 		]);
 	});
 
@@ -908,7 +913,7 @@ describe("Codex session coordinator", () => {
 		});
 
 		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, context([oldModel, currentModel]));
-		await expect(coordinator.prepareCompaction(currentModel, context([oldModel, currentModel]), [userInput("history")])).resolves.toEqual([userInput("history")]);
+		await expect(coordinator.prepareCompaction(currentModel, context([oldModel, currentModel]))).resolves.toEqual([userInput("history")]);
 		expect(compactedWith).toEqual([]);
 	});
 
@@ -921,7 +926,6 @@ describe("Codex session coordinator", () => {
 		await expect(coordinator.prepareCompaction(
 			currentModel,
 			context([currentModel]),
-			[userInput("history")],
 			false,
 			controller.signal,
 		)).rejects.toThrow("canceled");
