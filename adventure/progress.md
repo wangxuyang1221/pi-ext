@@ -34,14 +34,14 @@
 - 项目在 `package.json` 锁定 Pi `0.86.0`。本机 Node.js `v22.22.2`，pnpm `11.9.0`。
 - `extensions/codex-ui/src/components.ts` 中 `CodexEditor` 继承 `CustomEditor`；`src/index.ts` 通过 `ctx.ui.setEditorComponent` 安装它。Pi `ctx.ui.addAutocompleteProvider` 可以直接为它叠加 `$` 补全，不必再替换编辑器。
 - 输入可通过公开 `input` transform 接入原生 skill 展开，单 skill 的最小链路已验证。上游 slash 展开只识别消息开头的一次调用，多 skill 需要后续设计。
-- 发送后的原生 `SkillInvocationMessageComponent` 没有公开 renderer 替换入口。它不走 Markdown transformer，也不是 custom message。保持原生消息语义并改变该块布局，需要上游新接口或依赖内部实现的插件补丁。
+- 前一轮审计未发现原生 `SkillInvocationMessageComponent` 的公开 renderer 替换入口。它不走 Markdown transformer，也不是 custom message。该结论限于直接替换原生块，用户要求再由 GPT6 Astra Pro 复核。保留原生消息格式完全不变不是用户明确提出的硬约束，还需检查公开 API 组合能否用不同的消息表示满足实际体验。
 - [输入 API 报告](evidence/skill-input-api-audit.md) 和 [渲染 API 报告](evidence/skill-rendering-api-audit.md) 保存锁定版本源码、在线比对与边界。恢复 #4 必读。
 - [输入实验](experiments/skill-input-feasibility.test.ts) 11 项通过，运行 `pnpm exec vitest run --config adventure/experiments/vitest.config.ts`。使用实际上游类和 CodexEditor，但不是完整 TUI/session 端到端验收。没有运行 prototype patch，也没有证明最终产品可发布。
 - `pnpm run check` 的类型检查通过，1953 项测试通过、5 项跳过，但一个 MCP suite 因基准缺失 prototype 文件失败。单独 build 通过；package:check 因基准缺失 `docs/goal-descendant-acceptance.md` 失败。细节和日志见输入 API 报告，未修复这些无关基准缺口。
 - 截图是发送后的 skill 折叠块，不是输入时的候选菜单。
 - GitHub Map 已原生关联 Spec 与 Planning 子 Issues；#3 已关闭，#4、#5、#6 未通关。
 - 当前未改产品代码，未启动测试服务或真实模型会话。
-- Pi 官方文档入口为已安装 `@earendil-works/pi-coding-agent` 的 `docs/extensions.md`、`docs/tui.md`、`docs/skills.md`，还需锁定版本源码和实验核验。
+- Pi 官方文档入口为已安装 `@earendil-works/pi-coding-agent` 的 `docs/extensions.md`、`docs/tui.md`、`docs/skills.md`。前一轮已比对锁定版本源码；独立复核按证据缺口补验。
 - 本场使用 `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md` 的关卡、存档与交付流程。恢复时完整读取该 skill 及按阶段需要的引用。
 
 ## Current Assumptions
@@ -52,7 +52,9 @@
 
 ## Continuation Point
 
-#4 的事实查证完成，关卡保持 open，等待用户决定渲染路线：上游正式接口、插件内部兼容补丁，或先缩小范围只交付输入功能。不要重复询问两项功能是否都想要，该目标已经确认；当前问题是为此接受何种维护成本。涉及修改另一仓库或 Pi 全局安装时，要另行确认位置与授权，当前授权仅覆盖本冒险 worktree 和指定 GitHub 仓库。
+用户要求手动保存并提供 handoff，由 GPT6 Astra Pro 先独立复核可行性，本轮到此停止。复核入口：[handoff-20260920-152245.md](../handoff/handoff-20260920-152245.md)，其类型为 branch，包含具体复核问题、源码入口和证据局限。
+
+#4 保持 open，当前先等待独立复核，再请用户选择路线。复核重点是“缺少直接替换原生组件的 API”是否被过度推广成“公开 API 无法满足用户体验”。上游接口、内部补丁、缩小范围都尚未确认，也不应被当作穷尽选项。不要重复询问两项功能是否都想要，该目标已经确认。涉及修改另一仓库或 Pi 全局安装时，要另行确认位置与授权，当前授权仅覆盖本冒险 worktree 和指定 GitHub 仓库。
 
 渲染调研 subagent 已完成并关闭。报告已由主代理核对并修正多 XML block 的解析描述。未启动服务器，子代理进程及其 tmux server 已停止，没有监听端口；实验临时夹具已删除。
 
