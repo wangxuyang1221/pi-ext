@@ -79,3 +79,80 @@ it("keeps the real completion provider on raw text and turns the selected name i
   expect(base.isShowingAutocomplete()).toBe(false);
   expect(editor.render(80).join("")).toContain(cube);
 });
+
+it("maps projected rows back to raw cursor boundaries around a wrapped label", () => {
+  const base = new Editor(tui, theme);
+  const editor = sourceModelProbe(base, names);
+  const text = "前文 $presentations 后文";
+  editor.setText(text);
+  expect(editor.cursorPoint(17, 8).row).toBeGreaterThan(0);
+  for (const width of [8, 16, 80]) {
+    for (const offset of [0, 1, 2, 3, 17, 18, 19, 20]) {
+      const point = editor.cursorPoint(offset, width);
+      editor.placeCursor(point.row, point.col, width);
+      expect(base.getCursor().col).toBe(offset);
+    }
+  }
+  editor.placeCursor(1, 2, 8);
+  expect([3, 17]).toContain(base.getCursor().col);
+  expect(base.getText()).toBe(text);
+});
+
+it("restores an EOF label after undoing a temporary adjacent-text edit", () => {
+  const base = new Editor(tui, theme);
+  const editor = sourceModelProbe(base, names);
+  editor.setText("用 $presentations");
+  editor.handleInput("\x1b[D");
+  editor.handleInput("X");
+  expect(base.getText()).toBe("用 X$presentations");
+  editor.handleInput("\x7f");
+  editor.handleInput("\x1b[C");
+  editor.handleInput("\x7f");
+  expect(base.getText()).toBe("用 ");
+});
+
+it("uses the command fallback without changing raw coordinates or atomic editing", () => {
+  const base = new Editor(tui, theme);
+  const editor = sourceModelProbe(base, names, "command");
+  editor.setText("$presentations");
+  const output = editor.render(8);
+  expect(output.join("")).toContain("⌘");
+  expect(output.join("")).not.toContain(cube);
+  expect(output.every(line => visibleWidth(line) <= 8)).toBe(true);
+  const end = editor.cursorPoint(14, 8);
+  editor.placeCursor(end.row, end.col, 8);
+  expect(base.getCursor().col).toBe(14);
+  editor.handleInput("\x7f");
+  expect(base.getText()).toBe("");
+  editor.handleInput("\x1f");
+  expect(base.getText()).toBe("$presentations");
+});
+
+it("snaps projected mouse positions inside a folded paste to native cursor boundaries", () => {
+  const base = new Editor(tui, theme);
+  const editor = sourceModelProbe(base, names);
+  const pasted = Array.from({ length: 12 }, (_, index) => `line ${index}`).join("\n");
+  editor.handleInput("\x1b[200~" + pasted + "\x1b[201~");
+  const markerEnd = base.getText().length;
+  editor.handleInput("\x1b[200~ $presentations\x1b[201~");
+  for (const column of [1, markerEnd - 1]) {
+    editor.placeCursor(0, column, 80);
+    expect([0, markerEnd]).toContain(base.getCursor().col);
+    expect(editor.getExpandedText()).toBe(pasted + " $presentations");
+  }
+});
+
+it("preserves folded paste contents when deleting and undoing an adjacent label", () => {
+  const base = new Editor(tui, theme);
+  const editor = sourceModelProbe(base, names);
+  const pasted = Array.from({ length: 12 }, (_, index) => `line ${index}`).join("\n");
+  editor.handleInput("\x1b[200~" + pasted + "\x1b[201~");
+  editor.handleInput("\x1b[200~ $presentations\x1b[201~");
+  expect(editor.getExpandedText()).toBe(pasted + " $presentations");
+  editor.handleInput("\x7f");
+  expect(editor.getExpandedText()).toBe(pasted + " ");
+  expect(base.getText()).toMatch(/^\[paste #\d+ \+12 lines\] $/);
+  editor.handleInput("\x1f");
+  expect(editor.getExpandedText()).toBe(pasted + " $presentations");
+  expect(editor.render(80).join("")).toContain(cube);
+});

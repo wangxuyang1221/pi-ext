@@ -98,9 +98,20 @@ pnpm exec node adventure/experiments/skill-mention-ui/run.mjs cube --native --ca
 
 Planning #12 已实测本原型的窄行缺口：标签宽于整行时会拆行，并丢失cube与青色。简单在输入后调用setText自动成标还会增加仅撤销投影的步骤。[报告及3项探针](../../evidence/skill-label-editing-probe.md)记录可重复证据，不将这些探针通过视为生产验收。用户已确认自动成标、不新增复制原文操作；正式编辑方案仍待验证。
 
+## Source projection probe
+
+以上章节记录旧隐藏标记原型，不是最新正式方案。#12另有保留原生原文的宿主探针，不使用隐藏投影标记，也不以setText整块删除标签。运行时增加`--source`：
+
+```bash
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs cube --native --source
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs command --source
+```
+
+[完整报告](../../evidence/skill-source-host-probe.md)包含Landing Map、24项测试、两组真实PTY、折叠粘贴反例与修复、实施前必须保留的限制。此入口仍为一次性探针，不替代正式插件。
+
 ## Handoff
 
-用户已选择cube，Planning #11已通关并将要求移交Spec。#5已修订通关，正式边界见Spec，勿沿用本原型的有限标点适配。#13已通关，当前#12处理标签生成/编辑，包含大粘贴折叠的显示例外。Spec仍修订中，新Implementation切片未审核，旧#8/#9/#10不覆盖本轮新增需求。
+用户已选择cube，Planning #11已通关并将要求移交Spec。#5已修订通关，正式边界见Spec，勿沿用本原型的有限标点适配。#13已通关；#12已完成生成/编辑关键路径验证，保留原生大粘贴折叠。下一步审核本轮完整实施切片，旧#8/#9/#10不覆盖新增需求。
 
 可复用 launcher、离线 fixture 和 PTY 断言；正式实现应重新设计文档模型、坐标、主题及历史关联。未经用户审核新切片，不把实验代码移入产品或更新日常安装。
 

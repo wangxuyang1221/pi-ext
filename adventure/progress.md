@@ -1,6 +1,6 @@
 # Handoff
 
-> 从 Continuation Point 接续。完整规格只在 Spec Issue 正文维护。#11 与修订后的 #5 已通关，cube 青色与右侧标点规则已移交 Spec；#13 已通关，默认cube、command手动降级及命令保存偏好已移交Spec。当前返回#12，先确认原生大粘贴折叠与自动成标的显示例外，不重复询问样式、标点或跨行选择。
+> 从 Continuation Point 接续。完整规格只在Spec Issue正文维护。#5/#11/#12/#13均已通关并移交Spec；当前等待本轮完整实施切片审核，不重复询问样式、标点、跨行、降级或大粘贴选择。
 
 ## Handoff Position
 
@@ -10,88 +10,94 @@
 
 ## Current Goal or Problem
 
-为 Pi 实现 `$` 行内 skill 选择与激活。上一版已实施并验收；用户现要求右侧标点允许激活，候选仍要求双侧空白，并明确选择输入框及发送后正文两处都有特殊UI。[Planning #11](https://github.com/wangxuyang1221/pi-ext/issues/11) 已通关，用户选定无底色、常规字重、青色 #8DF9FD 的 cube 标签，要求已移交 Spec。[#5 激活边界](https://github.com/wangxuyang1221/pi-ext/issues/5) 也已修订通关。当前推进 [#12 标签生成与编辑](https://github.com/wangxuyang1221/pi-ext/issues/12)，其原生前置 #5 已解除；[#13 字体兼容](https://github.com/wangxuyang1221/pi-ext/issues/13) 已通关，用户选定command降级和命令保存偏好。尚未提交完整的新实施切片，不能将原型视为正式交付。
+为Pi实现行内`$skill`选择与激活。上一版已验收；本轮增加右侧标点激活、输入框和发送后任务正文的整体标签，以及手动图标降级。规划与关键可行性验证已结束，尚未实现新产品行为。
 
-- [Map #1](https://github.com/wangxuyang1221/pi-ext/issues/1) 与 [Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2) 保持 open。
-- [#8 输入闭环](https://github.com/wangxuyang1221/pi-ext/issues/8)、[#9 队列与历史](https://github.com/wangxuyang1221/pi-ext/issues/9)、[#10 安装交付与整体验收](https://github.com/wangxuyang1221/pi-ext/issues/10) 均通过协调者验收并关闭。
-- 产品提交 `0b9231d4645df658e5160f71ef49b439746dfbe4` 已推送。后续仅保存存档，不改产品。
-- 上一版使用入口：[docs/skill-mentions.md](../docs/skill-mentions.md)。旧版验收：[安装验收报告](evidence/skill-install-acceptance.md)。
-- 当前原型入口：[原型README](experiments/skill-mention-ui/README.md)，含Landing Map、真实启动命令、预览、smoke与限制。接续必读。
+- [Map #1](https://github.com/wangxuyang1221/pi-ext/issues/1)、[Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2)保持open。Spec已确定，可用于实施，但新切片须先审核。
+- 旧Implementation #8/#9/#10已关闭，不能改作本轮新关卡。产品代码基准`0b9231d4645df658e5160f71ef49b439746dfbe4`。
+- [旧版说明](../docs/skill-mentions.md)、[旧版完整验收](evidence/skill-install-acceptance.md)说明已有能力；不代表本轮通过。
+- 最新[源文本投影宿主报告](evidence/skill-source-host-probe.md)是输入标签worker接手必读，包含实验入口、失败路线、实际证据与未验证边界。
 
 ## Evolution
 
-用户在 #4 选择首批只做输入，发送后美化 #6 延期关闭，不是验收通过。#5 确定输入规则，#7 确定消费时快照、提前原生展示、同 user 持久化及公开 editor 适配，结论已移交 Spec。
+最初#4只做输入，卡片美化#6延期。#5/#7确定语法、消费时快照、同user持久化和公开编辑器组合。旧worker依次交付#8/#9/#10；真实PTY发现reload重建时序与历史遗漏，补失败测试后修复。旧MCP suite缺5个prototype文件，发布检查缺13份文档；用户明确与新功能无关，不恢复。实际tarball能够生成、隔离安装并运行，因此两种检查结果分别报告。
 
-实施切片已获审核，上次暂停后用户以 next 恢复。独立 worker 依序交付 #8 和 #9，协调者重跑89/89及112/112并验收。
+用户随后明确批准卸载全局`@tunglam/pi-inline-skills@0.1.3`，安装本worktree的`extensions/skill-mentions/dist/index.js`，已执行核对。当前日常Pi依赖此worktree，不得删除。
 
-#10 最初因旧发布清单缺13份文档、MCP suite缺5个prototype源文件而停下。用户明确这些文件与新功能无关。本轮不恢复它们、不删旧测试、不降低旧检查门槛。实际验证表明 pack 不以前述 package:check 为前置，tarball 可以生成和安装。因此旧失败单独报告，不再把它当作必须先修的功能阻塞。
+旧语法拒绝标点紧邻引用。用户要求激活与候选边界分离；否定accent/tint和紫色粗标签，逐步选定青色无底cube。#11视觉通关；#5确定有限句读/闭合符号和ASCII句点例外；#13确定command手动降级且命令保存偏好。
 
-真实PTY揭示此前替代宿主漏测的 /reload 时序：transcript 在 session_start 前重建，editor 重建不迁移历史。#10 先补失败测试，再以公开延迟渲染组件、仅reload时填充历史修复，同时避免startup重复历史。#9 Acceptance保留缺口发现及后续闭环记录。
-
-之后用户明确批准卸载全局 `@tunglam/pi-inline-skills@0.1.3`，并批准仅安装本worktree的 `extensions/skill-mentions/dist/index.js`。均已执行并用pi list核对，原本main工作区pi-ext及codex-search独立源码入口不变。因此不得删除此worktree，日常Pi仍依赖该路径。
-
-用户截图中的 `$presentations,` 和 `$lark-doc,` 因旧规则紧邻标点不激活。用户要求识别与补全规则分开，并选择两处UI。主代理以make-a-prototype在真实Pi/Codex UI内比较accent/tint，用户否定两者，提供带图标和圆角边框的标签参考图，并选择整体标签。chip原型的整体交互及效果获用户认可，但紫色与粗糙外观未获认可。随后用户要求灰底浅灰名称配蓝图标、无底色蓝图标蓝名称两个候选都做，此前提供gray/blue，两版均移除尖括号和粗体。用户倾向无底色，但否定菱形，要求命令图标和立方体都试，并用新截图中的青色。command/cube均用取样色#8DF9FD，保留整块交互。用户最终选择cube，随后同意先收尾视觉关卡、规划剩余规则，再审核实施切片。主代理已关闭#11、移交Spec，复用重开#5，并新建#12/#13。产品代码、全局安装和终端设置未改。随后用户在 #5 选择常用句读/闭合符号，而不是全部 Unicode 标点，并明确同意 `$research.md` 不激活、句尾 `$research.` 可以激活。源码临时副本的89项断言通过，#5 已关闭并移交 Spec。
+#12确认自动成标、屏幕复制不还原原文、超长名称完整跨行。最新用户选择保留大粘贴折叠，内部不单独显示标签，发送仍按展开原文激活。实验发现旧隐藏投影在窄行丢色，直接setText转换多一个undo；改用原文/范围/投影分离。随后发现setText整块删除清空paste注册表，撤销/内容损坏，故该路线作废。公开原生操作与分组撤销替代方案通过局部及真实CLI验证，#12已关闭并移交Spec。
 
 ## Agreed Decisions and Constraints
 
-- 工作区 `/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions`，分支 `adventure/skill-mentions`。用户已批准该worktree、分支提交推送和本仓库冒险Issues维护。仅本任务，不改main、不建PR、不合并、不部署。本轮原型不改全局Pi；此前两次全局卸载/安装有单独明确批准，不推定为后续全局修改授权。
-- 只用公开API，不修改已有实例方法或原型，不改Pi上游。旧slash入口、历史及CodexEditor外观/回调/快捷键保持原样。原生skill卡片美化仍延期；本轮选定的是任务正文引用标识，不是卡片美化。
-- 新方向已移交 Spec 的 References and boundaries 与 Visual references：激活允许右侧标点，补全仍双侧空白，左侧边界不扩大；输入与发送后正文均做标签，原生卡片不变。用户选定 cube 图标 U+F01A7，图标和名称同为 #8DF9FD、常规字重、无背景和尖括号；视觉隐藏 `$`，原文仍保留 `$skill-name`。补全确认后成为整体标签，左右键整块跳过，Backspace/Delete 整块删除，撤销恢复。标点范围与 ASCII 句点例外已由 #5 确认并移交 Spec；`/` 不放宽，句点紧接名称字符时不结束引用。#12 已确认自动成标：手写完整有效引用后输入有效分隔符才成标，粘贴/历史回填中的完整有效引用直接成标。用户决定本轮不新增复制原文操作，终端选区仍复制屏幕文字，不承诺还原美元引用。超长标签跨行显示完整名称，不省略；一般剩余空间不足时整体移到下一行。完整编辑契约继续在 #12 验证。#13已确认默认cube，用户手动通过命令切换为command `⌘` 并记住选择；不是无图标降级，不自动探测或修改字体/终端。两处图标模式一致，颜色、原文和交互不变，要求已移交Spec。静默回退、去重、来源边界等旧决定继续保留。
-- 消费时读取文件，队列保留原文；同一user保存任务、图片和快照。恢复不重读，仅显示当前分支已有有效关联卡片，隐藏孤立展示，不补卡、不固定或重注入已压缩全文。
-- 用户已明确旧缺文件与新功能无关，不为本任务恢复18个文件，也未授权删除旧测试或清理旧引用。保留全仓失败和本功能通过的区别。
-- 写文本前读 `docs/agents/repository-language-policy.md`。新增用户可见产品文案需确认语言，当前沿用skill元数据和原生组件，没有新增提示文案。
-- 用户确认交付前Map/Spec保持open。远端冒险分支不自动删除。
+- 只在`/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions`、`adventure/skill-mentions`工作。已获批准维护本冒险Issues、提交推送本任务资料/代码。不改main、不建PR、不合并、不部署。没有新全局配置/安装/字体修改授权。
+- 只用公开API，不改原实例方法、prototype或Pi上游。保留CodexEditor外观/回调/快捷键、slash入口、原生skill卡片。卡片美化仍不在范围内。
+- 规格权威见Spec：候选仍双侧空白；右侧允许明确句读，左侧不放宽。`$research.md`不激活，末尾`$research.`可激活；完整集合及Unicode名称例外读Spec，不沿用原型有限适配。
+- 两处标签默认cube U+F01A7，图标与名称同为`#8DF9FD`、正常字重、无新增背景。手动命令切换command `⌘` U+2318并持久化，重启/reload沿用，不自动探测字体或改终端。视觉隐藏`$`，底层仍为`$skill-name`。
+- 手写到有效分隔符才成标，不在名称途中锁定；菜单确认、完整粘贴及历史回填直接成标。超长名称完整跨行；左右、Backspace/Delete整体操作，undo恢复，无仅撤销投影步骤。保留原生大粘贴折叠与完整原文。屏幕复制仍复制视觉文字，不新增原文复制命令。
+- 输入标签只表示名称识别；正文仅标记成功快照。未知/读取失败完全静默回退；同一user保留任务、图片和消费时快照。队列保留原文，恢复不重读；孤立卡片隐藏，缺失不补，不重注入被压缩全文。
+- 新切片未经审核，不改产品、不创建Implementation。实施使用独立worker，一次推进一关；主代理协调验收。旧候选四关名称不是审核结果。
+- 不修复18个无关缺文件，不删旧测试、不降低门槛。写文本前读`docs/agents/repository-language-policy.md`；新产品文案语言须先确认。当前探针复用原有fixture文案。
+- 用户确认最终交付前Map/Spec保持open，远端分支不自动删除。
 
 ## Established Facts and Required Context
 
-- Node22.22.2、pnpm11.9.0、Pi0.86.0，Python3.12.13、pyte0.8.2。Context7无全部精确版本文档，已用安装源码、固定官方commit与真实运行补充核验，来源在各实施报告。
-- 产品在 `extensions/skill-mentions/src/`，测试在对应 `__tests__/`。package.json默认Pi入口、发布files、构建/typecheck/clean、包检查清单均已接入；dist只生成，不手改。
-- 严格v1封装含UUID requestId、原任务、skill真实路径与正文。`protocol.ts`提供decodeSnapshot。message_start消费时读取并提前展示，message_end保存同role user，图片保留。展示entry不进入模型上下文。历史不读取源文件。
-- 公开editor factory在resources_discover组合，Proxy仅处理setText/addToHistory，其他方法和属性委托原editor。reload填充active context历史，首次启动/resume仍由原生宿主填充。重复discovery不重复安装。
-- [#8实施报告](evidence/skill-input-implementation.md)含协议、语法、性能和输入到模型闭环；[#9实施报告](evidence/skill-history-implementation.md)含队列、JSONL、runtime切换、tree/fork、压缩与原生持久化边界。修改对应行为前读取。
-- [#10完整验收](evidence/skill-install-acceptance.md)为最终接续必读，含完整Spec矩阵、真实reload缺陷Red/Green、实际产物、PTY及局限。协调者已核对源码修复、验收脚本和五组原始记录，独立重跑117/117通过。
-- 真实产物命令 `pnpm run skill-mentions:acceptance` 执行prepack/build、tarball清单检查、隔离pnpm安装、八入口import、pi install及五组CLI PTY：native、native-fullscreen、codex、combined、combined-fullscreen。每组15类断言、19次离线消费，含正常退出后源文件删除再恢复，共10个Pi进程。
-- 五组均覆盖中文多行/两侧正文、Tab/Enter、原生卡片、四次reload、自定义快捷键、原生slash、插件图片消息、静默失败、真实followUp消费时文件更新及CLI恢复。全部八扩展组合未过滤清单；未执行真实MCP连接、子代理任务或远端provider。
-- 最终本功能117/117无skip，独立tsc与实际prepack/build通过。[全仓check](evidence/skill-install-final-check.log)为typecheck通过、2070 passed/5 skipped，仍因既有MCP缺文件收集失败；[package:check](evidence/skill-install-final-package-check.log)仍因旧文档缺失失败。两者都不能称通过。worker测试子进程清除四项PI_SUBAGENT标记避免root fixture误判，没有排除测试。
-- 缺文件详细路径及历史在[旧阻塞报告](evidence/skill-install-blocker.md)，其“先恢复文件”建议已被用户后续方向取代，不从该停点重启。
-- 中文测试为真实PTY UTF-8输入、粘贴与光标编辑，未操纵物理IME候选窗口；图片只验内容保留。tree/fork、压缩和多条steer为真实SDK/runtime离线测试，不冒充PTY。任意第三方覆盖factory不在保证范围。
-- Pi首次assistant前不落盘，写盘失败可能使parent链断开。插件不增加WAL/事务/损坏JSONL修复。历史快照不代表模型始终可见全文。
-- 临时安装、tarball、隔离HOME/配置/session/cache均已清理；最终10个PTY PID正常退出回收，协调者也确认无skill-install临时目录或残留PTY命令。无本任务监听服务或端口，无真实模型请求，未修改全局Pi。
+### Runtime and product
 
-- 原型位于 `adventure/experiments/skill-mention-ui/`，默认 `command`，另一候选为 `cube`。旧chip命令现在是command别名。旧gray/blue仅作历史对照，旧紫色/菱形不再作为候选。局部预览：[command](evidence/skill-ui-command-detail.png)、[cube](evidence/skill-ui-cube-detail.png)，来自真实PTY网格，字体/行距是approximation。
-- [取色与字体证据](evidence/skill-ui-icon-font-and-color.md)保留截图主体色RGB(141,249,253)及统计，临时截图不上传。cube为U+F01A7、md-cube_outline，本机JetBrainsMono Nerd Font Mono 3.4.0实际cmap已核验，两个图标均占一格。已安装不等于终端当前正在使用该字体，未改字体/终端配置；PNG图标使用已安装字体渲染。
-- 原型复用实际Pi CLI、完整codex-ui、产品补全/加载/协议/历史adapter及原生卡片。fixture只有两个无外部动作skill与离线faux provider。用户可直接编辑/发送，通过`/prototype command`与`/prototype cube`切换。
-- `chips.ts`通过公开factory包装投影文本，getText/getExpandedText/onChange/onSubmit还原`$skill-name`。方向键跳过标签，setText保存一个undo快照完成原子删除，再恢复光标。没有修改原实例方法或prototype。曾探索内部segmenter补丁，因与公开API约定冲突已撤除，勿沿用该路线。
-- 本轮command与cube两个图标/青色测试分别Red/Green，[共10项通过](evidence/skill-ui-icons-tests.log)，独立tsc通过。四组真实PTY覆盖command/cube×Codex/native，保留原子编辑/提交断言，核验两处图标和指定青色、背景继承、单格宽度、图标不进入模型、两种图标reload往返。记录：[command/Codex](evidence/skill-ui-command.json)、[cube/Codex](evidence/skill-ui-cube.json)、[command/native](evidence/skill-ui-command-native.json)、[cube/native](evidence/skill-ui-cube-native.json)。
-- 手写/粘贴仍按原文激活，但原型输入时仅补全确认、已有草稿和正常历史回填会转标签。生产转换时机已确认，但原型未实现自动转换。宽于整行的标签已实测会拆行并丢失cube/青色，不能按当前逐行匹配方案交付。裁剪/折叠、复杂剪切、鼠标/IME、自定义键位、跨session/reload旧历史的完整语义未验收。live按文本匹配、内部投影标记和Markdown代码span都是实验，不能直接当作生产富文本架构。详细限制见README。
-- [本轮check](evidence/skill-ui-icons-check.log)仍typecheck通过、2070 passed/5 skip、同一MCP缺文件suite失败；[build](evidence/skill-ui-icons-build.log)通过，[package:check](evidence/skill-ui-icons-package-check.log)旧文档失败。本轮PTY正常退出，对应临时目录清除，无监听服务器。用户之前自行启动的tint原型与`.tmp/skill-ui-prototype-GG4yw8`保留，不能误当作本轮遗留杀掉。
+Node22.22.2、pnpm11.9.0、Pi0.86.0，Python3.12.13、pyte0.8.2。Context7仅有Pi main，版本依据来自安装源码/声明、固定官方commit和真实运行。源链接在报告中。
 
-- #5 新增[边界验证报告](evidence/skill-reference-boundaries.md)及[实验](experiments/skill-reference-boundaries/verify.mjs)，读取真实源码并只在自动清理的临时副本上分离边界。89项断言通过，含常用标点、句点后中文/非BMP名称字符、严格候选、代码/转义与源位置。产品未改。重跑 `pnpm run check`：typecheck 通过、2070 passed/5 skipped，仍在同一 MCP 缺文件 suite 失败。没有修改测试门槛，也没有新启动服务。
+产品位于`extensions/skill-mentions/src/`与对应`__tests__/`；dist只生成。严格v1快照协议含UUID requestId、原任务、真实skill路径/正文。message_start消费时读取并提前展示，message_end保存同role user与图片；展示entry不进入模型上下文。历史恢复不读源文件。编辑器在resources_discover组合公开factory，reload补active context历史，首次启动/resume仍由宿主填充。
 
-- #12 新增[编辑探针报告](evidence/skill-label-editing-probe.md)及[3项实验](experiments/skill-mention-ui/editing-probe.test.ts)，使用真实Editor与替代TUI host：宽度16/12/8时长标签显示失败，但原文/原子删除/撤销仍可保持；简单在输入后setText成标会多出仅撤销投影的步骤。尚未验证正式方案，不能把探针通过称为功能验收。公开API没有任意位置setCursor或undo栈访问权限，不可用私有补丁。未启动服务、未操作剪贴板。
+修改旧行为前读取[输入实施](evidence/skill-input-implementation.md)、[历史实施](evidence/skill-history-implementation.md)、[安装验收](evidence/skill-install-acceptance.md)。后者包含117/117测试、真实reload失败修复、完整旧Spec矩阵，以及`pnpm run skill-mentions:acceptance`的tarball/隔离安装/八入口/五组真实PTY证据。保留离线faux provider，不误触真实MCP、子代理或远端provider。
 
-- #12 随后新增原文模型探针，4轮Red/Green通过：原生Editor始终保存原文，标签范围独立维护；纯显示转换不产生undo记录，真实补全provider/粘贴末尾成标、宽度8跨行颜色和整块删除/undo恢复通过。全部17项原型测试、独立tsc通过。新探针不是完整EditorComponent，没有宿主菜单/边框、滚动、光标标记和完整坐标集成，#12仍open。报告同上。未修改产品、全局安装或终端。
+旧PTY已验证UTF-8中文输入/粘贴和编辑，但不是物理IME候选窗口；tree/fork/压缩/多条steer部分由真实SDK离线测试，不能称PTY。Pi首次assistant前不落盘，插件不提供WAL/事务/损坏JSONL修复；快照保存在历史不保证永远处于模型上下文。
 
-- 返回#12后核验实际Editor.handlePaste：bracketed paste超过10行或1000个UTF-16 code units时自动折叠。新增12行探针复现getText只含`[paste #…]`、getExpandedText与onSubmit仍保留完整原文及引用；当前原文模型不会为折叠块内部画标签。这需要用户明确与自动成标的显示例外。全部18项原型/探针和独立tsc通过；没有新增CLI PTY。
+### Planning evidence
+
+- [边界报告](evidence/skill-reference-boundaries.md)和`experiments/skill-reference-boundaries/verify.mjs`：真实解析器临时副本的89断言通过，未改产品。
+- [字体/取色报告](evidence/skill-ui-icon-font-and-color.md)：截图色RGB141/249/253，JetBrainsMono Nerd Font Mono3.4.0 cmap覆盖两字形，两者宽度1。已安装不代表用户当前终端实际选用，无自动检测承诺。
+- [旧编辑探针](evidence/skill-label-editing-probe.md)保留窄行丢色、多余undo、原生大粘贴阈值等反例。Pi超过10行或1000 UTF-16 units时折叠，getText返回标记，getExpandedText/onSubmit保留完整原文。不可将setText删除旧结论当作当前方案。
+- [最新宿主报告](evidence/skill-source-host-probe.md)：24项探针通过、独立tsc退出0，cube/native和command/Codex真实CLI PTY通过，含12行折叠粘贴旁原子删除与一次undo完整恢复。最终PID56248/56434退出0，临时目录清除，没有监听服务。保留用户此前的`.tmp/skill-ui-prototype-GG4yw8`，不要误杀。
+- 新探针无隐藏投影标记，原文/标签范围/布局分离。只通过公开原生编辑/撤销操作保存paste数据。宽度8/16/80坐标、跨行着色及光标标记通过单测；不可达折叠标记偏移通过原生游标边界吸附，失败及Green均记录。
+- 真实PTY覆盖补全不发送、两处标签、原文与快照、history/reload、左右/Delete/Backspace/undo；使用旧实验的有限标点适配及正文关联，不能代替正式解析器或同文不同快照验收。
+- 正式输入切片仍须重做稳健的宿主帧/视口、连续undo状态关联、公共按键动作与长输入性能。逐字事件循环、按文本找journal、按render字符串找边框是探针限制，不是指定生产方案。上下/鼠标/resize、kill ring/外部编辑器、IME等责任已写Spec Deferred verification。
+- 本轮[全仓check](evidence/skill-source-host-check.log)仍typecheck通过、2070 passed/5 skipped，既有MCP缺文件suite失败，后续build/package被短路。旧独立build通过、package:check缺文档记录仍有效，不声称本轮全仓通过。
+
+### Prototype entry
+
+在本worktree运行：
+
+```bash
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs cube --native --source
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs command --source
+```
+
+真实CLI离线fixture；退出清理，`--capture`自动执行smoke。旧无`--source`入口是隐藏标记原型，不作为正式路线。[README](experiments/skill-mention-ui/README.md)解释入口区别。继续原型前完整读取`/Users/wangxuyang/.agents/skills/wangxuyang/make-a-prototype/SKILL.md`及必要引用。
 
 ## Current Assumptions
 
-cube、青色、无底色与整体标签交互已确认，不再重选视觉。原型仅支持观感与部分交互判断，不能证明生产编辑契约或任意终端字体兼容。新行为没有完整切片审核或生产验收；最近的“ok”只批准按规划流程继续，不是批准候选切片开工。
+原文/范围/投影分离已有关键路径证据，足以实施；尚未证明探针可直接发布或适配所有终端/编辑器。具体实现属于正式切片，公开API不足时回流Planning，不能换私有补丁。
 
-旧全仓缺文件问题仍存在，不恢复无关资料。原型不修改当前安装的插件行为，用户在日常会话仍会看到旧边界。
+本轮完整切片当前仅为待审核方案：1标点激活，2输入整体标签，3正文标签与图标偏好，4可安装交付及整体验收。前后依赖为1→2→3→4，共享产品代码，按adventure顺序执行。用户尚未接受这次完整清单。
 
 ## Continuation Point
 
-#5/#11/#13均已关闭，Map/Spec保持open且Spec修订中。当前#12先问大粘贴行为：推荐保留Pi原生折叠，块内引用提交时按展开原文正常激活但不单独显示标签；另一方案是含有效引用时取消折叠，显示全文与标签。两者仍待选，不将原先“粘贴直接成标”自行解释成其中一种。选择后继续整体坐标、视口、菜单与历史集成验证。局部原文/撤销模型已有证据，不能直接当成#12整体通过。
+等待用户审核本轮完整切片，主对话给出每关goal/in_scope/out_of_scope/dependencies/acceptance/boundaries。Spec Deferred verification已标出拟分配的责任。不要将最新“1”误读为切片批准；它只确认保留大粘贴折叠。
 
-原型启动：在本worktree运行 `pnpm exec node adventure/experiments/skill-mention-ui/run.mjs command`，或将command换成cube。退出自动清理，不连接真实provider；可加`--native`。仍运行上一版代码的原型先`/reload`，再通过`/prototype command`或`/prototype cube`切换。本轮使用的skill为 `/Users/wangxuyang/.agents/skills/wangxuyang/make-a-prototype/SKILL.md`，继续原型前完整读取及必要引用。
+审核通过后：
 
-完成 #12 后检查 Spec 一致性，读取 slicing skill，提交完整实施切片供用户审核。审核通过才创建匹配的 Implementation Issues 并派发首关。旧 #8/#9/#10 不重写为本轮实施关卡。主代理当前推进 Planning，未派发本轮 worker。
+1. 依当前slicing方法把完整字段保存到新的Implementation Issues，设置Map子Issue及原生依赖，Spec补责任链接。旧#8/#9/#10不重用。
+2. 更新Map为首个可执行关卡，按handoff保存、提交推送；用户无暂停要求则派发首个worker。
+3. 主代理一次协调一关，worker独立上下文、不再委派，维护Issue执行计划/交付/验证；协调者逐轮追加Acceptance、通过后关闭并存档。
+4. 最后worker完成整体验收、延期验证和清理。用户确认前Map/Spec保持open，最终交付待确认时停止。
 
-最后旧worker `01a0be90-2ed7-76f6-807e-976844772b8f` 曾保留上下文，当前没有本轮worker任务；复用前核对是否仍存活。新的Implementation按adventure要求独立上下文，原关返工可复用旧worker。工作区状态核验后行动，避免重复施工。实施所需skills须完整读取及必要引用：
+当前无本轮worker。旧worker`01a0be90-2ed7-76f6-807e-976844772b8f`曾保留，勿直接假设仍存活；新关须新上下文，返工复用原worker。接手先核对工作区与subagent状态，避免重复施工。
+
+必读skill及交接时需提供的绝对路径：
 
 - `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md`
+- `/Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md`
 - `/Users/wangxuyang/.agents/skills/wangxuyang/develop-with-tdd/SKILL.md`
 - `/Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md`
+- `/Users/wangxuyang/.agents/skills/wangxuyang/handoff/SKILL.md`
 
-worker维护Implementation执行计划/交付/验证，协调者记录Acceptance及存档。不继承协调者整段对话，不再委派。主代理保存流程用 `/Users/wangxuyang/.agents/skills/wangxuyang/handoff/SKILL.md`。
+新产品文案在开始编写前确认语言；不因此重开已确认的业务范围。文件写入/全局副作用仍受仓库和用户授权边界限制。

@@ -1,7 +1,7 @@
 import { appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { CustomEditor, SkillInvocationMessageComponent, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { Container, type EditorComponent } from "@earendil-works/pi-tui";
+import { Container, type Editor, type EditorComponent } from "@earendil-works/pi-tui";
 import { fauxProvider, fauxAssistantMessage, type UserMessage } from "@earendil-works/pi-ai";
 import { skillAutocomplete } from "../../../extensions/skill-mentions/src/autocomplete.js";
 import { loadSnapshot } from "../../../extensions/skill-mentions/src/loading.js";
@@ -9,6 +9,7 @@ import { decodeSnapshot, encodeSnapshot, isSkillSnapshot, type SkillSnapshot } f
 import { installHistoryEditor } from "../../../extensions/skill-mentions/src/history-editor.js";
 import { normalizePunctuation, sample, styleEditorLines, styleMarkdown, type Variant } from "./ui.js";
 import { chipEditor, chipMarkdown, type ChipVariant } from "./chips.js";
+import { sourceHostProbe } from "./source-host-probe.js";
 
 const displayType = "prototype/skill-mention-ui";
 const decorated = Symbol.for("prototype/skill-mention-ui/editor");
@@ -40,6 +41,10 @@ export default function prototype(pi: ExtensionAPI): void {
     if (!previous || !Reflect.get(previous, decorated)) {
       const factory: NonNullable<typeof previous> = (tui, theme, keys) => {
         const base = previous?.(tui, theme, keys) ?? new CustomEditor(tui, theme, keys);
+        if (process.env.MENTION_UI_SOURCE === "1") return sourceHostProbe(base as Editor, names(), {
+          rows: () => tui.terminal.rows, codex: process.env.MENTION_UI_NATIVE !== "1",
+          background: () => context.ui.theme.getBgAnsi("selectedBg"), icon: variant === "cube" ? "cube" : "command",
+        });
         if (variant !== "accent" && variant !== "tint") return chipEditor(base, names, variant);
         const methods = new Map<PropertyKey, unknown>();
         return new Proxy(base, {

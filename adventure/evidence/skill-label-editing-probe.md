@@ -2,7 +2,7 @@
 
 ## Scope
 
-为 [Planning #12](https://github.com/wangxuyang1221/pi-ext/issues/12) 核验公开编辑器接口与现有原型的边界。用户已确认自动成标，并决定本轮不新增复制原文操作。完整规格在 Spec 中维护；本关尚未通关。
+为 [Planning #12](https://github.com/wangxuyang1221/pi-ext/issues/12) 核验公开编辑器接口与现有原型的边界。用户已确认自动成标，并决定本轮不新增复制原文操作。完整规格在 Spec 中维护。本文保留调查顺序；最新的真实宿主结果与实施边界见[后续报告](skill-source-host-probe.md)。
 
 ## API and clipboard findings
 
@@ -55,7 +55,7 @@ pnpm exec vitest run --config adventure/experiments/vitest.config.ts adventure/e
 4轮 Red → Green：
 
 1. 原型手写后没有自动成标，断言先失败。新方案在分隔符后建立显示范围；输入名称期间不成标，撤销先移除空格、再按原生合并规则撤销名称，没有仅撤销投影的步骤，onChange次数不增加。
-2. 原生左键只移动一个字，整块移动断言先失败。通过有进度检查和循环上限的公开handleInput移动，以及一次公开setText完成整块删除后，左右移动、删除与原生undo恢复标签通过；原方法引用未改。
+2. 原生左键只移动一个字，整块移动断言先失败。早期通过有进度检查和循环上限的公开handleInput移动，以及一次公开setText完成整块删除，局部测试通过，原方法引用未改。后续混排反例推翻setText删除路线，见[替代方案](skill-source-host-probe.md#red-and-green)。
 3. 完整粘贴位于输入末尾时最初未成标。识别bracketed paste的完成事件后，末尾成标和一次undo撤销粘贴通过；普通文本中的同形cube字符串不会被当作标签。
 4. 真实产品补全provider选中名称后最初未成标。区分菜单确认事件后，原生菜单关闭、原文缓冲和标签同时通过。
 
@@ -72,7 +72,7 @@ pnpm exec tsc --noEmit --target ESNext --module NodeNext --moduleResolution Node
 
 新探针不是完整EditorComponent，也没有接入实际CLI。它验证真实Editor的原文、补全和撤销路径，但显示只验证标签内容布局，没有包含宿主边框/菜单、滚动视口、光标标记、上下移动或鼠标坐标映射。使用现有严格解析器做空白边界用例，不能声称已接入#5的新语法。kill ring、自定义快捷键、长粘贴折叠及reload/历史完整集成尚未验证。
 
-因此#12仍open，原文模型是一条有局部证据支持的候选，不是已经通过的整体可行性结论。#13已确定cube默认、command手动降级及命令记住选择，接下来将两种字形纳入完整坐标与宿主渲染验证。不创建Implementation，也不将此实验安装到日常Pi。
+这一阶段证据不足，故#12继续open。随后补充了真实宿主与坐标验证，最新结论见[后续报告](skill-source-host-probe.md)。#13已确定cube默认、command手动降级及命令记住选择。不将任何探针直接安装到日常Pi。
 
 ## Large paste finding
 
@@ -80,4 +80,4 @@ pnpm exec tsc --noEmit --target ESNext --module NodeNext --moduleResolution Node
 
 新增真实Editor探针，用12行且首行是 `$presentations` 的内容复现：输入显示折叠标记，没有独立skill标签；展开原文仍能识别引用，提交内容完整。18项原型/探针和独立tsc通过，未运行新的CLI PTY，不将其当成完整加载验收。
 
-这与“粘贴有效引用直接成标”存在需要用户明确的显示例外。候选：保留宿主大粘贴折叠，块内不单独画标签，展开内容提交时仍按正常规则激活；或对含有效skill引用的粘贴取消折叠，显示全文及标签。前者改动更小，后者可见性更强但占用更多输入区。当前待选，不自行覆盖此前自动成标要求。
+用户随后确认保留宿主大粘贴折叠，块内不单独画标签，展开内容提交时仍按正常规则激活。此显示例外已移交Spec。混排删除发现的新反例及原生操作替代路线见[后续报告](skill-source-host-probe.md)，最终两组真实PTY均覆盖折叠块旁删除标签和一次undo恢复，不再使用setText整块删除。

@@ -245,10 +245,22 @@ try:
         assert editor() == "用 $presentations"
         assert f" {icon} presentations " in "\n".join(screen.display)
         send("\x03")
+    if config.get("source"):
+        folded = "\n".join(f"line {index}" for index in range(12))
+        paste(folded)
+        paste(" $presentations")
+        assert editor() == folded + " $presentations", "Mixed folded paste must retain expanded source"
+        assert "[paste #" in "\n".join(screen.display), "Large paste must remain folded"
+        send("\x7f")
+        assert editor() == folded + " ", "Atomic deletion must not clear the paste registry"
+        send("\x1f")
+        assert editor() == folded + " $presentations", "Grouped undo must preserve expanded paste"
+        grab("folded-source")
+        send("\x03")
     send("/quit\r")
     wait(lambda: status is not None, "graceful quit")
     assert os.waitstatus_to_exitcode(status) == 0
-    stem = f"skill-ui-{config['variant']}{'-native' if config['native'] else ''}"
+    stem = f"skill-ui-{config['variant']}{'-native' if config['native'] else ''}{'-source' if config.get('source') else ''}"
     for name in ["input", "both"]:
         raster(shots[name], output / f"{stem}-{name}.png")
     if chip_mode:
@@ -261,9 +273,11 @@ try:
             detail.paste(crop, (0, top))
             top += crop.height + 18
         detail.save(output / f"{stem}-detail.png")
-    summary = {"variant": config["variant"], "native": config["native"], "pid": pid, "exit": 0, "checks": ["real CLI PTY", "input and user colors", "native cards", "original task and two snapshots", "no ANSI in provider input", "Tab completion does not send", "punctuation does not open menu", "public reload style switch"], "screens": {name: shot["text"] for name, shot in shots.items()}}
+    summary = {"variant": config["variant"], "native": config["native"], "source": config.get("source", False), "pid": pid, "exit": 0, "checks": ["real CLI PTY", "input and user colors", "native cards", "original task and two snapshots", "no ANSI in provider input", "Tab completion does not send", "punctuation does not open menu", "public reload style switch"], "screens": {name: shot["text"] for name, shot in shots.items()}}
     if chip_mode:
         summary["checks"] += ["no chip markers in provider input", "history restores projected chips", "Tab creates an atom", "left and right skip atom", "backspace and delete remove atom", "undo restores atom", "public reload between paired variants", "public reload into original style and select completion", "no simulated borders or bold text", "expected icon glyph and foreground color", "gray background or inherited host background"]
+    if config.get("source"):
+        summary["checks"] += ["native large paste remains folded", "adjacent atomic deletion preserves expanded paste", "grouped native undo restores label and expanded paste"]
     if config["variant"] in ["command", "cube"]:
         summary["foreground"] = "#8df9fd"
         summary["iconCodepoint"] = f"U+{ord(icon):X}"
@@ -273,7 +287,7 @@ try:
     print(json.dumps({"passed": True, "variant": config["variant"], "pid": pid, "exit": 0}))
 finally:
     if sys.exc_info()[0]:
-        (output / "skill-ui-debug.ansi").write_bytes(raw_output)
+        (output / ("skill-ui-source-debug.ansi" if config.get("source") else "skill-ui-debug.ansi")).write_bytes(raw_output)
     if status is None:
         os.kill(pid, signal.SIGTERM)
         deadline = time.monotonic() + 5
