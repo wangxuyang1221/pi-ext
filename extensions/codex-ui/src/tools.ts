@@ -24,6 +24,7 @@ import {
   type Component,
 } from "@earendil-works/pi-tui";
 
+import { ExecutionSettings, executionDefinitionCache, type CodexExecutionOptions } from "./execution-settings.js";
 import { BashGroups, type BashGroupRowState } from "./bash-groups.js";
 import { renderBashGroup } from "./bash-group-layout.js";
 import { ReadGroups, type ReadRowState } from "./read-groups.js";
@@ -72,6 +73,7 @@ export interface CodexToolFactories {
 }
 
 export interface CodexToolRenderServices {
+  getExecutionOptions?: (ctx: ExtensionContext) => CodexExecutionOptions;
   getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
   isLowPowerEnabled?: () => boolean;
   renderCache?: ToolRenderCache;
@@ -164,6 +166,9 @@ export function registerCodexTools(
     ? createObservedWriteDefinition(cwd, services.isLowPowerEnabled)
     : factories.write(cwd));
   const getBashDefinition = createDefinitionCache(factories.bash);
+  const executionSettings = new ExecutionSettings(services.getExecutionOptions);
+  const configuredRead = executionDefinitionCache(executionSettings, (cwd, options) => factories.read(cwd, options.read));
+  const configuredBash = executionDefinitionCache(executionSettings, (cwd, options) => factories.bash(cwd, options.bash));
   const renderCache = services.renderCache ?? new ToolRenderCache();
   const bashGroups = new BashGroups(renderCache);
   const readGroups = new ReadGroups(renderCache);
@@ -180,6 +185,7 @@ export function registerCodexTools(
   };
   let firstSessionStart = true;
   pi.on("session_start", (event, ctx) => {
+    executionSettings.clear();
     // Reload builds the new instance's history rows before emitting session_start.
     // Keep those fresh scopes and discover their ownership without reviving old instances.
     if (firstSessionStart) {
@@ -190,7 +196,7 @@ export function registerCodexTools(
   });
   pi.on("session_tree", rebuildGroups);
   pi.on("session_compact", rebuildGroups);
-  pi.on("session_shutdown", resetRendering);
+  pi.on("session_shutdown", () => { executionSettings.clear(); resetRendering(); });
   pi.on("message_start", (event, ctx) => {
     if (ctx?.mode === "tui") {
       bashGroups.discover(event.message, true);
@@ -215,7 +221,8 @@ export function registerCodexTools(
     ...baseRead,
     renderShell: "self",
     execute(toolCallId, params, signal, onUpdate, ctx) {
-      return getReadDefinition(ctx.cwd).execute(toolCallId, params, signal, onUpdate, ctx);
+      const definition = factories.read === createReadToolDefinition ? configuredRead(ctx) : getReadDefinition(ctx.cwd);
+      return definition.execute(toolCallId, params, signal, onUpdate, ctx);
     },
     renderCall(args, theme, context) {
       const state = context.state as unknown as CodexReadState;
@@ -330,7 +337,8 @@ export function registerCodexTools(
     ...baseBash,
     renderShell: "self",
     execute(toolCallId, params, signal, onUpdate, ctx) {
-      return getBashDefinition(ctx.cwd).execute(toolCallId, params, signal, onUpdate, ctx);
+      const definition = factories.bash === createBashToolDefinition ? configuredBash(ctx) : getBashDefinition(ctx.cwd);
+      return definition.execute(toolCallId, params, signal, onUpdate, ctx);
     },
     renderCall(args, theme, context) {
       const state = context.state as unknown as CodexBashState;
@@ -421,8 +429,13 @@ export function registerCodexTools(
   pi.registerTool(bashTool);
 }
 
+function sanitizeDiffSource(text: string): string {
+  // Sanitize source only, before highlighting. Persisted patches keep their bytes.
+  return stripTerminalSequences(text).replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/gu, "");
+}
+
 export function parseDisplayDiff(diff: string): DisplayDiffLine[] {
-  const rawLines = diff.split("\n");
+  const rawLines = diff.split("\n").map(sanitizeDiffSource);
   if (rawLines.at(-1) === "") rawLines.pop();
 
   return rawLines.map((line) => {
@@ -470,7 +483,7 @@ export function parseUnifiedPatch(patch: string): DisplayDiffLine[] {
     if (!inHunk || line.startsWith("\\ No newline at end of file")) continue;
 
     const marker = line[0];
-    const text = line.slice(1);
+    const text = sanitizeDiffSource(line.slice(1));
     if (marker === "-") {
       parsed.push({ kind: "removed", lineNumber: oldLine, text });
       oldLine += 1;

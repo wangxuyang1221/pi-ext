@@ -57,8 +57,13 @@ export class BashGroups {
     if (start) this.activeCandidates = [];
     const next: string[][] = [];
     let current: string[] | undefined;
+    const seen = new Set<string>();
+    const activeKeys = new Set(this.activeCandidates);
     for (const block of message.content) {
-      if (block?.type === "toolCall" && block.name === "bash" && typeof block.id === "string") {
+      const existingKey = typeof block?.id === "string" ? this.membership.get(block.id) : undefined;
+      const historical = existingKey !== undefined && !activeKeys.has(existingKey);
+      if (block?.type === "toolCall" && block.name === "bash" && typeof block.id === "string" && !seen.has(block.id) && !historical) {
+        seen.add(block.id);
         if (!current) next.push(current = []);
         current.push(block.id);
       } else current = undefined;
@@ -78,7 +83,8 @@ export class BashGroups {
       const key = ids[0]!;
       const previous = this.candidates.get(key);
       if (previous?.ids.length === ids.length && previous.ids.every((id, index) => id === ids[index])) continue;
-      for (const id of previous?.ids ?? []) if (!ids.includes(id)) {
+      const retained = new Set(ids);
+      for (const id of previous?.ids ?? []) if (!retained.has(id)) {
         this.membership.delete(id);
         const member = this.members.get(id);
         if (member) this.assign([member]);

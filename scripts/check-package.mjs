@@ -10,10 +10,10 @@ const themeEntries = packageJson.pi?.themes ?? [];
 const publishedEntries = packageJson.files ?? [];
 
 const expectedExtensionEntries = [
+  "./extensions/codex-ui/dist/index.js",
   "./extensions/codex-compact/dist/index.js",
   "./extensions/openai-fast-mode/dist/index.js",
   "./extensions/permissions/dist/index.js",
-  "./extensions/codex-ui/dist/index.js",
   "./extensions/mcp/dist/index.js",
   "./extensions/subagent/dist/index.js",
   "./extensions/goal/dist/index.js",

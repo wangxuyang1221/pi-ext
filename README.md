@@ -169,7 +169,21 @@ Write / Edit 从参数生成到执行结束前，都显示黄色静态 `⏺ Writ
 
 本地 Write 在内置文件队列中采集旧内容，新建成功显示 `Added`，覆盖显示 `Edited`。普通模式复用 Edit 的行号、增删统计与 diff 样式，默认显示 12 个 diff 行，灰色省略提示紧随正文，Ctrl+O 展开已保存的 diff。low-power 只识别新建或覆盖，不读取旧正文、不生成 Write diff。缺少变化元数据的旧 Write 结果暂时保留原有总行数摘要，不推测新建或覆盖。
 
+Write / Edit 的 diff 显示层在高亮和背景填充之前移除回车及原始终端控制序列，避免 CRLF 行被补齐空格擦空；磁盘内容和持久化 patch 保持原样。
+
 Write diff 采集限制为旧、新文本各 1 MiB，合计 4000 行，保存的 patch 不超过 2 MiB。不可读或超限时保留真实成功标题，普通模式显示 `Diff unavailable`，不编造增删数。Write / Edit 每行只高亮前 4096 个 UTF-16 单元，其余内容保留。已通过 Pi 0.84.3 与 0.85.1 的普通、全屏 CLI 验收；测试及性能边界见 [Write / Edit validation](docs/codex-ui-write-edit-validation.md)。
+
+### Tool execution settings
+
+工具覆盖在 TUI、print 和 RPC 中都会生效。默认 Read / Bash 通过公开 `SettingsManager` 的合并规则，读取 `getAgentDir()/settings.json` 与受信任项目的 `.pi/settings.json`，保留 `shellCommandPrefix`、`shellPath` 和 `images.autoResize`；项目配置优先，不信任项目的配置不读取。读取不写配置或锁文件；损坏或不可读的 scope 与宿主一样被忽略，宿主负责其配置诊断。
+
+配置按 cwd 和信任状态在首次执行时取得快照，普通工具调用和重绘不重复读文件。修改配置后使用 `/reload` 或重启，跨项目会话使用新项目配置；不监听文件变化，也不自动同步宿主尚未持久化的内存设置。
+
+SDK 内存覆盖、自定义 settings 存储和宿主自定义执行器不在自动继承范围内。SDK 可使用 `codexUi(pi, { getExecutionOptions })` 显式返回 `{ read: { autoResizeImages }, bash: { commandPrefix, shellPath } }`；这份配置替代文件配置，每个快照只取一次。需要自定义 operations 或执行器时可传入 `toolFactories`，沿用 `registerCodexTools` 的四工具 factory 契约；自定义 factory 自行管理执行参数，不套用默认文件配置。扩展不会探测或修改 Pi 内部执行器。
+
+### User message layout
+
+用户消息的 `›` 标记单独占一个 Markdown 段落，不再拼接到正文首行。原生 Markdown 因而保留首行代码围栏、表格、列表和标题，代码中的星号等字面量不会因标记而被解释成强调语法。显示会比原来的同行前缀多出标记行及段落间距，不修改会话原文和模型输入；已经以 `› ` 开头的内容保持原样。
 
 ### Assistant reply layout
 
@@ -193,7 +207,7 @@ Write diff 采集限制为旧、新文本各 1 MiB，合计 4000 行，保存的
 
 ### Low-power rendering
 
-`/lowpower on` 只负责简化 `write`、`edit`、`bash` 的渲染；`/lowpower off` 恢复完整工具输出，`/lowpower status` 仅查询当前状态。两种模式都会隐藏 Pi 内置的 streaming working row，并使用同一套原位单行思考摘要。窗口标题独立使用 `80ms` 单色转圈，与自动 compact 相同帧序列；项目名和会话名保持固定，不再播放动态省略号。按单调时钟选择帧，延迟后跳过错过的帧，不补播；仅写入 OSC 标题，不请求正文重绘。动画跨重试和自动 compact 保持运行，任务 settled、取消完成或会话退出时停止，恢复静态标题；手动 compact 也有标题反馈。两种 low-power 模式行为一致，工具计时器不受影响。
+`/lowpower on` 只负责简化 `write`、`edit`、`bash` 的渲染；`/lowpower off` 恢复完整工具输出，`/lowpower status` 仅查询当前状态。两种模式都会隐藏 Pi 内置的 streaming working row，并使用同一套原位单行思考摘要。窗口标题独立使用 `80ms` 单色转圈，与自动 compact 相同帧序列；项目名和会话名保持固定，不再播放动态省略号。按单调时钟选择帧，延迟后跳过错过的帧，不补播；仅写入 OSC 标题，不请求正文重绘。动画跨重试和自动 compact 保持运行，任务 settled、取消完成或会话退出时停止，恢复静态标题；手动 compact 也有标题反馈。默认 package manifest 将 `codex-ui` 放在 `codex-compact` 前加载，使标题在耗时压缩 handler 开始前启动；手动分别加载扩展时也需保持这个相对顺序。两种 low-power 模式行为一致，工具计时器不受影响。
 
 启用 Pi 的 `terminal.showTerminalProgress` 后，终端原生 edge progress 仍由 Pi 管理，不进入 TUI 行渲染管线。Low-power 状态仅保存在当前 extension instance 中；`/new`、`/resume`、`/fork`、`/reload` 或进程重启会重新加载扩展，并恢复为默认关闭。
 
@@ -243,7 +257,9 @@ Bash、Read、MCP 的正常正文统一使用 `text`，在 codex-pi 主题中为
 
 Read 在同一 assistant 消息内按调用顺序合并相邻读取，不跨 text、thinking、其他工具或消息边界。每个文件显示不加粗的主题 `accent` 文件名、暗灰目录和实际返回范围，默认附最多三屏幕行预览及余量提示。预览每行最多提取 512 个 UTF-16 代码单元，长行裁剪而不换行。全局 `app.tools.expand` 快捷键展开完整输入路径和最多 40 行源码，再次按键恢复短预览。错误、取消和续读提示保留；图片及归属不明的调用独立显示，避免宿主附件与文件名错位。分组不改执行、权限或持久化结果，不提供原型的配色与布局切换命令。双版本验证及预览开销见 [Read UI validation](docs/research/codex-ui-read-validation.md)。
 
-Footer 使用 ` ⋅ ` 分隔，并按 `model thinking ⋅ fast ⋅ cwd ⋅ git:branch ⋅ Context N% left ⋅ permissions` 排列。model 与 thinking 使用 Codex CLI 的 `#f6e2b7`，context 使用 `#f2b590`，Fast Mode 使用 `#c8a9ee`。终端变窄时会先缩短或移除 cwd 和 branch，再将 context 缩成 `N% left`；model、context 和 permissions 保留到最后。
+Read 分组仍有已知限制：`Ctrl+T` 或部分 settings 操作重建历史组件后，历史 Read 会降级为独立显示，普通重绘不能恢复。文件路径和内容仍可见，使用 `/reload` 可恢复分组。本轮接受该展示限制，不接入宿主内部组件生命周期，也不将它视为已修复。
+
+Footer 使用 ` ⋅ ` 分隔，并按 `model thinking ⋅ fast ⋅ cwd ⋅ git:branch ⋅ Context N% left ⋅ permissions` 排列。model 与 thinking 使用 Codex CLI 的 `#f6e2b7`，context 使用 `#f2b590`，Fast Mode 使用 `#c8a9ee`。终端变窄时会先缩短或移除 cwd 和 branch，再将 context 缩成 `N% left`；降级允许跳过等宽或更宽的中间变体，单字符目录也能显示可容纳的截断分支。model、context 和 permissions 保留到最后。
 
 Footer 首行消费 `pi-openai-fast-mode` 和 `permissions` 两个稳定 status。有 `goal` status 时在第二行显示目标状态，内容变化使缓存失效，清除后移除第二行，首行布局不变。MCP、压缩进度、low-power 和其他临时 status 不显示。内置的 `openai-fast-mode` 不再创建 below-editor widget。由于 Pi 0.84.3 没有公开 weekly quota 数据源，本 profile 不显示 weekly quota。
 

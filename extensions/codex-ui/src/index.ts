@@ -6,7 +6,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 import { CodexEditor, CodexFooter, CodexHeader } from "./components.js";
-import { registerCodexTools } from "./tools.js";
+import { registerCodexTools, type CodexToolFactories, type CodexToolRenderServices } from "./tools.js";
 import { ReasoningSummary } from "./reasoning-summary.js";
 import { registerTerminalTitleSpinner } from "./terminal-title.js";
 import { readGoalDisplay, type GoalFooterDisplay } from "./goal-display.js";
@@ -18,7 +18,13 @@ function hideInlineWorkingRow(ui: ExtensionUIContext): void {
   ui.setWorkingVisible(false);
 }
 
-export default function codexUiExtension(pi: ExtensionAPI): void {
+/** SDK callers must explicitly supply non-file execution settings or custom factories. */
+export interface CodexUiOptions {
+  toolFactories?: CodexToolFactories;
+  getExecutionOptions?: CodexToolRenderServices["getExecutionOptions"];
+}
+
+export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptions = {}): void {
   let lowPowerEnabled = false;
   let goalDisplay: GoalFooterDisplay | undefined;
   let unsubscribeGoal: (() => void) | undefined;
@@ -26,7 +32,8 @@ export default function codexUiExtension(pi: ExtensionAPI): void {
   const reasoningSummary = new ReasoningSummary();
   const installTitleSpinner = registerTerminalTitleSpinner(pi);
 
-  registerCodexTools(pi, undefined, {
+  registerCodexTools(pi, options.toolFactories, {
+    getExecutionOptions: options.getExecutionOptions,
     getKeybindings: () => currentKeybindings,
     isLowPowerEnabled: () => lowPowerEnabled,
   });
@@ -77,10 +84,11 @@ export default function codexUiExtension(pi: ExtensionAPI): void {
       // Display-only outer list: let native Markdown align wrapped lines and blocks.
       return markdown.trim() ? `- ${markdown.replace(/\r?\n/gu, "\n  ")}` : markdown;
     }
-    if (context.messageType !== "user" || markdown.length === 0 || markdown.startsWith("› ")) {
+    if (context.messageType !== "user" || markdown.length === 0 || markdown.startsWith("› ") || markdown.startsWith("›\n\n")) {
       return markdown;
     }
-    return `› ${markdown}`;
+    // A separate paragraph leaves the source's first block at a Markdown boundary.
+    return `›\n\n${markdown}`;
   });
 
   pi.on("session_tree", () => reasoningSummary.clear());

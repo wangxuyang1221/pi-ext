@@ -165,6 +165,16 @@ test("footer degrades location before stable session facts on narrow terminals",
   }
 });
 
+test("footer skips equal-width variants before dropping a short project branch", () => {
+  for (const cwd of ["/repo/a", "/repo/ab", "/repo/中", "/repo/é"]) {
+    const footer = new CodexFooter({ cwd, getModelId: () => "gpt", getThinkingLevel: () => "off",
+      getContextUsage: () => undefined, getBranch: () => "feature/a-very-long-branch-name",
+      getExtensionStatuses: () => new Map(), getTheme: () => theme });
+    assert.equal(stripTerminalSequences(footer.render(34)[0]!).trim(), "gpt off ⋅ feature/a-very-long-b…");
+    for (const width of [0, 1, 2, 8, 16, 34, 80]) assert(footer.render(width).every(line => visibleWidth(line) <= width));
+  }
+});
+
 test("footer caches only allowlisted statuses and painted output", () => {
   let themePaints = 0;
   const countingTheme = {

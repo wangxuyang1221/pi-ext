@@ -323,7 +323,7 @@ function fitItems(states: FooterItemState[], width: number): void {
   while (measureStates(states) > width) {
     const downgrade = states
       .filter((state) => !state.hidden && state.variantIndex + 1 < state.item.variants.length)
-      .map((state) => ({ state, saving: nextVariantSaving(state) }))
+      .map((state) => ({ state, ...nextShorterVariant(state) }))
       .filter(({ saving }) => saving > 0)
       .sort((left, right) => (
         left.state.item.priority - right.state.item.priority
@@ -338,7 +338,7 @@ function fitItems(states: FooterItemState[], width: number): void {
       ))[0];
 
     if (downgrade && (!removable || downgrade.state.item.priority <= removable.item.priority)) {
-      downgrade.state.variantIndex += 1;
+      downgrade.state.variantIndex = downgrade.index;
       continue;
     }
     if (!removable) break;
@@ -358,10 +358,13 @@ function visibleStates(states: readonly FooterItemState[]): FooterItemState[] {
     .sort((left, right) => left.item.order - right.item.order || left.item.key.localeCompare(right.item.key));
 }
 
-function nextVariantSaving(state: FooterItemState): number {
-  const current = state.item.variants[state.variantIndex];
-  const next = state.item.variants[state.variantIndex + 1];
-  return current && next ? variantWidth(current) - variantWidth(next) : 0;
+function nextShorterVariant(state: FooterItemState): { index: number; saving: number } {
+  const width = currentVariantWidth(state);
+  for (let index = state.variantIndex + 1; index < state.item.variants.length; index++) {
+    const saving = width - variantWidth(state.item.variants[index]!);
+    if (saving > 0) return { index, saving };
+  }
+  return { index: state.variantIndex, saving: 0 };
 }
 
 function currentVariantWidth(state: FooterItemState): number {

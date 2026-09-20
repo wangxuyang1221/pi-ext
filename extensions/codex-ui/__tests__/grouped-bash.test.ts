@@ -4,6 +4,7 @@ import { initTheme, SessionManager, ToolExecutionComponent, type ExtensionAPI, t
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { registerCodexTools } from "../src/tools.js";
 import { ToolRenderCache } from "../src/render-cache.js";
+import { BashGroups } from "../src/bash-groups.js";
 
 const plain = (row: ToolExecutionComponent, width = 120) => row.render(width).map(line => stripTerminalSequences(line).trimEnd());
 const call = (id: string, name = "bash") => ({ type: "toolCall", id, name, arguments: { command: `printf ${id}`, path: "README.md" } });
@@ -89,6 +90,60 @@ test("source text, thinking, other tools and assistant messages break groups", (
       h.declare([call("c")]); const c = h.row("c"); c.markExecutionStarted();
       assert.match(plain(c).join("\n"), /Bash\(printf c\)/u);
     } finally { h.dispose(); }
+  }
+});
+
+test("repeated first IDs in separate Bash segments never reorder visible calls", () => {
+  for (const separator of [{ type: "text", text: "between" }, { type: "thinking", thinking: "between" }, call("read", "read")]) {
+    const h = harness();
+    try {
+      const content = [call("a"), call("b"), separator, call("a"), call("c")];
+      h.declare(content);
+      const rows = ["a", "b", "a", "c"].map(id => { const row = h.row(id); row.updateResult(result(`output ${id}`)); return row; });
+      const order = () => rows.flatMap(row => plain(row)).join("\n").match(/Bash\(printf [abc]\)/gu);
+      const expected = ["Bash(printf a)", "Bash(printf b)", "Bash(printf a)", "Bash(printf c)"];
+      assert.deepEqual(order(), expected);
+      h.emit("message_update", { message: message([...content, call("d")]) });
+      const d = h.row("d"); d.updateResult(result("output d")); rows.push(d);
+      assert.deepEqual(order(), expected);
+      assert.doesNotMatch(plain(rows[0]!).join("\n"), /printf [cd]/u);
+      assert.match(plain(rows[2]!).join("\n"), /printf a/u);
+    } finally { h.dispose(); }
+  }
+});
+
+test("IDs reused by a later assistant message cannot take ownership of earlier rows", () => {
+  const h = harness();
+  try {
+    h.declare([call("a"), call("b")]);
+    const a = h.row("a"), b = h.row("b");
+    a.updateResult(result("old a")); b.updateResult(result("old b"));
+    const before = plain(a);
+    h.declare([call("a"), call("c")]);
+    const duplicate = h.row("a"), c = h.row("c");
+    duplicate.updateResult(result("new a")); c.updateResult(result("new c"));
+    assert.deepEqual(plain(a), before);
+    assert.equal(b.render(120).length, 0);
+    assert.match(plain(duplicate).join("\n"), /new a/u);
+    assert.match(plain(c).join("\n"), /new c/u);
+    assert.doesNotMatch(plain(a).join("\n"), /new [ac]/u);
+  } finally { h.dispose(); }
+});
+
+test("streaming discovery does not rescan every candidate for each retained ID", () => {
+  for (const count of [100, 1000]) {
+    const groups = new BashGroups(new ToolRenderCache());
+    const blocks = Array.from({ length: count }, (_, i) => call(`cost-${i}`));
+    groups.discover(message(blocks), true);
+    let scanned = 0;
+    const includes = Array.prototype.includes;
+    const spy = vi.spyOn(Array.prototype, "includes").mockImplementation(function (this: unknown[], ...args) {
+      if (typeof this[0] === "string" && this[0].startsWith("cost-")) scanned += this.length;
+      return includes.apply(this, args);
+    });
+    try { groups.discover(message([...blocks, call("cost-next")])); }
+    finally { spy.mockRestore(); }
+    assert(scanned <= count * 4, "Retained membership must not use a nested candidate scan");
   }
 });
 

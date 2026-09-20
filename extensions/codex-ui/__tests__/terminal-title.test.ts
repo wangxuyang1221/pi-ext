@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, test, vi } from "vitest";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { readFileSync } from "node:fs";
+import { createExtensionRuntime, ExtensionRunner, SessionManager, type ExtensionAPI, type ExtensionContext, type Extension } from "@earendil-works/pi-coding-agent";
 import { registerTerminalTitleSpinner, TerminalTitleSpinner } from "../src/terminal-title.js";
 
 function harness(mode = "tui") {
@@ -18,10 +19,43 @@ function harness(mode = "tui") {
   const ctx = { mode, cwd: "/repo/pi-ext", isIdle: () => idle,
     ui: { setTitle: (title: string) => titles.push(title) } } as unknown as ExtensionContext;
   const emit = (type: string, event = {}) => handlers.get(type)?.forEach(handler => handler(event, ctx));
-  return { install: () => install(ctx), titles, emit, rename(value: string) { name = value; emit("session_info_changed", { name }); },
+  return { handlers, install: () => install(ctx), titles, emit, rename(value: string) { name = value; emit("session_info_changed", { name }); },
     setIdle(value: boolean) { idle = value; }, dispose: () => emit("session_shutdown") };
 }
 afterEach(() => vi.useRealTimers());
+
+test("manifest order starts the title before a blocking compaction handler and stops on every outcome", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  const manifest = JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8"));
+  for (const outcome of ["success", "cancel", "throw", "shutdown"] as const) {
+    const h = harness(); h.install();
+    let release!: () => void, entered!: () => void;
+    const waiting = new Promise<void>(resolve => { release = resolve; });
+    const started = new Promise<void>(resolve => { entered = resolve; });
+    const compact = { handlers: new Map([["session_before_compact", [async () => {
+      entered(); await waiting;
+      if (outcome === "throw") throw new Error("Fixture failure");
+      return outcome === "success" ? { compaction: { summary: "Fixture" } } : { cancel: true };
+    }]]]) };
+    const extensions = manifest.pi.extensions.map((path: string) => ({ path,
+      handlers: path.includes("codex-ui/") ? h.handlers : path.includes("codex-compact/") ? compact.handlers : new Map(),
+    })) as Extension[];
+    const runner = new ExtensionRunner(extensions, createExtensionRuntime(), process.cwd(), SessionManager.inMemory(), {} as never);
+    const pending = runner.emit({ type: "session_before_compact" } as never);
+    try {
+      await started;
+      assert.equal(vi.getTimerCount(), 1, "The title must already animate while compaction awaits remote work");
+      assert.match(h.titles.at(-1)!, /^⠋ /u);
+      vi.advanceTimersByTime(160);
+      assert.match(h.titles.at(-1)!, /^⠹ /u);
+      if (outcome === "shutdown") await runner.emit({ type: "session_shutdown" } as never);
+      release(); await pending;
+      await runner.emit({ type: outcome === "success" ? "session_compact" : "session_compact_failed" } as never);
+      assert.equal(vi.getTimerCount(), 0);
+      assert.equal(h.titles.at(-1), "π · pi-ext");
+    } finally { release(); await pending; h.dispose(); }
+  }
+});
 
 test("delayed title ticks skip missed frames without catch-up writes or a second timer", () => {
   let now = 0;
