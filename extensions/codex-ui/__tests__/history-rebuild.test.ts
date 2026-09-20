@@ -3,11 +3,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "vitest";
 import { InMemoryCredentialStore, InMemoryModelsStore, fauxProvider, fauxAssistantMessage } from "@earendil-works/pi-ai";
-import { createAgentSession, DefaultResourceLoader, initTheme, InteractiveMode, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
+import { createAgentSession, DefaultResourceLoader, initTheme, InteractiveMode, ModelRuntime, SessionManager, SettingsManager, ToolExecutionComponent } from "@earendil-works/pi-coding-agent";
 import { Container, stripTerminalSequences } from "@earendil-works/pi-tui";
 import { registerCodexTools } from "../src/tools.js";
 
-test.each([false, true])("Read groups survive rebuild and lifecycle changes with final message replacement: %s", async (replaceFinal) => {
+test.each(["unchanged", "replacement", "in-place"])("Read groups survive rebuild and lifecycle changes with final message mode: %s", async (finalMode) => {
+  const replaceFinal = finalMode !== "unchanged";
   initTheme("dark", false);
   mkdirSync(".tmp", { recursive: true });
   const cwd = mkdtempSync(join(process.cwd(), ".tmp/codex-history-"));
@@ -29,6 +30,10 @@ test.each([false, true])("Read groups survive rebuild and lifecycle changes with
       });
       pi.on("message_end", event => {
         if (replaceFinal && event.message.role === "toolResult" && event.message.toolName === "read") {
+          if (finalMode === "in-place") {
+            for (const block of event.message.content) if (block.type === "text") block.text = expected(event.message.toolCallId);
+            return { message: { ...event.message } };
+          }
           return { message: { ...event.message, content: [{ type: "text", text: expected(event.message.toolCallId) }] } };
         }
       });
@@ -68,7 +73,25 @@ test.each([false, true])("Read groups survive rebuild and lifecycle changes with
       fauxAssistantMessage(["c", "d"].map(id => ({ type: "toolCall", id, name: "read", arguments: { path: `${id}.ts` } })), { stopReason: "toolUse" }),
       fauxAssistantMessage("Done"),
     ]);
-    await session.prompt("Read the new files");
+    const liveRows = new Map<string, ToolExecutionComponent>();
+    const executionPaints = new Map<string, string>(), messagePaints = new Map<string, string>();
+    const paintLive = () => [...liveRows.values()].flatMap(row => row.render(100)).map(stripTerminalSequences).join("\n");
+    const unsubscribe = session.subscribe(event => {
+      if (event.type === "tool_execution_end" && event.toolName === "read") {
+        const row = new ToolExecutionComponent("read", event.toolCallId, { path: `${event.toolCallId}.ts` }, { showImages: false },
+          session.getToolDefinition("read"), { requestRender() {} } as never, cwd);
+        row.updateResult({ ...event.result, isError: event.isError });
+        liveRows.set(event.toolCallId, row);
+        executionPaints.set(event.toolCallId, paintLive());
+      } else if (event.type === "message_end" && event.message.role === "toolResult") {
+        messagePaints.set(event.message.toolCallId, paintLive());
+      }
+    });
+    try { await session.prompt("Read the new files"); } finally { unsubscribe(); }
+    for (const id of ["c", "d"]) {
+      assert(executionPaints.get(id)?.includes(`fresh content ${id}`));
+      assert(messagePaints.get(id)?.includes(expected(id)), messagePaints.get(id));
+    }
     assert.deepEqual(executed.toSorted(), ["fresh content c", "fresh content d"]);
     assert.deepEqual(finalized, [expected("c"), expected("d")]);
     const persisted = sessionManager.getEntries().flatMap(entry => entry.type === "message" && entry.message.role === "toolResult"

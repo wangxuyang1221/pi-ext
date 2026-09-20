@@ -86,7 +86,7 @@ test("result priority preserves final content, status and details without replay
   assert.equal(groups.resolve(b).content?.[0]?.text, "message only");
 });
 
-test.each([false, true])("final message revisions reflow same-width views when the execution result is an image: %s", (initialImage) => {
+test.each([[false, false], [true, false], [false, true], [true, true]])("final message reflows image=%s with shared content=%s", (initialImage, sharedContent) => {
   const h = harness();
   const scans = vi.spyOn(h.sessionManager, "buildContextEntries");
   try {
@@ -99,7 +99,9 @@ test.each([false, true])("final message revisions reflow same-width views when t
     b.updateResult(initial);
     if (initialImage) assert.doesNotMatch(plain(a), /Read 3 files/u);
     else assert.match(plain(a), /Read 3 files/u);
-    const final = initialImage ? result("revised middle") : image;
+    const revised = initialImage ? result("revised middle") : image;
+    if (sharedContent) (initial.content as Array<{ type: string }>).splice(0, initial.content.length, ...revised.content);
+    const final = sharedContent ? { ...initial } : revised;
     h.emit("message_end", { message: { role: "toolResult", toolName: "read", toolCallId: "b", ...final } });
     // Native message_end requests a paint without replaying the tool's renderer slots.
     if (initialImage) {
@@ -121,6 +123,29 @@ test.each([false, true])("final message revisions reflow same-width views when t
     assert.equal(h.cache.stats().counts.misses, stats.counts.misses);
     assert.equal(scans.mock.calls.length, 0);
   } finally { scans.mockRestore(); h.close(); }
+});
+
+test("final promotion refreshes in-place details once even when content and status are unchanged", () => {
+  const h = harness();
+  try {
+    h.declare(["a"]);
+    const a = h.row("a");
+    const shared = { ...result("source"), details: { truncation: { truncated: false } } };
+    h.emit("tool_execution_end", { toolName: "read", toolCallId: "a", result: shared, isError: false });
+    a.updateResult(shared);
+    assert.doesNotMatch(plain(a), /truncated/u);
+    shared.details.truncation.truncated = true;
+    const final = { role: "toolResult", toolName: "read", toolCallId: "a", ...shared };
+    h.emit("message_end", { message: final });
+    assert.match(plain(a), /truncated/u);
+    const stats = h.cache.stats();
+    for (let i = 0; i < 3; i++) {
+      h.emit("message_end", { message: final });
+      assert.match(plain(a), /truncated/u);
+    }
+    assert.equal(h.cache.stats().layouts.misses, stats.layouts.misses);
+    assert.equal(h.cache.stats().counts.misses, stats.counts.misses);
+  } finally { h.close(); }
 });
 
 test("hydrated results have final-message priority and reject late execution events", () => {

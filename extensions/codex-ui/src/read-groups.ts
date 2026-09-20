@@ -130,8 +130,10 @@ export class ReadGroups {
     // settled sources are consumed once, while partial snapshots can keep advancing.
     if (!record || priority < record.resultPriority || (priority === record.resultPriority && source !== "partial")) return;
     const wasKnown = record.known, image = record.hasImage;
+    const promoted = priority > record.resultPriority;
     record.known = true; record.resultPriority = priority;
-    this.setResult(record, result, source === "partial", error);
+    // Final-message hooks may mutate shared content/details in place before promotion.
+    this.setResult(record, result, source === "partial", error, promoted);
     if (!wasKnown || image !== record.hasImage) this.reflowMember(record);
   }
 
@@ -185,10 +187,10 @@ export class ReadGroups {
     Object.assign(member, { path, fullPath, offset: args?.offset, limit: args?.limit }); this.changed(member);
   }
 
-  private setResult(member: ReadMember, result: ReadResult, partial: boolean, error: boolean): void {
+  private setResult(member: ReadMember, result: ReadResult, partial: boolean, error: boolean, forceRefresh = false): void {
     const status = partial ? "running" : error ? "failed" : "completed";
     const details = result.details && typeof result.details === "object" ? result.details as ReadToolDetails : undefined;
-    if (member.content === result.content && member.details === details && member.status === status) return;
+    if (!forceRefresh && member.content === result.content && member.details === details && member.status === status) return;
     member.content = result.content; member.details = details; member.status = status;
     member.hasImage = result.content?.some(block => block.type === "image") ?? false;
     this.changed(member);

@@ -114,6 +114,8 @@ PTY 使用现有 `prototypes/tool-status-prototype/smoke.py` 和新构建的生�
 
 ## Final message priority follow-up
 
+以下为 `fd605cf` 的修复记录；其同引用缓存残余见下一节。
+
 `ed18fb6` 复核确认：前置扩展通过公开 `message_end` 返回值修订 Read 消息时，监听器和历史已经是新内容，逻辑记录却因执行阶段的 `final` 锁而保留旧内容。这是首版引入的回归，不属于重复 ID 或缺失视图的妥协。
 
 - [x] 先补真实 SDK 回归。未修订消息的对照通过；开启前置修订后，历史已更新而首次真实重建仍显示旧内容，测试失败。
@@ -126,3 +128,15 @@ PTY 使用现有 `prototypes/tool-status-prototype/smoke.py` 和新构建的生�
 本轮检查结果：codex-ui 28 个文件、231 项测试通过；全仓类型检查和独立构建通过。`pnpm run check` 中 1949 项通过、5 项跳过，仍有 1 个 suite 因缺失 `prototypes/mcp-status-ui-prototype/src/codex-startup.js` 失败；独立发布校验仍缺失 `docs/goal-descendant-acceptance.md`。未修改这些基线问题。Red/Green 及验证日志在本地 `.tmp/review-verification/read-final-*`，正式测试不依赖这些日志。
 
 本轮未重跑 PTY 或图片协议终端。修复更新插件已经观察到的最终消息，不新增观察后置扩展返回值的机制，也不改变宿主管理图片附件的生命周期。图片相关断言限于逻辑分组和文本布局，不将其当成像素附件的端到端验收。验收后，用户已批准将本轮修复单独提交并推送到 `origin/fix/codex-ui-review`。
+
+## Shared-reference cache follow-up
+
+`fd605cf` 能接收更高优先级的最终消息，但 content/details 引用相同时，`setResult()` 仍会提前返回。前置 handler 原地修改共享数组或对象后，模型持有的新内容与旧派生缓存因此不一致。
+
+- [x] 真实 SDK 回归增加原地修改数组、仅浅拷贝消息的第三组。执行结果通过真实工具组件先渲染并填充缓存，再接收 `message_end`；旧代码同宽重绘失败，未修改与新数组替换两组通过。
+- [x] 优先级升级时强制刷新结果，重新计算图片标志并更新记录 revision、分组版本。同级终态和低优先级事件仍先被拒绝，不做通用深比较，也不改变 renderer 本地更新规则。
+- [x] 验证同宽重绘、连续三次真实重建、reload、tree 与压缩；补验共享数组的文本/图片双向切换、仅原地修改 details、重复最终事件不重复失效。
+
+这是有界的额外刷新：每次结果来源升级都更新派生版本，即使内容没有实际改变。稳定重绘和同级终态重放不重复提取，不增加历史扫描。
+
+本轮 codex-ui 28 个测试文件、235 项通过，全仓类型检查及独立构建通过。`pnpm run check` 为 1953 项通过、5 项跳过，仍有 1 个 MCP suite 因既有 prototype 文件缺失失败；独立发布检查仍缺少 `docs/goal-descendant-acceptance.md`。日志在本地 `.tmp/review-verification/read-reference-*`。未重跑 PTY，图片断言仍只覆盖逻辑分组与文本布局。验收后，用户已批准将本轮修复单独提交并推送到 `origin/fix/codex-ui-review`。
