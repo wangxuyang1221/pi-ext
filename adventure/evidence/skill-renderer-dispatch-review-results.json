@@ -1,0 +1,179 @@
+{
+  "auditVersion": "Pi 0.86.0",
+  "auditCommit": "ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc",
+  "node": "v24.19.0",
+  "scope": "Source components, transcript dispatch, Markdown transform chain and message conversion",
+  "substitutions": [
+    "MarkdownStub applies the real transform but does not parse Markdown",
+    "Theme, terminal styling and ASCII non-wrapping width helpers are substitutes",
+    "SourceHost supplies a substitute session/UI environment for actual addMessageToChat",
+    "No real session lifecycle, PTY, model call, reload, queue or compaction was run"
+  ],
+  "count": 8,
+  "results": [
+    {
+      "name": "native skill bypasses user transformers; only task suffix is transformed",
+      "status": "pass",
+      "output": {
+        "rows": 7,
+        "lines": [
+          "",
+          " [skill] adventure (ctrl+o to expand)",
+          "",
+          "",
+          "",
+          " Plan a quest.",
+          ""
+        ],
+        "hasBackgroundAnsi": true
+      },
+      "transformedSource": "Plan a quest."
+    },
+    {
+      "name": "task-first full snapshot uses ordinary user renderer and display-only transformer",
+      "status": "pass",
+      "output": {
+        "rows": 3,
+        "lines": [
+          "",
+          " Skill: adventure | Plan a quest.",
+          ""
+        ],
+        "hasBackgroundAnsi": true
+      },
+      "modelRole": "user",
+      "fullSnapshotPreserved": true,
+      "imagePreserved": true
+    },
+    {
+      "name": "two paragraph user declaration keeps one ordinary user box",
+      "status": "pass",
+      "output": {
+        "rows": 5,
+        "lines": [
+          "",
+          " Skill: adventure",
+          "",
+          " Plan a quest.",
+          ""
+        ],
+        "hasBackgroundAnsi": true
+      }
+    },
+    {
+      "name": "outputPad changes ordinary user horizontal padding only",
+      "status": "pass",
+      "ordinaryUserOutput": {
+        "rows": 3,
+        "lines": [
+          "",
+          "Skill: adventure | Plan a quest.",
+          ""
+        ],
+        "hasBackgroundAnsi": true
+      },
+      "nativeSkillStillHasHorizontalPadding": true
+    },
+    {
+      "name": "custom renderer replaces fallback box but retains host spacer",
+      "status": "pass",
+      "output": {
+        "rows": 2,
+        "lines": [
+          "",
+          "Skill: adventure"
+        ],
+        "hasBackgroundAnsi": false
+      },
+      "sessionRole": "custom",
+      "modelRole": "user"
+    },
+    {
+      "name": "custom entry renderer has one spacer and no imposed content box",
+      "status": "pass",
+      "output": {
+        "rows": 2,
+        "lines": [
+          "",
+          "Skill: adventure"
+        ],
+        "hasBackgroundAnsi": false
+      },
+      "undefinedRendererRows": 0
+    },
+    {
+      "name": "empty display transform suppresses user box; preceding transcript spacer remains",
+      "status": "pass",
+      "firstUserRows": 0,
+      "laterUserAddsOnlySpacerRows": 1
+    },
+    {
+      "name": "multiple skill snapshots need not use the single native skill parser",
+      "status": "pass",
+      "output": {
+        "rows": 3,
+        "lines": [
+          "",
+          " Skills: adventure, review | Plan a quest.",
+          ""
+        ],
+        "hasBackgroundAnsi": true
+      },
+      "bothSnapshotsPreserved": true
+    }
+  ],
+  "sourceRecords": [
+    {
+      "path": "packages/tui/src/tui.ts",
+      "sha256": "2ca47c56f4a4f24b8c6a4c9c9f2a06004bfc312d9dbcd0ac1921a2cae32bc675"
+    },
+    {
+      "path": "packages/tui/src/components/box.ts",
+      "sha256": "f79d30c9c263064df656dc55674b5d951bf765ffbbf658f400f449c44f6dab98"
+    },
+    {
+      "path": "packages/tui/src/components/text.ts",
+      "sha256": "3042e09dd8dcb870c23506e6fafb2dfcc095e7e375adad2fb62e447da17e5e3b"
+    },
+    {
+      "path": "packages/tui/src/components/spacer.ts",
+      "sha256": "b511acec1d33885dad23e7ab2108b2d04dff0589b3bfda53b1f7458be4381e66"
+    },
+    {
+      "path": "packages/tui/src/components/mouse-region.ts",
+      "sha256": "9dbcac616e8f8271b522b374bae29ab0b829d3771ce0ed228d6ae3da1c2be759"
+    },
+    {
+      "path": "packages/coding-agent/src/modes/interactive/components/markdown-transform.ts",
+      "sha256": "657edd0453dab59d362e0d18c330486b86a47fe7a33b8c32204db8ce23a142a9"
+    },
+    {
+      "path": "packages/coding-agent/src/modes/interactive/components/skill-invocation-message.ts",
+      "sha256": "7ec5c3e95413187aab7937740062cfa3c4dbac4754afbfa78810b6ad89ff0b27"
+    },
+    {
+      "path": "packages/coding-agent/src/modes/interactive/components/custom-message.ts",
+      "sha256": "321af8afdff8da4924a7dbf5623b5637eb160ea7d73a70e6662d8125249bde9b"
+    },
+    {
+      "path": "packages/coding-agent/src/modes/interactive/components/custom-entry.ts",
+      "sha256": "8796bd95c4b496aad74674bbfb0e286768731532ad5ab8f51e6471cfbfd9404e"
+    },
+    {
+      "path": "packages/coding-agent/src/modes/interactive/components/user-message.ts",
+      "sha256": "234d4f2544a0cb60082a6012a63576cdda4e9f99cdd0560129dd1efe5c6c7b1d"
+    },
+    {
+      "path": "packages/coding-agent/src/core/agent-session.ts",
+      "sha256": "3ea88a751cd830db66ae9348be9f8dfbd5218a01e74b445f3aee9fb87ad3e865"
+    },
+    {
+      "path": "packages/coding-agent/src/core/messages.ts",
+      "sha256": "5397e3c96c9504266e4ee8b6e88d5098b3280ee7dbb0c687b74708c62a06c8d4"
+    },
+    {
+      "path": "packages/coding-agent/src/modes/interactive/interactive-mode.ts",
+      "sha256": "01ebf39a2ce0b8939076fbd5cc78e9cad6f49f642a608cd3b2adb8d215e6c0f0"
+    }
+  ]
+}

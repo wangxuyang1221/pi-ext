@@ -1,0 +1,16 @@
+{"probe":"skill-editor-boundary-review","mode":"pinned-source","node":"v24.19.0","reviewedVersion":"0.86.0","commit":"ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc","editorSha256":"241695859d48f49c6aaba9b9cfc14c6cd28639c6c247adb4fe2c202a9e2c6e20"}
+(node:11) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ relaxing provider matching alone still does not auto-trigger beside Han characters (58.173635ms)
+✔ public Tab input bypasses boundary with multiple candidates and preserves suffix (53.753279ms)
+✔ synthetic Tab has a single-candidate behavior difference (50.269895ms)
+✔ public editor wrapper and SelectList support adjacency without private methods (4.567847ms)
+✔ public wrapper preserves native slash completion and native submission callbacks (52.074522ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 430.724672

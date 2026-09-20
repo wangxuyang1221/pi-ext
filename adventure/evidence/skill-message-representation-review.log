@@ -1,0 +1,18 @@
+(node:11) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ actual parser distinguishes the native skill shape from a user envelope (0.988073ms)
+✔ actual prompt preserves envelope snapshots, user role, images, and before_agent_start (1.323846ms)
+✔ actual steer queue carries complete per-message snapshots and images (0.533855ms)
+✔ actual followUp queue carries complete per-message snapshots and images (0.249147ms)
+✔ actual session projection restores user and custom snapshots without skill files (0.604739ms)
+✔ actual compaction projection keeps retained snapshots and drops summarized snapshots (0.501487ms)
+✔ actual custom conversion preserves user payload while custom sending skips prompt preparation (0.292921ms)
+✔ actual custom queues bypass the user queue display and text recovery bookkeeping (0.266271ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 135.416085
