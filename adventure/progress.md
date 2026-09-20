@@ -15,7 +15,8 @@
 - [Map #1](https://github.com/wangxuyang1221/pi-ext/issues/1)
 - [Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2)
 - [Planning #5](https://github.com/wangxuyang1221/pi-ext/issues/5) 已通关，输入规则已移交 Spec。
-- 当前 [Planning #7](https://github.com/wangxuyang1221/pi-ext/issues/7)，确定多 skill 快照与恢复兼容，尚未审核实施切片。
+- [Planning #7](https://github.com/wangxuyang1221/pi-ext/issues/7) 已通关，完整兼容方案已由用户确认并移交 Spec。
+- 当前等待实施切片审核。尚未创建 Implementation Issue 或修改产品。
 
 ## Evolution
 
@@ -23,7 +24,7 @@
 
 远端独立复核 `540ac13` 已合并。它补充普通 user 完整快照加显示转换等公开替代表示，纠正了最初候选不完整的问题。没有据此重新启动美化。
 
-用户确认一条消息支持多个 skill 后，单次 `/skill:name` 转换不再足够。先验证了完整 user 加后置展示 entry，随后本轮发现并实测 `message_end` 可替换 user 最终内容。再结合 `message_start` 提前创建原生卡片，可在正常 live/restore 与多条队列消费中保留卡片在正文前，并让待发送队列仍是原始输入。此为新技术候选，未被当作已批准产品方案。
+用户确认一条消息支持多个 skill 后，单次 `/skill:name` 转换不再足够。先验证了完整 user 加后置展示 entry，随后本轮发现并实测 `message_end` 可替换 user 最终内容。再结合 `message_start` 提前创建原生卡片，可在正常 live/restore 与多条队列消费中保留卡片在正文前，并让待发送队列仍是原始输入。该组合后来与公开 editor 适配一起由用户明确确认，现已移交 Spec Design；调查过程的候选标记保留为历史记录，不再作为当前待决事项。
 
 用户选择终端中其他插件生成的普通 user 消息同样识别后，#5 输入规则已完成并移交 Spec。快照时序、历史编辑与压缩修复是新发现的独立兼容主题，已建立 #7 承接，并通过原生依赖关联 #5。#7 是 Map 子 Issue；没有重新开启美化。
 
@@ -34,8 +35,7 @@
 - 已移交 Spec 的输入规则包括：`$ad` 名称过滤；完整有效引用的手写、粘贴、菜单补全等价；同一消息多个 skill；仅空格、换行、Tab 或输入边界分隔；代码与转义不触发；未知名称和读取失败均静默按普通文本发送。
 - 用户最新明确确认：重复引用只加载一次，不同 skill 按首次出现顺序组织；Tab/Enter 均选择候选且不发送；关闭菜单不删除引用；光标在名称中间不弹候选。不要重复提问这些行为。
 - 最新来源决定已移交 Spec Scope：TUI 内其他插件生成的普通 user 消息也按相同规则识别；RPC/print、assistant/tool/custom 消息不纳入。
-- #7 已确认：排队消息实际被消费、送给模型前读取 skill 文件，之后保存本次快照。排队期间修改会生效；不采用入队时固定版本。
-- #7 最新已确认：压缩后的 UI 卡片允许丢失，不要求补回或维持原位。正文遵循 Pi 正常压缩，可被摘要替代，不额外固定或重注入全文。历史快照不等于模型始终可见的活动上下文。这两项暂在 #7 维护，通关后移交 Spec。
+- 用户最新确认完整方案，#7 已关闭完成，要求已移交 Spec：消费时加载、普通 user 保存快照、提前原生展示、公开 editor 适配还原历史原文；不补回丢失卡片，不固定或重注入被压缩的全文。历史快照不等于模型始终可见的活动上下文。
 - 产品实施前审核切片，然后遵循 adventure 的独立 worker 流程。当前仍只有证据与实验，没有产品改动。
 - 文本写入遵循 `docs/agents/repository-language-policy.md`。若新增用户可见产品文案，仍须先确认语言；现已明确不写读取失败提示。
 
@@ -58,14 +58,20 @@
 
 ## Current Assumptions
 
-#7 剩余为完整技术组合的确认，不再询问压缩策略。候选是提前展示原生卡片、最终普通 user 保存快照、公开 editor factory 适配还原历史原文。不主动修复缺失的历史卡片，也不固定或重注入被压缩的 skill 正文。
+方案本身无待确认事项。实施切片草案尚未获批，拟按以下可验收结果顺序交付：
 
-公开 editor 适配是相较纯 autocomplete 多出的兼容层，用户尚未确认整套方案。它沿用现有 CodexEditor 外观和行为，不修改原生实例或原型。安装顺序、reload 避免重复包裹、fork/runtime 实际回填、原生 slash 隔离与严格版本化协议需纳入实施验收，失败时回到 #7，不以局部探针当作全部兼容性通过。
+1. 输入到模型的闭环：原生/CodexEditor 的完整美元补全与识别、idle 实际加载、同一 user 快照与原生展示、静默回退和 slash 隔离。
+2. 排队与历史继续使用：消费时版本、JSONL 持久化、reload/resume/tree/fork、历史原文回填、正常压缩、editor 安装顺序和重复 reload。
+3. 可安装交付：包入口与构建/清理/包检查、说明文档、真实 PTY 和仓库扩展组合，并负责完整 Spec 整体验收。
+
+拟依赖 1 → 2 → 3，不并行修改共享扩展和包装入口。完整字段在本轮回复中提交用户审核；审核后按 adventure 创建 Implementation Issues 保存接受的切片。
+
+已知全仓基准缺口不在本功能修复范围内，不绕过测试或捏造缺失文件。Slice 1 前核对，Slice 3 报告；若阻挡可安装产物验证则请求额外修复授权。新产品文案如有需要，写入前确认语言，优先复用 skill 自带名称/描述和原生组件。
 
 ## Continuation Point
 
-#5 已关闭完成，输入行为已移交 Spec。#7 的快照时点和压缩规则均已确认并有证据。当前向用户提交完整候选组合确认，确认后关闭 #7 并进入实施切片审核。不要重复询问卡片是否可丢失、全文是否固定、加载时点或输入规则。
+#7 已关闭完成，Spec 已标记设计确定、实施切片待审核。当前停在三个切片的审核，不再询问完整方案是否确认。用户要求调整时按 slicing 修订完整列表再审核；不得把本轮对方案的 yep 当作接受尚未呈现的切片。
 
-方案确认后将兼容集成的未覆盖项明确分配给实施/整体验收，原生 slash 隔离、历史编辑和安装顺序是验收要求，不把未验证写成已完成。若实施证明公开 API 组合无法满足已确认要求，重开 #7，不偷偷改范围或加入内部补丁。
+切片获批后创建 Map 子 Implementation Issues，设置原生依赖，将 Spec Deferred verification 的责任绑定具体 Issues，保存进度并派发首个独立 worker。skill 入口 `/Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md`；worker 需提供 adventure、develop-with-tdd 和 write-todo-list 的绝对路径并要求完整读取，不继承整段对话。
 
-#7 通过后移交 Spec。规格可实施时按 slicing 给出可验收切片供审核，未经审核不实施产品行为。完整插件加载、真实 PTY、发布包及全仓基准缺口的处理留给明确的实施/整体验收关卡。用户确认交付前 Map 与 Spec 保持 open。
+当前没有产品实现或运行中 worker。实施不满足公开 API 契约时重开 #7，不偷偷改范围或加入内部补丁。最后一个 Implementation worker 负责整体 Spec 验收与清理；用户确认交付前 Map 与 Spec 保持 open。

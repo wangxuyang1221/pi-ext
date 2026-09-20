@@ -1,5 +1,9 @@
 # Skill history and recovery audit
 
+## Subsequent approval
+
+用户随后确认完整公开 API 组合，Planning #7 已通关。有效规格见 [Spec Design](https://github.com/wangxuyang1221/pi-ext/issues/2#design)，本报告中的候选与待确认表述记录当时状态，不再代表当前停点。实现切片仍待审核，离线实验不等于产品集成验收。
+
 ## Result
 
 #7 的加载时点已由用户选择 A：实际消费排队消息时读取 skill，随后固定本次快照。本轮新增测试证明排队期间修改的正文进入本次请求，交付后再修改文件不会改写历史快照。
