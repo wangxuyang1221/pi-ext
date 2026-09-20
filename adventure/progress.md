@@ -36,7 +36,7 @@
 
 - 工作区 `/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions`，分支 `adventure/skill-mentions`。用户已批准该worktree、分支提交推送和本仓库冒险Issues维护。仅本任务，不改main、不建PR、不合并、不部署。本轮原型不改全局Pi；此前两次全局卸载/安装有单独明确批准，不推定为后续全局修改授权。
 - 只用公开API，不修改已有实例方法或原型，不改Pi上游。旧slash入口、历史及CodexEditor外观/回调/快捷键保持原样。原生skill卡片美化仍延期；本轮选定的是任务正文引用标识，不是卡片美化。
-- 新方向已移交 Spec 的 References and boundaries 与 Visual references：激活允许右侧标点，补全仍双侧空白，左侧边界不扩大；输入与发送后正文均做标签，原生卡片不变。用户选定 cube 图标 U+F01A7，图标和名称同为 #8DF9FD、常规字重、无背景和尖括号；视觉隐藏 `$`，原文仍保留 `$skill-name`。补全确认后成为整体标签，左右键整块跳过，Backspace/Delete 整块删除，撤销恢复。标点范围与 ASCII 句点例外已由 #5 确认并移交 Spec；`/` 不放宽，句点紧接名称字符时不结束引用。手写/粘贴/历史的成标时机与完整编辑契约归 #12，字体要求与降级归 #13。静默回退、去重、来源边界等旧决定继续保留。
+- 新方向已移交 Spec 的 References and boundaries 与 Visual references：激活允许右侧标点，补全仍双侧空白，左侧边界不扩大；输入与发送后正文均做标签，原生卡片不变。用户选定 cube 图标 U+F01A7，图标和名称同为 #8DF9FD、常规字重、无背景和尖括号；视觉隐藏 `$`，原文仍保留 `$skill-name`。补全确认后成为整体标签，左右键整块跳过，Backspace/Delete 整块删除，撤销恢复。标点范围与 ASCII 句点例外已由 #5 确认并移交 Spec；`/` 不放宽，句点紧接名称字符时不结束引用。#12 已确认自动成标：手写完整有效引用后输入有效分隔符才成标，粘贴/历史回填中的完整有效引用直接成标。用户决定本轮不新增复制原文操作，终端选区仍复制屏幕文字，不承诺还原美元引用。完整编辑契约继续在 #12 规划，字体要求与降级归 #13。静默回退、去重、来源边界等旧决定继续保留。
 - 消费时读取文件，队列保留原文；同一user保存任务、图片和快照。恢复不重读，仅显示当前分支已有有效关联卡片，隐藏孤立展示，不补卡、不固定或重注入已压缩全文。
 - 用户已明确旧缺文件与新功能无关，不为本任务恢复18个文件，也未授权删除旧测试或清理旧引用。保留全仓失败和本功能通过的区别。
 - 写文本前读 `docs/agents/repository-language-policy.md`。新增用户可见产品文案需确认语言，当前沿用skill元数据和原生组件，没有新增提示文案。
@@ -63,10 +63,12 @@
 - 原型复用实际Pi CLI、完整codex-ui、产品补全/加载/协议/历史adapter及原生卡片。fixture只有两个无外部动作skill与离线faux provider。用户可直接编辑/发送，通过`/prototype command`与`/prototype cube`切换。
 - `chips.ts`通过公开factory包装投影文本，getText/getExpandedText/onChange/onSubmit还原`$skill-name`。方向键跳过标签，setText保存一个undo快照完成原子删除，再恢复光标。没有修改原实例方法或prototype。曾探索内部segmenter补丁，因与公开API约定冲突已撤除，勿沿用该路线。
 - 本轮command与cube两个图标/青色测试分别Red/Green，[共10项通过](evidence/skill-ui-icons-tests.log)，独立tsc通过。四组真实PTY覆盖command/cube×Codex/native，保留原子编辑/提交断言，核验两处图标和指定青色、背景继承、单格宽度、图标不进入模型、两种图标reload往返。记录：[command/Codex](evidence/skill-ui-command.json)、[cube/Codex](evidence/skill-ui-cube.json)、[command/native](evidence/skill-ui-command-native.json)、[cube/native](evidence/skill-ui-cube-native.json)。
-- 手写/粘贴仍按原文激活，但原型输入时仅补全确认、已有草稿和正常历史回填会转标签。生产转换时机未定。宽于整行的标签、裁剪/折叠、复杂剪切、鼠标/IME、自定义键位、跨session/reload旧历史的完整语义未验收。live按文本匹配、内部投影标记和Markdown代码span都是实验，不能直接当作生产富文本架构。详细限制见README。
+- 手写/粘贴仍按原文激活，但原型输入时仅补全确认、已有草稿和正常历史回填会转标签。生产转换时机已确认，但原型未实现自动转换。宽于整行的标签已实测会拆行并丢失cube/青色，不能按当前逐行匹配方案交付。裁剪/折叠、复杂剪切、鼠标/IME、自定义键位、跨session/reload旧历史的完整语义未验收。live按文本匹配、内部投影标记和Markdown代码span都是实验，不能直接当作生产富文本架构。详细限制见README。
 - [本轮check](evidence/skill-ui-icons-check.log)仍typecheck通过、2070 passed/5 skip、同一MCP缺文件suite失败；[build](evidence/skill-ui-icons-build.log)通过，[package:check](evidence/skill-ui-icons-package-check.log)旧文档失败。本轮PTY正常退出，对应临时目录清除，无监听服务器。用户之前自行启动的tint原型与`.tmp/skill-ui-prototype-GG4yw8`保留，不能误当作本轮遗留杀掉。
 
 - #5 新增[边界验证报告](evidence/skill-reference-boundaries.md)及[实验](experiments/skill-reference-boundaries/verify.mjs)，读取真实源码并只在自动清理的临时副本上分离边界。89项断言通过，含常用标点、句点后中文/非BMP名称字符、严格候选、代码/转义与源位置。产品未改。重跑 `pnpm run check`：typecheck 通过、2070 passed/5 skipped，仍在同一 MCP 缺文件 suite 失败。没有修改测试门槛，也没有新启动服务。
+
+- #12 新增[编辑探针报告](evidence/skill-label-editing-probe.md)及[3项实验](experiments/skill-mention-ui/editing-probe.test.ts)，使用真实Editor与替代TUI host：宽度16/12/8时长标签显示失败，但原文/原子删除/撤销仍可保持；简单在输入后setText成标会多出仅撤销投影的步骤。尚未验证正式方案，不能把探针通过称为功能验收。公开API没有任意位置setCursor或undo栈访问权限，不可用私有补丁。未启动服务、未操作剪贴板。
 
 ## Current Assumptions
 
@@ -76,7 +78,7 @@ cube、青色、无底色与整体标签交互已确认，不再重选视觉。�
 
 ## Continuation Point
 
-当前关卡为 #12。下一步只问标签生成时机：推荐手写完整引用后输入有效分隔符时成标，粘贴/历史回填中的完整有效引用自动成标；较轻方案仅菜单确认成标，其他输入保持普通文字但提交仍可激活。这是候选，不是已确认决定。菜单成标与基本原子编辑已确认，不重复询问。#5 和 #11 已关闭，#13 可独立推进，Map/Spec 保持 open，Spec 修订中。
+当前关卡为 #12，尚未通关。自动成标时机和不新增复制原文操作已确认，不重复询问。下一步只问标签本身宽于整行时的显示取舍：跨行保留完整名称，或单行省略；一般剩余空间不足但整行能容纳时，候选方案是将标签整体移到下一行。确定后验证正式状态/坐标与撤销方案，不能直接迁移原型。#5 和 #11 已关闭，#13 可独立推进，Map/Spec 保持 open，Spec 修订中。
 
 原型启动：在本worktree运行 `pnpm exec node adventure/experiments/skill-mention-ui/run.mjs command`，或将command换成cube。退出自动清理，不连接真实provider；可加`--native`。仍运行上一版代码的原型先`/reload`，再通过`/prototype command`或`/prototype cube`切换。本轮使用的skill为 `/Users/wangxuyang/.agents/skills/wangxuyang/make-a-prototype/SKILL.md`，继续原型前完整读取及必要引用。
 

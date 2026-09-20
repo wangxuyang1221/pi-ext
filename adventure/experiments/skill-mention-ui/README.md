@@ -94,6 +94,10 @@ pnpm exec node adventure/experiments/skill-mention-ui/run.mjs cube --native --ca
 - [Pi rainbow-editor example](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/examples/extensions/rainbow-editor.ts)，渲染装饰参考。
 - [Pillow 12.3.0 ImageDraw](https://github.com/python-pillow/Pillow/blob/12.3.0/docs/reference/ImageDraw.rst)，Context7 匹配 12.3.0，截图栅格化与裁剪使用现有接口。
 
+## Editing probe
+
+Planning #12 已实测本原型的窄行缺口：标签宽于整行时会拆行，并丢失cube与青色。简单在输入后调用setText自动成标还会增加仅撤销投影的步骤。[报告及3项探针](../../evidence/skill-label-editing-probe.md)记录可重复证据，不将这些探针通过视为生产验收。用户已确认自动成标、不新增复制原文操作；正式编辑方案仍待验证。
+
 ## Handoff
 
 用户已选择cube，Planning #11已通关并将要求移交Spec。#5已修订通关，正式边界见Spec，勿沿用本原型的有限标点适配。当前#12处理标签生成/编辑，#13处理字体兼容。Spec仍修订中，新Implementation切片未审核，旧#8/#9/#10不覆盖本轮新增需求。
