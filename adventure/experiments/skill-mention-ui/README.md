@@ -96,7 +96,7 @@ pnpm exec node adventure/experiments/skill-mention-ui/run.mjs cube --native --ca
 
 ## Handoff
 
-用户已选择cube，Planning #11已通关并将要求移交Spec。当前推进重开的#5，补齐激活边界；#12处理标签生成/编辑，#13处理字体兼容。Spec仍修订中，新Implementation切片未审核，旧#8/#9/#10不覆盖本轮新增需求。
+用户已选择cube，Planning #11已通关并将要求移交Spec。#5已修订通关，正式边界见Spec，勿沿用本原型的有限标点适配。当前#12处理标签生成/编辑，#13处理字体兼容。Spec仍修订中，新Implementation切片未审核，旧#8/#9/#10不覆盖本轮新增需求。
 
 可复用 launcher、离线 fixture 和 PTY 断言；正式实现应重新设计文档模型、坐标、主题及历史关联。未经用户审核新切片，不把实验代码移入产品或更新日常安装。
 
