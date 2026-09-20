@@ -1,6 +1,6 @@
 # Handoff
 
-> 继承下述工作状态，从 Continuation Point 继续。完整规格以 Spec Issue 正文为准，当前关卡的已确认行为以其正文为准；报告与实验不替代用户确认。
+> 从 Continuation Point 接续。完整规格只在 Spec Issue 正文维护；证据中的历史候选不替代用户已确认要求。
 
 ## Handoff Position
 
@@ -10,71 +10,61 @@
 
 ## Current Goal or Problem
 
-本批只实现 Pi 输入框中的 `$` 行内 skill 选择与激活，使用公开 API，保留原生 skill 外观。用户选择方案 3，发送后美化延期。
+为 Pi 实现 `$` 行内 skill 选择与激活，保留原生 skill 外观。用户已通过本轮 `next` 撤销暂停，要求继续冒险。
 
 - [Map #1](https://github.com/wangxuyang1221/pi-ext/issues/1)
-- [Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2)
-- [Planning #5](https://github.com/wangxuyang1221/pi-ext/issues/5) 已通关，输入规则已移交 Spec。
-- [Planning #7](https://github.com/wangxuyang1221/pi-ext/issues/7) 已通关，完整兼容方案已由用户确认并移交 Spec。
-- 三个实施切片已由用户审核通过：[输入闭环 #8](https://github.com/wangxuyang1221/pi-ext/issues/8)、[排队与历史 #9](https://github.com/wangxuyang1221/pi-ext/issues/9)、[可安装交付 #10](https://github.com/wangxuyang1221/pi-ext/issues/10)。均为 Map 子 Issue，依赖顺序为 #8 → #9 → #10；#8 的规划前置 #7 已关闭。
-- 用户最新明确要求创建实施关卡、保存后暂停。当前已暂停，未派发 worker、未开始产品编码。
+- [Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2)，已确定，可用于实施。
+- [#8 输入闭环](https://github.com/wangxuyang1221/pi-ext/issues/8) 已由协调者验收通过。
+- 下一关 [#9 队列与历史](https://github.com/wangxuyang1221/pi-ext/issues/9)，其后 [#10 可安装交付与整体验收](https://github.com/wangxuyang1221/pi-ext/issues/10)。三个切片均已获用户审核，不重新审核同一范围。
 
 ## Evolution
 
-用户最初希望同时改善输入位置与发送后的折叠块。#3 按初始目标通关；调查缺少直接替换原生 user skill renderer 的公开入口后，用户选择只做输入。#4 通关，#6 按延期关闭，不是验收通过。旧 `handoff/handoff-20260920-152245.md` 只保留历史背景，不从其等待渲染路线的停点继续。
+首批原计划同时改善输入与发送后折叠块。用户在 #4 选择仅做输入，#6 美化延期关闭，不是验收通过。#5 确定输入规则，#7 确定快照、历史与公开 editor 适配，均已通关并移交 Spec。
 
-远端独立复核 `540ac13` 已合并。它补充普通 user 完整快照加显示转换等公开替代表示，纠正了最初候选不完整的问题。没有据此重新启动美化。
+早期 input/context 或后置展示实验不是最终路线。用户已确认 message_start 提前展示、message_end 替换同一 user、消费时加载及公开 editor 适配的组合。远端独立复核已合并，没有据此恢复美化范围。
 
-用户确认一条消息支持多个 skill 后，单次 `/skill:name` 转换不再足够。先验证了完整 user 加后置展示 entry，随后本轮发现并实测 `message_end` 可替换 user 最终内容。再结合 `message_start` 提前创建原生卡片，可在正常 live/restore 与多条队列消费中保留卡片在正文前，并让待发送队列仍是原始输入。该组合后来与公开 editor 适配一起由用户明确确认，现已移交 Spec Design；调查过程的候选标记保留为历史记录，不再作为当前待决事项。
-
-用户选择终端中其他插件生成的普通 user 消息同样识别后，#5 输入规则已完成并移交 Spec。快照时序、历史编辑与压缩修复是新发现的独立兼容主题，已建立 #7 承接，并通过原生依赖关联 #5。#7 是 Map 子 Issue；没有重新开启美化。
+上次暂停存档为 b6c75eb。本轮用户恢复后派发独立 worker 完成 #8，提交 ac9947a 与 f600f08。协调者核对证据及代码入口，独立重跑正式测试 89/89，通过本关验收。当前尚未完成恢复兼容和安装交付。
 
 ## Agreed Decisions and Constraints
 
-- 交付范围和工作约定见 [Spec](https://github.com/wangxuyang1221/pi-ext/issues/2)。不美化原生块、不 monkey patch、不改 Pi 上游或定制发行版，真正 `/skill:` 原入口保持原样。
-- worktree `/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions`，分支 `adventure/skill-mentions`，原始产品基准 `28656ed`。仅提交推送本任务资料和代码，不改 main，不创建 PR、不合并、不部署。
-- 已移交 Spec 的输入规则包括：`$ad` 名称过滤；完整有效引用的手写、粘贴、菜单补全等价；同一消息多个 skill；仅空格、换行、Tab 或输入边界分隔；代码与转义不触发；未知名称和读取失败均静默按普通文本发送。
-- 用户最新明确确认：重复引用只加载一次，不同 skill 按首次出现顺序组织；Tab/Enter 均选择候选且不发送；关闭菜单不删除引用；光标在名称中间不弹候选。不要重复提问这些行为。
-- 最新来源决定已移交 Spec Scope：TUI 内其他插件生成的普通 user 消息也按相同规则识别；RPC/print、assistant/tool/custom 消息不纳入。
-- 用户最新确认完整方案，#7 已关闭完成，要求已移交 Spec：消费时加载、普通 user 保存快照、提前原生展示、公开 editor 适配还原历史原文；不补回丢失卡片，不固定或重注入被压缩的全文。历史快照不等于模型始终可见的活动上下文。
-- 产品切片已获审核，但用户明确要求暂停。恢复前不得派发 worker 或开始实现；恢复后遵循 adventure 的独立 worker 流程。当前仍只有证据与实验，没有产品改动。
-- 文本写入遵循 `docs/agents/repository-language-policy.md`。若新增用户可见产品文案，仍须先确认语言；现已明确不写读取失败提示。
+- 操作位置 `/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions`，分支 `adventure/skill-mentions`。用户已批准该 worktree、分支提交推送和本仓库冒险 Issues 维护；仅操作本任务资料与代码，不改 main、不建 PR、不合并、不部署、不改全局 Pi。
+- 只用公开 API，不 monkey patch，不改 Pi 上游。既有 slash 入口、历史及 CodexEditor 行为保持原样。
+- 完整引用手写、粘贴、菜单等价；双侧仅空格/换行/Tab/输入边界。代码、转义、相邻标点、名称中间光标不触发。重复 skill 去重，不同 skill 按首次出现排序。Tab/Enter 选候选不发送，取消不删除引用。详细规则见 Spec，不再询问。
+- TUI 内其他插件的普通 user 也识别；RPC/print 和其他 role 不纳入。未知或不可读 skill 静默作为普通文本保留，不显示激活或失败提示。
+- 实际消费时读取文件，队列保持原文；同一 user 保存任务、图片和快照。正常卡片在正文前；恢复不重读。公开 editor factory 适配还原历史原文。
+- 仅显示当前分支有效关联卡片，隐藏孤立展示，不补回丢失卡片，不固定或重注入被压缩的全文。历史快照不等于模型当前始终可见。
+- 文本写入前读 `docs/agents/repository-language-policy.md`。新增用户可见产品文案须先确认语言，#8 沿用 skill 元数据与原生组件，未新增提示。
+- 全仓已有缺文件不在本功能修复范围。若妨碍安装产物验收，先请求额外修复授权，不能跳过测试或造文件宣称通过。
 
 ## Established Facts and Required Context
 
-- Pi 0.86.0、Node.js 22.22.2、pnpm 11.9.0 已核验。Context7 只返回 main 文档，版本结论以锁定安装包和测试为准。
-- CodexEditor 继承 CustomEditor，可叠加 `ctx.ui.addAutocompleteProvider`；不必替换编辑器。`pi.getCommands()` 提供 skill 与真实来源路径。
-- [输入 API 审计](evidence/skill-input-api-audit.md) 提供锁定源码与最初单 skill 证明。[输入实验](experiments/skill-input-feasibility.test.ts) 现为 15 项，含 native/CodexEditor 的 Tab/Enter 不误提交探针。
-- [独立复核](evidence/skill-feasibility-second-review.md) 是远端 540ac13 的报告。其 Node 24 结果为输入 5、渲染 8、消息表示 8 项。本机 Node 22 已重跑消息表示 8/8，旧日志不是本机重跑日志。
-- [多 skill 组件实验](experiments/multi-skill-native-components.test.ts) 5/5。本轮补齐构造类型要求的 `userMessage`，未改产品。
-- [前轮生命周期审计](evidence/multi-skill-lifecycle-audit.md) 与 [实验](experiments/multi-skill-lifecycle.test.ts)，前轮新增 18/18，后续该实验增至 23/23。实际 loader、extension runner、AgentSession、队列和官方离线 faux provider 均参与执行；terminal/editor 宿主是替代对象，不是完整 PTY。
-- **接续必读**：[历史编辑与恢复审计](evidence/skill-history-recovery-audit.md)。公开 editor factory 适配可清理 setText/addToHistory 的完整封装，保留底层 CodexEditor；新增 [编辑器探针](experiments/skill-history-editor.test.ts) 4/4。消费时文件版本实验通过；compaction 裁掉卡片而保留 user 时，禁用补卡仍可向模型提供完整快照；user 也被摘要覆盖后不重新注入。两项追加探针覆盖用户最新决定。
-- 最新 [组合实验日志](evidence/skill-compaction-policy-tests.log) 共 47/47，通过命令 `pnpm exec vitest run --config adventure/experiments/vitest.config.ts`。本轮涉及的生命周期与编辑器实验独立 tsc 检查通过。
-- 本轮全仓 `pnpm run check` 仍为类型检查通过、1953 tests 通过、5 skip，一个 MCP suite 缺失基准 prototype 文件失败，见最新 [日志](evidence/skill-compaction-policy-check.log)。后续 build/package:check 未执行。前轮 build 通过，package:check 缺失 `docs/goal-descendant-acceptance.md`，未修无关基准缺口。
-- 旧 [多 skill API 审计](evidence/multi-skill-api-audit.md) 的 input/context 路线不再穷尽候选。新证据说明后置展示会改变卡片位置和批次顺序；提前展示候选能避免正常场景下这两个问题。
-- 真正 `navigateTree(userId)` 移到 user 的 parent，并把持久化 user 内容交回 editor，不等于 `SessionManager.branch(userId)`。原始回填拿到完整封装，本轮公开 editor 适配已验证可还原；真实 fork/resume 集成尚待验收。
-- `message_start/end` 没有 input source 标记。提前展示探针以 `ctx.mode === "tui"` 限定终端，但会识别其他插件生成的普通 user 消息。用户已选择允许识别这些消息，来源边界不再阻碍该候选。
-- 没有运行中的 subagent、服务或真实模型请求。新测试临时 skills 位于 worktree 内并已清理。凭证、models store 和 session 均使用内存。
-- 冒险流程入口 `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md`，按阶段读取引用。
+- 当前产品提交 `f600f080f9b3dc66036ca424188bcb92592b9ce8` 已推送，验收时工作区干净。后续提交可能只更新存档，派发下一关使用实际最新 HEAD。
+- Node 22.22.2、pnpm 11.9.0、Pi 0.86.0；Context7 未提供目标版本专属文档，版本行为由安装源码与真实执行核验。
+- #8 开发入口 `extensions/skill-mentions/src/index.ts`，正式测试在 `extensions/skill-mentions/__tests__/`。已接入 typecheck/build/clean，未接入默认发布入口。
+- [#8 实施证据](evidence/skill-input-implementation.md)记录完整协议、测试、性能、版本来源、局限和复现命令。接手 #9 必读。严格版本化封装由 `protocol.ts` 提供 `decodeSnapshot(...).task`，包含 UUID requestId、任务及真实路径/正文。displayType 为 `pi-ext/skill-mentions/display-v1`。
+- 输入代码排除使用 Pi 公开 Marked lexer，补全与激活共用规则。一次清单索引，每个不同 skill 一次读取；100 KiB 混合 Markdown 补全中位 7.30 ms。性能只代表记录的本机负载。
+- #8 正式测试 89/89，协调者独立重跑一致；源码及测试独立 tsc、build 通过。真实 DefaultResourceLoader、AgentSession、离线 faux provider 与原生组件参与，但 terminal/editor 宿主为替代对象，不是 PTY。
+- [最终全仓 check](evidence/skill-input-final-check.log)：typecheck 通过、2042 passed、5 skipped，唯一 suite 失败为既有 `prototypes/mcp-status-ui-prototype/src/codex-startup.js` 缺失。[基准](evidence/skill-input-baseline-check.log)为 1953 passed、5 skipped，同一失败。worker 测试子进程清除了 PI_SUBAGENT_PARENT/LAUNCH/ID/SUBAGENT，避免已有 root fixture 误判，未跳过测试。
+- [build](evidence/skill-input-build.log)通过；[package:check](evidence/skill-input-package-check.log)因既有 `docs/goal-descendant-acceptance.md` 缺失失败。全仓 check 和发布检查均不能称为通过。
+- #9 必读[历史恢复审计](evidence/skill-history-recovery-audit.md)、[生命周期审计](evidence/multi-skill-lifecycle-audit.md)。规划实验共 47/47，日志为 [skill-compaction-policy-tests.log](evidence/skill-compaction-policy-tests.log)，只是方案证据，不替代产品集成。
+- 真正 navigateTree(userId) 移到 user 的 parent 并把持久化文本回填，不等于 SessionManager.branch(userId)。公开 editor factory 组合已在实验验证，产品仍需 #9 实现；保留 CodexEditor 外观、callbacks、快捷键和 autocomplete。
+- 如需追溯最初 API 选择，读[输入审计](evidence/skill-input-api-audit.md)及[独立复核](evidence/skill-feasibility-second-review.md)。不要从旧 handoff 的渲染路线停点继续。
+- #8 未请求真实模型，临时目录已清理，无后台服务及监听端口。
 
 ## Current Assumptions
 
-方案和切片均已确认，无待决设计提案。完整切片范围、验收、依赖和工作约束分别保存在 #8、#9、#10；Spec Deferred verification 已绑定相应责任，不在存档中维护第二份切片列表。
+尚未验收的都是后续产品集成，不是待定用户意图。#9 负责实际 steer/followUp、多条队列顺序、消费时版本变化、JSONL 中断/失败、reload/resume/tree/fork、editor 适配与压缩。#10 负责真实 PTY、中文输入、自定义快捷键、扩展组合、安装产物及完整 Spec。
 
-未验证的仍是产品实现与完整集成，不是用户意图。当前只有离线探针通过，不能据此关闭 Implementation。已知全仓基准缺口不在本功能修复范围内，#8 开始前核对，#10 负责报告；若阻挡安装产物验收则请求额外修复授权。新增产品文案仍须先确认语言。
+其他 extension 的 message_end、Markdown transformer、editor factory 组合尚无完整产品证据。若公开 API 不能满足契约，重开 #7，不擅改范围或使用内部补丁。
 
 ## Continuation Point
 
-已按用户要求手动保存并暂停。#8、#9、#10 均 open 且未开始，Execution 等待 worker；不把用户此前批准方案和切片理解为撤销暂停。等待用户明确恢复后再继续，不自动运行下一关。
+#8 已通过，继续 #9，不需要等待用户重新授权恢复。主代理担任协调者，一次推进一个 Implementation；为 #9 派发新上下文独立 worker，不继承整段会话、不继续由 #8 worker 编码下一关。派发前核对工作区及运行中 worker，避免重复施工。
 
-恢复时先读 Map、Spec、本存档和 #8，核对本地/远端 HEAD 与未提交改动。首个可执行关卡为 #8，其规划前置 #7 已完成。建关基准为 `9633d68677647a60b98552ce5ad4bcb4c2fae96b`；后续保存只有资料变化，派发时用实际最新 HEAD 更新工作基准。无需重建 Issues 或重新审核同一套切片。
-
-恢复后由主代理协调，派发独立 worker 执行 #8，不继承整段对话。向 worker 提供完整任务、Spec、Issue、工作区及以下 skill 绝对路径，并要求行动前完整读取 SKILL.md 与必要引用：
+提供 Map、Spec、#9、此存档、实施与恢复证据、实际 HEAD 和 worktree。worker 行动前完整读取以下 skills 与必要引用：
 
 - `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md`
 - `/Users/wangxuyang/.agents/skills/wangxuyang/develop-with-tdd/SKILL.md`
 - `/Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md`
 
-worker 在 Implementation 正文维护执行计划。主代理验收后按 #8 → #9 → #10 推进；若公开 API 不能满足契约则重开 #7，不偷偷改范围或加入内部补丁。#10 的 worker 负责完整 Spec 整体验收与清理，用户确认交付前 Map 与 Spec 保持 open。
-
-当前没有运行中 worker、服务或本任务占用的监听端口。
+执行计划只维护在 Implementation 正文；worker 提交代码、测试及证据，协调者记录 Acceptance。通关后用 handoff 更新此存档、提交推送、更新并核对 Map，再继续 #10。最终由 #10 worker 核对完整 Spec 与延期验证并清理资源，协调者验收保存后等待用户确认；用户确认前 Map/Spec 保持 open。
