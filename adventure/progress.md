@@ -32,7 +32,12 @@
 ## Established Facts and Required Context
 
 - 项目在 `package.json` 锁定 Pi `0.86.0`。本机 Node.js `v22.22.2`，pnpm `11.9.0`。
-- `extensions/codex-ui/src/components.ts` 中 `CodexEditor` 继承 `CustomEditor`；`src/index.ts` 通过 `ctx.ui.setEditorComponent` 安装它。已有定制编辑器，不宜另一个插件无协调地替换。
+- `extensions/codex-ui/src/components.ts` 中 `CodexEditor` 继承 `CustomEditor`；`src/index.ts` 通过 `ctx.ui.setEditorComponent` 安装它。Pi `ctx.ui.addAutocompleteProvider` 可以直接为它叠加 `$` 补全，不必再替换编辑器。
+- 输入可通过公开 `input` transform 接入原生 skill 展开，单 skill 的最小链路已验证。上游 slash 展开只识别消息开头的一次调用，多 skill 需要后续设计。
+- 发送后的原生 `SkillInvocationMessageComponent` 没有公开 renderer 替换入口。它不走 Markdown transformer，也不是 custom message。保持原生消息语义并改变该块布局，需要上游新接口或依赖内部实现的插件补丁。
+- [输入 API 报告](evidence/skill-input-api-audit.md) 和 [渲染 API 报告](evidence/skill-rendering-api-audit.md) 保存锁定版本源码、在线比对与边界。恢复 #4 必读。
+- [输入实验](experiments/skill-input-feasibility.test.ts) 11 项通过，运行 `pnpm exec vitest run --config adventure/experiments/vitest.config.ts`。使用实际上游类和 CodexEditor，但不是完整 TUI/session 端到端验收。没有运行 prototype patch，也没有证明最终产品可发布。
+- `pnpm run check` 的类型检查通过，1953 项测试通过、5 项跳过，但一个 MCP suite 因基准缺失 prototype 文件失败。单独 build 通过；package:check 因基准缺失 `docs/goal-descendant-acceptance.md` 失败。细节和日志见输入 API 报告，未修复这些无关基准缺口。
 - 截图是发送后的 skill 折叠块，不是输入时的候选菜单。
 - GitHub Map 已原生关联 Spec 与 Planning 子 Issues；#3 已关闭，#4、#5、#6 未通关。
 - 当前未改产品代码，未启动测试服务或真实模型会话。
@@ -41,12 +46,14 @@
 
 ## Current Assumptions
 
-尚未确认仅用公开扩展 API 能同时完成两个目标。输入事件、编辑器替换、Markdown transformer 和自定义消息 renderer 都是候选接入点，但它们各自适用的消息类型与原生 skill 展示边界仍需查证。
+候选路线尚未获用户确认：推荐补上游正式 skill renderer 接口，再由 codex-ui 定制显示；代价是上游采纳前需要维护 Pi 补丁或定制版本。另一条路线是在插件内对导出组件的内部 prototype 做有版本检查和降级的补丁，但兼容性及完整生命周期尚未实验验证。较轻的选择是先只交付 `$` 激活，暂缓原生块美化，但这会缩小已确认的双目标范围，需要用户明确同意。
+
+`请用 $adventure` 的现成补全链路已通过；`请用$adventure` 不会默认自动触发。紧邻文本、多个 skill、转义、手写引用是否等价于菜单选择等规则留给 #5。
 
 ## Continuation Point
 
-方向关已通关并保存，现在继续 #4。核验 Pi 0.86.0 的 skill 枚举、autocomplete provider、输入转换、skill 内容展开、原生折叠块渲染及历史恢复。先读取后续形成的 `evidence/` 报告，避免重复查证。
+#4 的事实查证完成，关卡保持 open，等待用户决定渲染路线：上游正式接口、插件内部兼容补丁，或先缩小范围只交付输入功能。不要重复询问两项功能是否都想要，该目标已经确认；当前问题是为此接受何种维护成本。涉及修改另一仓库或 Pi 全局安装时，要另行确认位置与授权，当前授权仅覆盖本冒险 worktree 和指定 GitHub 仓库。
 
-本 session 已按 research skill 派发 `skill-rendering-audit` 调研原生 skill 渲染，输出目标为 `evidence/skill-rendering-api-audit.md`；主代理查编辑器与激活链路。跨 session 恢复时先检查文件与原代理是否仍运行，不重复施工。该后台任务不是 Implementation，不修改产品代码。
+渲染调研 subagent 已完成并关闭。报告已由主代理核对并修正多 XML block 的解析描述。未启动服务器，子代理进程及其 tmux server 已停止，没有监听端口；实验临时夹具已删除。
 
-形成带证据的可行路线后，将维护成本或用户可见行为的必要取舍交给用户确认。然后继续 #5 与 #6，形成 Spec，按 slicing 审核实施切片。所有实施完成后运行项目完整检查及 Spec 整体验收，提交用户确认，用户确认前 Map 与 Spec 保持 open。
+用户选择路线后，对新增或受影响部分补验并完成 #4，再继续 #5 与 #6。形成 Spec 后按 slicing 审核实施切片。产品实施前还需确认用户可见文案语言。所有实施完成后运行完整检查及 Spec 整体验收，提交用户确认，用户确认前 Map 与 Spec 保持 open。
