@@ -3,6 +3,7 @@ import { CombinedAutocompleteProvider, Editor, type EditorTheme, type TUI } from
 import type { SlashCommandInfo, Theme } from "@earendil-works/pi-coding-agent";
 import { CodexEditor } from "../../codex-ui/src/components.js";
 import { skillAutocomplete } from "../src/autocomplete.js";
+import { loadSnapshot } from "../src/loading.js";
 
 const identity = (text: string) => text;
 const theme: EditorTheme = { borderColor: identity, selectList: { selectedPrefix: identity, selectedText: identity, description: identity, scrollInfo: identity, noMatch: identity } };
@@ -28,6 +29,27 @@ it("queries only discovered skill names, preserves metadata and does not match d
 });
 
 for (const kind of ["native", "codex"]) {
+  it(`${kind}: handwritten, bracketed-paste and menu references load identically`, async () => {
+    const expected = "用 $alpha $beta";
+    const handwritten = editorFor(kind);
+    for (const char of expected) handwritten.handleInput(char);
+    const pasted = editorFor(kind);
+    pasted.handleInput(`\x1b[200~${expected}\x1b[201~`);
+    const selected = editorFor(kind); selected.setText("用 ");
+    for (const char of "$al") selected.handleInput(char);
+    await settle(); selected.handleInput("\t"); selected.handleInput(" ");
+    for (const char of "$be") selected.handleInput(char);
+    await settle(); selected.handleInput("\r");
+    for (const editor of [handwritten, pasted, selected]) {
+      expect(editor.getText()).toBe(expected);
+      const snapshot = await loadSnapshot(editor.getText(), commands, async path => `BODY ${path}`);
+      expect(snapshot?.task).toBe(expected);
+      expect(snapshot?.skills.map(skill => [skill.name, skill.location, skill.body])).toEqual([
+        ["alpha", "/skills/alpha/SKILL.md", "References are relative to /skills/alpha.\n\nBODY /skills/alpha/SKILL.md"],
+        ["beta", "/skills/beta/SKILL.md", "References are relative to /skills/beta.\n\nBODY /skills/beta/SKILL.md"],
+      ]);
+    }
+  });
   it(`${kind}: cancel keeps a complete reference and slash completion still works`, async () => {
     const editor = editorFor(kind), submit = vi.fn(); editor.onSubmit = submit;
     for (const char of "$alpha") editor.handleInput(char);

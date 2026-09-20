@@ -68,10 +68,10 @@ Marked 的 lexer 和 token 字段以安装的 `marked.d.ts` 核验；遍历成�
 
 ## Functional verification
 
-[正式测试日志](skill-input-tests.log)为 6 个文件、87 项通过，没有新增 skip：
+[正式测试日志](skill-input-tests.log)为 6 个文件、89 项通过，没有新增 skip：
 
 - `references.test.ts` 19 项，输入边界、光标、Markdown 嵌套与源坐标。
-- `autocomplete.test.ts` 19 项，实际 Editor 与 CodexEditor 的 Tab/Enter、取消、两侧正文/多行、代码排除及原生 slash 补全。
+- `autocomplete.test.ts` 21 项，实际 Editor 与 CodexEditor 的 Tab/Enter、取消、两侧正文/多行、代码排除及原生 slash 补全；实际逐字输入、bracketed paste、菜单选择分别产生相同文本和加载结果。两项等价性补充测试直接通过，无需改产品代码。
 - `protocol.test.ts` 18 项，协议 round-trip、非法字段、普通 JSON 和原生历史隔离。
 - `loading.test.ts` 13 项，去重、稳定顺序、部分名/未知名、失败、正文不递归、10/100 个 skill 的清单访问及读取次数。
 - `registration.test.ts` 8 项，TUI 补全注册、其他模式和 assistant/tool/custom/system 排除。
@@ -121,7 +121,7 @@ env -u PI_SUBAGENT_PARENT -u PI_SUBAGENT_LAUNCH -u PI_SUBAGENT -u PI_SUBAGENT_ID
 | Check | Result |
 | --- | --- |
 | [基准 check](skill-input-baseline-check.log) | typecheck 通过；1953 passed、5 skipped；1 个既有 MCP suite 收集失败 |
-| [最终 check](skill-input-final-check.log) | 包含新增源码的 typecheck 通过；2040 passed、5 skipped；同一个 MCP suite 收集失败，无新增失败 |
+| [最终 check](skill-input-final-check.log) | 包含新增源码的 typecheck 通过；2042 passed、5 skipped；同一个 MCP suite 收集失败，无新增失败 |
 | [单独 build](skill-input-build.log) | 通过，包含 skill-mentions |
 | [单独 package:check](skill-input-package-check.log) | 既有 `docs/goal-descendant-acceptance.md` 缺失，失败 |
 | 新扩展测试独立 tsc | 通过 |
