@@ -19,8 +19,10 @@ export interface ReadMember {
   hasImage?: boolean;
 }
 type ReadResult = { content?: ReadMember["content"]; details?: unknown };
+const RESULT_PRIORITY = { partial: 1, execution: 2, message: 3 } as const;
+type ResultSource = keyof typeof RESULT_PRIORITY;
 // Source calls without execution/result facts stay standalone, even when a view exists.
-interface ReadRecord extends ReadMember { known: boolean; final: boolean }
+interface ReadRecord extends ReadMember { known: boolean; resultPriority: number }
 export interface ReadView { local: ReadMember; generation: number }
 export interface ReadRowState { readView?: ReadView }
 
@@ -52,7 +54,7 @@ export class ReadGroups {
       for (const message of sessionEntryToContextMessages(entry)) {
         if (message.role === "assistant") this.discover(message, true);
         else if (message.role === "toolResult" && message.toolName === "read") {
-          this.result(message.toolCallId, message, false, message.isError);
+          this.result(message.toolCallId, message, "message", message.isError);
         }
       }
     }
@@ -84,10 +86,10 @@ export class ReadGroups {
         || this.occurrences.get(block.id) !== 1) { current = undefined; continue; }
       let record = this.records.get(block.id);
       if (!record) {
-        record = Object.assign(this.createMember(block.id), { known: false, final: false });
+        record = Object.assign(this.createMember(block.id), { known: false, resultPriority: 0 });
         this.records.set(block.id, record);
       }
-      if (!record.final) this.setArgs(record, block.arguments, this.cwd);
+      if (record.resultPriority < RESULT_PRIORITY.execution) this.setArgs(record, block.arguments, this.cwd);
       if (!current) next.push(current = []);
       current.push(block.id);
     }
@@ -114,20 +116,22 @@ export class ReadGroups {
 
   start(id: string, args: unknown): void {
     const record = this.unique(id);
-    if (!record || record.final) return;
+    if (!record || record.resultPriority >= RESULT_PRIORITY.execution) return;
     this.setArgs(record, args, this.cwd);
     record.known = true;
     if (record.status !== "running") { record.status = "running"; this.changed(record); }
     this.reflowMember(record);
   }
 
-  result(id: string, result: ReadResult, partial: boolean, error: boolean): void {
+  result(id: string, result: ReadResult, source: ResultSource, error: boolean): void {
     const record = this.unique(id);
-    // Execution end already contains the post-hook result; later message_end is a duplicate.
-    if (!record || record.final) return;
+    const priority = RESULT_PRIORITY[source];
+    // message_end may replace the execution result. Never accept lower-priority replays;
+    // settled sources are consumed once, while partial snapshots can keep advancing.
+    if (!record || priority < record.resultPriority || (priority === record.resultPriority && source !== "partial")) return;
     const wasKnown = record.known, image = record.hasImage;
-    record.known = true; record.final = !partial;
-    this.setResult(record, result, partial, error);
+    record.known = true; record.resultPriority = priority;
+    this.setResult(record, result, source === "partial", error);
     if (!wasKnown || image !== record.hasImage) this.reflowMember(record);
   }
 

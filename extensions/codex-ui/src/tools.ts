@@ -215,7 +215,7 @@ export function registerCodexTools(
       bashGroups.discover(event.message);
       readGroups.discover(event.message);
       if (event.message.role === "toolResult" && event.message.toolName === "read") {
-        readGroups.result(event.message.toolCallId, event.message, false, event.message.isError);
+        readGroups.result(event.message.toolCallId, event.message, "message", event.message.isError);
       }
     }
   });
@@ -225,11 +225,11 @@ export function registerCodexTools(
   pi.on("tool_execution_update", (event, ctx) => {
     if (ctx.mode === "tui" && event.toolName === "read") {
       readGroups.start(event.toolCallId, event.args);
-      readGroups.result(event.toolCallId, event.partialResult, true, false);
+      readGroups.result(event.toolCallId, event.partialResult, "partial", false);
     }
   });
   pi.on("tool_execution_end", (event, ctx) => {
-    if (ctx.mode === "tui" && event.toolName === "read") readGroups.result(event.toolCallId, event.result, false, event.isError);
+    if (ctx.mode === "tui" && event.toolName === "read") readGroups.result(event.toolCallId, event.result, "execution", event.isError);
   });
 
   const baseRead = getReadDefinition(process.cwd());

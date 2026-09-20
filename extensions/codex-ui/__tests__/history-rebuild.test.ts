@@ -7,12 +7,15 @@ import { createAgentSession, DefaultResourceLoader, initTheme, InteractiveMode, 
 import { Container, stripTerminalSequences } from "@earendil-works/pi-tui";
 import { registerCodexTools } from "../src/tools.js";
 
-test("Read groups survive native rebuild, live completion, SDK reload, tree and compaction", async () => {
+test.each([false, true])("Read groups survive rebuild and lifecycle changes with final message replacement: %s", async (replaceFinal) => {
   initTheme("dark", false);
   mkdirSync(".tmp", { recursive: true });
   const cwd = mkdtempSync(join(process.cwd(), ".tmp/codex-history-"));
   const settingsManager = SettingsManager.inMemory({ showCacheMissNotices: false, compaction: { keepRecentTokens: 10 } });
   let firstKeptEntryId = "";
+  const executed: string[] = [], finalized: string[] = [];
+  const text = (content: Array<{ type: string; text?: string }>) => content.filter(block => block.type === "text").map(block => block.text).join("\n");
+  const expected = (id: string) => `${replaceFinal ? "final" : "fresh"} content ${id}`;
   const sessionManager = SessionManager.inMemory(cwd);
   sessionManager.appendMessage(fauxAssistantMessage(["a", "b"].map(id => ({ type: "toolCall", id, name: "read", arguments: { path: `${id}.ts` } })), { stopReason: "toolUse" }));
   for (const id of ["a", "b"]) sessionManager.appendMessage({ role: "toolResult", toolCallId: id, toolName: "read", content: [{ type: "text", text: `content ${id}` }], isError: false, timestamp: 1 });
@@ -21,7 +24,19 @@ test("Read groups survive native rebuild, live completion, SDK reload, tree and 
   const loader = new DefaultResourceLoader({ cwd, agentDir: join(cwd, "agent"), settingsManager,
     noExtensions: true, noSkills: true, noThemes: true, noContextFiles: true, noPromptTemplates: true,
     extensionFactories: [pi => {
+      pi.on("tool_execution_end", event => {
+        if (event.toolName === "read") executed.push(text(event.result.content));
+      });
+      pi.on("message_end", event => {
+        if (replaceFinal && event.message.role === "toolResult" && event.message.toolName === "read") {
+          return { message: { ...event.message, content: [{ type: "text", text: expected(event.message.toolCallId) }] } };
+        }
+      });
+    }, pi => {
       registerCodexTools(pi, undefined, { getExecutionOptions: () => ({}) });
+      pi.on("message_end", event => {
+        if (event.message.role === "toolResult" && event.message.toolName === "read") finalized.push(text(event.message.content));
+      });
       pi.on("session_before_compact", () => ({ compaction: { summary: "Earlier reads summarized", firstKeptEntryId, tokensBefore: 100 } }));
     }],
   });
@@ -54,11 +69,17 @@ test("Read groups survive native rebuild, live completion, SDK reload, tree and 
       fauxAssistantMessage("Done"),
     ]);
     await session.prompt("Read the new files");
-    mode.rebuildChatFromMessages();
-    assert.equal(plain().match(/Read 2 files/gu)?.length, 2);
-    for (const id of ["c", "d"]) assert(plain().includes(`fresh content ${id}`));
-    mode.rebuildChatFromMessages();
-    assert.equal(plain().match(/Read 2 files/gu)?.length, 2);
+    assert.deepEqual(executed.toSorted(), ["fresh content c", "fresh content d"]);
+    assert.deepEqual(finalized, [expected("c"), expected("d")]);
+    const persisted = sessionManager.getEntries().flatMap(entry => entry.type === "message" && entry.message.role === "toolResult"
+      && ["c", "d"].includes(entry.message.toolCallId) ? [text(entry.message.content)] : []);
+    assert.deepEqual(persisted, finalized);
+    for (let i = 0; i < 3; i++) {
+      mode.rebuildChatFromMessages();
+      assert.equal(plain().match(/Read 2 files/gu)?.length, 2);
+      for (const id of ["c", "d"]) assert(plain().includes(expected(id)), plain());
+      if (replaceFinal) assert.doesNotMatch(plain(), /fresh content/u);
+    }
     await session.reload({ beforeSessionStart: async () => mode.rebuildChatFromMessages() });
     assert.equal(plain().match(/Read 2 files/gu)?.length, 2);
     for (const id of ["a", "b"]) assert(plain().includes(`content ${id}`));
@@ -67,7 +88,7 @@ test("Read groups survive native rebuild, live completion, SDK reload, tree and 
     await session.navigateTree(oldResult.id);
     mode.rebuildChatFromMessages();
     assert.equal(plain().match(/Read 2 files/gu)?.length, 1);
-    assert.doesNotMatch(plain(), /fresh content/u);
+    assert.doesNotMatch(plain(), /(?:fresh|final) content/u);
     await session.navigateTree(leaf);
     mode.rebuildChatFromMessages();
     assert.equal(plain().match(/Read 2 files/gu)?.length, 2);
@@ -76,6 +97,6 @@ test("Read groups survive native rebuild, live completion, SDK reload, tree and 
     mode.rebuildChatFromMessages();
     assert.equal(plain().match(/Read 2 files/gu)?.length, 1);
     assert.doesNotMatch(plain(), /content [ab]/u);
-    for (const id of ["c", "d"]) assert(plain().includes(`fresh content ${id}`));
+    for (const id of ["c", "d"]) assert(plain().includes(expected(id)));
   } finally { session.dispose(); rmSync(cwd, { recursive: true, force: true }); }
 });

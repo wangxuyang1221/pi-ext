@@ -55,6 +55,87 @@ test("source events update same-width views before persistence and old callbacks
   } finally { scans.mockRestore(); h.close(); }
 });
 
+test("result priority preserves final content, status and details without replay invalidations", () => {
+  const groups = new ReadGroups(new ToolRenderCache());
+  groups.discover(message([call("a"), call("b")]), true);
+  const a = groups.bind({ state: {}, toolCallId: "a" } as never);
+  const b = groups.bind({ state: {}, toolCallId: "b" } as never);
+  groups.result("a", result("first partial"), "partial", false);
+  groups.result("a", result("next partial"), "partial", false);
+  assert.equal(groups.resolve(a).content?.[0]?.text, "next partial");
+  groups.result("a", result("execution output"), "execution", false);
+  assert.equal(groups.resolve(a).status, "completed");
+  groups.result("a", result("late partial"), "partial", false);
+  assert.equal(groups.resolve(a).content?.[0]?.text, "execution output");
+  const final = { ...result("Operation aborted"), details: { marker: "final details" } };
+  groups.result("a", final, "message", true);
+  // A final message also works without a preceding execution event.
+  groups.result("b", result("message only"), "message", false);
+  const member = groups.resolve(a), revision = member.revision, version = member.group.version;
+  assert.equal(member.content, final.content); assert.equal(member.details, final.details);
+  assert.equal(member.status, "failed");
+  for (let i = 0; i < 3; i++) {
+    groups.result("a", structuredClone(final), "message", true);
+    groups.result("a", result("late execution"), "execution", false);
+    groups.result("a", result("late partial"), "partial", false);
+    groups.start("a", { path: "late.ts" });
+  }
+  assert.equal(member.revision, revision); assert.equal(member.group.version, version);
+  assert.equal(member.content, final.content); assert.equal(member.details, final.details);
+  assert.equal(member.status, "failed"); assert.equal(member.path, "a.ts");
+  assert.equal(groups.resolve(b).content?.[0]?.text, "message only");
+});
+
+test.each([false, true])("final message revisions reflow same-width views when the execution result is an image: %s", (initialImage) => {
+  const h = harness();
+  const scans = vi.spyOn(h.sessionManager, "buildContextEntries");
+  try {
+    h.declare(["a", "b", "c"]);
+    const a = h.row("a"), b = h.row("b"), c = h.row("c");
+    a.updateResult(h.end("a")); c.updateResult(h.end("c"));
+    const image = { content: [{ type: "image" as const, mimeType: "image/png", data: "" }], isError: false };
+    const initial = initialImage ? image : result("original middle");
+    h.emit("tool_execution_end", { toolName: "read", toolCallId: "b", result: initial, isError: false });
+    b.updateResult(initial);
+    if (initialImage) assert.doesNotMatch(plain(a), /Read 3 files/u);
+    else assert.match(plain(a), /Read 3 files/u);
+    const final = initialImage ? result("revised middle") : image;
+    h.emit("message_end", { message: { role: "toolResult", toolName: "read", toolCallId: "b", ...final } });
+    // Native message_end requests a paint without replaying the tool's renderer slots.
+    if (initialImage) {
+      assert.match(plain(a), /Read 3 files/u); assert.match(plain(a), /revised middle/u);
+      assert.deepEqual(b.render(100), []); assert.deepEqual(c.render(100), []);
+    } else {
+      assert.doesNotMatch(plain(a), /Read 3 files|original middle|b.ts|c.ts/u);
+      assert.match(plain(b), /b.ts.*Image loaded/u); assert.match(plain(c), /content c/u);
+    }
+    const painted = [a, b, c].map(plain);
+    const stats = h.cache.stats();
+    for (let i = 0; i < 3; i++) {
+      h.emit("message_end", { message: { role: "toolResult", toolName: "read", toolCallId: "b", ...structuredClone(final) } });
+      h.end("b", result("late execution"));
+      h.emit("tool_execution_update", { toolName: "read", toolCallId: "b", args: { path: "late.ts" }, partialResult: result("late partial") });
+      assert.deepEqual([a, b, c].map(plain), painted);
+    }
+    assert.equal(h.cache.stats().layouts.misses, stats.layouts.misses);
+    assert.equal(h.cache.stats().counts.misses, stats.counts.misses);
+    assert.equal(scans.mock.calls.length, 0);
+  } finally { scans.mockRestore(); h.close(); }
+});
+
+test("hydrated results have final-message priority and reject late execution events", () => {
+  const h = harness();
+  try {
+    h.sessionManager.appendMessage(message([call("a"), call("b")]) as never);
+    for (const id of ["a", "b"]) h.sessionManager.appendMessage({ role: "toolResult", toolName: "read", toolCallId: id, ...result(`persisted ${id}`), timestamp: 1 });
+    h.emit("session_tree");
+    const a = h.row("a"), b = h.row("b");
+    h.end("b", result("late execution"));
+    assert.match(plain(a), /Read 2 files/u); assert.match(plain(a), /persisted b/u);
+    assert.doesNotMatch(plain(a), /late execution/u); assert.deepEqual(b.render(100), []);
+  } finally { h.close(); }
+});
+
 test("source duplicates stay local across messages while repeated snapshots and replacement views do not count as calls", () => {
   for (const later of [false, true]) {
     const h = harness();
@@ -150,7 +231,7 @@ test("one streaming update touches only its record and candidate regardless of h
       const ids = [`cost-${i}`, `cost-${i + 1}`];
       groups.discover(message(ids.map(call)), true);
       for (const id of ids) {
-        groups.result(id, result("partial"), true, false);
+        groups.result(id, result("partial"), "partial", false);
         views.push(groups.bind({ state: {}, toolCallId: id } as never));
       }
     }
@@ -163,7 +244,7 @@ test("one streaming update touches only its record and candidate regardless of h
       lookups++; return get.call(this, key);
     });
     try {
-      groups.result(`cost-${count - 1}`, result("final"), false, false);
+      groups.result(`cost-${count - 1}`, result("final"), "execution", false);
       assert.equal(groups.resolve(views[count - 2]!).group.members[1]!.status, "completed");
     } finally { spy.mockRestore(); }
     assert(lookups < 20, `Expected bounded single-record work, got ${lookups} lookups`);
@@ -185,7 +266,7 @@ test("bulk hydration and binding do not rescan an entire candidate for each reco
     try {
       groups.discover(message(blocks), true);
       for (const block of blocks) {
-        groups.result(block.id, result(block.id), false, false);
+        groups.result(block.id, result(block.id), "execution", false);
         views.push(groups.bind({ state: {}, toolCallId: block.id } as never));
       }
       for (const view of views) groups.resolve(view);

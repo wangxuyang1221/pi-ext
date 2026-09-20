@@ -103,7 +103,9 @@ context.state:       { generation, occurrenceKey, lastSeenVersion }
 
 依据：`$PI/dist/core/extensions/types.d.ts:592-630`。AgentSession 转发 end 时也只复制 ID、名称、result 和 isError：`$PI/dist/core/agent-session.js:571-579`。
 
-end 中的 result 是 after-tool hook 完成后的最终结果。执行结果先经过 `afterToolCall`，再产生 `tool_execution_end`，最后构造 `toolResult` message：`$CORE/dist/agent-loop.js:534-600`。
+end 中的 result 是 after-tool hook 完成后的执行结果。执行结果先经过 `afterToolCall`，再产生 `tool_execution_end`，最后构造 `toolResult` message：`$CORE/dist/agent-loop.js:534-600`。
+
+后续复核补充：这不是最终消息不可再变的保证。Pi 0.86.0 的公开 `message_end` handler 可以返回替换消息；`ExtensionRunner.emitMessageEnd()` 将前置 handler 的修订继续传给后续 handler，AgentSession 再将其写入监听器事件和历史。Read 应允许已观察到的最终消息修订执行终态，不能将它无条件视为重复通知。修复与验收见 [Final message priority follow-up](codex-ui-read-history-todo.md#final-message-priority-follow-up)。
 
 args 有一个必须记录的限制。start 和 update 暴露 assistant 原始 arguments；实际 execute 使用 `prepareArguments` 和 schema validation 后的 `validatedArgs`：`$CORE/dist/agent-loop.js:430-461`、`:488-493`、`:503-516`。如果分组只按 assistant 来源中的 Read path 工作，这没有问题；若 UI 必须展示工具实际收到的改写后参数，现有 execution events 不足。
 

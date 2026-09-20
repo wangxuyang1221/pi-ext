@@ -75,6 +75,8 @@ Pi 0.86.0 的 Ctrl+T 已改为原位更新 assistant 组件，不能再用它代
 
 ## Results
 
+以下为首版 `ed18fb6` 的实施记录。复核发现该版本会忽略最终消息修订，后续修复见 [Final message priority follow-up](#final-message-priority-follow-up)。
+
 实现基于 Pi `0.86.0`，未改依赖、宿主或 Bash 分组实现。`ReadGroups` 保存来源记录、出现次数、候选组和版本，不保存组件引用。`ReadViewComponent` 在宽度缓存前检查逻辑版本；旧视图回调只更新本地后备数据。来源、执行和最终结果直接消费公开事件，初始化与投影变化才扫描 active history。
 
 分组重算延迟到下一次 paint，并合并同组连续变更。100/1000 条记录的批量初始化、绑定保持线性；更新一个记录不访问其他历史组。工具执行结果、图片附件仍由宿主管理。
@@ -109,3 +111,18 @@ PTY 使用现有 `prototypes/tool-status-prototype/smoke.py` 和新构建的生�
 - session replacement、auto compaction 共用已测的重建与投影处理；本轮未分别跑真实 fork/switchSession 和自动阈值触发的端到端流程。
 - 图片屏障通过真实工具组件测试，但没有在真实支持图片协议的终端验证像素附件。未覆盖在线 provider 或所有终端平台。
 - 全仓检查与发布校验未全部通过，不将本轮定向通过写成全仓通过。
+
+## Final message priority follow-up
+
+`ed18fb6` 复核确认：前置扩展通过公开 `message_end` 返回值修订 Read 消息时，监听器和历史已经是新内容，逻辑记录却因执行阶段的 `final` 锁而保留旧内容。这是首版引入的回归，不属于重复 ID 或缺失视图的妥协。
+
+- [x] 先补真实 SDK 回归。未修订消息的对照通过；开启前置修订后，历史已更新而首次真实重建仍显示旧内容，测试失败。
+- [x] 将结果更新入口改为显式来源，优先级为 `partial < execution < message`。最终消息可修订 content、details 和状态；同级终态只接收一次，迟到低优先级事件不覆盖。历史投影直接按 message 优先级初始化。
+- [x] 沿用原有版本和图片标志更新，变更只影响对应记录及候选组，不新增历史扫描或组件引用。
+- [x] 补验无执行事件直接收到最终消息、历史初始化后的迟到事件、重复事件幂等、同宽缓存刷新，以及文本/图片双向变更的逻辑屏障。
+
+修复后，真实 SDK 的修订与未修订两组测试都通过，包括立即连续三次重建、reload、tree 往返和手动压缩。逻辑层验证最终 content、details、错误状态均更新，迟到 start/partial/end 不回退；重复最终消息不增加版本或缓存 miss。图片测试不重新调用 renderer slot，验证模型事件本身即可在下一帧更新文本布局。
+
+本轮检查结果：codex-ui 28 个文件、231 项测试通过；全仓类型检查和独立构建通过。`pnpm run check` 中 1949 项通过、5 项跳过，仍有 1 个 suite 因缺失 `prototypes/mcp-status-ui-prototype/src/codex-startup.js` 失败；独立发布校验仍缺失 `docs/goal-descendant-acceptance.md`。未修改这些基线问题。Red/Green 及验证日志在本地 `.tmp/review-verification/read-final-*`，正式测试不依赖这些日志。
+
+本轮未重跑 PTY 或图片协议终端。修复更新插件已经观察到的最终消息，不新增观察后置扩展返回值的机制，也不改变宿主管理图片附件的生命周期。图片相关断言限于逻辑分组和文本布局，不将其当成像素附件的端到端验收。验收后，用户已批准将本轮修复单独提交并推送到 `origin/fix/codex-ui-review`。
