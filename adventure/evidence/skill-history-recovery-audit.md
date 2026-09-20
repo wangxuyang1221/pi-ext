@@ -4,9 +4,9 @@
 
 #7 的加载时点已由用户选择 A：实际消费排队消息时读取 skill，随后固定本次快照。本轮新增测试证明排队期间修改的正文进入本次请求，交付后再修改文件不会改写历史快照。
 
-历史编辑有公开适配候选，但压缩后的卡片位置有待用户接受的差异。没有据此宣称整条方案已完成，也没有修改产品。
+后续用户接受压缩后的 UI 卡片消失，并选择 skill 正文遵循 Pi 正常压缩，不额外固定或重新注入。无需增加历史卡片修复机制。历史编辑的公开适配和完整组合仍待最终方案确认，没有修改产品。
 
-本轮实验合计 45/45：输入 15、原生组件 5、生命周期 21、编辑器适配 4。两份本轮涉及的实验独立 TypeScript 检查通过。
+首轮实验合计 45/45。后续按压缩决定新增两项，现为 47/47：输入 15、原生组件 5、生命周期 23、编辑器适配 4。生命周期实验独立 TypeScript 检查再次通过。
 
 ## Version and sources
 
@@ -71,20 +71,22 @@ Compaction summary → User with snapshots → Assistant → Repaired display
 
 没有再次加载 skill 文件，没有新增模型消息，没有丢失 user 的快照。这里只验证当前候选的显示取舍，不声称所有纯公开 API 方案都不可能恢复原位。
 
-## Decision needed
+## Confirmed compaction policy
 
-此差异影响“保留原生展示”的约定，不能当作无关实现细节：
+用户不要求保住历史卡片，随后明确选择正文遵循 Pi 正常压缩。完整快照仍在历史记录中，不等于每次模型请求都能看到全文。此决定在 #7 维护，通关后移交 Spec。
 
-- 候选 A，推荐：允许压缩/修复后的缺失卡片补在当前历史末尾。正常发送仍是卡片在正文前，历史详情保持可访问，快照不变。
-- 候选 B：历史卡片也必须保持原位。当前候选不能直接定案，继续核验其他公开方案，不自动升级为 monkey patch 或上游修改。
+两项追加探针验证：
 
-用户尚未选择。编辑器适配也仍是技术候选，最终组合须在 #7 收敛，不把测试通过当作方案获批。
+- 只裁掉 Display、保留 User：禁用缺失卡片补写，删除源文件后 reload 并继续请求。卡片不再出现，模型仍得到 User 内完整的两份快照。此测试先因既有 reconcile 自动补卡而失败，增加实验开关后通过。
+- User 也被摘要覆盖：reload 并继续请求后，模型拿到压缩摘要，不再拿到旧 skill 全文；历史 entries 仍保存原始快照，插件不重注入。此场景直接通过，支持候选原本即可遵循 Pi 压缩。
+
+两项均使用离线 faux provider，摘要由夹具固定，不验证真实模型摘要质量。测试里的可选卡片修复仅用于对比旧候选，最终候选不启用此机制。编辑器适配与完整组合仍须在 #7 确认。
 
 ## Verification
 
-- [生命周期实验](../experiments/multi-skill-lifecycle.test.ts) 21/21。
+- [生命周期实验](../experiments/multi-skill-lifecycle.test.ts) 23/23。
 - [编辑器适配实验](../experiments/skill-history-editor.test.ts) 4/4。
-- [组合实验日志](skill-history-recovery-tests.log) 45/45。
+- [首轮组合日志](skill-history-recovery-tests.log) 45/45；[最新组合日志](skill-compaction-policy-tests.log) 47/47。
 - 上述两份实验的独立 `tsc --noEmit --target ESNext --module NodeNext --moduleResolution NodeNext --allowImportingTsExtensions --skipLibCheck --esModuleInterop --types node` 检查通过。
-- [全仓 check](skill-history-recovery-check.log) 仍因既有 MCP prototype 文件缺失失败；类型检查与 1953 项测试通过，5 项跳过。build/package:check 未执行，不声称全仓验收通过。
+- [最新全仓 check](skill-compaction-policy-check.log) 仍因既有 MCP prototype 文件缺失失败；类型检查与 1953 项测试通过，5 项跳过。build/package:check 未执行，不声称全仓验收通过。
 - 模型、凭证与 session 均使用隔离的内存或离线 fixture；临时 skill 文件位于 worktree 并由测试清理，没有启动常驻服务。

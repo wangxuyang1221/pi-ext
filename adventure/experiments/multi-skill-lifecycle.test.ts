@@ -36,7 +36,7 @@ function deferred() {
   return { promise, resolve };
 }
 
-async function harness(entries?: SessionEntry[], options: { failAppendOnce?: boolean; expandAt?: "input" | "message_end"; earlyDisplay?: boolean; repairAfterCompact?: boolean } = {}) {
+async function harness(entries?: SessionEntry[], options: { failAppendOnce?: boolean; expandAt?: "input" | "message_end"; earlyDisplay?: boolean; repairAfterCompact?: boolean; repairMissingDisplays?: boolean } = {}) {
   const cwd = mkdtempSync(join(process.cwd(), "adventure/experiments/.lifecycle-"));
   const resource: { cwd: string; session?: AgentSession } = { cwd };
   resources.push(resource);
@@ -75,7 +75,7 @@ async function harness(entries?: SessionEntry[], options: { failAppendOnce?: boo
           const envelope = decode(textOf(entry.message));
           if (!envelope) continue;
           if (envelope.requestId) pendingIds.delete(envelope.requestId);
-          if (shown.has(envelope.requestId ?? entry.id)) continue;
+          if (shown.has(envelope.requestId ?? entry.id) || options.repairMissingDisplays === false) continue;
           if (failAppend) { failAppend = false; throw new Error("Injected display append failure"); }
           pi.appendEntry(displayType, { userEntryId: entry.id, requestId: envelope.requestId, skills: envelope.skills });
         }
@@ -387,6 +387,42 @@ test.each([false, true])("compaction cutting before a user repairs missing early
   await h.session.reload();
   expect(h.displays()).toHaveLength(1);
   expect(h.rebuild()).toContain("[skill] beta");
+  expect(h.errors).toEqual([]);
+});
+
+test("retained skill context survives without recreating compacted cards", async () => {
+  const h = await harness(undefined, { expandAt: "message_end", earlyDisplay: true, repairMissingDisplays: false });
+  await h.session.prompt(task, { source: "interactive" });
+  h.setCompactFrom(h.users()[0].id);
+  await h.session.compact();
+  for (const skill of h.skills) rmSync(skill.filePath);
+  await h.session.reload();
+  expect(h.displays()).toHaveLength(0);
+  expect(h.rebuild()).not.toContain("[skill] alpha");
+  await h.session.prompt("Continue the task", { source: "interactive" });
+  const retained = h.calls[1].filter((message: any) => message.role === "user" && decode(textOf(message)));
+  expect(retained).toHaveLength(1);
+  expect(decode(textOf(retained[0]))?.skills.map(skill => skill.content)).toEqual([
+    expect.stringContaining("ALPHA_BODY"), expect.stringContaining("BETA_BODY"),
+  ]);
+  expect(h.displays()).toHaveLength(0);
+  expect(h.errors).toEqual([]);
+});
+
+test("summarized skill messages stay out of active context without reinjection", async () => {
+  const h = await harness(undefined, { expandAt: "message_end", earlyDisplay: true, repairMissingDisplays: false });
+  await h.session.prompt(task, { source: "interactive" });
+  const assistant = h.sessionManager.buildContextEntries().find(entry => entry.type === "message" && entry.message.role === "assistant")!;
+  h.setCompactFrom(assistant.id);
+  await h.session.compact();
+  for (const skill of h.skills) rmSync(skill.filePath);
+  await h.session.reload();
+  await h.session.prompt("Continue after compaction", { source: "interactive" });
+  expect(h.displays()).toHaveLength(0);
+  expect(h.calls[1].some((message: any) => message.role === "user" && decode(textOf(message)))).toBe(false);
+  expect(JSON.stringify(h.calls[1])).not.toContain("ALPHA_BODY");
+  expect(JSON.stringify(h.calls[1])).toContain("Fixture summary");
+  expect(h.sessionManager.getEntries().some(entry => entry.type === "message" && entry.message.role === "user" && decode(textOf(entry.message)))).toBe(true);
   expect(h.errors).toEqual([]);
 });
 
