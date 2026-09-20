@@ -2,6 +2,16 @@
 
 > 继承下述工作状态，从 Continuation Point 继续。完整规格以 Spec Issue 正文为准，报告与实验只提供证据，不替代用户确认。
 
+## Independent Review Update
+
+2026-09-20：GPT6 Astra Pro 已完成独立可行性复核，结果见 [Skill Feasibility Second Review](evidence/skill-feasibility-second-review.md)。
+
+- 确认 Pi 0.86.0 无公开原生 skill renderer 替换入口；前一轮候选不穷尽可行路线。
+- 优先补入普通 user 完整 skill 快照 + Markdown 显示转换的公开 API 组合。它可继续使用原生 user 发送和队列链路，但改变封装文本、独立展开与部分编辑显示行为；尚待用户选择。
+- 紧邻汉字的输入也存在公开 editor factory + SelectList 组合；并非只加 triggerCharacters 即可。新增 5 项输入、8 项渲染、8 项消息表示离线探针全部通过，完整插件/PTY/lifecycle 未验。
+- [Planning #4](https://github.com/wangxuyang1221/pi-ext/issues/4) 继续 open；下一步由用户选择路线，再围绕新缺口补验。#5/#6 尚未通关，不进入产品实施。
+- 本轮报告保留两份原审计，不覆盖纠正依据。以下是复核前的完整冒险存档；其中“等待复核”和原三项候选的当前性由本更新及新报告替代。
+
 ## Handoff Position
 
 类型：`continuation`

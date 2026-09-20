@@ -1,0 +1,22 @@
+Pi renderer dispatch review: 8/8 source probes passed.
+Version: Pi 0.86.0 at ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc
+Node: v24.19.0
+Exact source SHA-256 assertions passed for 13 files.
+
+PASS native skill bypasses user transformers; only task suffix is transformed
+PASS task-first full snapshot uses ordinary user renderer and display-only transformer
+PASS two paragraph user declaration keeps one ordinary user box
+PASS outputPad changes ordinary user horizontal padding only
+PASS custom renderer replaces fallback box but retains host spacer
+PASS custom entry renderer has one spacer and no imposed content box
+PASS empty display transform suppresses user box; preceding transcript spacer remains
+PASS multiple skill snapshots need not use the single native skill parser
+
+Evidence boundary:
+- MarkdownStub applies the real transform but does not parse Markdown
+- Theme, terminal styling and ASCII non-wrapping width helpers are substitutes
+- SourceHost supplies a substitute session/UI environment for actual addMessageToChat
+- No real session lifecycle, PTY, model call, reload, queue or compaction was run
+- Row counts apply to the non-wrapping ASCII fixture under substitute Markdown/terminal helpers; they are not PTY visual acceptance.
+
+Full structured output: skill-renderer-dispatch-review-results.json
