@@ -3,6 +3,7 @@ import type { UserMessage } from "@earendil-works/pi-ai";
 import { Container } from "@earendil-works/pi-tui";
 import { skillAutocomplete } from "./autocomplete.js";
 import { loadSnapshot } from "./loading.js";
+import { installHistoryEditor } from "./history-editor.js";
 import { decodeSnapshot, encodeSnapshot, isSkillSnapshot, type SkillSnapshot } from "./protocol.js";
 
 export const displayType = "pi-ext/skill-mentions/display-v1";
@@ -42,6 +43,7 @@ export default function skillMentions(pi: ExtensionAPI): void {
     indexedLeaf = undefined;
     if (ctx.mode === "tui") ctx.ui.addAutocompleteProvider(current => skillAutocomplete(current, () => pi.getCommands()));
   });
+  pi.on("resources_discover", (_event, ctx) => { installHistoryEditor(ctx); });
   pi.on("session_shutdown", () => {
     pending = new WeakMap(); pendingIds.clear(); visibleIds.clear(); context = undefined; indexedLeaf = undefined;
   });

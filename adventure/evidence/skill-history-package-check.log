@@ -1,0 +1,21 @@
+$ node ./scripts/check-package.mjs
+file:///Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/scripts/check-package.mjs:69
+    throw new Error(`${label}: ${absolutePath}`, { cause: error });
+          ^
+
+Error: Required package path is missing: /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/docs/goal-descendant-acceptance.md
+    at assertPathExists (file:///Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/scripts/check-package.mjs:69:11)
+    at async file:///Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/scripts/check-package.mjs:105:3 {
+  [cause]: Error: ENOENT: no such file or directory, access '/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/docs/goal-descendant-acceptance.md'
+      at async access (node:internal/fs/promises:606:10)
+      at async assertPathExists (file:///Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/scripts/check-package.mjs:67:5)
+      at async file:///Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/scripts/check-package.mjs:105:3 {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'access',
+    path: '/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/docs/goal-descendant-acceptance.md'
+  }
+}
+
+Node.js v22.22.2
+[ELIFECYCLE] Command failed with exit code 1.
