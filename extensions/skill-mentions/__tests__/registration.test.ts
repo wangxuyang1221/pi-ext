@@ -13,7 +13,7 @@ function registration() {
 
 it.each(["assistant", "toolResult", "custom", "system"])("ignores %s lifecycle messages before resolving any skills", async role => {
   const h = registration();
-  const event = { message: { role, content: "$alpha", timestamp: 1 } };
+  const event = { message: { role, content: "$alpha $alpha，继续 $alpha.", timestamp: 1 } };
   await h.handlers.get("message_start")!(event, h.ctx);
   expect(h.handlers.get("message_end")!(event, h.ctx)).toBeUndefined();
   expect(h.getCommands).not.toHaveBeenCalled(); expect(h.appendEntry).not.toHaveBeenCalled();

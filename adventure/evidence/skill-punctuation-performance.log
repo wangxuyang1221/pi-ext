@@ -1,0 +1,7 @@
+{"node":"v22.22.2","cpu":"Apple M5","target":"100 KiB draft median below 100 ms; parser-only, no filesystem reads"}
+{"name":"whitespace","bytes":1063,"references":41,"medianMs":0.17995799999999917,"maxMs":0.4602080000000015}
+{"name":"whitespace","bytes":10285,"references":389,"medianMs":0.7033749999999941,"maxMs":0.9115839999999906}
+{"name":"whitespace","bytes":102452,"references":3867,"medianMs":7.317750000000018,"maxMs":8.039500000000004}
+{"name":"punctuation","bytes":1038,"references":31,"medianMs":0.08045800000002146,"maxMs":0.09616600000003928}
+{"name":"punctuation","bytes":10284,"references":299,"medianMs":0.5915840000000117,"maxMs":0.8601669999999899}
+{"name":"punctuation","bytes":102468,"references":2971,"medianMs":6.119916000000046,"maxMs":6.575958000000014}

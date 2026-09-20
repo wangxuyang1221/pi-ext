@@ -15,7 +15,9 @@ import termios
 import time
 import pyte
 
-install_root, cli, installed, mode = sys.argv[1:]
+install_root, cli, installed, mode, *extra = sys.argv[1:]
+evidence_prefix = extra[0] if extra else "skill-install"
+assert evidence_prefix and all(char in "abcdefghijklmnopqrstuvwxyz0123456789-" for char in evidence_prefix)
 repo = Path(__file__).resolve().parents[3]
 root = Path(install_root) / mode
 for name in ["home", "agent", "workspace", "tmp", "sessions"]:
@@ -47,7 +49,7 @@ settings_file.write_text(json.dumps(settings))
 keys = {"tui.editor.historyPrevious": "ctrl+p", "tui.editor.historyNext": "ctrl+n",
         "tui.editor.cursorLineStart": ["home", "ctrl+a", "f2"], "app.tools.expand": "f3"}
 (root / "agent/keybindings.json").write_text(json.dumps(keys))
-for name in ["alpha", "beta"]:
+for name in ["alpha", "beta", "research", "研究_𐐀-𝟠"]:
     skill = root / "agent/skills" / name
     skill.mkdir(parents=True)
     (skill / "SKILL.md").write_text(f"---\nname: {name}\ndescription: {name.title()} fixture\n---\n{name.upper()}_VERSION_ONE\n")
@@ -212,11 +214,53 @@ try:
     submit("光标 $alpxha", [])
     checks.append("cursor inside a name does not open candidates")
 
-    for task in ["文字$alpha", "（$alpha）", "$alpha，继续", "`$alpha`", "```\n$alpha\n```", "\\$alpha", "$unknown", "$12"]:
+    for task in ["文字$alpha", "（$alpha）", "$alpha.md $alpha.中文", "`$alpha,`", "```\n$alpha!\n```", "\\$alpha,", "$unknown!", "$12"]:
         paste(task)
         send("\x1b")
         submit(task, [])
-    checks.append("punctuation, adjacent text, code, escape, unknown and ordinary dollars remain literal")
+    checks.append("period continuations, adjacent text, code, escape, unknown and ordinary dollars remain literal")
+
+    # Run the same final task through typing, paste and both native menu keys.
+    punctuated = "用 $alpha，继续 $beta."
+    for source in ["handwritten", "paste", "menu-tab", "menu-enter"]:
+        if source == "handwritten":
+            for char in punctuated:
+                send(char)
+        elif source == "paste":
+            paste(punctuated)
+        else:
+            send("用 ")
+            for query, suffix in [("$al", "，继续 "), ("$be", ".")]:
+                for char in query:
+                    send(char)
+                wait(lambda: "fixture" in view(), "punctuation source candidates")
+                before = len(events("request"))
+                send("\t" if source == "menu-tab" else "\r")
+                assert len(events("request")) == before, "Selection must not send"
+                send(suffix)
+        assert editor() == punctuated
+        submit(punctuated, ["alpha", "beta"])
+    checks.append("punctuated typing, paste, Tab and Enter menu completion consume the same unchanged task")
+
+    delimiters = ",.;:!?，。；：！？、…)]}）］｝】》〉」』”’\"'"
+    task = " ".join("$research" + delimiter for delimiter in delimiters)
+    paste(task)
+    submit(task, ["research"])
+    paste("$research.md $research.中文 $research.𐐀 $research.𝟠 $research._ $research.- $research-long! $research_other,")
+    submit("$research.md $research.中文 $research.𐐀 $research.𝟠 $research._ $research.- $research-long! $research_other,", [])
+    paste("用 $研究_𐐀-𝟠，继续 $research.")
+    submit("用 $研究_𐐀-𝟠，继续 $research.", ["研究_𐐀-𝟠", "research"])
+    checks.append("all allowed delimiters, ASCII period exceptions, whole Unicode names and no prefix truncation")
+
+    paste("用 ,")
+    send("\x1b[D")
+    for char in "$al":
+        send(char)
+    assert "Alpha fixture" not in view(), view()
+    assert editor() == "用 $al,"
+    send("\x05")
+    submit("用 $al,", [])
+    checks.append("right punctuation never opens a candidate menu")
 
     paste("手写 $alpha $alpha $beta")
     send("\x1b")
@@ -263,8 +307,8 @@ try:
     checks.append("another extension sends one ordinary user with deduplicated skills and image")
 
     (root / "agent/skills/beta/SKILL.md").unlink()
-    paste("缺失 $beta $alpha $unknown")
-    submit("缺失 $beta $alpha $unknown", ["alpha"])
+    paste("缺失 $beta, $alpha! $unknown.")
+    submit("缺失 $beta, $alpha! $unknown.", ["alpha"])
     assert "Failed to read" not in view() and "ENOENT" not in view()
     checks.append("unreadable discovered skill and unknown name fall back silently beside a valid skill")
 
@@ -286,16 +330,16 @@ try:
     paste("QUEUE_HOLD")
     send("\r")
     wait(lambda: len(events("request")) == before + 1, "hold provider")
-    paste("排队 $alpha")
+    paste("排队 $alpha，继续")
     send("\x1b\r")  # Native Alt+Enter queues a follow-up.
     settle()
     screens["queue"] = view()
-    assert "排队 $alpha" in view(), view()
+    assert "排队 $alpha，继续" in view(), view()
     skill = root / "agent/skills/alpha/SKILL.md"
     skill.write_text("---\nname: alpha\ndescription: Alpha fixture\n---\nALPHA_VERSION_TWO\n")
     wait(lambda: len(events("request")) == before + 2 and len(events("settled")) > settled, "queue consumption", 15)
     last = [message for message in events("request")[-1] if message["role"] == "user"][-1]
-    assert snapshot(last)["task"] == "排队 $alpha"
+    assert snapshot(last)["task"] == "排队 $alpha，继续"
     assert "ALPHA_VERSION_TWO" in snapshot(last)["skills"][0]["body"]
     checks.append("real TUI follow-up queue keeps original text and consumes changed file version")
 
@@ -330,7 +374,7 @@ try:
     wait(lambda: len(events("ready")) > ready_count, "resume real CLI")
     settle(1)
     send("\x10")
-    assert editor() == "排队 $alpha"
+    assert editor() == "排队 $alpha，继续"
     assert "pi-ext-skill-mentions version" not in view()
     screens["resume"] = view()
     send("\x03")
@@ -367,4 +411,4 @@ finally:
               "editorObservations": events("editor"), "inputs": events("input"),
               "providerUsers": [[message for message in request if message["role"] == "user"][-1:] for request in events("request")],
               "cleanup": "PTY child reaped; no listener created; parent removes isolated installation"}
-    (repo / f"adventure/evidence/skill-install-pty-{mode}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    (repo / f"adventure/evidence/{evidence_prefix}-pty-{mode}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")

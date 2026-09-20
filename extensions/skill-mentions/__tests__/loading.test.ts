@@ -15,7 +15,15 @@ it("never recursively activates native slash expansions or plugin snapshots", as
   expect(read).not.toHaveBeenCalled();
 });
 
-it.each(["$al", "$unknown", "$", "用$alpha", "$alpha!", "` $alpha `", "```\n$alpha\n```", "\\$alpha"])("keeps non-activating input unchanged: %s", async task => {
+it("loads a complete name before punctuation without changing the task", async () => {
+  const read = vi.fn(async () => "BODY");
+  const result = await loadSnapshot("$alpha!", commands, read);
+  expect(result?.task).toBe("$alpha!");
+  expect(result?.skills.map(skill => skill.name)).toEqual(["alpha"]);
+  expect(read).toHaveBeenCalledExactlyOnceWith("/skills/alpha/SKILL.md");
+});
+
+it.each(["$al", "$unknown", "$", "用$alpha", "` $alpha `", "```\n$alpha\n```", "\\$alpha"])("keeps non-activating input unchanged: %s", async task => {
   const read = vi.fn(async () => "BODY");
   expect(await loadSnapshot(task, commands, read)).toBeUndefined();
   expect(read).not.toHaveBeenCalled();
@@ -31,13 +39,37 @@ it("silently omits unreadable skills while keeping other skills and all referenc
   expect(await loadSnapshot("$alpha", commands, read)).toBeUndefined();
 });
 
+it("matches whole Unicode names and never truncates unknown names to inventory prefixes", async () => {
+  const inventory = [...commands, ...["研究_𐐀-𝟠", "alpha-beta", "alpha_beta"].map(name => ({
+    name: `skill:${name}`, source: "skill", sourceInfo: { path: `/skills/${name}/SKILL.md` },
+  } as SlashCommandInfo))];
+  const read = vi.fn(async () => "BODY");
+  const task = "$alpha-long, $alpha_other! $研究_𐐀-𝟠。 $alpha-beta; $alpha_beta. $alpha.md $alpha.中文 $al,";
+  const snapshot = await loadSnapshot(task, inventory, read);
+  expect(snapshot?.task).toBe(task);
+  expect(snapshot?.skills.map(skill => skill.name)).toEqual(["研究_𐐀-𝟠", "alpha-beta", "alpha_beta"]);
+  expect(read).toHaveBeenCalledTimes(3);
+});
+
+it("deduplicates punctuated references in first order and silently skips repeated failed reads", async () => {
+  const task = "$beta，继续 $alpha! $unknown. $alpha; $beta)";
+  const read = vi.fn(async (path: string) => { if (path.includes("alpha")) throw new Error("EACCES"); return "BODY"; });
+  const snapshot = await loadSnapshot(task, commands, read);
+  expect(snapshot?.task).toBe(task);
+  expect(snapshot?.skills.map(skill => skill.name)).toEqual(["beta"]);
+  expect(read.mock.calls).toEqual([["/skills/beta/SKILL.md"], ["/skills/alpha/SKILL.md"]]);
+  read.mockClear();
+  expect(await loadSnapshot("$alpha! $unknown. $alpha,", commands, read)).toBeUndefined();
+  expect(read).toHaveBeenCalledTimes(1);
+});
+
 it.each([10, 100])("indexes %i skills once and bounds reads by distinct references", async count => {
   let nameReads = 0;
   const inventory = Array.from({ length: count }, (_, index) => ({
     get name() { nameReads++; return `skill:name-${index}`; }, source: "skill", sourceInfo: { path: `/skills/name-${index}/SKILL.md` },
   })) as SlashCommandInfo[];
   const read = vi.fn(async () => "BODY");
-  const task = Array.from({ length: count * 10 }, (_, index) => `$name-${index % count}`).join(" ");
+  const task = Array.from({ length: count * 10 }, (_, index) => `$name-${index % count}${index % 2 ? "," : "."}`).join(" ");
   expect((await loadSnapshot(task, inventory, read))?.skills).toHaveLength(count);
   expect(read).toHaveBeenCalledTimes(count);
   expect(nameReads).toBeLessThanOrEqual(count * 3);

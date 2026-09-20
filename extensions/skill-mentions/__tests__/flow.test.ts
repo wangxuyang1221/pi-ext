@@ -60,6 +60,47 @@ async function harness(mode: "tui" | "rpc" | "print" | "json" = "tui", filesyste
   return { cwd, skills, session, sessionManager, calls, errors, sequence, pi, plain, ui };
 }
 
+it.each(["prompt", "plugin-string", "plugin-blocks"])("activates punctuated references through %s with original task and ordered snapshots", async source => {
+  const h = await harness("tui", true);
+  const task = "用 $beta，继续 $alpha. $beta) $alpha.md $alpha.中文 $alpha-other! $unknown;";
+  const image = { type: "image" as const, data: "AA==", mimeType: "image/png" };
+  if (source === "prompt") await h.session.prompt(task, { images: [image] });
+  else {
+    h.pi.sendUserMessage(source === "plugin-string" ? task : [{ type: "text", text: task }, image]);
+    await new Promise<void>(resolve => {
+      const unsubscribe = h.session.subscribe(event => {
+        if (event.type === "agent_end") { unsubscribe(); resolve(); }
+      });
+    });
+  }
+  const users = h.calls[0].filter(message => message.role === "user");
+  expect(users).toHaveLength(1);
+  const snapshot = decodeSnapshot(textOf(users[0]));
+  expect(snapshot?.task).toBe(task);
+  expect(snapshot?.skills.map(skill => skill.name)).toEqual(["beta", "alpha"]);
+  if (source !== "plugin-string") expect(users[0].content).toContainEqual(image);
+  expect(h.sequence).toEqual(["display", "user"]);
+  expect(h.errors).toEqual([]);
+});
+
+it("silently falls back on punctuated unknown and unreadable names through the real loader", async () => {
+  const h = await harness("tui", true); rmSync(h.skills[1].filePath);
+  for (const task of ["$beta, $unknown! $beta。 $alpha;", "$beta, $unknown! $beta。"]) {
+    await h.session.sendUserMessage(task);
+    const user = h.calls.at(-1)!.filter(message => message.role === "user").at(-1)!;
+    const snapshot = decodeSnapshot(textOf(user));
+    if (task.includes("$alpha")) {
+      expect(snapshot?.task).toBe(task);
+      expect(snapshot?.skills.map(skill => skill.name)).toEqual(["alpha"]);
+    } else {
+      expect(snapshot).toBeUndefined();
+      expect(textOf(user)).toBe(task);
+    }
+    expect(h.errors).toEqual([]);
+  }
+  expect(h.sequence).toEqual(["display", "user", "user"]);
+});
+
 it("loads the development entry through the installed Pi filesystem loader", async () => {
   const h = await harness("tui", true); await h.session.prompt("$alpha");
   expect(decodeSnapshot(textOf(h.calls[0].find(message => message.role === "user")!))?.skills.map(skill => skill.name)).toEqual(["alpha"]);
@@ -77,8 +118,8 @@ it("preserves a pasted snapshot instead of rereading or recursively activating i
 });
 
 it.each(["rpc", "print", "json"] as const)("leaves %s users untouched", async mode => {
-  const h = await harness(mode); await h.session.prompt("$alpha $beta");
-  expect(h.calls[0].filter(message => message.role === "user").map(textOf)).toEqual(["$alpha $beta"]);
+  const h = await harness(mode); await h.session.prompt("$alpha $beta，继续 $alpha.");
+  expect(h.calls[0].filter(message => message.role === "user").map(textOf)).toEqual(["$alpha $beta，继续 $alpha."]);
   expect(h.sequence).toEqual(["user"]); expect(h.errors).toEqual([]);
 });
 

@@ -33,7 +33,7 @@ export default function (pi: ExtensionAPI): void {
   pi.registerCommand("fixture-user", {
     handler: async () => {
       pi.sendUserMessage([
-        { type: "text", text: "插件 $alpha $beta $alpha" },
+        { type: "text", text: "插件 $alpha，继续 $beta. $alpha!" },
         { type: "image", mimeType: "image/png", data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==" },
       ]);
     },

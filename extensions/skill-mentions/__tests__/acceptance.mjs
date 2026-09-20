@@ -9,8 +9,12 @@ import { assertSafePublishedPath } from "../../../scripts/package-paths.mjs";
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, "../../..");
 mkdirSync(join(repo, ".tmp"), { recursive: true });
-const root = mkdtempSync(join(repo, ".tmp/skill-install-"));
 const evidence = join(repo, "adventure/evidence");
+const args = process.argv.slice(2);
+const prefixArgument = args.find(arg => arg.startsWith("--evidence-prefix="));
+const evidencePrefix = prefixArgument?.split("=")[1] ?? "skill-install";
+assert(/^[a-z0-9-]+$/.test(evidencePrefix), "Evidence prefix must be a filename segment");
+const root = mkdtempSync(join(repo, ".tmp/skill-install-"));
 const run = (command, args, options = {}) => execFileSync(command, args, { cwd: repo, stdio: "inherit", timeout: 300_000, ...options });
 const manifest = JSON.parse(readFileSync(join(repo, "package.json"), "utf8"));
 const env = Object.fromEntries(["PATH", "LANG", "LC_ALL"].flatMap(key => process.env[key] ? [[key, process.env[key]]] : []));
@@ -39,11 +43,13 @@ try {
   run(process.execPath, ["--input-type=module", "-e", `for (const path of ${JSON.stringify(packaged.pi.extensions)}) { const m = await import(new URL(path, ${JSON.stringify(`file://${installed}/`)})); if (typeof m.default !== 'function') throw new Error(path); }`], { cwd: consumer, env });
   copyFileSync(join(here, "pty-fixture.ts"), join(consumer, "pty-fixture.ts"));
   const cli = join(realpathSync(join(consumer, "node_modules/@earendil-works/pi-coding-agent")), "dist/cli.js");
-  const modes = process.argv.slice(2).length ? process.argv.slice(2) : ["native", "native-fullscreen", "codex", "combined", "combined-fullscreen"];
+  const requestedModes = args.filter(arg => arg !== prefixArgument);
+  const modes = requestedModes.length ? requestedModes : ["native", "native-fullscreen", "codex", "combined", "combined-fullscreen"];
+  assert(modes.every(mode => ["native", "native-fullscreen", "codex", "combined", "combined-fullscreen"].includes(mode)));
   for (const mode of modes) {
-    run("conda", ["run", "--no-capture-output", "-n", "codex-py312", "python", join(here, "pty-driver.py"), root, cli, installed, mode], { timeout: 180_000 });
+    run("conda", ["run", "--no-capture-output", "-n", "codex-py312", "python", join(here, "pty-driver.py"), root, cli, installed, mode, evidencePrefix], { timeout: 180_000 });
   }
-  writeFileSync(join(evidence, "skill-install-artifact.json"), JSON.stringify({
+  writeFileSync(join(evidence, `${evidencePrefix}-artifact.json`), JSON.stringify({
     passed: true, node: process.version, pnpm: execFileSync("pnpm", ["--version"], { encoding: "utf8" }).trim(),
     sha256: createHash("sha256").update(readFileSync(tarball)).digest("hex"), files,
     extensionEntries: packaged.pi.extensions, modes,

@@ -1,0 +1,214 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ extensions/skill-mentions/__tests__/references.test.ts (168 tests | 1 failed) 25ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: , 8ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: . 1ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ; 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: : 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ! 1ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ? 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ， 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: 。 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ； 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ： 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ！ 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ？ 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: 、 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: … 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ) 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ] 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: } 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ） 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ］ 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ｝ 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: 】 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: 》 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: 〉 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: 」 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: 』 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ” 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ’ 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: " 0ms
+   ✓ reference boundaries > accepts a closing delimiter without offering completion: ' 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: 文字$alpha 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: （$alpha） 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: ($alpha) 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: $alpha 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: $alpha  0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: \$alpha 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: \\$alpha 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: $alpha/beta 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: $5.00 0ms
+   ✓ reference boundaries > does not end a reference at a period before md 0ms
+   ✓ reference boundaries > does not end a reference at a period before 中文 0ms
+   ✓ reference boundaries > does not end a reference at a period before é 0ms
+   ✓ reference boundaries > does not end a reference at a period before 𐐀 0ms
+   ✓ reference boundaries > does not end a reference at a period before 0 0ms
+   ✓ reference boundaries > does not end a reference at a period before ９ 0ms
+   ✓ reference boundaries > does not end a reference at a period before 𝟠 0ms
+   ✓ reference boundaries > does not end a reference at a period before _ 0ms
+   ✓ reference boundaries > does not end a reference at a period before - 0ms
+   ✓ reference boundaries > ends a reference at a period before a non-name character: "" 2ms
+   ✓ reference boundaries > ends a reference at a period before a non-name character: " " 0ms
+   ✓ reference boundaries > ends a reference at a period before a non-name character: "\n" 0ms
+   ✓ reference boundaries > ends a reference at a period before a non-name character: "\t" 0ms
+   ✓ reference boundaries > ends a reference at a period before a non-name character: ",next" 0ms
+   ✓ reference boundaries > ends a reference at a period before a non-name character: ".md" 0ms
+   ✓ reference boundaries > ends a reference at a period before a non-name character: "/path" 0ms
+   ✓ reference boundaries > ends a reference at a period before a non-name character: "@host" 0ms
+   ✓ reference boundaries > ends a reference at a period before a non-name character: "😀" 0ms
+   ✓ reference boundaries > ends a reference at a period before a non-name character: "́" 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: , 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ; 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: : 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ! 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ? 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ， 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: 。 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ； 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ： 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ！ 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ？ 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: 、 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: … 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ) 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ] 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: } 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ） 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ］ 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ｝ 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: 】 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: 》 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: 〉 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: 」 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: 』 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ” 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ’ 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: " 0ms
+   ✓ reference boundaries > allows prose immediately after non-period delimiters: ' 0ms
+   ✓ reference boundaries > does not grant new boundaries to "/" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "\\" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "@" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "#" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "+" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "=" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "*" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "(" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "［" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "｛" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "（" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "【" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "《" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "〈" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "「" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "『" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "“" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "‘" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "<" 0ms
+   ✓ reference boundaries > does not grant new boundaries to ">" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "%" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "&" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "|" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "^" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "~" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "\r" 0ms
+   ✓ reference boundaries > does not grant new boundaries to " " 0ms
+   ✓ reference boundaries > does not grant new boundaries to "　" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "​" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "—" 0ms
+   ✓ reference boundaries > does not grant new boundaries to "・" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "," 0ms
+   ✓ reference boundaries > does not relax the left boundary after "." 0ms
+   ✓ reference boundaries > does not relax the left boundary after ";" 0ms
+   ✓ reference boundaries > does not relax the left boundary after ":" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "!" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "?" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "，" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "。" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "；" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "：" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "！" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "？" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "、" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "…" 0ms
+   ✓ reference boundaries > does not relax the left boundary after ")" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "]" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "}" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "）" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "］" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "｝" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "】" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "》" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "〉" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "」" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "』" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "”" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "’" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "\"" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "'" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "文字" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "\\" 0ms
+   ✓ reference boundaries > does not relax the left boundary after "\\\\" 0ms
+   ✓ reference boundaries > keeps Unicode and hyphenated names whole with exact source offsets 0ms
+   ✓ reference boundaries > excludes punctuated references in Markdown code: `$research,` 0ms
+   ✓ reference boundaries > excludes punctuated references in Markdown code: `` $research! ` $research. `` 0ms
+   ✓ reference boundaries > excludes punctuated references in Markdown code: ```ts
+$research，
+``` 0ms
+   ✓ reference boundaries > excludes punctuated references in Markdown code: ~~~
+$research。
+~~~ 0ms
+   ✓ reference boundaries > excludes punctuated references in Markdown code: > ```
+> $research!
+> ``` 0ms
+   ✓ reference boundaries > excludes punctuated references in Markdown code: - ~~~
+  $research;
+  ~~~ 0ms
+   ✓ reference boundaries > excludes punctuated references in Markdown code:     $research, 0ms
+   ✓ reference boundaries > excludes punctuated references in Markdown code: [ `$research,` ](https://example.com) 0ms
+   ✓ reference boundaries > keeps completion at the name end with strict separators: "" 0ms
+   ✓ reference boundaries > keeps completion at the name end with strict separators: " " 0ms
+   ✓ reference boundaries > keeps completion at the name end with strict separators: "\n" 0ms
+   × reference boundaries > keeps completion at the name end with strict separators: "\t" 4ms
+     → expected undefined to be 'research' // Object.is equality
+   ✓ reference boundaries > rejects cursor positions inside a name and allows the bare trigger 0ms
+   ✓ reference boundaries > uses the same prose boundaries for completion and activation around unmatched backticks 0ms
+   ✓ reference boundaries > treats unmatched backticks as prose on submission and recognizes quoted fences 0ms
+   ✓ reference boundaries > recognizes fenced code inside list containers without hiding following prose 0ms
+   ✓ reference boundaries > keeps source identities through repeated names, tables, links and nested containers 0ms
+   ✓ reference boundaries > excludes inline code with matching backtick runs and backtick or tilde fences 0ms
+   ✓ reference boundaries > finds ordered whole tokens on any line with only space, tab or newline separators 0ms
+ ✓ extensions/skill-mentions/__tests__/loading.test.ts (15 tests) 16ms
+ ✓ extensions/skill-mentions/__tests__/autocomplete.test.ts (25 tests) 4121ms
+   ✓ native: handwritten, pasted and selected punctuated references submit identically  663ms
+   ✓ native: never offers skills beside right punctuation or inside the name  412ms
+   ✓ codex: handwritten, pasted and selected punctuated references submit identically  656ms
+   ✓ codex: never offers skills beside right punctuation or inside the name  410ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > keeps completion at the name end with strict separators: "\t"
+AssertionError: expected undefined to be 'research' // Object.is equality
+
+[32m- Expected:[39m
+"research"
+
+[31m+ Received:[39m
+undefined
+
+ ❯ extensions/skill-mentions/__tests__/references.test.ts:62:53
+     60|     const text = `${separator}$research${separator}`;
+     61|     const cursor = separator.length + "$research".length;
+     62|     expect(completionReference(text, cursor)?.name).toBe("research");
+       |                                                     ^
+     63|     for (let position = separator.length + 1; position < cursor; posit…
+     64|       expect(completionReference(text, position)).toBeUndefined();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 207 passed (208)
+   Start at  00:43:00
+   Duration  4.60s (transform 81ms, setup 0ms, collect 643ms, tests 4.16s, environment 0ms, prepare 122ms)

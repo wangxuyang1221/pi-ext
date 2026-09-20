@@ -16,13 +16,15 @@ vi.mock("node:fs/promises", async importOriginal => {
 beforeAll(() => initTheme("dark", false));
 afterEach(async () => { vi.restoreAllMocks(); await cleanup(); });
 
-it.each(["steer", "followUp"] as const)("consumes identical %s users independently with current files and their own images", async behavior => {
+it.each([
+  ["steer", "$alpha $beta $alpha"], ["followUp", "$alpha $beta $alpha"],
+  ["steer", "$alpha，继续 $beta. $alpha!"], ["followUp", "$alpha，继续 $beta. $alpha!"],
+] as const)("consumes identical %s users independently with current files and their own images: %s", async (behavior, task) => {
   const h = await lifecycleFixture();
   const entered = deferred(), release = deferred();
   h.faux.setResponses([async ctx => { entered.resolve(); await release.promise; return h.respond(ctx); }, h.respond]);
   const read = vi.mocked(fs.readFile); read.mockClear();
   const run = h.session.prompt("Initial task"); await entered.promise;
-  const task = "$alpha $beta $alpha";
   const images = ["AA==", "BB=="].map(data => ({ type: "image" as const, data, mimeType: "image/png" }));
   try {
     for (const image of images) await h.session.prompt(task, { streamingBehavior: behavior, images: [image] });

@@ -40,8 +40,11 @@ pi install "$PWD/node_modules/pi-ext"
 - 有候选时 Tab 或 Enter 选择当前项，只补全名称，不发送。菜单关闭后 Enter 正常发送。
 - Esc 关闭菜单且保留输入。保留完整有效引用仍会激活；要避免激活，删除或转义 `$`。
 - 可在句中和后续行引用，补全保留两侧正文与其他行。
-- 引用两侧仅接受空格、换行、Tab 或输入边界。`用 $research 调查` 可识别，`文字$research`、`（$research）`、`$research，继续` 不识别。
-- 光标处于名称中间、Markdown 行内代码、围栏代码或 `\$research` 时不补全、不激活。
+- 候选片段两侧仅接受空格、换行、Tab 或输入边界。名称中间的光标不弹候选，紧贴标点也不弹候选。
+- 提交激活时，左侧仍只接受上述分隔；右侧另外允许 `,.;:!?，。；：！？、…)]}）］｝】》〉」』”’"'`。例如 `$research，继续`、`$research)` 可激活，`文字$research`、`（$research）` 仍不激活。
+- ASCII 句点 `.` 紧接 Unicode 字母、数字、下划线或连字符时不结束引用。`$research.md`、`$research.中文` 不激活，末尾的 `$research.` 或句点后为空白时可激活。其他允许标点不限制其后正文。
+- `/`、反斜线、`@`、`#`、运算符、开括号及未列出的标点不构成新边界。不从 `$research-extra` 或 `$research_other` 中截取 `$research`，名称必须完整匹配。
+- Markdown 行内代码、围栏代码或 `\$research` 中的引用不补全、不激活。
 - 完整引用手写、粘贴和菜单补全等效；部分名称不激活。未知名称原样发送，不提示、不阻断。
 
 自定义快捷键继续由 Pi 的 `keybindings.json` 管理，修改后 `/reload`。原生 slash 补全和 `/skill:name` 入口保持不变。本功能只处理 TUI 普通 user 消息，包括其他扩展发送的 user，不处理 assistant/tool/custom 消息或 RPC/print。
@@ -68,5 +71,13 @@ pnpm run check
 pnpm run package:check
 pnpm run skill-mentions:acceptance
 ```
+
+只复核本轮标点的原生/Codex真实入口并另存证据：
+
+```bash
+pnpm run skill-mentions:acceptance --evidence-prefix=skill-punctuation native codex
+```
+
+本轮标点测试与真实入口结果见[标点验收报告](https://github.com/wangxuyang1221/pi-ext/blob/adventure/skill-mentions/adventure/evidence/skill-punctuation-implementation.md)。
 
 本功能的产物与 PTY 验证独立记录，不替代全仓 check 或 package:check。当前全仓既有缺失文档和 MCP prototype 会使这两项失败，不能据此宣称全仓通过。执行环境、逐项 Spec 证据及终端验证边界见 [安装验收报告](https://github.com/wangxuyang1221/pi-ext/blob/adventure/skill-mentions/adventure/evidence/skill-install-acceptance.md)。

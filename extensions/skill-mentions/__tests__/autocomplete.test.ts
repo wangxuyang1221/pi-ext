@@ -29,6 +29,47 @@ it("queries only discovered skill names, preserves metadata and does not match d
 });
 
 for (const kind of ["native", "codex"]) {
+  it(`${kind}: handwritten, pasted and selected punctuated references submit identically`, async () => {
+    const expected = "用 $alpha，继续 $beta.";
+    for (const source of ["handwritten", "paste", "menu-tab", "menu-enter"]) {
+      const editor = editorFor(kind), submit = vi.fn(); editor.onSubmit = submit;
+      if (source === "handwritten") {
+        for (const char of expected) editor.handleInput(char);
+      } else if (source === "paste") {
+        editor.handleInput(`\x1b[200~${expected}\x1b[201~`);
+      } else {
+        editor.setText("用 ");
+        for (const [query, suffix] of [["$al", "，继续 "], ["$be", "."]]) {
+          for (const char of query) editor.handleInput(char);
+          await settle(); expect(editor.isShowingAutocomplete()).toBe(true);
+          editor.handleInput(source === "menu-tab" ? "\t" : "\r");
+          expect(submit).not.toHaveBeenCalled();
+          expect(editor.isShowingAutocomplete()).toBe(false);
+          for (const char of suffix) editor.handleInput(char);
+        }
+      }
+      await settle();
+      expect(editor.isShowingAutocomplete()).toBe(false);
+      expect(editor.getExpandedText()).toBe(expected);
+      editor.handleInput("\r");
+      expect(submit).toHaveBeenCalledExactlyOnceWith(expected);
+      const snapshot = await loadSnapshot(submit.mock.calls[0][0], commands, async () => "BODY");
+      expect(snapshot?.task).toBe(expected);
+      expect(snapshot?.skills.map(skill => skill.name)).toEqual(["alpha", "beta"]);
+    }
+  });
+
+  it(`${kind}: never offers skills beside right punctuation or inside the name`, async () => {
+    const editor = editorFor(kind);
+    for (const suffix of [",", ".", "，继续", ")", "pha "]) {
+      editor.setText(`用 ${suffix}`);
+      for (let index = 0; index < suffix.length; index++) editor.handleInput("\x1b[D");
+      for (const char of "$al") editor.handleInput(char);
+      await settle();
+      expect(editor.getText()).toBe(`用 $al${suffix}`);
+      expect(editor.isShowingAutocomplete()).toBe(false);
+    }
+  });
   it(`${kind}: handwritten, bracketed-paste and menu references load identically`, async () => {
     const expected = "用 $alpha $beta";
     const handwritten = editorFor(kind);

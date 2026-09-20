@@ -1,0 +1,139 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ extensions/skill-mentions/__tests__/references.test.ts (45 tests | 29 failed) 23ms
+   × reference boundaries > accepts a closing delimiter without offering completion: , 4ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: . 1ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ; 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: : 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ! 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ? 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ， 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: 。 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ； 1ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ： 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ！ 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ？ 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: 、 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: … 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ) 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ] 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: } 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ） 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ］ 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ｝ 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: 】 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: 》 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: 〉 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: 」 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: 』 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ” 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ’ 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: " 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   × reference boundaries > accepts a closing delimiter without offering completion: ' 0ms
+     → expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+   ✓ reference boundaries > leaves adjacent or escaped text alone: 文字$alpha 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: （$alpha） 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: ($alpha) 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: $alpha 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: $alpha  0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: \$alpha 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: \\$alpha 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: $alpha/beta 0ms
+   ✓ reference boundaries > leaves adjacent or escaped text alone: $5.00 0ms
+   ✓ reference boundaries > rejects cursor positions inside a name and allows the bare trigger 6ms
+   ✓ reference boundaries > uses the same prose boundaries for completion and activation around unmatched backticks 2ms
+   ✓ reference boundaries > treats unmatched backticks as prose on submission and recognizes quoted fences 1ms
+   ✓ reference boundaries > recognizes fenced code inside list containers without hiding following prose 1ms
+   ✓ reference boundaries > keeps source identities through repeated names, tables, links and nested containers 0ms
+   ✓ reference boundaries > excludes inline code with matching backtick runs and backtick or tilde fences 0ms
+   ✓ reference boundaries > finds ordered whole tokens on any line with only space, tab or newline separators 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 29 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: ,
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: .
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: ;
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: :
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: !
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: ?
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: ，
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: 。
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: ；
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: ：
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: ！
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: ？
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: 、
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: …
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: )
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: ]
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: }
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: ）
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: ］
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: ｝
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: 】
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: 》
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: 〉
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: 」
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: 』
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: ”
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: ’
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: "
+ FAIL  extensions/skill-mentions/__tests__/references.test.ts > reference boundaries > accepts a closing delimiter without offering completion: '
+AssertionError: expected [] to deeply equal [ { name: 'alpha', start: 2, end: 8 } ]
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [[39m
+[32m-   {[39m
+[32m-     "end": 8,[39m
+[32m-     "name": "alpha",[39m
+[32m-     "start": 2,[39m
+[32m-   },[39m
+[32m- ][39m
+[31m+ [][39m
+
+ ❯ extensions/skill-mentions/__tests__/references.test.ts:7:34
+      5|   it.each([...`,.;:!?，。；：！？、…)]}）］｝】》〉」』”’"'`])("accepts a closing del…
+      6|     const text = `用 $alpha${delimiter}`;
+      7|     expect(findReferences(text)).toEqual([{ name: "alpha", start: 2, e…
+       |                                  ^
+      8|     expect(completionReference(text, 8)).toBeUndefined();
+      9|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/29]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  29 failed | 16 passed (45)
+   Start at  00:41:03
+   Duration  228ms (transform 24ms, setup 0ms, collect 45ms, tests 23ms, environment 0ms, prepare 41ms)
