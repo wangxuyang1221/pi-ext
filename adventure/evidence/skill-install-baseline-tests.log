@@ -1,0 +1,17 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ✓ extensions/skill-mentions/__tests__/protocol.test.ts (18 tests) 3ms
+ ✓ extensions/skill-mentions/__tests__/references.test.ts (19 tests) 22ms
+ ✓ extensions/skill-mentions/__tests__/registration.test.ts (8 tests) 7ms
+ ✓ extensions/skill-mentions/__tests__/visibility.test.ts (2 tests) 15ms
+ ✓ extensions/skill-mentions/__tests__/loading.test.ts (13 tests) 22ms
+ ✓ extensions/skill-mentions/__tests__/flow.test.ts (10 tests) 141ms
+ ✓ extensions/skill-mentions/__tests__/lifecycle.test.ts (15 tests) 236ms
+ ✓ extensions/skill-mentions/__tests__/history-editor.test.ts (6 tests) 352ms
+ ✓ extensions/skill-mentions/__tests__/autocomplete.test.ts (21 tests) 2026ms
+
+ Test Files  9 passed (9)
+      Tests  112 passed (112)
+   Start at  19:27:02
+   Duration  2.74s (transform 320ms, setup 0ms, collect 3.83s, tests 2.82s, environment 1ms, prepare 549ms)
