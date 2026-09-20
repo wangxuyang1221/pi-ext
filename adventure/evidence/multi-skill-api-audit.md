@@ -1,5 +1,7 @@
 # Multi-skill public API audit
 
+> 本报告是早期候选快照。后续 [生命周期审计](multi-skill-lifecycle-audit.md) 已验证实际 session/queue，并补充 `message_start` 提前展示与 `message_end` 替换普通 user 的路线。下文关于 input transform、context 后置 entry 的结论仍可作局部证据，但不能再当作唯一候选或最新验证状态。
+
 ## Verdict
 
 **存在一条不改上游、不 monkey patch、可望在同一模型请求注入多个完整 skill 快照并复用原生 `SkillInvocationMessageComponent` 外观的纯公开 API 候选路线。** 源码支持它的生命周期推演，组件和消息层探针已经通过，但完整 input、queue、context append 和失败恢复尚未端到端证实。它不是把多份 `/skill:name` 串起来，而是组合以下公开能力：
@@ -150,6 +152,7 @@ for (const snapshot of entry.data.skills) {
     name: snapshot.name,
     location: snapshot.location,
     content: snapshot.content,
+    userMessage: "",
   }));
 }
 return container;

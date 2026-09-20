@@ -19,7 +19,7 @@ const displayType = "multi-skill-probe-display";
 function renderNativeCards(_entry: unknown, options: { expanded: boolean }) {
   const group = new Container();
   for (const snapshot of snapshots) {
-    const card = new SkillInvocationMessageComponent(snapshot);
+    const card = new SkillInvocationMessageComponent({ ...snapshot, userMessage: "" });
     card.setExpanded(options.expanded);
     group.addChild(card);
   }
