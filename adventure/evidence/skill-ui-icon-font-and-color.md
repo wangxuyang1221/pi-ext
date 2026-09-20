@@ -2,7 +2,7 @@
 
 ## Decision scope
 
-本轮沿用用户倾向的无底色方案。用户要求同时试 `⌘` 和立方体，并指定新截图中的青色。颜色、两处一致标识和整体编辑沿用已确认方向，图标尚未选定。当前只改隔离原型，不改日常插件或终端设置。
+本轮沿用用户倾向的无底色方案。用户要求同时试 `⌘` 和立方体，并指定新截图中的青色。当时颜色、两处一致标识和整体编辑已有方向，图标尚未选定。后续用户选择cube为默认，command为手动降级，并确认通过命令切换、记住选择。最终有效要求见[Spec](https://github.com/wangxuyang1221/pi-ext/issues/2#visual-references)。当前只改隔离原型，不改日常插件或终端设置。
 
 ## Color sampling
 
@@ -30,7 +30,15 @@
 - 使用现有 fontTools 4.63.0 的 TTFont/getBestCmap 和 name 表只读核验，未安装或修改字体。
 - Pi 0.86.0 的 visibleWidth 对两个字形都返回 1。内部标签投影不随图标改变，只替换渲染字形，所以 supplementary-plane 的 UTF-16 长度不改变原文光标坐标。
 
-已确认字体安装与字形存在，未确认用户当前终端实际采用的字体或 fallback。若实际终端显示方框，需选用支持 U+F01A7 的 Nerd Font；本轮不自动修改终端配置。
+已确认字体安装与字形存在，未确认用户当前终端实际采用的字体或 fallback。若实际终端显示方框，可选择支持 U+F01A7 的 Nerd Font，或按后续已确认方案通过命令手动切换为 `⌘`。不承诺自动识别缺字，也不承诺command在任意字体中都可用。本轮不自动修改终端配置。
+
+## Fallback decision verification
+
+Planning #13 已确认command作为手动降级，不是隐藏图标。用户提供的后续截图显示 `⌘`，与已有command原型一致；截图中的宿主背景不代表新增标签背景。两处样式、颜色和原文/整体编辑不变。
+
+复用既有command/cube × Codex/native四组PTY证据。切换命令与持久化偏好是待正式实现的要求，不将原型 `/prototype` 命令视为已经交付。Context7的main文档确认registerCommand与命令上下文reload的公开入口；实际版本仍为Pi 0.86.0。本仓库也已有扩展通过getAgentDir定位用户配置，表明无需更改终端或安装字体来保存图标选择。
+
+命令名、参数校验、配置写入失败及重启/reload恢复由后续显示/设置切片验证，实际安装与两种图标的真实终端覆盖归整体验收。本次没有写入全局配置。
 
 ## Preview limits
 

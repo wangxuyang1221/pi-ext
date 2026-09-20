@@ -1,6 +1,6 @@
 # Handoff
 
-> 从 Continuation Point 接续。完整规格只在 Spec Issue 正文维护。#11 与修订后的 #5 已通关，cube 青色与右侧标点规则已移交 Spec；#12 的用户行为取舍已明确，正式集成仍待验证；当前先处理独立的 #13 字体前提，不重复询问样式、标点或跨行选择。
+> 从 Continuation Point 接续。完整规格只在 Spec Issue 正文维护。#11 与修订后的 #5 已通关，cube 青色与右侧标点规则已移交 Spec；#13 已通关，默认cube、command手动降级及命令保存偏好已移交Spec。当前返回#12，先确认原生大粘贴折叠与自动成标的显示例外，不重复询问样式、标点或跨行选择。
 
 ## Handoff Position
 
@@ -10,7 +10,7 @@
 
 ## Current Goal or Problem
 
-为 Pi 实现 `$` 行内 skill 选择与激活。上一版已实施并验收；用户现要求右侧标点允许激活，候选仍要求双侧空白，并明确选择输入框及发送后正文两处都有特殊UI。[Planning #11](https://github.com/wangxuyang1221/pi-ext/issues/11) 已通关，用户选定无底色、常规字重、青色 #8DF9FD 的 cube 标签，要求已移交 Spec。[#5 激活边界](https://github.com/wangxuyang1221/pi-ext/issues/5) 也已修订通关。当前推进 [#12 标签生成与编辑](https://github.com/wangxuyang1221/pi-ext/issues/12)，其原生前置 #5 已解除；[#13 字体兼容](https://github.com/wangxuyang1221/pi-ext/issues/13) 独立待规划。尚未提交完整的新实施切片，不能将原型视为正式交付。
+为 Pi 实现 `$` 行内 skill 选择与激活。上一版已实施并验收；用户现要求右侧标点允许激活，候选仍要求双侧空白，并明确选择输入框及发送后正文两处都有特殊UI。[Planning #11](https://github.com/wangxuyang1221/pi-ext/issues/11) 已通关，用户选定无底色、常规字重、青色 #8DF9FD 的 cube 标签，要求已移交 Spec。[#5 激活边界](https://github.com/wangxuyang1221/pi-ext/issues/5) 也已修订通关。当前推进 [#12 标签生成与编辑](https://github.com/wangxuyang1221/pi-ext/issues/12)，其原生前置 #5 已解除；[#13 字体兼容](https://github.com/wangxuyang1221/pi-ext/issues/13) 已通关，用户选定command降级和命令保存偏好。尚未提交完整的新实施切片，不能将原型视为正式交付。
 
 - [Map #1](https://github.com/wangxuyang1221/pi-ext/issues/1) 与 [Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2) 保持 open。
 - [#8 输入闭环](https://github.com/wangxuyang1221/pi-ext/issues/8)、[#9 队列与历史](https://github.com/wangxuyang1221/pi-ext/issues/9)、[#10 安装交付与整体验收](https://github.com/wangxuyang1221/pi-ext/issues/10) 均通过协调者验收并关闭。
@@ -36,7 +36,7 @@
 
 - 工作区 `/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions`，分支 `adventure/skill-mentions`。用户已批准该worktree、分支提交推送和本仓库冒险Issues维护。仅本任务，不改main、不建PR、不合并、不部署。本轮原型不改全局Pi；此前两次全局卸载/安装有单独明确批准，不推定为后续全局修改授权。
 - 只用公开API，不修改已有实例方法或原型，不改Pi上游。旧slash入口、历史及CodexEditor外观/回调/快捷键保持原样。原生skill卡片美化仍延期；本轮选定的是任务正文引用标识，不是卡片美化。
-- 新方向已移交 Spec 的 References and boundaries 与 Visual references：激活允许右侧标点，补全仍双侧空白，左侧边界不扩大；输入与发送后正文均做标签，原生卡片不变。用户选定 cube 图标 U+F01A7，图标和名称同为 #8DF9FD、常规字重、无背景和尖括号；视觉隐藏 `$`，原文仍保留 `$skill-name`。补全确认后成为整体标签，左右键整块跳过，Backspace/Delete 整块删除，撤销恢复。标点范围与 ASCII 句点例外已由 #5 确认并移交 Spec；`/` 不放宽，句点紧接名称字符时不结束引用。#12 已确认自动成标：手写完整有效引用后输入有效分隔符才成标，粘贴/历史回填中的完整有效引用直接成标。用户决定本轮不新增复制原文操作，终端选区仍复制屏幕文字，不承诺还原美元引用。超长标签跨行显示完整名称，不省略；一般剩余空间不足时整体移到下一行。完整编辑契约继续在 #12 验证，字体要求与降级归 #13。静默回退、去重、来源边界等旧决定继续保留。
+- 新方向已移交 Spec 的 References and boundaries 与 Visual references：激活允许右侧标点，补全仍双侧空白，左侧边界不扩大；输入与发送后正文均做标签，原生卡片不变。用户选定 cube 图标 U+F01A7，图标和名称同为 #8DF9FD、常规字重、无背景和尖括号；视觉隐藏 `$`，原文仍保留 `$skill-name`。补全确认后成为整体标签，左右键整块跳过，Backspace/Delete 整块删除，撤销恢复。标点范围与 ASCII 句点例外已由 #5 确认并移交 Spec；`/` 不放宽，句点紧接名称字符时不结束引用。#12 已确认自动成标：手写完整有效引用后输入有效分隔符才成标，粘贴/历史回填中的完整有效引用直接成标。用户决定本轮不新增复制原文操作，终端选区仍复制屏幕文字，不承诺还原美元引用。超长标签跨行显示完整名称，不省略；一般剩余空间不足时整体移到下一行。完整编辑契约继续在 #12 验证。#13已确认默认cube，用户手动通过命令切换为command `⌘` 并记住选择；不是无图标降级，不自动探测或修改字体/终端。两处图标模式一致，颜色、原文和交互不变，要求已移交Spec。静默回退、去重、来源边界等旧决定继续保留。
 - 消费时读取文件，队列保留原文；同一user保存任务、图片和快照。恢复不重读，仅显示当前分支已有有效关联卡片，隐藏孤立展示，不补卡、不固定或重注入已压缩全文。
 - 用户已明确旧缺文件与新功能无关，不为本任务恢复18个文件，也未授权删除旧测试或清理旧引用。保留全仓失败和本功能通过的区别。
 - 写文本前读 `docs/agents/repository-language-policy.md`。新增用户可见产品文案需确认语言，当前沿用skill元数据和原生组件，没有新增提示文案。
@@ -72,6 +72,8 @@
 
 - #12 随后新增原文模型探针，4轮Red/Green通过：原生Editor始终保存原文，标签范围独立维护；纯显示转换不产生undo记录，真实补全provider/粘贴末尾成标、宽度8跨行颜色和整块删除/undo恢复通过。全部17项原型测试、独立tsc通过。新探针不是完整EditorComponent，没有宿主菜单/边框、滚动、光标标记和完整坐标集成，#12仍open。报告同上。未修改产品、全局安装或终端。
 
+- 返回#12后核验实际Editor.handlePaste：bracketed paste超过10行或1000个UTF-16 code units时自动折叠。新增12行探针复现getText只含`[paste #…]`、getExpandedText与onSubmit仍保留完整原文及引用；当前原文模型不会为折叠块内部画标签。这需要用户明确与自动成标的显示例外。全部18项原型/探针和独立tsc通过；没有新增CLI PTY。
+
 ## Current Assumptions
 
 cube、青色、无底色与整体标签交互已确认，不再重选视觉。原型仅支持观感与部分交互判断，不能证明生产编辑契约或任意终端字体兼容。新行为没有完整切片审核或生产验收；最近的“ok”只批准按规划流程继续，不是批准候选切片开工。
@@ -80,11 +82,11 @@ cube、青色、无底色与整体标签交互已确认，不再重选视觉。�
 
 ## Continuation Point
 
-#12的自动成标、复制范围和跨行选择均已确认，局部原文/撤销模型已验证，但整体坐标与宿主渲染证据不足，不能关闭。当前先推进独立#13，问字体方案：要求终端使用支持cube的Nerd Font且本轮不做降级，或默认cube并额外提供手动关闭图标的降级开关。不承诺自动检测，不安装字体或改终端设置。确认后核验该方案，再回到#12将选定字形条件用于正式坐标、视口、菜单和历史集成验证。#5/#11已关闭，Map/Spec保持open，Spec修订中。
+#5/#11/#13均已关闭，Map/Spec保持open且Spec修订中。当前#12先问大粘贴行为：推荐保留Pi原生折叠，块内引用提交时按展开原文正常激活但不单独显示标签；另一方案是含有效引用时取消折叠，显示全文与标签。两者仍待选，不将原先“粘贴直接成标”自行解释成其中一种。选择后继续整体坐标、视口、菜单与历史集成验证。局部原文/撤销模型已有证据，不能直接当成#12整体通过。
 
 原型启动：在本worktree运行 `pnpm exec node adventure/experiments/skill-mention-ui/run.mjs command`，或将command换成cube。退出自动清理，不连接真实provider；可加`--native`。仍运行上一版代码的原型先`/reload`，再通过`/prototype command`或`/prototype cube`切换。本轮使用的skill为 `/Users/wangxuyang/.agents/skills/wangxuyang/make-a-prototype/SKILL.md`，继续原型前完整读取及必要引用。
 
-完成 #12/#13 后检查 Spec 一致性，读取 slicing skill，提交完整实施切片供用户审核。审核通过才创建匹配的 Implementation Issues 并派发首关。旧 #8/#9/#10 不重写为本轮实施关卡。主代理当前推进 Planning，未派发本轮 worker。
+完成 #12 后检查 Spec 一致性，读取 slicing skill，提交完整实施切片供用户审核。审核通过才创建匹配的 Implementation Issues 并派发首关。旧 #8/#9/#10 不重写为本轮实施关卡。主代理当前推进 Planning，未派发本轮 worker。
 
 最后旧worker `01a0be90-2ed7-76f6-807e-976844772b8f` 曾保留上下文，当前没有本轮worker任务；复用前核对是否仍存活。新的Implementation按adventure要求独立上下文，原关返工可复用旧worker。工作区状态核验后行动，避免重复施工。实施所需skills须完整读取及必要引用：
 

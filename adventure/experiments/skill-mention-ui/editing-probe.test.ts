@@ -1,6 +1,8 @@
 import { expect, it } from "vitest";
 import { Editor, stripTerminalSequences, visibleWidth, type EditorTheme, type TUI } from "@earendil-works/pi-tui";
 import { chipEditor, chipToken } from "./chips.js";
+import { sourceModelProbe } from "./source-model-probe.js";
+import { findReferences } from "../../../extensions/skill-mentions/src/references.js";
 
 const identity = (text: string) => text;
 const theme: EditorTheme = {
@@ -55,4 +57,20 @@ it("shows why adding setText conversion after a typed delimiter creates an extra
   expect(editor.getText()).toBe("$presentations ");
   expect(base.getText()).toBe("$presentations ");
   console.log(JSON.stringify({ probe: "naive-auto-conversion", firstUndoOnlyRemovesProjection: true }));
+});
+
+it("records native large-paste folding separately from expanded source and submission", () => {
+  const base = new Editor(tui, theme);
+  const editor = sourceModelProbe(base, names);
+  const text = "$presentations\n" + Array.from({ length: 11 }, (_, index) => `line ${index}`).join("\n");
+  let submitted = "";
+  base.onSubmit = value => { submitted = value; };
+  editor.handleInput("\x1b[200~" + text + "\x1b[201~");
+  expect(base.getText()).toMatch(/^\[paste #\d+ \+12 lines\]$/);
+  expect(base.getExpandedText()).toBe(text);
+  expect(editor.render(80).join("")).not.toContain("\u{f01a7}");
+  expect(findReferences(base.getExpandedText()).map(ref => ref.name)).toEqual(["presentations"]);
+  editor.handleInput("\r");
+  expect(submitted).toBe(text);
+  console.log(JSON.stringify({ probe: "large-paste", lines: 12, folded: true, expandedSourceAndSubmissionPreserved: true }));
 });
