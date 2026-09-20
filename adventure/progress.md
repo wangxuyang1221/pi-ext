@@ -1,6 +1,6 @@
 # Handoff
 
-> 从 Continuation Point 接续。完整规格只在Spec Issue正文维护。#5/#11/#12/#13均已通关并移交Spec；当前等待本轮完整实施切片审核，不重复询问样式、标点、跨行、降级或大粘贴选择。
+> 从 Continuation Point 接续。完整规格只在Spec Issue正文维护。#5/#11/#12/#13均已通关并移交Spec；用户已审核三关粒度，#14/#15/#16已创建并建立原生依赖。已按用户要求保存并暂停，未派发worker。恢复后从#14开始，不重复询问切片、样式、标点、跨行、降级或大粘贴选择。
 
 ## Handoff Position
 
@@ -10,9 +10,9 @@
 
 ## Current Goal or Problem
 
-为Pi实现行内`$skill`选择与激活。上一版已验收；本轮增加右侧标点激活、输入框和发送后任务正文的整体标签，以及手动图标降级。规划与关键可行性验证已结束，尚未实现新产品行为。
+为Pi实现行内`$skill`选择与激活。上一版已验收；本轮增加右侧标点激活、输入框和发送后任务正文的整体标签，以及手动图标降级。规划与关键可行性验证已结束，用户已确认把输入标签和正文/偏好合为一关，完整范围和验收不变。尚未实现新产品行为。
 
-- [Map #1](https://github.com/wangxuyang1221/pi-ext/issues/1)、[Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2)保持open。Spec已确定，可用于实施，但新切片须先审核。
+- [Map #1](https://github.com/wangxuyang1221/pi-ext/issues/1)、[Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2)保持open。Spec已确定，可用于实施，三关切片已审核。
 - 旧Implementation #8/#9/#10已关闭，不能改作本轮新关卡。产品代码基准`0b9231d4645df658e5160f71ef49b439746dfbe4`。
 - [旧版说明](../docs/skill-mentions.md)、[旧版完整验收](evidence/skill-install-acceptance.md)说明已有能力；不代表本轮通过。
 - 最新[源文本投影宿主报告](evidence/skill-source-host-probe.md)是输入标签worker接手必读，包含实验入口、失败路线、实际证据与未验证边界。
@@ -35,7 +35,7 @@
 - 两处标签默认cube U+F01A7，图标与名称同为`#8DF9FD`、正常字重、无新增背景。手动命令切换command `⌘` U+2318并持久化，重启/reload沿用，不自动探测字体或改终端。视觉隐藏`$`，底层仍为`$skill-name`。
 - 手写到有效分隔符才成标，不在名称途中锁定；菜单确认、完整粘贴及历史回填直接成标。超长名称完整跨行；左右、Backspace/Delete整体操作，undo恢复，无仅撤销投影步骤。保留原生大粘贴折叠与完整原文。屏幕复制仍复制视觉文字，不新增原文复制命令。
 - 输入标签只表示名称识别；正文仅标记成功快照。未知/读取失败完全静默回退；同一user保留任务、图片和消费时快照。队列保留原文，恢复不重读；孤立卡片隐藏，缺失不补，不重注入被压缩全文。
-- 新切片未经审核，不改产品、不创建Implementation。实施使用独立worker，一次推进一关；主代理协调验收。旧候选四关名称不是审核结果。
+- 用户已审核三关：[#14标点激活](https://github.com/wangxuyang1221/pi-ext/issues/14)、[#15完整标签体验](https://github.com/wangxuyang1221/pi-ext/issues/15)、[#16安装交付与整体验收](https://github.com/wangxuyang1221/pi-ext/issues/16)。原Slice 2和3合并，其余范围/验收不削减；各Issue含完整六字段。三者均为Map子Issue，原生依赖14→15→16。用户明确要求创建后保存并暂停，当前不派发、不编码。恢复后主代理协调，一次推进一关，worker独立上下文。
 - 不修复18个无关缺文件，不删旧测试、不降低门槛。写文本前读`docs/agents/repository-language-policy.md`；新产品文案语言须先确认。当前探针复用原有fixture文案。
 - 用户确认最终交付前Map/Spec保持open，远端分支不自动删除。
 
@@ -77,20 +77,20 @@ pnpm exec node adventure/experiments/skill-mention-ui/run.mjs command --source
 
 原文/范围/投影分离已有关键路径证据，足以实施；尚未证明探针可直接发布或适配所有终端/编辑器。具体实现属于正式切片，公开API不足时回流Planning，不能换私有补丁。
 
-本轮完整切片当前仅为待审核方案：1标点激活，2输入整体标签，3正文标签与图标偏好，4可安装交付及整体验收。前后依赖为1→2→3→4，共享产品代码，按adventure顺序执行。用户尚未接受这次完整清单。
+三关粒度和范围已获用户确认，不再是候选方案。创建时HEAD为`3598103`；后续保存只改存档，产品行为基准仍为`0b9231d`。正式派发前核对最新HEAD和前置验收提交。
 
 ## Continuation Point
 
-等待用户审核本轮完整切片，主对话给出每关goal/in_scope/out_of_scope/dependencies/acceptance/boundaries。Spec Deferred verification已标出拟分配的责任。不要将最新“1”误读为切片批准；它只确认保留大粘贴折叠。
+暂停位置：用户明确说“就这个粒度，创建level后保存进度并暂停”。三关已创建，Spec已更新责任链接，均open且尚未开工。本次建关存档只修改资料，重跑`pnpm run check`仍为2070 passed/5 skipped及同一MCP缺文件失败，没有新的产品测试变更。当前不继续派发，等待用户恢复口令。
 
-审核通过后：
+恢复后：
 
-1. 依当前slicing方法把完整字段保存到新的Implementation Issues，设置Map子Issue及原生依赖，Spec补责任链接。旧#8/#9/#10不重用。
-2. 更新Map为首个可执行关卡，按handoff保存、提交推送；用户无暂停要求则派发首个worker。
-3. 主代理一次协调一关，worker独立上下文、不再委派，维护Issue执行计划/交付/验证；协调者逐轮追加Acceptance、通过后关闭并存档。
-4. 最后worker完成整体验收、延期验证和清理。用户确认前Map/Spec保持open，最终交付待确认时停止。
+1. 读取[首关#14](https://github.com/wangxuyang1221/pi-ext/issues/14)、Spec及边界报告，核对worktree/HEAD和worker状态，不重复创建关卡或重新审核已接受的三关。#15由#14阻塞，#16由#15阻塞。
+2. 派发独立上下文worker执行#14，提供Map、Spec、Issue、证据、实际代码基准、操作范围及skill绝对路径。worker在Issue编写计划，主代理不替代worker编码。
+3. 主代理一次协调一关，worker不再委派，维护Issue执行计划/交付/验证；协调者逐轮追加Acceptance、通过后关闭并存档，然后进入#15与#16。
+4. #16的worker承担整体验收、延期验证和清理。用户确认前Map/Spec保持open，最终交付待确认时停止。
 
-当前无本轮worker。旧worker`01a0be90-2ed7-76f6-807e-976844772b8f`曾保留，勿直接假设仍存活；新关须新上下文，返工复用原worker。接手先核对工作区与subagent状态，避免重复施工。
+本次已核对subagent：无本轮worker任务；旧worker`01a0be90-2ed7-76f6-807e-976844772b8f`为settled，未进行施工，保留旧交付上下文。新关须新上下文，返工复用原worker；恢复时再次核对，避免重复施工。
 
 必读skill及交接时需提供的绝对路径：
 
