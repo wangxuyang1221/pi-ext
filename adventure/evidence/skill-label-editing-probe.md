@@ -44,6 +44,32 @@ pnpm exec vitest run --config adventure/experiments/vitest.config.ts adventure/e
 
 以上是需要验证的候选实现约束，不代表正式状态模型已验证。公开API组合、快捷键映射、kill ring、长粘贴折叠、历史和reload尚需进一步验证。旧视觉关卡明确未验收这些边界，因此本次不推翻已确认的cube外观。
 
-## Pending decision
+## Confirmed wrapping behavior
 
-一般情况下可将标签整块移到下一行。若标签本身比整行还宽，需要用户选择显示完整名称并允许跨行，或单行省略名称。该选择会影响显示坐标与渲染策略，先明确再验证。
+用户已选择跨行显示完整名称，不省略。一般剩余空间不足但整行能容纳时，标签整体移到下一行；标签本身超过整行宽度时可以拆行，编辑仍为一个整体。
+
+## Source model probe
+
+新增 [source-model-probe.ts](../experiments/skill-mention-ui/source-model-probe.ts) 与[测试](../experiments/skill-mention-ui/source-model-probe.test.ts)，验证另一条路线：原生 Editor 始终保存 `$skill` 原文，标签状态用范围数据单独记录，只在显示布局阶段替换图标与名称。不向原生buffer插入隐藏标记，也不从显示字形反推原文。原生补全仍读取原文，纯视觉转换不调用setText，因此不额外增加undo步骤。
+
+4轮 Red → Green：
+
+1. 原型手写后没有自动成标，断言先失败。新方案在分隔符后建立显示范围；输入名称期间不成标，撤销先移除空格、再按原生合并规则撤销名称，没有仅撤销投影的步骤，onChange次数不增加。
+2. 原生左键只移动一个字，整块移动断言先失败。通过有进度检查和循环上限的公开handleInput移动，以及一次公开setText完成整块删除后，左右移动、删除与原生undo恢复标签通过；原方法引用未改。
+3. 完整粘贴位于输入末尾时最初未成标。识别bracketed paste的完成事件后，末尾成标和一次undo撤销粘贴通过；普通文本中的同形cube字符串不会被当作标签。
+4. 真实产品补全provider选中名称后最初未成标。区分菜单确认事件后，原生菜单关闭、原文缓冲和标签同时通过。
+
+显示布局将每个标签作为一段；超过整行才拆为字素，每段按范围着色。宽度8的多行名称、cube及各行青色通过，原文不受影响。Pi的`wordWrapLine`虽然在内部模块有导出，但未从package root导出，实验没有继续使用深层导入，而采用自有投影布局。
+
+本次全部原型与探针共17项测试通过，独立tsc通过。运行：
+
+```bash
+pnpm exec vitest run --config adventure/experiments/vitest.config.ts adventure/experiments/skill-mention-ui
+pnpm exec tsc --noEmit --target ESNext --module NodeNext --moduleResolution NodeNext --skipLibCheck --esModuleInterop --types node adventure/experiments/skill-mention-ui/*.ts
+```
+
+## Remaining feasibility work
+
+新探针不是完整EditorComponent，也没有接入实际CLI。它验证真实Editor的原文、补全和撤销路径，但显示只验证标签内容布局，没有包含宿主边框/菜单、滚动视口、光标标记、上下移动或鼠标坐标映射。使用现有严格解析器做空白边界用例，不能声称已接入#5的新语法。kill ring、自定义快捷键、长粘贴折叠及reload/历史完整集成尚未验证。
+
+因此#12仍open，原文模型是一条有局部证据支持的候选，不是已经通过的整体可行性结论。接下来可以先处理独立的#13字体前提，再回到#12把选定字形/降级条件纳入完整坐标与宿主渲染验证。不创建Implementation，也不将此实验安装到日常Pi。
