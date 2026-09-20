@@ -1,12 +1,12 @@
 import { matchesKey, stripTerminalSequences, type AutocompleteProvider, type EditorComponent } from "@earendil-works/pi-tui";
 import { knownReferences } from "./ui.js";
 
-export const chipLabel = (name: string) => `‹ ◇ ${name} ›`;
+export const chipLabel = (name: string) => ` ◇ ${name} `;
 // Invisible separators distinguish projected atoms from literal lookalike text.
 const marker = "\u2063";
 // Braille blank occupies one cell but is not a wrap opportunity. Rendering
 // replaces it with a normal space; no font or terminal protocol is required.
-const chipPattern = () => /\u2063‹\u2800◇\u2800([\p{L}\p{N}_-]+)\u2800›\u2063/gu;
+const chipPattern = () => /\u2063\u2800◇\u2800([\p{L}\p{N}_-]+)\u2800\u2063/gu;
 export const chipToken = (name: string) => marker + chipLabel(name).replaceAll(" ", "\u2800") + marker;
 export function encodeChips(text: string, names: ReadonlySet<string>): string {
   for (const ref of knownReferences(text, names).reverse()) {
@@ -17,15 +17,17 @@ export function encodeChips(text: string, names: ReadonlySet<string>): string {
 export function decodeChips(text: string): string {
   return text.replace(chipPattern(), (_match, name: string) => `$${name}`);
 }
-const chipStyle = "\x1b[1;38;2;226;202;232;48;2;53;37;59m";
-export function chipMarkdown(text: string, names: ReadonlySet<string>, background: string): string {
+export type ChipVariant = "gray" | "blue";
+const chipStyle = (char: string, variant: ChipVariant) => `\x1b[22;38;2;${variant === "blue" || char === "◇" ? "127;169;223" : "215;218;222"}${variant === "gray" ? ";48;2;52;54;58" : ""}m`;
+export function chipMarkdown(text: string, names: ReadonlySet<string>, background: string, variant: ChipVariant = "gray"): string {
   for (const ref of knownReferences(text, names).reverse()) {
-    text = text.slice(0, ref.start) + "`" + chipStyle + chipLabel(ref.name)
-      + "\x1b[22m\x1b[39m" + background + "`" + text.slice(ref.end);
+    const label = [...chipLabel(ref.name)].map(char => chipStyle(char, variant) + char).join("");
+    text = text.slice(0, ref.start) + "`" + label
+      + "\x1b[22m\x1b[39m" + (variant === "gray" ? background : "") + "`" + text.slice(ref.end);
   }
   return text;
 }
-export function styleChipLines(lines: string[]): string[] {
+export function styleChipLines(lines: string[], variant: ChipVariant = "gray"): string[] {
   return lines.map(raw => {
     const spans = [...stripTerminalSequences(raw).matchAll(chipPattern())].map(match => ({ start: match.index, end: match.index + match[0].length }));
     if (!spans.length) return raw.replaceAll(marker, "").replaceAll("\u2800", " ");
@@ -34,7 +36,7 @@ export function styleChipLines(lines: string[]): string[] {
     function append(text: string) {
       for (const char of text) {
         if (char !== marker) out += spans.some(span => position >= span.start && position < span.end)
-          ? chipStyle + (char === "\u2800" ? " " : char) + "\x1b[22m\x1b[39m\x1b[49m" + sgr : char;
+          ? chipStyle(char, variant) + (char === "\u2800" ? " " : char) + "\x1b[22m\x1b[39m" + (variant === "gray" ? "\x1b[49m" : "") + sgr : char;
         position += char.length;
       }
     }
@@ -49,7 +51,7 @@ export function styleChipLines(lines: string[]): string[] {
   });
 }
 
-export function chipEditor(base: EditorComponent, names: () => ReadonlySet<string>): EditorComponent {
+export function chipEditor(base: EditorComponent, names: () => ReadonlySet<string>, variant: ChipVariant = "gray"): EditorComponent {
   const getCursor = Reflect.get(base, "getCursor") as () => { line: number; col: number };
   if (typeof getCursor !== "function") throw new Error("Chip prototype requires the public Editor.getCursor API");
   const offset = () => {
@@ -104,7 +106,7 @@ export function chipEditor(base: EditorComponent, names: () => ReadonlySet<strin
   return new Proxy(base, {
     get(target, key) {
       if (key === "handleInput") return input;
-      if (key === "render") return (width: number) => styleChipLines(target.render(width));
+      if (key === "render") return (width: number) => styleChipLines(target.render(width), variant);
       if (key === "getText") return () => decodeChips(target.getText());
       if (key === "getExpandedText") return () => decodeChips(target.getExpandedText?.() ?? target.getText());
       if (key === "setText") return (text: string) => target.setText(encodeChips(text, names()));

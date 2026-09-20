@@ -71,7 +71,7 @@ it("keeps adjacent word deletion atomic and undoable", () => {
   editor.setText("");
 });
 
-it("renders the same bounded label in the native editor and actual user Markdown", () => {
+it("renders a borderless gray label with a blue icon in both locations", () => {
   const source = "$presentations, 和 $lark-doc。";
   initTheme("dark", false);
   const styled = chipMarkdown(source, names, "\x1b[48;2;67;67;67m");
@@ -81,11 +81,38 @@ it("renders the same bounded label in the native editor and actual user Markdown
   const editor = chipEditor(base, () => names);
   editor.setText(source);
   const output = editor.render(104);
-  expect(output.join("\n")).toContain("48;2;53;37;59");
+  expect(output.join("\n")).toContain("48;2;52;54;58");
+  expect(output.join("\n")).toContain("38;2;127;169;223");
+  expect(output.join("\n")).toContain("38;2;215;218;222");
+  expect(chipLabel("presentations")).toBe(" ◇ presentations ");
+  expect(stripTerminalSequences(styled)).not.toMatch(/[‹›]/);
   expect(output.every(line => visibleWidth(line) <= 104)).toBe(true);
   expect(editor.getText()).toBe(source);
   // Nonbreaking projected padding keeps fitting labels together when wrapping.
   const wrapped = editor.render(27).map(stripTerminalSequences).join("\n");
   expect(wrapped).toContain(chipLabel("presentations"));
   expect(wrapped).toContain(chipLabel("lark-doc"));
+});
+
+it("renders blue icon and text without a new background while keeping atomic editing", () => {
+  const source = "$presentations, 和 $lark-doc。";
+  initTheme("dark", false);
+  const styled = chipMarkdown(source, names, "\x1b[48;2;67;67;67m", "blue");
+  expect(styled).toContain("38;2;127;169;223");
+  expect(styled).not.toContain("48;2;");
+  expect(styled).not.toContain("215;218;222");
+  const rendered = new Markdown(styled, 0, 0, getMarkdownTheme()).render(104);
+  expect(rendered.map(stripTerminalSequences).join("\n")).toContain(chipLabel("presentations"));
+  const base = new Editor(tui, theme);
+  const editor = chipEditor(base, () => names, "blue");
+  editor.setText("用 $presentations");
+  expect(editor.render(104).join("\n")).not.toContain("48;2;");
+  expect(editor.render(104).join("\n")).toContain("38;2;127;169;223");
+  editor.handleInput("\x1b[D");
+  expect(base.getCursor().col).toBe(2);
+  editor.handleInput("\x1b[C");
+  editor.handleInput("\x7f");
+  expect(editor.getText()).toBe("用 ");
+  editor.handleInput("\x1f");
+  expect(editor.getText()).toBe("用 $presentations");
 });

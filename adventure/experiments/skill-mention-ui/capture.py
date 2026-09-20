@@ -134,8 +134,8 @@ try:
     original = editor()
     assert "$presentations," in original and "$lark-doc，" in original
     grab("input")
-    chip_mode = config["variant"] == "chip"
-    foreground = "e2cae8" if chip_mode else "89cdff"
+    chip_mode = config["variant"] in ["gray", "blue"]
+    foreground = ("d7dade" if config["variant"] == "gray" else "7fa9df") if chip_mode else "89cdff"
     assert any(cell["fg"] == foreground for row in shots["input"]["cells"] for cell in row), "Input decoration missing"
     send("\r")
     wait(lambda: events("settled"), "offline submit")
@@ -147,21 +147,29 @@ try:
     assert snapshot["task"] == original
     assert [item["name"] for item in snapshot["skills"]] == ["presentations", "lark-doc"]
     assert "\x1b" not in text, "Visual ANSI leaked into model input"
-    assert "\u2063" not in text and "‹ ◇" not in text, "Projected label leaked into model input"
+    assert "\u2063" not in text and "◇" not in text, "Projected label leaked into model input"
     if chip_mode:
         send("\x1b[A")
         assert editor() == original, "History must preserve original source"
     else:
         paste(original)
     grab("both")
-    needle = "‹ ◇ presentations ›," if chip_mode else "$presentations,"
+    needle = " ◇ presentations ," if chip_mode else "$presentations,"
     text_rows = [i for i, row in enumerate(screen.display) if needle in row]
     assert len(text_rows) == 2, "Must show both user and editor references\n" + "\n".join(screen.display)
     for y in text_rows:
         x = screen.display[y].index(needle)
         assert screen.buffer[y][x].fg == foreground, (y, x, screen.buffer[y][x])
-        if chip_mode or config["variant"] == "tint":
-            assert screen.buffer[y][x].bg == ("35253b" if chip_mode else "2b3e4e"), screen.buffer[y][x]
+        if chip_mode:
+            expected_bg = "34363a" if config["variant"] == "gray" else screen.buffer[y][columns - 1].bg
+            assert screen.buffer[y][x].bg == expected_bg, screen.buffer[y][x]
+            assert screen.buffer[y][x + 1].fg == "7fa9df", "The icon must be blue in both variants"
+            assert screen.buffer[y][x + 3].fg == foreground, "Label text color mismatch"
+            assert not screen.buffer[y][x + 3].bold, "Label text must use normal weight"
+            label_text = screen.display[y][x:x + len(needle)]
+            assert "‹" not in label_text and "›" not in label_text, "Remove simulated label borders, not the host prompt"
+        elif config["variant"] == "tint":
+            assert screen.buffer[y][x].bg == "2b3e4e", screen.buffer[y][x]
     y = text_rows[0]
     assert screen.buffer[y][0].bg == screen.buffer[y][columns - 1].bg == "434343", "User row background must remain intact"
     assert screen.buffer[y][screen.display[y].index(",")].bg == "434343", "Mention background must not leak"
@@ -177,7 +185,7 @@ try:
     assert len(events("request")) == before
     grab("menu-selected")
     if chip_mode:
-        assert "‹ ◇ presentations ›" in "\n".join(screen.display), "Confirmed completion must become a chip"
+        assert " ◇ presentations " in "\n".join(screen.display), "Confirmed completion must become a chip"
         send("\x1b[D")
         send("X")
         assert editor() == "用 X$presentations", "Left must skip the complete chip"
@@ -197,25 +205,26 @@ try:
     assert "PowerPoint" not in "\n".join(screen.display), "Punctuation must not open completion"
     send("\x03")
     ready_before = len(events("ready"))
-    alternate = "accent" if config["variant"] == "tint" else "tint"
+    alternate = ("blue" if config["variant"] == "gray" else "gray") if chip_mode else ("accent" if config["variant"] == "tint" else "tint")
     send(f"/prototype {alternate}\r")
     wait(lambda: len(events("ready")) > ready_before, "public reload style switch")
     assert events("ready")[-1]["variant"] == alternate
     paste(original)
     assert editor() == original
     grab("switched")
-    assert any(cell["fg"] == "89cdff" for row in shots["switched"]["cells"] for cell in row)
+    switched_fg = ("7fa9df" if alternate == "blue" else "d7dade") if chip_mode else "89cdff"
+    assert any(cell["fg"] == switched_fg for row in shots["switched"]["cells"] for cell in row)
     send("\x03")
     if chip_mode:
         ready_before = len(events("ready"))
-        send("/prototype chip\r")
-        wait(lambda: len(events("ready")) > ready_before, "public reload into chip")
+        send(f"/prototype {config['variant']}\r")
+        wait(lambda: len(events("ready")) > ready_before, "public reload into original chip style")
         paste("用 $pre")
         send("s")
         wait(lambda: "PowerPoint" in "\n".join(screen.display), "skill menu after reload")
         send("\t")
         assert editor() == "用 $presentations"
-        assert "‹ ◇ presentations ›" in "\n".join(screen.display)
+        assert " ◇ presentations " in "\n".join(screen.display)
         send("\x03")
     send("/quit\r")
     wait(lambda: status is not None, "graceful quit")
@@ -235,7 +244,7 @@ try:
         detail.save(output / f"{stem}-detail.png")
     summary = {"variant": config["variant"], "native": config["native"], "pid": pid, "exit": 0, "checks": ["real CLI PTY", "input and user colors", "native cards", "original task and two snapshots", "no ANSI in provider input", "Tab completion does not send", "punctuation does not open menu", "public reload style switch"], "screens": {name: shot["text"] for name, shot in shots.items()}}
     if chip_mode:
-        summary["checks"] += ["no chip markers in provider input", "history restores projected chips", "Tab creates an atom", "left and right skip atom", "backspace and delete remove atom", "undo restores atom", "public reload into chip and select completion"]
+        summary["checks"] += ["no chip markers in provider input", "history restores projected chips", "Tab creates an atom", "left and right skip atom", "backspace and delete remove atom", "undo restores atom", "public reload between gray and blue", "public reload into original style and select completion", "no simulated borders or bold text", "blue icon in both styles", "gray background or inherited host background"]
     (output / f"{stem}.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({"passed": True, "variant": config["variant"], "pid": pid, "exit": 0}))
 finally:

@@ -2,9 +2,14 @@
 
 ## Question
 
-在真实 Pi 输入框和发送后正文中，带图标、底色、留白的整体 skill 标签，是否接近用户参考图，并且便于整块移动和删除？
+在已确认的整体标签交互上，灰底浅灰文字和无底色蓝字，哪种更适合真实 Pi 输入框与发送后正文？
 
-用户已否定 `accent` 和 `tint`，选择整体标签。两处都显示、左右键整块跳过、退格一次删除整个标签已确认。当前紫色、菱形图标和字符边界是待用户查看的视觉候选，不是已经确认的生产设计。
+用户已认可整体标签的交互和效果，但认为原型样式粗糙，并否定紫色。本轮按要求同时做两个候选，均移除尖括号和粗体，保留图标及整块编辑。用户尚未选定灰底或蓝字。
+
+- `gray`：中性深灰底、浅灰名称、低饱和蓝色图标，默认候选。
+- `blue`：不添加背景，图标和名称都用同一蓝色，继承宿主背景。
+
+两者使用相同的留白和文本宽度，避免把交互变化混入视觉比较。
 
 ## Landing Map
 
@@ -18,7 +23,7 @@
 
 真实入口采用离线 faux provider。`presentations` 与 `lark-doc` 是沿用原描述的具名 fixture，正文无外部操作。原生 skill 卡片、补全、加载、协议和历史 adapter 复用产品代码。标点适配、标签投影和输入包装是实验代码，不向真实 provider 发送请求。
 
-用户参考图中的像素级圆角细描边没有精确复刻。终端版本使用 `‹ ◇ name ›` 的字符边界、浅紫文字和深紫底色，不依赖 Nerd Font。PNG 字体与行距属于 approximation，实际终端显示为准。
+用户参考图中的像素级圆角细描边没有精确复刻。当前终端版本使用 ` ◇ name `，不再模拟边框，不依赖 Nerd Font。PNG 字体与行距属于 approximation，实际终端显示为准。
 
 ## Behavior
 
@@ -32,18 +37,23 @@
 
 ```bash
 cd /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
-pnpm exec node adventure/experiments/skill-mention-ui/run.mjs chip
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs gray
+# Or start the background-free version:
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs blue
 ```
 
 打开即有示例。可以先发送查看正文效果，再清空草稿，输入 `用 $pre` 并按 Tab，试左右键、退格、撤销。回复固定为离线 `Fixture response`，不执行 skill 内容。
 
-`/quit` 退出，launcher 删除独立 HOME、配置、fixture 和 session。加 `--native` 可试原生编辑器。本轮启动的原型可用 `/prototype chip` 切换。若终端仍运行上一版代码，先 `/reload` 加载更新，再 `/prototype chip`。旧 `accent`、`tint` 仅保留作为被否定方案的对照。
+`/quit` 退出，launcher 删除独立 HOME、配置、fixture 和 session。加 `--native` 可试原生编辑器。用 `/prototype gray` 或 `/prototype blue` 切换；若终端仍运行上一版代码，先 `/reload`。切换后已发送消息会使用新样式，输入新引用并确认补全可比较输入效果。
+
+旧 `chip` 命令作为 `gray` 的别名，不再输出紫色。旧 `accent`、`tint` 仅保留作为被否定方案的对照。
 
 ## Preview
 
-- [标签局部，上方发送后，下方输入](../../evidence/skill-ui-chip-detail.png)
-- [完整 Codex UI](../../evidence/skill-ui-chip-both.png)
-- [原生编辑器](../../evidence/skill-ui-chip-native-both.png)
+- [A：灰底标签，上方发送后、下方输入](../../evidence/skill-ui-gray-detail.png)
+- [B：无底色蓝字，上方发送后、下方输入](../../evidence/skill-ui-blue-detail.png)
+- 完整 Codex UI：[gray](../../evidence/skill-ui-gray-both.png) / [blue](../../evidence/skill-ui-blue-both.png)
+- 原生编辑器：[gray](../../evidence/skill-ui-gray-native-both.png) / [blue](../../evidence/skill-ui-blue-native-both.png)
 
 PNG 来自实际 PTY 字符与颜色网格，不是重建网页，也不是 macOS 窗口截图。局部图只裁剪真实网格图。第二行的代码内容沿用原生代码颜色，不代表激活。
 
@@ -52,15 +62,17 @@ PNG 来自实际 PTY 字符与颜色网格，不是重建网页，也不是 macO
 ```bash
 pnpm exec vitest run --config adventure/experiments/vitest.config.ts adventure/experiments/skill-mention-ui/chips.test.ts adventure/experiments/skill-mention-ui/ui.test.ts
 pnpm exec tsc --noEmit --target ESNext --module NodeNext --moduleResolution NodeNext --skipLibCheck --esModuleInterop --types node adventure/experiments/skill-mention-ui/*.ts
-pnpm exec node adventure/experiments/skill-mention-ui/run.mjs chip --capture
-pnpm exec node adventure/experiments/skill-mention-ui/run.mjs chip --native --capture
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs gray --capture
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs blue --capture
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs gray --native --capture
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs blue --native --capture
 ```
 
-- 新增 5 项行为测试逐项 Red/Green，覆盖投影与原文往返、原生编辑器整块移动/删除/撤销/提交、确认补全生成标签、相邻 Ctrl+W 整块删除、两处真实渲染。连同旧 2 项测试共 7 项通过，独立 tsc 通过。
+- 原有整体标签交互测试保留。灰底的无边框/分色测试先失败后通过，再新增无底色蓝字测试并完成 Red/Green；两种样式的渲染与原子编辑均有断言。[8 项测试](../../evidence/skill-ui-styles-tests.log)通过，独立 tsc 通过。
 - 最终方案使用公开 getCursor、handleInput、setText 等方法，不修改原 editor 的方法或 prototype。测试核对原方法引用未变。最初内部 segmenter 探针虽能运行，但与此前公开 API 约定冲突，已撤除，不作为交付代码或结论。
-- 两组真实 CLI PTY smoke 通过，覆盖两处标签颜色、原生卡片、原文和快照、投影不进入模型、确认补全不发送、左右跳过、Backspace/Delete、撤销、历史回填、标点不弹菜单及公开 reload 切到旧样式后再切回 chip 并补全。
-- [Codex PTY 记录](../../evidence/skill-ui-chip.json)与[原生 PTY 记录](../../evidence/skill-ui-chip-native.json)包含最终 PID、退出码、断言和屏幕文本。本轮启动的进程正常退出回收，对应 launcher 临时目录清除，无监听服务。用户此前手动启动的 tint 原型及其目录保留，不擅自关闭。
-- [全仓 check](../../evidence/skill-ui-chip-check.log)仍为 typecheck 通过、2070 passed/5 skipped，仅既有 MCP 缺文件 suite 失败。[build](../../evidence/skill-ui-chip-build.log)通过，[package:check](../../evidence/skill-ui-chip-package-check.log)仍缺旧文档。未修改旧门槛或恢复无关文件。
+- 四组真实 CLI PTY smoke 通过，覆盖 gray/blue × Codex/native。除原有交互与提交断言，还验证两处均无尖括号/粗体、图标为蓝色、灰底版名称为浅灰、蓝字版不改变宿主背景，以及两种样式之间 reload 往返。
+- PTY 记录：[gray/Codex](../../evidence/skill-ui-gray.json)、[blue/Codex](../../evidence/skill-ui-blue.json)、[gray/native](../../evidence/skill-ui-gray-native.json)、[blue/native](../../evidence/skill-ui-blue-native.json)，包含最终 PID、退出码、断言和屏幕文本。本轮启动的进程正常退出回收，对应 launcher 临时目录清除，无监听服务。用户此前手动启动的 tint 原型及其目录保留，不擅自关闭。
+- [全仓 check](../../evidence/skill-ui-styles-check.log)仍为 typecheck 通过、2070 passed/5 skipped，仅既有 MCP 缺文件 suite 失败。[build](../../evidence/skill-ui-styles-build.log)通过，[package:check](../../evidence/skill-ui-styles-package-check.log)仍缺旧文档。未修改旧门槛或恢复无关文件。
 
 截图脚本使用已有 Conda codex-py312、pyte 0.8.2 与 Pillow 12.3.0。普通交互入口仅需现有 Node/Pi 依赖。
 
@@ -72,7 +84,7 @@ pnpm exec node adventure/experiments/skill-mention-ui/run.mjs chip --native --ca
 - 已验证常规方向键、删除、撤销及相邻 Ctrl+W。鼠标包装会吸附光标，但物理鼠标、选区、IME、自定义键位、复杂按词剪切、外部编辑器和跨 session 恢复未验收。原型不能替代日常编辑器。
 - 手写、粘贴、reload 后重建的旧历史何时投影为标签，完整标点语法和原文到显示文本的选择/复制规则仍需后续规划。不要由这次试验自动推导产品要求。
 - live 正文关联沿用按任务文本匹配的实验方案，不覆盖同文不同快照、队列/分支/压缩。不替代产品 requestId 关联。
-- 仅验证 codex-pi 主题和固定两个 fixture。紫色、图标、名称显示形式尚未获用户确认；不保证所有字体或主题一致。
+- 仅验证 codex-pi 主题和固定两个 fixture。灰底/蓝字尚待用户选择，图标和名称显示形式仍可调整；不保证所有字体或主题一致。
 - Markdown 显示采用 display-only 代码 span 与 ANSI 并恢复父背景；不能当作生产富文本架构。
 
 ## Sources
@@ -84,7 +96,7 @@ pnpm exec node adventure/experiments/skill-mention-ui/run.mjs chip --native --ca
 
 ## Handoff
 
-当前只确认了两处整体标签的方向和整块编辑交互，等待用户看新原型。Planning #11 未通关，Spec 仍修订中，旧 #8/#9/#10 不覆盖新增需求。
+整体标签交互和标签形态已获认可；紫色和原有尖括号/粗体样式被否定，等待用户比较 gray/blue。Planning #11 未通关，Spec 仍修订中，旧 #8/#9/#10 不覆盖新增需求。
 
 可复用 launcher、离线 fixture 和 PTY 断言；正式实现应重新设计文档模型、坐标、主题及历史关联。未经用户审核新切片，不把实验代码移入产品或更新日常安装。
 
