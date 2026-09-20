@@ -2,14 +2,14 @@
 
 ## Question
 
-在已确认的整体标签交互上，灰底浅灰文字和无底色蓝字，哪种更适合真实 Pi 输入框与发送后正文？
+在无底色、统一青色的整体标签中，命令图标与线框立方体，哪种更适合用户？
 
-用户已认可整体标签的交互和效果，但认为原型样式粗糙，并否定紫色。本轮按要求同时做两个候选，均移除尖括号和粗体，保留图标及整块编辑。用户尚未选定灰底或蓝字。
+用户认为 blue 方案尚可，但否定菱形图标，要求 `⌘` 和立方体都做，并指定新截图中的青色。本轮两版均沿用无底色、正常字重、整块编辑，图标和名称统一为从截图提取的 `#8DF9FD`。
 
-- `gray`：中性深灰底、浅灰名称、低饱和蓝色图标，默认候选。
-- `blue`：不添加背景，图标和名称都用同一蓝色，继承宿主背景。
+- `command`：`⌘` 命令图标，默认入口。
+- `cube`：Nerd Fonts 的线框立方体 `md-cube_outline`，U+F01A7。
 
-两者使用相同的留白和文本宽度，避免把交互变化混入视觉比较。
+两版的图标都占一格，留白与交互相同。用户尚未选定图标；旧 gray/blue 仅留作历史对照。
 
 ## Landing Map
 
@@ -23,7 +23,7 @@
 
 真实入口采用离线 faux provider。`presentations` 与 `lark-doc` 是沿用原描述的具名 fixture，正文无外部操作。原生 skill 卡片、补全、加载、协议和历史 adapter 复用产品代码。标点适配、标签投影和输入包装是实验代码，不向真实 provider 发送请求。
 
-用户参考图中的像素级圆角细描边没有精确复刻。当前终端版本使用 ` ◇ name `，不再模拟边框，不依赖 Nerd Font。PNG 字体与行距属于 approximation，实际终端显示为准。
+不模拟像素级圆角边框。command 使用常见 Unicode 图标；cube 需要支持 U+F01A7 的 Nerd Font。本机已安装字体包含该图标，但未确认终端当前实际字体或 fallback，也没有改终端配置。PNG 字体与行距属于 approximation，实际终端显示为准。
 
 ## Behavior
 
@@ -37,23 +37,23 @@
 
 ```bash
 cd /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
-pnpm exec node adventure/experiments/skill-mention-ui/run.mjs gray
-# Or start the background-free version:
-pnpm exec node adventure/experiments/skill-mention-ui/run.mjs blue
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs command
+# Or start the outline cube version:
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs cube
 ```
 
 打开即有示例。可以先发送查看正文效果，再清空草稿，输入 `用 $pre` 并按 Tab，试左右键、退格、撤销。回复固定为离线 `Fixture response`，不执行 skill 内容。
 
-`/quit` 退出，launcher 删除独立 HOME、配置、fixture 和 session。加 `--native` 可试原生编辑器。用 `/prototype gray` 或 `/prototype blue` 切换；若终端仍运行上一版代码，先 `/reload`。切换后已发送消息会使用新样式，输入新引用并确认补全可比较输入效果。
+`/quit` 退出，launcher 删除独立 HOME、配置、fixture 和 session。加 `--native` 可试原生编辑器。用 `/prototype command` 或 `/prototype cube` 切换；若终端仍运行上一版代码，先 `/reload`。切换后已发送消息会使用新样式，输入新引用并确认补全可比较输入效果。
 
-旧 `chip` 命令作为 `gray` 的别名，不再输出紫色。旧 `accent`、`tint` 仅保留作为被否定方案的对照。
+旧 `chip` 命令作为 `command` 的别名。旧 `accent`、`tint`、`gray`、`blue` 仅保留作为历史对照。
 
 ## Preview
 
-- [A：灰底标签，上方发送后、下方输入](../../evidence/skill-ui-gray-detail.png)
-- [B：无底色蓝字，上方发送后、下方输入](../../evidence/skill-ui-blue-detail.png)
-- 完整 Codex UI：[gray](../../evidence/skill-ui-gray-both.png) / [blue](../../evidence/skill-ui-blue-both.png)
-- 原生编辑器：[gray](../../evidence/skill-ui-gray-native-both.png) / [blue](../../evidence/skill-ui-blue-native-both.png)
+- [A：命令图标，上方发送后、下方输入](../../evidence/skill-ui-command-detail.png)
+- [B：线框立方体，上方发送后、下方输入](../../evidence/skill-ui-cube-detail.png)
+- 完整 Codex UI：[command](../../evidence/skill-ui-command-both.png) / [cube](../../evidence/skill-ui-cube-both.png)
+- 原生编辑器：[command](../../evidence/skill-ui-command-native-both.png) / [cube](../../evidence/skill-ui-cube-native-both.png)
 
 PNG 来自实际 PTY 字符与颜色网格，不是重建网页，也不是 macOS 窗口截图。局部图只裁剪真实网格图。第二行的代码内容沿用原生代码颜色，不代表激活。
 
@@ -62,19 +62,19 @@ PNG 来自实际 PTY 字符与颜色网格，不是重建网页，也不是 macO
 ```bash
 pnpm exec vitest run --config adventure/experiments/vitest.config.ts adventure/experiments/skill-mention-ui/chips.test.ts adventure/experiments/skill-mention-ui/ui.test.ts
 pnpm exec tsc --noEmit --target ESNext --module NodeNext --moduleResolution NodeNext --skipLibCheck --esModuleInterop --types node adventure/experiments/skill-mention-ui/*.ts
-pnpm exec node adventure/experiments/skill-mention-ui/run.mjs gray --capture
-pnpm exec node adventure/experiments/skill-mention-ui/run.mjs blue --capture
-pnpm exec node adventure/experiments/skill-mention-ui/run.mjs gray --native --capture
-pnpm exec node adventure/experiments/skill-mention-ui/run.mjs blue --native --capture
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs command --capture
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs cube --capture
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs command --native --capture
+pnpm exec node adventure/experiments/skill-mention-ui/run.mjs cube --native --capture
 ```
 
-- 原有整体标签交互测试保留。灰底的无边框/分色测试先失败后通过，再新增无底色蓝字测试并完成 Red/Green；两种样式的渲染与原子编辑均有断言。[8 项测试](../../evidence/skill-ui-styles-tests.log)通过，独立 tsc 通过。
+- 原有整体标签交互和样式测试保留。command、cube 两项图标/指定青色测试分别完成 Red/Green。[10 项测试](../../evidence/skill-ui-icons-tests.log)通过，独立 tsc 通过。立方体虽然是 supplementary-plane 字符，其显示仍为单格，输入和删除坐标未改变。
 - 最终方案使用公开 getCursor、handleInput、setText 等方法，不修改原 editor 的方法或 prototype。测试核对原方法引用未变。最初内部 segmenter 探针虽能运行，但与此前公开 API 约定冲突，已撤除，不作为交付代码或结论。
-- 四组真实 CLI PTY smoke 通过，覆盖 gray/blue × Codex/native。除原有交互与提交断言，还验证两处均无尖括号/粗体、图标为蓝色、灰底版名称为浅灰、蓝字版不改变宿主背景，以及两种样式之间 reload 往返。
-- PTY 记录：[gray/Codex](../../evidence/skill-ui-gray.json)、[blue/Codex](../../evidence/skill-ui-blue.json)、[gray/native](../../evidence/skill-ui-gray-native.json)、[blue/native](../../evidence/skill-ui-blue-native.json)，包含最终 PID、退出码、断言和屏幕文本。本轮启动的进程正常退出回收，对应 launcher 临时目录清除，无监听服务。用户此前手动启动的 tint 原型及其目录保留，不擅自关闭。
-- [全仓 check](../../evidence/skill-ui-styles-check.log)仍为 typecheck 通过、2070 passed/5 skipped，仅既有 MCP 缺文件 suite 失败。[build](../../evidence/skill-ui-styles-build.log)通过，[package:check](../../evidence/skill-ui-styles-package-check.log)仍缺旧文档。未修改旧门槛或恢复无关文件。
+- 四组真实 CLI PTY smoke 通过，覆盖 command/cube × Codex/native。保留原有交互与提交断言，验证两处图标与指定青色、继承背景，以及两种图标之间 reload 往返。
+- PTY 记录：[command/Codex](../../evidence/skill-ui-command.json)、[cube/Codex](../../evidence/skill-ui-cube.json)、[command/native](../../evidence/skill-ui-command-native.json)、[cube/native](../../evidence/skill-ui-cube-native.json)，包含最终 PID、退出码、字形、取色、截图字体、断言和屏幕文本。本轮启动的进程正常退出回收，对应 launcher 临时目录清除，无监听服务。用户此前手动启动的 tint 原型及其目录保留，不擅自关闭。
+- [全仓 check](../../evidence/skill-ui-icons-check.log)仍为 typecheck 通过、2070 passed/5 skipped，仅既有 MCP 缺文件 suite 失败。[build](../../evidence/skill-ui-icons-build.log)通过，[package:check](../../evidence/skill-ui-icons-package-check.log)仍缺旧文档。未修改旧门槛或恢复无关文件。
 
-截图脚本使用已有 Conda codex-py312、pyte 0.8.2 与 Pillow 12.3.0。普通交互入口仅需现有 Node/Pi 依赖。
+截图脚本使用已有 Conda codex-py312、pyte 0.8.2、Pillow 12.3.0 和 fontTools 4.63.0。图标截图使用本机现有 JetBrainsMono Nerd Font Mono 3.4.0，可用 `MENTION_UI_ICON_FONT` 指定其他截图字体。普通交互入口仅需现有 Node/Pi 依赖，终端须能显示所选图标。详细[取色、字体及边界证据](../../evidence/skill-ui-icon-font-and-color.md)。
 
 ## Implementation limits
 
@@ -84,7 +84,7 @@ pnpm exec node adventure/experiments/skill-mention-ui/run.mjs blue --native --ca
 - 已验证常规方向键、删除、撤销及相邻 Ctrl+W。鼠标包装会吸附光标，但物理鼠标、选区、IME、自定义键位、复杂按词剪切、外部编辑器和跨 session 恢复未验收。原型不能替代日常编辑器。
 - 手写、粘贴、reload 后重建的旧历史何时投影为标签，完整标点语法和原文到显示文本的选择/复制规则仍需后续规划。不要由这次试验自动推导产品要求。
 - live 正文关联沿用按任务文本匹配的实验方案，不覆盖同文不同快照、队列/分支/压缩。不替代产品 requestId 关联。
-- 仅验证 codex-pi 主题和固定两个 fixture。灰底/蓝字尚待用户选择，图标和名称显示形式仍可调整；不保证所有字体或主题一致。
+- 仅验证 codex-pi 主题和固定两个 fixture。目前沿用无底色，青色由用户明确指定；command/cube 图标尚待选择。不保证所有字体或主题一致，截图不能证明用户当前终端的字体配置。
 - Markdown 显示采用 display-only 代码 span 与 ANSI 并恢复父背景；不能当作生产富文本架构。
 
 ## Sources
@@ -96,7 +96,7 @@ pnpm exec node adventure/experiments/skill-mention-ui/run.mjs blue --native --ca
 
 ## Handoff
 
-整体标签交互和标签形态已获认可；紫色和原有尖括号/粗体样式被否定，等待用户比较 gray/blue。Planning #11 未通关，Spec 仍修订中，旧 #8/#9/#10 不覆盖新增需求。
+整体标签交互已获认可，用户倾向无底色方案并明确指定青色。等待用户比较 command/cube，不能再将紫色或菱形当作待确认候选。Planning #11 未通关，Spec 仍修订中，旧 #8/#9/#10 不覆盖新增需求。
 
 可复用 launcher、离线 fixture 和 PTY 断言；正式实现应重新设计文档模型、坐标、主题及历史关联。未经用户审核新切片，不把实验代码移入产品或更新日常安装。
 

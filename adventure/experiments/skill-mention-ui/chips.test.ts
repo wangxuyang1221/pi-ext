@@ -116,3 +116,43 @@ it("renders blue icon and text without a new background while keeping atomic edi
   editor.handleInput("\x1f");
   expect(editor.getText()).toBe("用 $presentations");
 });
+
+it("uses a command icon and the sampled cyan without changing source or background", () => {
+  const source = "$presentations,";
+  const markdown = chipMarkdown(source, names, "\x1b[48;2;67;67;67m", "command");
+  expect(stripTerminalSequences(markdown)).toContain(" ⌘ presentations ");
+  expect(markdown).toContain("38;2;141;249;253");
+  expect(markdown).not.toContain("48;2;");
+  const base = new Editor(tui, theme);
+  const editor = chipEditor(base, () => names, "command");
+  editor.setText(source);
+  const rendered = editor.render(104);
+  expect(rendered.map(stripTerminalSequences).join("\n")).toContain(" ⌘ presentations ,");
+  expect(rendered.join("\n")).toContain("38;2;141;249;253");
+  expect(editor.getText()).toBe(source);
+  expect(visibleWidth("⌘")).toBe(visibleWidth("◇"));
+});
+
+it("renders the outline cube in one cell and keeps the atom editable as a whole", () => {
+  const cube = "\u{f01a7}";
+  const source = "用 $presentations";
+  initTheme("dark", false);
+  const markdown = chipMarkdown(source, names, "\x1b[48;2;67;67;67m", "cube");
+  expect(markdown).toContain(cube);
+  expect(markdown).toContain("38;2;141;249;253");
+  expect(markdown).not.toContain("48;2;");
+  const rendered = new Markdown(markdown, 0, 0, getMarkdownTheme()).render(104);
+  expect(rendered.map(stripTerminalSequences).join("\n")).toContain(`${cube} presentations`);
+  expect(visibleWidth(cube)).toBe(1);
+  const base = new Editor(tui, theme);
+  const editor = chipEditor(base, () => names, "cube");
+  editor.setText(source);
+  expect(editor.render(104).map(stripTerminalSequences).join("\n")).toContain(`${cube} presentations`);
+  editor.handleInput("\x1b[D");
+  expect(base.getCursor().col).toBe(2);
+  editor.handleInput("\x1b[C");
+  editor.handleInput("\x7f");
+  expect(editor.getText()).toBe("用 ");
+  editor.handleInput("\x1f");
+  expect(editor.getText()).toBe(source);
+});

@@ -95,11 +95,25 @@ def color(value, fallback):
     value = aliases.get(value, value)
     return "#" + value if len(value) == 6 else fallback
 
+def icon_for(variant):
+    return {"command": "⌘", "cube": "\U000f01a7"}.get(variant, "◇")
+
+def foreground_for(variant):
+    return {"gray": "d7dade", "blue": "7fa9df", "command": "8df9fd", "cube": "8df9fd"}.get(variant, "89cdff")
+
+icon_font_path = Path(os.environ.get("MENTION_UI_ICON_FONT", str(Path.home() / "Library/Fonts/JetBrainsMonoNerdFontMono-Regular.ttf")))
+
 def raster(shot, file):
     cw, ch, margin = 13, 30, 18
     image = Image.new("RGB", (columns * cw + margin * 2, rows * ch + margin * 2), "#27282b")
     draw = ImageDraw.Draw(image)
     ascii_font = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 21)
+    icon_font = ImageFont.truetype(str(icon_font_path), 21) if icon_font_path.exists() else ascii_font
+    if config["variant"] == "cube":
+        from fontTools.ttLib import TTFont
+        assert icon_font_path.exists(), "Set MENTION_UI_ICON_FONT to a Nerd Font for the cube preview"
+        with TTFont(icon_font_path) as font:
+            assert 0xf01a7 in font.getBestCmap(), "The preview font has no outline cube glyph"
     cjk_paths = list(Path("/System/Library/AssetsV2").glob("**/PingFang.ttc"))
     cjk_font = ImageFont.truetype(str(cjk_paths[0]), 24) if cjk_paths else ascii_font
     for y, row in enumerate(shot["cells"]):
@@ -116,7 +130,7 @@ def raster(shot, file):
                 continue
             fg = color(cell["bg"], "#27282b") if cell["reverse"] else color(cell["fg"], "#e5e5e5")
             wide = unicodedata.east_asian_width(char[0]) in ["W", "F"]
-            font = cjk_font if wide else ascii_font
+            font = icon_font if char[0] in ["⌘", "\U000f01a7"] else cjk_font if wide else ascii_font
             px, py = margin+x*cw, margin+y*ch+3
             draw.text((px, py), char, font=font, fill=fg, stroke_width=0)
             if cell["bold"]:
@@ -134,8 +148,9 @@ try:
     original = editor()
     assert "$presentations," in original and "$lark-doc，" in original
     grab("input")
-    chip_mode = config["variant"] in ["gray", "blue"]
-    foreground = ("d7dade" if config["variant"] == "gray" else "7fa9df") if chip_mode else "89cdff"
+    chip_mode = config["variant"] in ["gray", "blue", "command", "cube"]
+    foreground = foreground_for(config["variant"])
+    icon = icon_for(config["variant"])
     assert any(cell["fg"] == foreground for row in shots["input"]["cells"] for cell in row), "Input decoration missing"
     send("\r")
     wait(lambda: events("settled"), "offline submit")
@@ -147,14 +162,14 @@ try:
     assert snapshot["task"] == original
     assert [item["name"] for item in snapshot["skills"]] == ["presentations", "lark-doc"]
     assert "\x1b" not in text, "Visual ANSI leaked into model input"
-    assert "\u2063" not in text and "◇" not in text, "Projected label leaked into model input"
+    assert all(glyph not in text for glyph in ["\u2063", "◇", "⌘", "\U000f01a7"]), "Projected label leaked into model input"
     if chip_mode:
         send("\x1b[A")
         assert editor() == original, "History must preserve original source"
     else:
         paste(original)
     grab("both")
-    needle = " ◇ presentations ," if chip_mode else "$presentations,"
+    needle = f" {icon} presentations ," if chip_mode else "$presentations,"
     text_rows = [i for i, row in enumerate(screen.display) if needle in row]
     assert len(text_rows) == 2, "Must show both user and editor references\n" + "\n".join(screen.display)
     for y in text_rows:
@@ -163,7 +178,9 @@ try:
         if chip_mode:
             expected_bg = "34363a" if config["variant"] == "gray" else screen.buffer[y][columns - 1].bg
             assert screen.buffer[y][x].bg == expected_bg, screen.buffer[y][x]
-            assert screen.buffer[y][x + 1].fg == "7fa9df", "The icon must be blue in both variants"
+            assert screen.buffer[y][x + 1].data == icon, "Icon glyph mismatch"
+            icon_fg = "7fa9df" if config["variant"] == "gray" else foreground
+            assert screen.buffer[y][x + 1].fg == icon_fg, "Icon color mismatch"
             assert screen.buffer[y][x + 3].fg == foreground, "Label text color mismatch"
             assert not screen.buffer[y][x + 3].bold, "Label text must use normal weight"
             label_text = screen.display[y][x:x + len(needle)]
@@ -185,7 +202,7 @@ try:
     assert len(events("request")) == before
     grab("menu-selected")
     if chip_mode:
-        assert " ◇ presentations " in "\n".join(screen.display), "Confirmed completion must become a chip"
+        assert f" {icon} presentations " in "\n".join(screen.display), "Confirmed completion must become a chip"
         send("\x1b[D")
         send("X")
         assert editor() == "用 X$presentations", "Left must skip the complete chip"
@@ -205,15 +222,17 @@ try:
     assert "PowerPoint" not in "\n".join(screen.display), "Punctuation must not open completion"
     send("\x03")
     ready_before = len(events("ready"))
-    alternate = ("blue" if config["variant"] == "gray" else "gray") if chip_mode else ("accent" if config["variant"] == "tint" else "tint")
+    alternate = {"gray": "blue", "blue": "gray", "command": "cube", "cube": "command", "tint": "accent", "accent": "tint"}[config["variant"]]
     send(f"/prototype {alternate}\r")
     wait(lambda: len(events("ready")) > ready_before, "public reload style switch")
     assert events("ready")[-1]["variant"] == alternate
     paste(original)
     assert editor() == original
     grab("switched")
-    switched_fg = ("7fa9df" if alternate == "blue" else "d7dade") if chip_mode else "89cdff"
+    switched_fg = foreground_for(alternate)
     assert any(cell["fg"] == switched_fg for row in shots["switched"]["cells"] for cell in row)
+    if chip_mode:
+        assert f" {icon_for(alternate)} presentations " in "\n".join(screen.display), "Reload must update the historical label icon"
     send("\x03")
     if chip_mode:
         ready_before = len(events("ready"))
@@ -224,7 +243,7 @@ try:
         wait(lambda: "PowerPoint" in "\n".join(screen.display), "skill menu after reload")
         send("\t")
         assert editor() == "用 $presentations"
-        assert " ◇ presentations " in "\n".join(screen.display)
+        assert f" {icon} presentations " in "\n".join(screen.display)
         send("\x03")
     send("/quit\r")
     wait(lambda: status is not None, "graceful quit")
@@ -244,7 +263,12 @@ try:
         detail.save(output / f"{stem}-detail.png")
     summary = {"variant": config["variant"], "native": config["native"], "pid": pid, "exit": 0, "checks": ["real CLI PTY", "input and user colors", "native cards", "original task and two snapshots", "no ANSI in provider input", "Tab completion does not send", "punctuation does not open menu", "public reload style switch"], "screens": {name: shot["text"] for name, shot in shots.items()}}
     if chip_mode:
-        summary["checks"] += ["no chip markers in provider input", "history restores projected chips", "Tab creates an atom", "left and right skip atom", "backspace and delete remove atom", "undo restores atom", "public reload between gray and blue", "public reload into original style and select completion", "no simulated borders or bold text", "blue icon in both styles", "gray background or inherited host background"]
+        summary["checks"] += ["no chip markers in provider input", "history restores projected chips", "Tab creates an atom", "left and right skip atom", "backspace and delete remove atom", "undo restores atom", "public reload between paired variants", "public reload into original style and select completion", "no simulated borders or bold text", "expected icon glyph and foreground color", "gray background or inherited host background"]
+    if config["variant"] in ["command", "cube"]:
+        summary["foreground"] = "#8df9fd"
+        summary["iconCodepoint"] = f"U+{ord(icon):X}"
+        summary["rasterIconFont"] = str(icon_font_path)
+        summary["checks"] += ["sampled cyan in both locations", "no additional background", "icon occupies one terminal cell"]
     (output / f"{stem}.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({"passed": True, "variant": config["variant"], "pid": pid, "exit": 0}))
 finally:

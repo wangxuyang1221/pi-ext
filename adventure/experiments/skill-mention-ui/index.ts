@@ -19,7 +19,7 @@ export default function prototype(pi: ExtensionAPI): void {
   if (!root) throw new Error("Use the isolated prototype launcher");
   const record = (kind: string, data: unknown) => appendFileSync(join(root, "events.jsonl"), JSON.stringify({ kind, data }) + "\n");
   const requested = process.env.MENTION_UI_VARIANT;
-  const variant: Variant | ChipVariant = requested === "accent" || requested === "tint" || requested === "blue" ? requested : "gray";
+  const variant: Variant | ChipVariant = requested === "accent" || requested === "tint" || requested === "gray" || requested === "blue" || requested === "cube" ? requested : "command";
   const faux = fauxProvider({ api: "skill-mention-ui-prototype" });
   faux.setResponses(Array.from({ length: 100 }, () => context => {
     record("request", context.messages);
@@ -40,7 +40,7 @@ export default function prototype(pi: ExtensionAPI): void {
     if (!previous || !Reflect.get(previous, decorated)) {
       const factory: NonNullable<typeof previous> = (tui, theme, keys) => {
         const base = previous?.(tui, theme, keys) ?? new CustomEditor(tui, theme, keys);
-        if (variant === "gray" || variant === "blue") return chipEditor(base, names, variant);
+        if (variant !== "accent" && variant !== "tint") return chipEditor(base, names, variant);
         const methods = new Map<PropertyKey, unknown>();
         return new Proxy(base, {
           get(target, key) {
@@ -92,15 +92,15 @@ export default function prototype(pi: ExtensionAPI): void {
     if (options.messageType !== "user") return text;
     const snapshot = decodeSnapshot(text);
     const background = ctx?.ui.theme.getBgAnsi("userMessageBg") ?? "\x1b[48;2;67;67;67m";
-    const display = (task: string, skills: Set<string>) => variant === "gray" || variant === "blue" ? chipMarkdown(task, skills, background, variant) : styleMarkdown(task, skills, variant, background);
+    const display = (task: string, skills: Set<string>) => variant !== "accent" && variant !== "tint" ? chipMarkdown(task, skills, background, variant) : styleMarkdown(task, skills, variant, background);
     if (snapshot) return display(snapshot.task, new Set(snapshot.skills.map(skill => skill.name)));
     // Pi first constructs the user component from message_start's raw text.
     return display(text, liveDisplayNames.get(text) ?? new Set());
   });
   pi.registerShortcut("f6", { handler: async context => record("editor", context.ui.getEditorText()) });
   pi.registerCommand("prototype", { handler: async (value, context) => {
-    if (value !== "accent" && value !== "tint" && value !== "chip" && value !== "gray" && value !== "blue") return;
-    process.env.MENTION_UI_VARIANT = value === "chip" ? "gray" : value;
+    if (!["accent", "tint", "chip", "gray", "blue", "command", "cube"].includes(value)) return;
+    process.env.MENTION_UI_VARIANT = value === "chip" ? "command" : value;
     await context.reload();
   } });
   pi.on("agent_settled", () => record("settled", true));

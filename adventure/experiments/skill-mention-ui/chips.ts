@@ -1,7 +1,9 @@
 import { matchesKey, stripTerminalSequences, type AutocompleteProvider, type EditorComponent } from "@earendil-works/pi-tui";
 import { knownReferences } from "./ui.js";
 
-export const chipLabel = (name: string) => ` ◇ ${name} `;
+export type ChipVariant = "gray" | "blue" | "command" | "cube";
+export const chipIcon = (variant: ChipVariant) => variant === "command" ? "⌘" : variant === "cube" ? "\u{f01a7}" : "◇";
+export const chipLabel = (name: string, variant: ChipVariant = "gray") => ` ${chipIcon(variant)} ${name} `;
 // Invisible separators distinguish projected atoms from literal lookalike text.
 const marker = "\u2063";
 // Braille blank occupies one cell but is not a wrap opportunity. Rendering
@@ -17,11 +19,10 @@ export function encodeChips(text: string, names: ReadonlySet<string>): string {
 export function decodeChips(text: string): string {
   return text.replace(chipPattern(), (_match, name: string) => `$${name}`);
 }
-export type ChipVariant = "gray" | "blue";
-const chipStyle = (char: string, variant: ChipVariant) => `\x1b[22;38;2;${variant === "blue" || char === "◇" ? "127;169;223" : "215;218;222"}${variant === "gray" ? ";48;2;52;54;58" : ""}m`;
+const chipStyle = (char: string, variant: ChipVariant) => `\x1b[22;38;2;${variant === "command" || variant === "cube" ? "141;249;253" : variant === "blue" || char === "◇" ? "127;169;223" : "215;218;222"}${variant === "gray" ? ";48;2;52;54;58" : ""}m`;
 export function chipMarkdown(text: string, names: ReadonlySet<string>, background: string, variant: ChipVariant = "gray"): string {
   for (const ref of knownReferences(text, names).reverse()) {
-    const label = [...chipLabel(ref.name)].map(char => chipStyle(char, variant) + char).join("");
+    const label = [...chipLabel(ref.name, variant)].map(char => chipStyle(char, variant) + char).join("");
     text = text.slice(0, ref.start) + "`" + label
       + "\x1b[22m\x1b[39m" + (variant === "gray" ? background : "") + "`" + text.slice(ref.end);
   }
@@ -36,7 +37,7 @@ export function styleChipLines(lines: string[], variant: ChipVariant = "gray"): 
     function append(text: string) {
       for (const char of text) {
         if (char !== marker) out += spans.some(span => position >= span.start && position < span.end)
-          ? chipStyle(char, variant) + (char === "\u2800" ? " " : char) + "\x1b[22m\x1b[39m" + (variant === "gray" ? "\x1b[49m" : "") + sgr : char;
+          ? chipStyle(char, variant) + (char === "◇" ? chipIcon(variant) : char === "\u2800" ? " " : char) + "\x1b[22m\x1b[39m" + (variant === "gray" ? "\x1b[49m" : "") + sgr : char;
         position += char.length;
       }
     }
