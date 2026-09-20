@@ -30,6 +30,7 @@ export class BashGroups {
   private readonly members = new Map<string, BashMember>();
   private readonly candidates = new Map<string, Candidate>();
   private readonly membership = new Map<string, string>();
+  private readonly ambiguousIds = new Set<string>();
   private activeCandidates: string[] = [];
   private notifying = false;
 
@@ -42,7 +43,7 @@ export class BashGroups {
       }
       this.members.clear();
     }
-    this.candidates.clear(); this.membership.clear(); this.activeCandidates = [];
+    this.candidates.clear(); this.membership.clear(); this.ambiguousIds.clear(); this.activeCandidates = [];
     if (ctx?.mode !== "tui") return;
     for (const entry of ctx.sessionManager.buildContextEntries()) {
       for (const message of sessionEntryToContextMessages(entry)) {
@@ -60,13 +61,22 @@ export class BashGroups {
     const seen = new Set<string>();
     const activeKeys = new Set(this.activeCandidates);
     for (const block of message.content) {
-      const existingKey = typeof block?.id === "string" ? this.membership.get(block.id) : undefined;
+      if (block?.type !== "toolCall" || block.name !== "bash" || typeof block.id !== "string") {
+        current = undefined;
+        continue;
+      }
+      const existingKey = this.membership.get(block.id);
       const historical = existingKey !== undefined && !activeKeys.has(existingKey);
-      if (block?.type === "toolCall" && block.name === "bash" && typeof block.id === "string" && !seen.has(block.id) && !historical) {
-        seen.add(block.id);
-        if (!current) next.push(current = []);
-        current.push(block.id);
-      } else current = undefined;
+      if (seen.has(block.id) || historical) {
+        // Even an unbound/low-power first occurrence reserves its historical slot.
+        // Existing owners stay put; no later binding may claim an ambiguous ID.
+        this.ambiguousIds.add(block.id);
+        current = undefined;
+        continue;
+      }
+      seen.add(block.id);
+      if (!current) next.push(current = []);
+      current.push(block.id);
     }
     const nextKeys = new Set(next.map(ids => ids[0]!));
     for (const id of this.activeCandidates) {
@@ -105,7 +115,7 @@ export class BashGroups {
     };
     state.bashMember = member;
     // Duplicate IDs have ambiguous ownership. Keep the extra component independent.
-    if (!this.members.has(member.id)) this.members.set(member.id, member);
+    if (!this.ambiguousIds.has(member.id) && !this.members.has(member.id)) this.members.set(member.id, member);
     this.assign([member]);
     const candidate = this.membership.get(member.id);
     if (candidate && this.members.get(member.id) === member) this.reflow(candidate);

@@ -25,6 +25,7 @@ import {
 } from "@earendil-works/pi-tui";
 
 import { ExecutionSettings, executionDefinitionCache, type CodexExecutionOptions } from "./execution-settings.js";
+import { sanitizeDiffSource } from "./diff-source.js";
 import { BashGroups, type BashGroupRowState } from "./bash-groups.js";
 import { renderBashGroup } from "./bash-group-layout.js";
 import { ReadGroups, type ReadRowState } from "./read-groups.js";
@@ -427,11 +428,6 @@ export function registerCodexTools(
     },
   };
   pi.registerTool(bashTool);
-}
-
-function sanitizeDiffSource(text: string): string {
-  // Sanitize source only, before highlighting. Persisted patches keep their bytes.
-  return stripTerminalSequences(text).replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/gu, "");
 }
 
 export function parseDisplayDiff(diff: string): DisplayDiffLine[] {

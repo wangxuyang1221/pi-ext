@@ -130,6 +130,46 @@ test("IDs reused by a later assistant message cannot take ownership of earlier r
   } finally { h.dispose(); }
 });
 
+test("duplicate full rows cannot claim historical low-power or unbound candidate slots", () => {
+  for (const previous of ["low-power", "unbound"]) for (const barrier of [
+    undefined, { type: "text", text: "between" }, { type: "thinking", thinking: "between" }, call("other", "read"),
+  ]) {
+    let lowPower = previous === "low-power";
+    const h = harness({ isLowPowerEnabled: () => lowPower });
+    try {
+      h.declare([call("a"), call("b")]);
+      const oldA = previous === "low-power" ? h.row("a") : undefined;
+      oldA?.updateResult(result("old a"));
+      lowPower = false;
+      const oldB = h.row("b"); oldB.updateResult(result("old b"));
+      const beforeA = oldA ? plain(oldA) : undefined, beforeB = plain(oldB);
+      assert(beforeB.join("\n").includes("old b"));
+      const prefix = barrier ? [call("a"), call("b"), barrier] : [];
+      if (barrier) h.emit("message_update", { message: message([...prefix, call("a"), call("c")]) });
+      else h.declare([call("a"), call("c")]);
+      const newA = h.row("a"), c = h.row("c");
+      newA.updateResult(result("new a")); c.updateResult(result("new c"));
+      for (const expanded of [false, true, false]) {
+        newA.setExpanded(expanded); c.setExpanded(expanded);
+        assert.deepEqual(plain(oldB), beforeB);
+        if (oldA) assert.deepEqual(plain(oldA), beforeA);
+        assert.doesNotMatch(plain(newA).join("\n"), /old b|printf b/u);
+        assert.match(plain(newA).join("\n"), /new a/u);
+      }
+      h.emit("message_update", { message: message([...prefix, call("a"), call("c"), call("d")]) });
+      const d = h.row("d"); d.updateResult(result("new d"));
+      assert.deepEqual(plain(oldB), beforeB);
+      assert.deepEqual([...(oldA ? [oldA] : []), oldB, newA, c, d].flatMap(row => plain(row)).join("\n").match(/old b|new [acd]/gu),
+        ["old b", "new a", "new c", "new d"]);
+      h.emit("session_start"); h.declare([call("a"), call("b")]);
+      const freshA = h.row("a"), freshB = h.row("b");
+      freshA.updateResult(result("fresh a")); freshB.updateResult(result("fresh b"));
+      assert.match(plain(freshA).join("\n"), /fresh b/u);
+      assert.deepEqual(plain(freshB), []);
+    } finally { h.dispose(); }
+  }
+});
+
 test("streaming discovery does not rescan every candidate for each retained ID", () => {
   for (const count of [100, 1000]) {
     const groups = new BashGroups(new ToolRenderCache());
@@ -144,6 +184,35 @@ test("streaming discovery does not rescan every candidate for each retained ID",
     try { groups.discover(message([...blocks, call("cost-next")])); }
     finally { spy.mockRestore(); }
     assert(scanned <= count * 4, "Retained membership must not use a nested candidate scan");
+  }
+});
+
+test("ambiguous bindings do not scan retained history or acquire its unbound slots", () => {
+  for (const count of [100, 1000]) {
+    const groups = new BashGroups(new ToolRenderCache());
+    for (let i = 0; i < count; i++) groups.discover(message([call(`ambiguous-${i}`), call(`neighbor-${i}`)]), true);
+    groups.discover(message(Array.from({ length: count }, (_, i) => call(`ambiguous-${i}`))), true);
+    let visited = 0;
+    const values = Map.prototype.values;
+    const spy = vi.spyOn(Map.prototype, "values").mockImplementation(function (this: Map<unknown, unknown>) {
+      const iterator = values.call(this), next = iterator.next.bind(iterator);
+      iterator.next = () => { const item = next(); if (!item.done) visited++; return item; };
+      return iterator;
+    });
+    try {
+      for (let i = 0; i < count; i++) {
+        const ctx = { toolCallId: `ambiguous-${i}`, state: {} } as never;
+        const member = groups.bind(ctx);
+        assert.deepEqual(member.group.members, [member]);
+        assert.equal(groups.bind(ctx), member);
+      }
+    } finally { spy.mockRestore(); }
+    assert(visited <= count * 2, "Binding duplicate rows must not scan all historical members");
+    groups.reset();
+    groups.discover(message([call("ambiguous-0"), call("neighbor-0")]), true);
+    const a = groups.bind({ toolCallId: "ambiguous-0", state: {} } as never);
+    const b = groups.bind({ toolCallId: "neighbor-0", state: {} } as never);
+    assert.equal(a.group, b.group);
   }
 });
 
