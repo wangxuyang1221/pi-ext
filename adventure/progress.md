@@ -15,7 +15,7 @@
 - [Map #1](https://github.com/wangxuyang1221/pi-ext/issues/1)
 - [Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2)，已确定，可用于实施。
 - [#8 输入闭环](https://github.com/wangxuyang1221/pi-ext/issues/8) 已由协调者验收通过。
-- [#9 队列与历史](https://github.com/wangxuyang1221/pi-ext/issues/9) 已由协调者验收通过。下一关 [#10 可安装交付与整体验收](https://github.com/wangxuyang1221/pi-ext/issues/10)。三个切片均已获用户审核，不重新审核同一范围。
+- [#9 队列与历史](https://github.com/wangxuyang1221/pi-ext/issues/9) 已由协调者验收通过。[#10 可安装交付与整体验收](https://github.com/wangxuyang1221/pi-ext/issues/10) 已开始，现因既有缺文件阻挡包校验而等待用户修复授权。三个切片均已获用户审核，不重新审核同一范围。
 
 ## Evolution
 
@@ -23,7 +23,7 @@
 
 早期 input/context 或后置展示实验不是最终路线。用户已确认 message_start 提前展示、message_end 替换同一 user、消费时加载及公开 editor 适配的组合。远端独立复核已合并，没有据此恢复美化范围。
 
-上次暂停存档为 b6c75eb。本轮用户恢复后派发独立 worker 完成 #8，提交 ac9947a 与 f600f08。协调者核对证据及代码入口，独立重跑正式测试 89/89，通过本关验收。随后 #9 worker 完成公开 editor 适配与队列/历史产品验证，提交 c3f2284，协调者独立重跑 112/112 并验收通过。尚未完成安装交付。
+上次暂停存档为 b6c75eb。本轮用户恢复后派发独立 worker 完成 #8，提交 ac9947a 与 f600f08。协调者核对证据及代码入口，独立重跑正式测试 89/89，通过本关验收。随后 #9 worker 完成公开 editor 适配与队列/历史产品验证，提交 c3f2284，协调者独立重跑 112/112 并验收通过。#10 复核发现发布清单实际缺 13 份历史文档，MCP suite 缺 5 个 prototype 源文件。worker 提交 8b54815 保存调查证据，未擅自恢复用户此前删除的材料。安装交付尚未完成。
 
 ## Agreed Decisions and Constraints
 
@@ -38,7 +38,8 @@
 
 ## Established Facts and Required Context
 
-- 当前产品提交 `c3f2284` 已推送，验收时工作区干净。后续提交可能只更新存档，派发下一关使用实际最新 HEAD。
+- 当前产品提交 `c3f2284`，#10 阻塞证据提交 `8b54815`，均已推送，核对时工作区干净。后续提交可能只更新存档，继续时使用实际最新 HEAD。
+- [#10 阻塞报告](evidence/skill-install-blocker.md)是当前接续必读，列出 13 份缺失文档和 5 个缺失源码的准确路径、删除提交、可恢复历史源，以及完整 Spec 当前验收矩阵。check-package 在入口 import 前失败，直接阻挡安装产物校验；不能仅恢复首个报错文件。尚未改包入口、写使用说明或执行 pack/安装/PTY。
 - [#9 实施证据](evidence/skill-history-implementation.md)为接手 #10 必读，包含版本来源、真实 JSONL/runtime 队列恢复、tree/fork、压缩、安装顺序与原生持久化限制。产品通过 resources_discover 在 session_start 安装完成后组合 editor factory；Proxy 仅解码 setText/addToHistory，其他方法属性委托原 editor，不改实例方法或原型。
 - Node 22.22.2、pnpm 11.9.0、Pi 0.86.0；Context7 未提供目标版本专属文档，版本行为由安装源码与真实执行核验。
 - #8 开发入口 `extensions/skill-mentions/src/index.ts`，正式测试在 `extensions/skill-mentions/__tests__/`。已接入 typecheck/build/clean，未接入默认发布入口。
@@ -61,9 +62,11 @@
 
 ## Continuation Point
 
-#9 已通过，继续 #10，不需要等待用户重新授权恢复。主代理担任协调者，一次推进一个 Implementation；为 #10 派发新上下文独立 worker，不继承整段会话、不继续由 #9 worker 编码下一关。派发前核对工作区及运行中 worker，避免重复施工。
+#10 保持 open，当前停在修复授权决定，不是关卡通过，也不是用户要求暂停。需用户决定是否恢复发布清单缺少的 13 份历史文档，及是否同时恢复 MCP suite 依赖的 5 个 prototype 源码。全部文件从报告列出的 Git 历史原样恢复，不使用占位文件、不跳过测试；恢复后能否通过仍需重跑。较轻范围可只恢复 13 份文档，继续单独报告 MCP 基准失败。若用户选择保留删除并清理陈旧引用，须明确新的范围与验收，不能擅自解释为可删测试。
 
-提供 Map、Spec、#10、此存档、实施与恢复证据、实际 HEAD 和 worktree。worker 行动前完整读取以下 skills 与必要引用：
+当前 #10 worker `01a0be90-2ed7-76f6-807e-976844772b8f` 已停止本轮执行，保留上下文供同一 session 复用。没有运行中的测试/服务/PTY 或监听端口。收到决定后优先 subagent_prompt 复用该 worker，明确获批路径、范围和验收。跨 session 先核对 worker 与工作区状态；旧 worker 不可用时再创建独立替代 worker，避免重复施工。
+
+继续提供 Map、Spec、#10、此存档、阻塞报告、实施与恢复证据、实际 HEAD 和 worktree。新 worker 行动前完整读取以下 skills 与必要引用：
 
 - `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md`
 - `/Users/wangxuyang/.agents/skills/wangxuyang/develop-with-tdd/SKILL.md`
