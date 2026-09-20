@@ -12,7 +12,7 @@
 
 本轮用户已确认此前三项局部交互：重复引用只加载一次，关闭候选不删除引用，光标在名称中间不弹候选。Tab/Enter 选择且不发送、失败静默回退、代码与转义排除、空白分隔、多个 skill 同一消息的决定均保持不变。
 
-详细规则仍在 [Planning #5](https://github.com/wangxuyang1221/pi-ext/issues/5)。本报告只记录可行性和兼容证据，不作为第二份 Spec。
+后续 #5 已通关，输入规则移交 [Spec Behavior](https://github.com/wangxuyang1221/pi-ext/issues/2#behavior)，剩余兼容主题由 [Planning #7](https://github.com/wangxuyang1221/pi-ext/issues/7) 承接。本报告只记录可行性和兼容证据，不作为第二份 Spec。
 
 ## Environment and sources
 
@@ -82,13 +82,13 @@
 
 compaction 实验使用公开 `session_before_compact` 提供受控摘要及 firstKeptEntryId，未调用真实摘要模型。实测 user 被压缩移除、展示 entry 留下时，renderer 能隐藏孤立卡片。提前展示路线中“展示被移除但 user 被保留”的反向边界仍待验证和设计，不能承诺恢复/压缩的显示位置全部不变。
 
-## Unresolved source boundary
+## Source boundary
 
 `input` 事件提供 `source`，但 `message_start`/`message_end` 只提供 message，不携带交互、RPC、extension 来源标记。
 
 当前提前展示探针以 `ctx.mode === "tui"` 限定终端会话，并对其中的普通 user 消息应用识别。因此其他插件通过 `sendUserMessage()` 发送的普通 user 消息也可能被识别。它不会处理 custom role，也不会把 assistant/tool 输出当输入。
 
-是否允许处理这些插件生成的 user 消息需要用户确认。若只允许手工输入，不能用一个按 text 建立的松散缓存伪装可靠来源关联，尤其不能忽略重复文本、队列撤回和 steer/followUp 顺序变化。
+后续用户已选择允许处理这些插件生成的普通 user 消息，要求已移交 Spec Scope，来源边界不再阻碍此候选。仅手工输入的备选不再推进；也不需要用按 text 建立的松散缓存区分来源。
 
 RPC/print 本来不在本批 TUI 输入框范围内。本探针的默认 input 路线仅供比较，不代表把其他模式纳入产品。
 
@@ -107,5 +107,5 @@ RPC/print 本来不在本批 TUI 输入框范围内。本探针的默认 input �
 - 实验解析器只识别固定空白分隔夹具，未实现完整代码、转义、名称、光标语法。
 - transcript 使用实际 InteractiveMode 方法及原生组件，但替代 terminal/editor 宿主，没有启动整套交互界面，也未加载其他全局插件。
 - 提前展示方案仍需覆盖展开状态、主题、reload 中途操作、外部 transformer 链、自定义快捷键、`/skill:` 原入口隔离、fork/runtime 切换、压缩反向边界和实际磁盘 JSONL 失败。
-- 历史编辑原文还原、加载时间语义和来源边界须在实施前明确。
+- 历史编辑原文还原与加载时间语义须在 #7 明确后再实施；来源边界已移交 Spec。
 - 缺失展示修复不能制造重复模型内容或伪造路径；显示一致性异常不等同于用户选择的“读取 skill 失败静默回退”。
