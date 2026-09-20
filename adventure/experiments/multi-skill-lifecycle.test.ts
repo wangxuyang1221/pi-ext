@@ -36,7 +36,7 @@ function deferred() {
   return { promise, resolve };
 }
 
-async function harness(entries?: SessionEntry[], options: { failAppendOnce?: boolean; expandAt?: "input" | "message_end"; earlyDisplay?: boolean } = {}) {
+async function harness(entries?: SessionEntry[], options: { failAppendOnce?: boolean; expandAt?: "input" | "message_end"; earlyDisplay?: boolean; repairAfterCompact?: boolean } = {}) {
   const cwd = mkdtempSync(join(process.cwd(), "adventure/experiments/.lifecycle-"));
   const resource: { cwd: string; session?: AgentSession } = { cwd };
   resources.push(resource);
@@ -134,6 +134,7 @@ async function harness(entries?: SessionEntry[], options: { failAppendOnce?: boo
       pi.on("context", (_event, ctx) => { reconcile(ctx); });
       pi.on("session_start", (_event, ctx) => { reconcile(ctx); });
       pi.on("session_tree", (_event, ctx) => { reconcile(ctx); });
+      pi.on("session_compact", (_event, ctx) => { if (options.repairAfterCompact) reconcile(ctx); });
       pi.on("session_before_compact", () => ({ compaction: { summary: "Fixture summary", firstKeptEntryId: compactFrom, tokensBefore: 10 } }));
     }],
   });
@@ -342,6 +343,51 @@ test("an early display without a finalized user is hidden when restoring an inte
   expect(restored.users()).toHaveLength(0); expect(restored.displays()).toHaveLength(1);
   expect(restored.rebuild()).not.toContain("[skill]");
   expect(restored.errors).toEqual([]);
+});
+
+test("queued skills use file contents at consumption and retain that snapshot afterwards", async () => {
+  const h = await harness(undefined, { expandAt: "message_end", earlyDisplay: true });
+  const entered = deferred(), release = deferred();
+  h.faux.setResponses([async context => { entered.resolve(); await release.promise; return h.respond(context); }, h.respond]);
+  const run = h.session.prompt("Initial task", { source: "interactive" }); await entered.promise;
+  try {
+    await h.session.prompt(task, { source: "interactive", streamingBehavior: "followUp" });
+    const path = h.skills[0].filePath;
+    writeFileSync(path, readFileSync(path, "utf8").replace("ALPHA_BODY", "ALPHA_UPDATED_WHILE_QUEUED"));
+    expect(h.session.getFollowUpMessages()).toEqual([task]);
+  } finally { release.resolve(); }
+  await run;
+  const user = h.calls[1].find((message: any) => message.role === "user" && decode(textOf(message)));
+  expect(decode(textOf(user))?.skills[0].content).toContain("ALPHA_UPDATED_WHILE_QUEUED");
+  writeFileSync(h.skills[0].filePath, "ALPHA_CHANGED_AFTER_DELIVERY");
+  await h.session.reload();
+  const stored = h.users().find(entry => entry.type === "message" && decode(textOf(entry.message)))!;
+  expect(decode(textOf((stored as any).message))?.skills[0].content).toContain("ALPHA_UPDATED_WHILE_QUEUED");
+  expect(h.errors).toEqual([]);
+});
+
+test.each([false, true])("compaction cutting before a user repairs missing early cards only at the leaf: repair=%s", async repairAfterCompact => {
+  const h = await harness(undefined, { expandAt: "message_end", earlyDisplay: true, repairAfterCompact });
+  await h.session.prompt(task, { source: "interactive" });
+  const user = h.users()[0]; h.setCompactFrom(user.id);
+  await h.session.compact();
+  expect(h.users()).toHaveLength(1);
+  const after = h.rebuild();
+  if (repairAfterCompact) {
+    expect(h.displays()).toHaveLength(1);
+    expect(after).toContain("[skill] alpha");
+    expect(after.indexOf("[skill] alpha")).toBeGreaterThan(after.indexOf(task));
+    expect(after.indexOf("[skill] alpha")).toBeGreaterThan(after.indexOf("Fixture response"));
+  } else {
+    expect(h.displays()).toHaveLength(0);
+    expect(after).not.toContain("[skill] alpha");
+  }
+  const persisted = h.users()[0] as any;
+  expect(decode(textOf(persisted.message))?.skills).toHaveLength(2);
+  await h.session.reload();
+  expect(h.displays()).toHaveLength(1);
+  expect(h.rebuild()).toContain("[skill] beta");
+  expect(h.errors).toEqual([]);
 });
 
 test("compaction removes old cards and a surviving orphan display entry is not rendered", async () => {

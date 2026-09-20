@@ -1,5 +1,9 @@
 # Multi-skill lifecycle audit
 
+## Follow-up
+
+后续用户已确认消费时加载快照。新增历史编辑适配与压缩反向边界实验见[历史与恢复审计](skill-history-recovery-audit.md)，生命周期实验现为 21 项，组合实验为 45 项。下文保留前轮结论；其中历史编辑、压缩边界和加载时点的待办以新报告为准。
+
 ## Result
 
 本轮新增 18 项离线生命周期实验，使用真实 `DefaultResourceLoader`、extension runner、`AgentSession`、session entries 和官方 faux provider。全部通过。加上既有输入与组件实验，共 38/38 通过。

@@ -1,0 +1,12 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ✓ adventure/experiments/multi-skill-native-components.test.ts (5 tests) 19ms
+ ✓ adventure/experiments/multi-skill-lifecycle.test.ts (21 tests) 187ms
+ ✓ adventure/experiments/skill-history-editor.test.ts (4 tests) 336ms
+ ✓ adventure/experiments/skill-input-feasibility.test.ts (15 tests) 1011ms
+
+ Test Files  4 passed (4)
+      Tests  45 passed (45)
+   Start at  17:05:40
+   Duration  1.81s (transform 111ms, setup 0ms, collect 2.06s, tests 1.55s, environment 1ms, prepare 199ms)
