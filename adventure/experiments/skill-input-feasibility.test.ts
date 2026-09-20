@@ -70,6 +70,24 @@ for (const kind of ["native", "codex"] as const) {
     expect(editor.getText()).toBe("请用 $adventure 帮我规划");
   });
 
+  for (const [keyName, key] of [["Tab", "\t"], ["Enter", "\r"]] as const) {
+    test(`${kind}: ${keyName} selects a dollar candidate without submitting`, async () => {
+      const editor = createEditor(kind);
+      const submissions: string[] = [];
+      editor.onSubmit = text => { submissions.push(text); };
+      editor.setText("请用 ");
+      for (const char of "$ad") editor.handleInput(char);
+      await settle();
+      expect(editor.isShowingAutocomplete()).toBe(true);
+      editor.handleInput(key);
+      expect(editor.getText()).toBe("请用 $adventure");
+      expect(editor.isShowingAutocomplete()).toBe(false);
+      expect(submissions).toEqual([]);
+      editor.handleInput("\r");
+      expect(submissions).toEqual(["请用 $adventure"]);
+    });
+  }
+
   test(`${kind}: dollar provider opens on a later line`, async () => {
     const editor = createEditor(kind);
     editor.setText("先看上下文\n然后用 ");

@@ -36,6 +36,7 @@
 - 用户已选择 A：不在已发现 skill 清单中的名称作为普通文本发送，不报错、不阻止发送，同一消息里的其他有效 skill 照常加载。已发现 skill 的文件读取失败不在此决定内。
 - 用户已选择 A：引用片段两侧只接受空格、换行、Tab 或输入边界，补全与提交识别共用此分隔规则。紧贴标点也不触发，不新增标点分隔支持。
 - 用户进一步决定：已发现 skill 在提交时文件读取失败，也把该引用保留为普通文本发送，不阻止整条消息，其他有效 skill 照常加载。失败项不能显示为已激活。用户已进一步确认完全静默，不显示读取失败提示。
+- 用户补充明确要求：Tab 和 Enter 都可选择候选。候选菜单打开时选择当前候选，只补全、不发送；菜单关闭后 Enter 沿用正常发送行为。其余局部交互候选尚未获确认。
 - 产品实施前须审核切片。实施遵循 adventure 的独立 worker 流程；当前仅做规划与验证。
 - 所有文本写入前遵循 `docs/agents/repository-language-policy.md`。用户可见产品文案语言尚未确认。
 
@@ -45,20 +46,20 @@
 - `CodexEditor` 继承 `CustomEditor`。Pi `ctx.ui.addAutocompleteProvider` 可为它叠加 `$` 补全，不必再替换编辑器。
 - `pi.getCommands()` 可取得已发现的 skill。公开 `input` transform 在原生 skill 展开前执行，单 skill 最小链路已验证；多个 skill 不能简单串联 slash 调用。
 - [输入 API 报告](evidence/skill-input-api-audit.md) 保存锁定版本源码、在线比对与边界，是 #5 的技术证据入口。
-- 本轮 `pnpm exec vitest run --config adventure/experiments/vitest.config.ts` 共 16 项通过，包括既有 [输入实验](experiments/skill-input-feasibility.test.ts) 11 项和新增 [多 skill 原生组件实验](experiments/multi-skill-native-components.test.ts) 5 项。后者验证公开 entry renderer 可组合两张未修改的原生卡，转发展开状态，保持模型消息不重复，支持 JSON 恢复，并暴露 branch 回到 user 后派生 entry 消失。host 和消息输入是受控对象，不是完整 TUI/session 端到端验收。
+- 前轮 `pnpm exec vitest run --config adventure/experiments/vitest.config.ts` 共 16 项通过，包括既有 [输入实验](experiments/skill-input-feasibility.test.ts) 11 项和新增 [多 skill 原生组件实验](experiments/multi-skill-native-components.test.ts) 5 项。后者验证公开 entry renderer 可组合两张未修改的原生卡，转发展开状态，保持模型消息不重复，支持 JSON 恢复，并暴露 branch 回到 user 后派生 entry 消失。host 和消息输入是受控对象，不是完整 TUI/session 端到端验收。
+- 本轮为 Tab/Enter 新增 4 项组件级探针：native 与 CodexEditor 各验证两个按键均选择 `$` 候选、不调用 onSubmit，关闭菜单后再按 Enter 才提交。上述 Vitest 命令现为 20/20 通过，输入 15 项加多 skill 5 项。Pi 0.86.0 安装源码 `pi-tui/dist/components/editor.js:599–644` 对非 slash prefix 原生支持该行为；Context7 仅返回 main 文档，版本行为以锁定安装包与探针为准。未验证自定义冲突快捷键或真实 PTY，不是产品交付。
 - 现有实验支持句中及后续行的 `$`。独立复核指出原负向用例的 provider 同样要求空白，单看该用例不能隔离宿主限制；其放宽 provider 的新探针仍观测到宿主不自动触发，补足了证据。用户新增的完整双侧限制尚未验证，需在规则确定后补验。
 - [独立复核报告](evidence/skill-feasibility-second-review.md) 和对应源码探针来自远端 `540ac13`。报告记载在 Node 24 隔离环境运行 5 项输入、8 项渲染、8 项消息表示探针通过，本轮在 Node 22 重跑消息表示脚本 8/8 通过，未重跑其余两个脚本，旧日志仍对应独立复核环境。其 Input Boundary Review 与消息表示边界对 #5 有参考价值；其中原生组件组合方案现作为多 skill 兼容候选调查，不代表重新启动美化。完整插件/PTY/lifecycle 仍未验证。
-- 本轮重跑全仓 `pnpm run check`，类型检查通过，1953 项测试通过、5 项跳过，但同一个 MCP suite 仍因基准缺失 prototype 文件失败，后续 build/package:check 未执行。日志见 [multi-skill-check.log](evidence/multi-skill-check.log)。前轮单独 build 通过，package:check 因基准缺失 `docs/goal-descendant-acceptance.md` 失败。本轮只增加规划证据与实验，未修复这些无关缺口，没有声称全仓检查通过。
+- 本轮重跑全仓 `pnpm run check`，类型检查通过，1953 项测试通过、5 项跳过，但同一个 MCP suite 仍因基准缺失 prototype 文件失败，后续 build/package:check 未执行。最新日志见 [tab-enter-check.log](evidence/tab-enter-check.log)，与前轮 [multi-skill-check.log](evidence/multi-skill-check.log) 的基准失败一致。前轮单独 build 通过，package:check 因基准缺失 `docs/goal-descendant-acceptance.md` 失败。本轮只增加规划证据与实验，未修复这些无关缺口，没有声称全仓检查通过。
 - [多 skill API 审计](evidence/multi-skill-api-audit.md) 给出新增兼容候选：普通 user 保留全部真实 skill 快照，Markdown transformer 仅精简显示，context 阶段按真实 user entry id 追加展示 entry，公开 renderer 组合原生 skill 组件。组件层已验证，排队、恢复缺口与布局尚未完整验证，不能宣称发送后显示完全不变。单纯串联 slash/XML 或只靠 before_agent_start 不能统一覆盖多 skill 与 busy queue。本批无需继续证明内部补丁或设计上游 renderer。
 - 没有产品代码变更、运行中的 subagent 或服务。原调研进程已关闭，实验临时夹具已清理。
 - 完整冒险流程为 `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md`，按阶段读取其引用。
 
 ## Current Assumptions
 
-读取失败的回退与静默方式均已确认，不再询问。当前将剩余局部交互合并成一套推荐候选，请用户确认或指出修改项：
+读取失败的回退与静默方式、Tab/Enter 都可选择候选均已确认，不再询问。用户补充快捷键要求，不代表批准此前整套候选。剩余局部交互仍是推荐候选：
 
 - 同一 skill 在一条消息内重复引用，只加载一次；多个不同 skill 按首次出现的顺序组织内容，不代表强制模型依次执行。
-- 沿用当前编辑器的候选选择快捷键，选中只补全 `$skill-name`，不自动发送消息。
 - 取消候选只关闭菜单，不删除引用；保留完整有效引用后提交仍会激活。要避免激活可删除或转义引用。
 - 光标位于查询词中间时不弹候选，只在查询词末尾且满足既定双侧分隔规则时显示。
 
@@ -70,7 +71,7 @@
 
 ## Continuation Point
 
-#4 已通关，当前 #5 已确认 `$ad` 名称过滤、手写/粘贴完整有效引用的激活和同一消息多个 skill。代码与转义已确认按 A 排除，未知名称已确认按 A 作为普通文本发送。分隔规则已确认按 A，仅空格、换行、Tab 或输入边界。文件读取失败已确认也按普通文本发送，不阻塞；读取失败完全静默也已确认。等待用户确认剩余局部交互候选。不要重复询问已确认的静默、失败回退、分隔、未知名称、代码规则、数量、过滤、激活或暂缓美化决定。最新决定已写入 #5，尚未形成可实施的完整输入规格。
+#4 已通关，当前 #5 已确认 `$ad` 名称过滤、手写/粘贴完整有效引用的激活和同一消息多个 skill。代码与转义已确认按 A 排除，未知名称已确认按 A 作为普通文本发送。分隔规则已确认按 A，仅空格、换行、Tab 或输入边界。文件读取失败已确认也按普通文本发送，不阻塞；读取失败完全静默也已确认。Tab/Enter 选择候选已补充并通过组件级探针。等待用户确认剩余三项局部交互候选，不能把新增快捷键要求当作对整套建议的批准。不要重复询问已确认的静默、失败回退、分隔、未知名称、代码规则、数量、过滤、激活或暂缓美化决定。最新决定已写入 #5，尚未形成可实施的完整输入规格。
 
 用户回答后简短回显结果，核验新增边界能否用当前 API 实现，必要时补最小实验。保持每次一个问题，主要流程和异常收敛后更新 Spec，再按 slicing 形成切片供审核。未批准切片前不实施产品行为。
 
