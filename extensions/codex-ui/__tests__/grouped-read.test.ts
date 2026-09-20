@@ -17,7 +17,7 @@ function harness(start = true, cache = new ToolRenderCache()) {
   const handlers = new Map<string, Array<(event: any, ctx: any) => void>>();
   const sessionManager = SessionManager.inMemory(process.cwd());
   const emit = (type: string, event = {}) => {
-    for (const handler of handlers.get(type) ?? []) handler({ type, ...event }, { mode: "tui", sessionManager });
+    for (const handler of handlers.get(type) ?? []) handler({ type, ...event }, { mode: "tui", cwd: process.cwd(), sessionManager });
   };
   registerCodexTools({
     registerTool: (tool: ToolDefinition) => tools.set(tool.name, tool),
@@ -32,6 +32,12 @@ function harness(start = true, cache = new ToolRenderCache()) {
     row(id: string, args: Record<string, unknown> = { path: `src/${id}.ts` }) {
       return new ToolExecutionComponent("read", id, args, { showImages: false }, tools.get("read"),
         { requestRender() {} } as never, process.cwd());
+    },
+    publish(id: string, value: ReturnType<typeof result>, args: Record<string, unknown> = { path: `src/${id}.ts` }) {
+      emit("tool_execution_start", { toolCallId: id, toolName: "read", args });
+      emit("tool_execution_end", { toolCallId: id, toolName: "read", result: value, isError: value.isError });
+      sessionManager.appendMessage({ role: "toolResult", toolCallId: id, toolName: "read", ...value, timestamp: 1 });
+      return value;
     },
     dispose() { emit("session_shutdown"); },
   };
@@ -99,9 +105,11 @@ test("text, thinking, other tools, missing rows and assistant boundaries break R
     try {
       h.declare([call("a"), separator, call("b")]);
       const a = h.row("a"); const b = h.row("b");
+      a.updateResult(h.publish("a", result("alpha"))); b.updateResult(h.publish("b", result("beta")));
       assert.match(plain(a), /Read a.ts/u); assert.match(plain(b), /Read b.ts/u);
       assert.doesNotMatch(plain(a), /files/u);
       h.declare([call("c")]); const c = h.row("c");
+      c.updateResult(h.publish("c", result("gamma")));
       assert.match(plain(c), /Read c.ts/u);
     } finally { h.dispose(); }
   }
@@ -115,14 +123,17 @@ test("streaming membership and repeated file ranges retain separate members with
     h.emit("message_update", { message: message([call("a"), call("b")]) });
     const b = h.row("b", { path: "src/same.ts", offset: 20, limit: 3 });
     a.updateArgs({ path: "src/same.ts", offset: 1, limit: 2 });
-    a.updateResult(result("first\nsecond")); b.updateResult(result("twenty"));
+    a.updateResult(h.publish("a", result("first\nsecond"), { path: "src/same.ts", offset: 1, limit: 2 }));
+    b.updateResult(h.publish("b", result("twenty"), { path: "src/same.ts", offset: 20, limit: 3 }));
     const text = plain(a);
     assert.equal(text.split("same.ts").length - 1, 2);
     assert.match(text, /L1–2 · 2 lines/u); assert.match(text, /L20–20 · 1 line/u);
     h.emit("message_update", { message: message([call("a"), { type: "text", text: "barrier" }, call("b")]) });
     assert.doesNotMatch(plain(a), /files|twenty/u); assert.match(plain(b), /twenty/u);
     const orphan = h.row("orphan"); assert.match(plain(orphan), /orphan.ts/u);
-    const duplicate = h.row("a"); assert.match(plain(duplicate), /Read a.ts/u);
+    // Another view of one source occurrence is not a duplicated source call.
+    const replacement = h.row("a"); assert.match(plain(replacement), /Read same.ts/u);
+    assert.match(plain(replacement), /first/u);
   } finally { h.dispose(); }
 });
 
@@ -131,7 +142,7 @@ test("reload preserves fresh rows and tree or compaction rebuild only the active
   try {
     const entry = h.sessionManager.appendMessage(message([call("a"), call("b")]) as never);
     const a = h.row("a"); const b = h.row("b");
-    a.updateResult(result("alpha")); b.updateResult(result("beta"));
+    a.updateResult(h.publish("a", result("alpha"))); b.updateResult(h.publish("b", result("beta")));
     h.emit("session_start");
     assert.match(plain(a), /Read 2 files/u); assert.equal(b.render(120).length, 0);
     for (const event of ["session_tree", "session_compact"]) {
@@ -163,8 +174,8 @@ test("unchanged content reuses extraction and counts across redraw, resize, them
   };
   const h = harness(true, cache);
   try {
-    h.declare([call("a"), call("b")]); const a = h.row("a"); const b = h.row("b");
-    a.updateResult(result("alpha\n".repeat(2000))); b.updateResult(result("beta\n".repeat(1000)));
+    h.declare([call("a"), call("b"), call("c")]); const a = h.row("a"); const b = h.row("b"); const c = h.row("c");
+    a.updateResult(h.publish("a", result("alpha\n".repeat(2000)))); b.updateResult(h.publish("b", result("beta\n".repeat(1000))));
     plain(a);
     const first = computes.filter(key => key.startsWith("read-source"));
     assert.equal(first.length, 6);
@@ -172,7 +183,7 @@ test("unchanged content reuses extraction and counts across redraw, resize, them
     for (const width of [120, 120, 30, 80, 120]) { a.invalidate(); plain(a, width); }
     initTheme("light", false); a.invalidate(); plain(a);
     assert.deepEqual(computes.filter(key => key.startsWith("read-source")), first);
-    b.updateResult(result("changed")); plain(a);
+    c.updateResult(h.publish("c", result("changed"))); plain(a);
     assert.equal(computes.filter(key => key.startsWith("read-source")).length, first.length + 3);
     a.setExpanded(true); b.setExpanded(true); assert.match(plain(a), /40  alpha/u);
     a.setExpanded(false); b.setExpanded(false); assert.doesNotMatch(plain(a), /40  alpha/u);
@@ -223,9 +234,9 @@ test("consecutive Read calls share one row and keep source order under out-of-or
     h.declare([call("a"), call("b"), call("c")]);
     const rows = [h.row("a"), h.row("b"), h.row("c")];
     rows.forEach(row => { row.setArgsComplete(); row.markExecutionStarted(); });
-    rows[2]!.updateResult(result("c-first\nc-second\nc-third\nc-fourth"));
-    rows[0]!.updateResult(result("a-first"));
-    rows[1]!.updateResult(result("Permission denied\nstack", true));
+    rows[2]!.updateResult(h.publish("c", result("c-first\nc-second\nc-third\nc-fourth")));
+    rows[0]!.updateResult(h.publish("a", result("a-first")));
+    rows[1]!.updateResult(h.publish("b", result("Permission denied\nstack", true)));
     const text = plain(rows[0]!);
     assert.match(text, /Read 3 files/u);
     assert(text.indexOf("a.ts") < text.indexOf("b.ts"));

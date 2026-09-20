@@ -1,12 +1,13 @@
 import { sessionEntryToContextMessages, type ExtensionContext, type ReadToolDetails, type ToolDefinition } from "@earendil-works/pi-coding-agent";
-import type { Component } from "@earendil-works/pi-tui";
 import type { RenderCacheScope, ToolRenderCache } from "./render-cache.js";
 
 type RenderContext = Parameters<NonNullable<ToolDefinition["renderCall"]>>[2];
+type SourceMessage = { role: string; content?: unknown };
+export interface ReadGroup { members: ReadMember[]; version: number }
 export interface ReadMember {
   id: string;
   cache: RenderCacheScope;
-  group: ReadMember[];
+  group: ReadGroup;
   path: string;
   fullPath: string;
   offset?: number;
@@ -16,150 +17,205 @@ export interface ReadMember {
   details?: ReadToolDetails;
   revision: number;
   hasImage?: boolean;
-  component?: Component;
-  invalidate?: () => void;
 }
-export interface ReadRowState { readMember?: ReadMember }
+type ReadResult = { content?: ReadMember["content"]; details?: unknown };
+// Source calls without execution/result facts stay standalone, even when a view exists.
+interface ReadRecord extends ReadMember { known: boolean; final: boolean }
+export interface ReadView { local: ReadMember; generation: number }
+export interface ReadRowState { readView?: ReadView }
 
-/** Discover adjacency from assistant source blocks; never infer it from result arrival. */
+/** Source-owned facts and grouping. Row callbacks only update their own fallback data. */
 export class ReadGroups {
-  private readonly members = new Map<string, ReadMember>();
-  private readonly candidates = new Map<string, string[]>();
-  private readonly membership = new Map<string, string>();
-  private active: string[] = [];
-  private notifying = false;
+  private readonly records = new Map<string, ReadRecord>();
+  private readonly occurrences = new Map<string, number>();
+  private readonly candidates = new Map<number, string[]>();
+  private readonly membership = new Map<string, number>();
+  private readonly dirtyGroups = new Set<number>();
+  // Binding is an observed fact, not a claim that a previously bound host row is still mounted.
+  private readonly bound = new Set<string>();
+  private activeCounts = new Map<string, number>();
+  private activeKeys: number[] = [];
+  private nextKey = 0;
+  private generation = 0;
+  private cwd = "";
 
-  constructor(private readonly cache: ToolRenderCache) {}
+  constructor(private readonly cache: ToolRenderCache,
+    private readonly formatPath: (path: string, cwd: string) => string = path => path) {}
 
   reset(ctx?: ExtensionContext, preserveBound = false): void {
-    if (!preserveBound) {
-      for (const member of this.members.values()) member.invalidate = undefined;
-      this.members.clear();
-    }
-    this.candidates.clear(); this.membership.clear(); this.active = [];
-    if (preserveBound) for (const member of this.members.values()) this.assign([member]);
+    if (!preserveBound) { this.generation++; this.bound.clear(); }
+    this.records.clear(); this.occurrences.clear(); this.candidates.clear(); this.membership.clear(); this.dirtyGroups.clear();
+    this.activeCounts.clear(); this.activeKeys = []; this.nextKey = 0;
     if (ctx?.mode !== "tui") return;
+    this.cwd = ctx.cwd ?? ctx.sessionManager.getCwd();
     for (const entry of ctx.sessionManager.buildContextEntries()) {
       for (const message of sessionEntryToContextMessages(entry)) {
         if (message.role === "assistant") this.discover(message, true);
+        else if (message.role === "toolResult" && message.toolName === "read") {
+          this.result(message.toolCallId, message, false, message.isError);
+        }
       }
     }
-    this.active = [];
+    this.activeCounts = new Map(); this.activeKeys = [];
   }
 
-  discover(message: { role: string; content?: unknown }, start = false): void {
+  discover(message: SourceMessage, start = false): void {
     if (message.role !== "assistant" || !Array.isArray(message.content)) return;
-    if (start) this.active = [];
+    if (start) { this.activeCounts = new Map(); this.activeKeys = []; }
+    const counts = new Map<string, number>();
+    for (const block of message.content) if (block?.type === "toolCall" && typeof block.id === "string") {
+      counts.set(block.id, (counts.get(block.id) ?? 0) + 1);
+    }
+    const dirty = new Set<number>();
+    // Updates/end are snapshots of the current assistant message, not new occurrences.
+    for (const id of new Set([...this.activeCounts.keys(), ...counts.keys()])) {
+      const delta = (counts.get(id) ?? 0) - (this.activeCounts.get(id) ?? 0);
+      if (!delta) continue;
+      const total = (this.occurrences.get(id) ?? 0) + delta;
+      if (total) this.occurrences.set(id, total); else this.occurrences.delete(id);
+      const key = this.membership.get(id);
+      if (key !== undefined) dirty.add(key);
+    }
+    this.activeCounts = counts;
     const next: string[][] = [];
     let current: string[] | undefined;
-    const seen = new Set<string>();
     for (const block of message.content) {
-      if (block?.type === "toolCall" && block.name === "read" && typeof block.id === "string" && !seen.has(block.id)) {
-        seen.add(block.id);
-        if (!current) next.push(current = []);
-        current.push(block.id);
-      } else current = undefined;
-    }
-    const nextKeys = new Set(next.map(ids => ids[0]!));
-    for (const key of this.active) if (!nextKeys.has(key)) {
-      for (const id of this.candidates.get(key) ?? []) {
-        this.membership.delete(id);
-        const member = this.members.get(id);
-        if (member) this.assign([member]);
+      if (block?.type !== "toolCall" || block.name !== "read" || typeof block.id !== "string"
+        || this.occurrences.get(block.id) !== 1) { current = undefined; continue; }
+      let record = this.records.get(block.id);
+      if (!record) {
+        record = Object.assign(this.createMember(block.id), { known: false, final: false });
+        this.records.set(block.id, record);
       }
-      this.candidates.delete(key);
+      if (!record.final) this.setArgs(record, block.arguments, this.cwd);
+      if (!current) next.push(current = []);
+      current.push(block.id);
     }
-    for (const ids of next) {
-      const key = ids[0]!;
-      const previous = this.candidates.get(key);
-      if (previous?.length === ids.length && previous.every((id, index) => id === ids[index])) continue;
-      const retained = new Set(ids);
-      for (const id of previous ?? []) if (!retained.has(id)) {
+    const keys: number[] = [];
+    for (let index = 0; index < Math.max(this.activeKeys.length, next.length); index++) {
+      const key = this.activeKeys[index] ?? this.nextKey++;
+      const previous = this.candidates.get(key) ?? [], ids = next[index] ?? [];
+      if (ids.length) keys.push(key);
+      if (previous.length === ids.length && previous.every((id, i) => id === ids[i])) continue;
+      for (const id of previous) if (this.membership.get(id) === key) {
         this.membership.delete(id);
-        const member = this.members.get(id);
-        if (member) this.assign([member]);
+        const member = this.records.get(id); if (member) this.assign([member]);
       }
-      this.candidates.set(key, ids);
-      for (const id of ids) this.membership.set(id, key);
-      this.reflow(key);
+      if (!ids.length) this.candidates.delete(key);
+      else {
+        this.candidates.set(key, ids);
+        for (const id of ids) this.membership.set(id, key);
+        dirty.add(key);
+      }
     }
-    this.active = [...nextKeys];
+    this.activeKeys = keys;
+    for (const key of dirty) this.reflow(key);
   }
 
-  bind(context: RenderContext): ReadMember {
+  start(id: string, args: unknown): void {
+    const record = this.unique(id);
+    if (!record || record.final) return;
+    this.setArgs(record, args, this.cwd);
+    record.known = true;
+    if (record.status !== "running") { record.status = "running"; this.changed(record); }
+    this.reflowMember(record);
+  }
+
+  result(id: string, result: ReadResult, partial: boolean, error: boolean): void {
+    const record = this.unique(id);
+    // Execution end already contains the post-hook result; later message_end is a duplicate.
+    if (!record || record.final) return;
+    const wasKnown = record.known, image = record.hasImage;
+    record.known = true; record.final = !partial;
+    this.setResult(record, result, partial, error);
+    if (!wasKnown || image !== record.hasImage) this.reflowMember(record);
+  }
+
+  bind(context: RenderContext): ReadView {
     const state = context.state as ReadRowState;
-    if (state.readMember) return state.readMember;
-    const member: ReadMember = { id: context.toolCallId, cache: this.cache.scope(), group: [],
-      path: "", fullPath: "", status: "pending", revision: 0, hasImage: false };
-    state.readMember = member;
-    member.group = [member];
-    // A second row with the same ID has no unambiguous owner. Keep it independent.
-    if (!this.members.has(member.id)) {
-      this.members.set(member.id, member);
-      const key = this.membership.get(member.id);
-      if (key) this.reflow(key);
+    if (state.readView) return state.readView;
+    const view = { local: this.createMember(context.toolCallId), generation: this.generation };
+    state.readView = view;
+    if (!this.bound.has(context.toolCallId)) {
+      this.bound.add(context.toolCallId);
+      const key = this.membership.get(context.toolCallId);
+      if (key !== undefined) this.reflow(key);
     }
-    return member;
+    return view;
   }
 
-  updateCall(member: ReadMember, context: RenderContext, component: Component, path: string): void {
-    if (!member.cache.active) return;
-    member.component = component;
-    member.invalidate = context.invalidate;
-    const args = context.args as { path?: unknown; offset?: number; limit?: number };
-    const fullPath = typeof args.path === "string" ? args.path : "";
-    const status = context.isError ? "failed" : !context.isPartial && member.content ? "completed"
+  updateCall(view: ReadView, context: RenderContext): void {
+    if (!view.local.cache.active) return;
+    this.setArgs(view.local, context.args, context.cwd);
+    const status = context.isError ? "failed" : !context.isPartial && view.local.content ? "completed"
       : context.executionStarted ? "running" : "pending";
-    if (member.path !== path || member.fullPath !== fullPath || member.offset !== args.offset || member.limit !== args.limit || member.status !== status) {
-      Object.assign(member, { path, fullPath, offset: args.offset, limit: args.limit, status });
-      this.changed(member);
-    }
+    if (view.local.status !== status) { view.local.status = status; this.changed(view.local); }
   }
 
-  updateResult(member: ReadMember, result: Pick<ReadMember, "content" | "details">, isPartial: boolean, isError: boolean): void {
-    if (!member.cache.active) return;
-    const status = isError ? "failed" : isPartial ? member.status : "completed";
-    if (member.content !== result.content || member.details !== result.details || member.status !== status) {
-      member.content = result.content; member.details = result.details; member.status = status; member.revision++;
-      const hasImage = result.content?.some(block => block.type === "image") ?? false;
-      if (member.hasImage !== hasImage) {
-        member.hasImage = hasImage;
-        const key = this.membership.get(member.id);
-        if (key) this.reflow(key);
-      }
-      this.changed(member);
-    }
+  updateResult(view: ReadView, result: ReadResult, partial: boolean, error: boolean): void {
+    if (view.local.cache.active) this.setResult(view.local, result, partial, error);
   }
 
-  private reflow(key: string): void {
+  resolve(view: ReadView): ReadMember {
+    if (view.generation !== this.generation || !view.local.cache.active) return view.local;
+    const record = this.unique(view.local.id);
+    const key = this.membership.get(view.local.id);
+    if (key !== undefined && this.dirtyGroups.delete(key)) this.refreshGroup(key);
+    return record?.known ? record : view.local;
+  }
+
+  private unique(id: string): ReadRecord | undefined {
+    return this.occurrences.get(id) === 1 ? this.records.get(id) : undefined;
+  }
+
+  private createMember(id: string): ReadMember {
+    const member: ReadMember = { id, cache: this.cache.scope(), group: undefined!, path: "", fullPath: "", status: "pending", revision: 0 };
+    this.assign([member]); return member;
+  }
+
+  private setArgs(member: ReadMember, input: unknown, cwd: string): void {
+    const args = input as { path?: unknown; offset?: number; limit?: number } | undefined;
+    const fullPath = typeof args?.path === "string" ? args.path : "";
+    const path = this.formatPath(fullPath, cwd);
+    if (member.path === path && member.fullPath === fullPath && member.offset === args?.offset && member.limit === args?.limit) return;
+    Object.assign(member, { path, fullPath, offset: args?.offset, limit: args?.limit }); this.changed(member);
+  }
+
+  private setResult(member: ReadMember, result: ReadResult, partial: boolean, error: boolean): void {
+    const status = partial ? "running" : error ? "failed" : "completed";
+    const details = result.details && typeof result.details === "object" ? result.details as ReadToolDetails : undefined;
+    if (member.content === result.content && member.details === details && member.status === status) return;
+    member.content = result.content; member.details = details; member.status = status;
+    member.hasImage = result.content?.some(block => block.type === "image") ?? false;
+    this.changed(member);
+  }
+
+  private reflowMember(member: ReadMember): void {
+    const key = this.membership.get(member.id);
+    if (key !== undefined) this.reflow(key);
+  }
+
+  private reflow(key: number): void { this.dirtyGroups.add(key); }
+
+  private refreshGroup(key: number): void {
+    // Coalesce source, result and binding changes until the next paint.
     let segment: ReadMember[] = [];
     const flush = () => { if (segment.length) this.assign(segment); segment = []; };
     for (const id of this.candidates.get(key) ?? []) {
-      const member = this.members.get(id);
-      if (member?.hasImage) {
-        // Attachments are rendered by the host outside our component. Keep their row intact.
-        flush(); this.assign([member]);
-      } else if (member) segment.push(member);
-      else flush(); // A row we do not own must not be hidden or crossed.
+      const member = this.records.get(id);
+      if (!member || !this.bound.has(id) || !member.known || this.occurrences.get(id) !== 1 || member.hasImage) {
+        flush(); if (member) this.assign([member]);
+      } else segment.push(member);
     }
     flush();
   }
 
   private assign(members: ReadMember[]): void {
-    for (const member of members) member.group = members;
-    for (const member of members) this.notify(member);
+    const previous = members[0]?.group;
+    if (previous?.members.length === members.length && previous.members.every((member, i) => member === members[i])) return;
+    const group = { members, version: 0 };
+    for (const member of members) member.group = group;
   }
 
-  private changed(member: ReadMember): void {
-    const owner = member.group[0]!;
-    owner.component?.invalidate();
-    if (owner !== member) this.notify(owner);
-  }
-
-  private notify(member: ReadMember): void {
-    member.component?.invalidate();
-    if (this.notifying || !member.cache.active) return;
-    this.notifying = true;
-    try { member.invalidate?.(); } finally { this.notifying = false; }
-  }
+  private changed(member: ReadMember): void { member.revision++; member.group.version++; }
 }

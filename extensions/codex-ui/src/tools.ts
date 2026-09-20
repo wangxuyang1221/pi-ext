@@ -29,7 +29,7 @@ import { sanitizeDiffSource } from "./diff-source.js";
 import { BashGroups, type BashGroupRowState } from "./bash-groups.js";
 import { renderBashGroup } from "./bash-group-layout.js";
 import { ReadGroups, type ReadRowState } from "./read-groups.js";
-import { renderReadGroup } from "./read-group-layout.js";
+import { ReadViewComponent } from "./read-view.js";
 import {
   fitToWidth,
   formatHomePath,
@@ -88,7 +88,7 @@ export interface DisplayDiffLine {
 }
 
 interface CodexReadState extends ReadRowState {
-  callComponent?: ResponsiveLinesComponent;
+  callComponent?: ReadViewComponent;
 }
 
 interface WriteMetrics {
@@ -172,7 +172,7 @@ export function registerCodexTools(
   const configuredBash = executionDefinitionCache(executionSettings, (cwd, options) => factories.bash(cwd, options.bash));
   const renderCache = services.renderCache ?? new ToolRenderCache();
   const bashGroups = new BashGroups(renderCache);
-  const readGroups = new ReadGroups(renderCache);
+  const readGroups = new ReadGroups(renderCache, formatToolPath);
 
   const resetRendering = () => {
     renderCache.clear();
@@ -214,7 +214,22 @@ export function registerCodexTools(
     if (ctx?.mode === "tui") {
       bashGroups.discover(event.message);
       readGroups.discover(event.message);
+      if (event.message.role === "toolResult" && event.message.toolName === "read") {
+        readGroups.result(event.message.toolCallId, event.message, false, event.message.isError);
+      }
     }
+  });
+  pi.on("tool_execution_start", (event, ctx) => {
+    if (ctx.mode === "tui" && event.toolName === "read") readGroups.start(event.toolCallId, event.args);
+  });
+  pi.on("tool_execution_update", (event, ctx) => {
+    if (ctx.mode === "tui" && event.toolName === "read") {
+      readGroups.start(event.toolCallId, event.args);
+      readGroups.result(event.toolCallId, event.partialResult, true, false);
+    }
+  });
+  pi.on("tool_execution_end", (event, ctx) => {
+    if (ctx.mode === "tui" && event.toolName === "read") readGroups.result(event.toolCallId, event.result, false, event.isError);
   });
 
   const baseRead = getReadDefinition(process.cwd());
@@ -227,11 +242,10 @@ export function registerCodexTools(
     },
     renderCall(args, theme, context) {
       const state = context.state as unknown as CodexReadState;
-      const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
-      state.callComponent = component;
-      const member = readGroups.bind(context);
-      readGroups.updateCall(member, context, component, formatToolPath(typeof args.path === "string" ? args.path : "", context.cwd));
-      component.setRenderer((width) => renderReadGroup(member, context.expanded, theme, width), { linesAlreadyFit: true });
+      const view = readGroups.bind(context);
+      readGroups.updateCall(view, context);
+      const component = state.callComponent ??= new ReadViewComponent(readGroups, view);
+      component.update(context.expanded, theme);
       return component;
     },
     renderResult(result, options, theme, context) {

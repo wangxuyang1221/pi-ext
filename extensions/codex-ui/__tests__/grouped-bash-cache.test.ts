@@ -12,7 +12,7 @@ function setup(cache = new ToolRenderCache(), start = true) {
   const entries: any[] = [];
   const scan = vi.fn(() => entries);
   const emit = (type: string, event = {}) => {
-    for (const handler of handlers.get(type) ?? []) handler({ type, ...event }, { mode: "tui", sessionManager: { buildContextEntries: scan } });
+    for (const handler of handlers.get(type) ?? []) handler({ type, ...event }, { mode: "tui", cwd: process.cwd(), sessionManager: { buildContextEntries: scan } });
   };
   registerCodexTools({ registerTool: (tool: ToolDefinition) => tools.set(tool.name, tool),
     on(type: string, handler: (event: any, ctx?: any) => void) {

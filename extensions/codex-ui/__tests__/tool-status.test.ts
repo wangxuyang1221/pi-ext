@@ -147,7 +147,10 @@ test("keeps mixed group colors independent and reuses captured output across pai
     const reads = vi.fn();
     for (let index = items.length - 1; index >= 0; index--) {
       const text = index === 1 ? "Permission denied" : index === 2 ? name === "bash" ? "partial output\n\nCommand aborted" : "Operation aborted" : "source line\n".repeat(length);
-      items[index]!.resultContent([{ type: "text", get text() { reads(); return text; } }], index === 1 || index === 2);
+      const content = [{ type: "text" as const, get text() { reads(); return text; } }];
+      const isError = index === 1 || index === 2;
+      h.emit("tool_execution_end", { toolName: name, toolCallId: items[index]!.ctx.toolCallId, result: { content }, isError });
+      items[index]!.resultContent(content, isError);
     }
     for (const palette of [theme(), theme(1)]) {
       items[0]!.setTheme(palette);

@@ -1,5 +1,7 @@
 # Codex UI Residual Fixes
 
+本文保留 Pi `0.84.3` 的第二轮记录。原问题 4 后续已在 Pi `0.86.0` 上通过逻辑记录与视图分离修复；当前边界及验证见 [Read history grouping fixes](codex-ui-read-history-todo.md)，下文“仍保留限制”指本轮当时的范围。
+
 ## Understanding
 
 处理 `fix/codex-ui-review` 分支提交 `6fe4b308d3f333c6c741ed571279fbff08260653` 的三项已复现残余，顺序为原问题 1 → 2 → 7。原问题 1 采用用户接受的“配置异常时工具报错、不执行”方案，不实现宿主保留旧配置继续执行的行为。

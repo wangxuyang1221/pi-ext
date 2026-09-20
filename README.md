@@ -259,7 +259,9 @@ Bash、Read、MCP 的正常正文统一使用 `text`，在 codex-pi 主题中为
 
 Read 在同一 assistant 消息内按调用顺序合并相邻读取，不跨 text、thinking、其他工具或消息边界。每个文件显示不加粗的主题 `accent` 文件名、暗灰目录和实际返回范围，默认附最多三屏幕行预览及余量提示。预览每行最多提取 512 个 UTF-16 代码单元，长行裁剪而不换行。全局 `app.tools.expand` 快捷键展开完整输入路径和最多 40 行源码，再次按键恢复短预览。错误、取消和续读提示保留；图片及归属不明的调用独立显示，避免宿主附件与文件名错位。分组不改执行、权限或持久化结果，不提供原型的配色与布局切换命令。双版本验证及预览开销见 [Read UI validation](docs/research/codex-ui-read-validation.md)。
 
-Read 分组仍有已知限制：`Ctrl+T` 或部分 settings 操作重建历史组件后，历史 Read 会降级为独立显示，普通重绘不能恢复。文件路径和内容仍可见，使用 `/reload` 可恢复分组。本轮接受该展示限制，不接入宿主内部组件生命周期，也不将它视为已修复。
+Read 分组按会话来源维护，显示组件重建不会被算成重复调用。唯一 ID 的历史及本轮已完成 Read 在真实历史重建、`/reload` 后仍保持分组；旧组件回调不能覆盖逻辑结果。Pi 0.86.0 的 `Ctrl+T` 本身已不重建工具行，本次另行验证了实际重建路径。tree 和压缩后只使用当前可见历史，普通工具事件直接更新受影响记录，不重新扫描全部历史。实现及验收见 [Read history grouping fixes](docs/codex-ui-read-history-todo.md)。
+
+真实重复 ID 使用各行本地参数和结果，不共享歧义数据，也不修正宿主自身按 ID 复用行的限制。图片、缺失来源/结果、从未绑定的视图仍断开分组。已接受的边界是：公开接口没有行卸载通知，插件不检测宿主无通知移除曾绑定视图的情况；不为此读取私有组件列表或增加轮询。
 
 Footer 使用 ` ⋅ ` 分隔，并按 `model thinking ⋅ fast ⋅ cwd ⋅ git:branch ⋅ Context N% left ⋅ permissions` 排列。model 与 thinking 使用 Codex CLI 的 `#f6e2b7`，context 使用 `#f2b590`，Fast Mode 使用 `#c8a9ee`。终端变窄时会先缩短或移除 cwd 和 branch，再将 context 缩成 `N% left`；降级允许跳过等宽或更宽的中间变体，单字符目录也能显示可容纳的截断分支。model、context 和 permissions 保留到最后。
 

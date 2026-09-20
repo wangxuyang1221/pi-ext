@@ -106,14 +106,14 @@ function renderMember(member: ReadMember, expanded: boolean, grouped: boolean, t
   });
 }
 
-/** Only the first bound member emits the group, including all member previews. */
+/** The source group's first member emits its previews; ambiguous views stay local. */
 export function renderReadGroup(member: ReadMember, expanded: boolean, theme: Theme, availableWidth: number): string[] {
   const width = normalizeWidth(availableWidth);
-  if (!width || member.group[0] !== member) return [];
-  const grouped = member.group.length > 1;
+  if (!width || member.group.members[0] !== member) return [];
+  const grouped = member.group.members.length > 1;
   const inset = grouped && width > 2 ? "  " : "";
-  const lines = grouped ? [fitToWidth(theme.fg("toolTitle", theme.bold(`${expanded ? "▾" : "▸"} Read ${member.group.length} files`)), width)] : [];
-  for (const item of member.group) {
+  const lines = grouped ? [fitToWidth(theme.fg("toolTitle", theme.bold(`${expanded ? "▾" : "▸"} Read ${member.group.members.length} files`)), width)] : [];
+  for (const item of member.group.members) {
     for (const line of renderMember(item, expanded, grouped, theme, width - inset.length)) lines.push(inset + line);
   }
   return lines;
