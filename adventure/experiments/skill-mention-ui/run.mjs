@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, "../../..");
 const cli = join(dirname(fileURLToPath(import.meta.resolve("@earendil-works/pi-coding-agent"))), "cli.js");
-const variant = process.argv.includes("accent") ? "accent" : "tint";
+const variant = process.argv.includes("accent") ? "accent" : process.argv.includes("tint") ? "tint" : "chip";
 const native = process.argv.includes("--native");
 const capture = process.argv.includes("--capture");
 mkdirSync(join(repo, ".tmp"), { recursive: true });

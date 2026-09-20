@@ -10,7 +10,7 @@
 
 ## Current Goal or Problem
 
-为 Pi 实现 `$` 行内 skill 选择与激活。上一版已实施并验收；用户现要求右侧标点允许激活，候选仍要求双侧空白，并明确选择输入框及发送后正文两处都有特殊UI。当前 [Planning #11](https://github.com/wangxuyang1221/pi-ext/issues/11) 已做可运行原型，待用户选样式，不是新需求已正式交付。
+为 Pi 实现 `$` 行内 skill 选择与激活。上一版已实施并验收；用户现要求右侧标点允许激活，候选仍要求双侧空白，并明确选择输入框及发送后正文两处都有特殊UI。当前 [Planning #11](https://github.com/wangxuyang1221/pi-ext/issues/11) 已做整体标签原型，待用户查看视觉与手感，不是新需求已正式交付。用户已否定 accent/tint，并选择补全确认后变成标签、左右键跳过、退格整体删除。
 
 - [Map #1](https://github.com/wangxuyang1221/pi-ext/issues/1) 与 [Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2) 保持 open。
 - [#8 输入闭环](https://github.com/wangxuyang1221/pi-ext/issues/8)、[#9 队列与历史](https://github.com/wangxuyang1221/pi-ext/issues/9)、[#10 安装交付与整体验收](https://github.com/wangxuyang1221/pi-ext/issues/10) 均通过协调者验收并关闭。
@@ -30,13 +30,13 @@
 
 之后用户明确批准卸载全局 `@tunglam/pi-inline-skills@0.1.3`，并批准仅安装本worktree的 `extensions/skill-mentions/dist/index.js`。均已执行并用pi list核对，原本main工作区pi-ext及codex-search独立源码入口不变。因此不得删除此worktree，日常Pi仍依赖该路径。
 
-用户截图中的 `$presentations,` 和 `$lark-doc,` 因旧规则紧邻标点不激活。用户要求识别与补全规则分开，并选择两处UI。主代理以make-a-prototype在真实Pi/Codex UI内比较accent/tint，产品代码及全局安装本轮未改。
+用户截图中的 `$presentations,` 和 `$lark-doc,` 因旧规则紧邻标点不激活。用户要求识别与补全规则分开，并选择两处UI。主代理以make-a-prototype在真实Pi/Codex UI内比较accent/tint，用户否定两者，提供带图标和圆角边框的标签参考图，并选择整体标签。新的chip原型使用浅紫文字、深紫底、菱形图标、留白及字符边界近似，不精确复刻像素圆角。产品代码及全局安装未改。
 
 ## Agreed Decisions and Constraints
 
 - 工作区 `/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions`，分支 `adventure/skill-mentions`。用户已批准该worktree、分支提交推送和本仓库冒险Issues维护。仅本任务，不改main、不建PR、不合并、不部署。本轮原型不改全局Pi；此前两次全局卸载/安装有单独明确批准，不推定为后续全局修改授权。
 - 只用公开API，不修改已有实例方法或原型，不改Pi上游。旧slash入口、历史及CodexEditor外观/回调/快捷键保持原样。原生skill卡片美化仍延期；本轮选定的是任务正文引用标识，不是卡片美化。
-- 旧版完整规则在Spec，已标为修订中。用户新方向保存在#11，通关后移交Spec：激活允许右侧标点，补全仍双侧空白；UI两处均做。具体样式尚未确认，标点全集与生产语法还需明确。手写/粘贴/补全等效、静默回退、去重、来源边界等旧决定继续保留。
+- 旧版完整规则在Spec，已标为修订中。用户新方向保存在#11，通关后移交Spec：激活允许右侧标点，补全仍双侧空白；UI两处均做；用户已选择整体标签，左右键整块跳过，退格整块删除。具体颜色、图标和名称呈现尚未确认，手写/粘贴转标签时机、标点全集与生产语法还需明确。手写/粘贴/补全等效、静默回退、去重、来源边界等旧决定继续保留。
 - 消费时读取文件，队列保留原文；同一user保存任务、图片和快照。恢复不重读，仅显示当前分支已有有效关联卡片，隐藏孤立展示，不补卡、不固定或重注入已压缩全文。
 - 用户已明确旧缺文件与新功能无关，不为本任务恢复18个文件，也未授权删除旧测试或清理旧引用。保留全仓失败和本功能通过的区别。
 - 写文本前读 `docs/agents/repository-language-policy.md`。新增用户可见产品文案需确认语言，当前沿用skill元数据和原生组件，没有新增提示文案。
@@ -58,23 +58,24 @@
 - Pi首次assistant前不落盘，写盘失败可能使parent链断开。插件不增加WAL/事务/损坏JSONL修复。历史快照不代表模型始终可见全文。
 - 临时安装、tarball、隔离HOME/配置/session/cache均已清理；最终10个PTY PID正常退出回收，协调者也确认无skill-install临时目录或残留PTY命令。无本任务监听服务或端口，无真实模型请求，未修改全局Pi。
 
-- 新原型位于 `adventure/experiments/skill-mention-ui/`，两种样式 `accent` 和 `tint`。主代理推荐浅底色但用户尚未选择。截图 [tint](evidence/skill-ui-tint-both.png) / [accent](evidence/skill-ui-accent-both.png) 是真实PTY颜色网格转PNG，字体和行距是approximation，不是macOS窗口截图。
-- 原型复用实际Pi CLI、完整codex-ui、产品补全/加载/协议/历史adapter及原生卡片。fixture仅含两个无外部动作skill与离线faux provider。用户可直接编辑/发送，`/prototype accent` 或 `/prototype tint`切换。
-- 原型2项行为测试、独立tsc及3组真实PTY smoke通过。输入/发送后装饰、原文与快照、Tab不发送、标点不弹菜单、公开reload切换均已核验。测试发现Pi成对美元会进入LaTeX解析，实验显示转换用代码span保护美元并恢复父背景；不把ANSI写进任务或模型。
-- 原型输入仅装饰完整可映射的逻辑行，软换行/折叠/滚动裁剪保守不高亮；标点只覆盖示例集合；live显示按文本匹配是实验，不可替代产品请求ID关联。详细限制和重实现点见原型README。不能因为原型能运行就直接迁为产品。
-- 本轮全仓check仍typecheck通过、2070 passed/5 skip、同一MCP缺文件suite失败；单独build通过，package:check旧文档失败。三个最终PTY进程正常退出，临时目录清除，无监听服务器或残留端口。
+- 原型位于 `adventure/experiments/skill-mention-ui/`，默认 `chip`。旧accent/tint已被用户否定，只留作对照，不再询问二选一。新[局部预览](evidence/skill-ui-chip-detail.png)与[完整预览](evidence/skill-ui-chip-both.png)来自真实PTY颜色网格，字体/行距是approximation，局部图只裁剪原图。
+- 原型复用实际Pi CLI、完整codex-ui、产品补全/加载/协议/历史adapter及原生卡片。fixture只有两个无外部动作skill与离线faux provider。用户可直接编辑/发送，`/prototype chip`切换。
+- `chips.ts`通过公开factory包装投影文本，getText/getExpandedText/onChange/onSubmit还原`$skill-name`。方向键跳过标签，setText保存一个undo快照完成原子删除，再恢复光标。没有修改原实例方法或prototype。曾探索内部segmenter补丁，因与公开API约定冲突已撤除，勿沿用该路线。
+- 新增5项Red/Green行为测试，连同旧2项共7项通过，独立tsc通过；两组真实PTY覆盖Codex/native、两处标签、原生卡片、原文/快照、投影不进入模型、Tab不发送、左右跳过、Backspace/Delete/undo、历史回填、标点不弹菜单及公开reload切换。最终进程与屏幕记录在[Codex JSON](evidence/skill-ui-chip.json)和[native JSON](evidence/skill-ui-chip-native.json)。
+- 手写/粘贴仍按原文激活，但原型输入时仅补全确认、已有草稿和正常历史回填会转标签。生产转换时机未定。宽于整行的标签、裁剪/折叠、复杂剪切、鼠标/IME、自定义键位、跨session/reload旧历史的完整语义未验收。live按文本匹配、内部投影标记和Markdown代码span都是实验，不能直接当作生产富文本架构。详细限制见README。
+- [本轮check](evidence/skill-ui-chip-check.log)仍typecheck通过、2070 passed/5 skip、同一MCP缺文件suite失败；[build](evidence/skill-ui-chip-build.log)通过，[package:check](evidence/skill-ui-chip-package-check.log)旧文档失败。本轮PTY正常退出，对应临时目录清除，无监听服务器。用户之前自行启动的tint原型与`.tmp/skill-ui-prototype-GG4yw8`保留，不能误当作本轮遗留杀掉。
 
 ## Current Assumptions
 
-样式候选尚未获用户确认，新行为没有正式切片或生产验收。暂以短行、codex-pi主题和示例标点完成视觉判断；长期语法、软换行、主题、历史关联和生产组合需要后续规划及实施。
+整体标签交互方向已确认，但当前紫色、菱形图标、字符边界和名称形式仍是助手候选。新行为没有正式切片或生产验收。先通过固定主题和fixture验证标签观感，长期语法、坐标、undo、手写/粘贴转标签、主题和历史关联需要后续规划。
 
 旧全仓缺文件问题仍存在，不恢复无关资料。原型不修改当前安装的插件行为，用户在日常会话仍会看到旧边界。
 
 ## Continuation Point
 
-等待用户查看原型并选择accent/tint或提出修改。#11保持open，Map/Spec保持open且Spec修订中。不要把用户先前选择“3，两处都做”误解成已选某种配色，也不要重复询问两处范围。
+等待用户查看chip原型，确认视觉与整块操作是否符合预期或提出修改。#11保持open，Map/Spec保持open且Spec修订中。用户的“3”已确认两处都做，后来的“1”已确认整体标签；不要重复询问，也不要误当成已批准当前配色或生产实现。
 
-原型启动：在本worktree运行 `pnpm exec node adventure/experiments/skill-mention-ui/run.mjs tint`。退出自动清理，不连接真实provider；可加`--native`或改为`accent`。本轮使用的skill为 `/Users/wangxuyang/.agents/skills/wangxuyang/make-a-prototype/SKILL.md`，继续原型前完整读取及必要引用。
+原型启动：在本worktree运行 `pnpm exec node adventure/experiments/skill-mention-ui/run.mjs chip`。退出自动清理，不连接真实provider；可加`--native`。仍运行上一版代码的原型需先`/reload`，再用`/prototype chip`切换。本轮使用的skill为 `/Users/wangxuyang/.agents/skills/wangxuyang/make-a-prototype/SKILL.md`，继续原型前完整读取及必要引用。
 
 样式确认后继续查明影响可实现性的最少问题，#11通关将有效要求移交Spec，再按slicing审核新增实施切片，不能直接改日常产品。主代理当前是Planning推进者，原型独立完成，未派发worker。
 

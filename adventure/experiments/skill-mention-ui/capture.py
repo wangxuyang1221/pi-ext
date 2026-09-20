@@ -134,7 +134,9 @@ try:
     original = editor()
     assert "$presentations," in original and "$lark-doc，" in original
     grab("input")
-    assert any(cell["fg"] == "89cdff" for row in shots["input"]["cells"] for cell in row), "Input decoration missing"
+    chip_mode = config["variant"] == "chip"
+    foreground = "e2cae8" if chip_mode else "89cdff"
+    assert any(cell["fg"] == foreground for row in shots["input"]["cells"] for cell in row), "Input decoration missing"
     send("\r")
     wait(lambda: events("settled"), "offline submit")
     request = events("request")[-1]
@@ -145,15 +147,21 @@ try:
     assert snapshot["task"] == original
     assert [item["name"] for item in snapshot["skills"]] == ["presentations", "lark-doc"]
     assert "\x1b" not in text, "Visual ANSI leaked into model input"
-    paste(original)
+    assert "\u2063" not in text and "‹ ◇" not in text, "Projected label leaked into model input"
+    if chip_mode:
+        send("\x1b[A")
+        assert editor() == original, "History must preserve original source"
+    else:
+        paste(original)
     grab("both")
-    text_rows = [i for i, row in enumerate(screen.display) if "$presentations," in row]
+    needle = "‹ ◇ presentations ›," if chip_mode else "$presentations,"
+    text_rows = [i for i, row in enumerate(screen.display) if needle in row]
     assert len(text_rows) == 2, "Must show both user and editor references\n" + "\n".join(screen.display)
     for y in text_rows:
-        x = screen.display[y].index("$presentations,")
-        assert screen.buffer[y][x].fg == "89cdff", (y, x, screen.buffer[y][x])
-        if config["variant"] == "tint":
-            assert screen.buffer[y][x].bg == "2b3e4e", screen.buffer[y][x]
+        x = screen.display[y].index(needle)
+        assert screen.buffer[y][x].fg == foreground, (y, x, screen.buffer[y][x])
+        if chip_mode or config["variant"] == "tint":
+            assert screen.buffer[y][x].bg == ("35253b" if chip_mode else "2b3e4e"), screen.buffer[y][x]
     y = text_rows[0]
     assert screen.buffer[y][0].bg == screen.buffer[y][columns - 1].bg == "434343", "User row background must remain intact"
     assert screen.buffer[y][screen.display[y].index(",")].bg == "434343", "Mention background must not leak"
@@ -168,6 +176,20 @@ try:
     assert editor() == "用 $presentations"
     assert len(events("request")) == before
     grab("menu-selected")
+    if chip_mode:
+        assert "‹ ◇ presentations ›" in "\n".join(screen.display), "Confirmed completion must become a chip"
+        send("\x1b[D")
+        send("X")
+        assert editor() == "用 X$presentations", "Left must skip the complete chip"
+        send("\x7f")
+        send("\x1b[C")
+        send("\x7f")
+        assert editor() == "用 ", "Backspace must remove the whole chip"
+        send("\x1f")
+        assert editor() == "用 $presentations", "Undo must restore the whole chip"
+        send("\x1b[D")
+        send("\x1b[3~")
+        assert editor() == "用 ", "Forward delete must remove the whole chip"
     send("\x03")
     paste("$presentations,")
     assert editor() == "$presentations,"
@@ -184,13 +206,36 @@ try:
     grab("switched")
     assert any(cell["fg"] == "89cdff" for row in shots["switched"]["cells"] for cell in row)
     send("\x03")
+    if chip_mode:
+        ready_before = len(events("ready"))
+        send("/prototype chip\r")
+        wait(lambda: len(events("ready")) > ready_before, "public reload into chip")
+        paste("用 $pre")
+        send("s")
+        wait(lambda: "PowerPoint" in "\n".join(screen.display), "skill menu after reload")
+        send("\t")
+        assert editor() == "用 $presentations"
+        assert "‹ ◇ presentations ›" in "\n".join(screen.display)
+        send("\x03")
     send("/quit\r")
     wait(lambda: status is not None, "graceful quit")
     assert os.waitstatus_to_exitcode(status) == 0
     stem = f"skill-ui-{config['variant']}{'-native' if config['native'] else ''}"
     for name in ["input", "both"]:
         raster(shots[name], output / f"{stem}-{name}.png")
+    if chip_mode:
+        # Crop the actual grid image, preserving both surrounding message rows.
+        source = Image.open(output / f"{stem}-both.png")
+        crops = [source.crop((0, 18 + (y - 1) * 30, source.width, 18 + (y + 2) * 30)) for y in text_rows]
+        detail = Image.new("RGB", (source.width, sum(crop.height for crop in crops) + 18), "#27282b")
+        top = 0
+        for crop in crops:
+            detail.paste(crop, (0, top))
+            top += crop.height + 18
+        detail.save(output / f"{stem}-detail.png")
     summary = {"variant": config["variant"], "native": config["native"], "pid": pid, "exit": 0, "checks": ["real CLI PTY", "input and user colors", "native cards", "original task and two snapshots", "no ANSI in provider input", "Tab completion does not send", "punctuation does not open menu", "public reload style switch"], "screens": {name: shot["text"] for name, shot in shots.items()}}
+    if chip_mode:
+        summary["checks"] += ["no chip markers in provider input", "history restores projected chips", "Tab creates an atom", "left and right skip atom", "backspace and delete remove atom", "undo restores atom", "public reload into chip and select completion"]
     (output / f"{stem}.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({"passed": True, "variant": config["variant"], "pid": pid, "exit": 0}))
 finally:

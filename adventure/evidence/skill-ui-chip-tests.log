@@ -1,0 +1,10 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ✓ adventure/experiments/skill-mention-ui/ui.test.ts (2 tests) 12ms
+ ✓ adventure/experiments/skill-mention-ui/chips.test.ts (5 tests) 123ms
+
+ Test Files  2 passed (2)
+      Tests  7 passed (7)
+   Start at  21:48:34
+   Duration  762ms (transform 50ms, setup 0ms, collect 907ms, tests 135ms, environment 0ms, prepare 98ms)

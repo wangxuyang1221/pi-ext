@@ -1,0 +1,91 @@
+import { expect, it } from "vitest";
+import { CombinedAutocompleteProvider, Editor, Markdown, stripTerminalSequences, visibleWidth, type EditorTheme, type TUI } from "@earendil-works/pi-tui";
+import { getMarkdownTheme, initTheme, type SlashCommandInfo } from "@earendil-works/pi-coding-agent";
+import { skillAutocomplete } from "../../../extensions/skill-mentions/src/autocomplete.js";
+import { chipEditor, chipLabel, chipMarkdown, chipToken, decodeChips, encodeChips } from "./chips.js";
+
+const identity = (text: string) => text;
+const theme: EditorTheme = { borderColor: identity, selectList: { selectedPrefix: identity, selectedText: identity, description: identity, scrollInfo: identity, noMatch: identity } };
+const tui = { terminal: { rows: 30, columns: 104 }, requestRender() {} } as unknown as TUI;
+
+const names = new Set(["presentations", "lark-doc"]);
+it("projects known references into labels and round-trips source without changing lookalike text", () => {
+  const source = "$presentations, 和 $lark-doc。 ` $presentations ` \\$lark-doc $unknown " + chipLabel("presentations");
+  const projected = encodeChips(source, names);
+  expect(projected).not.toBe(source);
+  expect(projected).toContain(chipToken("lark-doc"));
+  expect(projected).toContain("` $presentations ` \\$lark-doc $unknown");
+  expect(decodeChips(projected)).toBe(source);
+  expect(decodeChips(chipLabel("presentations"))).toBe(chipLabel("presentations"));
+});
+
+it("moves and deletes a whole label through the real editor and submits the original source", () => {
+  const base = new Editor(tui, theme);
+  const originalMethods = [base.handleInput, base.render, Reflect.get(base, "segment")];
+  const editor = chipEditor(base, () => names);
+  expect([base.handleInput, base.render, Reflect.get(base, "segment")]).toEqual(originalMethods);
+  editor.setText("用 $presentations");
+  expect(base.getText()).toBe("用 " + chipToken("presentations"));
+  expect(editor.getText()).toBe("用 $presentations");
+  editor.handleInput("\x1b[D");
+  expect(base.getCursor().col).toBe(2);
+  editor.handleInput("\x1b[C");
+  expect(base.getCursor().col).toBe(base.getText().length);
+  editor.handleInput("\x7f");
+  expect(editor.getText()).toBe("用 ");
+  editor.handleInput("\x1f");
+  expect(editor.getText()).toBe("用 $presentations");
+  let submitted = "";
+  editor.onSubmit = text => { submitted = text; };
+  editor.handleInput("\r");
+  expect(submitted).toBe("用 $presentations");
+  expect(editor.getText()).toBe("");
+});
+
+it("converts a confirmed completion into an atom without changing the submitted spelling", async () => {
+  const base = new Editor(tui, theme);
+  const editor = chipEditor(base, () => names);
+  const commands = [...names].map(name => ({ name: `skill:${name}`, source: "skill" })) as SlashCommandInfo[];
+  editor.setAutocompleteProvider!(skillAutocomplete(new CombinedAutocompleteProvider([], process.cwd()), () => commands));
+  editor.setText("用 ");
+  for (const char of "$pre") editor.handleInput(char);
+  await new Promise(resolve => setTimeout(resolve, 100));
+  expect(base.isShowingAutocomplete()).toBe(true);
+  editor.handleInput("\t");
+  expect(base.getText()).toBe("用 " + chipToken("presentations"));
+  expect(editor.getExpandedText!()).toBe("用 $presentations");
+  editor.handleInput("\x1b[D");
+  editor.handleInput("\x1b[3~");
+  expect(editor.getText()).toBe("用 ");
+  editor.setText("");
+});
+
+it("keeps adjacent word deletion atomic and undoable", () => {
+  const base = new Editor(tui, theme);
+  const editor = chipEditor(base, () => names);
+  editor.setText("用 $presentations ");
+  editor.handleInput("\x17");
+  expect(editor.getText()).toBe("用 ");
+  editor.handleInput("\x1f");
+  expect(editor.getText()).toBe("用 $presentations ");
+  editor.setText("");
+});
+
+it("renders the same bounded label in the native editor and actual user Markdown", () => {
+  const source = "$presentations, 和 $lark-doc。";
+  initTheme("dark", false);
+  const styled = chipMarkdown(source, names, "\x1b[48;2;67;67;67m");
+  const rendered = new Markdown(styled, 0, 0, getMarkdownTheme()).render(104);
+  expect(rendered.map(stripTerminalSequences).join("\n")).toContain(chipLabel("presentations") + ", 和 " + chipLabel("lark-doc") + "。");
+  const base = new Editor(tui, theme);
+  const editor = chipEditor(base, () => names);
+  editor.setText(source);
+  const output = editor.render(104);
+  expect(output.join("\n")).toContain("48;2;53;37;59");
+  expect(output.every(line => visibleWidth(line) <= 104)).toBe(true);
+  expect(editor.getText()).toBe(source);
+  // Nonbreaking projected padding keeps fitting labels together when wrapping.
+  const wrapped = editor.render(27).map(stripTerminalSequences).join("\n");
+  expect(wrapped).toContain(chipLabel("presentations"));
+  expect(wrapped).toContain(chipLabel("lark-doc"));
+});
