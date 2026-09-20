@@ -1,6 +1,6 @@
 # Handoff
 
-> 从 Continuation Point 接续。完整规格只在 Spec Issue 正文维护。用户已提出新需求，当前等待 #11 原型样式选择，不再从上一版的交付确认停点继续。
+> 从 Continuation Point 接续。完整规格只在 Spec Issue 正文维护。#11 已通关，cube 与青色已选定；当前从重开的 #5 明确右侧标点范围，不再询问样式或上一版交付确认。
 
 ## Handoff Position
 
@@ -10,7 +10,7 @@
 
 ## Current Goal or Problem
 
-为 Pi 实现 `$` 行内 skill 选择与激活。上一版已实施并验收；用户现要求右侧标点允许激活，候选仍要求双侧空白，并明确选择输入框及发送后正文两处都有特殊UI。当前 [Planning #11](https://github.com/wangxuyang1221/pi-ext/issues/11) 已做整体标签原型，用户已认可交互和标签效果，但认为样式粗糙并否定紫色。用户认为无底色blue尚可，要求换掉菱形，同时试命令图标与立方体，并指定截图中的青色。当前提供command/cube两版，图标待选，不是新需求已正式交付。
+为 Pi 实现 `$` 行内 skill 选择与激活。上一版已实施并验收；用户现要求右侧标点允许激活，候选仍要求双侧空白，并明确选择输入框及发送后正文两处都有特殊UI。[Planning #11](https://github.com/wangxuyang1221/pi-ext/issues/11) 已通关，用户选定无底色、常规字重、青色 #8DF9FD 的 cube 标签，要求已移交 Spec。当前推进重开的 [#5 激活边界](https://github.com/wangxuyang1221/pi-ext/issues/5)；新建 [#12 标签生成与编辑](https://github.com/wangxuyang1221/pi-ext/issues/12) 和 [#13 字体兼容](https://github.com/wangxuyang1221/pi-ext/issues/13)，#12 原生依赖 #5。尚未提交完整的新实施切片，不能将原型视为正式交付。
 
 - [Map #1](https://github.com/wangxuyang1221/pi-ext/issues/1) 与 [Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2) 保持 open。
 - [#8 输入闭环](https://github.com/wangxuyang1221/pi-ext/issues/8)、[#9 队列与历史](https://github.com/wangxuyang1221/pi-ext/issues/9)、[#10 安装交付与整体验收](https://github.com/wangxuyang1221/pi-ext/issues/10) 均通过协调者验收并关闭。
@@ -30,13 +30,13 @@
 
 之后用户明确批准卸载全局 `@tunglam/pi-inline-skills@0.1.3`，并批准仅安装本worktree的 `extensions/skill-mentions/dist/index.js`。均已执行并用pi list核对，原本main工作区pi-ext及codex-search独立源码入口不变。因此不得删除此worktree，日常Pi仍依赖该路径。
 
-用户截图中的 `$presentations,` 和 `$lark-doc,` 因旧规则紧邻标点不激活。用户要求识别与补全规则分开，并选择两处UI。主代理以make-a-prototype在真实Pi/Codex UI内比较accent/tint，用户否定两者，提供带图标和圆角边框的标签参考图，并选择整体标签。chip原型的整体交互及效果获用户认可，但紫色与粗糙外观未获认可。随后用户要求灰底浅灰名称配蓝图标、无底色蓝图标蓝名称两个候选都做，此前提供gray/blue，两版均移除尖括号和粗体。用户倾向无底色，但否定菱形，要求命令图标和立方体都试，并用新截图中的青色。当前command/cube均用取样色#8DF9FD，保留整块交互。产品代码、全局安装和终端设置未改。
+用户截图中的 `$presentations,` 和 `$lark-doc,` 因旧规则紧邻标点不激活。用户要求识别与补全规则分开，并选择两处UI。主代理以make-a-prototype在真实Pi/Codex UI内比较accent/tint，用户否定两者，提供带图标和圆角边框的标签参考图，并选择整体标签。chip原型的整体交互及效果获用户认可，但紫色与粗糙外观未获认可。随后用户要求灰底浅灰名称配蓝图标、无底色蓝图标蓝名称两个候选都做，此前提供gray/blue，两版均移除尖括号和粗体。用户倾向无底色，但否定菱形，要求命令图标和立方体都试，并用新截图中的青色。command/cube均用取样色#8DF9FD，保留整块交互。用户最终选择cube，随后同意先收尾视觉关卡、规划剩余规则，再审核实施切片。主代理已关闭#11、移交Spec，复用重开#5，并新建#12/#13。产品代码、全局安装和终端设置未改。
 
 ## Agreed Decisions and Constraints
 
 - 工作区 `/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions`，分支 `adventure/skill-mentions`。用户已批准该worktree、分支提交推送和本仓库冒险Issues维护。仅本任务，不改main、不建PR、不合并、不部署。本轮原型不改全局Pi；此前两次全局卸载/安装有单独明确批准，不推定为后续全局修改授权。
 - 只用公开API，不修改已有实例方法或原型，不改Pi上游。旧slash入口、历史及CodexEditor外观/回调/快捷键保持原样。原生skill卡片美化仍延期；本轮选定的是任务正文引用标识，不是卡片美化。
-- 旧版完整规则在Spec，已标为修订中。用户新方向保存在#11，通关后移交Spec：激活允许右侧标点，补全仍双侧空白；UI两处均做；用户已选择整体标签，左右键整块跳过，退格整块删除。青色由用户明确指定，取样值为#8DF9FD；图标在command/cube中待选，名称呈现仍可调整。手写/粘贴转标签时机、标点全集与生产语法还需明确。手写/粘贴/补全等效、静默回退、去重、来源边界等旧决定继续保留。
+- 新方向已移交 Spec 的 References and boundaries 与 Visual references：激活允许右侧标点，补全仍双侧空白，左侧边界不扩大；输入与发送后正文均做标签，原生卡片不变。用户选定 cube 图标 U+F01A7，图标和名称同为 #8DF9FD、常规字重、无背景和尖括号；视觉隐藏 `$`，原文仍保留 `$skill-name`。补全确认后成为整体标签，左右键整块跳过，Backspace/Delete 整块删除，撤销恢复。标点范围归 #5，手写/粘贴/历史的成标时机与完整编辑契约归 #12，字体要求与降级归 #13。静默回退、去重、来源边界等旧决定继续保留。
 - 消费时读取文件，队列保留原文；同一user保存任务、图片和快照。恢复不重读，仅显示当前分支已有有效关联卡片，隐藏孤立展示，不补卡、不固定或重注入已压缩全文。
 - 用户已明确旧缺文件与新功能无关，不为本任务恢复18个文件，也未授权删除旧测试或清理旧引用。保留全仓失败和本功能通过的区别。
 - 写文本前读 `docs/agents/repository-language-policy.md`。新增用户可见产品文案需确认语言，当前沿用skill元数据和原生组件，没有新增提示文案。
@@ -66,19 +66,21 @@
 - 手写/粘贴仍按原文激活，但原型输入时仅补全确认、已有草稿和正常历史回填会转标签。生产转换时机未定。宽于整行的标签、裁剪/折叠、复杂剪切、鼠标/IME、自定义键位、跨session/reload旧历史的完整语义未验收。live按文本匹配、内部投影标记和Markdown代码span都是实验，不能直接当作生产富文本架构。详细限制见README。
 - [本轮check](evidence/skill-ui-icons-check.log)仍typecheck通过、2070 passed/5 skip、同一MCP缺文件suite失败；[build](evidence/skill-ui-icons-build.log)通过，[package:check](evidence/skill-ui-icons-package-check.log)旧文档失败。本轮PTY正常退出，对应临时目录清除，无监听服务器。用户之前自行启动的tint原型与`.tmp/skill-ui-prototype-GG4yw8`保留，不能误当作本轮遗留杀掉。
 
+- 本次规划存档只改文档与 Issues，重跑 `pnpm run check`：typecheck 通过、2070 passed/5 skipped，仍在同一 MCP 缺文件 suite 失败。没有修改测试门槛，也没有新启动服务。
+
 ## Current Assumptions
 
-整体标签交互和效果已确认，紫色与菱形已被否定。本轮沿用无底色，青色已明确指定；command/cube尚待选择，不能把“都做出来”当作批准某一种图标。新行为没有正式切片或生产验收。先通过固定主题和fixture验证标签观感，长期语法、坐标、undo、手写/粘贴转标签、主题和历史关联需要后续规划。
+cube、青色、无底色与整体标签交互已确认，不再重选视觉。原型仅支持观感与部分交互判断，不能证明生产编辑契约或任意终端字体兼容。新行为没有完整切片审核或生产验收；最近的“ok”只批准按规划流程继续，不是批准候选切片开工。
 
 旧全仓缺文件问题仍存在，不恢复无关资料。原型不修改当前安装的插件行为，用户在日常会话仍会看到旧边界。
 
 ## Continuation Point
 
-等待用户比较command/cube并选图标或提出调整。#11保持open，Map/Spec保持open且Spec修订中。两处范围、整体标签、整块编辑交互与青色已明确，不重复询问；生产实现尚未批准。若用户实际终端cube显示方框，先核验当前字体，不以PNG可绘制代替真实字体支持。
+当前关卡为 #5，下一步向用户确认右侧哪些标点算激活边界。候选为常用句读及闭合引号/括号的明确集合，或更宽的 Unicode 标点集合；用 `$skill，继续` 与 `$skill/path` 对照说明差别，一次只问这个取舍。现有生产 references.ts 对补全与激活共用双侧空白条件，需要拆开；原型的有限标点适配不等于最终规则。#12 依赖 #5，#13 可独立推进。#11 已关闭，Map/Spec 保持 open，Spec 修订中。
 
 原型启动：在本worktree运行 `pnpm exec node adventure/experiments/skill-mention-ui/run.mjs command`，或将command换成cube。退出自动清理，不连接真实provider；可加`--native`。仍运行上一版代码的原型先`/reload`，再通过`/prototype command`或`/prototype cube`切换。本轮使用的skill为 `/Users/wangxuyang/.agents/skills/wangxuyang/make-a-prototype/SKILL.md`，继续原型前完整读取及必要引用。
 
-样式确认后继续查明影响可实现性的最少问题，#11通关将有效要求移交Spec，再按slicing审核新增实施切片，不能直接改日常产品。主代理当前是Planning推进者，原型独立完成，未派发worker。
+完成 #5/#12/#13 后检查 Spec 一致性，读取 slicing skill，提交完整实施切片供用户审核。审核通过才创建匹配的 Implementation Issues 并派发首关。旧 #8/#9/#10 不重写为本轮实施关卡。主代理当前推进 Planning，未派发本轮 worker。
 
 最后旧worker `01a0be90-2ed7-76f6-807e-976844772b8f` 曾保留上下文，当前没有本轮worker任务；复用前核对是否仍存活。新的Implementation按adventure要求独立上下文，原关返工可复用旧worker。工作区状态核验后行动，避免重复施工。实施所需skills须完整读取及必要引用：
 

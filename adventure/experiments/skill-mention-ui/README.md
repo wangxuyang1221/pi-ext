@@ -9,7 +9,7 @@
 - `command`：`⌘` 命令图标，默认入口。
 - `cube`：Nerd Fonts 的线框立方体 `md-cube_outline`，U+F01A7。
 
-两版的图标都占一格，留白与交互相同。用户尚未选定图标；旧 gray/blue 仅留作历史对照。
+两版的图标都占一格，留白与交互相同。用户已选择cube；command与旧gray/blue保留为原型对照，不要求产品提供这些变体。最终要求见[Spec Visual references](https://github.com/wangxuyang1221/pi-ext/issues/2#visual-references)。
 
 ## Landing Map
 
@@ -84,7 +84,7 @@ pnpm exec node adventure/experiments/skill-mention-ui/run.mjs cube --native --ca
 - 已验证常规方向键、删除、撤销及相邻 Ctrl+W。鼠标包装会吸附光标，但物理鼠标、选区、IME、自定义键位、复杂按词剪切、外部编辑器和跨 session 恢复未验收。原型不能替代日常编辑器。
 - 手写、粘贴、reload 后重建的旧历史何时投影为标签，完整标点语法和原文到显示文本的选择/复制规则仍需后续规划。不要由这次试验自动推导产品要求。
 - live 正文关联沿用按任务文本匹配的实验方案，不覆盖同文不同快照、队列/分支/压缩。不替代产品 requestId 关联。
-- 仅验证 codex-pi 主题和固定两个 fixture。目前沿用无底色，青色由用户明确指定；command/cube 图标尚待选择。不保证所有字体或主题一致，截图不能证明用户当前终端的字体配置。
+- 仅验证 codex-pi 主题和固定两个 fixture。视觉方案已选定并移交Spec，cube字体兼容由Planning #13补齐。不保证所有字体或主题一致，截图不能证明用户当前终端的字体配置。
 - Markdown 显示采用 display-only 代码 span 与 ANSI 并恢复父背景；不能当作生产富文本架构。
 
 ## Sources
@@ -96,7 +96,7 @@ pnpm exec node adventure/experiments/skill-mention-ui/run.mjs cube --native --ca
 
 ## Handoff
 
-整体标签交互已获认可，用户倾向无底色方案并明确指定青色。等待用户比较 command/cube，不能再将紫色或菱形当作待确认候选。Planning #11 未通关，Spec 仍修订中，旧 #8/#9/#10 不覆盖新增需求。
+用户已选择cube，Planning #11已通关并将要求移交Spec。当前推进重开的#5，补齐激活边界；#12处理标签生成/编辑，#13处理字体兼容。Spec仍修订中，新Implementation切片未审核，旧#8/#9/#10不覆盖本轮新增需求。
 
 可复用 launcher、离线 fixture 和 PTY 断言；正式实现应重新设计文档模型、坐标、主题及历史关联。未经用户审核新切片，不把实验代码移入产品或更新日常安装。
 
