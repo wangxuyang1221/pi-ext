@@ -16,7 +16,8 @@
 - [Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2)
 - [Planning #5](https://github.com/wangxuyang1221/pi-ext/issues/5) 已通关，输入规则已移交 Spec。
 - [Planning #7](https://github.com/wangxuyang1221/pi-ext/issues/7) 已通关，完整兼容方案已由用户确认并移交 Spec。
-- 当前等待实施切片审核。尚未创建 Implementation Issue 或修改产品。
+- 三个实施切片已由用户审核通过：[输入闭环 #8](https://github.com/wangxuyang1221/pi-ext/issues/8)、[排队与历史 #9](https://github.com/wangxuyang1221/pi-ext/issues/9)、[可安装交付 #10](https://github.com/wangxuyang1221/pi-ext/issues/10)。均为 Map 子 Issue，依赖顺序为 #8 → #9 → #10；#8 的规划前置 #7 已关闭。
+- 用户最新明确要求创建实施关卡、保存后暂停。当前已暂停，未派发 worker、未开始产品编码。
 
 ## Evolution
 
@@ -36,7 +37,7 @@
 - 用户最新明确确认：重复引用只加载一次，不同 skill 按首次出现顺序组织；Tab/Enter 均选择候选且不发送；关闭菜单不删除引用；光标在名称中间不弹候选。不要重复提问这些行为。
 - 最新来源决定已移交 Spec Scope：TUI 内其他插件生成的普通 user 消息也按相同规则识别；RPC/print、assistant/tool/custom 消息不纳入。
 - 用户最新确认完整方案，#7 已关闭完成，要求已移交 Spec：消费时加载、普通 user 保存快照、提前原生展示、公开 editor 适配还原历史原文；不补回丢失卡片，不固定或重注入被压缩的全文。历史快照不等于模型始终可见的活动上下文。
-- 产品实施前审核切片，然后遵循 adventure 的独立 worker 流程。当前仍只有证据与实验，没有产品改动。
+- 产品切片已获审核，但用户明确要求暂停。恢复前不得派发 worker 或开始实现；恢复后遵循 adventure 的独立 worker 流程。当前仍只有证据与实验，没有产品改动。
 - 文本写入遵循 `docs/agents/repository-language-policy.md`。若新增用户可见产品文案，仍须先确认语言；现已明确不写读取失败提示。
 
 ## Established Facts and Required Context
@@ -58,20 +59,22 @@
 
 ## Current Assumptions
 
-方案本身无待确认事项。实施切片草案尚未获批，拟按以下可验收结果顺序交付：
+方案和切片均已确认，无待决设计提案。完整切片范围、验收、依赖和工作约束分别保存在 #8、#9、#10；Spec Deferred verification 已绑定相应责任，不在存档中维护第二份切片列表。
 
-1. 输入到模型的闭环：原生/CodexEditor 的完整美元补全与识别、idle 实际加载、同一 user 快照与原生展示、静默回退和 slash 隔离。
-2. 排队与历史继续使用：消费时版本、JSONL 持久化、reload/resume/tree/fork、历史原文回填、正常压缩、editor 安装顺序和重复 reload。
-3. 可安装交付：包入口与构建/清理/包检查、说明文档、真实 PTY 和仓库扩展组合，并负责完整 Spec 整体验收。
-
-拟依赖 1 → 2 → 3，不并行修改共享扩展和包装入口。完整字段在本轮回复中提交用户审核；审核后按 adventure 创建 Implementation Issues 保存接受的切片。
-
-已知全仓基准缺口不在本功能修复范围内，不绕过测试或捏造缺失文件。Slice 1 前核对，Slice 3 报告；若阻挡可安装产物验证则请求额外修复授权。新产品文案如有需要，写入前确认语言，优先复用 skill 自带名称/描述和原生组件。
+未验证的仍是产品实现与完整集成，不是用户意图。当前只有离线探针通过，不能据此关闭 Implementation。已知全仓基准缺口不在本功能修复范围内，#8 开始前核对，#10 负责报告；若阻挡安装产物验收则请求额外修复授权。新增产品文案仍须先确认语言。
 
 ## Continuation Point
 
-#7 已关闭完成，Spec 已标记设计确定、实施切片待审核。当前停在三个切片的审核，不再询问完整方案是否确认。用户要求调整时按 slicing 修订完整列表再审核；不得把本轮对方案的 yep 当作接受尚未呈现的切片。
+已按用户要求手动保存并暂停。#8、#9、#10 均 open 且未开始，Execution 等待 worker；不把用户此前批准方案和切片理解为撤销暂停。等待用户明确恢复后再继续，不自动运行下一关。
 
-切片获批后创建 Map 子 Implementation Issues，设置原生依赖，将 Spec Deferred verification 的责任绑定具体 Issues，保存进度并派发首个独立 worker。skill 入口 `/Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md`；worker 需提供 adventure、develop-with-tdd 和 write-todo-list 的绝对路径并要求完整读取，不继承整段对话。
+恢复时先读 Map、Spec、本存档和 #8，核对本地/远端 HEAD 与未提交改动。首个可执行关卡为 #8，其规划前置 #7 已完成。建关基准为 `9633d68677647a60b98552ce5ad4bcb4c2fae96b`；后续保存只有资料变化，派发时用实际最新 HEAD 更新工作基准。无需重建 Issues 或重新审核同一套切片。
 
-当前没有产品实现或运行中 worker。实施不满足公开 API 契约时重开 #7，不偷偷改范围或加入内部补丁。最后一个 Implementation worker 负责整体 Spec 验收与清理；用户确认交付前 Map 与 Spec 保持 open。
+恢复后由主代理协调，派发独立 worker 执行 #8，不继承整段对话。向 worker 提供完整任务、Spec、Issue、工作区及以下 skill 绝对路径，并要求行动前完整读取 SKILL.md 与必要引用：
+
+- `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md`
+- `/Users/wangxuyang/.agents/skills/wangxuyang/develop-with-tdd/SKILL.md`
+- `/Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md`
+
+worker 在 Implementation 正文维护执行计划。主代理验收后按 #8 → #9 → #10 推进；若公开 API 不能满足契约则重开 #7，不偷偷改范围或加入内部补丁。#10 的 worker 负责完整 Spec 整体验收与清理，用户确认交付前 Map 与 Spec 保持 open。
+
+当前没有运行中 worker、服务或本任务占用的监听端口。
