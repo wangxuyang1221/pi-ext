@@ -7,6 +7,7 @@ import { autoCompactTokenLimit, effectiveContextWindow, loadConfig } from "./con
 import { createNativeCheckpoint, type NativeCheckpointRequest } from "./remote-compaction.js";
 import { createSessionCoordinator, type RemoteCompactionReason } from "./session-coordinator.js";
 import {
+	HistoryPrefixMismatchError,
 	estimateCompactionWindowPrefillTokens,
 	FAILED_REQUEST_KIND,
 	findNativeCheckpoint,
@@ -438,6 +439,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 					phase: "before_provider_request",
 					code,
 					recoveryAttempted: false,
+					...(error instanceof HistoryPrefixMismatchError ? { errorType: error.name as "HistoryPrefixMismatchError", mismatchIndex: error.mismatchIndex } : {}),
 				});
 			} catch {}
 			// The abort signal stops Pi's provider call. A synthetic `input: null`

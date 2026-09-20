@@ -4,6 +4,7 @@ import type { Model } from "@earendil-works/pi-ai";
 import { compactionHash } from "./capabilities.js";
 import { effectiveContextWindow, loadConfig } from "./config.js";
 import {
+	HistoryPrefixMismatchError,
 	FAILED_REQUEST_KIND,
 	NATIVE_COMPACTION_BYPASS_KIND,
 	NATIVE_COMPACTION_BYPASS_VERSION,
@@ -321,13 +322,16 @@ function requestTail(
 ): ResponseItem[] {
 	if (!requestInput) return [];
 	const candidates = prefixes.flatMap((value) => systemPromptInput.length > 0 ? [value, [...systemPromptInput, ...value]] : [value]);
+	let longestMatch = 0;
 	for (const prefix of candidates) {
-		if (requestInput.length < prefix.length) continue;
-		if (prefix.every((item, index) => isDeepStrictEqual(item, requestInput[index]!))) {
+		let matched = 0;
+		while (matched < prefix.length && matched < requestInput.length && isDeepStrictEqual(prefix[matched], requestInput[matched])) matched++;
+		longestMatch = Math.max(longestMatch, matched);
+		if (matched === prefix.length) {
 			return requestInput.slice(prefix.length);
 		}
 	}
-	throw new Error("The Codex request changed before model-transition compaction completed.");
+	throw new HistoryPrefixMismatchError(longestMatch);
 }
 
 function resolveModel(ctx: ExtensionContext, key: string): Model<any> | undefined {

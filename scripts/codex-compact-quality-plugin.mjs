@@ -30,7 +30,7 @@ export async function runPluginCompaction({ directory, moduleDirectory, expected
   fs.cpSync(sourceWorkspace, workspace, { recursive: true });
   assert.deepEqual(fingerprintWorkspace(workspace), expectedWorkspaceFingerprint, "Plugin copied workspace changed");
   const configuration = { directory, home, workspace, moduleDirectory, expectedModuleFingerprint, expectedWorkspaceFingerprint,
-    history, instructions, executionTimeoutMs, model: "gpt-5.6-sol", effort: "medium", piVersion: "0.84.3", natural90PercentEvidence: false };
+    history, instructions, executionTimeoutMs, model: "gpt-5.6-sol", effort: "medium", piVersion: "0.86.0", natural90PercentEvidence: false };
   save(directory, "configuration.json", configuration);
   let child, stdout, stderr, result;
   const started = performance.now();
@@ -53,7 +53,7 @@ export async function runPluginCompaction({ directory, moduleDirectory, expected
     const [code, signal] = await exited;
     assert.equal(code, 0, `Plugin worker failed: ${code ?? signal}`);
     result = JSON.parse(fs.readFileSync(path.join(directory, "worker-result.json"), "utf8"));
-    assert.equal(result.piVersion, "0.84.3", "Plugin runtime version mismatch");
+    assert.equal(result.piVersion, "0.86.0", "Plugin runtime version mismatch");
     assert.equal(result.inputHistorySha256, hash(JSON.stringify(history)), "Plugin history fingerprint mismatch");
     assert.deepEqual(fingerprintWorkspace(workspace), expectedWorkspaceFingerprint, "Plugin compaction changed workspace");
     result.executionElapsedMs = performance.now() - started;
@@ -84,7 +84,7 @@ async function worker(configurationFile) {
   assert.deepEqual(fingerprintWorkspace(config.workspace), config.expectedWorkspaceFingerprint, "Worker workspace fingerprint mismatch");
   const packageFile = new URL("../package.json", import.meta.resolve("@earendil-works/pi-coding-agent"));
   const piVersion = JSON.parse(fs.readFileSync(packageFile, "utf8")).version;
-  assert.equal(piVersion, "0.84.3", "Installed Pi runtime version mismatch");
+  assert.equal(piVersion, "0.86.0", "Installed Pi runtime version mismatch");
   const { ModelRuntime, ModelRegistry } = await import("@earendil-works/pi-coding-agent");
   const runtime = await ModelRuntime.create({ authPath: path.join(config.home, "auth.json"), modelsPath: null,
     refreshOnCreate: false, allowModelNetwork: false, signal: AbortSignal.timeout(config.executionTimeoutMs) });

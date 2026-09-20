@@ -11,7 +11,7 @@ function transformer(): MarkdownTransformer {
   } as unknown as ExtensionAPI);
   return transform;
 }
-const contentLines = (row: UserMessageComponent, width = 80) => row.render(width).map(stripTerminalSequences).filter(line => line.trim()).map(line => line.trimEnd());
+const contentLines = (row: UserMessageComponent, width = 80) => row.render(width).map(stripTerminalSequences);
 
 test("user fenced code preserves literals and does not absorb following prose", () => {
   initTheme("dark", false);
@@ -20,7 +20,7 @@ test("user fenced code preserves literals and does not absorb following prose", 
   const row = new UserMessageComponent(source, undefined, 1, [transformer()]);
   const lines = contentLines(row);
   assert(lines.some(line => line.includes('"*literal*"')));
-  assert.deepEqual(lines.filter(line => line.trim() !== "›"), baseline);
+  assert.deepEqual(lines, baseline);
   row.invalidate();
   assert.deepEqual(contentLines(row), lines);
 });
@@ -30,15 +30,15 @@ test("all leading Markdown blocks render like native user content at every width
   const transform = transformer();
   for (const source of ["# Heading", "- First\n  - Nested\n- Second", "1. First\n2. Second",
     "| A | B |\n| --- | --- |\n| x | y |", "\n\n# Leading blanks", "    indented *literal* code",
-    "```ts\nconst literal = '*text*';\n```\n\n**Following prose**", "Normal **paragraph**."]) {
+    "```ts\nconst literal = '*text*';\n```\n\n**Following prose**", "Normal **paragraph**.", "", "› Existing marker", "›\n\nOriginal paragraph", "A long paragraph that wraps across several lines in a narrow terminal."]) {
     for (const width of [16, 40, 100]) {
       const baseline = new UserMessageComponent(source);
       const row = new UserMessageComponent(source, undefined, 1, [transform]);
-      assert.deepEqual(contentLines(row, width).filter(line => line.trim() !== "›"), contentLines(baseline, width));
+      assert.deepEqual(contentLines(row, width), contentLines(baseline, width));
       assert(row.render(width).every(line => visibleWidth(line) <= width));
       const context = { messageType: "user" as const, isStreaming: false, availableWidth: width };
-      assert.equal(transform(source, context), `›\n\n${source}`);
-      assert.equal(transform(transform(source, context), context), `›\n\n${source}`);
+      assert.equal(transform(source, context), source);
+      assert.equal(transform(transform(source, context), context), source);
     }
   }
   const ctx = { messageType: "user" as const, isStreaming: false, availableWidth: 80 };

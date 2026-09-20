@@ -90,13 +90,15 @@ const start = async manager => {
 };
 const current = async () => (await store.records()).find(record => record.ownerSessionId === runtime.session.sessionId);
 try {
-  await start(sdk.SessionManager.create(root, join(root, "sessions")));
+  // Provider-neutral goals reject non-persistent sessions, not faux providers.
+  await start(sdk.SessionManager.inMemory(root));
   await runtime.session.prompt(`/goal ${original}`);
   assert.equal(await current(), undefined);
   assert.ok(runtime.session.getActiveToolNames().includes("get_goal"));
   assert.ok(!runtime.session.getActiveToolNames().includes("create_goal"));
   selectedModel = fixture.model;
-  await runtime.session.setModel(fixture.model);
+  await runtime.dispose();
+  await start(sdk.SessionManager.create(root, join(root, "sessions")));
   await runtime.session.prompt(`/goal ${original}`);
   const first = await current();
   assert.equal(existsSync(runtime.session.sessionFile), false);

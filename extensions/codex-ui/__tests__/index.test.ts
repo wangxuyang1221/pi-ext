@@ -38,7 +38,7 @@ test("markdown transformer uses the same latest summary during streaming and rep
   assert.equal(transformers.length, 1);
   const transform = transformers[0];
   assert.ok(transform);
-  assert.equal(transform("hello", { messageType: "user" }), "›\n\nhello");
+  assert.equal(transform("hello", { messageType: "user" }), "hello");
   assert.equal(transform("› hello", { messageType: "user" }), "› hello");
   assert.equal(transform("hello", { messageType: "assistant" }), "- hello");
 

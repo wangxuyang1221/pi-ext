@@ -7,8 +7,7 @@ import { createAgentSession, DefaultResourceLoader, initTheme, InteractiveMode, 
 import { Container, stripTerminalSequences } from "@earendil-works/pi-tui";
 import { registerCodexTools } from "../src/tools.js";
 
-// Characterization of an accepted limitation, not a regression asserting a fix.
-test("Read history degrades after native thinking rebuild and real SDK reload restores grouping", async () => {
+test("Read history preserves grouping across native thinking rebuild and real SDK reload", async () => {
   initTheme("dark", false);
   mkdirSync(".tmp", { recursive: true });
   const cwd = mkdtempSync(join(process.cwd(), ".tmp/codex-history-"));
@@ -39,9 +38,9 @@ test("Read history degrades after native thinking rebuild and real SDK reload re
     assert.match(plain(), /Read 2 files/u);
     for (let i = 0; i < 3; i++) {
       mode.toggleThinkingBlockVisibility();
-      assert.doesNotMatch(plain(), /Read 2 files/u);
-      for (const id of ["a", "b"]) { assert.match(plain(), new RegExp(`Read ${id}.ts`)); assert(plain().includes(`content ${id}`)); }
-      mode.chatContainer.invalidate(); assert.doesNotMatch(plain(), /Read 2 files/u);
+      assert.match(plain(), /Read 2 files/u);
+      for (const id of ["a", "b"]) assert(plain().includes(`content ${id}`));
+      mode.chatContainer.invalidate(); assert.match(plain(), /Read 2 files/u);
     }
     await session.reload({ beforeSessionStart: async () => mode.rebuildChatFromMessages() });
     assert.match(plain(), /Read 2 files/u);

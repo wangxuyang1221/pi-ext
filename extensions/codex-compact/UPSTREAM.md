@@ -22,9 +22,13 @@
 
 ## Pi request compatibility
 
-请求转换以安装的 Pi `0.84.3` 为核验基线。Pi extension loader 不公开内部 Responses converter，`src/native-compaction.ts` 因而保留局部兼容转换：模型图片能力、namespace、grammar 工具格式、调用及结果 ID、孤立调用补全、文本签名和 Unicode 清理。`responses-parity.test.ts` 通过真实 Pi `streamSimple` 捕获发往网络前的 payload，作为 coordinator 的输入验证，而不是比较两次本地转换。
+请求转换以 Pi `0.86.0` 为核验基线。`src/native-compaction.ts` 复用公开的 transcript 归一化、提示更新渲染和工具状态解析，保留局部消息转换以处理 checkpoint 边界。先重建完整历史中的工具状态与消息位置，再取 checkpoint 后的输出，避免把紧邻 checkpoint 的 system 更新误当作开头提示。旧 `addedToolNames` 按目标版本宿主语义处理，不额外生成宿主已不再发送的工具加载项。
 
-Pi 的 `getAllTools()` 不包含 grammar 配置；扩展优先从观察到的 provider payload 恢复 wire tool 格式，不根据历史调用 ID 猜测当前 grammar 配置。thinking 通过公开的 `clampThinkingLevel` 按实际压缩模型归一化，`off` 不发送 reasoning。
+`src/pi-responses.ts` 通过包 `exports` 解析公开的 Responses 工具转换函数，复用 grammar 和 strict schema 处理。Node 的解析用于避开 Pi 文件扩展加载器对 `pi-ai/*` 的前缀别名，不修改宿主或挂接其内部方法。该适配绑定当前依赖版本，真实 `DefaultResourceLoader` 测试覆盖全部七个扩展的源码加载，集成生命周期检查覆盖构建产物加载。
+
+`responses-parity.test.ts` 使用目标版本原生 converter 和 `streamSimple` 的实际网络前 payload 对照，覆盖 system sections、工具新增/移除、tool search、constrained sampling、checkpoint 后连续请求及失败重试。失败继续保留严格前缀校验，诊断只新增错误类别与首个不一致位置，不保存私有内容。
+
+Pi 的 `getAllTools()` 可能缺少 wire grammar 格式；扩展结合 transcript 工具声明与观察到的请求恢复格式。thinking 通过公开的 `clampThinkingLevel` 按实际压缩模型归一化；`off` 按 0.86.0 发送对应 effort，默认 `none`，不支持的模型则省略。
 
 turn-state 保留到下一条实际投递的 user message，工具循环和无新用户消息的重试不重置。queued follow-up 排队时不重置，交付时重置；steering 实际交付也作为用户边界。Pi 公共 message 事件不区分这两种直接交付来源，这里明确采用 Pi 的消息边界，不宣称与 Codex 内部 TurnContext 的 steering 生命周期完全相同。会话切换、关闭和空闲 `agent_settled` 释放当前状态；远端压缩的迟到响应不能写入新轮次。
 

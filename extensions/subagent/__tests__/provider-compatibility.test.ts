@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import type { Provider, Tool } from "@earendil-works/pi-ai";
+import { normalizeContext } from "@earendil-works/pi-ai";
 import { deepseekProvider } from "@earendil-works/pi-ai/providers/deepseek";
 import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
 import { Type } from "typebox";
@@ -44,10 +45,10 @@ async function capturePayload(provider: Provider, tools: Tool[]) {
   })).toString("base64url");
   const fetch = vi.fn(async () => { throw new Error("Network access is forbidden in schema tests"); });
   let captured: { tools: Array<Record<string, any>> } | undefined;
-  const result = await provider.stream(model, {
+  const result = await provider.stream(model, normalizeContext({
     messages: [{ role: "user", content: "Schema test", timestamp: 0 }],
     tools,
-  }, {
+  }), {
     // This synthetic token only satisfies local Codex account-ID parsing.
     apiKey: `e30.${claims}.signature`,
     transport: "sse",

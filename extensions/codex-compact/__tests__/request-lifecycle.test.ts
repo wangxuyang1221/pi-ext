@@ -12,7 +12,7 @@ const user = (id: string, text: string) => ({ id, type: "message", message: { ro
 function setup(automatic = false) {
   const old = { ...getBuiltinModel("openai-codex", "gpt-5.5")!, contextWindow: 100_000 };
   const target = automatic ? { ...old, contextWindow: 1000 } : { ...getBuiltinModel("openai-codex", "gpt-5.6-sol")! };
-  const next = getBuiltinModel("openai-codex", "gpt-5.4")!;
+  const next = getBuiltinModel("openai-codex", "gpt-6-astra")!;
   let selected: Model<any> = target;
   const branch: any[] = [user("retained", "retained task"), {
     id: "checkpoint", type: "compaction", summary: "Codex encrypted compaction item.", firstKeptEntryId: "retained", tokensBefore: 1000,

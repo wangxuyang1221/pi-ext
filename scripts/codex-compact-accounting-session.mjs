@@ -71,7 +71,7 @@ const loader = new DefaultResourceLoader({
 await loader.reload();
 const { session, extensionsResult } = await createAgentSession({ cwd: root, agentDir, modelRuntime: runtime, model, thinkingLevel: "medium", noTools: "all", sessionManager: manager, settingsManager: settings, resourceLoader: loader });
 if (extensionsResult.errors.length) throw new Error("Extension loading failed");
-const results = { piVersion: "0.84.3", model: model.id, effort: "medium", importedItems: imported, importIsNormalized: true, observations, answers: [] };
+const results = { piVersion: "0.86.0", model: model.id, effort: "medium", importedItems: imported, importIsNormalized: true, observations, answers: [] };
 const timer = setTimeout(() => { void session.abort(); }, 900000);
 try {
   for (const prompt of [config.question, "Return the same JSON answer again using only conversation context. Do not use tools."]) {

@@ -59,6 +59,9 @@ function compactionBasePayload(params: NativeCheckpointRequest): JsonObject {
 	const thinkingLevel = params.ctx.thinkingLevel;
 	if (thinkingLevel === "off" || params.model.reasoning === false) {
 		delete base.reasoning;
+		if (params.model.reasoning && params.model.thinkingLevelMap?.off !== null) {
+			base.reasoning = { effort: params.model.thinkingLevelMap?.off ?? "none" };
+		}
 	} else if (!Object.hasOwn(base, "reasoning") && thinkingLevel) {
 		const level = clampThinkingLevel(params.model, thinkingLevel);
 		if (level !== "off") {

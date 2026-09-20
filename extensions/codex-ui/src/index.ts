@@ -84,11 +84,7 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
       // Display-only outer list: let native Markdown align wrapped lines and blocks.
       return markdown.trim() ? `- ${markdown.replace(/\r?\n/gu, "\n  ")}` : markdown;
     }
-    if (context.messageType !== "user" || markdown.length === 0 || markdown.startsWith("› ") || markdown.startsWith("›\n\n")) {
-      return markdown;
-    }
-    // A separate paragraph leaves the source's first block at a Markdown boundary.
-    return `›\n\n${markdown}`;
+    return markdown;
   });
 
   pi.on("session_tree", () => reasoningSummary.clear());

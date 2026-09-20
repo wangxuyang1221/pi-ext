@@ -43,7 +43,7 @@ const loader = new DefaultResourceLoader({ cwd: root, agentDir, settingsManager:
 }] });
 await loader.reload();
 const { session } = await createAgentSession({ cwd: root, agentDir, modelRuntime: runtime, model, thinkingLevel: "medium", noTools: "all", sessionManager: manager, settingsManager: settings, resourceLoader: loader });
-const result = { piVersion: "0.84.3", model: model.id, effort: "medium", rawWindow: 272000, autoLimit: 244800, effectiveWindow: 258400, piNativeAutoCompaction: false, observations, measurements: [] };
+const result = { piVersion: "0.86.0", model: model.id, effort: "medium", rawWindow: 272000, autoLimit: 244800, effectiveWindow: 258400, piNativeAutoCompaction: false, observations, measurements: [] };
 const timer = setTimeout(() => { void session.abort(); }, 900000);
 const lastResponse = () => session.messages.findLast((message) => message.role === "assistant");
 try {

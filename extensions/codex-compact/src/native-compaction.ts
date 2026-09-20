@@ -1,4 +1,5 @@
 import { responseItemEstimationView } from "./response-item-estimation.js";
+import { convertResponsesTools } from "./pi-responses.js";
 import { setTimeout as sleep } from "node:timers/promises";
 import { audioTokenCount, contentTokens, imageBytes, inlineAudioPayload, inlineImagePayload, textTokens, truncateImageMessage, truncateText } from "./token-estimation.js";
 import {
@@ -7,7 +8,7 @@ import {
 	type SessionEntry,
 	type ToolInfo,
 } from "@earendil-works/pi-coding-agent";
-import { calculateCost, type Message, type Model, type Usage } from "@earendil-works/pi-ai";
+import { calculateCost, getDeclaredTools, normalizeContext, resolveTranscript, resolveTranscriptTools, renderSystemMessageUpdate, type OpenAIResponsesCompat, type Tool, type SystemMessage, type Message, type Model, type Usage } from "@earendil-works/pi-ai";
 
 export const NATIVE_COMPACTION_KIND = "openai-codex-native-compaction";
 export const NATIVE_COMPACTION_BYPASS_KIND = "openai-codex-native-compaction-bypass";
@@ -89,7 +90,17 @@ export type FailedRequestDiagnostics = {
 	phase: "before_provider_request";
 	code: string;
 	recoveryAttempted: boolean;
+	errorType?: "HistoryPrefixMismatchError";
+	mismatchIndex?: number;
 };
+
+export class HistoryPrefixMismatchError extends Error {
+	readonly code = "history_prefix_mismatch";
+	constructor(readonly mismatchIndex: number) {
+		super("The Codex request changed before model-transition compaction completed.");
+		this.name = "HistoryPrefixMismatchError";
+	}
+}
 
 export type FailedRequestDetails = {
 	kind: typeof FAILED_REQUEST_KIND;
@@ -358,7 +369,7 @@ export function estimateCompactionWindowPrefillTokens(params: {
 		+ Math.max(0, Math.floor(params.stablePrefixTokens));
 }
 
-// Pi's extension loader does not expose Pi AI's internal Responses converter.
+// Message replay retains checkpoint boundaries while matching Pi's wire semantics.
 function sanitizeUnicode(value: string): string {
 	return value.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
 }
@@ -468,53 +479,38 @@ export function toolsWithRequestFormats(tools: ToolInfo[], basePayload?: JsonObj
 	}));
 }
 
-function responseTool(tool: ToolInfo, deferLoading: boolean, supportsStrictMode: boolean): JsonObject {
+function responseTool(tool: Tool, deferLoading: boolean, supportsStrictMode: boolean, supportsOpenAIGrammarTools = false): JsonObject {
 	const observed = (tool as ResponseToolInfo).responseFormat;
 	if (observed) {
 		const { defer_loading: _deferred, ...format } = observed;
 		return { ...format, ...(deferLoading ? { defer_loading: true } : {}) };
 	}
-	return {
-		type: "function",
-		name: tool.name,
-		description: tool.description,
-		parameters: tool.parameters as unknown,
-		...(supportsStrictMode ? { strict: null } : {}),
-		...(deferLoading ? { defer_loading: true } : {}),
-	};
+	return convertResponsesTools([tool], { strict: null, supportsStrictMode, supportsOpenAIGrammarTools, toolSearchResult: deferLoading })[0] as unknown as JsonObject;
 }
 
 function messagesToResponseItems(
 	model: Model<any>,
 	messages: Message[],
 	tools: ToolInfo[],
-	loadedToolNames = new Set<string>(),
+	skipMessages = 0,
 ): ResponseItem[] {
+	const retainedMessages = new Set(messages.slice(skipMessages));
+	const compat = model.compat as OpenAIResponsesCompat | undefined;
+	const context = resolveTranscript(normalizeContext({ messages, ...(messages.some(message => message.role === "system") ? {} : { tools }) }), compat?.supportsMidConvoSystemMessages);
+	messages = context.messages;
 	const items: ResponseItem[] = [];
 	const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
-	const compat = model.compat as { supportsAdditionalTools?: boolean; supportsToolSearch?: boolean; supportsStrictMode?: boolean } | undefined;
+	for (const tool of getDeclaredTools(messages)) toolsByName.set(tool.name, { ...toolsByName.get(tool.name), ...tool } as ToolInfo);
 	const supportsAdditionalTools = compat?.supportsAdditionalTools === true;
 	const supportsToolSearch = compat?.supportsToolSearch === true;
 	const supportsStrictMode = compat?.supportsStrictMode !== false;
+	const transcriptTools = resolveTranscriptTools(messages, supportsAdditionalTools || supportsToolSearch);
 	const pendingToolCalls = new Map<string, { callId: string; custom: boolean }>();
 	const normalizedToolCallIds = new Map<string, string>();
 	const grammarToolNames = new Set<string>();
-	const supportsGrammar = (model.compat as { supportsOpenAIGrammarTools?: boolean } | undefined)?.supportsOpenAIGrammarTools === true;
-	for (const tool of tools as ResponseToolInfo[]) {
-		if (supportsGrammar && tool.responseFormat?.type === "custom") grammarToolNames.add(tool.name);
-	}
-	const usedToolNames = new Set<string>();
-	const deferredToolNames = new Set<string>();
-	for (const message of messages as unknown as JsonObject[]) {
-		if (message.role === "assistant" && Array.isArray(message.content)) {
-			for (const block of message.content) {
-				if (isJsonObject(block) && block.type === "toolCall" && typeof block.name === "string") usedToolNames.add(block.name);
-			}
-		} else if ((supportsAdditionalTools || supportsToolSearch) && message.role === "toolResult" && Array.isArray(message.addedToolNames)) {
-			for (const name of message.addedToolNames) {
-				if (typeof name === "string" && !usedToolNames.has(name) && toolsByName.has(name)) deferredToolNames.add(name);
-			}
-		}
+	const supportsGrammar = compat?.supportsOpenAIGrammarTools === true;
+	for (const tool of toolsByName.values()) {
+		if (supportsGrammar && responseTool(tool, false, supportsStrictMode, true).type === "custom") grammarToolNames.add(tool.name);
 	}
 	const flushOrphanedToolCalls = () => {
 		for (const { callId, custom } of pendingToolCalls.values()) {
@@ -525,9 +521,28 @@ function messagesToResponseItems(
 	};
 	let messageIndex = 0;
 
+	let sourceIndex = 0;
+	let tailStart: number | undefined;
 	for (const message of messages as unknown as JsonObject[]) {
+		if (tailStart === undefined && retainedMessages.has(message as unknown as Message)) tailStart = items.length;
+		const isLeadingSystemMessage = sourceIndex++ === 0 && message.role === "system";
 		const itemCountBefore = items.length;
-		if (message.role === "user") {
+		if (message.role === "system") {
+			const system = message as unknown as SystemMessage;
+			if (!isLeadingSystemMessage) {
+				const additions = transcriptTools.anchorsAdditions ? (system.toolsAdded ?? []).map(tool => ({ ...tool, responseFormat: (toolsByName.get(tool.name) as ResponseToolInfo | undefined)?.responseFormat })) : [];
+				if (additions.length > 0 && supportsAdditionalTools) {
+					items.push({ type: "additional_tools", role: "developer", tools: additions.map(tool => responseTool(tool, false, supportsStrictMode, supportsGrammar)) });
+				} else if (additions.length > 0 && supportsToolSearch) {
+					const names = additions.map(tool => tool.name);
+					const callId = `pi_tool_load_${piShortHash(`system:${messageIndex}:${names.join(",")}`)}`;
+					items.push({ type: "tool_search_call", call_id: callId, execution: "client", status: "completed", arguments: { query: names.join(" "), limit: names.length } });
+					items.push({ type: "tool_search_output", call_id: callId, execution: "client", status: "completed", tools: additions.map(tool => responseTool(tool, true, supportsStrictMode, supportsGrammar)) });
+				}
+				const text = renderSystemMessageUpdate(system);
+				if (text) items.push({ role: model.reasoning && compat?.supportsDeveloperRole !== false ? "developer" : "system", content: sanitizeUnicode(text) });
+			}
+		} else if (message.role === "user") {
 			flushOrphanedToolCalls();
 			const content = contentToUserParts(imageAwareContent(message.content, model, "(image omitted: model does not support images)"));
 			if (content.length === 0) continue;
@@ -588,7 +603,7 @@ function messagesToResponseItems(
 						callId = callId.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64).replace(/_+$/, "");
 						itemId = !sameProviderApi ? (itemId ? `fc_${piShortHash(itemId)}` : undefined) : normalizedItemId(itemId);
 					}
-					// Tool-search IDs use Pi's full normalized ID, even when the wire call omits its item ID.
+					// Keep result pairing independent of whether the wire call retains its item ID.
 					normalizedToolCallIds.set(block.id, sameModel ? block.id : itemId === undefined ? callId : `${callId}|${itemId}`);
 					if ((sameProviderApi && !sameModel && itemId?.startsWith("fc_")) || (!custom && !itemId?.startsWith("fc_"))) itemId = undefined;
 					pendingToolCalls.set(block.id, { callId, custom });
@@ -605,7 +620,7 @@ function messagesToResponseItems(
 						id: itemId,
 						name: String(block.name ?? ""),
 						...(custom ? { input: sanitizeUnicode(args[property!] as string) } : { arguments: JSON.stringify(block.arguments ?? {}) }),
-						...((sameModel || deferredToolNames.has(String(block.name))) && typeof block.namespace === "string" ? { namespace: block.namespace } : {}),
+						...(sameModel && typeof block.namespace === "string" ? { namespace: block.namespace } : {}),
 					});
 				}
 			}
@@ -614,46 +629,13 @@ function messagesToResponseItems(
 			const callId = normalizedToolCallId.split("|")[0];
 			pendingToolCalls.delete(message.toolCallId);
 			items.push({ type: grammarToolNames.has(String(message.toolName)) ? "custom_tool_call_output" : "function_call_output", call_id: callId, output: toolResultOutput(message, model) });
-
-			const addedTools = (supportsAdditionalTools || supportsToolSearch) && Array.isArray(message.addedToolNames)
-				? message.addedToolNames.flatMap((name) => {
-					if (typeof name !== "string" || !deferredToolNames.has(name) || loadedToolNames.has(name)) return [];
-					const tool = toolsByName.get(name);
-					if (!tool) return [];
-					loadedToolNames.add(name);
-					return [tool];
-				})
-				: [];
-			if (addedTools.length > 0 && supportsAdditionalTools) {
-				items.push({
-					type: "additional_tools",
-					role: "developer",
-					tools: addedTools.map((tool) => responseTool(tool, false, supportsStrictMode)),
-				});
-			} else if (addedTools.length > 0 && supportsToolSearch) {
-				const searchCallId = `pi_tool_load_${piShortHash(`${normalizedToolCallId}:${addedTools.map((tool) => tool.name).join(",")}`)}`;
-				items.push({
-					type: "tool_search_call",
-					call_id: searchCallId,
-					execution: "client",
-					status: "completed",
-					arguments: { query: addedTools.map((tool) => tool.name).join(" "), limit: addedTools.length },
-				});
-				items.push({
-					type: "tool_search_output",
-					call_id: searchCallId,
-					execution: "client",
-					status: "completed",
-					tools: addedTools.map((tool) => responseTool(tool, true, supportsStrictMode)),
-				});
-			}
 		}
 		if (message.role === "assistant" && items.length === itemCountBefore) continue;
-		messageIndex++;
+		if (!isLeadingSystemMessage) messageIndex++;
 	}
 	flushOrphanedToolCalls();
 
-	return items;
+	return skipMessages > 0 ? items.slice(tailStart ?? items.length) : items;
 }
 
 export function loadedToolNamesFromItems(items: ResponseItem[]): Set<string> {
@@ -672,12 +654,15 @@ function entriesToResponseItems(
 	entries: SessionEntry[],
 	tools: ToolInfo[],
 	includeCompactionSummary = false,
-	loadedToolNames = new Set<string>(),
+	beforeEntryIndex = 0,
 ): ResponseItem[] {
 	const messages = entries
 		.filter((entry) => includeCompactionSummary || entry.type !== "compaction")
 		.flatMap((entry) => sessionEntryToContextMessages(entry));
-	return messagesToResponseItems(model, convertToLlm(messages), tools, loadedToolNames);
+	const skipped = entries.slice(0, beforeEntryIndex)
+		.filter((entry) => includeCompactionSummary || entry.type !== "compaction")
+		.flatMap((entry) => sessionEntryToContextMessages(entry));
+	return messagesToResponseItems(model, convertToLlm(messages), tools, convertToLlm(skipped).length);
 }
 
 export function fullInputForBranch(params: {
@@ -760,10 +745,10 @@ export function effectiveInputForBranch(params: {
 			...prefix,
 			...entriesToResponseItems(
 				params.model,
-				branch.slice(checkpoint.checkpoint.entryIndex + 1),
+				branch,
 				params.tools,
 				false,
-				loadedToolNamesFromItems(prefix),
+				checkpoint.checkpoint.entryIndex + 1,
 			),
 		];
 	}
@@ -1290,6 +1275,7 @@ const CANONICAL_COMPACTION_ERROR_CODES = new Set([
 ]);
 
 export function compactionFailureClassification(error: unknown): string {
+	if (error instanceof HistoryPrefixMismatchError) return error.code;
 	const code = compactionErrorCode(error);
 	if (code) {
 		const normalized = normalizedErrorCode(code);

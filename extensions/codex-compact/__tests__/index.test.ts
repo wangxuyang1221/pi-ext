@@ -535,6 +535,27 @@ test("persists safe diagnostics without request input or raw error text", async 
 	expect(notify).toHaveBeenCalledWith(expect.not.stringContaining("credential_bearer_secret"), "error");
 });
 
+test("persists only structural details for a history prefix mismatch", async () => {
+	const secret = "private history and instructions";
+	const branch = [
+		{ id: "history", type: "message", message: { role: "user", content: secret } },
+		checkpointEntry(),
+		{ id: "current", type: "message", message: { role: "user", content: "continue" } },
+	] as never;
+	const { handlers, ctx, appendEntry } = installExtension(branch, true);
+	await handlers.get("before_provider_request")?.({ payload: { input: [
+		{ role: "user", content: [{ type: "input_text", text: "different history" }] },
+		{ role: "user", content: [{ type: "input_text", text: "continue" }] },
+	] } }, ctx);
+	const marker = appendEntry.mock.calls.find(([kind]) => kind === FAILED_REQUEST_KIND)?.[1];
+	expect(marker.diagnostics).toEqual({ phase: "before_provider_request", code: "history_prefix_mismatch", recoveryAttempted: false,
+		errorType: "HistoryPrefixMismatchError", mismatchIndex: 0 });
+	expect(JSON.stringify(marker)).not.toContain(secret);
+	expect(JSON.stringify(marker)).not.toContain("opaque");
+	expect(marker).not.toHaveProperty("content");
+	expect(ctx.abort).toHaveBeenCalledOnce();
+});
+
 test("writes the same safe failure notice without UI", async () => {
 	const error = vi.spyOn(console, "error").mockImplementation(() => {});
 	const { handlers, ctx } = installExtension([checkpointEntry()]);

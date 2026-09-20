@@ -249,7 +249,7 @@ test("write persists actual creation and overwrite patches without changing mode
     const write = tools().find(tool => tool.name === "write")!;
     const args = { path: "nested/file.ts", content: "const value = 1;\n" };
     const added = await write.execute("add", args, undefined, undefined, { cwd } as never);
-    assert.deepEqual(added.content, [{ type: "text", text: `Successfully wrote ${args.content.length} bytes to ${args.path}` }]);
+    assert.deepEqual(added.content, [{ type: "text", text: `Successfully wrote to ${args.path}` }]);
     assert.equal(added.details.codexWrite.version, 1);
     assert.equal(added.details.codexWrite.action, "Added");
     assert.deepEqual(parseUnifiedPatch(added.details.codexWrite.patch).map(line => [line.kind, line.text]), [

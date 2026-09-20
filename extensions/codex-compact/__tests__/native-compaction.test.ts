@@ -1016,6 +1016,7 @@ describe("Codex compaction history", () => {
 	});
 
 	test("matches Pi's deferred-tool capability and strict-mode shapes", () => {
+		const tool = { name: "lazy", description: "lazy tool", parameters: { type: "object", properties: {} } } as never;
 		const branch = [
 			{
 				id: "tool-call",
@@ -1040,11 +1041,11 @@ describe("Codex compaction history", () => {
 					addedToolNames: ["lazy"],
 				},
 			},
+			{ id: "tool-update", type: "message", message: { role: "system", content: "", toolsAdded: [tool], timestamp: 0 } },
 		] as never;
-		const tool = { name: "lazy", description: "lazy tool", parameters: { type: "object", properties: {} } } as never;
 		const additionalTools = fullInputForBranch({
 			branch,
-			model: { provider: "openai-codex", api: "openai-codex-responses", id: "gpt", compat: { supportsAdditionalTools: true } } as never,
+			model: { provider: "openai-codex", api: "openai-codex-responses", id: "gpt", compat: { supportsMidConvoSystemMessages: true, supportsAdditionalTools: true } } as never,
 			tools: [tool],
 		});
 		expect(additionalTools).toContainEqual({
@@ -1054,7 +1055,7 @@ describe("Codex compaction history", () => {
 		});
 		const additionalToolsWithoutStrict = fullInputForBranch({
 			branch,
-			model: { provider: "openai-codex", api: "openai-codex-responses", id: "gpt", compat: { supportsAdditionalTools: true, supportsStrictMode: false } } as never,
+			model: { provider: "openai-codex", api: "openai-codex-responses", id: "gpt", compat: { supportsMidConvoSystemMessages: true, supportsAdditionalTools: true, supportsStrictMode: false } } as never,
 			tools: [tool],
 		});
 		expect(additionalToolsWithoutStrict).toContainEqual({
@@ -1065,7 +1066,7 @@ describe("Codex compaction history", () => {
 
 		const toolSearch = fullInputForBranch({
 			branch,
-			model: { provider: "openai-codex", api: "openai-codex-responses", id: "gpt", compat: { supportsToolSearch: true, supportsStrictMode: false } } as never,
+			model: { provider: "openai-codex", api: "openai-codex-responses", id: "gpt", compat: { supportsMidConvoSystemMessages: true, supportsToolSearch: true, supportsStrictMode: false } } as never,
 			tools: [tool],
 		});
 		expect(toolSearch).toContainEqual({
@@ -1087,7 +1088,7 @@ describe("Codex compaction history", () => {
 		]);
 	});
 
-	test("deduplicates deferred tools already present in a checkpoint prefix", () => {
+	test("preserves checkpoint declarations without replaying obsolete addedToolNames", () => {
 		const lazyTool = { name: "lazy", description: "lazy tool", parameters: { type: "object", properties: {} } } as never;
 		const newTool = { name: "new", description: "new tool", parameters: { type: "object", properties: {} } } as never;
 		const prefix = {
@@ -1134,16 +1135,11 @@ describe("Codex compaction history", () => {
 		] as never;
 		const result = effectiveInputForBranch({
 			branch,
-			model: { provider: "openai-codex", api: "openai-codex-responses", id: "gpt", compat: { supportsAdditionalTools: true } } as never,
+			model: { provider: "openai-codex", api: "openai-codex-responses", id: "gpt", compat: { supportsMidConvoSystemMessages: true, supportsAdditionalTools: true } } as never,
 			tools: [lazyTool, newTool],
 		});
 		expect(result.filter((item) => item.type === "additional_tools")).toEqual([
 			prefix,
-			{
-				type: "additional_tools",
-				role: "developer",
-				tools: [{ type: "function", name: "new", description: "new tool", parameters: { type: "object", properties: {} }, strict: null }],
-			},
 		]);
 	});
 

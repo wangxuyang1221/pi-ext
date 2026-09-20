@@ -531,7 +531,9 @@ describe("Codex session coordinator", () => {
 			throw error;
 		});
 
-		await expect(coordinator.prepareRequest(currentModel, context([oldModel, currentModel]), [userInput("different")])).rejects.toThrow("request changed");
+		await expect(coordinator.prepareRequest(currentModel, context([oldModel, currentModel]), [userInput("different")])).rejects.toMatchObject({
+			code: "history_prefix_mismatch", name: "HistoryPrefixMismatchError", mismatchIndex: 0,
+		});
 		expect(compactedWith).toEqual([]);
 		expect(branch).toHaveLength(2);
 	});
