@@ -1,0 +1,4 @@
+{"node":"v22.22.2","cpu":"Apple M5","target":"100 KiB draft median below 100 ms; parser-only, no filesystem reads"}
+{"bytes":1063,"references":41,"medianMs":0.24516699999999503,"maxMs":0.5679999999999978}
+{"bytes":10285,"references":389,"medianMs":2.4947499999999962,"maxMs":2.855791999999994}
+{"bytes":102452,"references":3867,"medianMs":145.24512499999992,"maxMs":159.15937500000018}
