@@ -1,0 +1,38 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ extensions/skill-mentions/__tests__/history-editor.test.ts (9 tests | 1 failed) 350ms
+   ✓ native seeds original history when reload replaces the editor without populating history 4ms
+   ✓ codex seeds original history when reload replaces the editor without populating history 0ms
+   × does not duplicate startup history populated by the host 4ms
+     → expected '用 $alpha 调查' to be 'Earlier task' // Object.is equality
+   ✓ native restores snapshot drafts and history through the public factory 1ms
+   ✓ codex restores snapshot drafts and history through the public factory 1ms
+   ✓ preserves CodexEditor installed before session_start and never nests on repeated discovery 0ms
+   ✓ preserves CodexEditor installed after session_start and never nests on repeated discovery 0ms
+   ✓ native preserves ordinary JSON, native slash history, focus and autocomplete 167ms
+   ✓ codex preserves ordinary JSON, native slash history, focus and autocomplete 166ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/history-editor.test.ts > does not duplicate startup history populated by the host
+AssertionError: expected '用 $alpha 调查' to be 'Earlier task' // Object.is equality
+
+Expected: [32m"Earlier task"[39m
+Received: [31m"用 $alpha 调查"[39m
+
+ ❯ extensions/skill-mentions/__tests__/history-editor.test.ts:73:72
+     71|   h.mode.editor.handleInput("\x1b[A"); expect(h.mode.editor.getText())…
+     72|   h.mode.editor.handleInput("\x1b[A"); expect(h.mode.editor.getText())…
+     73|   h.mode.editor.handleInput("\x1b[A"); expect(h.mode.editor.getText())…
+       |                                                                        ^
+     74| });
+     75|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 passed (9)
+   Start at  20:10:23
+   Duration  972ms (transform 49ms, setup 0ms, collect 439ms, tests 350ms, environment 0ms, prepare 50ms)

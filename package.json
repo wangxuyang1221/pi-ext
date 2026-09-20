@@ -48,6 +48,8 @@
     "docs/subagent-runtime-reliability.md",
     "docs/subagent-runtime-reliability-acceptance.md",
     "extensions/goal/dist",
+    "extensions/skill-mentions/dist",
+    "docs/skill-mentions.md",
     "extensions/goal/UPSTREAM.md",
     "extensions/goal/LICENSE",
     "extensions/goal/NOTICE",
@@ -75,7 +77,8 @@
       "./extensions/permissions/dist/index.js",
       "./extensions/mcp/dist/index.js",
       "./extensions/subagent/dist/index.js",
-      "./extensions/goal/dist/index.js"
+      "./extensions/goal/dist/index.js",
+      "./extensions/skill-mentions/dist/index.js"
     ],
     "themes": [
       "./themes/codex-pi.json"
@@ -88,6 +91,7 @@
     "test": "vitest run",
     "check": "pnpm run typecheck && pnpm test && pnpm run build && pnpm run package:check",
     "package:check": "node ./scripts/check-package.mjs",
+    "skill-mentions:acceptance": "node ./extensions/skill-mentions/__tests__/acceptance.mjs",
     "codex-compact:media:generate": "node ./scripts/codex-compact-media.mjs generate",
     "codex-compact:media:verify": "node ./scripts/codex-compact-media.mjs verify",
     "codex-compact:quality:report": "node ./scripts/codex-compact-quality-development-report.mjs",

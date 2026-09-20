@@ -17,6 +17,7 @@ const expectedExtensionEntries = [
   "./extensions/mcp/dist/index.js",
   "./extensions/subagent/dist/index.js",
   "./extensions/goal/dist/index.js",
+  "./extensions/skill-mentions/dist/index.js",
 ];
 const expectedThemeEntries = ["./themes/codex-pi.json"];
 const requiredPublishedEntries = [
@@ -28,6 +29,8 @@ const requiredPublishedEntries = [
   "extensions/openai-fast-mode/UPSTREAM.md",
   "extensions/mcp/dist",
   "extensions/goal/dist",
+  "extensions/skill-mentions/dist",
+  "docs/skill-mentions.md",
   "extensions/goal/LICENSE",
   "extensions/goal/UPSTREAM.md",
   "extensions/goal/NOTICE",

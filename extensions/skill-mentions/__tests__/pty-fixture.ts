@@ -1,0 +1,41 @@
+import { appendFileSync } from "node:fs";
+import { join } from "node:path";
+import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+
+export default function (pi: ExtensionAPI): void {
+  const root = process.env.SKILL_PTY_ROOT!;
+  const record = (type: string, data: unknown) => appendFileSync(join(root, "events.jsonl"), `${JSON.stringify({ type, data })}\n`);
+  const faux = fauxProvider({ api: "skill-pty-faux" });
+  faux.setResponses(Array.from({ length: 100 }, () => async (context, options) => {
+    record("request", context.messages);
+    // Keep a controlled request open for real TUI queue acceptance.
+    if (JSON.stringify(context.messages.at(-1)).includes("QUEUE_HOLD")) {
+      await new Promise<void>(resolve => {
+        const timer = setTimeout(resolve, 4000);
+        options?.signal?.addEventListener("abort", () => { clearTimeout(timer); resolve(); }, { once: true });
+      });
+    }
+    return fauxAssistantMessage("Fixture response");
+  }));
+  pi.registerProvider(faux.provider);
+  pi.on("session_start", (event, ctx) => record("start", { reason: event.reason, mode: ctx.mode, pid: process.pid, tty: process.stdin.isTTY, session: ctx.sessionManager.getSessionFile() }));
+  pi.on("resources_discover", () => { record("ready", true); });
+  pi.on("input", event => { record("input", event); });
+  pi.on("message_end", event => { if (event.message.role === "user") record("user", event.message); });
+  pi.on("agent_settled", () => { record("settled", true); });
+  pi.on("session_shutdown", event => { record("shutdown", event.reason); });
+  pi.registerShortcut("f6", {
+    handler: async ctx => {
+      record("editor", { text: ctx.ui.getEditorText(), commands: pi.getCommands().map(command => ({ name: command.name, source: command.source, path: command.sourceInfo.path })), tools: pi.getAllTools().map(tool => ({ name: tool.name, path: tool.sourceInfo.path })) });
+    },
+  });
+  pi.registerCommand("fixture-user", {
+    handler: async () => {
+      pi.sendUserMessage([
+        { type: "text", text: "插件 $alpha $beta $alpha" },
+        { type: "image", mimeType: "image/png", data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==" },
+      ]);
+    },
+  });
+}

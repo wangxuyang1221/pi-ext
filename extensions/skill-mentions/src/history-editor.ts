@@ -29,13 +29,22 @@ function wrapEditor(base: EditorComponent): EditorComponent {
 }
 
 /** Compose history normalization after session_start editor installers have run. */
-export function installHistoryEditor(ctx: ExtensionContext): void {
+export function installHistoryEditor(ctx: ExtensionContext, restoreHistory = false): void {
   if (ctx.mode !== "tui") return;
   const previous = ctx.ui.getEditorComponent();
   if (previous && Reflect.get(previous, adapted)) return;
-  const factory: EditorFactory = (tui, theme, keys) => wrapEditor(
-    previous?.(tui, theme, keys) ?? new CustomEditor(tui, theme, keys, { embedWorkingStatus: true }),
-  );
+  const factory: EditorFactory = (tui, theme, keys) => {
+    const editor = wrapEditor(previous?.(tui, theme, keys) ?? new CustomEditor(tui, theme, keys, { embedWorkingStatus: true }));
+    // Pi rebuilds the editor on /reload without repopulating its history.
+    // Seed from active context only; addToHistory retains the native size limit.
+    for (const entry of restoreHistory ? ctx.sessionManager.buildContextEntries() : []) {
+      if (entry.type !== "message" || entry.message.role !== "user") continue;
+      const content = entry.message.content;
+      const text = typeof content === "string" ? content : content.filter(block => block.type === "text").map(block => block.text).join("\n");
+      editor.addToHistory?.(text);
+    }
+    return editor;
+  };
   Object.defineProperty(factory, adapted, { value: true });
   ctx.ui.setEditorComponent(factory);
 }

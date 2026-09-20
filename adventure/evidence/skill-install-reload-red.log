@@ -1,0 +1,52 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ extensions/skill-mentions/__tests__/lifecycle.test.ts (16 tests | 1 failed) 206ms
+   ✓ consumes identical steer users independently with current files and their own images 29ms
+   ✓ consumes identical followUp users independently with current files and their own images 8ms
+   ✓ persists the first user snapshot after a provider error without rereading on resume 15ms
+   ✓ persists the first user snapshot after a provider aborted without rereading on resume 10ms
+   ✓ keeps dequeue text clean and silently skips a skill deleted while queued 7ms
+   ✓ reloads and resumes disk snapshots without reads using editor order undefined 22ms
+   ✓ reloads and resumes disk snapshots without reads using editor order before 15ms
+   ✓ reloads and resumes disk snapshots without reads using editor order after 15ms
+   × retains cards when the real reload callback rebuilds the transcript before session_start 9ms
+     → expected '                                     …' to contain '[skill] alpha'
+   ✓ navigates a real user parent, hides its orphan, and forks/resumes without crossing branches 11ms
+   ✓ respects compaction retaining user without repairing cards or reinjecting bodies 10ms
+   ✓ respects compaction retaining assistant without repairing cards or reinjecting bodies 10ms
+   ✓ restores interrupted JSONL with an orphan display and a truncated user without activating it 7ms
+   ✓ clones a completed branch with images and immutable snapshots 7ms
+   ✓ keeps the finalized user snapshot after a real display JSONL append error without retrying the display 17ms
+   ✓ does not repair a missing display when resuming a persisted snapshot 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/lifecycle.test.ts > retains cards when the real reload callback rebuilds the transcript before session_start
+AssertionError: expected '                                     …' to contain '[skill] alpha'
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [skill] alpha[39m
+[31m+                                                                                                     [39m
+[31m+  History $alpha                                                                                     [39m
+[31m+                                                                                                     [39m
+[31m+[39m
+[31m+  Fixture response                                                                                   [39m
+
+ ❯ extensions/skill-mentions/__tests__/lifecycle.test.ts:118:21
+    116|   } });
+    117|   // Do not rebuild after session_start: the actual CLI also keeps tho…
+    118|   expect(h.plain()).toContain("[skill] alpha");
+       |                     ^
+    119|   h.mode.editor.setText(""); h.mode.editor.handleInput("\x1b[A");
+    120|   expect(h.mode.editor.getText()).toBe("History $alpha");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 15 passed (16)
+   Start at  20:01:28
+   Duration  822ms (transform 65ms, setup 0ms, collect 438ms, tests 206ms, environment 0ms, prepare 41ms)

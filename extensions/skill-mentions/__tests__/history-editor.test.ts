@@ -13,7 +13,7 @@ const editors: EditorComponent[] = [];
 beforeAll(() => initTheme("dark", false));
 afterEach(() => { for (const editor of editors.splice(0)) editor.setText(""); });
 
-function fixture(kind: "native" | "codex", order: "before" | "after" = "before") {
+function fixture(kind: "native" | "codex", order: "before" | "after" = "before", reason = "reload") {
   const tui = { terminal: { rows: 40, columns: 100 }, requestRender() {}, setFocus() {} } as unknown as TUI;
   const appKeys: Record<string, string> = { "app.interrupt": "\x1b", "app.exit": "\x04", "app.clipboard.pasteImage": "\x16", "app.model.cycleForward": "\x10" };
   const keys = { matches: (data: string, action: string) => appKeys[action] === data } as KeybindingsManager;
@@ -37,7 +37,7 @@ function fixture(kind: "native" | "codex", order: "before" | "after" = "before")
     setEditorComponent: vi.fn((factory: any) => { mode.setCustomEditorComponent(factory); editors.push(mode.editor); }),
     addAutocompleteProvider: vi.fn((wrap: any) => { mode.autocompleteProvider = wrap(mode.autocompleteProvider); mode.editor.setAutocompleteProvider(mode.autocompleteProvider); }),
   };
-  const ctx = { mode: "tui", ui } as unknown as ExtensionContext;
+  const ctx = { mode: "tui", ui, sessionManager: { buildContextEntries: vi.fn(() => [{ type: "message", message: { role: "user", content: envelope } }]) } } as unknown as ExtensionContext;
   skillMentions({ on: (event: string, handler: any) => handlers.set(event, handler),
     getCommands: () => [{ name: "skill:alpha", source: "skill", sourceInfo: { path: "/fixture/alpha/SKILL.md" } }],
     registerMarkdownTransformer() {}, registerEntryRenderer() {},
@@ -53,9 +53,25 @@ function fixture(kind: "native" | "codex", order: "before" | "after" = "before")
   handlers.get("session_start")!({}, ctx);
   if (order === "after") installCodex();
   mode.editor.setText(envelope);
-  handlers.get("resources_discover")?.({}, ctx);
+  handlers.get("resources_discover")?.({ reason }, ctx);
   return { mode, ui, ctx, handlers, submitted, changed, escaped, shortcut, exited, pasted, cycled, get base() { return base; } };
 }
+
+it.each(["native", "codex"] as const)("%s seeds original history when reload replaces the editor without populating history", kind => {
+  const h = fixture(kind);
+  h.mode.editor.setText("");
+  h.mode.editor.handleInput("\x1b[A");
+  expect(h.mode.editor.getText()).toBe(task);
+});
+
+it("does not duplicate startup history populated by the host", () => {
+  const h = fixture("native", "before", "startup");
+  h.mode.editor.addToHistory("Earlier task"); h.mode.editor.addToHistory(envelope);
+  h.mode.editor.setText("");
+  h.mode.editor.handleInput("\x1b[A"); expect(h.mode.editor.getText()).toBe(task);
+  h.mode.editor.handleInput("\x1b[A"); expect(h.mode.editor.getText()).toBe("Earlier task");
+  h.mode.editor.handleInput("\x1b[A"); expect(h.mode.editor.getText()).toBe("Earlier task");
+});
 
 it.each(["native", "codex"] as const)("%s restores snapshot drafts and history through the public factory", kind => {
   const h = fixture(kind);
@@ -88,6 +104,7 @@ it.each(["before", "after"] as const)("preserves CodexEditor installed %s sessio
   expect(editor).toBeInstanceOf(CodexEditor);
   expect(editor.getText()).toBe(task);
   expect(h.ui.setEditorComponent).toHaveBeenCalledTimes(2);
+  expect(h.ctx.sessionManager.buildContextEntries).toHaveBeenCalledTimes(1);
 });
 
 it.each(["native", "codex"] as const)("%s preserves ordinary JSON, native slash history, focus and autocomplete", async kind => {

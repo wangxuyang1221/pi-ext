@@ -104,6 +104,27 @@ it.each([undefined, "before", "after"] as const)("reloads and resumes disk snaps
   expect(h.displays()).toHaveLength(1); expect(h.errors).toEqual([]);
 });
 
+it("retains cards when the real reload callback rebuilds the transcript before session_start", async () => {
+  const h = await lifecycleFixture();
+  await h.session.prompt("History $alpha");
+  const completed = decodeSnapshot(textOf(h.users()[0].message))!;
+  h.pi.appendEntry(displayType, { ...completed, requestId: "11111111-1111-4111-8111-111111111111", task: "Orphan $alpha" });
+  const disk = readFileSync(h.session.sessionFile!, "utf8");
+  rmSync(h.skills[0].filePath);
+  const read = vi.mocked(fs.readFile); read.mockClear();
+  await h.session.reload({ beforeSessionStart: () => {
+    h.mode.setCustomEditorComponent(undefined);
+    h.mode.rebuildChatFromMessages();
+  } });
+  // Do not rebuild after session_start: the actual CLI also keeps those components.
+  expect(h.plain().match(/\[skill\] alpha/g)).toHaveLength(1);
+  expect(h.plain()).not.toContain("Orphan");
+  h.mode.editor.setText(""); h.mode.editor.handleInput("\x1b[A");
+  expect(h.mode.editor.getText()).toBe("History $alpha");
+  expect(readFileSync(h.session.sessionFile!, "utf8")).toBe(disk);
+  expect(read.mock.calls.filter(([path]) => path === h.skills[0].filePath)).toHaveLength(0);
+});
+
 it("navigates a real user parent, hides its orphan, and forks/resumes without crossing branches", async () => {
   const h = await lifecycleFixture({ codex: "after" });
   await h.session.prompt("First $alpha"); await h.session.prompt("Second $beta");

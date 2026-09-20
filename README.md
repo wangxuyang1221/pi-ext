@@ -1,6 +1,6 @@
 # pi-ext
 
-为 [Pi Coding Agent](https://github.com/earendil-works/pi) 提供七个扩展和一套主题：
+为 [Pi Coding Agent](https://github.com/earendil-works/pi) 提供八个扩展和一套主题：
 
 - `codex-compact` 为支持的 ChatGPT auth 模型提供 Codex Remote Compaction V2。
 - `openai-fast-mode` 为匹配的 OpenAI 和 OpenAI-Codex 模型注入 priority service tier。
@@ -9,6 +9,7 @@
 - `permissions` 提供 `Default permissions` 和 `Full access` 两种模式，以及逐次调用审批。
 - `subagent` 通过 tmux 管理普通 TUI Pi child，并从 Pi 原生 session JSONL 读取活动与完成状态。
 - `goal` 提供目标独立保存、模型工具、事件驱动续跑、暂停/恢复、异常退出后的恢复和显式会话继承。
+- `skill-mentions` 提供行内 `$skill` 补全、加载和历史原文编辑，保留原生 skill 外观。
 
 ## Requirements
 
@@ -42,6 +43,12 @@ pi -e "$PWD"
 ```
 
 Pi package 以当前用户的完整系统权限运行。安装第三方 package 前应检查源码。
+
+## Skill mentions extension
+
+`skill-mentions` 在 TUI 输入框任意行提供 `$` skill 候选。例如输入 `用 $re`，再用 Tab 或 Enter 补全名称；第一次 Enter 只选择候选，菜单关闭后 Enter 才发送。发送后保持 Pi 原生 skill 卡片外观，兼容默认编辑器和本仓库 CodexEditor。
+
+引用两侧需要空格、换行、Tab 或输入边界。代码、转义和紧邻文字/标点的引用不激活。多项引用在同一 user 请求中生效，重复项去重；未知或不可读项静默保留原文。安装、队列、历史与压缩限制见 [Skill mentions](docs/skill-mentions.md)。
 
 ## Goal extension
 

@@ -1,0 +1,41 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ extensions/skill-mentions/__tests__/history-editor.test.ts (8 tests | 2 failed) 348ms
+   × native seeds original history when reload replaces the editor without populating history 6ms
+     → expected '' to be '用 $alpha 调查' // Object.is equality
+   × codex seeds original history when reload replaces the editor without populating history 1ms
+     → expected '' to be '用 $alpha 调查' // Object.is equality
+   ✓ native restores snapshot drafts and history through the public factory 1ms
+   ✓ codex restores snapshot drafts and history through the public factory 2ms
+   ✓ preserves CodexEditor installed before session_start and never nests on repeated discovery 0ms
+   ✓ preserves CodexEditor installed after session_start and never nests on repeated discovery 0ms
+   ✓ native preserves ordinary JSON, native slash history, focus and autocomplete 165ms
+   ✓ codex preserves ordinary JSON, native slash history, focus and autocomplete 166ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/history-editor.test.ts > native seeds original history when reload replaces the editor without populating history
+ FAIL  extensions/skill-mentions/__tests__/history-editor.test.ts > codex seeds original history when reload replaces the editor without populating history
+AssertionError: expected '' to be '用 $alpha 调查' // Object.is equality
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 用 $alpha 调查[39m
+
+ ❯ extensions/skill-mentions/__tests__/history-editor.test.ts:64:35
+     62|   h.mode.editor.setText("");
+     63|   h.mode.editor.handleInput("\x1b[A");
+     64|   expect(h.mode.editor.getText()).toBe(task);
+       |                                   ^
+     65| });
+     66|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 6 passed (8)
+   Start at  20:00:52
+   Duration  958ms (transform 45ms, setup 0ms, collect 417ms, tests 348ms, environment 0ms, prepare 41ms)

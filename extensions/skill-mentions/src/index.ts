@@ -14,11 +14,12 @@ export function userText(message: UserMessage): string {
     : message.content.filter(block => block.type === "text").map(block => block.text).join("\n");
 }
 
-/** Register the development entry point for inline skill mentions. */
+/** Register inline skill completion, snapshots, and history rendering. */
 export default function skillMentions(pi: ExtensionAPI): void {
   let pending = new WeakMap<object, SkillSnapshot>();
   const pendingIds = new Set<string>();
   let context: ExtensionContext | undefined;
+  let stopped = false;
   let indexedLeaf: string | null | undefined;
   let visibleIds = new Set<string>();
 
@@ -39,12 +40,14 @@ export default function skillMentions(pi: ExtensionAPI): void {
   }
 
   pi.on("session_start", (_event, ctx) => {
+    stopped = false;
     context = ctx;
     indexedLeaf = undefined;
     if (ctx.mode === "tui") ctx.ui.addAutocompleteProvider(current => skillAutocomplete(current, () => pi.getCommands()));
   });
-  pi.on("resources_discover", (_event, ctx) => { installHistoryEditor(ctx); });
+  pi.on("resources_discover", (event, ctx) => { installHistoryEditor(ctx, event.reason === "reload"); });
   pi.on("session_shutdown", () => {
+    stopped = true;
     pending = new WeakMap(); pendingIds.clear(); visibleIds.clear(); context = undefined; indexedLeaf = undefined;
   });
   pi.on("message_start", async (event, ctx) => {
@@ -67,13 +70,25 @@ export default function skillMentions(pi: ExtensionAPI): void {
   });
   pi.registerMarkdownTransformer((markdown, options) => options.messageType === "user" ? decodeSnapshot(markdown)?.task ?? markdown : markdown);
   pi.registerEntryRenderer(displayType, (entry, options) => {
-    if (!isSkillSnapshot(entry.data) || !visible(entry.data.requestId)) return undefined;
-    const group = new Container();
-    for (const skill of entry.data.skills) {
-      const card = new SkillInvocationMessageComponent({ name: skill.name, location: skill.location, content: skill.body, userMessage: "" });
-      card.setExpanded(options.expanded);
-      group.addChild(card);
-    }
-    return group;
+    if (stopped || !isSkillSnapshot(entry.data) || (context && !visible(entry.data.requestId))) return undefined;
+    const snapshot = entry.data;
+    let group: Container | undefined;
+    // /reload constructs transcript components before session_start binds context.
+    // Return a component now, but decide visibility only when the host renders it.
+    return {
+      render(width) {
+        if (!visible(snapshot.requestId)) return [];
+        if (!group) {
+          group = new Container();
+          for (const skill of snapshot.skills) {
+            const card = new SkillInvocationMessageComponent({ name: skill.name, location: skill.location, content: skill.body, userMessage: "" });
+            card.setExpanded(options.expanded);
+            group.addChild(card);
+          }
+        }
+        return group.render(width);
+      },
+      invalidate() { group?.invalidate(); },
+    };
   });
 }
