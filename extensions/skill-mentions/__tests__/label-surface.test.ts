@@ -1,5 +1,5 @@
 import { beforeAll, expect, it } from "vitest";
-import { initTheme, type Theme, type KeybindingsManager } from "@earendil-works/pi-coding-agent";
+import { initTheme, Theme, type KeybindingsManager } from "@earendil-works/pi-coding-agent";
 import { getKeybindings, stripTerminalSequences, visibleWidth, type TUI, type TuiMouseEvent } from "@earendil-works/pi-tui";
 import { CodexEditor } from "../../codex-ui/src/components.js";
 import { createLabelEditor } from "../src/label-editor.js";
@@ -9,21 +9,36 @@ import { icons, labelReferences, layoutLabels, type IconMode } from "../src/labe
 beforeAll(() => initTheme("dark", false));
 const delay = () => new Promise(resolve => setTimeout(resolve, 10));
 function fixture(host: string, icon: IconMode, names = ["alpha", "beta"]) {
-  const tui = { terminal: { rows: 40, columns: 80 }, requestRender() {} } as unknown as TUI;
+  const terminal = { rows: 40, columns: 80 };
+  const tui = { terminal, requestRender() {} } as unknown as TUI;
   const same = (value: string) => value;
-  const theme = { fg: (_name: string, value: string) => value, getBgAnsi: () => "\x1b[48;5;238m" } as Theme;
+  const theme = new Theme({
+    accent: "", border: "", borderAccent: "", borderMuted: "", success: "", error: "", warning: "",
+    muted: "", dim: "", text: "", thinkingText: "", scrollbarTrack: "", scrollbarThumb: "", searchMatchText: "",
+    userMessageText: "", customMessageText: "", customMessageLabel: "", toolTitle: "", toolOutput: "",
+    mdHeading: "", mdLink: "", mdLinkUrl: "", mdCode: "", mdCodeBlock: "", mdCodeBlockBorder: "",
+    mdQuote: "", mdQuoteBorder: "", mdHr: "", mdListBullet: "",
+    toolDiffAdded: "", toolDiffRemoved: "", toolDiffContext: "",
+    syntaxComment: "", syntaxKeyword: "", syntaxFunction: "", syntaxVariable: "", syntaxString: "",
+    syntaxNumber: "", syntaxType: "", syntaxOperator: "", syntaxPunctuation: "",
+    thinkingOff: "", thinkingMinimal: "", thinkingLow: "", thinkingMedium: "", thinkingHigh: "",
+    thinkingXhigh: "", thinkingMax: "", bashMode: "",
+  }, {
+    selectedBg: 238, searchMatchBg: 238, userMessageBg: 238, customMessageBg: 238,
+    toolPendingBg: 238, toolSuccessBg: 238, toolErrorBg: 238,
+  }, "256color");
   const editorTheme = { borderColor: same, selectList: { selectedPrefix: same, selectedText: same, description: same, scrollInfo: same, noMatch: same } };
   const keys = { matches: () => false } as unknown as KeybindingsManager;
   const base = host === "native" ? new LabelNativeEditor(tui, editorTheme, keys) : new CodexEditor(tui, editorTheme, keys, () => theme);
   const editor = createLabelEditor(base, { names: () => new Set(names), icon: () => icon, tui });
-  return { editor, base, tui };
+  return { editor, base, tui, terminal };
 }
 const cases = ["native", "codex"].flatMap(host => (["cube", "command"] as const).map(icon => ({ host, icon })));
 it.each(cases)("preserves full long names through narrow viewports and resize in $host/$icon", ({ host, icon }) => {
-  const name = "a".repeat(1024), { editor, tui } = fixture(host, icon, [name]);
+  const name = "a".repeat(1024), { editor, terminal } = fixture(host, icon, [name]);
   editor.setText("prefix $" + name + " suffix");
   for (const width of [8, 16, 80, 120, 8]) {
-    tui.terminal.columns = width;
+    terminal.columns = width;
     const rows = editor.render(width);
     expect(rows.every(row => visibleWidth(row) <= width)).toBe(true);
     expect(rows.length).toBeLessThanOrEqual(14);
