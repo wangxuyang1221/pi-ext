@@ -10,9 +10,9 @@
 
 ## Current Goal or Problem
 
-解决用户退出 Pi 后遗忘 session，subagent 长期留在后台、需要手动 kill tmux server 的问题，同时保留暂时离开后 resume 的用途。
+本轮交付 /quit 的退出意图选择与所属 subagent 回收，保留暂时离开和未选择退出后的后台运行及 resume。用户已要求暂不考虑长期遗忘后的提醒、统一管理或自动回收。
 
-入口为 [Map #17](https://github.com/wangxuyang1221/pi-ext/issues/17)、[Spec #18](https://github.com/wangxuyang1221/pi-ext/issues/18)。方向 #19、正常退出 #20 和未选择退出 #21 均已通关，当前进入 [Planning #22](https://github.com/wangxuyang1221/pi-ext/issues/22)，确定遗忘的后台代理如何被发现与处理。没有实施切片或 worker。
+入口为 [Map #17](https://github.com/wangxuyang1221/pi-ext/issues/17)、[Spec #18](https://github.com/wangxuyang1221/pi-ext/issues/18)。方向 #19、正常退出 #20 和未选择退出 #21 均已通关；#22 因用户收缩范围关闭为 not planned，不视作通关。Spec 已确定，可用于实施；当前等待单一实施切片审核，尚无 Implementation Issue 或 worker。
 
 ## Evolution
 
@@ -27,7 +27,7 @@
 - 正常退出时由用户选择“暂时离开 / 结束会话”。前者继续运行子代理，后者停止所属全部子代理，不等待任务完成。
 - #20 已移交 Spec 的细化：用户日常使用 /quit；仅有存活 subagent 时询问，空闲待命也算存活；默认 End session；查询失败或清理失败均保留主 Pi、显示失败详情并允许重试，已关闭的代理不恢复。Escape 取消退出选择，返回原会话，subagent 保持原样。
 - 用户所说的退出，是退出 Pi 或关闭终端使主 agent 进程退出；切换 session、detach tmux、一轮回复结束均不属于已确认的回收触发条件。
-- 用户已确认未经过选择就退出时保留 subagent，不能根据主进程消失自动清理；未批准任何超时回收。停止进程不表示删除历史记录。
+- 用户已确认未经过选择就退出时保留 subagent，不能根据主进程消失自动清理；长期遗忘后的提醒、统一清理入口和任何自动超时回收已明确移出本轮。停止进程不表示删除历史记录。
 - 用户已同意在 `/Users/wangxuyang/Code/t3code/pi-ext-subagent-cleanup` worktree 和 `adventure/subagent-cleanup` 分支开展本冒险，维护 GitHub Issues，提交并推送冒险分支；不创建 PR、不合并。
 - 不操作用户已有 tmux 会话。主工作区存在一批未提交的资料删除，未纳入本冒险。当前 worktree 从 `38a623c` 创建，继承的其他冒险证据不是本任务验证结果。
 - 遵循仓库语言策略；产品文案为英文。Python 使用 conda codex-py312；依赖使用固定 pnpm，dist 仅由构建生成。
@@ -49,14 +49,14 @@ Context7 已定位官方库，但查询失败；使用本地 0.86.0 包和已联
 
 ## Current Assumptions
 
-正常 /quit 方案和原型覆盖的实际回收已确认；不能推广到全部退出路径或替代正式集成回归。无选择退出的保留策略已确认。遗忘后的提醒、查看、手动清理或自动回收方案尚未确认。不能假设 registerShortcut 能覆盖 Ctrl+D，也不能在关闭终端后要求用户回答弹窗。
+正常 /quit 方案和原型覆盖的实际回收已确认；不能推广到全部退出路径或替代正式集成回归。无选择退出的保留策略已确认。遗忘处置已移出本轮，不是待确认的本轮需求。不能假设 registerShortcut 能覆盖 Ctrl+D，也不能在关闭终端后要求用户回答弹窗。
 
 ## Continuation Point
 
-当前进入 #22。下一问是遗忘处置方向：提醒并提供跨 session 的统一清理入口、关闭仍由用户决定，还是允许达到约定期限后自动回收？尚未收到选择，不自行加自动回收时限。
+当前待用户审核一个垂直实施切片：通过正式 subagent 扩展交付已确定的 /quit 选择、所属代理回收、取消/失败重试及无选择退出保留行为。该 slice 无前置实施依赖，包含必要源码、正式测试和使用文档，并承担 Spec 的全部延期验证及整体验收；不含遗忘处置。
 
-#20、#21 的已确认规则已在 Spec，勿重复询问。原型保留 12 组入口矩阵、9 组正常后端以及新增 4 组未选择退出证据，全部测试进程已清理。
+已读取 slicing skill，尚未获得切片审核，不创建 Implementation 或派发 worker。用户接受后，按 adventure Issue 模板创建唯一 Implementation，将完整 slice 六字段及 Spec 入口写入正文，关联 Map 和规划前置条件，再保存并直接派发独立 worker。worker 必须先完整读取 write-todo-list 的绝对路径 SKILL.md，在 Issue 正文记录执行计划；正式行为改动采用适当测试验证。
 
-已静态定位 state-store 的 scan/list 和 controller lock，可作为跨会话发现/清理的调查起点，但当前尚未验证完整流程。按用户方向进一步明确提醒时机、可见范围和处置动作，必要时继续在本 worktree 以真实隔离会话验证；不操作用户已有代理。
+切片验收须覆盖现有 12 组入口、9 组正常后端、4 组未选择退出，以及 Spec 的并发/生命周期/截止时间要求。运行 pnpm run check；已知 MCP 缺文件失败须作为基线单独记录，不扩大范围修复，也不得冒称通过。正式构建和发布包校验按实际结果报告，产品 dist 只由构建生成。
 
-继续完成 Planning 并移交 Spec，按 slicing skill 形成切片供用户审核；审核后创建 Implementation，再按 adventure 的 worker 流程编码、运行验收和保存。最终须由用户确认交付才关闭 Map 与 Spec。当前未授权安装本冒险产物到用户日常 Pi 配置。
+切片审核通过后按 adventure 的 worker 流程编码、运行验收和保存；若出现会推翻规格的证据，再重开相关 Planning。最终须由用户确认交付才关闭 Map 与 Spec。当前未授权安装本冒险产物到用户日常 Pi 配置。
