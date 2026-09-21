@@ -25,7 +25,7 @@
 完整要求与验收草案见 [Spec Behavior](https://github.com/wangxuyang1221/pi-ext/issues/18#behavior)。续接不可丢失的边界如下：
 
 - 正常退出时由用户选择“暂时离开 / 结束会话”。前者继续运行子代理，后者停止所属全部子代理，不等待任务完成。
-- #20 已确认但尚未通关移交 Spec 的细化：用户日常使用 /quit；仅有存活 subagent 时询问，空闲待命也算存活；默认 End session；清理失败保留主 Pi、显示失败详情并允许重试，已关闭的代理不恢复。
+- #20 已确认但尚未通关移交 Spec 的细化：用户日常使用 /quit；仅有存活 subagent 时询问，空闲待命也算存活；默认 End session；查询失败或清理失败均保留主 Pi、显示失败详情并允许重试，已关闭的代理不恢复。
 - 用户所说的退出，是退出 Pi 或关闭终端使主 agent 进程退出；切换 session、detach tmux、一轮回复结束均不属于已确认的回收触发条件。
 - 尚未批准无选择退出时自动停止，也未批准暂时离开后的超时回收。停止进程不表示删除历史记录。
 - 用户已同意在 `/Users/wangxuyang/Code/t3code/pi-ext-subagent-cleanup` worktree 和 `adventure/subagent-cleanup` 分支开展本冒险，维护 GitHub Issues，提交并推送冒险分支；不创建 PR、不合并。
@@ -39,19 +39,19 @@
 
 [起点核验](evidence/subagent-cleanup-starting-point.md)记录本地源码和官方版本证据。Pi 0.86.0 的 `session_shutdown` 不适合作为普通退出选择弹窗的直接入口：普通退出时 TUI 已停止，且该事件也会因 reload/new/resume/fork 触发。没有找到专用的可取消 before-quit 事件，退出快捷键又是保留快捷键。公开 raw terminal input 接口可作为候选，但尚未证明可安全覆盖现有退出操作。
 
-现有插件退出只关闭主 runtime 状态并释放 namespace，没有调用子代理关闭路径。manager 已有按所属 namespace 关闭 all 的实现，需要核验接入时序、失败和并发退出场景。
+现有产品插件退出只关闭主 runtime 状态并释放 namespace，没有调用子代理关闭路径。原型通过公开编辑器回调接上真实插件工具后，已完成 9 场景后端核验，见 [后端可行性报告](evidence/subagent-quit-backend-feasibility.md)。其中暂时离开后 resume 接管原代理、部分回收失败后重试、工作中退出与 reload 均已实际验证。正式并发回归仍归实施。
 
 Context7 已定位官方库，但查询失败；使用本地 0.86.0 包和已联网核验的官方 tag commit `ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc`。
 
-本次只修改冒险资料与 Issues，产品代码未变，已完成退出入口隔离原型，结果见下文。未启动服务或后台代理。已运行固定 pnpm 的 frozen-lockfile、ignore-scripts 安装。`pnpm run check` 类型检查通过，2333 测试通过、5 跳过，但 MCP suite 因既有 `prototypes/mcp-status-ui-prototype/src/codex-startup.js` 缺失而失败，后续 build/package 步骤未执行；日志在本 worktree `.tmp/subagent-cleanup/check.log`。未宣称全仓通过。
+本次只修改冒险资料、原型与 Issues，产品代码未变。原型曾启动隔离 Pi、离线模型子代理与 tmux server，均已清理；没有操作用户已有后台代理。已运行固定 pnpm 的 frozen-lockfile、ignore-scripts 安装。`pnpm run check` 类型检查通过，2333 测试通过、5 跳过，但 MCP suite 因既有 `prototypes/mcp-status-ui-prototype/src/codex-startup.js` 缺失而失败，后续 build/package 步骤未执行；日志在本 worktree `.tmp/subagent-cleanup/check.log`。未宣称全仓通过。
 
 ## Current Assumptions
 
-公开 editor factory + onSubmit 已在 /quit 原型中验证可接入选择；尚不能推广到全部退出路径、生命周期或代理回收。原型默认项已按用户选择调整为 End session 并完成 12 组补验；取消行为仍为候选，实际询问条件和回收失败尚未接入原型。不能假设 registerShortcut 能覆盖 Ctrl+D，也不能在关闭终端后要求用户回答弹窗。
+公开 editor factory + onSubmit 已在 /quit 原型中验证可接入选择；尚不能推广到全部退出路径、生命周期或代理回收。原型默认项已按用户选择调整为 End session 并完成 12 组补验；取消行为仍为候选，实际询问条件、状态失败和回收失败已接入真实后端原型并通过验证。不能假设 registerShortcut 能覆盖 Ctrl+D，也不能在关闭终端后要求用户回答弹窗。
 
 ## Continuation Point
 
-当前进入 #20，用户已明确日常通过 `/quit` 退出。已使用 make-a-prototype skill 完成 `adventure/prototypes/quit-choice/` 原型，12 组真实 Pi PTY 和 TypeScript 检查通过。详见 [可行性报告](evidence/subagent-quit-entry-feasibility.md)，需要交互复现时读取原型 README。当前等待用户回答已发送的问题：无法取得可靠 subagent 状态时，是保留主 Pi 显示错误供重试，还是提示后按暂时离开退出。默认 End session 的 12 组原型补验已完成，所有测试进程已退出。之后确认完整交互候选及取消规则，核验实际 manager 回收、失败后重试、正在生成时退出和生命周期，完成 #20；不重复询问已确认选项。
+当前进入 #20，用户已明确日常通过 `/quit` 退出。已使用 make-a-prototype skill 完成 `adventure/prototypes/quit-choice/` 原型，12 组真实 Pi PTY 和 TypeScript 检查通过。详见 [可行性报告](evidence/subagent-quit-entry-feasibility.md)，需要交互复现时读取原型 README。用户已确认查询失败时留在主 Pi、显示错误并允许重试。当前只剩取消选择的交互待决定：候选为 Escape 取消退出、回到原会话，subagent 原样继续。12 组入口矩阵和 9 组真实后端场景通过，所有测试进程已清理。用户决定取消行为后，若无新分歧即可完成 #20、把要求和延期回归移交 Spec、自动保存并进入 #21；不重复询问已有决定。
 
 后续独立关卡为 [#21](https://github.com/wangxuyang1221/pi-ext/issues/21)，决定无法取得退出选择时的规则；[#22](https://github.com/wangxuyang1221/pi-ext/issues/22)，处理暂时离开后遗忘。不得在 #20 中自行决定这两类规则。
 
