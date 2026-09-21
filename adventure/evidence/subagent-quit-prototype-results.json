@@ -1,0 +1,182 @@
+[
+  {
+    "host": "native",
+    "mode": "regular",
+    "choice": "Leave temporarily",
+    "cancelKeepsSession": true,
+    "normalPromptAfterCancel": true,
+    "recordedChoice": "Leave temporarily",
+    "shutdownReason": "quit",
+    "cleanExit": true,
+    "launcherPid": 1235,
+    "cliPids": [
+      1236
+    ],
+    "rootRemoved": true
+  },
+  {
+    "host": "native",
+    "mode": "regular",
+    "choice": "End session",
+    "cancelKeepsSession": true,
+    "normalPromptAfterCancel": true,
+    "recordedChoice": "End session",
+    "shutdownReason": "quit",
+    "cleanExit": true,
+    "launcherPid": 1257,
+    "cliPids": [
+      1258
+    ],
+    "rootRemoved": true
+  },
+  {
+    "host": "native",
+    "mode": "fullscreen",
+    "choice": "Leave temporarily",
+    "cancelKeepsSession": true,
+    "normalPromptAfterCancel": true,
+    "recordedChoice": "Leave temporarily",
+    "shutdownReason": "quit",
+    "cleanExit": true,
+    "launcherPid": 1282,
+    "cliPids": [
+      1395
+    ],
+    "rootRemoved": true
+  },
+  {
+    "host": "native",
+    "mode": "fullscreen",
+    "choice": "End session",
+    "cancelKeepsSession": true,
+    "normalPromptAfterCancel": true,
+    "recordedChoice": "End session",
+    "shutdownReason": "quit",
+    "cleanExit": true,
+    "launcherPid": 1569,
+    "cliPids": [
+      1570
+    ],
+    "rootRemoved": true
+  },
+  {
+    "host": "codex",
+    "mode": "regular",
+    "choice": "Leave temporarily",
+    "cancelKeepsSession": true,
+    "normalPromptAfterCancel": true,
+    "recordedChoice": "Leave temporarily",
+    "shutdownReason": "quit",
+    "cleanExit": true,
+    "launcherPid": 1655,
+    "cliPids": [
+      1668
+    ],
+    "rootRemoved": true
+  },
+  {
+    "host": "codex",
+    "mode": "regular",
+    "choice": "End session",
+    "cancelKeepsSession": true,
+    "normalPromptAfterCancel": true,
+    "recordedChoice": "End session",
+    "shutdownReason": "quit",
+    "cleanExit": true,
+    "launcherPid": 1930,
+    "cliPids": [
+      1931
+    ],
+    "rootRemoved": true
+  },
+  {
+    "host": "combined",
+    "mode": "regular",
+    "choice": "Leave temporarily",
+    "cancelKeepsSession": true,
+    "normalPromptAfterCancel": true,
+    "recordedChoice": "Leave temporarily",
+    "shutdownReason": "quit",
+    "cleanExit": true,
+    "launcherPid": 1985,
+    "cliPids": [
+      1986
+    ],
+    "rootRemoved": true
+  },
+  {
+    "host": "combined",
+    "mode": "regular",
+    "choice": "End session",
+    "cancelKeepsSession": true,
+    "normalPromptAfterCancel": true,
+    "recordedChoice": "End session",
+    "shutdownReason": "quit",
+    "cleanExit": true,
+    "launcherPid": 2009,
+    "cliPids": [
+      2010
+    ],
+    "rootRemoved": true
+  },
+  {
+    "host": "combined",
+    "mode": "fullscreen",
+    "choice": "Leave temporarily",
+    "cancelKeepsSession": true,
+    "normalPromptAfterCancel": true,
+    "recordedChoice": "Leave temporarily",
+    "shutdownReason": "quit",
+    "cleanExit": true,
+    "launcherPid": 2037,
+    "cliPids": [
+      2038
+    ],
+    "rootRemoved": true
+  },
+  {
+    "host": "combined",
+    "mode": "fullscreen",
+    "choice": "End session",
+    "cancelKeepsSession": true,
+    "normalPromptAfterCancel": true,
+    "recordedChoice": "End session",
+    "shutdownReason": "quit",
+    "cleanExit": true,
+    "launcherPid": 2065,
+    "cliPids": [
+      2071
+    ],
+    "rootRemoved": true
+  },
+  {
+    "host": "reverse",
+    "mode": "regular",
+    "choice": "Leave temporarily",
+    "cancelKeepsSession": true,
+    "normalPromptAfterCancel": true,
+    "recordedChoice": "Leave temporarily",
+    "shutdownReason": "quit",
+    "cleanExit": true,
+    "launcherPid": 2224,
+    "cliPids": [
+      2225
+    ],
+    "rootRemoved": true
+  },
+  {
+    "host": "reverse",
+    "mode": "regular",
+    "choice": "End session",
+    "cancelKeepsSession": true,
+    "normalPromptAfterCancel": true,
+    "recordedChoice": "End session",
+    "shutdownReason": "quit",
+    "cleanExit": true,
+    "launcherPid": 2266,
+    "cliPids": [
+      2267
+    ],
+    "rootRemoved": true
+  }
+]

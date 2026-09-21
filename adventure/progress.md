@@ -42,15 +42,15 @@
 
 Context7 已定位官方库，但查询失败；使用本地 0.86.0 包和已联网核验的官方 tag commit `ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc`。
 
-本次只修改冒险资料与 Issues，产品代码未变，尚未运行交互原型。未启动服务或后台代理。已运行固定 pnpm 的 frozen-lockfile、ignore-scripts 安装。`pnpm run check` 类型检查通过，2333 测试通过、5 跳过，但 MCP suite 因既有 `prototypes/mcp-status-ui-prototype/src/codex-startup.js` 缺失而失败，后续 build/package 步骤未执行；日志在本 worktree `.tmp/subagent-cleanup/check.log`。未宣称全仓通过。
+本次只修改冒险资料与 Issues，产品代码未变，已完成退出入口隔离原型，结果见下文。未启动服务或后台代理。已运行固定 pnpm 的 frozen-lockfile、ignore-scripts 安装。`pnpm run check` 类型检查通过，2333 测试通过、5 跳过，但 MCP suite 因既有 `prototypes/mcp-status-ui-prototype/src/codex-startup.js` 缺失而失败，后续 build/package 步骤未执行；日志在本 worktree `.tmp/subagent-cleanup/check.log`。未宣称全仓通过。
 
 ## Current Assumptions
 
-公开输入接口可能允许在真正退出前选择意图，但仍需实际验证。不能假设 registerShortcut 能覆盖 Ctrl+D，也不能在关闭终端后要求用户回答弹窗。
+公开 editor factory + onSubmit 已在 /quit 原型中验证可接入选择；尚不能推广到全部退出路径、生命周期或代理回收。原型的默认选项、取消行为及询问条件属于候选，仍需用户确认。不能假设 registerShortcut 能覆盖 Ctrl+D，也不能在关闭终端后要求用户回答弹窗。
 
 ## Continuation Point
 
-当前进入 #20，用户已明确日常通过 `/quit` 退出。下一步使用已读取的 make-a-prototype skill 在 `adventure/prototypes/quit-choice/` 验证编辑器提交回调组合能否在内置 `/quit` 前显示选择，并兼容原生、Codex UI 和 skill 标签编辑器。这是候选公开接入方式，尚未经运行验证。
+当前进入 #20，用户已明确日常通过 `/quit` 退出。已使用 make-a-prototype skill 完成 `adventure/prototypes/quit-choice/` 原型，12 组真实 Pi PTY 和 TypeScript 检查通过。详见 [可行性报告](evidence/subagent-quit-entry-feasibility.md)，需要交互复现时读取原型 README。下一步向用户确认是否仅在存在存活 subagent 时询问退出意图，再处理本关剩余取消、清理失败与范围问题；实际代理回收尚未验证。
 
 后续独立关卡为 [#21](https://github.com/wangxuyang1221/pi-ext/issues/21)，决定无法取得退出选择时的规则；[#22](https://github.com/wangxuyang1221/pi-ext/issues/22)，处理暂时离开后遗忘。不得在 #20 中自行决定这两类规则。
 
