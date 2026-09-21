@@ -1,6 +1,6 @@
 # Handoff
 
-> 从 Continuation Point 接续。完整规格只在Spec Issue正文维护。用户已确认英文产品文案，并接受原生同步逐字删除在大粘贴场景的性能与内存代价。#12本轮再次通关；#14已通过；恢复#15完整标签实施，不推进异步双状态方案，不缩减功能范围。
+> 从 Continuation Point 接续。#14/#15已验收通过并关闭，产品提交`184a7e7`，进入#16安装交付与整体验收。用户已确认英文产品文案，接受原生同步删除的大粘贴内存代价，不推进异步双状态。完整规格只在Spec Issue正文维护。
 
 ## Handoff Position
 
@@ -14,9 +14,9 @@
 
 - [Map #1](https://github.com/wangxuyang1221/pi-ext/issues/1)、[Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2)保持open，最终用户确认前不关闭。
 - [#14标点激活](https://github.com/wangxuyang1221/pi-ext/issues/14)已通过，产品基准`d8a6a40d05e7cf3db63b553520bb2717453c04a0`。
-- [#15完整标签体验](https://github.com/wangxuyang1221/pi-ext/issues/15)恢复实施，尚未交付标签。此前暂停在动作策略，产品src仍与#14相同。
+- [#15完整标签体验](https://github.com/wangxuyang1221/pi-ext/issues/15)已通过，产品提交`184a7e79c4dfadcec1f5f75e8ab0b5808411b065`，包含输入/正文标签、同步整体编辑、持久图标偏好及两宿主适配。
 - [#12编辑契约](https://github.com/wangxuyang1221/pi-ext/issues/12)因成本反例重开，现已再次通关；[收尾证据](evidence/skill-label-native-undo-closeout.md)提交`594f120e49b60a949ceb33c29d899b85b27d3243`。
-- [#16安装交付与整体验收](https://github.com/wangxuyang1221/pi-ext/issues/16)仍等待#15，最后一个worker承担完整Spec验收。
+- [#16安装交付与整体验收](https://github.com/wangxuyang1221/pi-ext/issues/16)前置已解除，派发新上下文worker承担可安装交付、当前扩展组合及完整Spec验收。
 
 ## Evolution
 
@@ -66,9 +66,21 @@
 - [原生undo收尾](evidence/skill-label-native-undo-closeout.md)，`594f120`：24项通过。原生栈无应用级数量/字节上限与淘汰；64/256/1024名称、单组1025及累计1349步恢复无截断。`$𠮷`只需2个native删除步骤，不是UTF-16 length 3，错误计数会过量undo。
 - 正常提交清undo；`setText("")`不清undo且可新增快照。撤销/正常提交/无引用editor释放后小样本heap下降，RSS未立即下降。真实reload须清扩展强引用、分组记录、回调，不能把fixture的GC等同实际宿主已释放。极端10 MiB×1024/连续多组/OOM未测，不再为证明性能而制造大分配。
 
+### Label delivery
+
+[#15正式交付报告](evidence/skill-label-product-implementation.md)提供完整本关矩阵和证据；新worker开始#16前必读。同步原生动作按实际步骤记账，合并回调并支持重入；分离grapheme原文坐标与布局，不按同文找journal或边框字符串找帧。修改`extensions/codex-ui/src/components.ts`提供投影装饰/菜单几何公开接缝，现有codex-ui回归通过。
+
+`/skill-label-icon cube|command`保存到agent目录`skill-mentions.json`，故障不假装成功；两处图标一致。没有修改用户日常配置或安装。live transformer捕获对应成功快照，历史按消息封装恢复，不按同文匹配。reload以TUI身份传递source-only草稿，无editor/provider/journal引用；移除扩展交出展开原文。原生getExpandedText仍是提交来源，没有异步双状态。
+
+#15正式345/345，连同Codex UI580/580。四组实际tarball隔离安装PTY：native/Codex regular各23项、fullscreen各24项，每组30次faux消费及真实退出/重启；两图标RGB/字重/背景、删除undo、同write删除发送、resize、外部编辑器及fullscreen SGR鼠标通过。单标签高于视口可分页/滚轮查看全部行；fullscreen用宿主已有Ctrl+PageUp/Down交给editor，普通PageUp/Down仍滚动会话。
+
+性能与生命周期见报告：100KiB布局中位30.81–34.24ms、最大43.85ms；1MiB paste/64名称同步删除中位7.91ms，约67MiB操作边界heap样本。接受成本不等于极端OOM安全。真实SDK三种安装顺序各三次reload，九个退休editor WeakRef均可回收。不是物理IME或全扩展运行组合验收。
+
+协调者核对源码接缝、矩阵、四组最终PTY JSON及内存证据，并独立复跑全仓check。#15第四次Acceptance为通过，前三次阻塞/证据记录保留。物理IME/字体观察、完整当前扩展组合与最终产物交#16。
+
 ### Checks and cleanup
 
-最新正式测试291/291，包含280项旧产品测试及11项边界核验，不代表标签已通过。最新check为typecheck通过、2244 passed/5 skipped，仍一个既有MCP suite缺`prototypes/mcp-status-ui-prototype/src/codex-startup.js`；独立build/入口import通过，package:check仍缺旧`docs/goal-descendant-acceptance.md`，不能称全仓通过。
+最新正式skill测试345/345，协调者复跑check为typecheck通过、2298 passed/5 skipped，仍一个既有MCP suite缺`prototypes/mcp-status-ui-prototype/src/codex-startup.js`；独立build/八入口import通过，package:check仍缺旧`docs/goal-descendant-acceptance.md`，不能称全仓通过。
 
 worker环境可能污染goal fixture；仅测试子进程清除`PI_SUBAGENT_PARENT/PI_SUBAGENT_LAUNCH/PI_SUBAGENT/PI_SUBAGENT_ID`，不修改全局环境或测试。正常主代理复跑结果已与worker一致。
 
@@ -76,18 +88,18 @@ worker环境可能污染goal fixture；仅测试子进程清除`PI_SUBAGENT_PARE
 
 ## Current Assumptions
 
-原生同步动作和分组undo的关键正确性有证据，用户接受成本，因此足以恢复正式实施。但完整布局/所有原生动作、连续undo合并、回调重入、真实reload引用释放仍需#15正式验证。小实验不是产品交付。出现新的正确性反例回流Planning，不将其混为已接受性能。
+#15全部本关责任已有正式产品证据并获协调者验收；更广的当前扩展运行组合、物理IME/字体及最终完整Spec核验仍归#16，不提前称通过。发现回归交原#15 worker修复，业务规则或已采用方案失效才回流Planning。已接受的资源代价不重复询问。
 
-正文身份通道可行，但成功快照标签、同文不同快照、队列/分支/压缩完整矩阵未实现。#16须区分SDK、PTY UTF-8输入与物理IME，不能冒称实际操作。
+不能把PTY UTF-8/粘贴注入等同物理IME候选窗口，不能把可导入全部入口等同全部扩展共同运行。无法实际操作的验收项明确缺口，不擅自通过。
 
 ## Continuation Point
 
-#12已关闭，用户取舍与收尾结论已移交Spec，自动保存后继续#15，不等待用户再次确认。主代理将复用现有worker恢复完整实施。
+#14/#15均关闭，自动保存后直接派发独立#16 worker，不等待用户再次确认。产品基准184a7e7，派发前核对最新HEAD和工作区。
 
-1. #15 worker `01a0c163-4879-7531-af23-b7eef1ddaf71`已保留上下文。补任务前核对其状态和实际HEAD，避免重复施工；用对应prompt返回settledCursor等待本轮。#14 worker已关闭。
-2. 向原worker提供更新后的Spec/#15、收尾报告及当前HEAD，恢复TDD产品实现。保留原生同步路线，不复制探针文本journal/帧识别或异步双状态；不再次因128 MiB成本阻塞。所有英文产品文案已授权。
-3. worker只维护#15 Execution/Delivery/Verification，协调者维护Acceptance、关卡关闭、Map/Spec/progress。现有三轮Acceptance记录均只是阻塞/证据核对，尚无完整标签验收通过。
-4. #15完整通过后自动保存，派发独立#16 worker做产物、当前扩展组合、完整Spec与延期验证和清理。最终交付提交用户确认时停止，Map/Spec保持open。
+1. #15 worker `01a0c163-4879-7531-af23-b7eef1ddaf71`已settled，保留上下文供最终验收发现回归时返工。#16须新上下文，不直接复用它负责下一关；原#14 worker已关闭。
+2. 新worker读取Map/Spec/#16、#15正式报告与使用文档，核对真实可安装产物、全部Spec及延期责任。使用离线faux与隔离配置，不接通实际MCP或远端provider，不改全局配置/字体或日常安装。
+3. #16 worker负责自己的Execution/Delivery/Verification及完整交付证据，不能写Acceptance、关Issue或改Map/Spec/progress。正确性回归由协调者交回#15原worker，避免并行修改。
+4. 全部验收通过后协调者保存并提交用户确认，Map/Spec保持open；用户确认才关闭。实际无法完成的IME/字体等验收明确缺口，不冒充完成或擅自减项。
 
 交接skill绝对路径：
 
