@@ -1,0 +1,4 @@
+Source commit: d8cae5fbe04647320e3a470066d637682e468c09
+Command: pnpm exec tsc --target ES2022 --module NodeNext --moduleResolution NodeNext --strict --esModuleInterop --forceConsistentCasingInFileNames --skipLibCheck --types node --noEmit extensions/skill-mentions/__tests__/*.ts
+Input files:       18
+Exit code: 0

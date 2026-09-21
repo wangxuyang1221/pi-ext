@@ -10,7 +10,7 @@
 - 六组实际 tarball 隔离安装 PTY 通过；另两组验证八个默认扩展加未发布的 codex-search 源码共同运行。每组均真实退出并重启。
 - 原生/Codex、regular/fullscreen 的人工验收 launcher 已通过八次 CLI 启停 smoke。这只是 launcher 可用性验证，人工观察仍未执行。
 - 全仓 check 失败，2298 passed / 5 skipped，仍缺旧 MCP prototype。独立 build 和八入口 import 通过，package:check 仍缺旧文档。
-- 额外全功能测试文件独立 tsc 发现两处已有 fixture 类型错误，详见 Checks。新 PTY fixture 独立类型检查通过；没有修原 #15 测试或降低检查门槛。
+- 额外全测试文件 tsc 曾发现两处 fixture 类型错误，原失败日志保留。#15 已在 `d8cae5fbe04647320e3a470066d637682e468c09` 修复；本 worker 独立严格 tsc 复核全部18个测试/fixture文件通过，详见 [返工报告](skill-label-fixture-type-repair.md)及 Checks。
 
 ## Delivery
 
@@ -31,6 +31,7 @@
 | [原生 undo 收尾](skill-label-native-undo-closeout.md) | 复用 Pi0.86.0 源码和容量边界，不重跑大分配/OOM；没有恢复旧128 MiB代理门槛 |
 | [旧 #10 安装报告](skill-install-acceptance.md) | 仅作 fixture 和历史实现定位，不能证明新增标签或本轮扩展组合 |
 | [本轮环境及来源](skill-final-environment.json) | Node22.22.2、pnpm11.9.0、Pi coding-agent/tui/ai0.86.0；三份固定官方源码与安装 source map 全文散列相同 |
+| [#15 fixture返工](skill-label-fixture-type-repair.md) | d8cae5f仅将label-surface测试改为真实Theme及持有可变terminal，未删减断言。独立核对a9cbf51至d8cae5f全部产品src无差异；八组PTY、安装和性能证据继续有效，本次不重复运行 |
 
 Context7 `/earendil-works/pi` 返回 main，只用于定位。目标版本以安装包0.86.0及固定官方 commit `ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc` 为依据。本轮在线复核 [package-manager.ts](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/core/package-manager.ts)、[interactive-mode.ts](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/modes/interactive/interactive-mode.ts)、[faux.ts](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/ai/src/providers/faux.ts)。本地完整读取的16份相关 Pi 文档及散列列于环境记录，并读取 reload-runtime、github-issue-autocomplete、SDK06 示例。
 
@@ -141,14 +142,17 @@ TMPDIR="$PWD/.tmp/skill-final" pnpm run skill-mentions:acceptance \
 | `pnpm run build` | [独立通过](skill-final-build.log) |
 | 八个生成入口动态import | [通过](skill-final-built-entries.log)；仅作入口检查，共同运行另有PTY |
 | `pnpm run package:check` | [失败](skill-final-package-check.log)，既有`docs/goal-descendant-acceptance.md`缺失 |
-| `pnpm exec tsc ... extensions/skill-mentions/__tests__/*.ts` | [额外检查失败](skill-final-test-types.log)，`label-surface.test.ts:14`不充分Theme断言、`:26`写只读columns。该文件本轮未改；此检查不在项目check内，不能因此隐瞒失败，也未把产品类型检查说成测试文件全通过 |
+| 原额外全测试文件tsc | [历史失败日志](skill-final-test-types.log)保留：不充分Theme断言TS2352、写只读columns TS2540。两处现已由#15修复，见[返工报告](skill-label-fixture-type-repair.md)；不是当前未解决项 |
+| d8cae5f独立全skill测试严格tsc | [复核通过](skill-final-test-types-recheck.log)，ES2022、NodeNext、strict，全部18个测试/fixture文件，无诊断、退出0；完整命令见日志 |
+| d8cae5f再次`pnpm run check` | [复核日志](skill-final-recheck-check.log)，typecheck通过、2298 passed / 5 skipped；仍只有既有MCP prototype缺文件造成suite失败，退出1 |
+| d8cae5f短路后独立build / package:check | [build退出0](skill-final-recheck-build.log)；[package退出1](skill-final-recheck-package-check.log)，仍缺旧`docs/goal-descendant-acceptance.md` |
 | 同参数单独检查`pty-fixture.ts` | [退出0](skill-final-fixture-types.log)，新增公开ctx.reload/本地tool fixture无类型错误 |
 | `node --check`三个mjs入口 | 退出0 |
 | manual launcher四模式 | [smoke JSON](skill-final-manual-smoke.json) / [日志](skill-final-manual-smoke.log)，八个CLI正常退出，偏好与会话恢复，临时目录删除 |
 | manual launcher非TTY | [日志](skill-final-manual-nontty.log)，按预期退出2，不伪造交互能力 |
 | `git diff --check` | 收尾通过 |
 
-仅测试子进程移除四项 `PI_SUBAGENT_PARENT/PI_SUBAGENT_LAUNCH/PI_SUBAGENT/PI_SUBAGENT_ID`，未改全局环境。完整测试文件tsc失败交协调者知悉，不属于新产品正确性回归；若需要修复，交原#15 worker，不与其并行修改。
+仅测试子进程移除四项 `PI_SUBAGENT_PARENT/PI_SUBAGENT_LAUNCH/PI_SUBAGENT/PI_SUBAGENT_ID`，未改全局环境。两处fixture错误已按协调者安排由原#15 worker修复，本worker只独立复核和更新证据，没有修改产品或测试代码。严格tsc沿用仓库skipLibCheck，没有降低门槛。返工后580项运行回归见[#15日志](skill-label-fixture-regression.log)，本次全仓check再次覆盖这些测试；不声称已解决无关基准失败。
 
 ## Manual acceptance gap
 
@@ -177,4 +181,6 @@ pnpm exec node extensions/skill-mentions/__tests__/manual-terminal.mjs codex ful
 
 保留已有其他临时资料和worktree。旧`.tmp/skill-ui-prototype-GG4yw8`仍不存在，本轮未删除、未重建，也不声称保留。未执行任何实际远端provider、外部MCP服务或子代理请求。
 
-交付后由协调者核对证据、处理人工缺口和额外fixture类型问题，再填写Acceptance。本worker仅更新#16 Execution/Delivery/Verification，不填写Acceptance、不关闭Issue、不改Map/Spec/progress。
+返工后的本轮复核使用worktree内`.tmp/skill-final-recheck`，前台命令均已返回。[复核清理记录](skill-final-recheck-cleanup.json)记录临时目录及新增quality日志清理、进程扫描和监听端口核对；原有临时资料保留。
+
+交付后由协调者核对已解决的fixture类型问题及剩余人工缺口，再填写Acceptance。物理IME与真实字体仍未验证，不能宣称整体验收通过。本worker仅更新#16 Execution/Delivery/Verification，不填写Acceptance、不关闭Issue、不改Map/Spec/progress。

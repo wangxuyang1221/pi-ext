@@ -1,0 +1,17 @@
+{
+  "sourceCommit": "d8cae5fbe04647320e3a470066d637682e468c09",
+  "commandsReturned": true,
+  "temporaryRootRemoved": true,
+  "removedQualityFiles": [
+    "quality-plugin-WsJDCy.stderr.log"
+  ],
+  "preservedQualityFiles": 39,
+  "taskProcessCandidates": [],
+  "taskListenerPids": [],
+  "unrelatedListenersUntouched": true,
+  "backgroundServicesStarted": 0,
+  "acceptanceBeforeSha256": "ceca5a7da8a0ef2b7cbd9b3604053aff04eac8fbcb791d30abb8b570ed922dd8",
+  "originalFailureLogUnchanged": true,
+  "productSourceUnchanged": true,
+  "externalProgressEditPreserved": true
+}
