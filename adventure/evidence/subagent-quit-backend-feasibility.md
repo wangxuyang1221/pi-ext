@@ -13,7 +13,7 @@
 | end-running | 子代理离线模型处于受控执行中，End session 关闭代理，确认 PID 消失后退出。 |
 | query-retry | 注入 tmux 查询失败，界面报告错误，不显示意图选择、不退出；移除故障后重试成功。 |
 | partial-close-retry | 两个实际代理，第一个关闭成功、第二个被注入关闭失败。主 Pi 保持存活；失败解除后再次 /quit 关闭剩余代理。 |
-| cancel | Escape 取消选择，主 Pi 和代理保持存活，再次 /quit 可以结束。该交互仍待用户决定。 |
+| cancel | Escape 取消选择，主 Pi 和代理保持存活，再次 /quit 可以结束。该交互已由用户确认。 |
 | main-busy | 主 agent 正在受控模型请求中，选择结束后通过公开 abort 中止当前轮，再完成回收和退出。 |
 | reload | /reload 重建扩展后，/quit 选择和实际回收仍可执行。 |
 | resume | 暂时离开后以同一 session 文件启动新主进程，接管原代理；再次 /quit 结束，原代理 PID 消失。 |

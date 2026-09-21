@@ -12,20 +12,20 @@
 
 解决用户退出 Pi 后遗忘 session，subagent 长期留在后台、需要手动 kill tmux server 的问题，同时保留暂时离开后 resume 的用途。
 
-入口为 [Map #17](https://github.com/wangxuyang1221/pi-ext/issues/17)、[Spec #18](https://github.com/wangxuyang1221/pi-ext/issues/18)。方向关卡 #19 已通关，当前进入 [Planning #20](https://github.com/wangxuyang1221/pi-ext/issues/20)，核验退出选择和定向回收。没有实施切片或 worker。
+入口为 [Map #17](https://github.com/wangxuyang1221/pi-ext/issues/17)、[Spec #18](https://github.com/wangxuyang1221/pi-ext/issues/18)。方向关卡 #19 与正常退出关卡 #20 已通关，当前进入 [Planning #21](https://github.com/wangxuyang1221/pi-ext/issues/21)，确定未取得用户选择的退出如何处理。没有实施切片或 worker。
 
 ## Evolution
 
 起初候选是主进程退出就关闭子代理。用户指出退出可能是暂时离开，只有用户能判断是否真正结束会话。统一按进程退出回收未获确认，不再作为设计依据。
 
-用户随后依次确认正常退出时选择意图，暂时离开允许 subagent 继续后台工作，明确结束则停止所属全部代理，包括工作中的代理。#19 的结论已移交 Spec。
+用户随后依次确认正常退出时选择意图，暂时离开允许 subagent 继续后台工作，明确结束则停止所属全部代理，包括工作中的代理。#19 的结论已移交 Spec。#20 随后完成正常 /quit 的细化、真实原型与失败重试核验；用户确认 Escape 取消退出后，本关也已移交 Spec 并关闭。
 
 ## Agreed Decisions and Constraints
 
 完整要求与验收草案见 [Spec Behavior](https://github.com/wangxuyang1221/pi-ext/issues/18#behavior)。续接不可丢失的边界如下：
 
 - 正常退出时由用户选择“暂时离开 / 结束会话”。前者继续运行子代理，后者停止所属全部子代理，不等待任务完成。
-- #20 已确认但尚未通关移交 Spec 的细化：用户日常使用 /quit；仅有存活 subagent 时询问，空闲待命也算存活；默认 End session；查询失败或清理失败均保留主 Pi、显示失败详情并允许重试，已关闭的代理不恢复。
+- #20 已移交 Spec 的细化：用户日常使用 /quit；仅有存活 subagent 时询问，空闲待命也算存活；默认 End session；查询失败或清理失败均保留主 Pi、显示失败详情并允许重试，已关闭的代理不恢复。Escape 取消退出选择，返回原会话，subagent 保持原样。
 - 用户所说的退出，是退出 Pi 或关闭终端使主 agent 进程退出；切换 session、detach tmux、一轮回复结束均不属于已确认的回收触发条件。
 - 尚未批准无选择退出时自动停止，也未批准暂时离开后的超时回收。停止进程不表示删除历史记录。
 - 用户已同意在 `/Users/wangxuyang/Code/t3code/pi-ext-subagent-cleanup` worktree 和 `adventure/subagent-cleanup` 分支开展本冒险，维护 GitHub Issues，提交并推送冒险分支；不创建 PR、不合并。
@@ -47,12 +47,14 @@ Context7 已定位官方库，但查询失败；使用本地 0.86.0 包和已联
 
 ## Current Assumptions
 
-公开 editor factory + onSubmit 已在 /quit 原型中验证可接入选择；尚不能推广到全部退出路径、生命周期或代理回收。原型默认项已按用户选择调整为 End session 并完成 12 组补验；取消行为仍为候选，实际询问条件、状态失败和回收失败已接入真实后端原型并通过验证。不能假设 registerShortcut 能覆盖 Ctrl+D，也不能在关闭终端后要求用户回答弹窗。
+正常 /quit 方案和原型覆盖的实际回收已确认；不能推广到全部退出路径或替代正式集成回归。未取得用户选择时的默认行为仍未确认。不能假设 registerShortcut 能覆盖 Ctrl+D，也不能在关闭终端后要求用户回答弹窗。
 
 ## Continuation Point
 
-当前进入 #20，用户已明确日常通过 `/quit` 退出。已使用 make-a-prototype skill 完成 `adventure/prototypes/quit-choice/` 原型，12 组真实 Pi PTY 和 TypeScript 检查通过。详见 [可行性报告](evidence/subagent-quit-entry-feasibility.md)，需要交互复现时读取原型 README。用户已确认查询失败时留在主 Pi、显示错误并允许重试。当前只剩取消选择的交互待决定：候选为 Escape 取消退出、回到原会话，subagent 原样继续。12 组入口矩阵和 9 组真实后端场景通过，所有测试进程已清理。用户决定取消行为后，若无新分歧即可完成 #20、把要求和延期回归移交 Spec、自动保存并进入 #21；不重复询问已有决定。
+当前进入 #21。向用户询问：直接关闭终端、崩溃或强制结束等未经过退出选择的离开，应保留 subagent，还是按结束会话自动回收？尚未收到选择，不替用户推断意图。用户确定后核验该规则在正常清理回调不可达时的可行性和边界，按必要程度使用隔离真实进程验证。
 
-后续独立关卡为 [#21](https://github.com/wangxuyang1221/pi-ext/issues/21)，决定无法取得退出选择时的规则；[#22](https://github.com/wangxuyang1221/pi-ext/issues/22)，处理暂时离开后遗忘。不得在 #20 中自行决定这两类规则。
+#20 已关闭，正常 /quit 的完整需求与延期回归已在 Spec。12 组入口矩阵和 9 组真实后端场景通过，详见原型 README 与后端报告；勿重复询问默认项、取消、查询失败或清理失败规则。
+
+[#22](https://github.com/wangxuyang1221/pi-ext/issues/22) 负责暂时离开后长期遗忘的发现与处置。保留进程不意味着可以放任遗忘，该主题仍需解决，但不能在 #21 自行批准超时回收。
 
 继续完成 Planning 并移交 Spec，按 slicing skill 形成切片供用户审核；审核后创建 Implementation，再按 adventure 的 worker 流程编码、运行验收和保存。最终须由用户确认交付才关闭 Map 与 Spec。当前未授权安装本冒险产物到用户日常 Pi 配置。
