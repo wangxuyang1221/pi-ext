@@ -2,7 +2,7 @@
 
 ## Default Policy
 
-本 policy 适用于本 repo 中由 agent 创建、修改或发布的 text artifacts；当未覆盖某个 artifact 或 partition 时，必须在写入前询问用户，不要自行推断, AFK 任务例外。
+本 policy 适用于本 repo 中由 agent 创建、修改或发布的 text artifacts；未覆盖的 artifact 或 partition 默认使用英文。
 
 | Artifact / Partition | Language |
 | --- | --- |
@@ -21,7 +21,7 @@
 | variable / function / class names | English |
 | test names | English |
 | assertion messages | English |
-| user-facing product copy | Ask before writing |
+| user-facing product copy | English by default |
 | commands / paths / config keys / API names / identifiers | Keep original |
 | quoted source text | Keep original, then explain in Chinese when needed |
 | issue title / PR title | Chinese |

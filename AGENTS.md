@@ -10,4 +10,4 @@
 
 ### Repository language policy
 
-Agent 创建、修改或发布 text artifacts 前，必须先读取 `docs/agents/repository-language-policy.md`；当 artifact 或 partition 未被覆盖时，写入前必须询问用户。
+Agent 创建、修改或发布 text artifacts 前，必须先读取 `docs/agents/repository-language-policy.md`。
