@@ -40,6 +40,14 @@ conda run -n codex-py312 python adventure/prototypes/quit-choice/backend-smoke.p
 - 原型 TypeScript 检查及 launcher 语法检查通过。
 - 每个后端场景在 launcher 清理之前核验 keeper 仍存活；之后核验测试进程退出、隔离 socket 不再可用、临时目录移除。
 
+### Unselected exit probes
+
+新增 SIGHUP、SIGTERM、SIGKILL、Ctrl+D 四组退出后 resume 核验通过。首次退出不触发代理回收，原代理在 resume 后仍存活并可主动关闭。SIGKILL 首次退出没有运行清理回调。详见 [无选择退出报告](../../evidence/subagent-unselected-exit-feasibility.md)。
+
+```sh
+conda run -n codex-py312 python adventure/prototypes/quit-choice/backend-smoke.py sighup-resume sigterm-resume sigkill-resume ctrld-resume
+```
+
 ## Decisions and limitations
 
 已确认：用户日常入口为 `/quit`；仅有存活 subagent 时询问；默认 End session；暂时离开保留后台代理；结束会话回收所属全部代理；查询或清理失败保留主 Pi、显示错误并允许重试。

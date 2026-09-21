@@ -17,12 +17,13 @@ repo = Path(__file__).resolve().parents[3]
 results = []
 scenarios = sys.argv[1:] or ['empty', 'leave', 'end-running', 'query-retry', 'partial-close-retry', 'cancel', 'main-busy', 'reload', 'resume']
 for scenario in scenarios:
+    unselected = scenario in ['sighup-resume', 'sigterm-resume', 'sigkill-resume', 'ctrld-resume']
     report = repo / f'.tmp/subagent-cleanup/backend-{scenario}.jsonl'
     pid, fd = pty.fork()
     if pid == 0:
         os.chdir(repo)
         os.environ['QUIT_PROBE_REPORT'] = str(report)
-        os.execvp('node', ['node', 'adventure/prototypes/quit-choice/run.mjs', 'combined', 'regular', 'resume' if scenario == 'resume' else 'real'])
+        os.execvp('node', ['node', 'adventure/prototypes/quit-choice/run.mjs', 'combined', 'regular', 'unselected-resume' if unselected else 'resume' if scenario == 'resume' else 'real'])
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 40, 120, 0, 0))
     output, status, root = bytearray(), None, None
     def events(kind):
@@ -59,7 +60,7 @@ for scenario in scenarios:
         wait(lambda: re.search(rb'Prototype root: ([^\r\n]+)', output))
         root = Path(re.search(rb'Prototype root: ([^\r\n]+)', output)[1].decode())
         wait(lambda: len(events('quit-adapter-installed')) == 1 and len(events('ready')) == 1)
-        if scenario == 'resume':
+        if scenario == 'resume' or unselected:
             command('Persist root session')
             wait(lambda: len(events('settled')) == 1)
         if scenario != 'empty':
@@ -82,6 +83,17 @@ for scenario in scenarios:
             assert not events('settled')
         if scenario == 'query-retry':
             (root / 'fail-query').write_text('fail')
+        if unselected:
+            original = events('start')[0]
+            child_pid = events('probe-spawn')[0]['tmux']['panePid']
+            if scenario == 'ctrld-resume':
+                os.write(fd, b'\x04')
+            else:
+                os.kill(original['pid'], {'sighup-resume': signal.SIGHUP, 'sigterm-resume': signal.SIGTERM, 'sigkill-resume': signal.SIGKILL}[scenario])
+            wait(lambda: len(events('start')) == 2 and len(events('ready')) == 2)
+            assert not alive(original['pid']) and alive(child_pid)
+            assert events('start')[1]['session'] == original['session']
+            assert not events('quit-choice') and not events('quit-cleaned')
         command('/quit')
         if scenario == 'empty':
             wait(lambda: status is not None)
@@ -139,7 +151,14 @@ for scenario in scenarios:
         assert summary['keeperAlive'], summary
         assert not cleanup['livePids'] and cleanup['socketUnavailable']
         assert not root.exists()
-        assert values('shutdown') == (['reload', 'quit'] if scenario == 'reload' else ['quit', 'quit'] if scenario == 'resume' else ['quit'])
+        expected_shutdowns = ['reload', 'quit'] if scenario == 'reload' else ['quit', 'quit'] if scenario == 'resume' or unselected and scenario != 'sigkill-resume' else ['quit']
+        assert values('shutdown') == expected_shutdowns, values('shutdown')
+        if unselected:
+            assert values('quit-choice') == ['End session']
+            assert values('quit-status')[0]['capacity']['active'] == 1
+            assert len(values('start')) == 2
+            if scenario == 'sigkill-resume':
+                assert values('probe-process-exit')[0]['signal'] == 'SIGKILL'
         if scenario == 'resume':
             assert values('quit-choice') == ['Leave temporarily', 'End session']
             assert values('quit-status')[-1]['capacity']['active'] == 1
@@ -160,7 +179,7 @@ for scenario in scenarios:
         assert all(not alive(row['pid']) for row in values('start'))
         for child_pid in cleanup['pids']:
             assert not alive(child_pid), child_pid
-        results.append({'scenario':scenario,'passed':True,'beforeLauncherCleanup':summary,'cleanup':cleanup,'launcherPid':pid})
+        results.append({'scenario':scenario,'passed':True,'mainPids':[row['pid'] for row in values('start')],'unselectedResume':unselected,'observedShutdownEvents':values('shutdown'),'beforeLauncherCleanup':summary,'cleanup':cleanup,'launcherPid':pid})
         print(json.dumps(results[-1]), flush=True)
     finally:
         if status is None:

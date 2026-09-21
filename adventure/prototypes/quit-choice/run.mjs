@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '../../..');
 const [host = 'native', mode = 'regular', backend = 'fixture'] = process.argv.slice(2);
-const real = backend === 'real' || backend === 'resume';
+const real = ['real','resume','unselected-resume'].includes(backend);
+const repeat = ['resume','unselected-resume'].includes(backend);
 const quote = value => `'${value.replaceAll("'", "'\"'\"'")}'`;
 const tmux = real ? spawnSync('/usr/bin/which', ['tmux'], {encoding:'utf8'}).stdout.trim() : '';
 assert(!real || tmux, 'tmux is required for the real backend');
@@ -43,9 +44,11 @@ try {
   const args=[join(repo,'node_modules/@earendil-works/pi-coding-agent/dist/cli.js'),'--offline','--no-extensions','--no-context-files','--no-prompt-templates','--no-skills','--no-builtin-tools','--no-approve','--skill',join(root,'alpha.md'),...extensions.flatMap(p=>['-e',p]),'--provider','faux','--model','faux-1','--session-dir',join(root,'sessions'),'--tui-mode',mode];
   console.log(`Prototype root: ${root}`);
   let child;
-  for(let run=0;run<(backend==='resume'?2:1);run++) {
+  for(let run=0;run<(repeat?2:1);run++) {
     child=spawnSync(process.execPath,[...args,...(run?['--continue']:[])],{cwd:join(root,'workspace'),env,stdio:'inherit'});
-    assert.equal(child.status,0,`CLI run failed: ${child.error??child.signal??child.status}`);
+    appendFileSync(join(root,'events.jsonl'),JSON.stringify({type:'probe-process-exit',data:{run,status:child.status,signal:child.signal}})+'\n');
+    if(backend==='unselected-resume' && run===0) assert(child.status===0 || child.signal==='SIGKILL', `Unexpected first exit: ${child.error??child.signal??child.status}`);
+    else assert.equal(child.status,0,`CLI run failed: ${child.error??child.signal??child.status}`);
   }
   const records = readFileSync(join(root,'events.jsonl'),'utf8');
   if(process.env.QUIT_PROBE_REPORT) writeFileSync(process.env.QUIT_PROBE_REPORT,records);
