@@ -20,7 +20,10 @@ it.each([
   ["steer", "$alpha $beta $alpha"], ["followUp", "$alpha $beta $alpha"],
   ["steer", "$alpha，继续 $beta. $alpha!"], ["followUp", "$alpha，继续 $beta. $alpha!"],
 ] as const)("consumes identical %s users independently with current files and their own images: %s", async (behavior, task) => {
-  const h = await lifecycleFixture();
+  const h = await lifecycleFixture({ extraBefore: pi => {
+    pi.on("message_end", event => event.message.role === "user"
+      ? { message: { ...event.message, timestamp: event.message.timestamp + 1 } } : undefined);
+  } });
   const entered = deferred(), release = deferred();
   h.faux.setResponses([async ctx => { entered.resolve(); await release.promise; return h.respond(ctx); }, h.respond]);
   const read = vi.mocked(fs.readFile); read.mockClear();
@@ -253,4 +256,135 @@ it("does not repair a missing display when resuming a persisted snapshot", async
   await h.session.prompt("Continue");
   expect(JSON.stringify(h.calls.at(-1))).toContain("ALPHA_BODY"); expect(h.displays()).toHaveLength(0);
   expect(h.errors).toEqual([]);
+});
+
+it("preserves skill snapshots when an earlier message_end handler clones the user", async () => {
+  const h = await lifecycleFixture({ extraBefore: pi => {
+    pi.on("message_end", event => event.message.role === "user" ? { message: { ...event.message } } : undefined);
+  } });
+  const image = { type: "image" as const, data: "AA==", mimeType: "image/png" };
+  await h.session.prompt("$alpha", { images: [image] });
+  const user = h.calls[0].find(message => message.role === "user")!;
+  const snapshot = decodeSnapshot(textOf(user));
+  expect(snapshot?.skills[0].body).toContain("ALPHA_BODY");
+  expect(decodeSnapshot(textOf(h.users()[0].message))).toEqual(snapshot);
+  expect(user.content).toContainEqual(image);
+  expect(h.plain()).toContain("[skill] alpha"); expect(h.rebuild()).toContain("[skill] alpha");
+  h.sm.branch(h.displays()[0].id);
+  expect(h.rebuild()).not.toContain("[skill] alpha");
+  expect(h.errors).toEqual([]);
+});
+
+it.each(["$alpha changed", "$beta $alpha changed", "plain replacement"])("uses the finalized task and cards after replacement with %s", async task => {
+  const h = await lifecycleFixture({ extraBefore: pi => {
+    pi.on("message_end", event => event.message.role === "user" ? { message: { ...event.message, content: task } } : undefined);
+  } });
+  const read = vi.mocked(fs.readFile); read.mockClear();
+  await h.session.prompt("$alpha");
+  const text = textOf(h.calls[0].find(message => message.role === "user")!);
+  const snapshot = decodeSnapshot(text);
+  if (task.startsWith("plain")) expect(text).toBe(task);
+  else {
+    expect(snapshot?.task).toBe(task);
+    expect(snapshot?.skills.map(skill => skill.name)).toEqual(task.includes("$beta") ? ["beta", "alpha"] : ["alpha"]);
+  }
+  expect(textOf(h.users()[0].message)).toBe(text);
+  expect(read.mock.calls.filter(([path]) => path === h.skills[0].filePath)).toHaveLength(1);
+  for (const rendered of [h.plain(), h.rebuild()]) {
+    expect(rendered).toContain(task.startsWith("plain") ? task : "changed");
+    expect(rendered.includes("[skill] alpha")).toBe(!task.startsWith("plain"));
+    expect(rendered.includes("[skill] beta")).toBe(task.includes("$beta"));
+  }
+  await h.reload();
+  expect(h.rebuild().includes("[skill] beta")).toBe(task.includes("$beta"));
+  expect(h.errors).toEqual([]);
+});
+
+it("discards unfinished starts on agent end and ignores late reads after reload", async () => {
+  const h = await lifecycleFixture();
+  const runner = h.session.extensionRunner!;
+  await runner.emit({ type: "message_start", message: { role: "user", content: "$alpha", timestamp: 1 } });
+  const display = h.displays()[0];
+  expect(runner.getEntryRenderer(displayType)!(display, { expanded: false }, {} as any)).toBeDefined();
+  await runner.emit({ type: "agent_end", messages: [] });
+  expect(runner.getEntryRenderer(displayType)!(display, { expanded: false }, {} as any)).toBeUndefined();
+  expect(await runner.emitMessageEnd({ type: "message_end", message: { role: "user", content: "$alpha", timestamp: 1 } })).toBeUndefined();
+  const entered = deferred(), release = deferred();
+  const read = vi.mocked(fs.readFile), original = (await vi.importActual<typeof fs>("node:fs/promises")).readFile;
+  read.mockImplementation((async (...args: Parameters<typeof fs.readFile>) => {
+    if (args[0] === h.skills[0].filePath) { entered.resolve(); await release.promise; }
+    return original(...args);
+  }) as typeof fs.readFile);
+  const start = runner.emit({ type: "message_start", message: { role: "user", content: "$alpha $beta", timestamp: 2 } });
+  await entered.promise;
+  try { await h.reload(); } finally { release.resolve(); }
+  await start;
+  expect(h.displays()).toHaveLength(1);
+  expect(h.rebuild()).not.toContain("[skill] alpha");
+  await h.session.prompt("$beta");
+  expect(decodeSnapshot(textOf(h.calls[0].find(message => message.role === "user")!))?.skills.map(skill => skill.name)).toEqual(["beta"]);
+  expect(h.errors).toEqual([]);
+});
+
+it("shows the replacement when an earlier handler replaces a pasted snapshot", async () => {
+  let replace = false;
+  const h = await lifecycleFixture({ extraBefore: pi => {
+    pi.on("message_end", event => replace && event.message.role === "user" ? { message: { ...event.message, content: "plain replacement" } } : undefined);
+  } });
+  await h.session.prompt("$alpha");
+  const snapshot = textOf(h.users()[0].message);
+  replace = true;
+  await h.session.prompt(snapshot);
+  expect(textOf(h.users()[1].message)).toBe("plain replacement");
+  expect(h.plain()).toContain("plain replacement");
+});
+
+it("invalidates an already rendered user when message_end changes its task", async () => {
+  let render = () => "";
+  const h = await lifecycleFixture({ extraBefore: pi => {
+    pi.on("message_end", event => {
+      if (event.message.role !== "user") return;
+      expect(render()).toContain("alpha");
+      return { message: { ...event.message, content: "$beta changed" } };
+    });
+  } });
+  render = h.plain;
+  await h.session.prompt("$alpha");
+  expect(h.plain()).toContain("changed");
+  expect(h.plain()).not.toContain("alpha");
+  expect(h.errors).toEqual([]);
+});
+
+it("activates references introduced at message_end and preserves replacement images", async () => {
+  const image = { type: "image" as const, data: "BB==", mimeType: "image/png" };
+  const h = await lifecycleFixture({ extraBefore: pi => {
+    pi.on("message_end", event => event.message.role === "user" ? { message: { ...event.message,
+      content: [{ type: "text" as const, text: "$beta introduced" }, image] } } : undefined);
+  } });
+  await h.session.prompt("plain task");
+  const user = h.calls[0].find(message => message.role === "user")!;
+  expect(decodeSnapshot(textOf(user))?.task).toBe("$beta introduced");
+  expect(user.content).toContainEqual(image);
+  expect(textOf(h.users()[0].message)).toBe(textOf(user));
+  expect(h.displays()).toHaveLength(1);
+  for (const rendered of [h.plain(), h.rebuild()]) {
+    expect(rendered).toContain("[skill] beta"); expect(rendered).toContain("introduced");
+    expect(rendered).not.toContain("plain task");
+  }
+  expect(h.errors).toEqual([]);
+});
+
+it("does not display activation after finalizing a newly introduced reference fails", async () => {
+  const h = await lifecycleFixture({ extraBefore: pi => {
+    pi.on("message_end", event => event.message.role === "user" ? { message: { ...event.message, content: "$beta" } } : undefined);
+  } });
+  const append = vi.spyOn(h.sm, "appendCustomEntry").mockImplementationOnce(() => { throw new Error("Display append failed"); });
+  try {
+    await h.session.prompt("plain task");
+    expect(textOf(h.users()[0].message)).toBe("$beta");
+    expect(textOf(h.calls[0].find(message => message.role === "user")!)).toBe("$beta");
+    expect(h.plain()).toContain("$beta");
+    expect(h.plain()).not.toContain("\u{f01a7}");
+    expect(h.errors).toEqual(["Display append failed"]);
+  } finally { append.mockRestore(); }
 });

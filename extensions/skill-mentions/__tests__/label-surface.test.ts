@@ -160,3 +160,27 @@ it.each(cases)("keeps completion below projected content and groups completion u
   editor.handleInput("\x1b[45;5u"); expect(editor.getText()).toBe("abc $alpha $beta");
   editor.handleInput("\x1b[45;5u"); expect(editor.getText()).toBe("abc $alpha $b");
 });
+
+it.each(cases)("matches a fresh render after unrendered edits and coordinate input in $host/$icon", ({ host, icon }) => {
+  for (const edit of ["insert", "set", "type", "remove", "restore"]) for (const key of ["\x1b[A", "\x1b[B", "\x1b[5~", "\x1b[6~", "mouse"]) {
+    const actual = fixture(host, icon).editor, control = fixture(host, icon).editor;
+    for (const editor of [actual, control]) {
+      editor.setText("$alpha\nabc"); editor.render(12);
+      if (edit === "insert") editor.insertTextAtCursor("\nxyz");
+      if (edit === "set") editor.setText("123\n$alpha\nxyz\nmore");
+      if (edit === "type") { editor.handleInput("\x1b\r"); editor.handleInput("xyz"); }
+      if (edit === "remove" || edit === "restore") {
+        editor.setText("$alpha"); editor.render(12); editor.handleInput("\x7f");
+        if (edit === "restore") { editor.render(12); editor.handleInput("\x1b[45;5u"); }
+      }
+    }
+    control.render(12);
+    for (const editor of [actual, control]) {
+      if (key === "mouse") editor.handleMouse({ type: "click", button: "left", x: 3, y: 2, width: 12, height: 8 } as TuiMouseEvent);
+      else editor.handleInput(key);
+    }
+    expect(actual.getCursor(), `${edit} / ${key}`).toEqual(control.getCursor());
+    actual.handleInput("!"); control.handleInput("!");
+    expect(actual.getText(), `${edit} / ${key}`).toBe(control.getText());
+  }
+});

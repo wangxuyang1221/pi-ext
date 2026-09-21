@@ -1,5 +1,6 @@
 import { CustomEditor, getAgentDir, SkillInvocationMessageComponent, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { join } from "node:path";
+import { readFile } from "node:fs/promises";
 import type { UserMessage } from "@earendil-works/pi-ai";
 import { Container, type TUI } from "@earendil-works/pi-tui";
 import { captureLabelDraft, createLabelEditor, releaseLabelEditor } from "./label-editor.js";
@@ -21,12 +22,12 @@ export function userText(message: UserMessage): string {
 
 /** Register inline skill completion, snapshots, and history rendering. */
 export default function skillMentions(pi: ExtensionAPI, configuration: { preferencePath?: string } = {}): void {
-  let pending = new WeakMap<object, SkillSnapshot>();
-  const pendingIds = new Set<string>();
+  // Pi 0.86 awaits each user start/end pair before consuming the next user.
+  let pending: { task: string; snapshot?: SkillSnapshot; reads: Map<string, Promise<string>> } | undefined;
   let context: ExtensionContext | undefined;
   let stopped = false;
   let indexedLeaf: string | null | undefined;
-  let visibleIds = new Set<string>();
+  let visibleSnapshots = new Map<string, SkillSnapshot>();
   let icon: IconMode = "cube";
   const preferencePath = configuration.preferencePath ?? join(getAgentDir(), "skill-mentions.json");
   const editors = new Map<TUI, CustomEditor>();
@@ -52,23 +53,24 @@ export default function skillMentions(pi: ExtensionAPI, configuration: { prefere
     },
   });
 
-  function visible(requestId: string): boolean {
-    if (pendingIds.has(requestId)) return true;
-    if (!context || context.mode !== "tui") return false;
+  function visibleSnapshot(requestId: string): SkillSnapshot | undefined {
+    if (pending?.snapshot?.requestId === requestId) return pending.snapshot;
+    if (!context || context.mode !== "tui") return;
     const leaf = context.sessionManager.getLeafId();
     if (leaf !== indexedLeaf) {
-      visibleIds = new Set();
+      visibleSnapshots = new Map();
       for (const entry of context.sessionManager.buildContextEntries()) {
         if (entry.type !== "message" || entry.message.role !== "user") continue;
         const snapshot = decodeSnapshot(userText(entry.message));
-        if (snapshot) visibleIds.add(snapshot.requestId);
+        if (snapshot) visibleSnapshots.set(snapshot.requestId, snapshot);
       }
       indexedLeaf = leaf;
     }
-    return visibleIds.has(requestId);
+    return visibleSnapshots.get(requestId);
   }
 
   pi.on("session_start", (_event, ctx) => {
+    clearPending();
     stopped = false;
     context = ctx;
     indexedLeaf = undefined;
@@ -108,41 +110,83 @@ export default function skillMentions(pi: ExtensionAPI, configuration: { prefere
       releaseLabelEditor(editor);
     }
     editors.clear();
-    pending = new WeakMap(); pendingIds.clear(); visibleIds.clear(); context = undefined; indexedLeaf = undefined;
+    clearPending(); visibleSnapshots.clear(); context = undefined; indexedLeaf = undefined;
   });
-  pi.on("message_start", async (event, ctx) => {
-    if (ctx.mode !== "tui" || event.message.role !== "user" || pending.has(event.message)) return;
-    context = ctx;
-    const snapshot = await loadSnapshot(userText(event.message), pi.getCommands());
-    if (!snapshot) return;
-    pending.set(event.message, snapshot);
-    pendingIds.add(snapshot.requestId);
-    // Each user component captures its request's transformer function at construction.
-    pi.registerMarkdownTransformer((markdown, options) => options.messageType === "user"
-      ? visualize(decodeSnapshot(markdown) ?? snapshot) : markdown);
-    pi.appendEntry(displayType, snapshot);
-  });
-  pi.on("message_end", (event, ctx) => {
-    if (ctx.mode !== "tui" || event.message.role !== "user") return;
-    const snapshot = pending.get(event.message);
+  const clearPending = () => {
+    if (pending) { pending.reads.clear(); pending.snapshot = undefined; }
+    pending = undefined;
     pi.registerMarkdownTransformer(ordinaryMarkdown);
-    if (!snapshot) return;
-    pending.delete(event.message);
-    pendingIds.delete(snapshot.requestId);
-    const images = typeof event.message.content === "string" ? [] : event.message.content.filter(block => block.type === "image");
-    return { message: { ...event.message, content: [{ type: "text" as const, text: encodeSnapshot(snapshot) }, ...images] } };
+  };
+  const readFor = (request: NonNullable<typeof pending>) => (path: string) => {
+    if (pending !== request || stopped) return Promise.reject(new Error("Skill request is no longer active"));
+    let read = request.reads.get(path);
+    if (!read) { read = readFile(path, "utf8"); request.reads.set(path, read); }
+    return read;
+  };
+  pi.on("agent_end", clearPending);
+  pi.on("message_start", async (event, ctx) => {
+    if (ctx.mode !== "tui" || event.message.role !== "user") return;
+    clearPending();
+    context = ctx;
+    const request: NonNullable<typeof pending> = { task: userText(event.message), reads: new Map() };
+    const initialTask = request.task;
+    pending = request;
+    const snapshot = await loadSnapshot(request.task, pi.getCommands(), readFor(request));
+    if (pending !== request || stopped) { request.reads.clear(); return; }
+    request.snapshot = snapshot;
+    // The component captures this request, whose finalized task can differ after message_end.
+    pi.registerMarkdownTransformer((markdown, options) => {
+      if (options.messageType !== "user") return markdown;
+      const current = request.snapshot ?? decodeSnapshot(request.task);
+      return current ? visualize(current) : request.task === initialTask ? markdown : request.task;
+    });
+    if (snapshot) pi.appendEntry(displayType, snapshot);
+  });
+  pi.on("message_end", async (event, ctx) => {
+    if (ctx.mode !== "tui" || event.message.role !== "user") return;
+    const request = pending;
+    pi.registerMarkdownTransformer(ordinaryMarkdown);
+    if (!request) return;
+    try {
+      const task = userText(event.message), original = request.snapshot;
+      if (task !== request.task) {
+        const revised = await loadSnapshot(task, pi.getCommands(), readFor(request));
+        if (pending !== request || stopped) return;
+        request.task = task;
+        request.snapshot = revised && { ...revised, requestId: original?.requestId ?? revised.requestId };
+        for (const tui of editors.keys()) { tui.invalidate(); tui.requestRender(); }
+      }
+      const snapshot = request.snapshot;
+      if (!snapshot) return;
+      // Existing cards resolve the authoritative user snapshot by requestId at render time.
+      // A reference introduced only at message_end has no earlier card to reuse.
+      if (!original) pi.appendEntry(displayType, snapshot);
+      const images = typeof event.message.content === "string" ? [] : event.message.content.filter(block => block.type === "image");
+      return { message: { ...event.message, content: [{ type: "text" as const, text: encodeSnapshot(snapshot) }, ...images] } };
+    } catch (error) {
+      request.task = userText(event.message);
+      request.snapshot = undefined;
+      for (const tui of editors.keys()) { tui.invalidate(); tui.requestRender(); }
+      throw error;
+    } finally {
+      request.reads.clear();
+      if (pending === request) pending = undefined;
+    }
   });
   pi.registerMarkdownTransformer(ordinaryMarkdown);
   pi.registerEntryRenderer(displayType, (entry, options) => {
-    if (stopped || !isSkillSnapshot(entry.data) || (context && !visible(entry.data.requestId))) return undefined;
-    const snapshot = entry.data;
+    if (stopped || !isSkillSnapshot(entry.data) || (context && !visibleSnapshot(entry.data.requestId))) return undefined;
+    const requestId = entry.data.requestId;
+    let renderedSnapshot: SkillSnapshot | undefined;
     let group: Container | undefined;
     // /reload constructs transcript components before session_start binds context.
     // Return a component now, but decide visibility only when the host renders it.
     return {
       render(width) {
-        if (!visible(snapshot.requestId)) return [];
-        if (!group) {
+        const snapshot = visibleSnapshot(requestId);
+        if (!snapshot) return [];
+        if (!group || snapshot !== renderedSnapshot) {
+          renderedSnapshot = snapshot;
           group = new Container();
           for (const skill of snapshot.skills) {
             const card = new SkillInvocationMessageComponent({ name: skill.name, location: skill.location, content: skill.body, userMessage: "" });

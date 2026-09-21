@@ -272,6 +272,26 @@ try:
         screens[f"label-{icon}"] = view()
     checks.append("both icons retain all three prototype spaces, truecolor normal weight and inherited background in input/body; whole Delete/Backspace, configured undo and fullscreen space hit targets")
 
+    paste("$alpha")
+    send("\x7f")
+    send("a")
+    if mode.endswith("fullscreen"):
+        wait(lambda: any(row.strip().removeprefix("›").strip() == "a" for row in screen.display), "draft rendered before mouse positioning")
+        draft_row = max(index for index, row in enumerate(screen.display) if row.strip().removeprefix("›").strip() == "a")
+        draft_column = screen.display[draft_row].index("a") + 2
+        send(f"\x1b[<0;{draft_column};{draft_row + 1}M\x1b[<0;{draft_column};{draft_row + 1}m")
+    else:
+        send("\x0e")  # No-op historyNext must also split typing undo groups.
+    send("b")
+    assert editor() == "ab"
+    for expected in ["a", "", "$alpha"]:
+        send("\x1b[19~")
+        assert editor() == expected, editor()
+    assert "⌘ alpha" in view(), view()
+    screens["undo-after-click-or-history"] = view()
+    send("\x03")
+    checks.append("consecutive undo after same-position fullscreen click or no-op historyNext restores a, empty draft and the complete alpha label")
+
     paste("$" + long_name)
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 50, 16, 0, 0))
     screen.resize(50, 16)

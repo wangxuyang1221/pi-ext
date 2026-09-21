@@ -15,7 +15,7 @@ it.each(["assistant", "toolResult", "custom", "system"])("ignores %s lifecycle m
   const h = registration();
   const event = { message: { role, content: "$alpha $alpha，继续 $alpha.", timestamp: 1 } };
   await h.handlers.get("message_start")!(event, h.ctx);
-  expect(h.handlers.get("message_end")!(event, h.ctx)).toBeUndefined();
+  expect(await h.handlers.get("message_end")!(event, h.ctx)).toBeUndefined();
   expect(h.getCommands).not.toHaveBeenCalled(); expect(h.appendEntry).not.toHaveBeenCalled();
 });
 
@@ -30,7 +30,7 @@ it("registers only layered completion and leaves input and queue handling to Pi"
   expect(h.handlers.has("input")).toBe(false);
   const event = { message: { role: "user", content: "$unknown" } };
   await h.handlers.get("message_start")!(event, h.ctx);
-  expect(h.handlers.get("message_end")!(event, h.ctx)).toBeUndefined();
+  expect(await h.handlers.get("message_end")!(event, h.ctx)).toBeUndefined();
   expect(h.getCommands).toHaveBeenCalledTimes(1);
   expect(h.appendEntry).not.toHaveBeenCalled();
 });

@@ -93,7 +93,7 @@ export function createLabelEditor(base: CustomEditor, options: LabelEditorOption
     if (disposed) return;
     changed = true; changeSerial++;
     if (!batch) {
-      manualScroll = false;
+      manualScroll = false; preferredColumn = undefined;
       if (forceCompletion) recordCompletion();
       resolve(true); emit();
     }
@@ -113,7 +113,7 @@ export function createLabelEditor(base: CustomEditor, options: LabelEditorOption
     const before = base.getText(), unit = capture();
     run();
     if (base.getText() !== before || force) units.push(unit);
-    word = false; historyIndex = -1; manualScroll = false; resolve(explicit);
+    word = false; historyIndex = -1; manualScroll = false; preferredColumn = undefined; resolve(explicit);
   });
   let inPaste = false, pasteBuffer = "";
   const rememberPaste = (text: string, position: number) => {
@@ -140,6 +140,25 @@ export function createLabelEditor(base: CustomEditor, options: LabelEditorOption
         previous.some(old => old.start === value.start && old.end === value.end && old.name === value.name));
     }
   };
+  let lastWidth = options.tui.terminal.columns;
+  const ensureLayoutCurrent = (width = lastWidth) => {
+    refreshNames();
+    lastWidth = width;
+    if (!labels.length) { visual = []; layoutLabelsIdentity = undefined; layoutKey = ""; scroll = 0; visibleRows = 0; return; }
+    padding = Math.min(base.getPaddingX(), Math.max(0, Math.floor((width - 1) / 2)));
+    const contentWidth = Math.max(1, width - 2 * padding), layoutWidth = Math.max(1, contentWidth - (padding ? 0 : 1));
+    const raw = base.getText(), key = `${layoutWidth}:${options.icon()}:${raw}`;
+    if (key !== layoutKey || labels !== layoutLabelsIdentity) {
+      visual = layoutLabels(raw, labels, options.icon(), layoutWidth); layoutKey = key; layoutLabelsIdentity = labels;
+    }
+    const point = projectedCursor(visual, offset()), maxRows = Math.max(5, Math.floor(options.tui.terminal.rows * 0.3));
+    if (!manualScroll) {
+      if (point.row < scroll) scroll = point.row;
+      else if (point.row >= scroll + maxRows) scroll = point.row - maxRows + 1;
+    }
+    scroll = Math.max(0, Math.min(scroll, visual.length - maxRows));
+    visibleRows = Math.min(maxRows, visual.length - scroll);
+  };
   const snap = (target: number, direction = 0) => {
     const ref = labels.find(value => value.start < target && target < value.end);
     return ref ? direction < 0 ? ref.start : direction > 0 ? ref.end : target - ref.start < (ref.end - ref.start) / 2 ? ref.start : ref.end : target;
@@ -165,21 +184,10 @@ export function createLabelEditor(base: CustomEditor, options: LabelEditorOption
     render: (width: number) => {
       if (width <= 0) return [];
       if (disposed) return base.render(width);
-      refreshNames();
-      if (!labels.length) { visual = []; layoutLabelsIdentity = undefined; layoutKey = ""; return base.render(width); }
-      padding = Math.min(base.getPaddingX(), Math.max(0, Math.floor((width - 1) / 2)));
-      const contentWidth = Math.max(1, width - 2 * padding), layoutWidth = Math.max(1, contentWidth - (padding ? 0 : 1));
-      const raw = base.getText(), key = `${layoutWidth}:${options.icon()}:${raw}`;
-      if (key !== layoutKey || labels !== layoutLabelsIdentity) {
-        visual = layoutLabels(raw, labels, options.icon(), layoutWidth); layoutKey = key; layoutLabelsIdentity = labels;
-      }
-      const point = projectedCursor(visual, offset()), maxRows = Math.max(5, Math.floor(options.tui.terminal.rows * 0.3));
-      if (!manualScroll) {
-        if (point.row < scroll) scroll = point.row;
-        else if (point.row >= scroll + maxRows) scroll = point.row - maxRows + 1;
-      }
-      scroll = Math.max(0, Math.min(scroll, visual.length - maxRows));
-      const window = visual.slice(scroll, scroll + maxRows); visibleRows = window.length;
+      ensureLayoutCurrent(width);
+      if (!visual.length) return base.render(width);
+      const point = projectedCursor(visual, offset());
+      const window = visual.slice(scroll, scroll + visibleRows);
       const content = window.map((line, index) => {
         const text = paintEditorLine(line, scroll + index === point.row ? offset() : undefined, base.focused);
         return " ".repeat(padding) + text + " ".repeat(Math.max(0, width - padding - visibleWidth(text)));
@@ -191,7 +199,18 @@ export function createLabelEditor(base: CustomEditor, options: LabelEditorOption
         [base.borderColor("─".repeat(width)), ...content, base.borderColor("─".repeat(width)), ...surface.menu];
     },
     handleMouse: (event: TuiMouseEvent) => {
-      if (!visual.length || !labels.length) return base.handleMouse(event);
+      if (disposed) return base.handleMouse(event);
+      ensureLayoutCurrent(event.width);
+      if (!visual.length || !labels.length) {
+        if (event.type === "click" && event.button === "left") {
+          const surface = sourceSurface(base, event.width, options.tui.terminal.rows);
+          if (event.y > 0 && event.y <= surface.nativeBodyRows) {
+            word = false; historyIndex = -1; preferredColumn = undefined;
+          }
+        }
+        return base.handleMouse(event);
+      }
+      nativeBodyRows = sourceSurface(base, event.width, options.tui.terminal.rows).nativeBodyRows;
       if (event.y >= visibleRows + 2) return base.handleMouse({ ...event, y: event.y - visibleRows + nativeBodyRows });
       if (event.type === "wheel" && scrollBy(event.wheelDelta ?? 0)) return { handled: true, render: true };
       if (event.type !== "click" || event.button !== "left") return undefined;
@@ -255,7 +274,8 @@ export function createLabelEditor(base: CustomEditor, options: LabelEditorOption
         const before = base.getText(), position = offset(), unit = capture();
         const showingAutocomplete = base.isShowingAutocomplete();
         const vertical = matches(data, "cursorUp") || matches(data, "pageUp") ? -1 : matches(data, "cursorDown") || matches(data, "pageDown") ? 1 : 0;
-        const point = visual.length ? projectedCursor(visual, position) : undefined;
+        if (vertical) ensureLayoutCurrent();
+        const point = vertical && visual.length ? projectedCursor(visual, position) : undefined;
         const paging = matches(data, "pageUp") || matches(data, "pageDown");
         if (!paging) manualScroll = false;
         if (!vertical) preferredColumn = undefined;
@@ -352,7 +372,7 @@ export function createLabelEditor(base: CustomEditor, options: LabelEditorOption
           word = typingWord; historyIndex = -1;
           resolve(pasting || (!typingWord && !backward && !forward));
         } else if (offset() !== position || backward || forward ||
-          ["cursorLeft", "cursorRight", "cursorUp", "cursorDown", "cursorLineStart", "cursorLineEnd", "cursorWordLeft", "cursorWordRight", "pageUp", "pageDown"].some(name => matches(data, name))) word = false;
+          ["cursorLeft", "cursorRight", "cursorUp", "cursorDown", "cursorLineStart", "cursorLineEnd", "cursorWordLeft", "cursorWordRight", "pageUp", "pageDown", "historyPrevious", "historyNext"].some(name => matches(data, name))) word = false;
       });
       if (remainder) methods.handleInput(remainder);
     },

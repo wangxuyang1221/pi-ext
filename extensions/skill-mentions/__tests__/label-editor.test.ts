@@ -1,14 +1,15 @@
-import { beforeAll, expect, it } from "vitest";
+import { beforeAll, expect, it, vi } from "vitest";
 import { CustomEditor, initTheme, type KeybindingsManager } from "@earendil-works/pi-coding-agent";
 import { getKeybindings, stripTerminalSequences, visibleWidth, type TUI } from "@earendil-works/pi-tui";
+import * as labels from "../src/labels.js";
 import { captureLabelDraft, createLabelEditor, releaseLabelEditor } from "../src/label-editor.js";
 
 beforeAll(() => initTheme("dark", false));
-function fixture(names: ReadonlySet<string> = new Set(["alpha", "𠮷"])) {
+function fixture(names: ReadonlySet<string> = new Set(["alpha", "𠮷"]), icon: () => labels.IconMode = () => "cube") {
   const tui = { terminal: { rows: 40, columns: 80 }, requestRender() {} } as unknown as TUI;
   const same = (value: string) => value;
   const base = new CustomEditor(tui, { borderColor: same, selectList: { selectedPrefix: same, selectedText: same, description: same, scrollInfo: same, noMatch: same } }, { matches: () => false } as unknown as KeybindingsManager);
-  const editor = createLabelEditor(base, { names: () => names, icon: () => "cube", tui });
+  const editor = createLabelEditor(base, { names: () => names, icon, tui });
   return { base, editor };
 }
 const undo = "\x1b[45;5u";
@@ -211,4 +212,70 @@ it("allows synchronous onChange reentry after the native group is complete", () 
   editor.onChange = undefined;
   editor.handleInput(undo); expect(editor.getText()).toBe("");
   editor.handleInput(undo); expect(editor.getText()).toBe("$alpha");
+});
+
+it("keeps logical undo groups synchronized after a same-position mouse click", () => {
+  const { editor } = fixture(); editor.setText("$alpha"); editor.render(80);
+  editor.handleInput("\x7f"); editor.handleInput("a"); editor.render(80);
+  editor.handleMouse({ type: "click", button: "left", x: 1, y: 1, width: 80, height: 3, screenX: 1, screenY: 1, shift: false, alt: false, ctrl: false });
+  expect(editor.getCursor()).toEqual({ line: 0, col: 1 });
+  editor.handleInput("b");
+  for (const text of ["a", "", "$alpha"]) {
+    editor.handleInput(undo); expect(editor.getText()).toBe(text);
+    const frame = editor.render(80).map(stripTerminalSequences).join("\n");
+    if (text === "$alpha") expect(frame).toContain(" \u{f01a7} alpha ");
+    else expect(frame).not.toContain("alpha");
+  }
+});
+
+it.each(["historyPrevious", "historyNext"])("breaks typing coalescing after a no-op %s", name => {
+  const bindings = getKeybindings(), previous = bindings.getUserBindings();
+  bindings.setUserBindings({ ...previous, [`tui.editor.${name}`]: "ctrl+o" });
+  try {
+    const { editor } = fixture(); editor.setText("$alpha"); editor.handleInput("\x7f");
+    editor.handleInput("a"); editor.handleInput("\x0f"); editor.handleInput("b");
+    for (const text of ["a", "", "$alpha"]) {
+      editor.handleInput(undo); expect(editor.getText()).toBe(text);
+      expect(editor.render(80).map(stripTerminalSequences).join("\n").includes(" \u{f01a7} alpha ")).toBe(text === "$alpha");
+    }
+  } finally { bindings.setUserBindings(previous); }
+});
+
+it.each(["border", "wheel", "right"])("preserves typing coalescing for a %s mouse event", kind => {
+  const { editor } = fixture(); editor.setText("$alpha"); editor.handleInput("\x7f");
+  editor.handleInput("a"); editor.render(80);
+  editor.handleMouse({ type: kind === "wheel" ? "wheel" : "click", button: kind === "right" ? "right" : "left", x: 1,
+    y: kind === "border" ? 0 : 1, width: 80, height: 3, wheelDelta: 1, screenX: 1, screenY: 1, shift: false, alt: false, ctrl: false });
+  editor.handleInput("b"); editor.handleInput(undo); expect(editor.getText()).toBe("");
+  editor.handleInput(undo); expect(editor.getText()).toBe("$alpha");
+});
+
+it("uses current layout for vertical movement before the next render", () => {
+  const { editor } = fixture(); editor.setText("$alpha\nabc"); editor.render(80);
+  editor.insertTextAtCursor("\nxyz");
+  editor.handleInput("\x1b[A");
+  expect(editor.getCursor()).toEqual({ line: 1, col: 3 });
+  editor.handleInput("!"); expect(editor.getText()).toBe("$alpha\nabc!\nxyz");
+});
+
+it("shares cached layouts between navigation, mouse input and render and refreshes dependencies", () => {
+  const layout = vi.spyOn(labels, "layoutLabels");
+  const names = new Set(["alpha"]); let icon: labels.IconMode = "cube";
+  const { editor } = fixture(names, () => icon);
+  try {
+    editor.setText("$alpha\nabc"); editor.render(12); expect(layout).toHaveBeenCalledTimes(1);
+    for (let i = 0; i < 3; i++) { editor.handleInput("\x1b[A"); editor.handleInput("\x1b[B"); editor.render(12); }
+    expect(layout).toHaveBeenCalledTimes(1);
+    editor.insertTextAtCursor("\nxyz"); editor.handleInput("\x1b[A");
+    expect(layout).toHaveBeenCalledTimes(2); editor.render(12); expect(layout).toHaveBeenCalledTimes(2);
+    icon = "command"; editor.handleInput("\x1b[B"); expect(layout).toHaveBeenCalledTimes(3);
+    expect(layout.mock.calls.at(-1)?.[2]).toBe("command");
+    names.clear(); editor.handleInput("\x1b[A"); expect(layout).toHaveBeenCalledTimes(3);
+    expect(editor.render(12).join("\n")).not.toContain("⌘");
+    names.add("alpha"); editor.handleInput("\x1b[A"); expect(layout).toHaveBeenCalledTimes(4);
+    editor.handleMouse({ type: "click", button: "left", x: 1, y: 1, width: 8, height: 8,
+      screenX: 1, screenY: 1, shift: false, alt: false, ctrl: false });
+    expect(layout).toHaveBeenCalledTimes(5);
+    editor.render(8); expect(layout).toHaveBeenCalledTimes(5);
+  } finally { layout.mockRestore(); }
 });
