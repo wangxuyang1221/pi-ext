@@ -1,0 +1,23 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ✓ extensions/skill-mentions/__tests__/references.test.ts (170 tests) 41ms
+ ✓ extensions/skill-mentions/__tests__/package.test.ts (1 test) 2ms
+ ✓ extensions/skill-mentions/__tests__/protocol.test.ts (18 tests) 6ms
+ ✓ extensions/skill-mentions/__tests__/registration.test.ts (8 tests) 10ms
+ ✓ extensions/skill-mentions/__tests__/visibility.test.ts (2 tests) 18ms
+ ✓ extensions/skill-mentions/__tests__/loading.test.ts (15 tests) 31ms
+ ✓ extensions/skill-mentions/__tests__/label-api-boundaries.test.ts (7 tests) 66ms
+ ✓ extensions/skill-mentions/__tests__/flow.test.ts (14 tests) 313ms
+ ✓ extensions/skill-mentions/__tests__/history-editor.test.ts (9 tests) 360ms
+ ✓ extensions/skill-mentions/__tests__/lifecycle.test.ts (18 tests) 397ms
+ ✓ extensions/skill-mentions/__tests__/autocomplete.test.ts (25 tests) 4102ms
+   ✓ native: handwritten, pasted and selected punctuated references submit identically  663ms
+   ✓ native: never offers skills beside right punctuation or inside the name  408ms
+   ✓ codex: handwritten, pasted and selected punctuated references submit identically  651ms
+   ✓ codex: never offers skills beside right punctuation or inside the name  406ms
+
+ Test Files  11 passed (11)
+      Tests  287 passed (287)
+   Start at  08:43:31
+   Duration  5.16s (transform 289ms, setup 0ms, collect 6.78s, tests 5.35s, environment 1ms, prepare 723ms)
