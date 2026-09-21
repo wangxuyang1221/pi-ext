@@ -49,6 +49,33 @@ pi install "$PWD/node_modules/pi-ext"
 
 自定义快捷键继续由 Pi 的 `keybindings.json` 管理，修改后 `/reload`。原生 slash 补全和 `/skill:name` 入口保持不变。本功能只处理 TUI 普通 user 消息，包括其他扩展发送的 user，不处理 assistant/tool/custom 消息或 RPC/print。
 
+## Labels and icons
+
+输入框和成功加载快照的任务正文显示青色 `#8DF9FD` 标签：图标和完整名称为正常字重，继承宿主背景，不新增底色。原生 skill 卡片保持原样。
+
+- 菜单确认、完整粘贴和历史回填直接成标。手写名称须输入空白或允许的右侧标点后才成标，不因中途匹配完整名称而锁定。
+- 左右方向键跨过整个标签；Backspace/Delete 整体删除，一次撤销恢复。名称过长会完整换行，不使用省略号。单个标签高于输入视口时，编辑器分页键可逐页查看中间行，保持源光标在标签边界。默认 regular 为 PageUp/PageDown，fullscreen 使用 Ctrl+PageUp/Ctrl+PageDown（普通 PageUp/PageDown 留给宿主会话滚动）；fullscreen 中也可滚轮浏览。继续普通编辑时视口重新跟随光标。其他原生编辑、按词删除、kill ring 和外部编辑器仍使用原文。
+- 大粘贴保留 Pi 原生折叠，块内不单独画标签；提交按展开原文识别。标签与折叠块混排、删除和撤销保留完整内容。
+- 输入标签只表示已识别名称；正文只标识本次成功读取的快照。未知或不可读项仍是普通文字，无额外报错。
+- 普通模式保留终端自己的鼠标选区；Pi 0.86.0 的应用鼠标点击定位在 fullscreen 模式中生效，点击标签内部会吸附到边界。屏幕复制得到显示文字，不承诺自动还原 `$`；模型、队列、持久历史和外部编辑器没有图标或 ANSI。
+
+默认 cube 使用 Nerd Fonts 的 `md-cube_outline`（U+F01A7）。终端字体需要支持该字形；缺字时可手动切换为 command（`⌘`，U+2318）：
+
+```text
+/skill-label-icon command
+/skill-label-icon cube
+```
+
+命令同时更新输入和正文，保存到 Pi agent 目录的 `skill-mentions.json`，重启及 `/reload` 沿用。非法参数或保存失败显示英文错误；失败不改变当前模式、不声称保存成功。读取损坏或不支持的设置时报告错误并回退 cube。缺失设置文件表示使用默认值。扩展不检测字体、不安装字体、不修改终端设置，command 字形也需要字体支持。
+
+## Editing costs
+
+整体删除使用同步原生逐字动作，再按实际有效步骤分组撤销；不是异步待提交文本。大粘贴会随每个原生步骤复制 undo 快照。已有 10 MiB 粘贴旁 64 字符名称的实验观察到约 650 MiB 额外 heap；这是用户已接受的取舍，不是恒定内存实现。
+
+Pi 0.86.0 的 undo 栈没有应用级容量上限或淘汰。正常提交清栈，`setText` 清空草稿不清 undo；只有不可达快照可被 GC 释放，RSS 不保证立即下降。扩展在真实 reload 时释放旧 editor 的动作记录、布局、provider 包装和回调；仅通过当前 TUI 身份临时移交折叠原文，新 editor 消费后删除移交记录。移除扩展时也先通过公开 UI 边界交出展开原文。reload 不承诺跨 editor 保存旧 undo 栈，这是宿主原有边界。
+
+本轮常规布局、64/256/1024 名称及至多 1 MiB 粘贴的实测见标签报告。没有执行极端组合或破坏性 OOM 测试，不承诺任意输入规模安全。
+
 ## Snapshots and history
 
 `$research $research $adventure` 只加载两项，按首次出现顺序组织在同一 user 请求中，不拆成两轮任务，也不保证模型分别按顺序执行。图片与任务一起保留。已发现 skill 读取失败时静默退回普通文本，其他项照常加载，失败项不显示为已激活。
@@ -72,12 +99,16 @@ pnpm run package:check
 pnpm run skill-mentions:acceptance
 ```
 
-只复核本轮标点的原生/Codex真实入口并另存证据：
+复核标签的原生/Codex、regular/fullscreen 真实入口并另存证据：
 
 ```bash
-pnpm run skill-mentions:acceptance --evidence-prefix=skill-punctuation native codex
+pnpm run skill-mentions:acceptance --evidence-prefix=skill-label-product-final native codex native-fullscreen codex-fullscreen
+node --expose-gc extensions/skill-mentions/__tests__/label-performance.mjs
+node --expose-gc extensions/skill-mentions/__tests__/label-reload-memory.mjs
 ```
 
-本轮标点测试与真实入口结果见[标点验收报告](https://github.com/wangxuyang1221/pi-ext/blob/adventure/skill-mentions/adventure/evidence/skill-punctuation-implementation.md)。
+标签的来源、编辑、正文、偏好、性能及验证边界见[标签实现报告](https://github.com/wangxuyang1221/pi-ext/blob/adventure/skill-mentions/adventure/evidence/skill-label-product-implementation.md)。PTY 脚本不代表物理 IME 或完整扩展组合验收；后者归 #16。
+
+既有标点测试与真实入口结果见[标点验收报告](https://github.com/wangxuyang1221/pi-ext/blob/adventure/skill-mentions/adventure/evidence/skill-punctuation-implementation.md)。
 
 本功能的产物与 PTY 验证独立记录，不替代全仓 check 或 package:check。当前全仓既有缺失文档和 MCP prototype 会使这两项失败，不能据此宣称全仓通过。执行环境、逐项 Spec 证据及终端验证边界见 [安装验收报告](https://github.com/wangxuyang1221/pi-ext/blob/adventure/skill-mentions/adventure/evidence/skill-install-acceptance.md)。

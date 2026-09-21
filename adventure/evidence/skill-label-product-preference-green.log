@@ -1,0 +1,9 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ✓ extensions/skill-mentions/__tests__/label-preference.test.ts (3 tests) 3ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  11:04:50
+   Duration  182ms (transform 16ms, setup 0ms, collect 15ms, tests 3ms, environment 0ms, prepare 44ms)

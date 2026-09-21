@@ -1,0 +1,9 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ✓ extensions/skill-mentions/__tests__/label-editor.test.ts (15 tests) 26ms
+
+ Test Files  1 passed (1)
+      Tests  15 passed (15)
+   Start at  11:27:00
+   Duration  632ms (transform 58ms, setup 0ms, collect 420ms, tests 26ms, environment 0ms, prepare 54ms)

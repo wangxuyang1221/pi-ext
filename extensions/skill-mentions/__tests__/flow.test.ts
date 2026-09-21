@@ -139,7 +139,7 @@ it("silently keeps missing and unknown references while displaying only readable
   const task = "$beta $unknown $alpha"; await h.session.prompt(task);
   const snapshot = decodeSnapshot(textOf(h.calls[0].find(message => message.role === "user")!));
   expect(snapshot?.task).toBe(task); expect(snapshot?.skills.map(skill => skill.name)).toEqual(["alpha"]);
-  expect(h.plain()).not.toContain("[skill] beta"); expect(h.plain()).toContain(task);
+  expect(h.plain()).not.toContain("[skill] beta"); expect(h.plain()).toContain("$beta $unknown \u{f01a7}alpha");
   expect(h.errors).toEqual([]);
   await h.session.prompt("$beta $unknown");
   expect(h.calls[1].filter(message => message.role === "user").map(textOf).at(-1)).toBe("$beta $unknown");
@@ -162,7 +162,7 @@ it("uses native expanded cards and only transforms strictly recognized user enve
   const transformers = h.session.extensionRunner!.getMarkdownTransformers();
   for (const messageType of ["user", "assistant", "assistant-thinking"] as const) {
     const actual = transformers.reduce((value, transform) => transform(value, { messageType, isStreaming: false, availableWidth: 90 }), text);
-    expect(actual).toBe(messageType === "user" ? "$alpha" : text);
+    expect(stripTerminalSequences(actual)).toBe(messageType === "user" ? "\u{f01a7}alpha" : text);
   }
   const renderer = h.session.extensionRunner!.getEntryRenderer(displayType)!;
   const entry = h.sessionManager.getEntries().find(entry => entry.type === "custom" && entry.customType === displayType)!;
@@ -189,7 +189,7 @@ it("sends multiple snapshots and images in one user and displays native cards be
   expect(h.sequence).toEqual(["display", "user"]);
   const display = h.plain();
   expect(display).toContain("[skill] beta"); expect(display).toContain("[skill] alpha");
-  expect(display.indexOf("[skill] alpha")).toBeLessThan(display.indexOf(task));
+  expect(display.indexOf("[skill] alpha")).toBeLessThan(display.indexOf("用 \u{f01a7}beta \u{f01a7}alpha \u{f01a7}beta $unknown 调查"));
   expect(display).not.toContain("BETA_BODY"); expect(display).not.toContain("pi-ext/skill-mentions");
   const stored = h.sessionManager.getEntries().filter(entry => entry.type === "message" && entry.message.role === "user");
   expect(stored).toHaveLength(1);

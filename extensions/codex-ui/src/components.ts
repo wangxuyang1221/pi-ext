@@ -4,7 +4,6 @@ import {
   type Theme,
 } from "@earendil-works/pi-coding-agent";
 import {
-  stripTerminalSequences,
   visibleWidth,
   type Component,
   type EditorTheme,
@@ -86,15 +85,44 @@ export class CodexEditor extends CustomEditor {
     super(tui, editorTheme, keybindings, { paddingX: 1 });
   }
 
+  /** Decorate a source-coordinate editor projection without parsing rendered frame text. */
+  renderProjectedLines(width: number, content: string[], menu: string[], _hiddenAbove: number, _hiddenBelow: number): string[] {
+    const safeWidth = normalizeWidth(width);
+    if (safeWidth === 0) return [];
+    const theme = this.getTheme();
+    const body = [...content];
+    if (body.length) body[0] = addPrompt(body[0], theme, this.getText().length === 0);
+    const background = theme.getBgAnsi("selectedBg");
+    return [" ".repeat(safeWidth), ...body, " ".repeat(safeWidth), ...menu]
+      .map(line => paintBackground(line, safeWidth, background));
+  }
+
+  private sourceFrame(width: number): { lines: string[]; menuHeight: number } {
+    let menuHeight = 0;
+    if (this.isShowingAutocomplete()) {
+      const wide = this.getLines().reduce((size, line) => Math.max(size, visibleWidth(line)), width) + 2 * this.getPaddingX() + 1;
+      const unwrapped = super.render(wide);
+      const bodyRows = Math.min(this.getLines().length, Math.max(5, Math.floor(this.tui.terminal.rows * 0.3)));
+      menuHeight = unwrapped.length - bodyRows - 2;
+    }
+    return { lines: super.render(width), menuHeight };
+  }
+
+  /** Expose source/menu geometry for composed public editor projections. */
+  renderSourceSurface(width: number): { nativeBodyRows: number; menu: string[] } {
+    const { lines, menuHeight } = this.sourceFrame(width);
+    return { nativeBodyRows: lines.length - menuHeight - 2, menu: menuHeight ? lines.slice(-menuHeight) : [] };
+  }
+
   render(width: number): string[] {
     const safeWidth = normalizeWidth(width);
     if (safeWidth === 0) return [];
 
-    const lines = super.render(safeWidth);
+    const { lines, menuHeight } = this.sourceFrame(safeWidth);
     if (lines.length === 0) return [];
 
     const theme = this.getTheme();
-    const bottomBorderIndex = findBottomBorderIndex(lines, this.isShowingAutocomplete());
+    const bottomBorderIndex = lines.length - menuHeight - 1;
     const output = [...lines];
     output[0] = " ".repeat(safeWidth);
     if (bottomBorderIndex !== undefined) {
@@ -131,18 +159,4 @@ function addPrompt(line: string, theme: Theme, showPlaceholder: boolean): string
   const insertionPoint = resetIndex + FULL_RESET.length;
   prompted = `${prompted.slice(0, insertionPoint)}${placeholder}${prompted.slice(insertionPoint)}`;
   return prompted;
-}
-
-function findBottomBorderIndex(
-  lines: readonly string[],
-  autocompleteVisible: boolean,
-): number | undefined {
-  for (let index = lines.length - 1; index > 0; index -= 1) {
-    const plain = stripTerminalSequences(lines[index] ?? "");
-    if (/^─+$/u.test(plain) || /^─── [↑↓] \d+ more /u.test(plain)) {
-      return index;
-    }
-  }
-
-  return autocompleteVisible ? undefined : Math.max(1, lines.length - 1);
 }

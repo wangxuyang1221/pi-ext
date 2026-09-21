@@ -1,0 +1,49 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ extensions/skill-mentions/__tests__/label-editor.test.ts (18 tests | 1 failed) 30ms
+   ✓ deletes and restores an explicit label synchronously with one consumer change per action 8ms
+   ✓ does not lock a handwritten name before a delimiter but locks an explicit paste 5ms
+   ✓ keeps folded paste intact through delete, grouped undo and same-stack submission 1ms
+   ✓ restores repeated logical actions by identity rather than equal text 0ms
+   ✓ preserves native word typing coalescing around a grouped deletion 0ms
+   ✓ counts supplementary-plane native deletions without consuming an older undo 0ms
+   ✓ keeps history browsing as one native undo unit before deleting a label 1ms
+   ✓ does not coalesce word typing across a no-op cursor movement 0ms
+   ✓ honors configured native deletion and undo keys 0ms
+   ✓ does not turn an intercepted shortcut into a grouped deletion or duplicate its mutation 0ms
+   × does not coalesce typing across a failed native character jump 3ms
+     → expected '$alph' to be '' // Object.is equality
+   ✓ rebuilds the projected frame after rendering an empty-label draft and undoing 2ms
+   ✓ renders cyan source labels across narrow rows without polluting raw text 1ms
+   ✓ respects native action priority when configured character and word deletion keys overlap 0ms
+   ✓ groups the native backslash-enter workaround without consuming an earlier group 0ms
+   ✓ preserves the native kill ring around grouped deletions and consecutive undo 0ms
+   ✓ retains paste identities across backward renumbering, undo and draft handoff 1ms
+   ✓ allows synchronous onChange reentry after the native group is complete 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/label-editor.test.ts > does not coalesce typing across a failed native character jump
+AssertionError: expected '$alph' to be '' // Object.is equality
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[31m+ $alph[39m
+
+ ❯ extensions/skill-mentions/__tests__/label-editor.test.ts:118:54
+    116|   editor.handleInput("a"); editor.handleInput("\x1d"); editor.handleIn…
+    117|   expect(editor.getText()).toBe("ab"); editor.handleInput(undo); expec…
+    118|   editor.handleInput(undo); expect(editor.getText()).toBe("");
+       |                                                      ^
+    119|   editor.handleInput(undo); expect(editor.getText()).toBe("$alpha");
+    120| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 passed (18)
+   Start at  11:40:14
+   Duration  694ms (transform 46ms, setup 0ms, collect 466ms, tests 30ms, environment 0ms, prepare 60ms)

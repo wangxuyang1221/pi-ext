@@ -1,0 +1,1187 @@
+{
+  "mode": "native",
+  "pids": [
+    79115
+  ],
+  "exit": 0,
+  "checks": [
+    "installed CLI startup and selected extension commands",
+    "both icons use truecolor normal weight in input and successful body; native whole Delete/Backspace and configured undo"
+  ],
+  "selectedExtensions": [
+    "./extensions/skill-mentions/dist/index.js"
+  ],
+  "screens": {
+    "startup": "[Skill conflicts]\n  auto (user) /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究\n_𐐀-𝟠/SKILL.md\n    name contains invalid characters (must be lowercase a-z, 0-9, hyphens only)\n\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/workspace (adventure/skill-menti...\n0.0%/128k                                                                                                         faux-1\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+    "label-cube": "[Skill conflicts]\n  auto (user) /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究\n_𐐀-𝟠/SKILL.md\n    name contains invalid characters (must be lowercase a-z, 0-9, hyphens only)\n\n\n Skill label icon saved: cube\n\n\n [skill] alpha (f3 to expand)\n\n\n\n Use 󰆧alpha\n\n\n Fixture response\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/workspace (adventure/skill-menti...\n↑729 ↓4 W729 CH0.0% 1.1%/128k                                                                                     faux-1\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+    "label-command": "[Skill conflicts]\n  auto (user) /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究\n_𐐀-𝟠/SKILL.md\n    name contains invalid characters (must be lowercase a-z, 0-9, hyphens only)\n\n\n Skill label icon saved: cube\n\n\n [skill] alpha (f3 to expand)\n\n\n\n Use ⌘alpha\n\n\n Fixture response\n\n Skill label icon saved: command\n\n\n [skill] alpha (f3 to expand)\n\n\n\n Use ⌘alpha\n\n\n Fixture response\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/workspace (adventure/skill-menti...\n↑891 ↓8 R729 W891 CH69.2% 0.8%/128k                                                                               faux-1\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+    "label-narrow-resize": "ons/.tmp/skill-i\nnstall-BRqHQU/na\ntive/agent/skill\ns/研究\n_𐐀-𝟠/SKILL.md\n    name\ncontains invalid\ncharacters (must\nbe lowercase\na-z, 0-9,\nhyphens only)\n\n\n Skill label\n icon saved:\n cube\n\n\n [skill] alpha\n (f3 to expand)\n\n\n\n Use ⌘alpha\n\n\n Fixture\n response\n\n Skill label\n icon saved:\n command\n\n\n [skill] alpha\n (f3 to expand)\n\n\n\n Use ⌘alpha\n\n\n Fixture\n response\n\n────────────────\nabc ⌘alpha tail\n────────────────\n/Users/wangxu...\n↑891 ↓8 R729 ..."
+  },
+  "lastScreen": "[Skill conflicts]\n  auto (user) /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究\n_𐐀-𝟠/SKILL.md\n    name contains invalid characters (must be lowercase a-z, 0-9, hyphens only)\n\n\n Skill label icon saved: cube\n\n\n\n Use ⌘alpha\n\n\n Fixture response\n\n Skill label icon saved: command\n\n\n\n Use ⌘alpha\n\n\n Fixture response\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\nXabc $alpha tail\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/workspace (adventure/skill-menti...\n↑891 ↓8 R729 W891 CH69.2% 0.8%/128k                                                                               faux-1\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+  "installation": "Installing /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext...\nInstalled /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext\n",
+  "requests": 2,
+  "diskUsers": [],
+  "starts": [
+    {
+      "reason": "startup",
+      "mode": "tui",
+      "pid": 79115,
+      "tty": true,
+      "session": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/sessions/2026-09-21T04-42-41-100Z_01a0c245-fa4c-756e-a071-0e865046dd4d.jsonl"
+    }
+  ],
+  "shutdowns": [
+    "quit"
+  ],
+  "editorObservations": [
+    {
+      "text": "",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use ",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alpha",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use ",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alpha",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use ",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alpha",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use ",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alpha",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "abc $alpha tail",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "abc $alpha tail",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Xabc $alpha tail",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Xabc $alpha tail",
+      "commands": [
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/consumer/node_modules/.pnpm/pi-ext@file+..+pi-ext-0.1.0.tgz_@earendil-works+pi-ai@0.86.0_@modelcontextprotocol+sdk@_07d3cccb654a1d785af0547d614c8f55/node_modules/pi-ext/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "type": "input",
+      "text": "Use $alpha",
+      "source": "interactive"
+    },
+    {
+      "type": "input",
+      "text": "Use $alpha",
+      "source": "interactive"
+    }
+  ],
+  "providerUsers": [
+    [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "<pi-ext-skill-mentions version=\"1\">\n{\"namespace\":\"pi-ext/skill-mentions\",\"version\":1,\"requestId\":\"e0f337b2-a4c3-40c4-9406-babd7fc1de5d\",\"task\":\"Use $alpha\",\"skills\":[{\"name\":\"alpha\",\"location\":\"/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md\",\"baseDir\":\"/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha\",\"body\":\"References are relative to /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha.\\n\\nALPHA_VERSION_ONE\"}]}\n</pi-ext-skill-mentions>"
+          }
+        ],
+        "timestamp": 1789965767714
+      }
+    ],
+    [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "<pi-ext-skill-mentions version=\"1\">\n{\"namespace\":\"pi-ext/skill-mentions\",\"version\":1,\"requestId\":\"52e880ec-42bb-4379-bc36-b6bafc24c7b7\",\"task\":\"Use $alpha\",\"skills\":[{\"name\":\"alpha\",\"location\":\"/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha/SKILL.md\",\"baseDir\":\"/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha\",\"body\":\"References are relative to /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-install-BRqHQU/native/agent/skills/alpha.\\n\\nALPHA_VERSION_ONE\"}]}\n</pi-ext-skill-mentions>"
+          }
+        ],
+        "timestamp": 1789965773347
+      }
+    ]
+  ],
+  "cleanup": "PTY child reaped; no listener created; parent removes isolated installation"
+}

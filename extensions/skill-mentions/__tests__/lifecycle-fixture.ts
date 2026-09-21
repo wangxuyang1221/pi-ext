@@ -23,9 +23,11 @@ export function deferred() {
   return { promise, resolve };
 }
 
-export async function lifecycleFixture(options: { codex?: "before" | "after"; extraBefore?: ExtensionFactory; extra?: ExtensionFactory } = {}) {
+export async function lifecycleFixture(options: { codex?: "before" | "after"; extraBefore?: ExtensionFactory; extra?: ExtensionFactory; preparePreference?: (path: string) => void; skillMentionsEnabled?: () => boolean } = {}) {
   const cwd = mkdtempSync(join(process.cwd(), "extensions/skill-mentions/__tests__/.lifecycle-"));
   const resource: typeof resources[number] = { cwd, editors: [] }; resources.push(resource);
+  const preferencePath = join(cwd, "skill-label-icon.json");
+  options.preparePreference?.(preferencePath);
   const skills = ["alpha", "beta"].map(name => {
     const baseDir = join(cwd, name); mkdirSync(baseDir);
     const filePath = join(baseDir, "SKILL.md");
@@ -46,7 +48,7 @@ export async function lifecycleFixture(options: { codex?: "before" | "after"; ex
     const services = await createAgentSessionServices({ cwd, agentDir: join(cwd, "agent"), settingsManager, modelRuntime: models,
       resourceLoaderOptions: { noExtensions: true, noSkills: true, noThemes: true, noContextFiles: true, noPromptTemplates: true,
         skillsOverride: () => ({ skills, diagnostics: [] }),
-        extensionFactories: [...(options.extraBefore ? [options.extraBefore] : []), ...(options.codex === "before" ? [codex] : []), skillMentions, ...(options.codex === "after" ? [codex] : []), api => {
+        extensionFactories: [...(options.extraBefore ? [options.extraBefore] : []), ...(options.codex === "before" ? [codex] : []), (api: ExtensionAPI) => { if (options.skillMentionsEnabled?.() !== false) skillMentions(api, { preferencePath }); }, ...(options.codex === "after" ? [codex] : []), api => {
           pi = api;
           api.on("session_before_compact", () => ({ compaction: { summary: "Fixture summary", firstKeptEntryId: compactFrom, tokensBefore: 10 } }));
         }, ...(options.extra ? [options.extra] : [])],
@@ -58,7 +60,7 @@ export async function lifecycleFixture(options: { codex?: "before" | "after"; ex
 
   // Real editor/transcript methods with inert terminal plumbing. PTY belongs to slice 3.
   const mode: any = Object.create(InteractiveMode.prototype);
-  const tui = { terminal: { rows: 40, columns: 100 }, requestRender() {}, setFocus() {} } as unknown as TUI;
+  const tui = { terminal: { rows: 40, columns: 100 }, requestRender() {}, setFocus() {}, invalidate() { mode.chatContainer?.invalidate(); } } as unknown as TUI;
   const keys = { matches: () => false } as unknown as KeybindingsManager;
   const identity = (text: string) => text;
   const defaultEditor = new CustomEditor(tui, { borderColor: identity, selectList: { selectedPrefix: identity, selectedText: identity, description: identity, scrollInfo: identity, noMatch: identity } }, keys, { embedWorkingStatus: true });
@@ -73,7 +75,11 @@ export async function lifecycleFixture(options: { codex?: "before" | "after"; ex
     getMarkdownTransformers: () => runtime.session.extensionRunner!.getMarkdownTransformers(),
   }));
   const wrappers: ((provider: any) => any)[] = [];
+  const notifications: { message: string; type?: string }[] = [];
   const ui = {
+    notify(message: string, type?: string) { notifications.push({ message, type }); },
+    getEditorText: () => mode.editor.getExpandedText?.() ?? mode.editor.getText(),
+    setEditorText: (text: string) => mode.editor.setText(text),
     theme: { fg: (_key: string, text: string) => text, getBgAnsi: () => "" },
     getEditorComponent: () => mode.editorComponentFactory,
     setEditorComponent: (factory: any) => { mode.setCustomEditorComponent(factory); resource.editors.push(mode.editor); },
@@ -93,8 +99,10 @@ export async function lifecycleFixture(options: { codex?: "before" | "after"; ex
   runtime.setBeforeSessionInvalidate(resetUI);
   await bind(runtime.session);
   const plain = () => mode.chatContainer.render(100).map(stripTerminalSequences).join("\n");
-  return { cwd, runtime, skills, faux, calls, errors, respond, sequence, mode, wrappers,
+  return { cwd, runtime, skills, faux, calls, errors, respond, sequence, mode, wrappers, preferencePath, notifications,
     get pi() { return pi; }, get session() { return runtime.session; }, get sm() { return runtime.session.sessionManager; },
+    // Memory probes must explicitly drop the fixture's cleanup-only strong references.
+    forgetRetiredEditors() { resource.editors = resource.editors.filter(editor => editor === mode.editor || editor === defaultEditor); },
     plain, rebuild() { mode.rebuildChatFromMessages(); return plain(); },
     async reload() { await runtime.session.reload({ beforeSessionStart: async () => resetUI() }); },
     displays() { return runtime.session.sessionManager.getEntries().filter((entry): entry is CustomEntry => entry.type === "custom" && entry.customType === displayType); },

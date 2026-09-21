@@ -1,0 +1,57 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ extensions/skill-mentions/__tests__/label-editor.test.ts (9 tests | 2 failed) 25ms
+   ✓ deletes and restores an explicit label synchronously with one consumer change per action 7ms
+   ✓ does not lock a handwritten name before a delimiter but locks an explicit paste 4ms
+   ✓ keeps folded paste intact through delete, grouped undo and same-stack submission 1ms
+   ✓ restores repeated logical actions by identity rather than equal text 0ms
+   ✓ preserves native word typing coalescing around a grouped deletion 0ms
+   ✓ counts supplementary-plane native deletions without consuming an older undo 0ms
+   × keeps history browsing as one native undo unit before deleting a label 3ms
+     → expected '$' to be '$alpha' // Object.is equality
+   × does not coalesce word typing across a no-op cursor movement 1ms
+     → expected '$alph' to be '' // Object.is equality
+   ✓ allows synchronous onChange reentry after the native group is complete 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/label-editor.test.ts > keeps history browsing as one native undo unit before deleting a label
+AssertionError: expected '$' to be '$alpha' // Object.is equality
+
+Expected: [32m"$[7malpha[27m"[39m
+Received: [31m"$"[39m
+
+ ❯ extensions/skill-mentions/__tests__/label-editor.test.ts:81:54
+     79|   editor.handleInput(undo); expect(editor.getText()).toBe("draft");
+     80|   editor.handleInput(undo); expect(editor.getText()).toBe("");
+     81|   editor.handleInput(undo); expect(editor.getText()).toBe("$alpha");
+       |                                                      ^
+     82| });
+     83|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  extensions/skill-mentions/__tests__/label-editor.test.ts > does not coalesce word typing across a no-op cursor movement
+AssertionError: expected '$alph' to be '' // Object.is equality
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[31m+ $alph[39m
+
+ ❯ extensions/skill-mentions/__tests__/label-editor.test.ts:88:54
+     86|   editor.handleInput("a"); editor.handleInput("\x1b[C"); editor.handle…
+     87|   editor.handleInput(undo); expect(editor.getText()).toBe("a");
+     88|   editor.handleInput(undo); expect(editor.getText()).toBe("");
+       |                                                      ^
+     89|   editor.handleInput(undo); expect(editor.getText()).toBe("$alpha");
+     90| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 7 passed (9)
+   Start at  10:56:03
+   Duration  624ms (transform 36ms, setup 0ms, collect 413ms, tests 25ms, environment 0ms, prepare 43ms)

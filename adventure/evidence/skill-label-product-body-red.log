@@ -1,0 +1,54 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ extensions/skill-mentions/__tests__/label-body.test.ts (2 tests | 2 failed) 42ms
+   × paints successful live and restored snapshots while leaving model text unprojected 32ms
+     → Theme not initialized. Call initTheme() first.
+   × binds equal live task text to distinct successful snapshots without text lookup 10ms
+     → Theme not initialized. Call initTheme() first.
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/label-body.test.ts > paints successful live and restored snapshots while leaving model text unprojected
+Error: Theme not initialized. Call initTheme() first.
+ ❯ Object.get node_modules/.pnpm/@earendil-works+pi-coding-agent@0.86.0_@modelcontextprotocol+sdk@1.29.0_zod@4.4.3__ws@8.21.3_zod@4.4.3/node_modules/@earendil-works/pi-coding-agent/src/modes/interactive/theme/theme.ts:748:17
+ ❯ SkillInvocationMessageComponent.updateDisplay node_modules/.pnpm/@earendil-works+pi-coding-agent@0.86.0_@modelcontextprotocol+sdk@1.29.0_zod@4.4.3__ws@8.21.3_zod@4.4.3/node_modules/@earendil-works/pi-coding-agent/src/modes/interactive/components/skill-invocation-message.ts:50:11
+ ❯ new SkillInvocationMessageComponent node_modules/.pnpm/@earendil-works+pi-coding-agent@0.86.0_@modelcontextprotocol+sdk@1.29.0_zod@4.4.3__ws@8.21.3_zod@4.4.3/node_modules/@earendil-works/pi-coding-agent/src/modes/interactive/components/skill-invocation-message.ts:20:8
+ ❯ Object.render extensions/skill-mentions/src/index.ts:84:26
+     82|           group = new Container();
+     83|           for (const skill of snapshot.skills) {
+     84|             const card = new SkillInvocationMessageComponent({ name: s…
+       |                          ^
+     85|             card.setExpanded(options.expanded);
+     86|             group.addChild(card);
+ ❯ CustomEntryComponent.render node_modules/.pnpm/@earendil-works+pi-tui@0.86.0/node_modules/@earendil-works/pi-tui/src/tui.ts:370:29
+ ❯ Container.render node_modules/.pnpm/@earendil-works+pi-tui@0.86.0/node_modules/@earendil-works/pi-tui/src/tui.ts:370:29
+ ❯ Object.plain extensions/skill-mentions/__tests__/lifecycle-fixture.ts:95:42
+ ❯ extensions/skill-mentions/__tests__/label-body.test.ts:10:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  extensions/skill-mentions/__tests__/label-body.test.ts > binds equal live task text to distinct successful snapshots without text lookup
+Error: Theme not initialized. Call initTheme() first.
+ ❯ Object.get node_modules/.pnpm/@earendil-works+pi-coding-agent@0.86.0_@modelcontextprotocol+sdk@1.29.0_zod@4.4.3__ws@8.21.3_zod@4.4.3/node_modules/@earendil-works/pi-coding-agent/src/modes/interactive/theme/theme.ts:748:17
+ ❯ SkillInvocationMessageComponent.updateDisplay node_modules/.pnpm/@earendil-works+pi-coding-agent@0.86.0_@modelcontextprotocol+sdk@1.29.0_zod@4.4.3__ws@8.21.3_zod@4.4.3/node_modules/@earendil-works/pi-coding-agent/src/modes/interactive/components/skill-invocation-message.ts:50:11
+ ❯ new SkillInvocationMessageComponent node_modules/.pnpm/@earendil-works+pi-coding-agent@0.86.0_@modelcontextprotocol+sdk@1.29.0_zod@4.4.3__ws@8.21.3_zod@4.4.3/node_modules/@earendil-works/pi-coding-agent/src/modes/interactive/components/skill-invocation-message.ts:20:8
+ ❯ Object.render extensions/skill-mentions/src/index.ts:84:26
+     82|           group = new Container();
+     83|           for (const skill of snapshot.skills) {
+     84|             const card = new SkillInvocationMessageComponent({ name: s…
+       |                          ^
+     85|             card.setExpanded(options.expanded);
+     86|             group.addChild(card);
+ ❯ CustomEntryComponent.render node_modules/.pnpm/@earendil-works+pi-tui@0.86.0/node_modules/@earendil-works/pi-tui/src/tui.ts:370:29
+ ❯ Container.render node_modules/.pnpm/@earendil-works+pi-tui@0.86.0/node_modules/@earendil-works/pi-tui/src/tui.ts:370:29
+ ❯ Object.plain extensions/skill-mentions/__tests__/lifecycle-fixture.ts:95:42
+ ❯ extensions/skill-mentions/__tests__/label-body.test.ts:23:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  11:06:57
+   Duration  648ms (transform 58ms, setup 0ms, collect 419ms, tests 42ms, environment 0ms, prepare 49ms)

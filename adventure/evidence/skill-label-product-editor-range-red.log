@@ -1,0 +1,38 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ extensions/skill-mentions/__tests__/label-editor.test.ts (7 tests | 1 failed) 24ms
+   ✓ deletes and restores an explicit label synchronously with one consumer change per action 7ms
+   ✓ does not lock a handwritten name before a delimiter but locks an explicit paste 4ms
+   ✓ keeps folded paste intact through delete, grouped undo and same-stack submission 1ms
+   × restores repeated logical actions by identity rather than equal text 4ms
+     → expected '$alph' to be '' // Object.is equality
+   ✓ preserves native word typing coalescing around a grouped deletion 0ms
+   ✓ counts supplementary-plane native deletions without consuming an older undo 0ms
+   ✓ allows synchronous onChange reentry after the native group is complete 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/label-editor.test.ts > restores repeated logical actions by identity rather than equal text
+AssertionError: expected '$alph' to be '' // Object.is equality
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[31m+ $alph[39m
+
+ ❯ extensions/skill-mentions/__tests__/label-editor.test.ts:50:84
+     48|   const { editor } = fixture();
+     49|   editor.setText("$alpha $alpha"); editor.handleInput("\x7f");
+     50|   editor.handleInput("\x7f"); editor.handleInput("\x7f"); expect(edito…
+       |                                                                                    ^
+     51|   for (const text of ["$alpha", "$alpha ", "$alpha $alpha"]) {
+     52|     editor.handleInput(undo); expect(editor.getText()).toBe(text);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  10:53:46
+   Duration  589ms (transform 33ms, setup 0ms, collect 390ms, tests 24ms, environment 0ms, prepare 37ms)

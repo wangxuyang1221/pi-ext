@@ -1,0 +1,342 @@
+{
+  "node": "v22.22.2",
+  "pid": 51400,
+  "warmup": 5,
+  "samples": 20,
+  "results": [
+    {
+      "kind": "layout",
+      "bytes": 102400,
+      "count": 10,
+      "width": 8,
+      "cold": {
+        "medianMs": 32.13016599999992,
+        "maxMs": 41.561750000000075
+      },
+      "cached": {
+        "medianMs": 23.65254200000004,
+        "maxMs": 32.77220799999998
+      },
+      "afterGC": {
+        "rss": 327073792,
+        "heapTotal": 82755584,
+        "heapUsed": 43792080,
+        "external": 3859374,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "layout",
+      "bytes": 102400,
+      "count": 10,
+      "width": 16,
+      "cold": {
+        "medianMs": 31.3454999999999,
+        "maxMs": 43.70916699999998
+      },
+      "cached": {
+        "medianMs": 23.338374999999814,
+        "maxMs": 25.42645900000025
+      },
+      "afterGC": {
+        "rss": 326418432,
+        "heapTotal": 80658432,
+        "heapUsed": 39732808,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "layout",
+      "bytes": 102400,
+      "count": 10,
+      "width": 80,
+      "cold": {
+        "medianMs": 31.306041999999707,
+        "maxMs": 37.57679100000041
+      },
+      "cached": {
+        "medianMs": 24.075458000000253,
+        "maxMs": 30.12845900000002
+      },
+      "afterGC": {
+        "rss": 326418432,
+        "heapTotal": 79347712,
+        "heapUsed": 38926832,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "layout",
+      "bytes": 102400,
+      "count": 10,
+      "width": 120,
+      "cold": {
+        "medianMs": 31.11949999999979,
+        "maxMs": 42.65629199999967
+      },
+      "cached": {
+        "medianMs": 23.318500000000313,
+        "maxMs": 25.345957999999882
+      },
+      "afterGC": {
+        "rss": 326434816,
+        "heapTotal": 79347712,
+        "heapUsed": 39012552,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "layout",
+      "bytes": 102400,
+      "count": 100,
+      "width": 8,
+      "cold": {
+        "medianMs": 34.23833300000024,
+        "maxMs": 39.12012499999946
+      },
+      "cached": {
+        "medianMs": 23.358791999999994,
+        "maxMs": 29.39445799999976
+      },
+      "afterGC": {
+        "rss": 326991872,
+        "heapTotal": 82755584,
+        "heapUsed": 41861168,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "layout",
+      "bytes": 102400,
+      "count": 100,
+      "width": 16,
+      "cold": {
+        "medianMs": 31.620249999999942,
+        "maxMs": 41.438500000000204
+      },
+      "cached": {
+        "medianMs": 23.612832999999227,
+        "maxMs": 25.524499999999534
+      },
+      "afterGC": {
+        "rss": 327008256,
+        "heapTotal": 80658432,
+        "heapUsed": 39810624,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "layout",
+      "bytes": 102400,
+      "count": 100,
+      "width": 80,
+      "cold": {
+        "medianMs": 31.782750000000306,
+        "maxMs": 37.780125000001135
+      },
+      "cached": {
+        "medianMs": 23.054667000000336,
+        "maxMs": 27.04833300000064
+      },
+      "afterGC": {
+        "rss": 327024640,
+        "heapTotal": 79609856,
+        "heapUsed": 38991544,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "layout",
+      "bytes": 102400,
+      "count": 100,
+      "width": 120,
+      "cold": {
+        "medianMs": 30.81170799999927,
+        "maxMs": 43.84620899999936
+      },
+      "cached": {
+        "medianMs": 23.31708299999991,
+        "maxMs": 25.071874999999636
+      },
+      "afterGC": {
+        "rss": 327024640,
+        "heapTotal": 80134144,
+        "heapUsed": 39052160,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "layout",
+      "bytes": 102400,
+      "count": 1000,
+      "width": 8,
+      "cold": {
+        "medianMs": 32.01283300000068,
+        "maxMs": 34.687165999999706
+      },
+      "cached": {
+        "medianMs": 23.960708000000523,
+        "maxMs": 30.971167000001515
+      },
+      "afterGC": {
+        "rss": 327073792,
+        "heapTotal": 83279872,
+        "heapUsed": 42123856,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "layout",
+      "bytes": 102400,
+      "count": 1000,
+      "width": 16,
+      "cold": {
+        "medianMs": 31.855750000000626,
+        "maxMs": 38.10899999999856
+      },
+      "cached": {
+        "medianMs": 23.87750000000051,
+        "maxMs": 31.086499999999432
+      },
+      "afterGC": {
+        "rss": 327090176,
+        "heapTotal": 80658432,
+        "heapUsed": 40096672,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "layout",
+      "bytes": 102400,
+      "count": 1000,
+      "width": 80,
+      "cold": {
+        "medianMs": 31.341667000000598,
+        "maxMs": 38.126750000001266
+      },
+      "cached": {
+        "medianMs": 23.284332999999606,
+        "maxMs": 30.356667000000016
+      },
+      "afterGC": {
+        "rss": 327090176,
+        "heapTotal": 79609856,
+        "heapUsed": 39202624,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "layout",
+      "bytes": 102400,
+      "count": 1000,
+      "width": 120,
+      "cold": {
+        "medianMs": 31.132792000000336,
+        "maxMs": 39.09516599999915
+      },
+      "cached": {
+        "medianMs": 23.408833000001323,
+        "maxMs": 25.792874999999185
+      },
+      "afterGC": {
+        "rss": 327090176,
+        "heapTotal": 79609856,
+        "heapUsed": 39256016,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "delete-undo",
+      "pasteBytes": 1024,
+      "nameLength": 64,
+      "medianMs": 1.5252500000024156,
+      "maxMs": 1.6800829999992857,
+      "observedHeapDelta": 951720,
+      "observedRssDelta": 16384,
+      "submittedAfterGC": {
+        "rss": 327450624,
+        "heapTotal": 71483392,
+        "heapUsed": 31516776,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "delete-undo",
+      "pasteBytes": 1024,
+      "nameLength": 256,
+      "medianMs": 8.59966699999859,
+      "maxMs": 9.19970900000044,
+      "observedHeapDelta": 6855048,
+      "observedRssDelta": 131072,
+      "submittedAfterGC": {
+        "rss": 328548352,
+        "heapTotal": 71483392,
+        "heapUsed": 31640224,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "delete-undo",
+      "pasteBytes": 1024,
+      "nameLength": 1024,
+      "medianMs": 97.42175000000134,
+      "maxMs": 98.23529200000121,
+      "observedHeapDelta": 16214544,
+      "observedRssDelta": 0,
+      "submittedAfterGC": {
+        "rss": 332840960,
+        "heapTotal": 71745536,
+        "heapUsed": 31656968,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "delete-undo",
+      "pasteBytes": 102400,
+      "nameLength": 64,
+      "medianMs": 1.6508749999993597,
+      "maxMs": 1.936874999999418,
+      "observedHeapDelta": 8622992,
+      "observedRssDelta": 0,
+      "submittedAfterGC": {
+        "rss": 332840960,
+        "heapTotal": 72007680,
+        "heapUsed": 31745448,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    },
+    {
+      "kind": "delete-undo",
+      "pasteBytes": 1048576,
+      "nameLength": 64,
+      "medianMs": 7.905749999998079,
+      "maxMs": 8.156457999997656,
+      "observedHeapDelta": 70420208,
+      "observedRssDelta": 71352320,
+      "submittedAfterGC": {
+        "rss": 334790656,
+        "heapTotal": 72810496,
+        "heapUsed": 32695008,
+        "external": 3849524,
+        "arrayBuffers": 82414
+      }
+    }
+  ],
+  "releasedEditor": true,
+  "notes": "Boundary samples are not allocation peaks; RSS need not shrink. No destructive/OOM workload was attempted."
+}

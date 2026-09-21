@@ -1,0 +1,42 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ extensions/skill-mentions/__tests__/label-surface.test.ts (13 tests | 1 failed) 1819ms
+   ✓ preserves full long names through narrow viewports and resize in 'native'/'cube'  446ms
+   ✓ preserves full long names through narrow viewports and resize in 'native'/'command'  441ms
+   ✓ preserves full long names through narrow viewports and resize in 'codex'/'cube'  438ms
+   ✓ preserves full long names through narrow viewports and resize in 'codex'/'command'  433ms
+   ✓ maps wrapped vertical motion and mouse clicks to label boundaries in 'native'/'cube' 1ms
+   ✓ maps wrapped vertical motion and mouse clicks to label boundaries in 'native'/'command' 1ms
+   ✓ maps wrapped vertical motion and mouse clicks to label boundaries in 'codex'/'cube' 1ms
+   ✓ maps wrapped vertical motion and mouse clicks to label boundaries in 'codex'/'command' 1ms
+   × maps projected clicks when native cursor keys are function keys 3ms
+     → Unsupported configured editing key: f2
+   ✓ keeps completion below projected content and groups completion undo in 'native'/'cube' 12ms
+   ✓ keeps completion below projected content and groups completion undo in 'native'/'command' 11ms
+   ✓ keeps completion below projected content and groups completion undo in 'codex'/'cube' 12ms
+   ✓ keeps completion below projected content and groups completion undo in 'codex'/'command' 11ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/label-surface.test.ts > maps projected clicks when native cursor keys are function keys
+Error: Unsupported configured editing key: f2
+ ❯ keyData extensions/skill-mentions/src/label-editor.ts:26:33
+     24|   const codes: Record<string, number> = { space: 32, tab: 9, enter: 13…
+     25|   const code = codes[name] ?? (Array.from(name).length === 1 ? name.co…
+     26|   if (code === undefined) throw new Error(`Unsupported configured edit…
+       |                                 ^
+     27|   return `\x1b[${code};${modifier}u`;
+     28| }
+ ❯ native extensions/skill-mentions/src/label-editor.ts:94:83
+ ❯ moveTo extensions/skill-mentions/src/label-editor.ts:129:7
+ ❯ Proxy.handleMouse extensions/skill-mentions/src/label-editor.ts:176:59
+ ❯ extensions/skill-mentions/__tests__/label-surface.test.ts:63:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 passed (13)
+   Start at  12:53:02
+   Duration  2.47s (transform 54ms, setup 0ms, collect 453ms, tests 1.82s, environment 0ms, prepare 58ms)

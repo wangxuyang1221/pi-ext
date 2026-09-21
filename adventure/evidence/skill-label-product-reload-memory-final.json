@@ -1,0 +1,115 @@
+{
+  "node": "v22.22.2",
+  "pid": 54985,
+  "results": [
+    {
+      "host": "native",
+      "reload": 1,
+      "released": 1,
+      "memory": {
+        "rss": 177160192,
+        "heapTotal": 85409792,
+        "heapUsed": 45149136,
+        "external": 3914057,
+        "arrayBuffers": 82718
+      }
+    },
+    {
+      "host": "native",
+      "reload": 2,
+      "released": 2,
+      "memory": {
+        "rss": 177537024,
+        "heapTotal": 85934080,
+        "heapUsed": 45316112,
+        "external": 3914097,
+        "arrayBuffers": 82718
+      }
+    },
+    {
+      "host": "native",
+      "reload": 3,
+      "released": 3,
+      "memory": {
+        "rss": 177602560,
+        "heapTotal": 85934080,
+        "heapUsed": 45430840,
+        "external": 3914097,
+        "arrayBuffers": 82718
+      }
+    },
+    {
+      "host": "before",
+      "reload": 1,
+      "released": 1,
+      "memory": {
+        "rss": 177750016,
+        "heapTotal": 86720512,
+        "heapUsed": 45909248,
+        "external": 3914097,
+        "arrayBuffers": 82718
+      }
+    },
+    {
+      "host": "before",
+      "reload": 2,
+      "released": 2,
+      "memory": {
+        "rss": 177881088,
+        "heapTotal": 86720512,
+        "heapUsed": 46019536,
+        "external": 3914097,
+        "arrayBuffers": 82718
+      }
+    },
+    {
+      "host": "before",
+      "reload": 3,
+      "released": 3,
+      "memory": {
+        "rss": 177913856,
+        "heapTotal": 86720512,
+        "heapUsed": 46047808,
+        "external": 3914097,
+        "arrayBuffers": 82718
+      }
+    },
+    {
+      "host": "after",
+      "reload": 1,
+      "released": 1,
+      "memory": {
+        "rss": 178110464,
+        "heapTotal": 87506944,
+        "heapUsed": 46576808,
+        "external": 3914097,
+        "arrayBuffers": 82718
+      }
+    },
+    {
+      "host": "after",
+      "reload": 2,
+      "released": 2,
+      "memory": {
+        "rss": 178126848,
+        "heapTotal": 87769088,
+        "heapUsed": 46578912,
+        "external": 3914097,
+        "arrayBuffers": 82718
+      }
+    },
+    {
+      "host": "after",
+      "reload": 3,
+      "released": 3,
+      "memory": {
+        "rss": 178208768,
+        "heapTotal": 87506944,
+        "heapUsed": 46671816,
+        "external": 3914097,
+        "arrayBuffers": 82718
+      }
+    }
+  ],
+  "cleanup": "SDK runtimes disposed; fixture directories removed; no listener started"
+}

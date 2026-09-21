@@ -1,0 +1,107 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ extensions/skill-mentions/__tests__/labels.test.ts (4 tests | 4 failed) 5ms
+   × recognizes only complete known references using the activation parser 3ms
+     → expected [] to deeply equal [ { start: +0, end: 6, …(1) }, …(1) ]
+   × defers an unfinished handwritten reference but accepts explicit source completion 1ms
+     → expected [] to have a length of 1 but got +0
+   × moves a fitting label intact and wraps an oversized name without truncation 0ms
+     → expected [] to deeply equal [ '123 ', '⌘alpha' ]
+   × projects normal-weight cyan without changing the task or adding background escapes 1ms
+     → expected '**$alpha** $alpha.' to contain '\u001b[22m\u001b[38;2;141;249;253m⌘al…'
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/labels.test.ts > recognizes only complete known references using the activation parser
+AssertionError: expected [] to deeply equal [ { start: +0, end: 6, …(1) }, …(1) ]
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [[39m
+[32m-   {[39m
+[32m-     "end": 6,[39m
+[32m-     "name": "alpha",[39m
+[32m-     "start": 0,[39m
+[32m-   },[39m
+[32m-   {[39m
+[32m-     "end": 50,[39m
+[32m-     "name": "alpha",[39m
+[32m-     "start": 44,[39m
+[32m-   },[39m
+[32m- ][39m
+[31m+ [][39m
+
+ ❯ extensions/skill-mentions/__tests__/labels.test.ts:7:53
+      5| it("recognizes only complete known references using the activation par…
+      6|   const text = "$alpha. `$alpha` \\$alpha $missing $alpha.md\n$alpha，继…
+      7|   expect(labelReferences(text, new Set(["alpha"]))).toEqual([
+       |                                                     ^
+      8|     { start: 0, end: 6, name: "alpha" },
+      9|     { start: text.lastIndexOf("$alpha"), end: text.lastIndexOf("$alpha…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  extensions/skill-mentions/__tests__/labels.test.ts > defers an unfinished handwritten reference but accepts explicit source completion
+AssertionError: expected [] to have a length of 1 but got +0
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+ ❯ extensions/skill-mentions/__tests__/labels.test.ts:15:61
+     13| it("defers an unfinished handwritten reference but accepts explicit so…
+     14|   expect(labelReferences("$alpha", new Set(["alpha"]), 6)).toEqual([]);
+     15|   expect(labelReferences("$alpha.", new Set(["alpha"]), 7)).toHaveLeng…
+       |                                                             ^
+     16|   expect(labelReferences("$alpha", new Set(["alpha"]))).toHaveLength(1…
+     17| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  extensions/skill-mentions/__tests__/labels.test.ts > moves a fitting label intact and wraps an oversized name without truncation
+AssertionError: expected [] to deeply equal [ '123 ', '⌘alpha' ]
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [[39m
+[32m-   "123 ",[39m
+[32m-   "⌘alpha",[39m
+[32m- ][39m
+[31m+ [][39m
+
+ ❯ extensions/skill-mentions/__tests__/labels.test.ts:22:64
+     20|   const text = "123 $alpha";
+     21|   const lines = layoutLabels(text, labelReferences(text, new Set(["alp…
+     22|   expect(lines.map(line => stripTerminalSequences(line.text))).toEqual…
+       |                                                                ^
+     23|   const long = "$" + "a".repeat(64);
+     24|   const wrapped = layoutLabels(long, labelReferences(long, new Set(["a…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  extensions/skill-mentions/__tests__/labels.test.ts > projects normal-weight cyan without changing the task or adding background escapes
+AssertionError: expected '**$alpha** $alpha.' to contain '\u001b[22m\u001b[38;2;141;249;253m⌘al…'
+
+Expected: [32m"[7m[22m[38;2;141;249;253m⌘[27malpha"[39m
+Received: [31m"[7m**$alpha** $[27malpha[7m.[27m"[39m
+
+ ❯ extensions/skill-mentions/__tests__/labels.test.ts:32:19
+     30|   const text = "**$alpha** $alpha.";
+     31|   const painted = paintLabels(text, labelReferences(text, new Set(["al…
+     32|   expect(painted).toContain("\x1b[22m\x1b[38;2;141;249;253m⌘alpha");
+       |                   ^
+     33|   expect(painted).not.toMatch(/\x1b\[(?:4[0-9]|48)[;m]/);
+     34|   expect(text).toBe("**$alpha** $alpha.");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  10:46:52
+   Duration  222ms (transform 21ms, setup 0ms, collect 52ms, tests 5ms, environment 0ms, prepare 46ms)

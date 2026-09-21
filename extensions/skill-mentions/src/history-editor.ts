@@ -1,5 +1,6 @@
-import { CustomEditor, type ExtensionContext } from "@earendil-works/pi-coding-agent";
-import type { EditorComponent } from "@earendil-works/pi-tui";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { EditorComponent, TUI } from "@earendil-works/pi-tui";
+import { LabelNativeEditor } from "./editor-surface.js";
 import { decodeSnapshot } from "./protocol.js";
 
 type EditorFactory = NonNullable<ReturnType<ExtensionContext["ui"]["getEditorComponent"]>>;
@@ -29,12 +30,13 @@ function wrapEditor(base: EditorComponent): EditorComponent {
 }
 
 /** Compose history normalization after session_start editor installers have run. */
-export function installHistoryEditor(ctx: ExtensionContext, restoreHistory = false): void {
+export function installHistoryEditor(ctx: ExtensionContext, restoreHistory = false, decorate?: (editor: EditorComponent, tui: TUI) => EditorComponent): void {
   if (ctx.mode !== "tui") return;
   const previous = ctx.ui.getEditorComponent();
   if (previous && Reflect.get(previous, adapted)) return;
   const factory: EditorFactory = (tui, theme, keys) => {
-    const editor = wrapEditor(previous?.(tui, theme, keys) ?? new CustomEditor(tui, theme, keys, { embedWorkingStatus: true }));
+    const base = previous?.(tui, theme, keys) ?? new LabelNativeEditor(tui, theme, keys);
+    const editor = wrapEditor(decorate?.(base, tui) ?? base);
     // Pi rebuilds the editor on /reload without repopulating its history.
     // Seed from active context only; addToHistory retains the native size limit.
     for (const entry of restoreHistory ? ctx.sessionManager.buildContextEntries() : []) {

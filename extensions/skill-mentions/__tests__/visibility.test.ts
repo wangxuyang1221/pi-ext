@@ -17,7 +17,7 @@ it.each([10, 100])("indexes active history once for %i cards and invalidates on 
   const handlers = new Map<string, (event: any, ctx: ExtensionContext) => any>();
   let renderer!: (entry: any, options: any, theme: any) => any;
   skillMentions({ on: (event: string, handler: any) => handlers.set(event, handler),
-    registerEntryRenderer: (_type: string, render: any) => { renderer = render; }, registerMarkdownTransformer() {},
+    registerEntryRenderer: (_type: string, render: any) => { renderer = render; }, registerMarkdownTransformer() {}, registerCommand() {},
   } as unknown as ExtensionAPI);
   const scan = vi.spyOn(sm, "buildContextEntries");
   const ctx = { mode: "tui", sessionManager: sm, ui: { addAutocompleteProvider() {} } } as unknown as ExtensionContext;

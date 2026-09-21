@@ -1,0 +1,50 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ extensions/skill-mentions/__tests__/label-editor.test.ts (19 tests | 1 failed) 32ms
+   ✓ deletes and restores an explicit label synchronously with one consumer change per action 8ms
+   ✓ does not lock a handwritten name before a delimiter but locks an explicit paste 4ms
+   ✓ keeps folded paste intact through delete, grouped undo and same-stack submission 1ms
+   ✓ restores repeated logical actions by identity rather than equal text 0ms
+   ✓ preserves native word typing coalescing around a grouped deletion 0ms
+   ✓ counts supplementary-plane native deletions without consuming an older undo 0ms
+   ✓ keeps history browsing as one native undo unit before deleting a label 1ms
+   ✓ does not coalesce word typing across a no-op cursor movement 0ms
+   ✓ honors configured native deletion and undo keys 0ms
+   ✓ does not turn an intercepted shortcut into a grouped deletion or duplicate its mutation 0ms
+   × refreshes discovered names before input and does not resurrect removed labels through undo 2ms
+     → expected '' to be '$alph' // Object.is equality
+   ✓ does not coalesce typing across a failed native character jump 0ms
+   ✓ rebuilds the projected frame after rendering an empty-label draft and undoing 2ms
+   ✓ renders cyan source labels across narrow rows without polluting raw text 1ms
+   ✓ respects native action priority when configured character and word deletion keys overlap 0ms
+   ✓ groups the native backslash-enter workaround without consuming an earlier group 0ms
+   ✓ preserves the native kill ring around grouped deletions and consecutive undo 0ms
+   ✓ retains paste identities across backward renumbering, undo and draft handoff 1ms
+   ✓ allows synchronous onChange reentry after the native group is complete 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/label-editor.test.ts > refreshes discovered names before input and does not resurrect removed labels through undo
+AssertionError: expected '' to be '$alph' // Object.is equality
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- $alph[39m
+
+ ❯ extensions/skill-mentions/__tests__/label-editor.test.ts:116:97
+    114| it("refreshes discovered names before input and does not resurrect rem…
+    115|   const names = new Set(["alpha"]), { editor } = fixture(names);
+    116|   editor.setText("$alpha"); names.clear(); editor.handleInput("\x7f");…
+       |                                                                                                 ^
+    117|   names.add("alpha"); editor.setText("$alpha"); editor.handleInput("\x…
+    118|   names.clear(); editor.handleInput(undo); editor.handleInput("\x7f");…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 18 passed (19)
+   Start at  12:39:01
+   Duration  655ms (transform 58ms, setup 0ms, collect 420ms, tests 32ms, environment 0ms, prepare 69ms)

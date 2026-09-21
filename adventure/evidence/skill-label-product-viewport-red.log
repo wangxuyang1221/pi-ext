@@ -1,0 +1,170 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ extensions/skill-mentions/__tests__/label-surface.test.ts (17 tests | 4 failed) 2891ms
+   ✓ preserves full long names through narrow viewports and resize in 'native'/'cube'  456ms
+   ✓ preserves full long names through narrow viewports and resize in 'native'/'command'  446ms
+   ✓ preserves full long names through narrow viewports and resize in 'codex'/'cube'  438ms
+   ✓ preserves full long names through narrow viewports and resize in 'codex'/'command'  437ms
+   ✓ maps wrapped vertical motion and mouse clicks to label boundaries in 'native'/'cube' 1ms
+   ✓ maps wrapped vertical motion and mouse clicks to label boundaries in 'native'/'command' 1ms
+   ✓ maps wrapped vertical motion and mouse clicks to label boundaries in 'codex'/'cube' 1ms
+   ✓ maps wrapped vertical motion and mouse clicks to label boundaries in 'codex'/'command' 0ms
+   × exposes every row of a viewport-sized label through paging in 'native'/'cube' 267ms
+     → expected [ '80019001a001b00', …(44) ] to deeply equal []
+   × exposes every row of a viewport-sized label through paging in 'native'/'command' 258ms
+     → expected [ '80019001a001b00', …(44) ] to deeply equal []
+   × exposes every row of a viewport-sized label through paging in 'codex'/'cube' 264ms
+     → expected [ '50016001700180', …(49) ] to deeply equal []
+   × exposes every row of a viewport-sized label through paging in 'codex'/'command' 264ms
+     → expected [ '50016001700180', …(49) ] to deeply equal []
+   ✓ maps projected clicks when native cursor keys are function keys 0ms
+   ✓ keeps completion below projected content and groups completion undo in 'native'/'cube' 13ms
+   ✓ keeps completion below projected content and groups completion undo in 'native'/'command' 13ms
+   ✓ keeps completion below projected content and groups completion undo in 'codex'/'cube' 13ms
+   ✓ keeps completion below projected content and groups completion undo in 'codex'/'command' 12ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/label-surface.test.ts > exposes every row of a viewport-sized label through paging in 'native'/'cube'
+ FAIL  extensions/skill-mentions/__tests__/label-surface.test.ts > exposes every row of a viewport-sized label through paging in 'native'/'command'
+AssertionError: expected [ '80019001a001b00', …(44) ] to deeply equal []
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [][39m
+[31m+ [[39m
+[31m+   "80019001a001b00",[39m
+[31m+   "1c001d001e001f0",[39m
+[31m+   "01g001h001i001j",[39m
+[31m+   "001k001l001m001",[39m
+[31m+   "n001o001p001q00",[39m
+[31m+   "1r001s001t001u0",[39m
+[31m+   "01v001w001x001y",[39m
+[31m+   "001z00200021002",[39m
+[31m+   "200230024002500",[39m
+[31m+   "260027002800290",[39m
+[31m+   "02a002b002c002d",[39m
+[31m+   "002e002f002g002",[39m
+[31m+   "h002i002j002k00",[39m
+[31m+   "2l002m002n002o0",[39m
+[31m+   "02p002q002r002s",[39m
+[31m+   "002t002u002v002",[39m
+[31m+   "w002x002y002z00",[39m
+[31m+   "300031003200330",[39m
+[31m+   "034003500360037",[39m
+[31m+   "00380039003a003",[39m
+[31m+   "b003c003d003e00",[39m
+[31m+   "3f003g003h003i0",[39m
+[31m+   "03j003k003l003m",[39m
+[31m+   "003n003o003p003",[39m
+[31m+   "q003r003s003t00",[39m
+[31m+   "3u003v003w003x0",[39m
+[31m+   "03y003z00400041",[39m
+[31m+   "004200430044004",[39m
+[31m+   "500460047004800",[39m
+[31m+   "49004a004b004c0",[39m
+[31m+   "04d004e004f004g",[39m
+[31m+   "004h004i004j004",[39m
+[31m+   "k004l004m004n00",[39m
+[31m+   "4o004p004q004r0",[39m
+[31m+   "04s004t004u004v",[39m
+[31m+   "004w004x004y004",[39m
+[31m+   "z00500051005200",[39m
+[31m+   "530054005500560",[39m
+[31m+   "05700580059005a",[39m
+[31m+   "005b005c005d005",[39m
+[31m+   "e005f005g005h00",[39m
+[31m+   "5i005j005k005l0",[39m
+[31m+   "05m005n005o005p",[39m
+[31m+   "005q005r005s005",[39m
+[31m+   "t005u005v005w00",[39m
+[31m+ ][39m
+
+ ❯ extensions/skill-mentions/__tests__/label-surface.test.ts:67:50
+     65|     editor.handleInput("\x1b[5~");
+     66|   }
+     67|   expect(expected.filter(row => !seen.has(row))).toEqual([]);
+       |                                                  ^
+     68|   expect(editor.getExpandedText()).toBe("$" + name);
+     69| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  extensions/skill-mentions/__tests__/label-surface.test.ts > exposes every row of a viewport-sized label through paging in 'codex'/'cube'
+ FAIL  extensions/skill-mentions/__tests__/label-surface.test.ts > exposes every row of a viewport-sized label through paging in 'codex'/'command'
+AssertionError: expected [ '50016001700180', …(49) ] to deeply equal []
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [][39m
+[31m+ [[39m
+[31m+   "50016001700180",[39m
+[31m+   "019001a001b001",[39m
+[31m+   "c001d001e001f0",[39m
+[31m+   "01g001h001i001",[39m
+[31m+   "j001k001l001m0",[39m
+[31m+   "01n001o001p001",[39m
+[31m+   "q001r001s001t0",[39m
+[31m+   "01u001v001w001",[39m
+[31m+   "x001y001z00200",[39m
+[31m+   "02100220023002",[39m
+[31m+   "40025002600270",[39m
+[31m+   "0280029002a002",[39m
+[31m+   "b002c002d002e0",[39m
+[31m+   "02f002g002h002",[39m
+[31m+   "i002j002k002l0",[39m
+[31m+   "02m002n002o002",[39m
+[31m+   "p002q002r002s0",[39m
+[31m+   "02t002u002v002",[39m
+[31m+   "w002x002y002z0",[39m
+[31m+   "03000310032003",[39m
+[31m+   "30034003500360",[39m
+[31m+   "03700380039003",[39m
+[31m+   "a003b003c003d0",[39m
+[31m+   "03e003f003g003",[39m
+[31m+   "h003i003j003k0",[39m
+[31m+   "03l003m003n003",[39m
+[31m+   "o003p003q003r0",[39m
+[31m+   "03s003t003u003",[39m
+[31m+   "v003w003x003y0",[39m
+[31m+   "03z00400041004",[39m
+[31m+   "20043004400450",[39m
+[31m+   "04600470048004",[39m
+[31m+   "9004a004b004c0",[39m
+[31m+   "04d004e004f004",[39m
+[31m+   "g004h004i004j0",[39m
+[31m+   "04k004l004m004",[39m
+[31m+   "n004o004p004q0",[39m
+[31m+   "04r004s004t004",[39m
+[31m+   "u004v004w004x0",[39m
+[31m+   "04y004z0050005",[39m
+[31m+   "10052005300540",[39m
+[31m+   "05500560057005",[39m
+[31m+   "80059005a005b0",[39m
+[31m+   "05c005d005e005",[39m
+[31m+   "f005g005h005i0",[39m
+[31m+   "05j005k005l005",[39m
+[31m+   "m005n005o005p0",[39m
+[31m+   "05q005r005s005",[39m
+[31m+   "t005u005v005w0",[39m
+[31m+   "05x005y005z006",[39m
+[31m+ ][39m
+
+ ❯ extensions/skill-mentions/__tests__/label-surface.test.ts:67:50
+     65|     editor.handleInput("\x1b[5~");
+     66|   }
+     67|   expect(expected.filter(row => !seen.has(row))).toEqual([]);
+       |                                                  ^
+     68|   expect(editor.getExpandedText()).toBe("$" + name);
+     69| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 13 passed (17)
+   Start at  12:58:18
+   Duration  3.54s (transform 62ms, setup 0ms, collect 459ms, tests 2.89s, environment 0ms, prepare 57ms)

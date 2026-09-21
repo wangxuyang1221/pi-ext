@@ -1,0 +1,28 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ✓ extensions/skill-mentions/__tests__/labels.test.ts (4 tests) 44ms
+ ✓ extensions/skill-mentions/__tests__/references.test.ts (170 tests) 69ms
+ ✓ extensions/skill-mentions/__tests__/label-editor.test.ts (12 tests) 57ms
+ ✓ extensions/skill-mentions/__tests__/label-api-boundaries.test.ts (11 tests) 89ms
+ ✓ extensions/skill-mentions/__tests__/label-body.test.ts (2 tests) 108ms
+ ✓ extensions/skill-mentions/__tests__/protocol.test.ts (18 tests) 3ms
+ ✓ extensions/skill-mentions/__tests__/visibility.test.ts (2 tests) 30ms
+ ✓ extensions/skill-mentions/__tests__/loading.test.ts (15 tests) 73ms
+ ✓ extensions/skill-mentions/__tests__/label-preference.test.ts (3 tests) 6ms
+ ✓ extensions/skill-mentions/__tests__/history-editor.test.ts (9 tests) 401ms
+ ✓ extensions/skill-mentions/__tests__/package.test.ts (1 test) 10ms
+ ✓ extensions/skill-mentions/__tests__/lifecycle.test.ts (18 tests) 589ms
+ ✓ extensions/skill-mentions/__tests__/registration.test.ts (8 tests) 8ms
+ ✓ extensions/skill-mentions/__tests__/flow.test.ts (14 tests) 724ms
+   ✓ activates punctuated references through prompt with original task and ordered snapshots  364ms
+ ✓ extensions/skill-mentions/__tests__/autocomplete.test.ts (25 tests) 4126ms
+   ✓ native: handwritten, pasted and selected punctuated references submit identically  672ms
+   ✓ native: never offers skills beside right punctuation or inside the name  409ms
+   ✓ codex: handwritten, pasted and selected punctuated references submit identically  655ms
+   ✓ codex: never offers skills beside right punctuation or inside the name  407ms
+
+ Test Files  15 passed (15)
+      Tests  312 passed (312)
+   Start at  11:10:05
+   Duration  5.45s (transform 375ms, setup 0ms, collect 9.82s, tests 6.34s, environment 1ms, prepare 1.13s)

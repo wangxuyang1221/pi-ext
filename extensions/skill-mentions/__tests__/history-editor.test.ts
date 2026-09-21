@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { CustomEditor, initTheme, InteractiveMode, type KeybindingsManager, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { CombinedAutocompleteProvider, Container, type EditorComponent, type TUI } from "@earendil-works/pi-tui";
+import { CombinedAutocompleteProvider, Container, stripTerminalSequences, type EditorComponent, type TUI } from "@earendil-works/pi-tui";
 import { CodexEditor } from "../../codex-ui/src/components.js";
 import skillMentions from "../src/index.js";
 import { encodeSnapshot } from "../src/protocol.js";
@@ -40,7 +40,7 @@ function fixture(kind: "native" | "codex", order: "before" | "after" = "before",
   const ctx = { mode: "tui", ui, sessionManager: { buildContextEntries: vi.fn(() => [{ type: "message", message: { role: "user", content: envelope } }]) } } as unknown as ExtensionContext;
   skillMentions({ on: (event: string, handler: any) => handlers.set(event, handler),
     getCommands: () => [{ name: "skill:alpha", source: "skill", sourceInfo: { path: "/fixture/alpha/SKILL.md" } }],
-    registerMarkdownTransformer() {}, registerEntryRenderer() {},
+    registerMarkdownTransformer() {}, registerEntryRenderer() {}, registerCommand() {},
   } as unknown as ExtensionAPI);
   let base: CodexEditor | undefined;
   const installCodex = () => {
@@ -88,7 +88,8 @@ it.each(["native", "codex"] as const)("%s restores snapshot drafts and history t
   editor.setText(envelope); expect(h.changed).toHaveBeenLastCalledWith(task);
   if (kind === "codex") {
     expect(editor).toBeInstanceOf(CodexEditor);
-    expect(editor.render(80)).toEqual(h.base!.render(80));
+    expect(editor.render(80).map(stripTerminalSequences).join("\n").replaceAll("\u{f01a7}", "$"))
+      .toBe(h.base!.render(80).map(stripTerminalSequences).join("\n"));
     expect(h.base!.setText).toBe(CodexEditor.prototype.setText);
   } else expect((editor as CustomEditor).embedWorkingStatus).toBe(true);
 });

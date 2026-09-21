@@ -1,0 +1,32 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ✓ extensions/skill-mentions/__tests__/loading.test.ts (15 tests) 19ms
+ ✓ extensions/skill-mentions/__tests__/label-api-boundaries.test.ts (11 tests) 70ms
+ ✓ extensions/skill-mentions/__tests__/label-editor.test.ts (21 tests) 96ms
+ ✓ extensions/skill-mentions/__tests__/label-body.test.ts (8 tests) 199ms
+ ✓ extensions/skill-mentions/__tests__/references.test.ts (170 tests) 30ms
+ ✓ extensions/skill-mentions/__tests__/labels.test.ts (4 tests) 29ms
+ ✓ extensions/skill-mentions/__tests__/history-editor.test.ts (9 tests) 383ms
+ ✓ extensions/skill-mentions/__tests__/label-preference.test.ts (3 tests) 4ms
+ ✓ extensions/skill-mentions/__tests__/protocol.test.ts (18 tests) 2ms
+ ✓ extensions/skill-mentions/__tests__/lifecycle.test.ts (18 tests) 517ms
+ ✓ extensions/skill-mentions/__tests__/flow.test.ts (14 tests) 540ms
+ ✓ extensions/skill-mentions/__tests__/package.test.ts (1 test) 1ms
+ ✓ extensions/skill-mentions/__tests__/visibility.test.ts (2 tests) 30ms
+ ✓ extensions/skill-mentions/__tests__/registration.test.ts (8 tests) 6ms
+ ✓ extensions/skill-mentions/__tests__/label-surface.test.ts (18 tests) 3380ms
+   ✓ preserves full long names through narrow viewports and resize in 'native'/'cube'  811ms
+   ✓ preserves full long names through narrow viewports and resize in 'native'/'command'  450ms
+   ✓ preserves full long names through narrow viewports and resize in 'codex'/'cube'  441ms
+   ✓ preserves full long names through narrow viewports and resize in 'codex'/'command'  439ms
+ ✓ extensions/skill-mentions/__tests__/autocomplete.test.ts (25 tests) 4141ms
+   ✓ native: handwritten, pasted and selected punctuated references submit identically  671ms
+   ✓ native: never offers skills beside right punctuation or inside the name  411ms
+   ✓ codex: handwritten, pasted and selected punctuated references submit identically  659ms
+   ✓ codex: never offers skills beside right punctuation or inside the name  412ms
+
+ Test Files  16 passed (16)
+      Tests  345 passed (345)
+   Start at  13:22:42
+   Duration  5.08s (transform 329ms, setup 0ms, collect 7.33s, tests 9.45s, environment 1ms, prepare 896ms)

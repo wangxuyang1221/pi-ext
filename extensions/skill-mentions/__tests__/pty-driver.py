@@ -39,20 +39,30 @@ assert (settings_file.parent / settings["packages"][0]).resolve() == Path(instal
 entries = json.loads((Path(installed) / "package.json").read_text())["pi"]["extensions"]
 if mode.startswith("native"):
     selected = [entry for entry in entries if "/skill-mentions/" in entry]
-elif mode == "codex":
+elif mode.startswith("codex"):
     selected = [entry for entry in entries if "/codex-ui/" in entry or "/skill-mentions/" in entry]
 else:
     selected = entries
 if not mode.startswith("combined"):
     settings["packages"] = [{"source": installed, "extensions": [entry.removeprefix("./") for entry in selected]}]
 settings_file.write_text(json.dumps(settings))
-keys = {"tui.editor.historyPrevious": "ctrl+p", "tui.editor.historyNext": "ctrl+n",
+keys = {"tui.editor.undo": "f8", "tui.editor.historyPrevious": "ctrl+p", "tui.editor.historyNext": "ctrl+n",
         "tui.editor.cursorLineStart": ["home", "ctrl+a", "f2"], "app.tools.expand": "f3"}
 (root / "agent/keybindings.json").write_text(json.dumps(keys))
 for name in ["alpha", "beta", "research", "研究_𐐀-𝟠"]:
     skill = root / "agent/skills" / name
     skill.mkdir(parents=True)
     (skill / "SKILL.md").write_text(f"---\nname: {name}\ndescription: {name.title()} fixture\n---\n{name.upper()}_VERSION_ONE\n")
+long_name = "long-" + "".join(f"{index:03d}" for index in range(80))
+long_skill = root / "agent/skills/long-label"
+long_skill.mkdir(parents=True)
+(long_skill / "SKILL.md").write_text(f"---\nname: {long_name}\ndescription: Long label fixture\n---\nLONG_LABEL_BODY\n")
+external = root / "external-editor.mjs"
+external.write_text("import { readFileSync, writeFileSync } from 'node:fs';\n"
+                    "const path = process.argv[2]; const source = readFileSync(path, 'utf8');\n"
+                    f"writeFileSync({json.dumps(str(root / 'external-source.txt'))}, source);\n"
+                    "writeFileSync(path, source + ' external');\n")
+env["VISUAL"] = env["EDITOR"] = f"node {external}"
 args = ["node", cli, "--extension", str(Path(install_root) / "consumer/pty-fixture.ts"),
         "--no-context-files", "--no-prompt-templates", "--approve", "--offline", "--no-builtin-tools",
         "--session-dir", str(root / "sessions"), "--provider", "faux", "--model", "faux-1",
@@ -135,6 +145,15 @@ def editor():
     return events("editor")[-1]["text"]
 
 
+def assert_label_style(glyph):
+    row = max(index for index, line in enumerate(screen.display) if "Use " + glyph + "alpha" in line)
+    column = screen.display[row].index(glyph)
+    background = screen.buffer[row][column - 1].bg
+    for offset in range(6):
+        char = screen.buffer[row][column + offset]
+        assert char.fg == "8df9fd" and not char.bold and char.bg == background, char
+
+
 def text(message):
     content = message["content"]
     return content if isinstance(content, str) else "\n".join(block["text"] for block in content if block["type"] == "text")
@@ -147,10 +166,10 @@ def snapshot(message):
     return None
 
 
-def submit(expected_task, names):
+def submit(expected_task, names, keys="\r"):
     before = len(events("request"))
     settled = len(events("settled"))
-    send("\r")
+    send(keys)
     wait(lambda: len(events("request")) == before + 1 and len(events("settled")) > settled, "submit consumes exactly once")
     users = [message for message in events("request")[-1] if message["role"] == "user"]
     value = snapshot(users[-1])
@@ -160,6 +179,7 @@ def submit(expected_task, names):
     else:
         assert value is None and text(users[-1]) == expected_task, users[-1]
     assert editor() == ""
+    assert all("\U000f01a7" not in text(user) and "⌘" not in text(user) and "\x1b" not in text(user) for user in users)
     settle()
     assert "pi-ext-skill-mentions version" not in view(), view()
     return value
@@ -178,6 +198,113 @@ try:
         assert any("/subagent/dist/" in tool["path"] for tool in events("editor")[-1]["tools"])
     screens["startup"] = view()
     checks.append("installed CLI startup and selected extension commands")
+
+    # Exercise the product projection through terminal events, not direct editor calls.
+    for icon, glyph in [("cube", "\U000f01a7"), ("command", "⌘")]:
+        paste(f"/skill-label-icon {icon}")
+        send("\r")
+        preference = root / "agent/skill-mentions.json"
+        wait(lambda: preference.exists() and json.loads(preference.read_text())["icon"] == icon, "persist icon")
+        paste("Use $alpha")
+        assert glyph + "alpha" in view(), view()
+        colored = [char for row in screen.buffer.values() for char in row.values() if char.data == glyph]
+        assert colored and any(char.fg == "8df9fd" and not char.bold for char in colored), colored
+        assert_label_style(glyph)
+        send("\x7f")
+        assert editor() == "Use "
+        send("\x1b[19~")
+        assert editor() == "Use $alpha"
+        send("\x01")
+        for _ in range(4):
+            send("\x1b[C")
+        send("\x1b[3~")
+        assert editor() == "Use "
+        send("\x1b[19~")
+        assert editor() == "Use $alpha"
+        send("\x05")
+        submit("Use $alpha", ["alpha"])
+        assert glyph + "alpha" in view(), view()
+        assert_label_style(glyph)
+        screens[f"label-{icon}"] = view()
+    checks.append("both icons use truecolor normal weight in input and successful body; native whole Delete/Backspace and configured undo")
+
+    paste("$" + long_name)
+    fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 50, 16, 0, 0))
+    screen.resize(50, 16)
+    os.kill(pid, signal.SIGWINCH)
+    settle(0.6)
+    assert editor() == "$" + long_name
+    # Fullscreen reserves plain PageUp/PageDown for the transcript viewport.
+    send("\x1b[5;5~" if mode.endswith("fullscreen") else "\x1b[5~")
+    assert "⌘long-" in view(), view()
+    screens["tall-label-page-up"] = view()
+    send("\x1b[6;5~" if mode.endswith("fullscreen") else "\x1b[6~")
+    send("\x7f")
+    assert editor() == ""
+    send("\x1b[19~")
+    assert editor() == "$" + long_name
+    fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 50, 120, 0, 0))
+    screen.resize(50, 120)
+    os.kill(pid, signal.SIGWINCH)
+    settle(0.6)
+    send("\x03")
+    checks.append("a label taller than the real narrow viewport remains page-accessible and atomically editable")
+
+    paste("abc $alpha tail")
+    fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 50, 16, 0, 0))
+    screen.resize(50, 16)
+    os.kill(pid, signal.SIGWINCH)
+    settle(0.6)
+    assert editor() == "abc $alpha tail"
+    screens["label-narrow-resize"] = view()
+    assert "⌘alpha" in view(), view()
+    send("\x01")
+    send("\x1b[B")
+    send("\x1b[A")
+    assert editor() == "abc $alpha tail"
+    fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 50, 120, 0, 0))
+    screen.resize(50, 120)
+    os.kill(pid, signal.SIGWINCH)
+    settle(0.6)
+    if mode.endswith("fullscreen"):
+        # Pi 0.86 only dispatches application mouse events in fullscreen mode.
+        draft_row = max(index for index, row in enumerate(screen.display) if "abc ⌘alpha tail" in row)
+        draft_column = screen.display[draft_row].index("⌘") + 2
+        send(f"\x1b[<0;{draft_column};{draft_row + 1}M\x1b[<0;{draft_column};{draft_row + 1}m")
+        send("X")
+        assert editor() == "abc X$alpha tail", editor()
+        send("\x1b[19~")
+        assert editor() == "abc $alpha tail"
+        screens["label-mouse"] = view()
+        checks.append("fullscreen SGR mouse snaps inside a label to its source boundary")
+    send("\x05")
+    send("\x07")
+    wait(lambda: (root / "external-source.txt").exists(), "external editor process")
+    settle(0.6)
+    assert (root / "external-source.txt").read_text() == "abc $alpha tail"
+    assert editor() == "abc $alpha tail external"
+    send("\x03")
+    checks.append("real SIGWINCH narrow/wide resize, vertical events and external editor process preserve original source")
+
+    large_paste = "folded $alpha " + "p" * 2048
+    paste(large_paste)
+    paste(" $beta")
+    assert "[paste #" in view() and "⌘beta" in view(), view()
+    send("\x7f")
+    assert editor() == large_paste + " "
+    send("\x1b[19~")
+    assert editor() == large_paste + " $beta"
+    submit(large_paste, ["alpha"], "\x7f\r")
+    checks.append("folded paste plus visible label retain expanded source after delete/undo and same-write Delete-Enter activates internal references")
+
+    for char in "$alpha":
+        send(char)
+    wait(lambda: "Alpha fixture" in view(), "complete handwritten candidate")
+    send("\t")
+    assert editor() == "$alpha"
+    send("\x1b[19~")
+    assert editor() == "", editor()
+    checks.append("confirming an unchanged handwritten name adds no visual-only undo")
 
     for query, key, complete in [("$al", "\t", "$alpha"), ("$be", "\r", "$beta")]:
         paste("首行\n用  后文")
@@ -206,7 +333,9 @@ try:
     submit("$alpha", ["alpha"])
     checks.append("Escape keeps an active complete reference")
 
-    paste("光标 $alpha")
+    for char in "光标 $alpha":
+        send(char)
+    send("\x1b")
     send("\x1b[D" * 2)
     send("x")
     assert "Alpha fixture" not in view()
@@ -373,6 +502,7 @@ try:
     decoder = codecs.getincrementaldecoder("utf-8")("strict")
     wait(lambda: len(events("ready")) > ready_count, "resume real CLI")
     settle(1)
+    assert "⌘alpha" in view() and "\U000f01a7alpha" not in view(), view()
     send("\x10")
     assert editor() == "排队 $alpha，继续"
     assert "pi-ext-skill-mentions version" not in view()

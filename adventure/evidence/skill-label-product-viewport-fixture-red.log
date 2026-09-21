@@ -1,0 +1,43 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ✓ extensions/skill-mentions/__tests__/label-editor.test.ts (21 tests) 90ms
+ ❯ extensions/skill-mentions/__tests__/label-body.test.ts (8 tests | 1 failed) 117ms
+   ✓ paints successful live and restored snapshots while leaving model text unprojected 36ms
+   ✓ switches both surfaces and persists through reload with Codex order undefined 21ms
+   ✓ switches both surfaces and persists through reload with Codex order before 13ms
+   ✓ switches both surfaces and persists through reload with Codex order after 10ms
+   ✓ reports invalid arguments and read/write failures without claiming a save 5ms
+   ✓ preserves a folded paste and a visible label when the real reload replaces factories 8ms
+   × hands expanded source to the native editor when removed and restores folding when re-enabled 9ms
+     → expected '[paste #1 2048 chars] $alpha' not to contain '[paste #'
+   ✓ binds equal live task text to distinct successful snapshots without text lookup 8ms
+ ✓ extensions/skill-mentions/__tests__/label-surface.test.ts (17 tests) 2880ms
+   ✓ preserves full long names through narrow viewports and resize in 'native'/'cube'  458ms
+   ✓ preserves full long names through narrow viewports and resize in 'native'/'command'  443ms
+   ✓ preserves full long names through narrow viewports and resize in 'codex'/'cube'  435ms
+   ✓ preserves full long names through narrow viewports and resize in 'codex'/'command'  432ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/label-body.test.ts > hands expanded source to the native editor when removed and restores folding when re-enabled
+AssertionError: expected '[paste #1 2048 chars] $alpha' not to contain '[paste #'
+
+Expected: [32m"[paste #"[39m
+Received: [31m"[paste #[7m1 2048 chars] $alpha[27m"[39m
+
+ ❯ extensions/skill-mentions/__tests__/label-body.test.ts:68:39
+     66|   enabled = false; await h.reload();
+     67|   expect(h.mode.editor.getExpandedText()).toBe(paste + " $alpha");
+     68|   expect(h.mode.editor.getText()).not.toContain("[paste #");
+       |                                       ^
+     69|   enabled = true; await h.reload();
+     70|   expect(h.mode.editor.getExpandedText()).toBe(paste + " $alpha");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 2 passed (3)
+      Tests  1 failed | 45 passed (46)
+   Start at  12:59:29
+   Duration  3.58s (transform 112ms, setup 0ms, collect 1.50s, tests 3.09s, environment 0ms, prepare 120ms)

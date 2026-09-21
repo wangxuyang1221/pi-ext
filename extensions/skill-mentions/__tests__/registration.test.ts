@@ -5,7 +5,7 @@ import skillMentions from "../src/index.js";
 function registration() {
   const handlers = new Map<string, (event: any, ctx: ExtensionContext) => any>();
   const getCommands = vi.fn(() => []), appendEntry = vi.fn(), addAutocompleteProvider = vi.fn();
-  const pi = { on: (name: string, handler: any) => { handlers.set(name, handler); }, getCommands, appendEntry, registerMarkdownTransformer: vi.fn(), registerEntryRenderer: vi.fn() };
+  const pi = { on: (name: string, handler: any) => { handlers.set(name, handler); }, getCommands, appendEntry, registerCommand: vi.fn(), registerMarkdownTransformer: vi.fn(), registerEntryRenderer: vi.fn() };
   skillMentions(pi as unknown as ExtensionAPI);
   const ctx = { mode: "tui", ui: { addAutocompleteProvider } } as unknown as ExtensionContext;
   return { handlers, getCommands, appendEntry, addAutocompleteProvider, ctx };

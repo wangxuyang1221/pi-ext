@@ -45,7 +45,7 @@ try {
   const cli = join(realpathSync(join(consumer, "node_modules/@earendil-works/pi-coding-agent")), "dist/cli.js");
   const requestedModes = args.filter(arg => arg !== prefixArgument);
   const modes = requestedModes.length ? requestedModes : ["native", "native-fullscreen", "codex", "combined", "combined-fullscreen"];
-  assert(modes.every(mode => ["native", "native-fullscreen", "codex", "combined", "combined-fullscreen"].includes(mode)));
+  assert(modes.every(mode => ["native", "native-fullscreen", "codex", "codex-fullscreen", "combined", "combined-fullscreen"].includes(mode)));
   for (const mode of modes) {
     run("conda", ["run", "--no-capture-output", "-n", "codex-py312", "python", join(here, "pty-driver.py"), root, cli, installed, mode, evidencePrefix], { timeout: 180_000 });
   }
