@@ -1,5 +1,9 @@
 # Skill label serial transaction supplement
 
+## Later decision
+
+用户随后选择原生同步逐字删除＋分组撤销，并接受大粘贴快照成本。本报告的pending/native双状态与异步事务候选不进入产品，实验及结果保留供追溯。最新undo容量与释放边界见[收尾报告](skill-label-native-undo-closeout.md)，不以原128 MiB代理门槛继续阻塞。
+
 ## Result
 
 这是[Implementation #15](https://github.com/wangxuyang1221/pi-ext/issues/15)的补充调查，不是产品交付。[首轮阻塞报告](skill-label-implementation-blocker.md)及其失败日志保留，产品`src/`未改，#15完整范围未缩减，#16未推进。

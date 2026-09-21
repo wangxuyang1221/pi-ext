@@ -9,6 +9,9 @@ const identity = value => value;
 const theme = { borderColor: identity, selectList: { selectedPrefix: identity, selectedText: identity, description: identity, scrollInfo: identity, noMatch: identity } };
 const tui = { terminal: { rows: 40, columns: 100 }, requestRender() {} };
 const undoKey = "\x1b[45;5u";
+// Historical agent-defined budget, superseded by the user's accepted synchronous cost tradeoff.
+// Keep --assert-contract and its original failure for reproducibility, not as a current release gate.
+// See adventure/evidence/skill-label-native-undo-closeout.md.
 const heapBudget = 128 * 1024 * 1024;
 
 function sample(pasteBytes, nameLength) {
@@ -27,7 +30,7 @@ function sample(pasteBytes, nameLength) {
   let peakHeap = before.heapUsed, peakRss = before.rss, changes = 0;
   editor.onChange = () => { changes++; };
   const started = performance.now();
-  // Reproduce the rejected probe strategy, not production behavior.
+  // Reproduce the historical measured strategy, not a complete production editor.
   for (let index = 0; index < reference.length; index++) {
     editor.handleInput("\x7f");
     const memory = process.memoryUsage();

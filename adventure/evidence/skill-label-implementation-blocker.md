@@ -1,5 +1,9 @@
 # Skill label implementation blocker
 
+## Later decision
+
+用户随后明确接受原生同步逐字删除＋分组撤销的时间/内存放大，不采用pending/native双状态或异步事务。下文128 MiB预算及按名称长度复制paste的成本反例保留为历史证据，其代理设定门槛不再作为本轮阻塞；内容完整、undo正确、同步读取/即时提交、kill ring等功能要求不变。最新容量与释放核验见[原生undo收尾报告](skill-label-native-undo-closeout.md)。下文Status及其余叙述描述首轮调查当时的状态。
+
 ## Status
 
 [Implementation #15](https://github.com/wangxuyang1221/pi-ext/issues/15)未完成。本轮保存公开API核验、失败负载及正式边界测试，没有修改产品`src/`，没有交付标签或图标命令。完整要求仍以[Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2)为准，未删减六字段切片。

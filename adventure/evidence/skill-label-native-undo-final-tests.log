@@ -1,0 +1,11 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ✓ adventure/experiments/skill-label-native-undo/probe.test.ts (24 tests) 2394ms
+   ✓ 'native' restores a 1024-character reference after 'forward' deletion without eviction  514ms
+   ✓ 'codex' restores a 1024-character reference after 'forward' deletion without eviction  509ms
+
+ Test Files  1 passed (1)
+      Tests  24 passed (24)
+   Start at  10:27:48
+   Duration  3.12s (transform 46ms, setup 0ms, collect 498ms, tests 2.39s, environment 0ms, prepare 52ms)

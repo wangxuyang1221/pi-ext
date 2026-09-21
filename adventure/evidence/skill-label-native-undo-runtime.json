@@ -1,0 +1,11 @@
+{
+  "node": "v22.22.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "heapSizeLimit": 4345298944,
+  "nodeOptions": null,
+  "execArgv": [
+    "--input-type=module",
+    "-e"
+  ]
+}
