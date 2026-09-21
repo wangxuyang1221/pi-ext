@@ -1,6 +1,6 @@
 # Handoff
 
-> 本文是 subagent cleanup 冒险的当前存档。继承目标、已确认需求和证据边界，从 Continuation Point 继续。完整规格以 Spec Issue 正文为准。
+> 本冒险已按用户要求手动保存并暂停，供切换会话继续。单一实施切片已批准，Implementation #23 已创建，但尚未派发 worker 或开始产品实现。收到新的继续指令后，从 Continuation Point 接手；不要重复审批或创建实施关卡。完整规格以 Spec Issue 正文为准。
 
 ## Handoff Position
 
@@ -12,13 +12,13 @@
 
 本轮交付 /quit 的退出意图选择与所属 subagent 回收，保留暂时离开和未选择退出后的后台运行及 resume。用户已要求暂不考虑长期遗忘后的提醒、统一管理或自动回收。
 
-入口为 [Map #17](https://github.com/wangxuyang1221/pi-ext/issues/17)、[Spec #18](https://github.com/wangxuyang1221/pi-ext/issues/18)。方向 #19、正常退出 #20 和未选择退出 #21 均已通关；#22 因用户收缩范围关闭为 not planned，不视作通关。Spec 已确定，可用于实施；当前等待单一实施切片审核，尚无 Implementation Issue 或 worker。
+入口为 [Map #17](https://github.com/wangxuyang1221/pi-ext/issues/17)、[Spec #18](https://github.com/wangxuyang1221/pi-ext/issues/18)。方向 #19、正常退出 #20 和未选择退出 #21 均已通关；#22 因用户收缩范围关闭为 not planned，不视作通关。Spec 已确定，可用于实施；单一切片已由用户审核通过，[Implementation #23](https://github.com/wangxuyang1221/pi-ext/issues/23) 已创建。当前按用户要求暂停，没有 worker，也没有进行中的编码任务。
 
 ## Evolution
 
 起初候选是主进程退出就关闭子代理。用户指出退出可能是暂时离开，只有用户能判断是否真正结束会话。统一按进程退出回收未获确认，不再作为设计依据。
 
-用户随后依次确认正常退出时选择意图，暂时离开允许 subagent 继续后台工作，明确结束则停止所属全部代理，包括工作中的代理。#19 的结论已移交 Spec。#20 随后完成正常 /quit 的细化、真实原型与失败重试核验；用户确认 Escape 取消退出后，本关也已移交 Spec 并关闭。
+用户随后依次确认正常退出时选择意图，暂时离开允许 subagent 继续后台工作，明确结束则停止所属全部代理，包括工作中的代理。#19 的结论已移交 Spec。#20 随后完成正常 /quit 的细化、真实原型与失败重试核验；用户确认 Escape 取消退出后，本关也已移交 Spec 并关闭。#21 确认未选择退出保留代理并通过恢复验证；#22 因用户要求减少复杂度而取消。随后用户批准单一实施切片，要求创建 Implementation 后保存并暂停，切换会话继续。
 
 ## Agreed Decisions and Constraints
 
@@ -31,11 +31,12 @@
 - 用户已同意在 `/Users/wangxuyang/Code/t3code/pi-ext-subagent-cleanup` worktree 和 `adventure/subagent-cleanup` 分支开展本冒险，维护 GitHub Issues，提交并推送冒险分支；不创建 PR、不合并。
 - 不操作用户已有 tmux 会话。主工作区存在一批未提交的资料删除，未纳入本冒险。当前 worktree 从 `38a623c` 创建，继承的其他冒险证据不是本任务验证结果。
 - 遵循仓库语言策略；产品文案为英文。Python 使用 conda codex-py312；依赖使用固定 pnpm，dist 仅由构建生成。
-- adventure skill 规定实施前审核 slices，进入实施后再派发独立 worker；规划目前由主代理独立完成。
+- 切片已审核，最终交付尚未验收。当前暂停来自用户明确请求；本次没有启动 worker。恢复后 adventure 主代理担任协调者，只派发一个独立 worker 负责 #23，并禁止其再委派。
+- 除已批准的冒险 worktree 与 GitHub 操作，其他目录写入或副作用需先说明缘由、范围和风险，取得用户“同意”；安装必要依赖除外。禁止使用 skill-creator。
 
 ## Established Facts and Required Context
 
-已建立并推送冒险分支，Map 使用原生子 Issue 关联 Spec 和各关卡，后续 Planning 原生依赖 #19。
+已建立并推送冒险分支，Map 使用原生子 Issue 关联 Spec 和各关卡。Implementation #23 已关联 Map，并原生依赖已关闭的 #20、#21；不存在未完成的规划阻塞。Spec 的延期验证已明确分配给 #23。
 
 [起点核验](evidence/subagent-cleanup-starting-point.md)记录本地源码和官方版本证据。Pi 0.86.0 的 `session_shutdown` 不适合作为普通退出选择弹窗的直接入口：普通退出时 TUI 已停止，且该事件也会因 reload/new/resume/fork 触发。没有找到专用的可取消 before-quit 事件，退出快捷键又是保留快捷键。已用公开 editor factory/onSubmit 验证 /quit 接入，不依赖 raw terminal input 覆盖所有退出路径。
 
@@ -53,10 +54,16 @@ Context7 已定位官方库，但查询失败；使用本地 0.86.0 包和已联
 
 ## Continuation Point
 
-当前待用户审核一个垂直实施切片：通过正式 subagent 扩展交付已确定的 /quit 选择、所属代理回收、取消/失败重试及无选择退出保留行为。该 slice 无前置实施依赖，包含必要源码、正式测试和使用文档，并承担 Spec 的全部延期验证及整体验收；不含遗忘处置。
+当前停点：用户已批准单一 slice，并要求“创建实施 level 后保存游戏进度，并暂停，我打算切换会话继续”。这些准备工作已完成；本会话到此暂停，不能自行进入实现。
 
-已读取 slicing skill，尚未获得切片审核，不创建 Implementation 或派发 worker。用户接受后，按 adventure Issue 模板创建唯一 Implementation，将完整 slice 六字段及 Spec 入口写入正文，关联 Map 和规划前置条件，再保存并直接派发独立 worker。worker 必须先完整读取 write-todo-list 的绝对路径 SKILL.md，在 Issue 正文记录执行计划；正式行为改动采用适当测试验证。
+下一次用户明确继续时：
 
-切片验收须覆盖现有 12 组入口、9 组正常后端、4 组未选择退出，以及 Spec 的并发/生命周期/截止时间要求。运行 pnpm run check；已知 MCP 缺文件失败须作为基线单独记录，不扩大范围修复，也不得冒称通过。正式构建和发布包校验按实际结果报告，产品 dist 只由构建生成。
+1. 阅读 /Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md，核对 [Map #17](https://github.com/wangxuyang1221/pi-ext/issues/17)、[Spec #18](https://github.com/wangxuyang1221/pi-ext/issues/18) 和 [Implementation #23](https://github.com/wangxuyang1221/pi-ext/issues/23)。#23 保存已批准的六字段 slice、工作区、证据和验收责任；不要重新创建 Issue 或要求用户重复审核。
+2. 确认 worktree 为 /Users/wangxuyang/Code/t3code/pi-ext-subagent-cleanup，分支 adventure/subagent-cleanup；检查最新提交、未提交改动及是否已有 worker。本次存档前基准 d2aa550，此次保存只更新 progress；产品代码仍未修改。
+3. 作为协调者派发唯一 Implementation worker，显式使用 agent_type=worker、fork_turns=none。交接 Map、Spec、#23、worktree、当时的最新提交及上述证据；明确 worker 不再委派，提交推送仅限冒险分支。
+4. 要求 worker 行动前完整读取 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md 及必要引用，在 #23 正文维护执行计划。给出完整绝对路径，不只传 skill 名称。正常行为改动须有适当测试，具体局部实现由 worker 自主完成。
+5. #23 承担源码、测试、必要文档、全部延期验证和整体验收。相关证据包括 12 组入口、9 组正常后端、4 组未选择退出；这些是规划期间不同阶段的证据，不是最终产品已通过的证明。实施后运行正式回归，覆盖并发、生命周期、截止时间和原有保护。
+6. 执行 pnpm run check，并核验构建和发布包的实际结果。规划期已有 MCP 缺文件失败须单独记录，不扩大范围修无关基线，也不宣称通过；若新增失败与本切片有关则修复。dist 只能由构建生成。
+7. worker 完成后主代理核对 Spec 和验收证据，不通过则交回同一 worker 返工；通过后完成关卡与存档，提交最终交付给用户确认。Map、Spec 目前保持 open，不能提前关闭。
 
-切片审核通过后按 adventure 的 worker 流程编码、运行验收和保存；若出现会推翻规格的证据，再重开相关 Planning。最终须由用户确认交付才关闭 Map 与 Spec。当前未授权安装本冒险产物到用户日常 Pi 配置。
+如果新证据推翻已定规格，重开相关 Planning，不能把范围变化藏进执行计划。当前没有授权将本冒险安装到用户日常 Pi 配置；没有创建 PR、合并或部署的授权。测试资源须隔离，结束时记录进程和端口清理结果。
