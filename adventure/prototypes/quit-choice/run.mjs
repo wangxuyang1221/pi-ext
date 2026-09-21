@@ -6,8 +6,9 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '../../..');
 const [host = 'native', mode = 'regular', backend = 'fixture'] = process.argv.slice(2);
-const real = ['real','resume','unselected-resume'].includes(backend);
-const repeat = ['resume','unselected-resume'].includes(backend);
+const real = ['real','resume','unselected-resume','product','product-resume','product-unselected-resume'].includes(backend);
+const repeat = ['resume','unselected-resume','product-resume','product-unselected-resume'].includes(backend);
+const product = backend.startsWith('product');
 const quote = value => `'${value.replaceAll("'", "'\"'\"'")}'`;
 const tmux = real ? spawnSync('/usr/bin/which', ['tmux'], {encoding:'utf8'}).stdout.trim() : '';
 assert(!real || tmux, 'tmux is required for the real backend');
@@ -25,7 +26,7 @@ try {
   writeFileSync(join(root,'agent/settings.json'),JSON.stringify({quietStartup:true,compaction:{enabled:false},cacheWarming:'off',retry:{enabled:false}}));
   const env=Object.fromEntries(['PATH','LANG','LC_ALL','TERM','TERM_PROGRAM','COLORTERM'].flatMap(key=>process.env[key]?[[key,process.env[key]]]:[]));
   Object.assign(env,{HOME:join(root,'home'),TMPDIR:join(root,'tmp'),XDG_CACHE_HOME:join(root,'cache'),PI_CODING_AGENT_DIR:join(root,'agent'),SKILL_PTY_ROOT:root,PI_OFFLINE:'1',PI_TELEMETRY:'0',PI_SKIP_VERSION_CHECK:'1',PI_HARDWARE_CURSOR:'1'});
-  Object.assign(env,{QUIT_PROBE_REAL:real?'1':'0',QUIT_PROBE_REPO:repo});
+  Object.assign(env,{QUIT_PROBE_REAL:real?'1':'0',QUIT_PROBE_PRODUCT:product?'1':'0',QUIT_PROBE_REPO:repo});
   if(real) {
     writeFileSync(join(root,'tmux'), '#!/bin/sh\nexport LANG=en_US.UTF-8\n' +
       'if [ "$1" = display-message ] && [ -f '+quote(join(root,'fail-query'))+' ]; then echo "Injected tmux query failure" >&2; exit 87; fi\n' +
@@ -47,7 +48,7 @@ try {
   for(let run=0;run<(repeat?2:1);run++) {
     child=spawnSync(process.execPath,[...args,...(run?['--continue']:[])],{cwd:join(root,'workspace'),env,stdio:'inherit'});
     appendFileSync(join(root,'events.jsonl'),JSON.stringify({type:'probe-process-exit',data:{run,status:child.status,signal:child.signal}})+'\n');
-    if(backend==='unselected-resume' && run===0) assert(child.status===0 || child.signal==='SIGKILL', `Unexpected first exit: ${child.error??child.signal??child.status}`);
+    if(['unselected-resume','product-unselected-resume'].includes(backend) && run===0) assert(child.status===0 || child.signal==='SIGKILL', `Unexpected first exit: ${child.error??child.signal??child.status}`);
     else assert.equal(child.status,0,`CLI run failed: ${child.error??child.signal??child.status}`);
   }
   const records = readFileSync(join(root,'events.jsonl'),'utf8');

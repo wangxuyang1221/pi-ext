@@ -28,6 +28,7 @@ import {
 import { TmuxRuntime } from "./tmux-runtime.js";
 import { executeCommand } from "./command-executor.js";
 import { registerSubagentTools } from "./tools.js";
+import { createSubagentQuitSession, type SubagentQuitSession } from "./quit.js";
 import { assignUsage, GOAL_TASK_EVENT, registerChildUsage, usageDirectory } from "./usage.js";
 
 const PI_SUBAGENT_TMUX_PATH = "PI_SUBAGENT_TMUX_PATH";
@@ -125,7 +126,10 @@ export default function subagentExtension(
   }
 
   let rootSessionId: string | undefined;
+  let quitSession: SubagentQuitSession | undefined;
   pi.on("session_start", async (_event, ctx) => {
+    quitSession?.invalidate();
+    quitSession = undefined;
     const sessionFile = ctx.sessionManager.getSessionFile();
     if (!sessionFile) return;
     if (!parent) {
@@ -162,6 +166,13 @@ export default function subagentExtension(
       ...(parent ? { configuration: { protocolVersion: SESSION_STATE_SCHEMA_VERSION, agentDir, tmuxPath, piPath } } : {}),
     });
     if (rootSessionId) await manager.claimNamespace(rootSessionId);
+    if (!parent && ctx.mode === "tui") {
+      quitSession = createSubagentQuitSession(ctx, manager);
+    }
+  });
+
+  pi.on("resources_discover", (_event, ctx) => {
+    if (ctx.mode === "tui") quitSession?.installEditor();
   });
 
   pi.on("agent_start", async () => {
@@ -187,6 +198,8 @@ export default function subagentExtension(
   });
 
   pi.on("session_shutdown", async () => {
+    quitSession?.invalidate();
+    quitSession = undefined;
     try { await host.shutdown(); }
     finally {
       await manager.releaseAllNamespaces();

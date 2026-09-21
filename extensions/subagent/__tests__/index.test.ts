@@ -11,12 +11,80 @@ const SessionStateStore = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await 
 const subagentExtension = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/index.js")).default : sourceExtension;
 
 const eventNames = [
+  "resources_discover",
   "session_start",
   "session_shutdown",
   "agent_start",
   "agent_settled",
   "session_tree",
 ];
+
+test("installs the quit editor only for a root TUI session", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-index-test-"));
+  const handlers = new Map<string, (...args: any[]) => unknown>();
+  let factory: unknown;
+  const ui = {
+    getEditorComponent: vi.fn(() => undefined),
+    setEditorComponent: vi.fn((value: unknown) => { factory = value; }),
+  };
+  const ctx = {
+    mode: "tui",
+    ui,
+    cwd: root,
+    sessionManager: {
+      getSessionId: () => "parent-a",
+      getSessionFile: () => join(root, "parent-a.jsonl"),
+      getLeafId: () => null,
+      getEntries: () => [],
+    },
+  };
+  try {
+    subagentExtension({
+      on: (name: string, handler: any) => handlers.set(name, handler),
+      registerTool() {},
+    } as never, { env: { PATH: "/usr/bin" }, stateRoot: root });
+
+    await handlers.get("session_start")!({}, ctx);
+    await handlers.get("resources_discover")!({ reason: "startup" }, ctx);
+
+    assert.equal(typeof factory, "function");
+    assert.equal(ui.setEditorComponent.mock.calls.length, 1);
+    await handlers.get("session_shutdown")!({ reason: "quit" }, ctx);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test.each(["rpc", "json", "print"])("does not install the quit editor in %s mode", async (mode) => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-index-test-"));
+  const handlers = new Map<string, (...args: any[]) => unknown>();
+  const ui = { setEditorComponent: vi.fn() };
+  const ctx = {
+    mode,
+    ui,
+    cwd: root,
+    sessionManager: {
+      getSessionId: () => "parent-a",
+      getSessionFile: () => join(root, "parent-a.jsonl"),
+      getLeafId: () => null,
+      getEntries: () => [],
+    },
+  };
+  try {
+    subagentExtension({
+      on: (name: string, handler: any) => handlers.set(name, handler),
+      registerTool() {},
+    } as never, { env: { PATH: "/usr/bin" }, stateRoot: root });
+
+    await handlers.get("session_start")!({}, ctx);
+    await handlers.get("resources_discover")!({ reason: "startup" }, ctx);
+
+    assert.equal(ui.setEditorComponent.mock.calls.length, 0);
+    await handlers.get("session_shutdown")!({ reason: "quit" }, ctx);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test("wires the public tools to Pi session lifecycle events", async () => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-index-test-"));
@@ -242,6 +310,8 @@ test("keeps managed-child lifecycle hooks without registering orchestration tool
     exec: vi.fn(),
   };
   const ctx = {
+    mode: "tui",
+    ui: { setEditorComponent: vi.fn() },
     cwd: "/repo",
     sessionManager: {
       getSessionId: () => "child-a",
@@ -284,6 +354,8 @@ test("keeps managed-child lifecycle hooks without registering orchestration tool
     assert.equal(handlers.has("message_end"), true);
 
     await handlers.get("session_start")?.({ type: "session_start", reason: "startup" }, ctx);
+    await handlers.get("resources_discover")?.({ type: "resources_discover", reason: "startup" }, ctx);
+    assert.equal(ctx.ui.setEditorComponent.mock.calls.length, 0);
     await handlers.get("agent_start")?.({ type: "agent_start" }, ctx);
     await handlers.get("message_start")?.({ type: "message_start", message: {
       role: "user", content: [{ type: "text", text: "[subagent:012345abcdef]\nWork" }],

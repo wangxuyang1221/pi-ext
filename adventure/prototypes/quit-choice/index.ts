@@ -7,6 +7,7 @@ import { installBackend } from "./backend.js";
 export default function (pi: ExtensionAPI): void {
   const record = (type: string, data: unknown = null) => appendFileSync(join(process.env.SKILL_PTY_ROOT!, "events.jsonl"), `${JSON.stringify({ type, data })}\n`);
   const backend = process.env.QUIT_PROBE_REAL === "1" ? installBackend(pi) : undefined;
+  if (process.env.QUIT_PROBE_PRODUCT === "1") return;
   pi.on("session_start", (_event, ctx) => {
     if (ctx.mode !== "tui") return;
     let pending = false;

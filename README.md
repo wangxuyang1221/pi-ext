@@ -400,6 +400,10 @@ managed child 仍加载 lifecycle hooks 并写入 runtime state，但不注册 s
 
 `subagent_close` 是终结操作：先停止并确认 Pi 进程与 tmux window 已退出，再解除 direct-child 关系并删除 Extension 状态，从而释放 slot。关闭失败或确认超时时保留关系、状态和 slot，以便重试。终态 child 若重新可达，单目标 close 仍核验并关闭对应 runtime；共享进程的历史 alias 不得关闭活跃 sibling。未知 tmux 查询错误会向上传递，不当作死亡证明。成功关闭不会删除或修改 Pi 原生 session JSONL、session 目录或项目文件。
 
+root TUI 提交 `/quit` 时，扩展先查询当前 session namespace。没有存活或正在启动的 child 时直接退出；存在存活 child 时显示 `End session` 和 `Leave temporarily`，默认选择 `End session`。前者中止仍在执行的 main turn，调用 close-all 并再次查询，确认没有存活或正在启动的 child 后才退出。后者只退出 main Pi，保留 child 供同一 session resume。Escape 取消选择，不中止 main turn。状态诊断、正在启动的 child、close 失败或关闭后仍有成员时，Pi 显示错误并留在当前 session；排除故障后可再次提交 `/quit`。
+
+该选择只接入 root TUI 的 `/quit` submit。Ctrl+D、SIGHUP、SIGTERM、SIGKILL、进程崩溃和其他没有经过选择的退出路径不会调用 close-all；child 和原生 session 数据保持原状，之后仍须通过 namespace owner 与 runtime identity 核验才能恢复控制。managed child、RPC、JSON 和 print 模式不安装退出选择。session replacement 或 reload 会作废旧 context 中尚未完成的退出流程。
+
 扩展要求当前 parent 使用持久化 Pi session；`--no-session` 模式下工具会明确拒绝。默认管理快照位于 Pi agent directory 的 `subagents/sessions/<sessionId>/state.json`。parent 控制事实与 child 生命周期分开写入，跨进程锁保护更新；同一 namespace 只允许一个管理控制者。状态协议已升级到 v3，升级前必须关闭旧 child、停止旧写入者。离线转换、回退、环境契约和超时边界见 [runtime reliability](docs/subagent-runtime-reliability.md)。可使用以下环境变量：
 
 ```text

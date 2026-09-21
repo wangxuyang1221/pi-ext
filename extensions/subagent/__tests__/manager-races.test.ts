@@ -88,6 +88,41 @@ test.each(["steer", "follow_up"] as const)("keeps %s delivery bound when it fini
   } finally { await f.cleanup(); }
 });
 
+test("close-all cannot miss a child while a prompt delivery is in flight", async () => {
+  const f = await fixture();
+  let markSending!: () => void;
+  let releaseSend!: () => void;
+  const sending = new Promise<void>(resolve => { markSending = resolve; });
+  const release = new Promise<void>(resolve => { releaseSend = resolve; });
+  try {
+    f.runtime.sendPrompt = async () => {
+      markSending();
+      await release;
+    };
+    const prompting = f.manager.prompt("parent", "child", "Concurrent work", "follow_up")
+      .then(() => undefined, error => error);
+    await sending;
+
+    const closing = f.manager.close("parent", "all");
+    releaseSend();
+    await closing;
+    await prompting;
+
+    assert.equal(f.getCloses(), 1);
+    assert.deepEqual((await f.manager.list("parent")).capacity, {
+      active: 0,
+      pending: 0,
+      limit: 1,
+      available: 1,
+    });
+    assert.deepEqual((await f.store.load("parent"))?.children, []);
+    assert.equal(await f.store.load("child"), undefined);
+  } finally {
+    releaseSend?.();
+    await f.cleanup();
+  }
+});
+
 test.each(["steer", "follow_up"] as const)("does not settle an unconsumed %s queue entry", async (delivery) => {
   const f = await fixture();
   try {

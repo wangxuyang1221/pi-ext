@@ -1,0 +1,441 @@
+[
+  {
+    "scenario": "empty",
+    "passed": true,
+    "mainPids": [
+      99391
+    ],
+    "unselectedResume": false,
+    "observedShutdownEvents": [
+      "quit"
+    ],
+    "beforeLauncherCleanup": {
+      "keeperPid": 99390,
+      "keeperAlive": true,
+      "agents": []
+    },
+    "cleanup": {
+      "pids": [
+        99389,
+        99390
+      ],
+      "livePids": [],
+      "socketUnavailable": true
+    },
+    "launcherPid": 99385,
+    "quitElapsedMs": 338
+  },
+  {
+    "scenario": "leave",
+    "passed": true,
+    "mainPids": [
+      99422
+    ],
+    "unselectedResume": false,
+    "observedShutdownEvents": [
+      "quit"
+    ],
+    "beforeLauncherCleanup": {
+      "keeperPid": 99421,
+      "keeperAlive": true,
+      "agents": [
+        {
+          "agentId": "01a0c45d-a116-71c6-9ef9-6608d48bfba5",
+          "pid": 99457,
+          "alive": true
+        }
+      ]
+    },
+    "cleanup": {
+      "pids": [
+        99420,
+        99421,
+        99457
+      ],
+      "livePids": [],
+      "socketUnavailable": true
+    },
+    "launcherPid": 99416,
+    "quitElapsedMs": 453
+  },
+  {
+    "scenario": "end-running",
+    "passed": true,
+    "mainPids": [
+      99508
+    ],
+    "unselectedResume": false,
+    "observedShutdownEvents": [
+      "quit"
+    ],
+    "beforeLauncherCleanup": {
+      "keeperPid": 99507,
+      "keeperAlive": true,
+      "agents": [
+        {
+          "agentId": "01a0c45d-ae2b-7292-b532-0217ee492ea9",
+          "pid": 99532,
+          "alive": false
+        }
+      ]
+    },
+    "cleanup": {
+      "pids": [
+        99506,
+        99507,
+        99532
+      ],
+      "livePids": [],
+      "socketUnavailable": true
+    },
+    "launcherPid": 99502,
+    "quitElapsedMs": 366
+  },
+  {
+    "scenario": "query-retry",
+    "passed": true,
+    "mainPids": [
+      99618
+    ],
+    "unselectedResume": false,
+    "observedShutdownEvents": [
+      "quit"
+    ],
+    "beforeLauncherCleanup": {
+      "keeperPid": 99617,
+      "keeperAlive": true,
+      "agents": [
+        {
+          "agentId": "01a0c45d-bb7f-77af-99e5-f2e2268c4c2f",
+          "pid": 99642,
+          "alive": false
+        }
+      ]
+    },
+    "cleanup": {
+      "pids": [
+        99616,
+        99617,
+        99642
+      ],
+      "livePids": [],
+      "socketUnavailable": true
+    },
+    "launcherPid": 99606,
+    "quitElapsedMs": 555
+  },
+  {
+    "scenario": "partial-close-retry",
+    "passed": true,
+    "mainPids": [
+      99700
+    ],
+    "unselectedResume": false,
+    "observedShutdownEvents": [
+      "quit"
+    ],
+    "beforeLauncherCleanup": {
+      "keeperPid": 99699,
+      "keeperAlive": true,
+      "agents": [
+        {
+          "agentId": "01a0c45d-c894-7236-9435-930a2e866d84",
+          "pid": 99737,
+          "alive": false
+        },
+        {
+          "agentId": "01a0c45d-ccd8-70ce-b801-12e59b044427",
+          "pid": 99781,
+          "alive": false
+        }
+      ]
+    },
+    "cleanup": {
+      "pids": [
+        99698,
+        99699,
+        99737,
+        99781
+      ],
+      "livePids": [],
+      "socketUnavailable": true
+    },
+    "launcherPid": 99694,
+    "quitElapsedMs": 714
+  },
+  {
+    "scenario": "cancel",
+    "passed": true,
+    "mainPids": [
+      99857
+    ],
+    "unselectedResume": false,
+    "observedShutdownEvents": [
+      "quit"
+    ],
+    "beforeLauncherCleanup": {
+      "keeperPid": 99856,
+      "keeperAlive": true,
+      "agents": [
+        {
+          "agentId": "01a0c45d-da82-72b9-9692-32ab240872e0",
+          "pid": 99902,
+          "alive": false
+        }
+      ]
+    },
+    "cleanup": {
+      "pids": [
+        99855,
+        99856,
+        99902
+      ],
+      "livePids": [],
+      "socketUnavailable": true
+    },
+    "launcherPid": 99851,
+    "quitElapsedMs": 1045
+  },
+  {
+    "scenario": "main-busy",
+    "passed": true,
+    "mainPids": [
+      546
+    ],
+    "unselectedResume": false,
+    "observedShutdownEvents": [
+      "quit"
+    ],
+    "beforeLauncherCleanup": {
+      "keeperPid": 545,
+      "keeperAlive": true,
+      "agents": [
+        {
+          "agentId": "01a0c45d-e9a7-71e7-b836-485d2a7d66b0",
+          "pid": 570,
+          "alive": false
+        }
+      ]
+    },
+    "cleanup": {
+      "pids": [
+        544,
+        545,
+        570
+      ],
+      "livePids": [],
+      "socketUnavailable": true
+    },
+    "launcherPid": 540,
+    "quitElapsedMs": 386
+  },
+  {
+    "scenario": "reload",
+    "passed": true,
+    "mainPids": [
+      679,
+      679
+    ],
+    "unselectedResume": false,
+    "observedShutdownEvents": [
+      "reload",
+      "quit"
+    ],
+    "beforeLauncherCleanup": {
+      "keeperPid": 678,
+      "keeperAlive": true,
+      "agents": [
+        {
+          "agentId": "01a0c45d-f716-716e-9b16-16a4ff54b08f",
+          "pid": 702,
+          "alive": false
+        }
+      ]
+    },
+    "cleanup": {
+      "pids": [
+        677,
+        678,
+        702
+      ],
+      "livePids": [],
+      "socketUnavailable": true
+    },
+    "launcherPid": 673,
+    "quitElapsedMs": 356
+  },
+  {
+    "scenario": "resume",
+    "passed": true,
+    "mainPids": [
+      760,
+      916
+    ],
+    "unselectedResume": false,
+    "observedShutdownEvents": [
+      "quit",
+      "quit"
+    ],
+    "beforeLauncherCleanup": {
+      "keeperPid": 759,
+      "keeperAlive": true,
+      "agents": [
+        {
+          "agentId": "01a0c45e-05b2-7656-80f4-1d9d78ee0d61",
+          "pid": 874,
+          "alive": false
+        }
+      ]
+    },
+    "cleanup": {
+      "pids": [
+        758,
+        759,
+        874
+      ],
+      "livePids": [],
+      "socketUnavailable": true
+    },
+    "launcherPid": 754,
+    "quitElapsedMs": 1377
+  },
+  {
+    "scenario": "sighup-resume",
+    "passed": true,
+    "mainPids": [
+      953,
+      1084
+    ],
+    "unselectedResume": true,
+    "observedShutdownEvents": [
+      "quit",
+      "quit"
+    ],
+    "beforeLauncherCleanup": {
+      "keeperPid": 952,
+      "keeperAlive": true,
+      "agents": [
+        {
+          "agentId": "01a0c45e-16d2-7788-8122-3f0139fbc5d4",
+          "pid": 979,
+          "alive": false
+        }
+      ]
+    },
+    "cleanup": {
+      "pids": [
+        951,
+        952,
+        979
+      ],
+      "livePids": [],
+      "socketUnavailable": true
+    },
+    "launcherPid": 947,
+    "quitElapsedMs": 378
+  },
+  {
+    "scenario": "sigterm-resume",
+    "passed": true,
+    "mainPids": [
+      1122,
+      1205
+    ],
+    "unselectedResume": true,
+    "observedShutdownEvents": [
+      "quit",
+      "quit"
+    ],
+    "beforeLauncherCleanup": {
+      "keeperPid": 1121,
+      "keeperAlive": true,
+      "agents": [
+        {
+          "agentId": "01a0c45e-26c7-75c0-a50c-a6acc8ccd01f",
+          "pid": 1145,
+          "alive": false
+        }
+      ]
+    },
+    "cleanup": {
+      "pids": [
+        1120,
+        1121,
+        1145
+      ],
+      "livePids": [],
+      "socketUnavailable": true
+    },
+    "launcherPid": 1116,
+    "quitElapsedMs": 384
+  },
+  {
+    "scenario": "sigkill-resume",
+    "passed": true,
+    "mainPids": [
+      1252,
+      1444
+    ],
+    "unselectedResume": true,
+    "observedShutdownEvents": [
+      "quit"
+    ],
+    "beforeLauncherCleanup": {
+      "keeperPid": 1251,
+      "keeperAlive": true,
+      "agents": [
+        {
+          "agentId": "01a0c45e-36d5-7427-b6e1-03a72d138f76",
+          "pid": 1277,
+          "alive": false
+        }
+      ]
+    },
+    "cleanup": {
+      "pids": [
+        1250,
+        1251,
+        1277
+      ],
+      "livePids": [],
+      "socketUnavailable": true
+    },
+    "launcherPid": 1246,
+    "quitElapsedMs": 397
+  },
+  {
+    "scenario": "ctrld-resume",
+    "passed": true,
+    "mainPids": [
+      1493,
+      1571
+    ],
+    "unselectedResume": true,
+    "observedShutdownEvents": [
+      "quit",
+      "quit"
+    ],
+    "beforeLauncherCleanup": {
+      "keeperPid": 1492,
+      "keeperAlive": true,
+      "agents": [
+        {
+          "agentId": "01a0c45e-46b6-7240-b9a2-4e4dd7e8521e",
+          "pid": 1530,
+          "alive": false
+        }
+      ]
+    },
+    "cleanup": {
+      "pids": [
+        1490,
+        1492,
+        1530
+      ],
+      "livePids": [],
+      "socketUnavailable": true
+    },
+    "launcherPid": 1486,
+    "quitElapsedMs": 397
+  }
+]

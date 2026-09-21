@@ -19,11 +19,15 @@ node adventure/prototypes/quit-choice/run.mjs native regular
 node adventure/prototypes/quit-choice/run.mjs combined regular real
 conda run -n codex-py312 python adventure/prototypes/quit-choice/smoke.py
 conda run -n codex-py312 python adventure/prototypes/quit-choice/backend-smoke.py
+conda run -n codex-py312 python adventure/prototypes/quit-choice/product-entry-smoke.py
+conda run -n codex-py312 python adventure/prototypes/quit-choice/product-smoke.py
 ```
 
 第一条命令只验证选择入口，每次 `/quit` 询问；第二条接入真实 subagent 后端。真实后端中先输入 `/probe-spawn fast work` 创建测试代理，或 `/probe-spawn hold:work` 创建保持执行中的代理，然后 `/quit`。默认 End session，另一项 Leave temporarily，Escape 取消退出。未创建代理时直接退出。
 
 真实后端需要 tmux。`run.mjs` 的第三参数 `resume` 会在暂时离开后用同一隔离配置再启动一次 Pi `--continue`，用于验证恢复；这是原型测试入口，不是产品自动重启功能。
+
+实施后的正式回归使用第三参数 `product`、`product-resume` 和 `product-unselected-resume`。这些模式仍注册隔离的 `/probe-spawn` 命令和故障注入，但不安装一次性 quit adapter；`/quit` 完全由生产 subagent extension 处理。
 
 ## Isolation and fixtures
 
@@ -47,6 +51,14 @@ conda run -n codex-py312 python adventure/prototypes/quit-choice/backend-smoke.p
 ```sh
 conda run -n codex-py312 python adventure/prototypes/quit-choice/backend-smoke.py sighup-resume sigterm-resume sigkill-resume ctrld-resume
 ```
+
+### Production integration
+
+实施关卡使用生产入口重跑矩阵，不把上面的规划结果当成交付证据：
+
+- [12 组 editor 结果](../../evidence/subagent-quit-product-entry-results.json)：native、Codex、skill、fullscreen 与两种 skill 加载顺序；每组覆盖 Escape 后继续输入，以及 Leave temporarily 或 End session。
+- [13 组 backend 结果](../../evidence/subagent-quit-product-results.json)：无 agent、保留、回收工作中 agent、查询失败重试、部分回收失败重试、取消、main busy、reload、resume，以及四种无选择退出后恢复。
+- [实施报告](../../evidence/subagent-quit-implementation.md)：自动化测试、全仓 check、build、package 边界和资源清理。
 
 ## Decisions and limitations
 

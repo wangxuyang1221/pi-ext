@@ -1,7 +1,11 @@
 import { appendFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@earendil-works/pi-coding-agent";
-import subagentExtension from "../../../extensions/subagent/src/index.js";
+import sourceSubagentExtension from "../../../extensions/subagent/src/index.js";
+
+const subagentExtension = process.env.QUIT_PROBE_PRODUCT === "1"
+  ? (await import("../../../extensions/subagent/dist/index.js")).default
+  : sourceSubagentExtension;
 
 /** Use production registrations; only expose their calls to the disposable quit adapter. */
 export function installBackend(pi: ExtensionAPI) {
