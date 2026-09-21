@@ -1,6 +1,6 @@
 # Handoff
 
-> 从 Continuation Point 接续。#14/#15已关闭，产品提交`184a7e7`，测试夹具返工提交`d8cae5f`。#16自动化验收已完成，停在物理中文输入法与实际终端字形观察，不能据此关闭关卡。用户已确认英文产品文案，接受原生同步删除的大粘贴内存代价，不推进异步双状态。完整规格只在Spec Issue正文维护。
+> 从 Continuation Point 接续。用户验收发现两个UI问题，#15已重开。本轮仅修问题1原型留白，产品提交`7eb5143`，协调者局部复验通过；问题2旧Codex UI混装样式变化按用户要求暂不处理，#15/#16保持open。等待用户reload复验留白，未完成整体验收。此前自动化结论及责任边界见下文，最新状态以本段及Continuation Point为准。
 
 ## Handoff Position
 
@@ -14,7 +14,7 @@
 
 - [Map #1](https://github.com/wangxuyang1221/pi-ext/issues/1)、[Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2)保持open，最终用户确认前不关闭。
 - [#14标点激活](https://github.com/wangxuyang1221/pi-ext/issues/14)已通过，产品基准`d8a6a40d05e7cf3db63b553520bb2717453c04a0`。
-- [#15完整标签体验](https://github.com/wangxuyang1221/pi-ext/issues/15)已通过，产品提交`184a7e79c4dfadcec1f5f75e8ab0b5808411b065`，包含输入/正文标签、同步整体编辑、持久图标偏好及两宿主适配。
+- [#15完整标签体验](https://github.com/wangxuyang1221/pi-ext/issues/15)原产品`184a7e7`曾通过，用户验收后重开；留白返工`7eb5143`已局部通过，旧Codex UI混装样式问题未处理。
 - [#12编辑契约](https://github.com/wangxuyang1221/pi-ext/issues/12)因成本反例重开，现已再次通关；[收尾证据](evidence/skill-label-native-undo-closeout.md)提交`594f120e49b60a949ceb33c29d899b85b27d3243`。
 - [#16安装交付与整体验收](https://github.com/wangxuyang1221/pi-ext/issues/16)保持open。真实安装、八组扩展/宿主组合PTY及自动化Spec核验通过，物理IME/字形尚未验证。隔离人工入口已准备，不修改日常配置。
 
@@ -98,13 +98,19 @@ worker环境可能污染goal fixture；仅测试子进程清除`PI_SUBAGENT_PARE
 
 ## Current Assumptions
 
-#15产品和fixture返工均已验收；#16自动化责任已有证据，仍缺物理IME/字体观察，不提前称整体验收通过。发现回归交原#15 worker修复，业务规则或已采用方案失效才回流Planning。已接受的资源代价不重复询问。
+#15原产品和fixture返工曾通过，但用户实际验收发现原型留白与旧Codex UI混装覆盖缺口。留白已修，混装未修；#16原自动化结果不覆盖这些缺口，仍需用户复验与物理IME/字体观察，不提前称整体验收通过。发现回归交原#15 worker修复，业务规则或已采用方案失效才回流Planning。已接受的资源代价不重复询问。
 
 不能把PTY UTF-8/粘贴注入等同物理IME候选窗口，不能把可导入全部入口等同全部扩展共同运行。无法实际操作的验收项明确缺口，不擅自通过。
 
 ## Continuation Point
 
-#14/#15均关闭，#16停在等待实际终端人工观察，Map/Spec保持open。无需重复已通过的八组PTY、性能或安装实验。续接先核对工作区与原worker状态，避免重复施工。
+最新停点：用户报告问题1标签留白不符原型，问题2成标后旧Codex UI样式变化，并明确先单独修1。原worker提交`7eb5143ca777530ec482dbd1714b284cecbec828`，恢复输入/成功正文两种图标的前导、间隔、尾随三个显示空格，修复跨行共享源坐标与鼠标末端吸附。详见[留白返工报告](evidence/skill-label-spacing-repair.md)。594项相关回归及严格tsc通过，两宿主fullscreen真实PTY各7组通过；协调者检查产品diff并独立复跑36项布局/界面测试通过。check为2312 passed/5 skipped及既有MCP缺文件失败，build通过，package仍缺旧文档。进程端口已清理。
+
+#15留白局部返工通过，因问题2未解决仍保持open，#16也未通关。等待用户`/reload`复验问题1，不自动扩修问题2、不替换其他插件。日常配置仍是main整包加冒险worktree单独skill入口。旧Codex UI缺少renderProjectedLines，成标后退回普通边框；配套新Codex UI有该接口，但用户尚未要求切换，不能将同分支组合通过说成旧版混装已兼容。没有改安装、Codex UI或全局配置。
+
+历史配套组合的八组PTY/安装记录保持其原适用版本；本轮仅针对留白补验，没有重新跑全部组合。最终报告中旧产品hash/580项等是历史结果，最新留白证据以上述返工报告为准。其余物理IME与字体观察要求仍有效。收到用户结果后再决定继续问题2或整体验收，不重复性能取舍或擅自结束冒险。
+
+保留的后续职责与人工入口如下：
 
 1. 已保留#15 worker `01a0c163-4879-7531-af23-b7eef1ddaf71`供产品返工；#16 worker `01a0c279-d8df-7713-a26c-f61160eb76fd`负责整体验收，后续优先复用其上下文。两者已settled，没有继续实施任务，原#14 worker已关闭。跨session无法复用时按原职责创建新上下文并提供准确材料入口。
 2. 等用户在实际终端执行`docs/skill-mentions.md#manual-terminal-verification`。从本worktree运行`pnpm exec node extensions/skill-mentions/__tests__/manual-terminal.mjs native regular`，再覆盖`codex regular`、`native fullscreen`、`codex fullscreen`。记录OS、终端/字体/输入法及结果。重点观察中文候选窗口、选择字符不提前发送或重复，标签两侧输入/删除/undo，以及cube/command真实字形、输入与正文颜色、reload/重启偏好。入口离线隔离，不新增日常安装、不改全局配置/字体。
