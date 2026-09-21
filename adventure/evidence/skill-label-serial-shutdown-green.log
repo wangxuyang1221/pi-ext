@@ -1,0 +1,9 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ✓ adventure/experiments/skill-label-serial/editor.test.ts (16 tests) 20ms
+
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+   Start at  09:06:22
+   Duration  619ms (transform 48ms, setup 0ms, collect 412ms, tests 20ms, environment 0ms, prepare 45ms)

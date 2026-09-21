@@ -1,0 +1,33 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ adventure/experiments/skill-label-serial/editor.test.ts (2 tests | 2 failed) 12ms
+   × native exposes deletion and cursor synchronously before the native transaction 4ms
+     → expected 'alpha.' to be '.' // Object.is equality
+   × codex exposes deletion and cursor synchronously before the native transaction 1ms
+     → expected 'alpha.' to be '.' // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  adventure/experiments/skill-label-serial/editor.test.ts > native exposes deletion and cursor synchronously before the native transaction
+ FAIL  adventure/experiments/skill-label-serial/editor.test.ts > codex exposes deletion and cursor synchronously before the native transaction
+AssertionError: expected 'alpha.' to be '.' // Object.is equality
+
+Expected: [32m"."[39m
+Received: [31m"[7malpha[27m."[39m
+
+ ❯ adventure/experiments/skill-label-serial/editor.test.ts:21:28
+     19|   const editor = fixture(kind);
+     20|   editor.handleInput("\x1b[3~");
+     21|   expect(editor.getText()).toBe(".");
+       |                            ^
+     22|   expect(editor.getExpandedText()).toBe(".");
+     23|   expect(editor.getCursor()).toEqual({ line: 0, col: 0 });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  08:59:53
+   Duration  654ms (transform 36ms, setup 0ms, collect 473ms, tests 12ms, environment 0ms, prepare 49ms)

@@ -1,0 +1,6 @@
+Temporary experiment directory removed: yes
+Task quality stderr file removed: yes
+Existing prototype preserved: Benchmark children: 40211 40399 20696 20697 (spawnSync waited; recorded ESRCH)
+Current process check:
+TCP listeners for these children:
+No persistent service or PTY was started by this supplement.

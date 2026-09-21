@@ -1,0 +1,47 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ adventure/experiments/skill-label-serial/editor.test.ts (16 tests | 2 failed) 22ms
+   ✓ native exposes deletion and cursor synchronously before the native transaction 6ms
+   ✓ codex exposes deletion and cursor synchronously before the native transaction 2ms
+   ✓ native serializes same-stack delete and submit with synchronous consumer callbacks 1ms
+   ✓ codex serializes same-stack delete and submit with synchronous consumer callbacks 0ms
+   ✓ native preserves delete, external-editor replacement and undo order 1ms
+   ✓ codex preserves delete, external-editor replacement and undo order 0ms
+   ✓ native restores consecutive deletions and undos without looking up text history 1ms
+   ✓ codex restores consecutive deletions and undos without looking up text history 0ms
+   ✓ native releases a native wait on an abort-ignoring provider and rejects its late result 1ms
+   ✓ codex releases a native wait on an abort-ignoring provider and rejects its late result 0ms
+   × native cancellation retries deletion and shutdown drains an accepted undo 2ms
+     → expected '.' to be '$alpha.' // Object.is equality
+   × codex cancellation retries deletion and shutdown drains an accepted undo 0ms
+     → expected '.' to be '$alpha.' // Object.is equality
+   ✓ native serves pending expanded paste text by source segments 0ms
+   ✓ codex serves pending expanded paste text by source segments 0ms
+   ✓ delegates a current ordinary provider result and retains one native undo 0ms
+   ✓ preserves consumer callback reentrancy when submit prefills the next draft 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  adventure/experiments/skill-label-serial/editor.test.ts > native cancellation retries deletion and shutdown drains an accepted undo
+ FAIL  adventure/experiments/skill-label-serial/editor.test.ts > codex cancellation retries deletion and shutdown drains an accepted undo
+AssertionError: expected '.' to be '$alpha.' // Object.is equality
+
+Expected: [32m"[7m$alpha[27m."[39m
+Received: [31m"."[39m
+
+ ❯ adventure/experiments/skill-label-serial/editor.test.ts:108:33
+    106|   await editor.dispose();
+    107|   await editor.settled();
+    108|   expect(editor.base.getText()).toBe("$alpha.");
+       |                                 ^
+    109| });
+    110|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 14 passed (16)
+   Start at  09:05:34
+   Duration  627ms (transform 45ms, setup 0ms, collect 438ms, tests 22ms, environment 0ms, prepare 43ms)

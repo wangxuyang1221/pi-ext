@@ -1,0 +1,37 @@
+{
+  "node": "v22.22.2",
+  "arch": "arm64",
+  "budget": 134217728,
+  "results": [
+    {
+      "bytes": 1048576,
+      "nameLength": 64,
+      "warmups": 5,
+      "samples": 20,
+      "medianMs": 0.5676465000000235,
+      "maxMs": 0.9846670000000017,
+      "peakHeapDelta": 3269072,
+      "peakRssDelta": 3244032,
+      "peakRss": 157499392,
+      "userUndoEvents": 1,
+      "pid": 40211,
+      "exitCode": 0,
+      "reaped": true
+    },
+    {
+      "bytes": 10485760,
+      "nameLength": 64,
+      "warmups": 5,
+      "samples": 20,
+      "medianMs": 3.683896499999719,
+      "maxMs": 4.243999999999687,
+      "peakHeapDelta": 31585360,
+      "peakRssDelta": 31571968,
+      "peakRss": 242450432,
+      "userUndoEvents": 1,
+      "pid": 40399,
+      "exitCode": 0,
+      "reaped": true
+    }
+  ]
+}
