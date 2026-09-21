@@ -1,0 +1,99 @@
+{
+  "node": "v22.22.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "pnpm": "11.9.0",
+  "packages": {
+    "pi-coding-agent": "0.86.0",
+    "pi-tui": "0.86.0",
+    "pi-ai": "0.86.0"
+  },
+  "stdinIsTTY": false,
+  "physicalIme": "unavailable: no desktop terminal input or observation capability used",
+  "physicalFont": "not observed; TERM is not a font attestation",
+  "context7": "Pi main only; not a 0.86.0 version guarantee",
+  "sources": [
+    {
+      "official": "https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/core/package-manager.ts",
+      "sha256": "e2fdd18093dc69cb8fe82bb6bef674f20f8a5093d0d13fd1b7180f49dbe751fd",
+      "equal": true
+    },
+    {
+      "official": "https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/modes/interactive/interactive-mode.ts",
+      "sha256": "01ebf39a2ce0b8939076fbd5cc78e9cad6f49f642a608cd3b2adb8d215e6c0f0",
+      "equal": true
+    },
+    {
+      "official": "https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/ai/src/providers/faux.ts",
+      "sha256": "b0f0f8b2335150cf6be34260885eca8b901cdbf64de852d6fccc50b06875b1e6",
+      "equal": true
+    }
+  ],
+  "docsRead": [
+    {
+      "path": "docs/extensions.md",
+      "sha256": "a92b13e0f5049095050c3269809ca79ece80b64feb301d193c9f560131b78ebc"
+    },
+    {
+      "path": "docs/tui.md",
+      "sha256": "279d5c04e6d48fbc978dfc428d07d1b70731fcefba8f299b39d02cc0cfe9c1d1"
+    },
+    {
+      "path": "docs/packages.md",
+      "sha256": "1067eae058c5ce980a21b04c51ce6d38e201e51197807037d0a063ac3c769b46"
+    },
+    {
+      "path": "docs/sdk.md",
+      "sha256": "2d11354f1999f0213783d92683c3f2dcbc2abcfe259b92768f0d80872ab3ae88"
+    },
+    {
+      "path": "docs/skills.md",
+      "sha256": "e44738f2de44436b1ef56ab64231116fdc68a451213b96b27a5338d6296176c7"
+    },
+    {
+      "path": "docs/session-format.md",
+      "sha256": "0492f604727307f987a97a9674ed77d2676dbd6adfe06cd857c69662e9c856e7"
+    },
+    {
+      "path": "docs/custom-provider.md",
+      "sha256": "7a159f6fb8a6f96ac73e38ab6756206701a5ec87c5dddd92f610182e09cd4d4f"
+    },
+    {
+      "path": "docs/keybindings.md",
+      "sha256": "2e3167fc89c116009421356ceb666cb5b03a15dbd9518d2e1b1ed52771ebf6b8"
+    },
+    {
+      "path": "docs/environment-variables.md",
+      "sha256": "cbcb0316ecca8323a92eb628989809f25c97f9d0d68bd70eb040cf700fbc59a0"
+    },
+    {
+      "path": "docs/terminal-setup.md",
+      "sha256": "93084e7e5b5cb28dba4d76704b758a414c93cb91055c765a6336f9df96167d33"
+    },
+    {
+      "path": "docs/settings.md",
+      "sha256": "e802f5b34e23620abc77e260f0af94425859dee60ce2495c0481564bb1c1ea24"
+    },
+    {
+      "path": "docs/quickstart.md",
+      "sha256": "487cb6d2a4e47d616c3e6319b6ef4ccccd7382c77adf002f84419f950035ce8d"
+    },
+    {
+      "path": "docs/themes.md",
+      "sha256": "34a3a36f232ac3bb1a8f9728894064f0220f9164c411c508b0a5c888ff4b88db"
+    },
+    {
+      "path": "docs/compaction.md",
+      "sha256": "f70e26e5d54aa0d9d131dbc49cd316deb0909030fab2b66d6a071b5f0ae72c26"
+    },
+    {
+      "path": "docs/sessions.md",
+      "sha256": "2310cd14ab177c055c82f79a471190f23494b32b041624ab553aa0b44c72370a"
+    },
+    {
+      "path": "docs/usage.md",
+      "sha256": "b00b0d084a4976f2d693b63fa22d26f623dbbebef0966673b625466395c2512d"
+    }
+  ],
+  "productDiffFrom184a7e7": ""
+}

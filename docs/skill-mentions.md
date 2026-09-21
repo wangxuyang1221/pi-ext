@@ -107,8 +107,26 @@ node --expose-gc extensions/skill-mentions/__tests__/label-performance.mjs
 node --expose-gc extensions/skill-mentions/__tests__/label-reload-memory.mjs
 ```
 
-标签的来源、编辑、正文、偏好、性能及验证边界见[标签实现报告](https://github.com/wangxuyang1221/pi-ext/blob/adventure/skill-mentions/adventure/evidence/skill-label-product-implementation.md)。PTY 脚本不代表物理 IME 或完整扩展组合验收；后者归 #16。
+标签的来源、编辑、正文、偏好、性能及验证边界见[标签实现报告](https://github.com/wangxuyang1221/pi-ext/blob/adventure/skill-mentions/adventure/evidence/skill-label-product-implementation.md)。当前产物、全部八个默认扩展共同运行和完整 Spec 矩阵见[本轮安装验收](https://github.com/wangxuyang1221/pi-ext/blob/adventure/skill-mentions/adventure/evidence/skill-final-acceptance.md)。`combined` 与 `combined-fullscreen` 还运行受控的本地 stdio MCP fixture，不连接外部服务或执行子代理。PTY 字节注入不代表物理 IME 候选窗口或实际字体观察。
 
 既有标点测试与真实入口结果见[标点验收报告](https://github.com/wangxuyang1221/pi-ext/blob/adventure/skill-mentions/adventure/evidence/skill-punctuation-implementation.md)。
 
-本功能的产物与 PTY 验证独立记录，不替代全仓 check 或 package:check。当前全仓既有缺失文档和 MCP prototype 会使这两项失败，不能据此宣称全仓通过。执行环境、逐项 Spec 证据及终端验证边界见 [安装验收报告](https://github.com/wangxuyang1221/pi-ext/blob/adventure/skill-mentions/adventure/evidence/skill-install-acceptance.md)。
+本功能的产物与 PTY 验证独立记录，不替代全仓 check 或 package:check。当前全仓既有缺失文档和 MCP prototype 会使这两项失败，不能据此宣称全仓通过。旧版证据保留在[上一版安装验收](https://github.com/wangxuyang1221/pi-ext/blob/adventure/skill-mentions/adventure/evidence/skill-install-acceptance.md)，不能替代本轮标签验收。
+
+## Manual terminal verification
+
+物理 IME 与实际字体仍须人工观察。在专用终端窗口运行以下命令，不要在日常 Pi 会话中执行。launcher 只使用 worktree 内临时 HOME、配置、session 和离线 faux，正常退出后清理，不安装字体或修改终端配置。它使用本次构建入口，不是另一轮 tarball 安装测试。
+
+```bash
+pnpm run build
+pnpm exec node extensions/skill-mentions/__tests__/manual-terminal.mjs native regular
+pnpm exec node extensions/skill-mentions/__tests__/manual-terminal.mjs codex regular
+```
+
+也分别将 `regular` 换成 `fullscreen` 复核。每条命令启动两次 Pi，第一次 `/quit` 后自动恢复该隔离会话，第二次 `/quit` 后删除临时目录。
+
+1. 记录操作系统、终端版本、当前字体和输入法。在中文输入法组合态中，在 `用 $al` 的前后输入中文，观察候选窗口是否贴近真实光标、选词是否只提交一次，未确认的候选不能导致 Pi 提交。
+2. Tab 确认 alpha，确认两侧中文没有丢失。左右跨过标签；Backspace 删除，F8 撤销。缩窄和放宽窗口，在换行标签两侧再次用输入法选词。
+3. 观察 cube 是否是清楚的线框立方体，而不是空框、乱码或重叠。提交 `用 $alpha`，检查输入框与任务正文的图标、青色、正常字重和背景继承一致，原生卡片仍在。
+4. 执行 `/skill-label-icon command`，观察 `⌘`，再 `/reload`；退出进入第二次启动，确认两处仍使用 command。字体不支持时如实记录，不自动改字体或把缺字当通过。
+5. 保存各宿主/模式的观察结果或截图交协调者。自动化结果不能代签这份人工记录。

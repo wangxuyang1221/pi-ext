@@ -1,0 +1,50 @@
+{
+  "results": [
+    {
+      "host": "native",
+      "mode": "regular",
+      "launcherPid": 41062,
+      "cliPids": [
+        41072,
+        41304
+      ],
+      "passed": true,
+      "temporaryRootRemoved": true
+    },
+    {
+      "host": "codex",
+      "mode": "regular",
+      "launcherPid": 41417,
+      "cliPids": [
+        41427,
+        41612
+      ],
+      "passed": true,
+      "temporaryRootRemoved": true
+    },
+    {
+      "host": "native",
+      "mode": "fullscreen",
+      "launcherPid": 41745,
+      "cliPids": [
+        41746,
+        41945
+      ],
+      "passed": true,
+      "temporaryRootRemoved": true
+    },
+    {
+      "host": "codex",
+      "mode": "fullscreen",
+      "launcherPid": 42059,
+      "cliPids": [
+        42069,
+        42264
+      ],
+      "passed": true,
+      "temporaryRootRemoved": true
+    }
+  ],
+  "physicalIme": "not tested",
+  "physicalFont": "not observed"
+}

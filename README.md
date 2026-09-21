@@ -48,7 +48,9 @@ Pi package 以当前用户的完整系统权限运行。安装第三方 package 
 
 `skill-mentions` 在 TUI 输入框任意行提供 `$` skill 候选。例如输入 `用 $re`，再用 Tab 或 Enter 补全名称；第一次 Enter 只选择候选，菜单关闭后 Enter 才发送。发送后保持 Pi 原生 skill 卡片外观，兼容默认编辑器和本仓库 CodexEditor。
 
-引用两侧需要空格、换行、Tab 或输入边界。代码、转义和紧邻文字/标点的引用不激活。多项引用在同一 user 请求中生效，重复项去重；未知或不可读项静默保留原文。安装、队列、历史与压缩限制见 [Skill mentions](docs/skill-mentions.md)。
+候选两侧需要空格、换行、Tab 或输入边界。提交激活保留左侧限制，右侧另接受明确的句读和闭合符号，例如 `$research，继续`；`$research.md` 不激活。代码、转义和左侧紧邻正文的引用保持原文。多项引用在同一 user 请求中生效，重复项去重；未知或不可读项静默保留原文。
+
+输入框与成功快照正文显示青色整体标签，默认 cube 图标需要支持 U+F01A7 的 Nerd Font。缺字时用 `/skill-label-icon command` 切换为 `⌘` 并保存偏好。整体删除、撤销、大粘贴成本、安装和历史限制见 [Skill mentions](docs/skill-mentions.md)。
 
 ## Goal extension
 
@@ -444,7 +446,7 @@ pnpm run prototype:tui
 pnpm run prototype:subagent-ui
 ```
 
-仓库不提交 `dist/`、编译缓存或本地运行日志。CI 从源码构建，并检查是否有被忽略的文件仍受 Git 跟踪。`extensions/codex-compact/src/media/` 中的预编译 WASM、manifest、许可证和第三方源码包是普通构建的输入，继续纳入版本控制；普通构建只校验并复制这些资源，不调用 Rust。`prepack` 会重建七个扩展，发布包只包含编译产物、theme、README、goal 验收报告、license 和上游 attribution。包同时包含 MIT 本地实现与 Apache-2.0 的 Codex goal 复制内容，metadata 使用 `MIT AND Apache-2.0`；具体文件归属见 `extensions/goal/UPSTREAM.md`、`LICENSE` 和 `NOTICE`，不把上游内容改授 MIT。
+仓库不提交 `dist/`、编译缓存或本地运行日志。CI 从源码构建，并检查是否有被忽略的文件仍受 Git 跟踪。`extensions/codex-compact/src/media/` 中的预编译 WASM、manifest、许可证和第三方源码包是普通构建的输入，继续纳入版本控制；普通构建只校验并复制这些资源，不调用 Rust。`prepack` 会重建八个扩展，发布包只包含编译产物、theme、README、goal 验收报告、license 和上游 attribution。包同时包含 MIT 本地实现与 Apache-2.0 的 Codex goal 复制内容，metadata 使用 `MIT AND Apache-2.0`；具体文件归属见 `extensions/goal/UPSTREAM.md`、`LICENSE` 和 `NOTICE`，不把上游内容改授 MIT。
 
 验证本地工作区后，可安装解包目录，不必先发布到注册表：
 

@@ -36,7 +36,7 @@ try {
   const installed = realpathSync(join(consumer, "node_modules/pi-ext"));
   const packaged = JSON.parse(readFileSync(join(installed, "package.json"), "utf8"));
   assert.deepEqual(packaged.pi, manifest.pi);
-  for (const path of files.filter(path => path.startsWith("extensions/skill-mentions/dist/"))) {
+  for (const path of files.filter(path => /^extensions\/[^/]+\/dist\//.test(path))) {
     assert.deepEqual(readFileSync(join(installed, path)), readFileSync(join(repo, path)));
   }
   // Imports run against the installed package, not source or a development symlink.
@@ -45,15 +45,19 @@ try {
   const cli = join(realpathSync(join(consumer, "node_modules/@earendil-works/pi-coding-agent")), "dist/cli.js");
   const requestedModes = args.filter(arg => arg !== prefixArgument);
   const modes = requestedModes.length ? requestedModes : ["native", "native-fullscreen", "codex", "combined", "combined-fullscreen"];
-  assert(modes.every(mode => ["native", "native-fullscreen", "codex", "codex-fullscreen", "combined", "combined-fullscreen"].includes(mode)));
+  assert(modes.every(mode => ["native", "native-fullscreen", "codex", "codex-fullscreen", "combined", "combined-fullscreen", "combined-search", "combined-search-fullscreen"].includes(mode)));
   for (const mode of modes) {
     run("conda", ["run", "--no-capture-output", "-n", "codex-py312", "python", join(here, "pty-driver.py"), root, cli, installed, mode, evidencePrefix], { timeout: 180_000 });
   }
   writeFileSync(join(evidence, `${evidencePrefix}-artifact.json`), JSON.stringify({
-    passed: true, node: process.version, pnpm: execFileSync("pnpm", ["--version"], { encoding: "utf8" }).trim(),
+    passed: true,
+    sourceCommit: execFileSync("git", ["rev-parse", "HEAD"], { cwd: repo, encoding: "utf8" }).trim(),
+    piVersion: JSON.parse(readFileSync(join(dirname(dirname(cli)), "package.json"), "utf8")).version,
+    fixtureSha256: Object.fromEntries(["acceptance.mjs", "pty-driver.py", "pty-fixture.ts", "pty-mcp-fixture.mjs"].map(path => [path, createHash("sha256").update(readFileSync(join(here, path))).digest("hex")])),
+    node: process.version, pnpm: execFileSync("pnpm", ["--version"], { encoding: "utf8" }).trim(),
     sha256: createHash("sha256").update(readFileSync(tarball)).digest("hex"), files,
     extensionEntries: packaged.pi.extensions, modes,
-    checks: ["prepack build", "tarball contents", "no test/log payload", "pnpm installation", "compiled file byte equality", "all installed entry imports", "isolated pi install", "real CLI PTY"],
+    checks: ["prepack build", "tarball contents", "no test/log payload", "pnpm installation", "all extension compiled files byte equality", "all installed entry imports", "isolated pi install", "real CLI PTY"],
   }, null, 2) + "\n");
 } finally {
   rmSync(root, { recursive: true, force: true });

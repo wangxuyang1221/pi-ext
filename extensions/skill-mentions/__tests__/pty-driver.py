@@ -26,6 +26,15 @@ env = {key: os.environ[key] for key in ["PATH", "LANG", "LC_ALL"] if key in os.e
 env.update(HOME=str(root / "home"), TMPDIR=str(root / "tmp"), XDG_CACHE_HOME=str(root / "cache"),
            PI_CODING_AGENT_DIR=str(root / "agent"), PI_OFFLINE="1", PI_SKIP_VERSION_CHECK="1",
            PI_TELEMETRY="0", PI_HARDWARE_CURSOR="1", TERM="xterm-256color", SKILL_PTY_ROOT=str(root))
+mcp_events_file = root / "mcp-events.jsonl"
+if mode.startswith("combined"):
+    config = root / "mcp.json"
+    config.write_text(json.dumps({"mcpServers": {"local": {
+        "type": "stdio", "command": "node",
+        "args": [str(Path(__file__).with_name("pty-mcp-fixture.mjs")), str(mcp_events_file)],
+        "connectTimeout": 5000, "retry": {"maxAttempts": 1, "background": False},
+    }}}))
+    env["PI_MCP_CONFIG"] = str(config)
 settings_file = root / "agent/settings.json"
 settings_file.write_text(json.dumps({"quietStartup": True, "compaction": {"enabled": False},
                                      "cacheWarming": "off", "retry": {"enabled": False}, "doubleEscapeAction": "none"}))
@@ -67,6 +76,9 @@ args = ["node", cli, "--extension", str(Path(install_root) / "consumer/pty-fixtu
         "--no-context-files", "--no-prompt-templates", "--approve", "--offline", "--no-builtin-tools",
         "--session-dir", str(root / "sessions"), "--provider", "faux", "--model", "faux-1",
         "--tui-mode", "fullscreen" if mode.endswith("fullscreen") else "regular"]
+additional_extensions = [str(repo / "extensions/codex-search/src/index.ts")] if "combined-search" in mode else []
+for extension in additional_extensions:
+    args += ["--extension", extension]
 pid, fd = pty.fork()
 if pid == 0:
     os.chdir(root / "workspace")
@@ -196,6 +208,9 @@ try:
         for name in ["goal", "mcp", "permissions", "codex-ui", "openai-fast-mode"]:
             assert any(f"/{name}/dist/" in path for path in sources), (name, sources)
         assert any("/subagent/dist/" in tool["path"] for tool in events("editor")[-1]["tools"])
+    if additional_extensions:
+        assert any(tool["name"] == "codex_search" and "/codex-search/src/" in tool["path"] for tool in events("editor")[-1]["tools"])
+        checks.append("unpackaged codex-search source coexists without executing a search or reading daily credentials")
     screens["startup"] = view()
     checks.append("installed CLI startup and selected extension commands")
 
@@ -296,6 +311,38 @@ try:
     assert editor() == large_paste + " $beta"
     submit(large_paste, ["alpha"], "\x7f\r")
     checks.append("folded paste plus visible label retain expanded source after delete/undo and same-write Delete-Enter activates internal references")
+
+    paste(large_paste)
+    paste(" $beta")
+    for _ in range(2):
+        before = len(events("ready"))
+        requests_before = len(events("request"))
+        send("\x1b[18~")  # F7 calls the public reload command without consuming the draft.
+        wait(lambda: len(events("ready")) == before + 1, "reload a folded draft")
+        settle(0.5)
+        assert editor() == large_paste + " $beta"
+        assert "[paste #" in view() and "⌘beta" in view(), view()
+        assert len(events("request")) == requests_before
+        send("\x7f")
+        assert editor() == large_paste + " "
+        send("\x1b[19~")
+        assert editor() == large_paste + " $beta"
+    submit(large_paste + " $beta", ["alpha", "beta"])
+    checks.append("two public reloads retain folded draft and visible label; fresh delete/undo and submission preserve expanded source")
+
+    if mode.startswith("combined"):
+        editor()
+        assert any(tool["name"] == "mcp__local__echo" for tool in events("editor")[-1]["tools"])
+        before = len(events("request"))
+        settled = len(events("settled"))
+        paste("MCP_COMBINATION $alpha")
+        send("\r")
+        wait(lambda: len(events("request")) == before + 2 and len(events("settled")) > settled, "local MCP tool with all extensions")
+        assert len(events("tool")) == 1 and not events("tool")[-1]["isError"], events("tool")
+        result = [message for message in events("request")[-1] if message["role"] == "toolResult"][-1]
+        assert text(result) == "Tool literal $alpha", result
+        assert "⌘alpha" in view() and editor() == ""
+        checks.append("all eight extensions coexist with a real local stdio MCP call; tool dollars stay literal and no subagent or remote provider runs")
 
     for char in "$alpha":
         send(char)
@@ -435,7 +482,23 @@ try:
     assert len([block for block in last["content"] if block["type"] == "image"]) == 1
     checks.append("another extension sends one ordinary user with deduplicated skills and image")
 
+    same_task = "同文 $alpha $beta"
+    paste(same_task)
+    first = submit(same_task, ["alpha", "beta"])
     (root / "agent/skills/beta/SKILL.md").unlink()
+    paste(same_task)
+    second = submit(same_task, ["alpha"])
+    assert first["requestId"] != second["requestId"]
+    assert "同文 ⌘alpha ⌘beta" in view() and "同文 ⌘alpha $beta" in view(), view()
+    screens["equal-tasks-distinct-success"] = view()
+    before = len(events("ready"))
+    paste("/reload")
+    send("\r")
+    wait(lambda: len(events("ready")) == before + 1, "reload equal task snapshots")
+    settle(0.5)
+    assert "同文 ⌘alpha ⌘beta" in view() and "同文 ⌘alpha $beta" in view(), view()
+    screens["equal-tasks-after-reload"] = view()
+    checks.append("identical tasks bind distinct success sets live and after reload without rereading deleted beta")
     paste("缺失 $beta, $alpha! $unknown.")
     submit("缺失 $beta, $alpha! $unknown.", ["alpha"])
     assert "Failed to read" not in view() and "ENOENT" not in view()
@@ -533,8 +596,12 @@ finally:
     reaped.append(pid)
     for child in reaped:
         assert subprocess.run(["kill", "-0", str(child)], capture_output=True).returncode != 0
-    result = {"mode": mode, "pids": reaped, "exit": os.waitstatus_to_exitcode(status), "checks": checks,
-              "selectedExtensions": selected, "screens": screens, "lastScreen": view(),
+    mcp_events = [json.loads(line) for line in mcp_events_file.read_text().splitlines()] if mcp_events_file.exists() else []
+    mcp_pids = [event["data"]["pid"] for event in mcp_events if event["type"] == "start"]
+    for child in mcp_pids:
+        assert subprocess.run(["kill", "-0", str(child)], capture_output=True).returncode != 0, child
+    result = {"mode": mode, "pids": reaped, "mcpPids": mcp_pids, "mcpEvents": mcp_events, "exit": os.waitstatus_to_exitcode(status), "checks": checks,
+              "selectedExtensions": selected, "additionalSourceExtensions": additional_extensions, "screens": screens, "lastScreen": view(),
               "installation": installation.stdout, "requests": len(events("request")),
               "diskUsers": disk_users if "disk_users" in globals() else [],
               "starts": events("start"), "shutdowns": events("shutdown"),

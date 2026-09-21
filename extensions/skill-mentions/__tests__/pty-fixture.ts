@@ -9,6 +9,10 @@ export default function (pi: ExtensionAPI): void {
   const faux = fauxProvider({ api: "skill-pty-faux" });
   faux.setResponses(Array.from({ length: 100 }, () => async (context, options) => {
     record("request", context.messages);
+    const last = context.messages.at(-1);
+    if (last?.role === "user" && JSON.stringify(last).includes("MCP_COMBINATION")) {
+      return fauxAssistantMessage({ type: "toolCall", id: "local-echo", name: "mcp__local__echo", arguments: { text: "Tool literal $alpha" } }, { stopReason: "toolUse" });
+    }
     // Keep a controlled request open for real TUI queue acceptance.
     if (JSON.stringify(context.messages.at(-1)).includes("QUEUE_HOLD")) {
       await new Promise<void>(resolve => {
@@ -30,6 +34,13 @@ export default function (pi: ExtensionAPI): void {
       record("editor", { text: ctx.ui.getEditorText(), commands: pi.getCommands().map(command => ({ name: command.name, source: command.source, path: command.sourceInfo.path })), tools: pi.getAllTools().map(tool => ({ name: tool.name, path: tool.sourceInfo.path })) });
     },
   });
+  pi.registerShortcut("f7", {
+    handler: async ctx => { pi.sendUserMessage("/fixture-reload", { expandPromptTemplates: true }); },
+  });
+  pi.registerCommand("fixture-reload", {
+    handler: async (_args, ctx) => { await ctx.reload(); },
+  });
+  pi.on("tool_execution_end", event => { record("tool", event); });
   pi.registerCommand("fixture-user", {
     handler: async () => {
       pi.sendUserMessage([
