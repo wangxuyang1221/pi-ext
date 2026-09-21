@@ -113,4 +113,4 @@ Context7在首轮仅返回`/earendil-works/pi`的main索引，不能作为0.86.0
 
 已完整读取的Pi文档及引用清单沿用首轮报告，没有把Context7 main冒充安装版本。除补充实验、证据和#15自己的Execution/Verification外，未改Map/Spec/#12/progress/Acceptance。
 
-本轮未启动常驻服务或新PTY。成本子进程初次PID40211/40399、最终PID20696/20697均由spawnSync等待退出，并以ESRCH确认回收；无这些PID的TCP listener。测试临时目录与本轮新产生的quality stderr临时文件已清理，保留已有`.tmp/skill-ui-prototype-GG4yw8`。详情见[清理记录](skill-label-serial-cleanup.log)。
+本轮未启动常驻服务或新PTY。成本子进程初次PID40211/40399、最终PID20696/20697均由spawnSync等待退出，并以ESRCH确认回收；无这些PID的TCP listener。测试临时目录与本轮新产生的quality stderr临时文件已清理。最终核对发现`.tmp/skill-ui-prototype-GG4yw8`不存在；初版报告的“已保留”表述不成立，现已更正。本补充仅删除`.tmp/skill-label-serial`和`.tmp/codex-quality/quality-plugin-p57BRn.stderr.log`，没有执行删除该prototype的操作，尚不能确认其消失时间或原因。未重建空目录冒充保留成功，已向协调者报告此异常。详情见[清理记录](skill-label-serial-cleanup.log)。
