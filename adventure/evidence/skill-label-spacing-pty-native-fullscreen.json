@@ -1,0 +1,2961 @@
+{
+  "mode": "native-fullscreen",
+  "scope": "spacing",
+  "pids": [
+    25137
+  ],
+  "mcpPids": [],
+  "mcpEvents": [],
+  "exit": 0,
+  "checks": [
+    "compiled-entry CLI startup and selected extension commands",
+    "both icons retain all three prototype spaces, truecolor normal weight and inherited background in input/body; whole Delete/Backspace, configured undo and fullscreen space hit targets",
+    "a label taller than the real narrow viewport remains page-accessible and atomically editable",
+    "fullscreen SGR mouse snaps inside a label to its source boundary",
+    "real SIGWINCH narrow/wide resize, vertical events and external editor process preserve original source",
+    "folded paste plus visible label retain expanded source after delete/undo and same-write Delete-Enter activates internal references",
+    "graceful exit"
+  ],
+  "selectedExtensions": [
+    "./extensions/skill-mentions/dist/index.js"
+  ],
+  "additionalSourceExtensions": [],
+  "screens": {
+    "startup": "[Skill conflicts]\n  auto (user)\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-la\nbel/SKILL.md\n    name exceeds 64 characters (245)\n  auto (user)\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究\n_𐐀-𝟠/SKILL.md\n    name contains invalid characters (must be lowercase a-z, 0-9, hyphens only)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/workspace (advent...\n0.0%/128k                                                                                                         faux-1",
+    "label-cube": "[Skill conflicts]\n  auto (user)\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-la\nbel/SKILL.md\n    name exceeds 64 characters (245)\n  auto (user)\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究\n_𐐀-𝟠/SKILL.md\n    name contains invalid characters (must be lowercase a-z, 0-9, hyphens only)\n\n\n Skill label icon saved: cube\n\n\n [skill] alpha (f3 to expand)\n\n\n\n Use  󰆧 alpha\n\n\n Fixture response\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/workspace (advent...\n↑717 ↓4 W717 CH0.0% 1.1%/128k                                                                                     faux-1",
+    "label-command": "[Skill conflicts]\n  auto (user)\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-la\nbel/SKILL.md\n    name exceeds 64 characters (245)\n  auto (user)\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究\n_𐐀-𝟠/SKILL.md\n    name contains invalid characters (must be lowercase a-z, 0-9, hyphens only)\n\n\n Skill label icon saved: cube\n\n\n [skill] alpha (f3 to expand)\n\n\n\n Use  ⌘ alpha\n\n\n Fixture response\n\n Skill label icon saved: command\n\n\n [skill] alpha (f3 to expand)\n\n\n\n Use  ⌘ alpha\n\n\n Fixture response\n\n\n\n\n\n\n\n\n\n\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/workspace (advent...\n↑891 ↓8 R717 W891 CH67.3% 0.8%/128k                                                                               faux-1",
+    "tall-label-page-up": " icon saved:\n cube\n\n\n [skill] alpha\n (f3 to expand)\n\n\n\n Use  ⌘ alpha\n\n\n Fixture\n response\n\n Skill label\n icon saved:\n command\n\n\n [skill] alpha\n (f3 to expand)\n\n\n\n Use  ⌘ alpha\n\n\n Fixture\n response\n\n────────────────\n ⌘ long-0000010\n020030040050060\n070080090100110\n120130140150160\n170180190200210\n220230240250260\n270280290300310\n320330340350360\n370380390400410\n420430440450460\n470480490500510\n520530540550560\n570580590600610\n620630640650660\n670680690700710\n─── ↓ 2 more ───\n/Users/wangxu...\n↑891 ↓8 R717 ...",
+    "label-narrow-resize": "y/native-fullscr\neen/agent/skills\n/研究\n_𐐀-𝟠/SKILL.md\n    name\ncontains invalid\ncharacters (must\nbe lowercase\na-z, 0-9,\nhyphens only)\n\n\n Skill label\n icon saved:\n cube\n\n\n [skill] alpha\n (f3 to expand)\n\n\n\n Use  ⌘ alpha\n\n\n Fixture\n response\n\n Skill label\n icon saved:\n command\n\n\n [skill] alpha\n (f3 to expand)\n\n\n\n Use  ⌘ alpha\n\n\n Fixture\n response\n\n────────────────\nabc  ⌘ alpha\ntail\n────────────────\n/Users/wangxu...\n↑891 ↓8 R717 ...",
+    "label-mouse": "[Skill conflicts]\n  auto (user)\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-la\nbel/SKILL.md\n    name exceeds 64 characters (245)\n  auto (user)\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究\n_𐐀-𝟠/SKILL.md\n    name contains invalid characters (must be lowercase a-z, 0-9, hyphens only)\n\n\n Skill label icon saved: cube\n\n\n [skill] alpha (f3 to expand)\n\n\n\n Use  ⌘ alpha\n\n\n Fixture response\n\n Skill label icon saved: command\n\n\n [skill] alpha (f3 to expand)\n\n\n\n Use  ⌘ alpha\n\n\n Fixture response\n\n\n\n\n\n\n\n\n\n\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\nabc  ⌘ alpha  tail\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/workspace (advent...\n↑891 ↓8 R717 W891 CH67.3% 0.8%/128k                                                                               faux-1"
+  },
+  "lastScreen": " Fixture response\n\n Skill label icon saved: command\n\n\n [skill] alpha (f3 to expand)\n\n\n\n Use  ⌘ alpha\n\n\n Fixture response\n\n\n [skill] alpha (f3 to expand)\n\n\n\n folded  ⌘ alpha\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\n pppppppppppppppppppppppppppppppppppppppppp\n\n\n Fixture response\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n\n────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/workspace (advent...\n↑1.6k ↓12 R1.6k W1.6k CH39.4% 1.8%/128k                                                                           faux-1\nTo resume this session: pi --session-dir /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsD\nVy/native-fullscreen/sessions --session 01a0c2e6-250b-7769-abed-2e5fd28b3914\n",
+  "installation": "",
+  "requests": 3,
+  "diskUsers": [],
+  "starts": [
+    {
+      "reason": "startup",
+      "mode": "tui",
+      "pid": 25137,
+      "tty": true,
+      "session": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/sessions/2026-09-21T07-37-37-803Z_01a0c2e6-250b-7769-abed-2e5fd28b3914.jsonl"
+    }
+  ],
+  "shutdowns": [
+    "quit"
+  ],
+  "editorObservations": [
+    {
+      "text": "",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use ",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alpha",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use ",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alpha",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use X$alpha",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alpha",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use X$alpha",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alpha",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alphaX",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alpha",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use ",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alpha",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use ",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alpha",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use X$alpha",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alpha",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use X$alpha",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alpha",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alphaX",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "Use $alpha",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "$long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "$long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "abc $alpha tail",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "abc $alpha tail",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "abc X$alpha tail",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "abc $alpha tail",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "abc $alpha tail external",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "folded $alpha pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp ",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "folded $alpha pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp $beta",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    },
+    {
+      "text": "",
+      "commands": [
+        {
+          "name": "fixture-reload",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "fixture-user",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/consumer/pty-fixture.ts"
+        },
+        {
+          "name": "skill-label-icon",
+          "source": "extension",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/skill-mentions/dist/index.js"
+        },
+        {
+          "name": "llama",
+          "source": "extension",
+          "path": "<inline:llama.cpp>"
+        },
+        {
+          "name": "skill:alpha",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md"
+        },
+        {
+          "name": "skill:beta",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/beta/SKILL.md"
+        },
+        {
+          "name": "skill:long-000001002003004005006007008009010011012013014015016017018019020021022023024025026027028029030031032033034035036037038039040041042043044045046047048049050051052053054055056057058059060061062063064065066067068069070071072073074075076077078079",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/long-label/SKILL.md"
+        },
+        {
+          "name": "skill:research",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/research/SKILL.md"
+        },
+        {
+          "name": "skill:研究_𐐀-𝟠",
+          "source": "skill",
+          "path": "/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/研究_𐐀-𝟠/SKILL.md"
+        }
+      ],
+      "tools": [
+        {
+          "name": "read",
+          "path": "<builtin:read>"
+        },
+        {
+          "name": "bash",
+          "path": "<builtin:bash>"
+        },
+        {
+          "name": "powershell",
+          "path": "<builtin:powershell>"
+        },
+        {
+          "name": "edit",
+          "path": "<builtin:edit>"
+        },
+        {
+          "name": "write",
+          "path": "<builtin:write>"
+        },
+        {
+          "name": "grep",
+          "path": "<builtin:grep>"
+        },
+        {
+          "name": "find",
+          "path": "<builtin:find>"
+        },
+        {
+          "name": "ls",
+          "path": "<builtin:ls>"
+        }
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "type": "input",
+      "text": "Use $alpha",
+      "source": "interactive"
+    },
+    {
+      "type": "input",
+      "text": "Use $alpha",
+      "source": "interactive"
+    },
+    {
+      "type": "input",
+      "text": "folded $alpha pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp",
+      "source": "interactive"
+    }
+  ],
+  "providerUsers": [
+    [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "<pi-ext-skill-mentions version=\"1\">\n{\"namespace\":\"pi-ext/skill-mentions\",\"version\":1,\"requestId\":\"5867357f-72cf-4ab9-b3a1-25e3fb61d49a\",\"task\":\"Use $alpha\",\"skills\":[{\"name\":\"alpha\",\"location\":\"/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md\",\"baseDir\":\"/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha\",\"body\":\"References are relative to /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha.\\n\\nALPHA_VERSION_ONE\"}]}\n</pi-ext-skill-mentions>"
+          }
+        ],
+        "timestamp": 1789976268702
+      }
+    ],
+    [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "<pi-ext-skill-mentions version=\"1\">\n{\"namespace\":\"pi-ext/skill-mentions\",\"version\":1,\"requestId\":\"006ce92e-76e9-4da7-af5c-24e09df3d066\",\"task\":\"Use $alpha\",\"skills\":[{\"name\":\"alpha\",\"location\":\"/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md\",\"baseDir\":\"/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha\",\"body\":\"References are relative to /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha.\\n\\nALPHA_VERSION_ONE\"}]}\n</pi-ext-skill-mentions>"
+          }
+        ],
+        "timestamp": 1789976278868
+      }
+    ],
+    [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "<pi-ext-skill-mentions version=\"1\">\n{\"namespace\":\"pi-ext/skill-mentions\",\"version\":1,\"requestId\":\"9fd16225-a749-4a5f-b962-77806d9bc90d\",\"task\":\"folded $alpha pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\",\"skills\":[{\"name\":\"alpha\",\"location\":\"/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha/SKILL.md\",\"baseDir\":\"/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha\",\"body\":\"References are relative to /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy/native-fullscreen/agent/skills/alpha.\\n\\nALPHA_VERSION_ONE\"}]}\n</pi-ext-skill-mentions>"
+          }
+        ],
+        "timestamp": 1789976291460
+      }
+    ]
+  ],
+  "cleanup": "PTY child reaped; no listener created; parent removes isolated installation"
+}

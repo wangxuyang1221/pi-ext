@@ -1,0 +1,73 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ❯ extensions/skill-mentions/__tests__/labels.test.ts (8 tests | 2 failed) 28ms
+   ✓ retains prototype spacing and source boundaries in cube projections 7ms
+   ✓ retains prototype spacing and source boundaries in command projections 11ms
+   × keeps the caret outside wrapped display-only spacing in cube 5ms
+     → expected { row: 2, column: +0 } to deeply equal { row: +0, column: +0 }
+     → expected { row: 1, column: +0 } to deeply equal { row: +0, column: +0 }
+   × keeps the caret outside wrapped display-only spacing in command 1ms
+     → expected { row: 2, column: +0 } to deeply equal { row: +0, column: +0 }
+     → expected { row: 1, column: +0 } to deeply equal { row: +0, column: +0 }
+   ✓ recognizes only complete known references using the activation parser 3ms
+   ✓ defers an unfinished handwritten reference but accepts explicit source completion 0ms
+   ✓ moves a fitting label intact and wraps an oversized name without truncation 0ms
+   ✓ projects normal-weight cyan without changing the task or adding background escapes 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/labels.test.ts > keeps the caret outside wrapped display-only spacing in cube
+ FAIL  extensions/skill-mentions/__tests__/labels.test.ts > keeps the caret outside wrapped display-only spacing in command
+AssertionError: expected { row: 2, column: +0 } to deeply equal { row: +0, column: +0 }
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[2m  {[22m
+[2m    "column": 0,[22m
+[32m-   "row": 0,[39m
+[31m+   "row": 2,[39m
+[2m  }[22m
+
+ ❯ extensions/skill-mentions/__tests__/labels.test.ts:25:44
+     23|   for (const width of [1, 2, 3, 4, 8, 9, 10]) {
+     24|     const source = "$alpha", lines = layoutLabels(source, labelReferen…
+     25|     expect.soft(projectedCursor(lines, 0)).toEqual({ row: 0, column: 0…
+       |                                            ^
+     26|     expect.soft(projectedCursor(lines, source.length)).toEqual({ row: …
+     27|     expect(lines.map(line => stripTerminalSequences(line.text)).join("…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  extensions/skill-mentions/__tests__/labels.test.ts > keeps the caret outside wrapped display-only spacing in cube
+ FAIL  extensions/skill-mentions/__tests__/labels.test.ts > keeps the caret outside wrapped display-only spacing in command
+AssertionError: expected { row: 1, column: +0 } to deeply equal { row: +0, column: +0 }
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[2m  {[22m
+[2m    "column": 0,[22m
+[32m-   "row": 0,[39m
+[31m+   "row": 1,[39m
+[2m  }[22m
+
+ ❯ extensions/skill-mentions/__tests__/labels.test.ts:25:44
+     23|   for (const width of [1, 2, 3, 4, 8, 9, 10]) {
+     24|     const source = "$alpha", lines = layoutLabels(source, labelReferen…
+     25|     expect.soft(projectedCursor(lines, 0)).toEqual({ row: 0, column: 0…
+       |                                            ^
+     26|     expect.soft(projectedCursor(lines, source.length)).toEqual({ row: …
+     27|     expect(lines.map(line => stripTerminalSequences(line.text)).join("…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 6 passed (8)
+   Start at  15:27:28
+   Duration  722ms (transform 36ms, setup 0ms, collect 472ms, tests 28ms, environment 0ms, prepare 51ms)
+
+
+Exit code: 1

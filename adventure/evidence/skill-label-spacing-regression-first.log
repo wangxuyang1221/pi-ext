@@ -1,0 +1,143 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+stdout | extensions/codex-ui/__tests__/claude-bash-performance.test.ts > 1 Claude Bash calls cache stable lines captures and only process the updated member
+{"benchmark":"claude-bash-cache","size":1,"kind":"lines","samples":[{"expanded":false,"warmMs":14.58,"stable10Ms":0.62,"reads":[1],"layouts":{"limitBytes":16777216,"chargedBytes":121904,"entries":4,"hits":42,"misses":4,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":208,"entries":1,"hits":10,"misses":1,"evictions":0}},{"expanded":true,"warmMs":2.58,"stable10Ms":0.58,"reads":[1],"layouts":{"limitBytes":16777216,"chargedBytes":553902,"entries":7,"hits":84,"misses":7,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":208,"entries":1,"hits":10,"misses":1,"evictions":0}}]}
+
+stdout | extensions/codex-ui/__tests__/claude-bash-performance.test.ts > 1 Claude Bash calls cache stable token captures and only process the updated member
+{"benchmark":"claude-bash-cache","size":1,"kind":"token","samples":[{"expanded":false,"warmMs":73.95,"stable10Ms":0.36,"reads":[1],"layouts":{"limitBytes":16777216,"chargedBytes":104946,"entries":4,"hits":42,"misses":4,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":208,"entries":1,"hits":10,"misses":1,"evictions":0}},{"expanded":true,"warmMs":36.77,"stable10Ms":0.41,"reads":[1],"layouts":{"limitBytes":16777216,"chargedBytes":386606,"entries":7,"hits":84,"misses":7,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":208,"entries":1,"hits":10,"misses":1,"evictions":0}}]}
+
+stdout | extensions/codex-ui/__tests__/claude-bash-performance.test.ts > 3 Claude Bash calls cache stable lines captures and only process the updated member
+{"benchmark":"claude-bash-cache","size":3,"kind":"lines","samples":[{"expanded":false,"warmMs":3.88,"stable10Ms":1,"reads":[1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":365712,"entries":12,"hits":126,"misses":12,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":624,"entries":3,"hits":30,"misses":3,"evictions":0}},{"expanded":true,"warmMs":7.42,"stable10Ms":1.82,"reads":[1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":1661706,"entries":21,"hits":252,"misses":21,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":624,"entries":3,"hits":30,"misses":3,"evictions":0}}]}
+
+ ✓ extensions/skill-mentions/__tests__/history-editor.test.ts (9 tests) 381ms
+stdout | extensions/codex-ui/__tests__/claude-bash-performance.test.ts > 3 Claude Bash calls cache stable token captures and only process the updated member
+{"benchmark":"claude-bash-cache","size":3,"kind":"token","samples":[{"expanded":false,"warmMs":204.3,"stable10Ms":0.73,"reads":[1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":314838,"entries":12,"hits":126,"misses":12,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":624,"entries":3,"hits":30,"misses":3,"evictions":0}},{"expanded":true,"warmMs":90.13,"stable10Ms":0.61,"reads":[1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":1159818,"entries":21,"hits":252,"misses":21,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":624,"entries":3,"hits":30,"misses":3,"evictions":0}}]}
+
+ ✓ extensions/skill-mentions/__tests__/lifecycle.test.ts (18 tests) 417ms
+stdout | extensions/codex-ui/__tests__/claude-bash-performance.test.ts > 10 Claude Bash calls cache stable lines captures and only process the updated member
+{"benchmark":"claude-bash-cache","size":10,"kind":"lines","samples":[{"expanded":false,"warmMs":10.47,"stable10Ms":2.25,"reads":[1,1,1,1,1,1,1,1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":1219040,"entries":40,"hits":420,"misses":40,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":2080,"entries":10,"hits":100,"misses":10,"evictions":0}},{"expanded":true,"warmMs":19.65,"stable10Ms":14.89,"reads":[1,1,1,1,1,1,1,1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":5539020,"entries":70,"hits":840,"misses":70,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":2080,"entries":10,"hits":100,"misses":10,"evictions":0}}]}
+
+ ✓ extensions/codex-ui/__tests__/grouped-bash.test.ts (20 tests) 798ms
+   ✓ captured output, truncation warnings and custom key hints remain visible and width-safe  641ms
+ ✓ extensions/skill-mentions/__tests__/flow.test.ts (14 tests) 816ms
+   ✓ activates punctuated references through prompt with original task and ordered snapshots  376ms
+ ✓ extensions/codex-ui/__tests__/execution-settings.test.ts (9 tests) 1197ms
+   ✓ shell wrappers, prefix cwd and image settings survive merged file configuration  782ms
+ ✓ extensions/codex-ui/__tests__/reasoning.test.ts (4 tests) 263ms
+ ✓ extensions/codex-ui/__tests__/tool-status.test.ts (7 tests) 227ms
+stdout | extensions/codex-ui/__tests__/claude-bash-performance.test.ts > 10 Claude Bash calls cache stable token captures and only process the updated member
+{"benchmark":"claude-bash-cache","size":10,"kind":"token","samples":[{"expanded":false,"warmMs":751.72,"stable10Ms":2.16,"reads":[1,1,1,1,1,1,1,1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":1049460,"entries":40,"hits":420,"misses":40,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":2080,"entries":10,"hits":100,"misses":10,"evictions":0}},{"expanded":true,"warmMs":368.85,"stable10Ms":2.34,"reads":[1,1,1,1,1,1,1,1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":3866060,"entries":70,"hits":840,"misses":70,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":2080,"entries":10,"hits":100,"misses":10,"evictions":0}}]}
+
+ ✓ extensions/codex-ui/__tests__/claude-bash-performance.test.ts (7 tests) 1634ms
+   ✓ 10 Claude Bash calls cache stable token captures and only process the updated member  1128ms
+ ✓ extensions/codex-ui/__tests__/tools.test.ts (43 tests) 217ms
+ ✓ extensions/skill-mentions/__tests__/label-body.test.ts (8 tests) 239ms
+ ✓ extensions/codex-ui/__tests__/layout.test.ts (7 tests) 124ms
+ ✓ extensions/codex-ui/__tests__/write-execution.test.ts (11 tests) 142ms
+ ✓ extensions/codex-ui/__tests__/grouped-read.test.ts (10 tests) 72ms
+ ✓ extensions/codex-ui/__tests__/read-model.test.ts (14 tests) 65ms
+ ✓ extensions/codex-ui/__tests__/grouped-bash-cache.test.ts (19 tests) 144ms
+ ✓ extensions/codex-ui/__tests__/diff-display-safety.test.ts (8 tests) 144ms
+ ✓ extensions/codex-ui/__tests__/history-rebuild.test.ts (3 tests) 148ms
+ ✓ extensions/codex-ui/__tests__/bash-group-layout.test.ts (10 tests) 158ms
+ ✓ extensions/codex-ui/__tests__/reasoning-inline.test.ts (3 tests) 59ms
+ ❯ extensions/skill-mentions/__tests__/label-editor.test.ts (21 tests | 1 failed) 116ms
+   ✓ deletes and restores an explicit label synchronously with one consumer change per action 9ms
+   ✓ does not lock a handwritten name before a delimiter but locks an explicit paste 11ms
+   ✓ keeps folded paste intact through delete, grouped undo and same-stack submission 2ms
+   ✓ restores repeated logical actions by identity rather than equal text 1ms
+   ✓ preserves native word typing coalescing around a grouped deletion 1ms
+   ✓ counts supplementary-plane native deletions without consuming an older undo 1ms
+   ✓ keeps history browsing as one native undo unit before deleting a label 1ms
+   ✓ does not coalesce word typing across a no-op cursor movement 0ms
+   ✓ honors configured native deletion and undo keys 0ms
+   ✓ does not turn an intercepted shortcut into a grouped deletion or duplicate its mutation 0ms
+   ✓ does not create a visual-only undo when confirming an already complete handwritten name 14ms
+   ✓ ignores old completion results after setText or release and preserves callback order 47ms
+   ✓ refreshes discovered names before input and does not resurrect removed labels through undo 1ms
+   ✓ does not coalesce typing across a failed native character jump 1ms
+   ✓ rebuilds the projected frame after rendering an empty-label draft and undoing 1ms
+   × renders cyan source labels across narrow rows without polluting raw text 5ms
+     → expected 'abc  󰆧alpha' to be 'abc󰆧 alpha' // Object.is equality
+   ✓ respects native action priority when configured character and word deletion keys overlap 2ms
+   ✓ groups the native backslash-enter workaround without consuming an earlier group 3ms
+   ✓ preserves the native kill ring around grouped deletions and consecutive undo 1ms
+   ✓ retains paste identities across backward renumbering, undo and draft handoff 2ms
+   ✓ allows synchronous onChange reentry after the native group is complete 0ms
+ ✓ extensions/codex-ui/__tests__/reply-markdown.test.ts (6 tests) 64ms
+ ✓ extensions/skill-mentions/__tests__/label-api-boundaries.test.ts (11 tests) 78ms
+ ✓ extensions/codex-ui/__tests__/user-markdown.test.ts (3 tests) 68ms
+ ✓ extensions/codex-ui/__tests__/index.test.ts (9 tests) 60ms
+ ✓ extensions/skill-mentions/__tests__/references.test.ts (170 tests) 31ms
+ ✓ extensions/codex-ui/__tests__/reasoning-summary.test.ts (4 tests) 28ms
+ ✓ extensions/codex-ui/__tests__/tool-status-prototype.test.ts (5 tests) 17ms
+ ✓ extensions/codex-ui/__tests__/exact-visual-tail.test.ts (1 test) 31ms
+ ✓ extensions/skill-mentions/__tests__/visibility.test.ts (2 tests) 29ms
+ ✓ extensions/skill-mentions/__tests__/labels.test.ts (8 tests) 61ms
+stdout | extensions/codex-ui/__tests__/rendering-pipeline.test.ts > stable tail updates never resend offscreen history for short rows or long tokens
+{"benchmark":"claude-bash-terminal","event":"append","groupSize":1,"kind":"lines","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"append","groupSize":3,"kind":"lines","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"append","groupSize":10,"kind":"lines","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"replace-tail","groupSize":1,"kind":"lines","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"replace-tail","groupSize":3,"kind":"lines","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"replace-tail","groupSize":10,"kind":"lines","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"append","groupSize":1,"kind":"token","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"append","groupSize":3,"kind":"token","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"append","groupSize":10,"kind":"token","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"replace-tail","groupSize":1,"kind":"token","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"replace-tail","groupSize":3,"kind":"token","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"replace-tail","groupSize":10,"kind":"token","history0Bytes":96,"history20Bytes":96}
+
+ ✓ extensions/skill-mentions/__tests__/autocomplete.test.ts (25 tests) 4131ms
+   ✓ native: handwritten, pasted and selected punctuated references submit identically  662ms
+   ✓ native: never offers skills beside right punctuation or inside the name  414ms
+   ✓ codex: handwritten, pasted and selected punctuated references submit identically  654ms
+   ✓ codex: never offers skills beside right punctuation or inside the name  411ms
+ ✓ extensions/codex-ui/__tests__/terminal-title.test.ts (5 tests) 20ms
+ ✓ extensions/codex-ui/__tests__/components.test.ts (8 tests) 16ms
+ ✓ extensions/skill-mentions/__tests__/loading.test.ts (15 tests) 37ms
+ ✓ extensions/codex-ui/__tests__/goal-footer.test.ts (2 tests) 9ms
+ ✓ extensions/codex-ui/__tests__/responsive-lines.test.ts (3 tests) 15ms
+ ✓ extensions/skill-mentions/__tests__/label-preference.test.ts (3 tests) 18ms
+ ✓ extensions/codex-ui/__tests__/render-cache.test.ts (5 tests) 2ms
+ ✓ extensions/skill-mentions/__tests__/package.test.ts (1 test) 7ms
+ ✓ extensions/skill-mentions/__tests__/protocol.test.ts (18 tests) 2ms
+ ✓ extensions/codex-ui/__tests__/theme.test.ts (1 test) 4ms
+ ✓ extensions/skill-mentions/__tests__/registration.test.ts (8 tests) 8ms
+ ✓ extensions/codex-ui/__tests__/rendering-pipeline.test.ts (8 tests) 4636ms
+   ✓ stable tail updates never resend offscreen history for short rows or long tokens  3979ms
+ ✓ extensions/skill-mentions/__tests__/label-surface.test.ts (22 tests) 5407ms
+   ✓ preserves full long names through narrow viewports and resize in 'native'/'cube'  771ms
+   ✓ preserves full long names through narrow viewports and resize in 'native'/'command'  861ms
+   ✓ preserves full long names through narrow viewports and resize in 'codex'/'cube'  1077ms
+   ✓ preserves full long names through narrow viewports and resize in 'codex'/'command'  950ms
+   ✓ exposes every row of a viewport-sized label through paging in 'native'/'cube'  516ms
+   ✓ exposes every row of a viewport-sized label through paging in 'native'/'command'  487ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/skill-mentions/__tests__/label-editor.test.ts > renders cyan source labels across narrow rows without polluting raw text
+AssertionError: expected 'abc  󰆧alpha' to be 'abc󰆧 alpha' // Object.is equality
+
+Expected: [32m"abc󰆧[7m [27malpha"[39m
+Received: [31m"abc[7m  [27m󰆧alpha"[39m
+
+ ❯ extensions/skill-mentions/__tests__/label-editor.test.ts:165:95
+    163|   const rendered = editor.render(8);
+    164|   expect(rendered.join("\n")).toContain("\x1b[38;2;141;249;253m");
+    165|   expect(rendered.slice(1, -1).map(stripTerminalSequences).map(line =>…
+       |                                                                                               ^
+    166|   expect(rendered.every(line => visibleWidth(line) <= 8)).toBe(true);
+    167|   expect(editor.getText()).toBe("abc $alpha");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 43 passed (44)
+      Tests  1 failed | 587 passed (588)
+   Start at  15:30:32
+   Duration  6.45s (transform 968ms, setup 0ms, collect 20.01s, tests 22.14s, environment 3ms, prepare 2.18s)
+
+
+Exit code: 1

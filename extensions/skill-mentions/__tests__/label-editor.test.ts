@@ -117,7 +117,7 @@ it("does not create a visual-only undo when confirming an already complete handw
     applyCompletion: (lines, cursorLine, cursorCol) => ({ lines, cursorLine, cursorCol }) });
   for (const char of "$alpha") editor.handleInput(char);
   editor.handleInput("\t"); await new Promise(done => setTimeout(done, 10));
-  expect(editor.render(80).map(stripTerminalSequences).join("\n")).toContain("\u{f01a7}alpha");
+  expect(editor.render(80).map(stripTerminalSequences).join("\n")).toContain(" \u{f01a7} alpha ");
   editor.handleInput(undo); expect(editor.getText()).toBe("");
 });
 
@@ -155,14 +155,14 @@ it("does not coalesce typing across a failed native character jump", () => {
 it("rebuilds the projected frame after rendering an empty-label draft and undoing", () => {
   const { editor } = fixture(); editor.setText("Use $alpha"); editor.render(80);
   editor.handleInput("\x7f"); editor.render(80); editor.handleInput(undo);
-  expect(editor.render(80).map(stripTerminalSequences).join("\n")).toContain("\u{f01a7}alpha");
+  expect(editor.render(80).map(stripTerminalSequences).join("\n")).toContain(" \u{f01a7} alpha ");
 });
 
 it("renders cyan source labels across narrow rows without polluting raw text", () => {
   const { editor } = fixture(); editor.setText("abc $alpha"); editor.focused = false;
   const rendered = editor.render(8);
   expect(rendered.join("\n")).toContain("\x1b[38;2;141;249;253m");
-  expect(rendered.map(stripTerminalSequences).join("\n")).toContain("\u{f01a7}alpha");
+  expect(rendered.slice(1, -1).map(stripTerminalSequences)).toEqual(["abc  \u{f01a7}  ", "alpha   "]);
   expect(rendered.every(line => visibleWidth(line) <= 8)).toBe(true);
   expect(editor.getText()).toBe("abc $alpha");
   expect(editor.getExpandedText()).toBe("abc $alpha");

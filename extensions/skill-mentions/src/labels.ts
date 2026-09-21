@@ -6,7 +6,7 @@ export const icons: Record<IconMode, string> = { cube: "\u{f01a7}", command: "âŒ
 export const labelColor = "\x1b[22m\x1b[38;2;141;249;253m";
 const colorEnd = "\x1b[39m\x1b[22m";
 const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
-export interface LabelCell { text: string; start: number; end: number; width: number; label: boolean; }
+export interface LabelCell { text: string; start: number; end: number; width: number; label: boolean; hitTarget?: number; }
 export interface LabelLine { text: string; start: number; end: number; cells: LabelCell[]; }
 
 /** Resolve visual references through the same parser used for activation. */
@@ -20,7 +20,7 @@ export function paintLabels(text: string, labels: readonly Reference[], mode: Ic
   const parts: string[] = [];
   let start = 0;
   for (const label of labels) {
-    parts.push(text.slice(start, label.start), labelColor, icons[mode], label.name, colorEnd);
+    parts.push(text.slice(start, label.start), labelColor, " ", icons[mode], " ", label.name, " ", colorEnd);
     start = label.end;
   }
   parts.push(text.slice(start));
@@ -48,11 +48,13 @@ export function layoutLabels(text: string, labels: readonly Reference[], mode: I
     lines.push({ text: paintCells(cells), start: lineStart, end, cells });
     cells = []; used = 0; lineStart = end;
   };
+  const place = (cell: LabelCell) => {
+    if (used && used + cell.width > width) flush(cell.start);
+    cells.push(cell); used += cell.width;
+  };
   const append = (value: string, start: number, labeled: boolean) => {
     const appendCell = (text: string, index: number, cellWidth: number) => {
-      const cell = { text, start: start + index, end: start + index + text.length, width: cellWidth, label: labeled };
-      if (used && used + cell.width > width) flush(cell.start);
-      cells.push(cell); used += cell.width;
+      place({ text, start: start + index, end: start + index + text.length, width: cellWidth, label: labeled });
     };
     // Avoid creating one ICU iterator per ordinary ASCII word or space.
     if (/^[\x20-\x7e]*$/u.test(value)) {
@@ -66,12 +68,16 @@ export function layoutLabels(text: string, labels: readonly Reference[], mode: I
     if (text[offset] === "\n") { flush(offset); offset++; lineStart = offset; continue; }
     const label = byStart.get(offset);
     if (label) {
-      const size = visibleWidth(icons[mode]) + visibleWidth(label.name);
+      const iconWidth = visibleWidth(icons[mode]), size = iconWidth + visibleWidth(label.name) + 3;
       if (used && size <= width && used + size > width) flush(offset);
-      const iconWidth = visibleWidth(icons[mode]);
-      if (used && used + iconWidth > width) flush(offset);
-      cells.push({ text: icons[mode], start: offset, end: offset + 1, width: iconWidth, label: true }); used += iconWidth;
-      append(label.name, offset + 1, true); offset = label.end;
+      // Display-only spacing shares source graphemes: the prefix belongs to "$",
+      // and the suffix to the last name grapheme. Neither creates a source caret stop.
+      place({ text: " ", start: offset, end: offset + 1, width: 1, label: true });
+      place({ text: icons[mode], start: offset, end: offset + 1, width: iconWidth, label: true });
+      place({ text: " ", start: offset, end: offset + 1, width: 1, label: true });
+      append(label.name, offset + 1, true);
+      place({ text: " ", start: cells.at(-1)!.start, end: label.end, width: 1, label: true, hitTarget: label.end });
+      offset = label.end;
     } else {
       let end = offset + 1;
       const space = /\s/u.test(text[offset]);

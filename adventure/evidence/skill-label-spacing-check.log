@@ -1,0 +1,289 @@
+$ env -u PI_SUBAGENT_PARENT -u PI_SUBAGENT_LAUNCH -u PI_SUBAGENT -u PI_SUBAGENT_ID pnpm run check
+$ pnpm run typecheck && pnpm test && pnpm run build && pnpm run package:check
+$ tsc -p ./extensions/codex-compact/tsconfig.json --noEmit && tsc -p ./extensions/openai-fast-mode/tsconfig.json --noEmit && tsc -p ./extensions/codex-ui/tsconfig.json --noEmit && tsc -p ./extensions/mcp/tsconfig.json --noEmit && tsc -p ./extensions/permissions/tsconfig.json --noEmit && tsc -p ./extensions/subagent/tsconfig.json --noEmit && tsc -p ./extensions/goal/tsconfig.json --noEmit && tsc -p ./extensions/skill-mentions/tsconfig.json --noEmit
+$ vitest run
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ✓ extensions/subagent/__tests__/manager-races.test.ts (16 tests) 3413ms
+   ✓ keeps a registered spawn alive when list takes over before launch returns  381ms
+   ✓ rejects a registered spawn with mismatched runtime process identity  326ms
+stdout | extensions/codex-ui/__tests__/rendering-pipeline.test.ts > stable tail updates never resend offscreen history for short rows or long tokens
+{"benchmark":"claude-bash-terminal","event":"append","groupSize":1,"kind":"lines","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"append","groupSize":3,"kind":"lines","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"append","groupSize":10,"kind":"lines","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"replace-tail","groupSize":1,"kind":"lines","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"replace-tail","groupSize":3,"kind":"lines","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"replace-tail","groupSize":10,"kind":"lines","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"append","groupSize":1,"kind":"token","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"append","groupSize":3,"kind":"token","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"append","groupSize":10,"kind":"token","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"replace-tail","groupSize":1,"kind":"token","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"replace-tail","groupSize":3,"kind":"token","history0Bytes":96,"history20Bytes":96}
+{"benchmark":"claude-bash-terminal","event":"replace-tail","groupSize":10,"kind":"token","history0Bytes":96,"history20Bytes":96}
+
+ ✓ extensions/subagent/__tests__/runtime-integration.test.ts (6 tests) 4237ms
+   ✓ new-session starts a child with its own pane under a fish default shell  675ms
+   ✓ new-window starts a child with its own pane under a fish default shell  752ms
+   ✓ manager single-target close removes a retained dead pane after list marks it interrupted  857ms
+   ✓ a restarted tmux server cannot make an old pane locator own a replacement  609ms
+   ✓ real tmux rename retains identity and removes a live pane on close  632ms
+   ✓ real tmux rename retains identity and removes a dead pane on close  711ms
+ ✓ extensions/codex-compact/__tests__/quality-plugin.test.ts (4 tests) 4252ms
+   ✓ runs a frozen plugin entry in an isolated Pi process and captures transport without headers  705ms
+   ✓ preserves a native preflight refusal without bypassing it or inventing a model request  661ms
+   ✓ terminates an unresponsive worker at the execution deadline and verifies its process group  2866ms
+ ✓ extensions/skill-mentions/__tests__/autocomplete.test.ts (25 tests) 4149ms
+   ✓ native: handwritten, pasted and selected punctuated references submit identically  666ms
+   ✓ native: never offers skills beside right punctuation or inside the name  409ms
+   ✓ codex: handwritten, pasted and selected punctuated references submit identically  649ms
+   ✓ codex: never offers skills beside right punctuation or inside the name  406ms
+ ✓ extensions/codex-ui/__tests__/rendering-pipeline.test.ts (8 tests) 4601ms
+   ✓ stable tail updates never resend offscreen history for short rows or long tokens  3292ms
+   ✓ three-member groups keep tick at the visible tail instead of replaying history  325ms
+   ✓ three-member groups keep append at the visible tail instead of replaying history  451ms
+ ✓ extensions/skill-mentions/__tests__/label-surface.test.ts (26 tests) 5676ms
+   ✓ preserves full long names through narrow viewports and resize in 'native'/'cube'  851ms
+   ✓ preserves full long names through narrow viewports and resize in 'native'/'command'  686ms
+   ✓ preserves full long names through narrow viewports and resize in 'codex'/'cube'  614ms
+   ✓ preserves full long names through narrow viewports and resize in 'codex'/'command'  685ms
+   ✓ exposes every row of a viewport-sized label through paging in 'native'/'cube'  533ms
+   ✓ exposes every row of a viewport-sized label through paging in 'native'/'command'  890ms
+   ✓ exposes every row of a viewport-sized label through paging in 'codex'/'cube'  496ms
+   ✓ exposes every row of a viewport-sized label through paging in 'codex'/'command'  581ms
+ ✓ extensions/codex-compact/__tests__/quality-fixed.test.ts (4 tests) 7688ms
+   ✓ freezes creation scopes across all four arms and retains new files through the next compaction  424ms
+   ✓ chains successive compactions through the preceding checkpoint, complete tool history and isolated workspace  5029ms
+   ✓ routes a frozen paired schedule through each compactor and its own dependent continuations  2214ms
+ ✓ extensions/mcp/__tests__/pi-modes-smoke.test.ts (1 test) 2359ms
+   ✓ MCP real Pi mode isolation > exercises a bounded HTTP failure without contaminating JSON, RPC, or print output  2358ms
+ ✓ extensions/subagent/__tests__/multiprocess.test.ts (1 test) 4451ms
+   ✓ independent OS writers cannot erase a completed generation  4450ms
+stdout | extensions/codex-ui/__tests__/claude-bash-performance.test.ts > 1 Claude Bash calls cache stable lines captures and only process the updated member
+{"benchmark":"claude-bash-cache","size":1,"kind":"lines","samples":[{"expanded":false,"warmMs":14.5,"stable10Ms":0.56,"reads":[1],"layouts":{"limitBytes":16777216,"chargedBytes":121904,"entries":4,"hits":42,"misses":4,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":208,"entries":1,"hits":10,"misses":1,"evictions":0}},{"expanded":true,"warmMs":3.19,"stable10Ms":0.62,"reads":[1],"layouts":{"limitBytes":16777216,"chargedBytes":553902,"entries":7,"hits":84,"misses":7,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":208,"entries":1,"hits":10,"misses":1,"evictions":0}}]}
+
+stdout | extensions/codex-ui/__tests__/claude-bash-performance.test.ts > 1 Claude Bash calls cache stable token captures and only process the updated member
+{"benchmark":"claude-bash-cache","size":1,"kind":"token","samples":[{"expanded":false,"warmMs":58.07,"stable10Ms":0.41,"reads":[1],"layouts":{"limitBytes":16777216,"chargedBytes":104946,"entries":4,"hits":42,"misses":4,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":208,"entries":1,"hits":10,"misses":1,"evictions":0}},{"expanded":true,"warmMs":25.91,"stable10Ms":0.32,"reads":[1],"layouts":{"limitBytes":16777216,"chargedBytes":386606,"entries":7,"hits":84,"misses":7,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":208,"entries":1,"hits":10,"misses":1,"evictions":0}}]}
+
+stdout | extensions/codex-ui/__tests__/claude-bash-performance.test.ts > 3 Claude Bash calls cache stable lines captures and only process the updated member
+{"benchmark":"claude-bash-cache","size":3,"kind":"lines","samples":[{"expanded":false,"warmMs":2.54,"stable10Ms":1.67,"reads":[1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":365712,"entries":12,"hits":126,"misses":12,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":624,"entries":3,"hits":30,"misses":3,"evictions":0}},{"expanded":true,"warmMs":3.55,"stable10Ms":1.82,"reads":[1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":1661706,"entries":21,"hits":252,"misses":21,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":624,"entries":3,"hits":30,"misses":3,"evictions":0}}]}
+
+ ✓ extensions/codex-compact/__tests__/host-compatibility.test.ts (1 test) 1849ms
+   ✓ loads every registered extension through the Pi 0.86.0 filesystem loader  1848ms
+stdout | extensions/codex-ui/__tests__/claude-bash-performance.test.ts > 3 Claude Bash calls cache stable token captures and only process the updated member
+{"benchmark":"claude-bash-cache","size":3,"kind":"token","samples":[{"expanded":false,"warmMs":146.21,"stable10Ms":0.74,"reads":[1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":314838,"entries":12,"hits":126,"misses":12,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":624,"entries":3,"hits":30,"misses":3,"evictions":0}},{"expanded":true,"warmMs":77.82,"stable10Ms":1.07,"reads":[1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":1159818,"entries":21,"hits":252,"misses":21,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":624,"entries":3,"hits":30,"misses":3,"evictions":0}}]}
+
+stdout | extensions/codex-ui/__tests__/claude-bash-performance.test.ts > 10 Claude Bash calls cache stable lines captures and only process the updated member
+{"benchmark":"claude-bash-cache","size":10,"kind":"lines","samples":[{"expanded":false,"warmMs":6.92,"stable10Ms":2.99,"reads":[1,1,1,1,1,1,1,1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":1219040,"entries":40,"hits":420,"misses":40,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":2080,"entries":10,"hits":100,"misses":10,"evictions":0}},{"expanded":true,"warmMs":16.31,"stable10Ms":6.94,"reads":[1,1,1,1,1,1,1,1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":5539020,"entries":70,"hits":840,"misses":70,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":2080,"entries":10,"hits":100,"misses":10,"evictions":0}}]}
+
+ ✓ extensions/codex-compact/__tests__/quality-runner.test.ts (10 tests) 4618ms
+   ✓ resumes an interrupted batch without repeating completed requests and rejects changed plans  2272ms
+   ✓ keeps failed requests and dependent failures immutable across resumes  348ms
+   ✓ retries only explicitly selected failures in a new attempt without replacing primary outcomes  468ms
+   ✓ reconciles a dead owner only after its registered worker stopped and records unknown upstream outcome  365ms
+   ✓ keeps a lost continuation unknown and issues no replacement HTTP request without an explicit retry  612ms
+ ✓ extensions/codex-compact/__tests__/native-compaction.test.ts (97 tests) 3075ms
+   ✓ Codex compaction history > does not switch models for usage-limit SSE errors  3004ms
+ ✓ extensions/subagent/__tests__/reliability.test.ts (17 tests) 4008ms
+   ✓ controller handoff cancels old I/O and fences old callbacks without changing namespace epoch  613ms
+   ✓ process capacity survives an empty session binding set  402ms
+   ✓ unknown launch outcome retains its durable reservation  305ms
+ ✓ extensions/subagent/__tests__/scope-performance.test.ts (4 tests) 9539ms
+   ✓ ordinary listing reads the same owned records with 0, 100, and 10000 unrelated namespaces  7904ms
+   ✓ listing shared aliases probes once and reuses the parent snapshot with alive=true  675ms
+   ✓ listing shared aliases probes once and reuses the parent snapshot with alive=false  752ms
+ ✓ extensions/goal/__tests__/commands.test.ts (67 tests) 8753ms
+   ✓ asks before reading native paste attachments and copies only the selected image  405ms
+   ✓ preserves saved content across cancelled attachment selection and failed record commits  700ms
+   ✓ attributes managed reports before completion and ignores replaced goal late reports  354ms
+   ✓ advances stopped child baselines across reload and resume without backcharging  333ms
+ ✓ extensions/goal/__tests__/storage.test.ts (16 tests) 1656ms
+ ✓ extensions/subagent/__tests__/manager-capacity.test.ts (10 tests) 1888ms
+   ✓ waits for in-flight spawn before close-all returns  331ms
+   ✓ uses persistent reservations to reject a fourth parallel spawn  376ms
+stdout | extensions/codex-ui/__tests__/claude-bash-performance.test.ts > 10 Claude Bash calls cache stable token captures and only process the updated member
+{"benchmark":"claude-bash-cache","size":10,"kind":"token","samples":[{"expanded":false,"warmMs":561.97,"stable10Ms":2.64,"reads":[1,1,1,1,1,1,1,1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":1049460,"entries":40,"hits":420,"misses":40,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":2080,"entries":10,"hits":100,"misses":10,"evictions":0}},{"expanded":true,"warmMs":366.01,"stable10Ms":3,"reads":[1,1,1,1,1,1,1,1,1,1],"layouts":{"limitBytes":16777216,"chargedBytes":3866060,"entries":70,"hits":840,"misses":70,"evictions":0},"counts":{"limitBytes":2097152,"chargedBytes":2080,"entries":10,"hits":100,"misses":10,"evictions":0}}]}
+
+ ✓ extensions/codex-ui/__tests__/claude-bash-performance.test.ts (7 tests) 1325ms
+   ✓ 10 Claude Bash calls cache stable token captures and only process the updated member  935ms
+ ✓ extensions/subagent/__tests__/command-executor.test.ts (2 tests) 838ms
+   ✓ reaps an ignoring descendant even when its command leader exits on SIGTERM  423ms
+   ✓ terminates a command that ignores SIGTERM before returning its timeout  414ms
+ ✓ extensions/codex-ui/__tests__/execution-settings.test.ts (9 tests) 885ms
+ ✓ extensions/goal/__tests__/child-budget.test.ts (5 tests) 697ms
+ ✓ extensions/mcp/__tests__/renderers.test.ts (15 tests) 848ms
+   ✓ MCP tool renderers > falls back to bounded original JSON when pretty printing exceeds the stack  785ms
+ ✓ extensions/subagent/__tests__/session-reader-performance.test.ts (1 test) 632ms
+   ✓ measures a single turn with twenty 64 KiB assistant messages  628ms
+ ✓ extensions/subagent/__tests__/manager-close.test.ts (7 tests) 553ms
+ ✓ extensions/subagent/__tests__/operation.test.ts (1 test) 755ms
+   ✓ cleanup failure preserves the original operation error  754ms
+ ✓ extensions/codex-search/__tests__/codex.test.ts (36 tests) 805ms
+   ✓ codex helpers > summarizes Cloudflare challenge HTML errors  752ms
+ ✓ extensions/goal/__tests__/content.test.ts (9 tests) 463ms
+stdout | extensions/codex-search/__tests__/renderers.test.ts > records a repeatable collapsed and expanded rendering baseline
+{"benchmark":"search-render","collapsed300Ms":35.36,"expanded20Ms":340.41}
+
+ ✓ extensions/subagent/__tests__/manager-operations.test.ts (8 tests) 791ms
+ ✓ extensions/codex-search/__tests__/renderers.test.ts (12 tests) 436ms
+   ✓ records a repeatable collapsed and expanded rendering baseline  377ms
+ ✓ extensions/codex-ui/__tests__/grouped-bash.test.ts (20 tests) 733ms
+   ✓ captured output, truncation warnings and custom key hints remain visible and width-safe  606ms
+ ✓ extensions/mcp/__tests__/transport-fixtures.test.ts (9 tests) 638ms
+ ✓ extensions/goal/__tests__/budget.test.ts (4 tests) 529ms
+ ✓ extensions/goal/__tests__/controls.test.ts (11 tests) 1019ms
+ ✓ extensions/subagent/__tests__/session-reader.test.ts (22 tests) 596ms
+ ✓ extensions/codex-compact/__tests__/media-package.test.ts (5 tests) 415ms
+ ✓ extensions/codex-compact/__tests__/quality-cli.test.ts (7 tests) 467ms
+   ✓ cleans credential copies and verifies group shutdown when the CLI exits before initialization  452ms
+ ✓ extensions/codex-compact/__tests__/quality-report.test.ts (10 tests) 434ms
+ ✓ extensions/skill-mentions/__tests__/flow.test.ts (14 tests) 706ms
+ ✓ extensions/subagent/__tests__/index.test.ts (9 tests) 731ms
+ ✓ extensions/subagent/__tests__/usage.test.ts (3 tests) 321ms
+ ✓ extensions/subagent/__tests__/tmux-runtime.test.ts (21 tests) 369ms
+ ✓ extensions/skill-mentions/__tests__/lifecycle.test.ts (18 tests) 788ms
+ ✓ extensions/mcp/__tests__/status-ui.test.ts (13 tests) 249ms
+ ✓ extensions/skill-mentions/__tests__/history-editor.test.ts (9 tests) 404ms
+ ✓ extensions/codex-ui/__tests__/reasoning.test.ts (4 tests) 358ms
+   ✓ inline summary changes never replay static offscreen tool history  328ms
+ ✓ extensions/codex-compact/__tests__/quality-process.test.ts (3 tests) 205ms
+ ✓ extensions/mcp/__tests__/index.test.ts (36 tests) 259ms
+ ✓ extensions/subagent/__tests__/manager.test.ts (4 tests) 274ms
+ ✓ extensions/skill-mentions/__tests__/label-body.test.ts (8 tests) 327ms
+ ✓ extensions/codex-ui/__tests__/tools.test.ts (43 tests) 309ms
+ ✓ extensions/codex-ui/__tests__/tool-status.test.ts (7 tests) 322ms
+ ✓ extensions/codex-compact/__tests__/index.test.ts (80 tests) 256ms
+ ✓ extensions/goal/__tests__/display-timing.test.ts (3 tests) 153ms
+ ✓ extensions/subagent/__tests__/file-lock.test.ts (2 tests) 229ms
+ ✓ extensions/mcp/__tests__/client.test.ts (43 tests) 137ms
+ ✓ extensions/subagent/__tests__/state-store.test.ts (8 tests) 141ms
+ ✓ extensions/codex-ui/__tests__/diff-display-safety.test.ts (8 tests) 216ms
+ ✓ extensions/codex-compact/__tests__/request-lifecycle.test.ts (8 tests) 187ms
+ ✓ extensions/mcp/__tests__/tool-summary-host.test.ts (2 tests) 174ms
+ ✓ extensions/mcp/__tests__/integration.test.ts (3 tests) 258ms
+ ✓ extensions/codex-ui/__tests__/write-execution.test.ts (11 tests) 259ms
+ ✓ extensions/codex-ui/__tests__/bash-group-layout.test.ts (10 tests) 209ms
+ ✓ extensions/subagent/__tests__/delivery-receipt.test.ts (1 test) 75ms
+ ✓ extensions/subagent/__tests__/runtime-host.test.ts (1 test) 58ms
+ ✓ extensions/codex-ui/__tests__/history-rebuild.test.ts (3 tests) 261ms
+ ✓ extensions/codex-compact/__tests__/full-reference.test.ts (276 tests) 156ms
+ ✓ extensions/codex-ui/__tests__/layout.test.ts (7 tests) 184ms
+ ✓ extensions/codex-compact/__tests__/quality-continuation.test.ts (9 tests) 108ms
+ ✓ extensions/codex-ui/__tests__/grouped-bash-cache.test.ts (19 tests) 170ms
+ ✓ extensions/mcp/__tests__/history-host.test.ts (1 test) 55ms
+ ✓ extensions/codex-search/__tests__/config.test.ts (24 tests) 46ms
+ ✓ extensions/openai-fast-mode/__tests__/extension.test.ts (13 tests) 77ms
+ ✓ extensions/codex-search/__tests__/compact-renderers.test.ts (8 tests) 97ms
+ ✓ extensions/skill-mentions/__tests__/label-editor.test.ts (21 tests) 147ms
+ ✓ extensions/subagent/__tests__/upgrade.test.ts (6 tests) 58ms
+ ✓ extensions/codex-compact/__tests__/media-resources.test.ts (2 tests) 92ms
+ ✓ extensions/codex-ui/__tests__/user-markdown.test.ts (3 tests) 168ms
+ ✓ extensions/subagent/__tests__/tools.test.ts (14 tests) 41ms
+ ✓ extensions/codex-ui/__tests__/index.test.ts (9 tests) 69ms
+ ✓ extensions/goal/__tests__/children.test.ts (1 test) 61ms
+ ✓ extensions/subagent/__tests__/provider-compatibility.test.ts (2 tests) 63ms
+ ✓ extensions/skill-mentions/__tests__/label-api-boundaries.test.ts (11 tests) 110ms
+ ✓ extensions/mcp/__tests__/diagnostics.test.ts (36 tests) 55ms
+ ✓ extensions/codex-ui/__tests__/grouped-read.test.ts (10 tests) 99ms
+ ✓ extensions/codex-ui/__tests__/reasoning-inline.test.ts (3 tests) 101ms
+ ✓ extensions/openai-fast-mode/__tests__/payload-status.test.ts (19 tests) 5ms
+ ✓ extensions/permissions/__tests__/host-compatibility.test.ts (2 tests) 111ms
+ ✓ extensions/codex-compact/__tests__/quality-tools.test.ts (9 tests) 42ms
+ ✓ extensions/mcp/__tests__/history-handoff.test.ts (6 tests) 14ms
+ ✓ extensions/codex-ui/__tests__/read-model.test.ts (14 tests) 215ms
+ ✓ extensions/skill-mentions/__tests__/labels.test.ts (10 tests) 58ms
+ ✓ extensions/codex-compact/__tests__/quality-review.test.ts (2 tests) 15ms
+ ✓ extensions/codex-compact/__tests__/quality-rpc.test.ts (9 tests) 27ms
+ ✓ extensions/openai-fast-mode/__tests__/host-compatibility.test.ts (1 test) 54ms
+ ✓ extensions/codex-ui/__tests__/reply-markdown.test.ts (6 tests) 108ms
+ ✓ extensions/codex-compact/__tests__/token-estimation.test.ts (10 tests) 30ms
+ ✓ extensions/codex-compact/__tests__/responses-parity.test.ts (27 tests) 16ms
+ ✓ extensions/skill-mentions/__tests__/references.test.ts (170 tests) 51ms
+ ✓ extensions/codex-compact/__tests__/turn-boundary.test.ts (120 tests) 58ms
+ ✓ extensions/codex-ui/__tests__/reasoning-summary.test.ts (4 tests) 44ms
+ ✓ extensions/codex-compact/__tests__/reasoning.test.ts (10 tests) 21ms
+ ✓ extensions/goal/__tests__/scheduler.test.ts (81 tests) 63ms
+ ✓ extensions/codex-ui/__tests__/tool-status-prototype.test.ts (5 tests) 39ms
+ ✓ extensions/mcp/__tests__/resilience-baseline.test.ts (5 tests) 18ms
+ ✓ extensions/codex-ui/__tests__/exact-visual-tail.test.ts (1 test) 45ms
+ ✓ extensions/openai-fast-mode/__tests__/config.test.ts (16 tests) 19ms
+ ✓ extensions/goal/__tests__/footer-prototype.test.ts (4 tests) 25ms
+ ✓ extensions/skill-mentions/__tests__/visibility.test.ts (2 tests) 42ms
+ ✓ extensions/codex-compact/__tests__/session-coordinator.test.ts (44 tests) 28ms
+ ✓ extensions/codex-compact/__tests__/quality-history.test.ts (7 tests) 13ms
+ ✓ extensions/codex-compact/__tests__/media-decoder.test.ts (15 tests) 72ms
+ ✓ extensions/mcp/__tests__/retry.test.ts (41 tests) 20ms
+ ✓ extensions/codex-compact/__tests__/quality-native.test.ts (4 tests) 20ms
+ ✓ extensions/skill-mentions/__tests__/loading.test.ts (15 tests) 40ms
+ ✓ extensions/subagent/__tests__/wait.test.ts (4 tests) 19ms
+ ✓ extensions/codex-ui/__tests__/terminal-title.test.ts (5 tests) 24ms
+ ✓ extensions/goal/__tests__/loop.test.ts (6 tests) 17ms
+ ✓ extensions/goal/__tests__/presentation.test.ts (5 tests) 12ms
+ ✓ extensions/codex-compact/__tests__/reference.test.ts (63 tests) 11ms
+ ✓ extensions/codex-ui/__tests__/goal-footer.test.ts (2 tests) 8ms
+ ✓ extensions/subagent/__tests__/runtime-state.test.ts (2 tests) 2ms
+ ✓ extensions/goal/__tests__/loop-scheduler.test.ts (10 tests) 25ms
+ ✓ extensions/subagent/__tests__/renderers.test.ts (6 tests) 15ms
+ ✓ extensions/mcp/__tests__/config.test.ts (13 tests) 21ms
+ ✓ extensions/mcp/__tests__/history-tool.test.ts (1 test) 36ms
+ ✓ extensions/goal/__tests__/details.test.ts (1 test) 8ms
+ ✓ extensions/codex-compact/__tests__/quality-metrics.test.ts (4 tests) 5ms
+ ✓ extensions/codex-ui/__tests__/render-cache.test.ts (5 tests) 3ms
+ ✓ extensions/goal/__tests__/tools.test.ts (4 tests) 25ms
+ ✓ extensions/skill-mentions/__tests__/label-preference.test.ts (3 tests) 6ms
+ ✓ extensions/codex-compact/__tests__/usage-accounting.test.ts (26 tests) 13ms
+ ✓ extensions/codex-compact/__tests__/quality-response.test.ts (3 tests) 3ms
+ ✓ extensions/skill-mentions/__tests__/protocol.test.ts (18 tests) 3ms
+ ✓ extensions/codex-compact/__tests__/remote-boundaries.test.ts (1 test) 31ms
+ ✓ extensions/codex-compact/__tests__/window-evaluation.test.ts (2 tests) 4ms
+ ✓ extensions/permissions/__tests__/permission-policy.test.ts (9 tests) 3ms
+ ✓ extensions/openai-fast-mode/__tests__/commands.test.ts (6 tests) 3ms
+ ✓ extensions/mcp/__tests__/schema.test.ts (11 tests) 4ms
+ ✓ extensions/codex-compact/__tests__/presentation.test.ts (2 tests) 12ms
+ ✓ extensions/codex-ui/__tests__/components.test.ts (8 tests) 22ms
+ ✓ extensions/codex-ui/__tests__/theme.test.ts (1 test) 3ms
+ ✓ extensions/mcp/__tests__/history.test.ts (7 tests) 11ms
+ ✓ extensions/codex-compact/__tests__/evaluation.test.ts (5 tests) 4ms
+ ✓ extensions/skill-mentions/__tests__/registration.test.ts (8 tests) 9ms
+ ✓ extensions/subagent/__tests__/cursor.test.ts (4 tests) 3ms
+ ✓ extensions/skill-mentions/__tests__/package.test.ts (1 test) 4ms
+ ✓ extensions/subagent/__tests__/ownership.test.ts (2 tests) 1ms
+ ✓ extensions/codex-compact/__tests__/scheduler.test.ts (10 tests) 6ms
+ ✓ extensions/goal/__tests__/accounting.test.ts (7 tests) 2ms
+ ✓ extensions/codex-ui/__tests__/responsive-lines.test.ts (3 tests) 7ms
+ ✓ extensions/goal/__tests__/capability.test.ts (8 tests) 4ms
+ ✓ extensions/codex-compact/__tests__/capabilities.test.ts (1 test) 2ms
+ ✓ extensions/subagent/__tests__/lifecycle.test.ts (2 tests) 2ms
+ ↓ extensions/subagent/__tests__/integration.test.ts (1 test | 1 skipped)
+ ↓ extensions/subagent/__tests__/isolated-integration.test.ts (1 test | 1 skipped)
+ ✓ extensions/codex-compact/__tests__/response-item-estimation.test.ts (8 tests) 3ms
+ ✓ extensions/codex-compact/__tests__/config.test.ts (3 tests) 2ms
+ ↓ extensions/subagent/__tests__/production-integration.test.ts (3 tests | 3 skipped)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/mcp/__tests__/status-ui-prototype.test.ts [ extensions/mcp/__tests__/status-ui-prototype.test.ts ]
+Error: Cannot find module '../../../prototypes/mcp-status-ui-prototype/src/codex-startup.js' imported from '/Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/mcp/__tests__/status-ui-prototype.test.ts'
+ ❯ extensions/mcp/__tests__/status-ui-prototype.test.ts:4:1
+      2| import { visibleWidth } from "@earendil-works/pi-tui";
+      3| import { stripVTControlCharacters } from "node:util";
+      4| import { renderCodexStartup } from "../../../prototypes/mcp-status-ui-…
+       | ^
+      5| import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-ag…
+      6| import prototype from "../../../prototypes/mcp-status-ui-prototype/src…
+
+Caused by: Error: Failed to load url ../../../prototypes/mcp-status-ui-prototype/src/codex-startup.js (resolved id: ../../../prototypes/mcp-status-ui-prototype/src/codex-startup.js) in /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/extensions/mcp/__tests__/status-ui-prototype.test.ts. Does the file exist?
+ ❯ loadAndTransform node_modules/.pnpm/vite@7.3.6_@types+node@22.19.19_jiti@2.7.0_yaml@2.9.0/node_modules/vite/dist/node/chunks/config.js:22739:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 155 passed | 3 skipped (159)
+      Tests  2312 passed | 5 skipped (2317)
+   Start at  15:36:52
+   Duration  21.36s (transform 2.69s, setup 0ms, collect 55.81s, tests 101.98s, environment 18ms, prepare 8.31s)
+
+[ELIFECYCLE] Test failed. See above for more details.
+[ELIFECYCLE] Command failed with exit code 1.
+
+Exit code: 1

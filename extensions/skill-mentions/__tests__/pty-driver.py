@@ -17,6 +17,8 @@ import pyte
 
 install_root, cli, installed, mode, *extra = sys.argv[1:]
 evidence_prefix = extra[0] if extra else "skill-install"
+scope = extra[1] if len(extra) > 1 else "full"
+assert scope in ["full", "spacing"]
 assert evidence_prefix and all(char in "abcdefghijklmnopqrstuvwxyz0123456789-" for char in evidence_prefix)
 repo = Path(__file__).resolve().parents[3]
 root = Path(install_root) / mode
@@ -38,13 +40,17 @@ if mode.startswith("combined"):
 settings_file = root / "agent/settings.json"
 settings_file.write_text(json.dumps({"quietStartup": True, "compaction": {"enabled": False},
                                      "cacheWarming": "off", "retry": {"enabled": False}, "doubleEscapeAction": "none"}))
-# Use the actual local-package install operation before applying supported resource filters.
-installation = subprocess.run(["node", cli, "install", installed], cwd=root / "workspace", env=env,
-                              capture_output=True, text=True, timeout=30)
-assert installation.returncode == 0, installation.stdout + installation.stderr
+installation_output = ""
+if scope == "full":
+    # Use the actual local-package install operation before applying supported resource filters.
+    installation = subprocess.run(["node", cli, "install", installed], cwd=root / "workspace", env=env,
+                                  capture_output=True, text=True, timeout=30)
+    assert installation.returncode == 0, installation.stdout + installation.stderr
+    installation_output = installation.stdout
 settings = json.loads(settings_file.read_text())
-assert len(settings["packages"]) == 1
-assert (settings_file.parent / settings["packages"][0]).resolve() == Path(installed), settings
+if scope == "full":
+    assert len(settings["packages"]) == 1
+    assert (settings_file.parent / settings["packages"][0]).resolve() == Path(installed), settings
 entries = json.loads((Path(installed) / "package.json").read_text())["pi"]["extensions"]
 if mode.startswith("native"):
     selected = [entry for entry in entries if "/skill-mentions/" in entry]
@@ -52,7 +58,7 @@ elif mode.startswith("codex"):
     selected = [entry for entry in entries if "/codex-ui/" in entry or "/skill-mentions/" in entry]
 else:
     selected = entries
-if not mode.startswith("combined"):
+if scope == "full" and not mode.startswith("combined"):
     settings["packages"] = [{"source": installed, "extensions": [entry.removeprefix("./") for entry in selected]}]
 settings_file.write_text(json.dumps(settings))
 keys = {"tui.editor.undo": "f8", "tui.editor.historyPrevious": "ctrl+p", "tui.editor.historyNext": "ctrl+n",
@@ -76,6 +82,12 @@ args = ["node", cli, "--extension", str(Path(install_root) / "consumer/pty-fixtu
         "--no-context-files", "--no-prompt-templates", "--approve", "--offline", "--no-builtin-tools",
         "--session-dir", str(root / "sessions"), "--provider", "faux", "--model", "faux-1",
         "--tui-mode", "fullscreen" if mode.endswith("fullscreen") else "regular"]
+if scope == "spacing":
+    args += ["--no-extensions"]
+    for entry in selected:
+        args += ["--extension", str(Path(installed) / entry)]
+    if mode.startswith("codex"):
+        args += ["--theme", str(Path(installed) / "themes/codex-pi.json")]
 additional_extensions = [str(repo / "extensions/codex-search/src/index.ts")] if "combined-search" in mode else []
 for extension in additional_extensions:
     args += ["--extension", extension]
@@ -158,10 +170,10 @@ def editor():
 
 
 def assert_label_style(glyph):
-    row = max(index for index, line in enumerate(screen.display) if "Use " + glyph + "alpha" in line)
+    row = max(index for index, line in enumerate(screen.display) if "Use  " + glyph + " alpha " in line)
     column = screen.display[row].index(glyph)
-    background = screen.buffer[row][column - 1].bg
-    for offset in range(6):
+    background = screen.buffer[row][column - 2].bg
+    for offset in range(-1, 8):
         char = screen.buffer[row][column + offset]
         assert char.fg == "8df9fd" and not char.bold and char.bg == background, char
 
@@ -197,11 +209,17 @@ def submit(expected_task, names, keys="\r"):
     return value
 
 
+class SpacingComplete(Exception):
+    """Stop after the focused spacing checks while retaining common cleanup."""
+
+
 try:
     wait(lambda: bool(events("ready")), "actual CLI startup")
     settle(1)
     assert events("start")[0]["tty"] is True and events("start")[0]["mode"] == "tui"
     assert "[Extension issues]" not in view(), view()
+    if scope == "spacing":
+        assert "Codex profile theme unavailable" not in view(), view()
     editor()
     sources = {item["path"] for item in events("editor")[-1]["commands"] if item["source"] == "extension"}
     if mode.startswith("combined"):
@@ -212,7 +230,7 @@ try:
         assert any(tool["name"] == "codex_search" and "/codex-search/src/" in tool["path"] for tool in events("editor")[-1]["tools"])
         checks.append("unpackaged codex-search source coexists without executing a search or reading daily credentials")
     screens["startup"] = view()
-    checks.append("installed CLI startup and selected extension commands")
+    checks.append("compiled-entry CLI startup and selected extension commands" if scope == "spacing" else "installed CLI startup and selected extension commands")
 
     # Exercise the product projection through terminal events, not direct editor calls.
     for icon, glyph in [("cube", "\U000f01a7"), ("command", "⌘")]:
@@ -221,7 +239,7 @@ try:
         preference = root / "agent/skill-mentions.json"
         wait(lambda: preference.exists() and json.loads(preference.read_text())["icon"] == icon, "persist icon")
         paste("Use $alpha")
-        assert glyph + "alpha" in view(), view()
+        assert "Use  " + glyph + " alpha " in "\n".join(screen.display), view()
         colored = [char for row in screen.buffer.values() for char in row.values() if char.data == glyph]
         assert colored and any(char.fg == "8df9fd" and not char.bold for char in colored), colored
         assert_label_style(glyph)
@@ -237,11 +255,22 @@ try:
         send("\x1b[19~")
         assert editor() == "Use $alpha"
         send("\x05")
+        if mode.endswith("fullscreen"):
+            for offset, source_column in [(-1, 4), (1, 4), (7, 10)]:
+                row = max(index for index, line in enumerate(screen.display) if "Use  " + glyph + " alpha " in line)
+                column = screen.display[row].index(glyph) + offset
+                send(f"\x1b[<0;{column + 1};{row + 1}M\x1b[<0;{column + 1};{row + 1}m")
+                send("X")
+                source = "Use $alpha"
+                assert editor() == source[:source_column] + "X" + source[source_column:]
+                send("\x1b[19~")
+                assert editor() == source
+            send("\x05")
         submit("Use $alpha", ["alpha"])
-        assert glyph + "alpha" in view(), view()
+        assert "Use  " + glyph + " alpha " in "\n".join(screen.display), view()
         assert_label_style(glyph)
         screens[f"label-{icon}"] = view()
-    checks.append("both icons use truecolor normal weight in input and successful body; native whole Delete/Backspace and configured undo")
+    checks.append("both icons retain all three prototype spaces, truecolor normal weight and inherited background in input/body; whole Delete/Backspace, configured undo and fullscreen space hit targets")
 
     paste("$" + long_name)
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 50, 16, 0, 0))
@@ -251,7 +280,7 @@ try:
     assert editor() == "$" + long_name
     # Fullscreen reserves plain PageUp/PageDown for the transcript viewport.
     send("\x1b[5;5~" if mode.endswith("fullscreen") else "\x1b[5~")
-    assert "⌘long-" in view(), view()
+    assert "⌘ long-" in view(), view()
     screens["tall-label-page-up"] = view()
     send("\x1b[6;5~" if mode.endswith("fullscreen") else "\x1b[6~")
     send("\x7f")
@@ -272,7 +301,7 @@ try:
     settle(0.6)
     assert editor() == "abc $alpha tail"
     screens["label-narrow-resize"] = view()
-    assert "⌘alpha" in view(), view()
+    assert "⌘ alpha" in view(), view()
     send("\x01")
     send("\x1b[B")
     send("\x1b[A")
@@ -283,7 +312,7 @@ try:
     settle(0.6)
     if mode.endswith("fullscreen"):
         # Pi 0.86 only dispatches application mouse events in fullscreen mode.
-        draft_row = max(index for index, row in enumerate(screen.display) if "abc ⌘alpha tail" in row)
+        draft_row = max(index for index, row in enumerate(screen.display) if "abc  ⌘ alpha  tail" in row)
         draft_column = screen.display[draft_row].index("⌘") + 2
         send(f"\x1b[<0;{draft_column};{draft_row + 1}M\x1b[<0;{draft_column};{draft_row + 1}m")
         send("X")
@@ -304,13 +333,22 @@ try:
     large_paste = "folded $alpha " + "p" * 2048
     paste(large_paste)
     paste(" $beta")
-    assert "[paste #" in view() and "⌘beta" in view(), view()
+    assert "[paste #" in view() and "⌘ beta" in view(), view()
     send("\x7f")
     assert editor() == large_paste + " "
     send("\x1b[19~")
     assert editor() == large_paste + " $beta"
     submit(large_paste, ["alpha"], "\x7f\r")
     checks.append("folded paste plus visible label retain expanded source after delete/undo and same-write Delete-Enter activates internal references")
+
+    if scope == "spacing":
+        paste("/quit")
+        send("\r")
+        wait(lambda: status is not None, "spacing graceful exit")
+        assert os.waitstatus_to_exitcode(status) == 0
+        checks.append("graceful exit")
+        print(json.dumps({"mode": mode, "scope": scope, "passed": True, "checks": len(checks), "requests": len(events("request")), "pids": [pid]}))
+        raise SpacingComplete()
 
     paste(large_paste)
     paste(" $beta")
@@ -321,7 +359,7 @@ try:
         wait(lambda: len(events("ready")) == before + 1, "reload a folded draft")
         settle(0.5)
         assert editor() == large_paste + " $beta"
-        assert "[paste #" in view() and "⌘beta" in view(), view()
+        assert "[paste #" in view() and "⌘ beta" in view(), view()
         assert len(events("request")) == requests_before
         send("\x7f")
         assert editor() == large_paste + " "
@@ -341,7 +379,7 @@ try:
         assert len(events("tool")) == 1 and not events("tool")[-1]["isError"], events("tool")
         result = [message for message in events("request")[-1] if message["role"] == "toolResult"][-1]
         assert text(result) == "Tool literal $alpha", result
-        assert "⌘alpha" in view() and editor() == ""
+        assert "⌘ alpha" in view() and editor() == ""
         checks.append("all eight extensions coexist with a real local stdio MCP call; tool dollars stay literal and no subagent or remote provider runs")
 
     for char in "$alpha":
@@ -489,14 +527,14 @@ try:
     paste(same_task)
     second = submit(same_task, ["alpha"])
     assert first["requestId"] != second["requestId"]
-    assert "同文 ⌘alpha ⌘beta" in view() and "同文 ⌘alpha $beta" in view(), view()
+    assert "同文  ⌘ alpha   ⌘ beta" in view() and "同文  ⌘ alpha  $beta" in view(), view()
     screens["equal-tasks-distinct-success"] = view()
     before = len(events("ready"))
     paste("/reload")
     send("\r")
     wait(lambda: len(events("ready")) == before + 1, "reload equal task snapshots")
     settle(0.5)
-    assert "同文 ⌘alpha ⌘beta" in view() and "同文 ⌘alpha $beta" in view(), view()
+    assert "同文  ⌘ alpha   ⌘ beta" in view() and "同文  ⌘ alpha  $beta" in view(), view()
     screens["equal-tasks-after-reload"] = view()
     checks.append("identical tasks bind distinct success sets live and after reload without rereading deleted beta")
     paste("缺失 $beta, $alpha! $unknown.")
@@ -565,7 +603,7 @@ try:
     decoder = codecs.getincrementaldecoder("utf-8")("strict")
     wait(lambda: len(events("ready")) > ready_count, "resume real CLI")
     settle(1)
-    assert "⌘alpha" in view() and "\U000f01a7alpha" not in view(), view()
+    assert "⌘ alpha" in view() and "\U000f01a7 alpha" not in view(), view()
     send("\x10")
     assert editor() == "排队 $alpha，继续"
     assert "pi-ext-skill-mentions version" not in view()
@@ -583,6 +621,8 @@ try:
     wait(lambda: status is not None, "resume graceful exit")
     assert os.waitstatus_to_exitcode(status) == 0
     print(json.dumps({"mode": mode, "passed": True, "checks": len(checks), "requests": len(events("request")), "pids": reaped + [pid]}))
+except SpacingComplete:
+    pass
 finally:
     if status is None:
         os.kill(pid, signal.SIGTERM)
@@ -600,9 +640,9 @@ finally:
     mcp_pids = [event["data"]["pid"] for event in mcp_events if event["type"] == "start"]
     for child in mcp_pids:
         assert subprocess.run(["kill", "-0", str(child)], capture_output=True).returncode != 0, child
-    result = {"mode": mode, "pids": reaped, "mcpPids": mcp_pids, "mcpEvents": mcp_events, "exit": os.waitstatus_to_exitcode(status), "checks": checks,
+    result = {"mode": mode, "scope": scope, "pids": reaped, "mcpPids": mcp_pids, "mcpEvents": mcp_events, "exit": os.waitstatus_to_exitcode(status), "checks": checks,
               "selectedExtensions": selected, "additionalSourceExtensions": additional_extensions, "screens": screens, "lastScreen": view(),
-              "installation": installation.stdout, "requests": len(events("request")),
+              "installation": installation_output, "requests": len(events("request")),
               "diskUsers": disk_users if "disk_users" in globals() else [],
               "starts": events("start"), "shutdowns": events("shutdown"),
               "editorObservations": events("editor"), "inputs": events("input"),

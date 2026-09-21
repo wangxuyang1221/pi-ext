@@ -45,8 +45,8 @@ it.each([
   });
   expect(read.mock.calls.filter(([path]) => h.skills.some(skill => skill.filePath === path))).toHaveLength(4);
   expect(h.sequence).toEqual(["user", "display", "user", "display", "user"]);
-  expect(h.plain().match(/\u{f01a7}alpha/gu)).toHaveLength(4);
-  expect(h.plain().match(/\u{f01a7}beta/gu)).toHaveLength(2);
+  expect(h.plain().match(/ \u{f01a7} alpha /gu)).toHaveLength(4);
+  expect(h.plain().match(/ \u{f01a7} beta /gu)).toHaveLength(2);
   expect(JSON.stringify(users)).not.toContain("\u{f01a7}");
   const disk = readFileSync(h.session.sessionFile!, "utf8").trim().split("\n").map(line => JSON.parse(line));
   expect(disk.filter(e => e.type === "message" && e.message.role === "user").slice(1).map(e => e.message)).toEqual(users);
@@ -87,7 +87,7 @@ it("keeps dequeue text clean and silently skips a skill deleted while queued", a
   const user = h.calls[1].filter(m => m.role === "user").at(-1)!;
   expect(decodeSnapshot(textOf(user))?.skills.map(skill => skill.name)).toEqual(["beta"]);
   expect(h.plain()).not.toContain("[skill] alpha");
-  expect(h.plain()).toContain("$alpha \u{f01a7}beta"); expect(h.errors).toEqual([]);
+  expect(h.plain()).toContain("$alpha  \u{f01a7} beta "); expect(h.errors).toEqual([]);
 });
 
 it.each([undefined, "before", "after"] as const)("reloads and resumes disk snapshots without reads using editor order %s", async codex => {
@@ -100,7 +100,7 @@ it.each([undefined, "before", "after"] as const)("reloads and resumes disk snaps
     expect(h.mode.editor.getText()).toBe("Existing draft"); expect(h.wrappers).toHaveLength(1);
     if (codex) expect(h.mode.editor).toBeInstanceOf(CodexEditor);
     const display = h.rebuild(); expect(display).toContain("[skill] alpha"); expect(display).not.toContain("pi-ext/skill-mentions");
-    expect(display).toContain("\u{f01a7}alpha \u{f01a7}beta");
+    expect(display).toContain(" \u{f01a7} alpha   \u{f01a7} beta ");
   }
   expect(readFileSync(file, "utf8")).toBe(original);
   await h.runtime.newSession(); await h.runtime.switchSession(file);
@@ -144,7 +144,7 @@ it("navigates a real user parent, hides its orphan, and forks/resumes without cr
   h.mode.editor.setText(result.editorText);
   expect(h.mode.editor.getText()).toBe("Second $beta");
   expect(h.rebuild()).toContain("[skill] alpha"); expect(h.plain()).not.toContain("[skill] beta");
-  expect(h.plain()).toContain("\u{f01a7}alpha"); expect(h.plain()).not.toContain("\u{f01a7}beta");
+  expect(h.plain()).toContain(" \u{f01a7} alpha "); expect(h.plain()).not.toContain(" \u{f01a7} beta ");
   await h.session.prompt("Alternate $alpha");
   expect(h.calls.at(-1)!.filter(m => m.role === "user").map(textOf).some(t => decodeSnapshot(t)?.task === "Second $beta")).toBe(false);
   await h.session.navigateTree(oldLeaf, { summarize: false });
@@ -156,7 +156,7 @@ it("navigates a real user parent, hides its orphan, and forks/resumes without cr
   h.mode.editor.setText(fork.selectedText);
   expect(h.mode.editor.getText()).toBe("Second $beta");
   expect(h.rebuild()).toContain("[skill] alpha"); expect(h.plain()).not.toContain("[skill] beta");
-  expect(h.plain()).toContain("\u{f01a7}alpha"); expect(h.plain()).not.toContain("\u{f01a7}beta");
+  expect(h.plain()).toContain(" \u{f01a7} alpha "); expect(h.plain()).not.toContain(" \u{f01a7} beta ");
   await h.runtime.switchSession(file);
   expect(h.rebuild()).toContain("[skill] beta");
   expect(read.mock.calls.filter(([path]) => h.skills.some(skill => skill.filePath === path))).toHaveLength(0);
@@ -172,7 +172,7 @@ it.each(["user", "assistant"] as const)("respects compaction retaining %s withou
   const read = vi.mocked(fs.readFile); read.mockClear();
   const before = h.sm.getEntries().length;
   await h.reload(); expect(h.rebuild()).not.toContain("[skill]"); expect(h.sm.getEntries()).toHaveLength(before);
-  expect(h.plain().includes("\u{f01a7}alpha")).toBe(keep === "user");
+  expect(h.plain().includes(" \u{f01a7} alpha ")).toBe(keep === "user");
   await h.session.prompt("Continue");
   const messages = h.calls.at(-1)!;
   expect(JSON.stringify(messages)).toContain("Fixture summary");

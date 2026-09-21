@@ -88,8 +88,8 @@ it.each(["native", "codex"] as const)("%s restores snapshot drafts and history t
   editor.setText(envelope); expect(h.changed).toHaveBeenLastCalledWith(task);
   if (kind === "codex") {
     expect(editor).toBeInstanceOf(CodexEditor);
-    expect(editor.render(80).map(stripTerminalSequences).join("\n").replaceAll("\u{f01a7}", "$"))
-      .toBe(h.base!.render(80).map(stripTerminalSequences).join("\n"));
+    expect(editor.render(80).map(stripTerminalSequences).map(line => line.replaceAll(" \u{f01a7} alpha ", "$alpha").trimEnd()))
+      .toEqual(h.base!.render(80).map(stripTerminalSequences).map(line => line.trimEnd()));
     expect(h.base!.setText).toBe(CodexEditor.prototype.setText);
   } else expect((editor as CustomEditor).embedWorkingStatus).toBe(true);
 });

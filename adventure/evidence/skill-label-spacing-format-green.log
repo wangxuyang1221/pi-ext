@@ -1,0 +1,11 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
+
+ ✓ extensions/skill-mentions/__tests__/labels.test.ts (6 tests) 22ms
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  15:26:53
+   Duration  630ms (transform 35ms, setup 0ms, collect 426ms, tests 22ms, environment 0ms, prepare 46ms)
+
+Exit code: 0

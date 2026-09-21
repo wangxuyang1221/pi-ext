@@ -1,0 +1,6 @@
+$ node extensions/skill-mentions/__tests__/spacing-acceptance.mjs skill-label-spacing
+{"mode": "native-fullscreen", "scope": "spacing", "passed": true, "checks": 7, "requests": 3, "pids": [25137]}
+{"mode": "codex-fullscreen", "scope": "spacing", "passed": true, "checks": 7, "requests": 3, "pids": [30819]}
+Removed isolated spacing workspace: /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions/.tmp/skill-spacing-pty-6ZsDVy
+
+Exit code: 0

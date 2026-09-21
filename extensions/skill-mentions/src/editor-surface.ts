@@ -35,10 +35,22 @@ export function sourceSurface(base: CustomEditor, width: number, rows: number) {
 }
 
 export function projectedCursor(lines: readonly LabelLine[], offset: number): { row: number; column: number } {
-  let row = 0;
-  for (let i = 1; i < lines.length; i++) if (lines[i].start <= offset) row = i;
-  const line = lines[row];
-  return { row, column: line.cells.filter(cell => cell.end <= offset).reduce((total, cell) => total + cell.width, 0) };
+  for (let row = 0; row < lines.length; row++) {
+    const line = lines[row];
+    // Several wrapped display cells can share one source grapheme. Its caret
+    // belongs before the first such cell, not on the last row sharing its start.
+    if ((line.cells.at(-1)?.end ?? line.end) > offset) {
+      let column = 0;
+      for (const cell of line.cells) {
+        if (offset < cell.end) return { row, column };
+        column += cell.width;
+      }
+    }
+    if (row === lines.length - 1 || (offset <= line.end && lines[row + 1].start > offset)) {
+      return { row, column: line.cells.reduce((total, cell) => total + cell.width, 0) };
+    }
+  }
+  return { row: 0, column: 0 };
 }
 
 export function paintEditorLine(line: LabelLine, cursor: number | undefined, focused: boolean): string {
