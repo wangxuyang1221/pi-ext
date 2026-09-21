@@ -1,6 +1,6 @@
 # Handoff
 
-> 从 Continuation Point 接续。#14/#15已验收通过并关闭，产品提交`184a7e7`，进入#16安装交付与整体验收。用户已确认英文产品文案，接受原生同步删除的大粘贴内存代价，不推进异步双状态。完整规格只在Spec Issue正文维护。
+> 从 Continuation Point 接续。#14/#15已关闭，产品提交`184a7e7`，测试夹具返工提交`d8cae5f`。#16自动化验收已完成，停在物理中文输入法与实际终端字形观察，不能据此关闭关卡。用户已确认英文产品文案，接受原生同步删除的大粘贴内存代价，不推进异步双状态。完整规格只在Spec Issue正文维护。
 
 ## Handoff Position
 
@@ -16,7 +16,7 @@
 - [#14标点激活](https://github.com/wangxuyang1221/pi-ext/issues/14)已通过，产品基准`d8a6a40d05e7cf3db63b553520bb2717453c04a0`。
 - [#15完整标签体验](https://github.com/wangxuyang1221/pi-ext/issues/15)已通过，产品提交`184a7e79c4dfadcec1f5f75e8ab0b5808411b065`，包含输入/正文标签、同步整体编辑、持久图标偏好及两宿主适配。
 - [#12编辑契约](https://github.com/wangxuyang1221/pi-ext/issues/12)因成本反例重开，现已再次通关；[收尾证据](evidence/skill-label-native-undo-closeout.md)提交`594f120e49b60a949ceb33c29d899b85b27d3243`。
-- [#16安装交付与整体验收](https://github.com/wangxuyang1221/pi-ext/issues/16)前置已解除，派发新上下文worker承担可安装交付、当前扩展组合及完整Spec验收。
+- [#16安装交付与整体验收](https://github.com/wangxuyang1221/pi-ext/issues/16)保持open。真实安装、八组扩展/宿主组合PTY及自动化Spec核验通过，物理IME/字形尚未验证。隔离人工入口已准备，不修改日常配置。
 
 ## Evolution
 
@@ -52,7 +52,7 @@
 
 产品在`extensions/skill-mentions/src/`及对应`__tests__/`。v1协议保存UUID requestId、原任务、真实skill路径和正文；message_start消费时读取并展示，message_end保存同role user与图片。展示entry不进入模型上下文。队列保存原文，历史恢复不读文件；活动分支卡片缺失不补、孤立隐藏，压缩不重注入旧正文。Pi首次assistant前不落盘，本扩展不提供WAL或损坏JSONL修复。
 
-编辑器在resources_discover组合公开factory，reload补active context历史，首次启动/resume由宿主填充。正文逐消息transformer闭包身份通道在真实SDK核验可行，不依赖相同任务文本；尚未实现完整正文视觉矩阵。
+编辑器在resources_discover组合公开factory，reload补active context历史，首次启动/resume由宿主填充。正文逐消息transformer闭包身份通道已进入产品，不依赖相同任务文本；正式视觉和快照矩阵见下方Label delivery与Final acceptance。
 
 修改产品前按需读[输入实施](evidence/skill-input-implementation.md)、[历史实施](evidence/skill-history-implementation.md)、[旧安装验收](evidence/skill-install-acceptance.md)。后者包含tarball/隔离安装/八入口/五组真实PTY；不是本轮标签验收。使用离线faux，不误触真实MCP、远端provider或子代理任务。
 
@@ -76,7 +76,17 @@
 
 性能与生命周期见报告：100KiB布局中位30.81–34.24ms、最大43.85ms；1MiB paste/64名称同步删除中位7.91ms，约67MiB操作边界heap样本。接受成本不等于极端OOM安全。真实SDK三种安装顺序各三次reload，九个退休editor WeakRef均可回收。不是物理IME或全扩展运行组合验收。
 
-协调者核对源码接缝、矩阵、四组最终PTY JSON及内存证据，并独立复跑全仓check。#15第四次Acceptance为通过，前三次阻塞/证据记录保留。物理IME/字体观察、完整当前扩展组合与最终产物交#16。
+协调者核对源码接缝、矩阵、四组最终PTY JSON及内存证据，并独立复跑全仓check。#15第四次Acceptance为通过；#16额外独立tsc发现两处fixture类型错误后局部重开。原worker以`d8cae5f`修复真实Theme构造和只读columns赋值，未改产品、断言或检查严格度。全skill测试独立严格tsc、580项回归及build通过，第六次Acceptance通过并重新关闭#15。此前失败记录保留，见[返工报告](evidence/skill-label-fixture-type-repair.md)。
+
+### Final acceptance
+
+[#16最终报告](evidence/skill-final-acceptance.md)是续接必读入口，记录完整Spec矩阵、安装/PTY结果与未验证项。验收脚本和文档提交`a9cbf51`，fixture修复独立复核与最终报告更新为`0d7c5f182e2a3efd9b423b2c3d7ec5148f1e6ab9`。产品src仍与`184a7e7`一致。八个dist入口经真实tarball隔离安装、逐字节比较及import；测试不是直接加载未打包skill源码冒充安装。580项相关运行测试通过。
+
+八组真实PTY均退出0且重启通过：native、codex各regular/fullscreen，八个已发布扩展组合各regular/fullscreen，再附加未发布codex-search源码的组合各regular/fullscreen，分别25/25/26/26/26/27/27/28项检查。默认八个扩展为codex-ui、codex-compact、openai-fast-mode、permissions、mcp、subagent、goal、skill-mentions。codex-search明确为附加载入源码，不冒充发布入口。离线faux provider，组合中调用一次本地stdio MCP echo，工具正文中的`$alpha`保持字面量；未接远端MCP/provider，未创建goal/subagent任务，不声称其他扩展所有业务重验。
+
+新场景包括folded paste与可见标签混排后两次实际reload、删除/undo/提交，以及相同任务在删除beta文件前后分别保留各自成功快照。provider JSONL中的用户原文未受图标/ANSI污染。75个记录进程已退出，无遗留listener，隔离安装/缓存等清理记录见[cleanup](evidence/skill-final-cleanup.json)。
+
+协调者在#16第二次Acceptance确认自动化范围通过，但整关仍待人工验证。当前非TTY工具环境不能观察物理中文输入法候选窗口或实际字体。UTF-8注入、ANSI与终端列宽断言不能替代这两项，未降低Spec门槛。四种模式的隔离人工launcher已有八次启动烟测；每次先启动新会话，第一次`/quit`后恢复同一隔离session，第二次`/quit`清理。详见[人工核验说明](../docs/skill-mentions.md#manual-terminal-verification)。
 
 ### Checks and cleanup
 
@@ -88,18 +98,18 @@ worker环境可能污染goal fixture；仅测试子进程清除`PI_SUBAGENT_PARE
 
 ## Current Assumptions
 
-#15全部本关责任已有正式产品证据并获协调者验收；更广的当前扩展运行组合、物理IME/字体及最终完整Spec核验仍归#16，不提前称通过。发现回归交原#15 worker修复，业务规则或已采用方案失效才回流Planning。已接受的资源代价不重复询问。
+#15产品和fixture返工均已验收；#16自动化责任已有证据，仍缺物理IME/字体观察，不提前称整体验收通过。发现回归交原#15 worker修复，业务规则或已采用方案失效才回流Planning。已接受的资源代价不重复询问。
 
 不能把PTY UTF-8/粘贴注入等同物理IME候选窗口，不能把可导入全部入口等同全部扩展共同运行。无法实际操作的验收项明确缺口，不擅自通过。
 
 ## Continuation Point
 
-#14/#15均关闭，自动保存后直接派发独立#16 worker，不等待用户再次确认。产品基准184a7e7，派发前核对最新HEAD和工作区。
+#14/#15均关闭，#16停在等待实际终端人工观察，Map/Spec保持open。无需重复已通过的八组PTY、性能或安装实验。续接先核对工作区与原worker状态，避免重复施工。
 
-1. #15 worker `01a0c163-4879-7531-af23-b7eef1ddaf71`已settled，保留上下文供最终验收发现回归时返工。#16须新上下文，不直接复用它负责下一关；原#14 worker已关闭。
-2. 新worker读取Map/Spec/#16、#15正式报告与使用文档，核对真实可安装产物、全部Spec及延期责任。使用离线faux与隔离配置，不接通实际MCP或远端provider，不改全局配置/字体或日常安装。
-3. #16 worker负责自己的Execution/Delivery/Verification及完整交付证据，不能写Acceptance、关Issue或改Map/Spec/progress。正确性回归由协调者交回#15原worker，避免并行修改。
-4. 全部验收通过后协调者保存并提交用户确认，Map/Spec保持open；用户确认才关闭。实际无法完成的IME/字体等验收明确缺口，不冒充完成或擅自减项。
+1. 已保留#15 worker `01a0c163-4879-7531-af23-b7eef1ddaf71`供产品返工；#16 worker `01a0c279-d8df-7713-a26c-f61160eb76fd`负责整体验收，后续优先复用其上下文。两者已settled，没有继续实施任务，原#14 worker已关闭。跨session无法复用时按原职责创建新上下文并提供准确材料入口。
+2. 等用户在实际终端执行`docs/skill-mentions.md#manual-terminal-verification`。从本worktree运行`pnpm exec node extensions/skill-mentions/__tests__/manual-terminal.mjs native regular`，再覆盖`codex regular`、`native fullscreen`、`codex fullscreen`。记录OS、终端/字体/输入法及结果。重点观察中文候选窗口、选择字符不提前发送或重复，标签两侧输入/删除/undo，以及cube/command真实字形、输入与正文颜色、reload/重启偏好。入口离线隔离，不新增日常安装、不改全局配置/字体。
+3. 收到人工结果后由#16 worker整理完整矩阵；失败按归属交回#15修复并保留验收记录。没有实际观察结果时继续保留未验证，不以用户接受性能代价推定其放弃IME/字体要求。
+4. 全部Spec验收通过后协调者关闭#16、保存进度并提交最终交付供用户确认；此时Map/Spec仍open，用户明确确认交付后才关闭。远端分支及日常Pi依赖的worktree不自动删除。
 
 交接skill绝对路径：
 
