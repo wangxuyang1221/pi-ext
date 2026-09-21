@@ -2,14 +2,14 @@
 
 ## Result
 
-本轮完成 #16 可自主执行的安装、组合与完整 Spec 核对。没有发现新的产品正确性回归，没有修改产品 `src/`。**#16 仍应保持 open**，物理 IME 候选窗口和实际终端字体尚未人工验收，不能用 PTY 结果代替。
+用户在留白修复及切换配套新 Codex UI 后明确反馈“验收通过”，由协调者在本轮派发中转交。本报告据此完成最终交付收尾，建议协调者验收 #16。这是用户最终体验确认，不是代理执行物理 IME、真实字体或四模式逐项检查的记录；缺少的设备与逐项实录不补写，也不新增验收门槛。
 
-接手 `71ade67d8c5f76642806b75dfb7df37ec47e2a03`，产品基准 `184a7e79c4dfadcec1f5f75e8ab0b5808411b065`。两者之间只有 progress 资料变化；本轮再次核对 `extensions/*/src/` 无差异。完整规格只在 [Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2)，本报告是证据矩阵，不另建规格。
+本报告保留历轮证据及其适用版本。初次接手 `71ade67d8c5f76642806b75dfb7df37ec47e2a03`，安装/八组组合证据对应产品基准 `184a7e79c4dfadcec1f5f75e8ab0b5808411b065`。最新产品修复为 `7eb5143ca777530ec482dbd1714b284cecbec828`；本次文档收尾接手 `d94b6ba6fad8a5cb1cc64af73d258e5456ff2949`，工作区干净，两者间仅 progress 资料变化。完整规格只在 [Spec #2](https://github.com/wangxuyang1221/pi-ext/issues/2)，本报告是证据矩阵，不另建规格。
 
-- 正式 skill-mentions + codex-ui 测试 **580/580**，其中 skill-mentions 345 项。
-- 六组实际 tarball 隔离安装 PTY 通过；另两组验证八个默认扩展加未发布的 codex-search 源码共同运行。每组均真实退出并重启。
-- 原生/Codex、regular/fullscreen 的人工验收 launcher 已通过八次 CLI 启停 smoke。这只是 launcher 可用性验证，人工观察仍未执行。
-- 全仓 check 失败，2298 passed / 5 skipped，仍缺旧 MCP prototype。独立 build 和八入口 import 通过，package:check 仍缺旧文档。
+- 最新正式 skill-mentions + codex-ui 测试 **594/594**，其中 skill-mentions 359 项。#15 留白返工恢复三个显示空格，补充坐标、换行、鼠标及原文保护回归；全部18个 skill 测试/fixture 文件严格 tsc 通过。
+- 历史六组实际 tarball 隔离安装 PTY 及另两组八默认扩展加 codex-search 源码组合通过，均真实退出重启。留白返工另补原生/Codex fullscreen 各7组受影响检查，不将旧八组说成在7eb5143上重新执行。
+- 原生/Codex、regular/fullscreen 人工 launcher 的八次 CLI 启停 smoke 只证明入口可用。用户最终体验确认与代理自动化证据分别记录，见下方 Final user acceptance。
+- 最新全仓 check 为2312 passed / 5 skipped，仍因旧 MCP prototype 缺失失败。独立 build 通过，package:check 仍缺旧文档；八入口 import 属于历史产物证据。
 - 额外全测试文件 tsc 曾发现两处 fixture 类型错误，原失败日志保留。#15 已在 `d8cae5fbe04647320e3a470066d637682e468c09` 修复；本 worker 独立严格 tsc 复核全部18个测试/fixture文件通过，详见 [返工报告](skill-label-fixture-type-repair.md)及 Checks。
 
 ## Delivery
@@ -20,24 +20,38 @@
 - [pty-mcp-fixture.mjs](../../extensions/skill-mentions/__tests__/pty-mcp-fixture.mjs) 只提供本地 stdio echo，记录 PID、调用和退出，不开监听端口。
 - [manual-terminal.mjs](../../extensions/skill-mentions/__tests__/manual-terminal.mjs) 提供隔离、离线、两次启动的人工观察入口。非 TTY 提前退出 2，不创建配置；正常结束清理 worktree 内的临时目录。
 
-实际构建、打包、安装命令均运行过。没有安装到用户日常 Pi，没有修改全局配置、字体、终端或输入法；没有 PR、合并或部署。dist 仅构建生成。
+实际构建、打包、隔离安装命令已在前轮运行。本worker各轮均未修改用户日常安装、全局配置、字体、终端或输入法；本次只更新文档。用户后续另行批准的日常 Codex UI 切换由协调者完成，见下节，不与隔离安装证据混淆。没有 PR、合并或部署，dist 仅构建生成。
+
+## Final user acceptance
+
+用户实际验收先指出两个问题，随后在以下处理完成后明确表示“验收通过”。本节来源为协调者本轮交接及仓库证据，未声称本worker亲自执行日常安装或物理观察。
+
+1. 问题1是标签留白与原型不一致。原#15 worker在7eb5143恢复前导、图标名称间、尾随各一个显示空格，保留源文本原有空格。共享源坐标跨行和补充平面字符尾随空格命中一并修正。[留白报告](skill-label-spacing-repair.md)保留Red/Green、594项回归、严格tsc及两宿主fullscreen各7组PTY。协调者另行独立复跑36项布局/界面测试通过，记录见[#16第四次验收](https://github.com/wangxuyang1221/pi-ext/issues/16)。
+2. 问题2来自日常旧 Codex UI 缺少`renderProjectedLines`，成标时不能保留配套投影样式。用户随后批准只切换冒险分支 Codex UI，协调者已完成并核对配置解析和公开投影方法。当前组合使用本worktree的`extensions/codex-ui/dist/index.js`及`extensions/skill-mentions/dist/index.js`，保留main其他扩展/主题与codex-search。此举解决当前日常部署组合，不是给旧Codex增加兼容实现，也不代表旧版混装通过。
+3. 协调者报告已备份`~/.pi/agent/settings.json`为`settings.json.before-adventure-codex-ui-20260921-160216.bak`。冒险Codex编译入口放在第一项，原main包改为带`source`的对象，以`extensions: ["-extensions/codex-ui/dist/index.js"]`排除旧Codex；其他设置保持。本worker未读取或修改该全局文件，不再次执行安装。备份由用户保留，不作为临时验收文件清理。
+
+用户没有提供终端型号、字体、输入法名称或原生/Codex × regular/fullscreen逐项物理实录。因此收尾结论是“用户最终体验验收通过”，不是“代理已独立证明全部物理IME/字形场景通过”。原人工步骤继续作为可复现入口，未执行细项仍如实注明，不再作为本轮新增交付门槛。Issue验收、关闭及Map/Spec/progress收尾交协调者。
 
 ## Evidence provenance
 
 | Evidence | Version and use |
 | --- | --- |
-| [#14 标点报告](skill-punctuation-implementation.md) | 已关闭前置关卡；当前正式 parser 未变。本轮重跑正式测试与产物标点矩阵，不用旧 280 项结果替代当前 345 项 |
+| [#14 标点报告](skill-punctuation-implementation.md) | 已关闭前置关卡；正式parser未变。初轮重跑345项skill测试与产物标点矩阵，最新留白返工为359项；不拿旧280项结果替代后续回归 |
 | [#15 标签报告](skill-label-product-implementation.md) | 产品基准184a7e7；正式布局、回调重入、grapheme、kill ring、安装顺序、偏好故障、分支和压缩测试本轮在同源码上重跑 |
 | [原生 undo 收尾](skill-label-native-undo-closeout.md) | 复用 Pi0.86.0 源码和容量边界，不重跑大分配/OOM；没有恢复旧128 MiB代理门槛 |
 | [旧 #10 安装报告](skill-install-acceptance.md) | 仅作 fixture 和历史实现定位，不能证明新增标签或本轮扩展组合 |
 | [本轮环境及来源](skill-final-environment.json) | Node22.22.2、pnpm11.9.0、Pi coding-agent/tui/ai0.86.0；三份固定官方源码与安装 source map 全文散列相同 |
-| [#15 fixture返工](skill-label-fixture-type-repair.md) | d8cae5f仅将label-surface测试改为真实Theme及持有可变terminal，未删减断言。独立核对a9cbf51至d8cae5f全部产品src无差异；八组PTY、安装和性能证据继续有效，本次不重复运行 |
+| [#15 fixture返工](skill-label-fixture-type-repair.md) | d8cae5f仅将label-surface测试改为真实Theme及持有可变terminal，未删减断言。独立核对a9cbf51至d8cae5f全部产品src无差异；该轮没有重复PTY、安装和性能实验 |
+| [#15 留白返工](skill-label-spacing-repair.md) | 最新产品7eb5143修改labels、editor-surface、label-editor及对应测试。594项回归、严格tsc、两宿主fullscreen补验通过。旧八组仍属于原产物版本；新补验不冒充再次tarball安装或全部扩展组合 |
+| 用户最终体验确认 | 协调者转交用户“验收通过”，发生在留白修复和用户批准切换配套新Codex之后；无终端/字体/IME及四模式逐项实录，不能推导这些未记录细项均被观察 |
 
-Context7 `/earendil-works/pi` 返回 main，只用于定位。目标版本以安装包0.86.0及固定官方 commit `ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc` 为依据。本轮在线复核 [package-manager.ts](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/core/package-manager.ts)、[interactive-mode.ts](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/modes/interactive/interactive-mode.ts)、[faux.ts](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/ai/src/providers/faux.ts)。本地完整读取的16份相关 Pi 文档及散列列于环境记录，并读取 reload-runtime、github-issue-autocomplete、SDK06 示例。
+Context7 `/earendil-works/pi` 返回 main，只用于定位。目标版本以安装包0.86.0及固定官方 commit `ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc` 为依据。初轮在线复核 [package-manager.ts](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/core/package-manager.ts)、[interactive-mode.ts](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/coding-agent/src/modes/interactive/interactive-mode.ts)、[faux.ts](https://github.com/earendil-works/pi/blob/ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc/packages/ai/src/providers/faux.ts)。本地完整读取的16份相关 Pi 文档及散列列于环境记录，并读取 reload-runtime、github-issue-autocomplete、SDK06 示例。
 
 MCP fixture 复用本仓库1.29.0 SDK，查阅 Context7 精确 `/modelcontextprotocol/typescript-sdk/v1.29.0` 的 [stdio 文档](https://github.com/modelcontextprotocol/typescript-sdk/blob/v1.29.0/docs/server.md)，没有依据结果中混入的 main 片段声明版本行为。Python3.12.13、pyte0.8.2。
 
 ## Artifact and terminal matrix
+
+以下八组是产品184a7e7的历史完整安装证据，7eb5143后没有重复全部安装/组合。最新显示及坐标变化由[留白补验](skill-label-spacing-repair.md#real-pty)覆盖；最终日常组合另有用户体验确认。三个层次不互相冒充。
 
 ```bash
 TMPDIR="$PWD/.tmp/skill-final" pnpm run skill-mentions:acceptance \
@@ -73,11 +87,11 @@ TMPDIR="$PWD/.tmp/skill-final" pnpm run skill-mentions:acceptance \
 3. 原文出口：每次普通提交核对 provider user 的 task、去重顺序、图片和快照；所有 user 检查没有 cube/command/ANSI，最终 JSONL user 与实际 provider user 全量相等。外部编辑器收到 `$` 原文。排队仍显示原文，消费时才采用新文件版本。
 4. 本地 MCP 与全部扩展：faux 只返回固定 echo tool call，实际 stdio 服务器返回 `Tool literal $alpha`。同一普通 user 的 skill 快照仍正确，tool 引用不激活；每轮 reload 旧服务器退出，新服务器重新注册。退出时所有 fixture PID 不存在。
 
-这些新增断言首跑即通过，属于已有行为的验收覆盖，没有伪造产品 Red→Green。没有发现需退回 #15 修复的行为反例。源码独立核对 `index.ts` 的消息对象 WeakMap/requestId、逐消息 transformer、严格协议、history factory、`label-editor.ts` 原生 getExpandedText 出口和同步动作记账，以及 source-only reload WeakMap 的释放。没有 pending/native 异步双状态、显示字符串反解原文或 setText 整块删除路径。
+初次八组验收的新增断言首跑即通过，属于已有行为的覆盖，没有伪造产品 Red→Green。当时未发现的原型留白缺失后来由用户指出，已退回#15并以7eb5143修复；旧Codex组合问题按用户批准切换配套版本解决。初次源码独立核对 `index.ts` 的消息对象 WeakMap/requestId、逐消息 transformer、严格协议、history factory、`label-editor.ts` 原生 getExpandedText 出口和同步动作记账，以及 source-only reload WeakMap 的释放。没有 pending/native 异步双状态、显示字符串反解原文或 setText 整块删除路径。
 
 ## Complete Spec verification
 
-“通过”只涵盖本行注明的证据层级。formal 指 [当前580项正式执行](skill-final-formal.log)，文件位于 `extensions/skill-mentions/__tests__/`；SDK 行使用真实 Pi Session/Runtime、离线 faux 和替代 terminal，不冒充真实终端。
+“通过”只涵盖本行注明的证据层级。最新formal为[7eb5143的594项正式执行](skill-label-spacing-regression.log)，保留原580项并新增14项；历史[580项日志](skill-final-formal.log)未覆盖或改写。测试位于 `extensions/skill-mentions/__tests__/`及Codex UI对应目录。表中八组PTY仍指历史安装版本；留白、坐标及命中受影响路径另有两宿主fullscreen补验。SDK行使用真实Pi Session/Runtime、离线faux和替代terminal，不冒充物理检查。
 
 | Spec contract | Evidence | Status and boundary |
 | --- | --- | --- |
@@ -94,7 +108,7 @@ TMPDIR="$PWD/.tmp/skill-final" pnpm run skill-mentions:acceptance \
 | 未知/不可读静默，其他有效项正常 | loading/flow、PTY删beta且无错误；同文不同成功集 | 通过 |
 | 其他扩展普通user处理，assistant/tool/custom/RPC/print/json排除 | registration/flow、PTY插件user、真实MCP tool | 通过；非TUI是排除范围而非支持模式 |
 | 原生slash候选/调用/旧历史、原生skill卡片 | flow/history-editor/protocol、八组PTY slash/F3展开 | 通过；卡片美化仍延期 |
-| 两处cube/command统一青色正常字重、无新增背景 | labels/label-surface/label-body、PTY按屏幕单元核对RGB/非bold/邻接背景 | 自动化通过；实际字体/颜色观察待人工 |
+| 两处cube/command统一青色正常字重、无新增背景及原型留白 | 最新labels/label-surface/label-body精确格式，留白PTY核对三个空格、RGB/非bold/邻接背景 | 自动化通过；用户最终体验确认通过，未提供逐项真实字形观察记录 |
 | 命令参数、保存/读取故障、重启/reload偏好 | label-preference/label-body、PTY cube→command及进程重启 | 通过；命令不写任务/skill快照 |
 | 手写分隔后成标，不提前锁定；菜单/完整粘贴/历史末尾成标 | label-editor/label-surface/autocomplete/history、PTY手写确认undo | 通过 |
 | 未知/代码/转义/无效边界不成标 | labels、parser、label-editor | 通过 |
@@ -115,11 +129,11 @@ TMPDIR="$PWD/.tmp/skill-final" pnpm run skill-mentions:acceptance \
 | Pi发现资源，不自行扫描清单；真实路径和相对目录 | registration/loading/protocol及源码pi.getCommands，PTY路径核对 | 通过 |
 | 严格版本化协议，不误识别普通JSON/原生skill，不递归激活body | protocol/loading/flow | 通过 |
 | editor安装顺序、重复reload、回调不覆盖/不重复包装 | history-editor/label-body/lifecycle，native/Codex前后顺序，八组PTY七次reload | 通过 |
-| retired editor释放、原生undo无上限/setText不清栈/RSS边界 | #15九个真实SDK WeakRef、原生undo收尾，版本未变 | 复用已验收证据，不把退出PID等同heap回收测量 |
-| 可安装产物、文档命令、当前扩展组合 | 本轮两份tarball证据、八组PTY、manual launcher smoke | 通过已列组合和命令；无日常全局安装 |
+| retired editor释放、原生undo无上限/setText不清栈/RSS边界 | #15九个真实SDK WeakRef、原生undo收尾，Pi0.86.0及原生动作/释放路径未变 | 复用已验收证据，不把退出PID等同heap回收测量 |
+| 可安装产物、文档命令、当前扩展组合 | 历史两份tarball/八组PTY、manual smoke；7eb5143补验及配套新Codex日常组合的用户确认 | 通过各证据所列版本/范围；不宣称旧Codex混装兼容或最新八组重跑 |
 | 真实终端输入与中文 | OS PTY、UTF-8、bracketed paste、SGR鼠标、SIGWINCH | 通过这些输入层；不是物理键盘/IME候选窗口 |
-| 物理IME候选位置、组合态不误提交 | 当前无桌面终端输入与观察能力，入口不是TTY | **未执行，人工缺口；#16不满足全部通关条件** |
-| 终端当前字体实际cube/command字形 | 未操作用户终端，不从TERM或已装字体推断实际字形 | **未执行，人工缺口** |
+| 物理IME候选位置、组合态不误提交 | 代理未执行；用户在最新组合下最终体验验收通过，未提供IME及四模式逐项实录 | 用户体验确认已收束；本细项没有独立物理观察记录，不标为代理实测通过 |
+| 终端当前字体实际cube/command字形 | 代理未执行；用户最终体验确认通过，未提供字体/终端型号或逐项字形记录 | 用户体验确认已收束；不从TERM、已装字体或PTY推导真实字形通过 |
 
 ## Deferred responsibility closeout
 
@@ -127,13 +141,28 @@ TMPDIR="$PWD/.tmp/skill-final" pnpm run skill-mentions:acceptance \
 | --- | --- | --- |
 | 旧#8/#9/#10 | 输入、生命周期、历史与旧安装 | 仅保留来源；当前源码的正式测试重新执行，不直接沿用旧规格的通过结论 |
 | #14 | 右侧标点及所有激活入口 | 当前正式+PTY通过，已关闭前置有效 |
-| #15 | 成标来源、动作/键位、坐标布局/resize、上下鼠标、undo/kill ring/外部编辑器、折叠粘贴、历史队列、成功正文/分支、偏好故障 | 当前正式重跑通过；本轮新增产物组合断言通过。长输入时间/内存与九个retired editor测量复用同产品基准证据，不机械重跑历史探针 |
-| #16 | 实际产物/文档/扩展组合/完整矩阵/清理 | 自动化完成，见本报告 |
-| #16 | 实际终端/IME及物理字体 | PTY部分完成，物理部分未执行。交协调者组织人工观察；不能将责任删除或宣告整关通过 |
+| #15 | 成标来源、动作/键位、坐标布局/resize、上下鼠标、undo/kill ring/外部编辑器、折叠粘贴、历史队列、成功正文/分支、偏好故障 | 最新594项正式回归及受影响PTY通过。留白/坐标缺口已修复；长输入时间/内存与九个retired editor测量保留原版本依据，原生动作与释放路径未改，不机械重跑历史探针 |
+| #15/#16 | 用户实际反馈的原型留白及旧Codex组合 | 问题1由7eb5143修复；问题2由用户批准切换配套新Codex解决当前使用组合，不扩称兼容旧版；用户随后明确验收通过 |
+| #16 | 实际产物/文档/扩展组合/完整矩阵/清理 | 已完成分版本自动化证据、受影响补验与用户确认汇总，交付材料齐备，见本报告 |
+| #16 | 实际终端/IME及物理字体 | 以用户最终体验“验收通过”收束交付责任；物理IME/字形四模式逐项实录未提供，代理未执行，不伪造补齐。保留可复现步骤，不新增门槛 |
 | 既有全仓缺文件 | MCP prototype及旧发布文档 | 原样保留失败；不恢复18份无关文件，不删测试/清单，不降低门槛 |
-| 公开API正确性反例回流 | 发生则退回所属关卡/Planning | 本轮未发现新的产品行为反例，无产品修复 |
+| 公开API正确性反例回流 | 发生则退回所属关卡/Planning | 留白及坐标问题已退回#15修复；旧Codex未扩改，使用配套公开投影接口。无需新增Planning或私有补丁 |
+| 延期卡片美化 | 原生skill声明块美化 | 仍按Spec排除，不混入标签收尾；RPC/print等排除范围亦未扩大 |
 
 ## Checks
+
+最新产品7eb5143已运行必要检查，本次仅文档收尾，按用户要求不重复实验或引入新门槛。核对原日志、差异及报告，不把他人执行记为本worker重跑。
+
+| Latest check | Result |
+| --- | --- |
+| skill-mentions + codex-ui | [594 passed](skill-label-spacing-regression.log)，skill359、Codex235，44 files，无新增skip |
+| 全skill测试/fixture严格tsc | [18个文件通过](skill-label-spacing-types.log)，退出0 |
+| 原生/Codex fullscreen受影响PTY | [最终有主题日志](skill-label-spacing-themed-pty.log)及[编译入口/fixture散列](skill-label-spacing-themed-artifact.json)，各7组、各3次faux请求；不是安装重验 |
+| `pnpm run check` | [2312 passed / 5 skipped](skill-label-spacing-check.log)，typecheck通过，仍1个旧MCP缺文件suite失败、退出1 |
+| 独立build / package:check | [build退出0](skill-label-spacing-build.log)；[package退出1](skill-label-spacing-package-check.log)，仍缺旧文档 |
+| 协调者局部独立复验 | 36项布局/界面测试通过，来源为协调者交接及[#16第四次验收](https://github.com/wangxuyang1221/pi-ext/issues/16)，不是本worker新增执行 |
+
+下表为前轮检查，保留失败与修复时间线，不用旧计数描述最新产品。
 
 | Command | Result |
 | --- | --- |
@@ -152,13 +181,13 @@ TMPDIR="$PWD/.tmp/skill-final" pnpm run skill-mentions:acceptance \
 | manual launcher非TTY | [日志](skill-final-manual-nontty.log)，按预期退出2，不伪造交互能力 |
 | `git diff --check` | 收尾通过 |
 
-仅测试子进程移除四项 `PI_SUBAGENT_PARENT/PI_SUBAGENT_LAUNCH/PI_SUBAGENT/PI_SUBAGENT_ID`，未改全局环境。两处fixture错误已按协调者安排由原#15 worker修复，本worker只独立复核和更新证据，没有修改产品或测试代码。严格tsc沿用仓库skipLibCheck，没有降低门槛。返工后580项运行回归见[#15日志](skill-label-fixture-regression.log)，本次全仓check再次覆盖这些测试；不声称已解决无关基准失败。
+仅测试子进程移除四项 `PI_SUBAGENT_PARENT/PI_SUBAGENT_LAUNCH/PI_SUBAGENT/PI_SUBAGENT_ID`，未改全局环境。两处fixture错误已按协调者安排由原#15 worker修复，本worker只独立复核和更新证据，没有修改产品或测试代码。严格tsc沿用仓库skipLibCheck，没有降低门槛。返工后580项运行回归见[#15日志](skill-label-fixture-regression.log)，d8cae5f复核的全仓check再次覆盖这些测试；不声称已解决无关基准失败。
 
-## Manual acceptance gap
+## Physical observation boundary
 
-本环境可以创建和读写 OS PTY、读取ANSI单元与硬件光标定位；当前工具入口 `tty` 返回 `not a tty`。没有可用于专用本机终端的桌面键盘、输入法组合态控制或字形观察工具。浏览器页面自动化不能代替这些能力。本轮没有操作用户日常终端、全局字体或输入法。
+前轮环境能创建和读写OS PTY、读取ANSI单元与硬件光标定位，工具入口`tty`为`not a tty`，没有桌面键盘、输入法组合态或真实字形观察能力。本worker未执行这些物理检查，未操作用户日常终端、字体或输入法。用户最终体验确认已收到，但没有设备信息与四模式逐项实录，不能把用户的一句确认展开成不存在的观察日志。
 
-最小人工步骤已写入 [Manual terminal verification](../../docs/skill-mentions.md#manual-terminal-verification)。协调者可在专用终端分别运行：
+[Manual terminal verification](../../docs/skill-mentions.md#manual-terminal-verification)保留为后续复验入口，不再要求用户为本次收尾补交记录。需要复验时，可在专用终端分别运行：
 
 ```bash
 pnpm exec node extensions/skill-mentions/__tests__/manual-terminal.mjs native regular
@@ -183,4 +212,6 @@ pnpm exec node extensions/skill-mentions/__tests__/manual-terminal.mjs codex ful
 
 返工后的本轮复核使用worktree内`.tmp/skill-final-recheck`，前台命令均已返回。[复核清理记录](skill-final-recheck-cleanup.json)记录临时目录及新增quality日志清理、进程扫描和监听端口核对；原有临时资料保留。
 
-交付后由协调者核对已解决的fixture类型问题及剩余人工缺口，再填写Acceptance。物理IME与真实字体仍未验证，不能宣称整体验收通过。本worker仅更新#16 Execution/Delivery/Verification，不填写Acceptance、不关闭Issue、不改Map/Spec/progress。
+留白返工的[清理记录](skill-label-spacing-cleanup.json)另记录四个CLI进程退出、无遗留监听、两轮PTY临时目录及缓存清理。本次文档收尾没有启动测试、服务或后台进程，没有新临时安装目录，也没有全局配置写入。用户日常安装依赖本worktree；保留worktree、冒险分支和用户设置备份，不作为清理对象。
+
+本worker建议协调者依据已归档的自动化、留白补验及用户最终“验收通过”完成关卡验收。旧全仓缺文件失败、未提供的逐项物理记录、旧Codex不兼容及已接受原生undo成本均保留为明确边界，不伪称全部技术检查通过。本worker仅更新#16 Execution/Delivery/Verification和交付文档，不填写Acceptance、不关闭Issue、不改Map/Spec/progress。

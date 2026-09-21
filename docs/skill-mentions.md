@@ -18,6 +18,8 @@ pi -e "$PWD/extensions/skill-mentions/dist/index.js"
 
 本地 package 安装只记录路径，不复制文件；更新后重新构建并重启或 `/reload`。不要同时加载 package 和同一扩展的源码/编译入口。
 
+使用 Codex UI 时须配套加载本分支版本。旧 main 版本缺少标签投影接口，不能保证成标后的 Codex 外观；这次交付不声明兼容旧版混装。用户当前组合已按另行授权切换到冒险分支 Codex UI，并排除 main 包的旧 Codex 入口，保留其他扩展/主题，详见[最终交付记录](../adventure/evidence/skill-final-acceptance.md#final-user-acceptance)。不要因更新本功能而擅自替换其他扩展或修改全局配置。
+
 需要可搬运的本地产物时：
 
 ```bash
@@ -51,7 +53,7 @@ pi install "$PWD/node_modules/pi-ext"
 
 ## Labels and icons
 
-输入框和成功加载快照的任务正文显示青色 `#8DF9FD` 标签：图标和完整名称为正常字重，继承宿主背景，不新增底色。原生 skill 卡片保持原样。
+输入框和成功加载快照的任务正文显示青色 `#8DF9FD` 标签：图标和完整名称为正常字重，继承宿主背景，不新增底色。标签前导、图标与名称之间、尾随各有一个显示空格，原文已有空格保留；这些显示空格不写入任务或历史。原生 skill 卡片保持原样。
 
 - 菜单确认、完整粘贴和历史回填直接成标。手写名称须输入空白或允许的右侧标点后才成标，不因中途匹配完整名称而锁定。
 - 左右方向键跨过整个标签；Backspace/Delete 整体删除，一次撤销恢复。名称过长会完整换行，不使用省略号。单个标签高于输入视口时，编辑器分页键可逐页查看中间行，保持源光标在标签边界。默认 regular 为 PageUp/PageDown，fullscreen 使用 Ctrl+PageUp/Ctrl+PageDown（普通 PageUp/PageDown 留给宿主会话滚动）；fullscreen 中也可滚轮浏览。继续普通编辑时视口重新跟随光标。其他原生编辑、按词删除、kill ring 和外部编辑器仍使用原文。
@@ -115,7 +117,9 @@ node --expose-gc extensions/skill-mentions/__tests__/label-reload-memory.mjs
 
 ## Manual terminal verification
 
-物理 IME 与实际字体仍须人工观察。在专用终端窗口运行以下命令，不要在日常 Pi 会话中执行。launcher 只使用 worktree 内临时 HOME、配置、session 和离线 faux，正常退出后清理，不安装字体或修改终端配置。它使用本次构建入口，不是另一轮 tarball 安装测试。
+用户已在留白修复及切换配套新 Codex UI 后确认最终体验“验收通过”。未提供终端/字体/输入法及四模式逐项实录，代理也未执行物理观察；此确认不等于以下每个步骤都有独立实测记录。清单保留供复验，不作为本次收尾新增门槛。
+
+物理 IME 与实际字体只能通过人工观察判断。需要复验时，在专用终端窗口运行以下命令，不要在日常 Pi 会话中执行。launcher 只使用 worktree 内临时 HOME、配置、session 和离线 faux，正常退出后清理，不安装字体或修改终端配置。它使用当前构建入口，不是另一轮 tarball 安装测试。
 
 ```bash
 pnpm run build
