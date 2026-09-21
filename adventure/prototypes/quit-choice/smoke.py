@@ -67,7 +67,7 @@ for host, mode in [('native', 'regular'), ('native', 'fullscreen'), ('codex', 'r
             command('/quit')
             wait(lambda: len(events('quit-choice-open')) == 2)
             time.sleep(0.15)
-            if choice == 'End session':
+            if choice == 'Leave temporarily':
                 os.write(fd, b'\x1b[B')
                 time.sleep(0.1)
             os.write(fd, b'\r')

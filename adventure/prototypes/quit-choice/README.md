@@ -34,6 +34,6 @@ conda run -n codex-py312 python adventure/prototypes/quit-choice/smoke.py
 
 原型单文件 TypeScript 检查通过。详细数据见 [PTY results](../../evidence/subagent-quit-prototype-results.json)。没有验证实际 subagent 回收、正在工作的主 agent、全部重载/恢复路径、其他退出方式或用户亲自操作的体验。
 
-当前 prototype 每次 /quit 都弹出选择，初始高亮 Leave temporarily，Escape 取消退出。这些是候选交互，尚未确认是否仅在存在存活 subagent 时询问。
+用户已确认默认选中 End session，prototype 已据此调整。用户还确认仅有存活 subagent 时询问；本入口原型未加载真实 subagent，仍每次 /quit 询问，不能据此认为条件查询已实现。Escape 取消退出仍待完整候选确认。
 
 生产实现应重新设计生命周期与 editor factory 的释放/恢复，不直接照搬这份仅覆盖一次挂载的 adapter。

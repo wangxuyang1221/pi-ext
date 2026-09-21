@@ -17,7 +17,7 @@ export default function (pi: ExtensionAPI): void {
         pending = true;
         ctx.ui.setEditorText("");
         record("quit-choice-open");
-        void ctx.ui.select("Leave this session?", ["Leave temporarily", "End session"]).then(choice => {
+        void ctx.ui.select("Leave this session?", ["End session", "Leave temporarily"]).then(choice => {
           record("quit-choice", choice ?? "cancel");
           pending = false;
           if (choice) ctx.shutdown();

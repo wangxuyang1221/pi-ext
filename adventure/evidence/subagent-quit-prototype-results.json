@@ -8,9 +8,9 @@
     "recordedChoice": "Leave temporarily",
     "shutdownReason": "quit",
     "cleanExit": true,
-    "launcherPid": 1235,
+    "launcherPid": 23484,
     "cliPids": [
-      1236
+      23485
     ],
     "rootRemoved": true
   },
@@ -23,9 +23,9 @@
     "recordedChoice": "End session",
     "shutdownReason": "quit",
     "cleanExit": true,
-    "launcherPid": 1257,
+    "launcherPid": 23518,
     "cliPids": [
-      1258
+      23519
     ],
     "rootRemoved": true
   },
@@ -38,9 +38,9 @@
     "recordedChoice": "Leave temporarily",
     "shutdownReason": "quit",
     "cleanExit": true,
-    "launcherPid": 1282,
+    "launcherPid": 23541,
     "cliPids": [
-      1395
+      23542
     ],
     "rootRemoved": true
   },
@@ -53,9 +53,9 @@
     "recordedChoice": "End session",
     "shutdownReason": "quit",
     "cleanExit": true,
-    "launcherPid": 1569,
+    "launcherPid": 23563,
     "cliPids": [
-      1570
+      23564
     ],
     "rootRemoved": true
   },
@@ -68,9 +68,9 @@
     "recordedChoice": "Leave temporarily",
     "shutdownReason": "quit",
     "cleanExit": true,
-    "launcherPid": 1655,
+    "launcherPid": 23604,
     "cliPids": [
-      1668
+      23605
     ],
     "rootRemoved": true
   },
@@ -83,9 +83,9 @@
     "recordedChoice": "End session",
     "shutdownReason": "quit",
     "cleanExit": true,
-    "launcherPid": 1930,
+    "launcherPid": 23641,
     "cliPids": [
-      1931
+      23642
     ],
     "rootRemoved": true
   },
@@ -98,9 +98,9 @@
     "recordedChoice": "Leave temporarily",
     "shutdownReason": "quit",
     "cleanExit": true,
-    "launcherPid": 1985,
+    "launcherPid": 23733,
     "cliPids": [
-      1986
+      23734
     ],
     "rootRemoved": true
   },
@@ -113,9 +113,9 @@
     "recordedChoice": "End session",
     "shutdownReason": "quit",
     "cleanExit": true,
-    "launcherPid": 2009,
+    "launcherPid": 23756,
     "cliPids": [
-      2010
+      23757
     ],
     "rootRemoved": true
   },
@@ -128,9 +128,9 @@
     "recordedChoice": "Leave temporarily",
     "shutdownReason": "quit",
     "cleanExit": true,
-    "launcherPid": 2037,
+    "launcherPid": 23791,
     "cliPids": [
-      2038
+      23792
     ],
     "rootRemoved": true
   },
@@ -143,9 +143,9 @@
     "recordedChoice": "End session",
     "shutdownReason": "quit",
     "cleanExit": true,
-    "launcherPid": 2065,
+    "launcherPid": 23820,
     "cliPids": [
-      2071
+      23821
     ],
     "rootRemoved": true
   },
@@ -158,9 +158,9 @@
     "recordedChoice": "Leave temporarily",
     "shutdownReason": "quit",
     "cleanExit": true,
-    "launcherPid": 2224,
+    "launcherPid": 23890,
     "cliPids": [
-      2225
+      23892
     ],
     "rootRemoved": true
   },
@@ -173,9 +173,9 @@
     "recordedChoice": "End session",
     "shutdownReason": "quit",
     "cleanExit": true,
-    "launcherPid": 2266,
+    "launcherPid": 23923,
     "cliPids": [
-      2267
+      23924
     ],
     "rootRemoved": true
   }
