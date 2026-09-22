@@ -36,6 +36,15 @@ const ThinkingLevelSchema = Type.Union([
   description: "subagent 的 thinking level；省略时继承当前设置。",
 });
 
+const modelReferencePattern = "^[^/\\s]+/\\S+$";
+const modelReferenceRegex = new RegExp(modelReferencePattern, "u");
+
+function validateModelReference(model: unknown): void {
+  if (model !== undefined && (typeof model !== "string" || !modelReferenceRegex.test(model))) {
+    throw new Error("Model must use provider/model format, for example deepseek/deepseek-flash.");
+  }
+}
+
 const spawnParameters = Type.Object({
   task: Type.String({
     description: "交给 subagent 的自包含初始任务。写明必要上下文和可检查的完成条件。",
@@ -46,8 +55,9 @@ const spawnParameters = Type.Object({
     minLength: 1,
   })),
   model: Type.Optional(Type.String({
-    description: "subagent 使用的 provider/model；省略时继承当前模型。",
+    description: "必须填写完整的 provider/model，例如 deepseek/deepseek-flash；不接受模型短名称。省略时继承当前模型。",
     minLength: 1,
+    pattern: modelReferencePattern,
   })),
   thinkingLevel: Type.Optional(ThinkingLevelSchema),
 });
@@ -201,10 +211,19 @@ export function registerSubagentTools(
       "仅在没有合适的可复用对象，且任务边界和验收条件明确时调用 subagent_spawn。",
     ],
     parameters: spawnParameters,
+    prepareArguments(args) {
+      if (isRecord(args)) validateModelReference(args.model);
+      return args as Static<typeof spawnParameters>;
+    },
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-      const agent = await manager.spawn(currentSessionId(ctx), params, {
+      validateModelReference(params.model);
+      const reference = params.model ?? (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined);
+      if (!reference) throw new Error("No parent model to inherit; specify a model using provider/model format.");
+      const slash = reference.indexOf("/");
+      const model = ctx.modelRegistry.find(reference.slice(0, slash), reference.slice(slash + 1));
+      if (!model) throw new Error(`Model not found: ${reference}. Use an existing provider/model.`);
+      const agent = await manager.spawn(currentSessionId(ctx), { ...params, model: { provider: model.provider, id: model.id } }, {
         cwd: ctx.cwd,
-        model: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
         thinkingLevel: ctx.thinkingLevel,
       }, _signal);
       const details: SubagentUiDetails = {

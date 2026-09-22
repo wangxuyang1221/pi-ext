@@ -323,7 +323,7 @@ test("prepares a persisted native session before delivering the initial task", a
       task,
     }, {
       cwd: "/repo",
-      model: "openai/gpt-test",
+      model: { provider: "openai", id: "gpt-test" },
       thinkingLevel: "high",
     });
 

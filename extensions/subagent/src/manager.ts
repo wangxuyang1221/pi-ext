@@ -66,7 +66,7 @@ export interface SubagentManagerOptions {
   extensionPath: string;
   piPath: string;
   environment: Record<string, string>;
-  authenticationEnvironment?: (model: string | undefined) => Promise<Record<string, string>>;
+  authenticationEnvironment?: (model: SubagentModel | undefined) => Promise<Record<string, string>>;
   createId?: () => string;
   now?: () => string;
   sleep?: (milliseconds: number) => Promise<void>;
@@ -80,16 +80,22 @@ export interface SubagentManagerOptions {
   beforePrompt?: (parentSessionId: string, child: SessionState) => Promise<void>;
 }
 
+/** Provider and model identity resolved by the caller before allocating a child. */
+export interface SubagentModel {
+  provider: string;
+  id: string;
+}
+
 export interface SpawnSubagentOptions {
   task: string;
   cwd?: string;
-  model?: string;
+  model?: SubagentModel;
   thinkingLevel?: string;
 }
 
 export interface SpawnDefaults {
   cwd: string;
-  model?: string;
+  model?: SubagentModel;
   thinkingLevel?: string;
 }
 
@@ -379,7 +385,8 @@ export class SubagentManager {
     };
     const displayName = await this.reserveSpawn(parent.sessionId, reservation);
     const cwd = resolve(defaults.cwd, options.cwd ?? ".");
-    const model = options.model ?? defaults.model;
+    const selectedModel = options.model ?? defaults.model;
+    const model = selectedModel ? `${selectedModel.provider}/${selectedModel.id}` : undefined;
     const thinkingLevel = options.thinkingLevel ?? defaults.thinkingLevel;
     const sessionDir = join(this.nativeSessionRoot, parent.sessionId, processInstanceId);
     const sessionFile = join(sessionDir, "session.jsonl");
@@ -423,7 +430,7 @@ export class SubagentManager {
     let privateEnvironmentDirectory: string | undefined;
     try {
       await mkdir(sessionDir, { recursive: true });
-      const authentication = await this.authenticationEnvironment?.(model) ?? {};
+      const authentication = await this.authenticationEnvironment?.(selectedModel) ?? {};
       if (Object.keys(authentication).length) {
         privateEnvironmentDirectory = await mkdtemp(join(sessionDir, ".auth-"));
         privateEnvironmentFile = join(privateEnvironmentDirectory, "environment.sh");

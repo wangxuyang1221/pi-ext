@@ -1,3 +1,0 @@
-$ pnpm exec tsc --target ES2022 --module NodeNext --moduleResolution NodeNext --strict --esModuleInterop --forceConsistentCasingInFileNames --skipLibCheck --types node --noEmit extensions/skill-mentions/__tests__/*.ts
-
-Exit code: 0

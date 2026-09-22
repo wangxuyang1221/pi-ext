@@ -1,8 +1,0 @@
-PASS ./extensions/codex-ui/dist/index.js
-PASS ./extensions/codex-compact/dist/index.js
-PASS ./extensions/openai-fast-mode/dist/index.js
-PASS ./extensions/permissions/dist/index.js
-PASS ./extensions/mcp/dist/index.js
-PASS ./extensions/subagent/dist/index.js
-PASS ./extensions/goal/dist/index.js
-PASS ./extensions/skill-mentions/dist/index.js

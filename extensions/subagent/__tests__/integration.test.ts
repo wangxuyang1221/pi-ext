@@ -118,7 +118,7 @@ export default function integrationExtension(pi) {
     const largeResultMarker = `SUBAGENT_E2E_LARGE_RESULT_${Date.now()}`;
     const markerFive = `SUBAGENT_E2E_FIVE_${Date.now()}`;
     const model = process.env.PI_PROVIDER && process.env.PI_MODEL
-      ? `${process.env.PI_PROVIDER}/${process.env.PI_MODEL}`
+      ? { provider: process.env.PI_PROVIDER, id: process.env.PI_MODEL }
       : undefined;
 
     try {

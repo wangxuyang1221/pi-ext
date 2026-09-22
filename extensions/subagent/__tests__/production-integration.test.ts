@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promis
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { test } from "vitest";
+import { ModelRegistry, ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { HERO_NAMES } from "../src/hero-names.js";
 import subagentExtension from "../src/index.js";
 import { executeCommand } from "../src/command-executor.js";
@@ -13,7 +14,7 @@ const quote = (value: string) => `'${value.replaceAll("'", `'"'"'`)}'`;
 const enabled = process.env.PI_SUBAGENT_ISOLATED_INTEGRATION === "1";
 const fish = [process.env.PI_SUBAGENT_TEST_FISH, "/opt/homebrew/bin/fish", "/usr/bin/fish"].find((path): path is string => !!path && existsSync(path));
 
-for (const mode of ["immediate", "delayed", "fish", "full-package-fast", "full-package-delayed", "auth-env", "auth-stored", "auth-both", "auth-missing"] as const) {
+for (const mode of ["immediate", "delayed", "fish", "full-package-fast", "full-package-delayed", "auth-env", "auth-inherited", "auth-stored", "auth-both", "auth-missing"] as const) {
 test.skipIf(!enabled || (mode === "fish" && !fish))(`production parent entry overrides a stale server with ${mode} startup`, async () => {
   const delayIdentity = mode === "delayed";
   const nativeAuth = mode.startsWith("auth-");
@@ -79,12 +80,34 @@ export default async function(pi){
     const pi = { on: (name: string, handler: any) => handlers.set(name, handler), registerTool: (tool: any) => tools.set(tool.name, tool), events: { emit() {} } };
     const extension = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/index.js")).default : subagentExtension;
     extension(pi as never, { env: { PATH: process.env.PATH, HOME: home, SHELL: "/bin/sh", LANG: "en_US.UTF-8", TERM: "xterm-256color", TMPDIR: root, PI_CODING_AGENT_DIR: agentDir, TMUX_PANE: "%parent",
-      ...(mode === "auth-env" || mode === "auth-both" ? { DEEPSEEK_API_KEY: "fixture-auth-secret", OPENAI_API_KEY: "unrelated-secret" } : {}),
+      ...(mode === "auth-env" || mode === "auth-inherited" || mode === "auth-both" ? { DEEPSEEK_API_KEY: "fixture-auth-secret", OPENAI_API_KEY: "unrelated-secret" } : {}),
     },
       stateRoot, nativeSessionRoot: join(root, "native"), tmuxPath: wrapper, tmuxSessionName: "keeper", piPath, extensionPath: fixture });
-    const ctx = { cwd: root, sessionManager: { getSessionId: () => "parent", getSessionFile: () => join(root, "parent.jsonl"), getLeafId: () => null, getEntries: () => [] } };
+    const parentModelsPath = join(root, "parent-models.json");
+    await writeFile(parentModelsPath, JSON.stringify({ providers: {
+      deepseek: { models: [{ id: "deepseek-flash" }] },
+      "subagent-fixture": { api: "openai-completions", baseUrl: "https://offline.invalid", models: [{ id: "deterministic" }] },
+    } }));
+    const modelRegistry = new ModelRegistry(await ModelRuntime.create({ authPath: join(agentDir, "auth.json"), modelsPath: parentModelsPath, refreshOnCreate: false }));
+    assert.equal(modelRegistry.getError(), undefined);
+    const selectedModel = modelRegistry.find(nativeAuth ? "deepseek" : "subagent-fixture", nativeAuth ? "deepseek-flash" : "deterministic")!;
+    assert.ok(selectedModel);
+    const ctx = { cwd: root, model: selectedModel, modelRegistry,
+      sessionManager: { getSessionId: () => "parent", getSessionFile: () => join(root, "parent.jsonl"), getLeafId: () => null, getEntries: () => [] } };
     await handlers.get("session_start")!({}, ctx);
-    const spawn = () => tools.get("subagent_spawn").execute("spawn", { task: "fast work", model: nativeAuth ? "deepseek/deepseek-flash" : "subagent-fixture/deterministic" }, undefined, undefined, ctx);
+    const reference = `${selectedModel.provider}/${selectedModel.id}`;
+    const spawn = () => tools.get("subagent_spawn").execute("spawn", { task: "fast work", ...(mode === "auth-inherited" ? {} : { model: reference }) }, undefined, undefined, ctx);
+    if (mode === "auth-env") {
+      const store = new SessionStateStore(stateRoot);
+      const before = await store.load("parent");
+      const panesBefore = (await executeCommand(wrapper, ["list-panes", "-a", "-F", "#{pane_id}"])).stdout;
+      for (const model of ["deepseek-flash", "deepseek/unknown", "unknown/deepseek-flash"]) {
+        await assert.rejects(tools.get("subagent_spawn").execute("invalid", { task: "must not launch", model }, undefined, undefined, ctx), /provider\/model/u);
+      }
+      assert.deepEqual(await store.load("parent"), before);
+      assert.equal(existsSync(join(root, "native")), false);
+      assert.equal((await executeCommand(wrapper, ["list-panes", "-a", "-F", "#{pane_id}"])).stdout, panesBefore);
+    }
     if (mode === "auth-missing") {
       await assert.rejects(spawn(), /delivery_rejected: Child authentication unavailable/u);
       const parent = await new SessionStateStore(stateRoot).load("parent");
@@ -111,6 +134,7 @@ export default async function(pi){
     assert.equal(state?.runtime.configuration?.agentDir, agentDir);
     assert.equal(state?.runtime.promptReady, true);
     assert.equal(state?.launch?.displayName, agent.name);
+    assert.equal(state?.launch?.model, reference);
     assert.equal((await new SessionStateStore(stateRoot).load("parent"))?.children[0]?.name, agent.name);
     let session = await readFile(agent.sessionFile, "utf8");
     if (nativeAuth) {

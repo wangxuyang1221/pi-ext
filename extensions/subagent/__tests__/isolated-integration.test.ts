@@ -72,7 +72,7 @@ test.skipIf(!enabled)("uses real Pi and an offline provider on an isolated tmux 
     manager = new Manager({ store, runtime, stateRoot: store.root, nativeSessionRoot: join(root, "native"),
       extensionPath: resolve("extensions/subagent/__tests__/fixtures/offline-child.ts"), piPath: piWrapper,
       environment: env, pollIntervalMs: 20, registrationTimeoutMs: 15000, promptAckTimeoutMs: 5000 });
-    const child = await manager.spawn("parent", { task: "hold:old", model: "subagent-fixture/deterministic" }, { cwd: root });
+    const child = await manager.spawn("parent", { task: "hold:old", model: { provider: "subagent-fixture", id: "deterministic" } }, { cwd: root });
     await until(() => existsSync(join(home, "started-old")));
     const originalSend = runtime.sendPrompt.bind(runtime);
     let forceRace = true;

@@ -655,6 +655,69 @@ test("spawn schema excludes caller-selected names", () => {
   assert.equal(Object.hasOwn((spawn.parameters as any).properties, "name"), false);
 });
 
+test.each(["deepseek-flash", "", "/deepseek-flash", "deepseek/", " deepseek/deepseek-flash", "deepseek/deepseek-flash ", "deepseek/deepseek-flash\n"])(
+  "rejects invalid model reference %j before calling the manager", async (model) => {
+    const spawn = vi.fn().mockRejectedValue(new Error("Manager must not be called"));
+    const tool = registerTools({ spawn }).find(tool => tool.name === "subagent_spawn")!;
+    const find = vi.fn();
+    const ctx = { cwd: "/repo", modelRegistry: { find }, sessionManager: { getSessionId: () => "parent", getSessionFile: () => "/repo/parent.jsonl" } };
+    await assert.rejects((tool.execute as any)("call", { task: "work", model }, undefined, undefined, ctx), /provider\/model.*deepseek\/deepseek-flash/u);
+    assert.equal(spawn.mock.calls.length, 0);
+    assert.equal(find.mock.calls.length, 0);
+    assert.equal(Check(tool.parameters as never, { task: "work", model }), false);
+  },
+);
+
+test.each(["unknown/deepseek-flash", "deepseek/unknown"])("rejects an unknown model %s without spawning", async (model) => {
+  const spawn = vi.fn().mockRejectedValue(new Error("Manager must not be called"));
+  const tool = registerTools({ spawn }).find(tool => tool.name === "subagent_spawn")!;
+  const find = vi.fn(() => undefined);
+  const ctx = { cwd: "/repo", modelRegistry: { find }, sessionManager: { getSessionId: () => "parent", getSessionFile: () => "/repo/parent.jsonl" } };
+  await assert.rejects((tool.execute as any)("call", { task: "work", model }, undefined, undefined, ctx), /Model not found/u);
+  assert.equal(spawn.mock.calls.length, 0);
+  assert.deepEqual(find.mock.calls, [model.split("/")]);
+});
+
+test("rejects missing inherited model before querying the registry or spawning", async () => {
+  const spawn = vi.fn().mockRejectedValue(new Error("Manager must not be called"));
+  const tool = registerTools({ spawn }).find(tool => tool.name === "subagent_spawn")!;
+  const find = vi.fn();
+  const ctx = { cwd: "/repo", modelRegistry: { find }, sessionManager: { getSessionId: () => "parent", getSessionFile: () => "/repo/parent.jsonl" } };
+  await assert.rejects((tool.execute as any)("call", { task: "work" }, undefined, undefined, ctx), /No parent model.*provider\/model/u);
+  assert.equal(spawn.mock.calls.length, 0);
+  assert.equal(find.mock.calls.length, 0);
+});
+
+test("reports the required model format before Pi schema validation", () => {
+  const tool = registerTools().find(tool => tool.name === "subagent_spawn")!;
+  const prepare = tool.prepareArguments as (args: unknown) => unknown;
+  for (const model of ["deepseek-flash", "", "/deepseek-flash", "deepseek/", null, 123]) {
+    assert.throws(() => prepare({ task: "work", model }), /provider\/model.*deepseek\/deepseek-flash/u);
+  }
+  for (const params of [{ task: "work" }, { task: "work", model: "deepseek/deepseek-flash" }]) {
+    assert.deepEqual(prepare(params), params);
+  }
+});
+
+test.each([
+  { input: "deepseek/deepseek-flash", provider: "deepseek", id: "deepseek-flash" },
+  { input: "openrouter/org/model", provider: "openrouter", id: "org/model" },
+  { input: undefined, provider: "openai-codex", id: "gpt-6-astra" },
+])("resolves $input once and forwards the selected model without resolving credentials", async ({ input, provider, id }) => {
+  const selected = { provider, id };
+  const find = vi.fn((p, m) => p === provider && m === id ? selected : undefined);
+  const spawn = vi.fn().mockResolvedValue({ agentId: "child", name: "Storm", status: "idle", generation: 0 });
+  const tool = registerTools({ spawn }).find(tool => tool.name === "subagent_spawn")!;
+  const ctx = { cwd: "/repo", model: { provider: "openai-codex", id: "gpt-6-astra" }, thinkingLevel: "medium",
+    modelRegistry: { find }, sessionManager: { getSessionId: () => "parent", getSessionFile: () => "/repo/parent.jsonl" } };
+  const params = { task: "work", ...(input === undefined ? {} : { model: input }) };
+  assert.equal(Check(tool.parameters as never, params), true);
+  await (tool.execute as any)("call", params, undefined, undefined, ctx);
+  assert.deepEqual(find.mock.calls, [[provider, id]]);
+  assert.equal(spawn.mock.calls.length, 1);
+  assert.deepEqual(spawn.mock.calls[0], ["parent", { task: "work", model: selected }, { cwd: "/repo", thinkingLevel: "medium" }, undefined]);
+});
+
 test("read displays the persisted name without changing its public payload", async () => {
   const payload = { view: "recent_activity", activity: [], cursor: "next", hasMore: false, returnedBytes: 0 };
   const agent = { agentId: "child-a", name: "Storm", status: "settled", generation: 1 };

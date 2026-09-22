@@ -7,13 +7,13 @@ import { TmuxRuntime } from "../src/tmux-runtime.js";
 import { executeCommand } from "../src/command-executor.js";
 
 test("selects only the chosen provider's configured environment keys", async () => {
-  assert.deepEqual(await providerEnvironment("deepseek/deepseek-flash", { DEEPSEEK_API_KEY: "key", OPENAI_API_KEY: "other" }), { DEEPSEEK_API_KEY: "key" });
-  assert.deepEqual(await providerEnvironment("openai-codex/gpt-6-astra", { DEEPSEEK_API_KEY: "key" }), {});
+  assert.deepEqual(await providerEnvironment({ provider: "deepseek", id: "deepseek-flash" }, { DEEPSEEK_API_KEY: "key", OPENAI_API_KEY: "other" }), { DEEPSEEK_API_KEY: "key" });
+  assert.deepEqual(await providerEnvironment({ provider: "openai-codex", id: "gpt-6-astra" }, { DEEPSEEK_API_KEY: "key" }), {});
 });
 
 test("does not import ambient credentials outside the explicitly supplied environment", async () => {
   vi.stubEnv("DEEPSEEK_API_KEY", "ambient");
-  try { assert.deepEqual(await providerEnvironment("deepseek/deepseek-flash", {}), {}); }
+  try { assert.deepEqual(await providerEnvironment({ provider: "deepseek", id: "deepseek-flash" }, {}), {}); }
   finally { vi.unstubAllEnvs(); }
 });
 

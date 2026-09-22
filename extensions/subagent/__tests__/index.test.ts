@@ -242,7 +242,8 @@ test("production entry forwards effective agent and tmux configuration without p
       env: { PATH: "/usr/bin", PI_CODING_AGENT_DIR: join(root, "agent"), TMUX_PANE: "%parent", OPENAI_API_KEY: "do-not-transfer" },
       tmuxPath: "./custom/tmux", piPath: "./custom/pi",
     });
-    const ctx = { cwd: root, sessionManager: { getSessionId: () => "parent", getSessionFile: () => join(root, "parent.jsonl"), getLeafId: () => null, getEntries: () => [] } };
+    const model = { provider: "deepseek", id: "deepseek-flash" };
+    const ctx = { cwd: root, model, modelRegistry: { find: () => model }, sessionManager: { getSessionId: () => "parent", getSessionFile: () => join(root, "parent.jsonl"), getLeafId: () => null, getEntries: () => [] } };
     await handlers.get("session_start")!({}, ctx);
     await tools.get("subagent_spawn").execute("call", { task: "Test" }, undefined, undefined, ctx).catch(() => undefined);
     assert.equal(environment?.PI_CODING_AGENT_DIR, join(root, "agent"));

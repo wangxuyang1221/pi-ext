@@ -1,9 +1,0 @@
-
- RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext-skill-mentions
-
- ✓ extensions/skill-mentions/__tests__/label-api-boundaries.test.ts (7 tests) 38ms
-
- Test Files  1 passed (1)
-      Tests  7 passed (7)
-   Start at  08:42:04
-   Duration  647ms (transform 52ms, setup 0ms, collect 434ms, tests 38ms, environment 0ms, prepare 38ms)
