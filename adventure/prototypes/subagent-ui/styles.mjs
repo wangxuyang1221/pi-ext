@@ -7,7 +7,7 @@ export function resultTheme(style, theme) {
   return new Proxy(theme, { get(target, key) {
     if (key === 'fg') return (tone, text) => {
       if (tone !== 'success') return target.fg(tone, text);
-      if (style === 'after') return `\x1b[38;2;70;232;124m${text}\x1b[39m`;
+      if (style === 'after') return `\x1b[38;2;64;214;114m${text}\x1b[39m`;
       if (style === 'quiet') return target.fg('dim', text);
       return style === 'neutral' ? target.fg('text', text) : `\x1b[38;2;143;184;155m${text}\x1b[39m`;
     };

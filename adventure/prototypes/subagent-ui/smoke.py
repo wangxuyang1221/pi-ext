@@ -127,7 +127,7 @@ try:
     for text in ['Spawned Lin', 'Sent input to Lin', 'Listed 2 subagents', 'Read activity from Lin', 'Finished waiting for Lin', 'Closed Lin', 'Read tool-style.ts', 'Bash']:
         assert text in view(), (text, view())
     assert markers()[-6:] == (['77777d'] * 6 if before else ['4dff88'] * 6), markers()
-    expected_success = {'before': '4dff88', 'after': '46e87c', 'neutral': 'd6d6d6', 'soft': '8fb89b', 'quiet': '77777d'}[style]
+    expected_success = {'before': '4dff88', 'after': '40d672', 'neutral': 'd6d6d6', 'soft': '8fb89b', 'quiet': '77777d'}[style]
     for needle in ['Settled', 'Process stopped']:
         cells = [screen.buffer[row][line.index(needle)].fg for row, line in enumerate(screen.display) if needle in line]
         assert cells and all(value == expected_success for value in cells), (needle, cells, expected_success)
