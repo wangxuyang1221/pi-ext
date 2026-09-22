@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { fixture, KINDS, OUTCOMES } from "./fixtures.mjs";
+import { STYLES, LABELS, resultTheme } from "./styles.mjs";
 
 const root = process.env.SUBAGENT_UI_ROOT;
 if (!root) throw new Error("Start with demo.mjs");
@@ -18,8 +19,8 @@ const plans = new Map();
 const waiting = new Map();
 let serial = 0;
 let active = false;
-let style = process.argv.includes("--before") ? "before" : "after";
-const instructions = "Subagent UI comparison\n/before or /after: replay six messages with Read and Bash\n/demo all|spawn|prompt|list|read|wait|close success|error|hold [before|after]\n/demo wait timeout · /demo wait interrupted · /demo spawn success after long\n/finish success|error|timeout|interrupted\nCtrl+O: expand/collapse · /quit: exit";
+let style = STYLES.find(value => process.argv.includes(`--${value}`)) ?? "neutral";
+const instructions = "Subagent UI comparison\n/neutral: option 1, body text · /soft: option 2, muted green\n/before or /after: previous versions\n/demo all|spawn|prompt|list|read|wait|close success|error|hold [before|after|neutral|soft]\n/demo wait timeout · /demo wait interrupted · /demo spawn success after long\n/finish success|error|timeout|interrupted\nCtrl+O: expand/collapse · /quit: exit";
 function release(outcome = "interrupted") { for (const finish of [...waiting.values()]) finish(outcome); }
 const extension = pi => {
   const execute = async (id, args, signal) => {
@@ -42,14 +43,17 @@ const extension = pi => {
   codexUi(proxy);
   for (const kind of KINDS) {
     pi.registerTool({ name: `subagent_${kind}`, label: `Subagent ${kind}`, description: "Offline visual fixture", parameters: { type: "object", additionalProperties: true }, executionMode: "parallel", renderShell: "self", execute,
-      renderCall: (args, theme, context) => renderers[plans.get(context.toolCallId)?.style ?? style].renderSubagentCall(kind, args, theme, context),
-      renderResult: (result, options, theme, context) => renderers[plans.get(context.toolCallId)?.style ?? style].renderSubagentResult(kind, context.args, result, options, theme, context),
+      renderCall: (args, theme, context) => renderers[(plans.get(context.toolCallId)?.style ?? style) === "before" ? "before" : "after"].renderSubagentCall(kind, args, theme, context),
+      renderResult: (result, options, theme, context) => {
+        const variant = plans.get(context.toolCallId)?.style ?? style;
+        return renderers[variant === "before" ? "before" : "after"].renderSubagentResult(kind, context.args, result, options, resultTheme(variant, theme), context);
+      },
     });
   }
   const start = (args, ctx) => {
     if (active || !ctx.isIdle()) return ctx.ui.notify("Finish the current scenario with /finish success.", "info");
     const [kind = "all", outcome = "success", requestedStyle = style, length] = args.trim().split(/\s+/).filter(Boolean);
-    if ((kind !== "all" && !KINDS.includes(kind)) || !OUTCOMES.includes(outcome) || !["before", "after"].includes(requestedStyle)) return ctx.ui.notify(instructions, "info");
+    if ((kind !== "all" && !KINDS.includes(kind)) || !OUTCOMES.includes(outcome) || !STYLES.includes(requestedStyle)) return ctx.ui.notify(instructions, "info");
     if (["timeout", "interrupted"].includes(outcome) && kind !== "wait") return ctx.ui.notify("Use /demo wait timeout or /demo wait interrupted.", "info");
     style = requestedStyle;
     const batch = kind === "all" ? [{ context: "read", args: { path: "src/tool-style.ts" } }, { context: "bash", args: { command: "pnpm run check" } }] : [];
@@ -61,10 +65,10 @@ const extension = pi => {
     });
     active = true;
     faux.setResponses([ai.fauxAssistantMessage(blocks, { stopReason: "toolUse" }), ai.fauxAssistantMessage(`Comparison ready: ${requestedStyle} / ${kind} / ${outcome}.`)]);
-    pi.sendUserMessage(`${requestedStyle === "before" ? "Before" : "After"}: ${kind} / ${outcome}`);
+    pi.sendUserMessage(`${LABELS[requestedStyle]}: ${kind} / ${outcome}`);
   };
   pi.registerCommand("demo", { description: "Show a fixture scenario", handler: start });
-  for (const variant of ["before", "after"]) pi.registerCommand(variant, { description: `Show ${variant} fixtures`, handler: (_args, ctx) => start(`all success ${variant}`, ctx) });
+  for (const variant of STYLES) pi.registerCommand(variant, { description: `Show ${variant} fixtures`, handler: (_args, ctx) => start(`all success ${variant}`, ctx) });
   pi.registerCommand("finish", { description: "Finish held tools", handler: (args, ctx) => {
     const outcome = args.trim() || "success";
     if (!["success", "error", "timeout", "interrupted"].includes(outcome)) return ctx.ui.notify("Use /finish success|error|timeout|interrupted", "info");
