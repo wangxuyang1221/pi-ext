@@ -19,7 +19,7 @@ here = Path(__file__).resolve().parent
 repo = here.parents[2]
 mode = 'fullscreen' if '--fullscreen' in sys.argv else 'regular'
 before = '--before' in sys.argv
-style = next((name for name in ['before', 'after', 'neutral', 'soft', 'quiet'] if '--' + name in sys.argv), 'quiet')
+style = next((name for name in ['before', 'after', 'neutral', 'soft', 'quiet'] if '--' + name in sys.argv), 'after')
 output_dir = repo / '.tmp' / f'subagent-ui-{style}-{mode}'
 output_dir.mkdir(parents=True, exist_ok=True)
 screen = pyte.Screen(120, 70)
@@ -127,7 +127,7 @@ try:
     for text in ['Spawned Lin', 'Sent input to Lin', 'Listed 2 subagents', 'Read activity from Lin', 'Finished waiting for Lin', 'Closed Lin', 'Read tool-style.ts', 'Bash']:
         assert text in view(), (text, view())
     assert markers()[-6:] == (['77777d'] * 6 if before else ['4dff88'] * 6), markers()
-    expected_success = {'before': '4dff88', 'after': '4dff88', 'neutral': 'd6d6d6', 'soft': '8fb89b', 'quiet': '77777d'}[style]
+    expected_success = {'before': '4dff88', 'after': '46e87c', 'neutral': 'd6d6d6', 'soft': '8fb89b', 'quiet': '77777d'}[style]
     for needle in ['Settled', 'Process stopped']:
         cells = [screen.buffer[row][line.index(needle)].fg for row, line in enumerate(screen.display) if needle in line]
         assert cells and all(value == expected_success for value in cells), (needle, cells, expected_success)

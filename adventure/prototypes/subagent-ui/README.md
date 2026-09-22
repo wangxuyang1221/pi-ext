@@ -15,13 +15,13 @@ cd /Users/wangxuyang/Code/t3code/pi-ext/.scratch/u
 pnpm exec node adventure/prototypes/subagent-ui/demo.mjs
 ```
 
-启动默认展示最新暗灰方案：成功状态文字使用 dim，与后续元信息同色，并保留真实 codex-ui Read、Bash 作为参照。
+启动默认展示用户选回的 /after 布局，成功文字绿色从 #4dff88 小幅调暗为 #46e87c，并保留真实 codex-ui Read、Bash 作为参照。
 
-- `/quiet`：最新方案，成功状态文字使用 dim #77777d，与后续元信息同色。
+- `/quiet`：历史暗灰方案，成功状态文字使用 dim #77777d，与后续元信息同色。
 - `/neutral`：选项 1，成功状态文字使用正文色 #d6d6d6。
 - `/soft`：选项 2，成功状态文字使用灰绿 #8fb89b。
 - `/before`：追加原版六类消息。
-- `/after`：追加此前的亮绿色候选版，作为比较基准。
+- `/after`：当前方案，沿用原候选布局，成功文字绿色微调为 #46e87c。
 - `Ctrl+O`：使用 Pi 原生折叠/展开。
 - `/demo all hold`：观察六类工具进行中，再输入 `/finish success` 或 `/finish error`。
 - `/demo all error`：观察六类失败消息。
@@ -29,7 +29,7 @@ pnpm exec node adventure/prototypes/subagent-ui/demo.mjs
 - `/demo spawn success after long`：观察长名称。缩小窗口到 40 或 80 列检查截断。
 - `/quit`：退出并清理隔离运行目录。
 
-`--quiet` 可指定最新暗灰方案；`--neutral` 和 `--soft` 可指定之前的两个方案，`--after` 可查看此前的亮绿色，`--before` 可从原版开始，`--expanded` 可从展开状态开始，`--fullscreen` 使用 Pi 全屏模式。每次调用的样式固定，切换不会改写上方已有消息。`/before` 和 `/after` 只是追加显示对照，不执行真实子代理。
+`--after` 为当前默认方案；`--quiet` 可指定历史暗灰方案；`--neutral` 和 `--soft` 可指定之前的两个方案，`--before` 可从原版开始，`--expanded` 可从展开状态开始，`--fullscreen` 使用 Pi 全屏模式。每次调用的样式固定，切换不会改写上方已有消息。`/before` 和 `/after` 只是追加显示对照，不执行真实子代理。
 
 ## Landing Map
 
@@ -51,7 +51,7 @@ pnpm exec node adventure/prototypes/subagent-ui/demo.mjs
 
 用户认为 Settled 的绿色过亮，已要求把两个替代方案都做出来。当前仅限 subagent 结果区的成功状态文字：Settled、Process stopped、列表中 settled 的数量/状态等。选项 1 使用主题 text，选项 2 在原型中使用固定灰绿 #8fb89b。两者的标题圆点、warning、error、正文、信息顺序和布局相同。没有修改全局主题，因此周围 Read/Bash 与 diff 颜色保持原样。
 
-styles.mjs 通过结果区专用 theme 代理实现；灰绿是原型固定色，尚不是正式主题 API 设计。用户已否定正文色与灰绿两版。最新 quiet 方案经用户要求制作，将同一范围的成功文字映射到主题 dim，使 Settled 与其后整行元信息一致；标题圆点、警告/错误、任务与回复正文保持原样。最新方案尚待用户审阅。
+styles.mjs 通过结果区专用 theme 代理实现；灰绿是原型固定色，尚不是正式主题 API 设计。用户已否定正文色与灰绿两版。最新 quiet 方案经用户要求制作，将同一范围的成功文字映射到主题 dim，使 Settled 与其后整行元信息一致；标题圆点、警告/错误、任务与回复正文保持原样。用户随后选择回到 /after，要求绿色仅调暗一点。当前 /after 成功文字为 #46e87c，保留鲜绿色调；标题圆点继续使用主题 success #4dff88。neutral、soft、quiet 保留作历史比较。新色值仍是待审阅的试调值。
 
 ## Real and fixture
 

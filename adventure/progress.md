@@ -41,6 +41,6 @@ Map 与 Spec、#26、#27 已使用 GitHub 原生子 Issue 关系。冒险分支�
 
 ## Continuation Point
 
-第一关已通关并保存，当前 #27 保持 open，等待用户审阅最新暗灰 quiet 方案。读取 [README](prototypes/subagent-ui/README.md) 的运行入口与 [review.md](prototypes/subagent-ui/review.md) 的对照图、验证结果和限制。用户已批准制作，不需要再询问是否制作。用户反馈整体不错，但 Settled 过亮，要求两个方案都做。现已完成 /neutral 正文色与 /soft 灰绿 #8fb89b；只有成功结果文字不同，标题圆点保留原绿色。用户已否定这两个方案，并明确要求制作最新暗灰方案。现已加入 /quiet，把成功结果文字变为主题 dim，让 Settled 与后续元信息整行一致。下一步请用户审阅 quiet，不能再把之前两版当作待选或已批准方案，也不能把制作授权当成选择。不得把批准制作视为批准视觉方案。
+第一关已通关并保存，当前 #27 保持 open，等待用户审阅回到 /after 后的绿色微调。读取 [README](prototypes/subagent-ui/README.md) 的运行入口与 [review.md](prototypes/subagent-ui/review.md) 的对照图、验证结果和限制。用户已批准制作，不需要再询问是否制作。用户反馈整体不错，但 Settled 过亮，要求两个方案都做。现已完成 /neutral 正文色与 /soft 灰绿 #8fb89b；只有成功结果文字不同，标题圆点保留原绿色。用户已否定这两个方案，并明确要求制作最新暗灰方案。现已加入 /quiet，把成功结果文字变为主题 dim，让 Settled 与后续元信息整行一致。用户随后选回 /after，要求绿色稍微调暗。当前 /after 默认成功文字从 #4dff88 改为 #46e87c，标题圆点不变。下一步请用户审阅这个试调色值；neutral、soft、quiet 都是历史方案，不再要求用户在它们之间选择。不得把批准制作视为批准视觉方案。
 
 后续按原型制作与审阅结果确定规则，通过 #27 后移交 Spec，使用 slicing 形成切片并取得用户审核，再创建 Implementation 并逐关派发、验收。最终运行 pnpm run check 和适用的视觉核验，清理任务进程，等待用户交付确认后才关闭 Map/Spec。

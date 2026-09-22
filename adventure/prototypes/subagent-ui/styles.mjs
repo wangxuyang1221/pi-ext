@@ -3,10 +3,11 @@ export const LABELS = { before: 'Before', after: 'After', neutral: 'Neutral text
 
 // Change only success text in result bodies; title markers keep the shared theme.
 export function resultTheme(style, theme) {
-  if (!['neutral', 'soft', 'quiet'].includes(style)) return theme;
+  if (!['after', 'neutral', 'soft', 'quiet'].includes(style)) return theme;
   return new Proxy(theme, { get(target, key) {
     if (key === 'fg') return (tone, text) => {
       if (tone !== 'success') return target.fg(tone, text);
+      if (style === 'after') return `\x1b[38;2;70;232;124m${text}\x1b[39m`;
       if (style === 'quiet') return target.fg('dim', text);
       return style === 'neutral' ? target.fg('text', text) : `\x1b[38;2;143;184;155m${text}\x1b[39m`;
     };
