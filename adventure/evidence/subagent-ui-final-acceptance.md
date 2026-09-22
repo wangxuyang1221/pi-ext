@@ -2,7 +2,7 @@
 
 ## Result
 
-对照 [Spec #25](https://github.com/wangxuyang1221/pi-ext/issues/25)，协调者已核对代码、测试、真实宿主证据和本矩阵，#29、#30、#31 全部工程验收通过。各关卡 Acceptance 保存验收记录；Map 与 Spec 保持 open，等待用户确认交付。
+对照 [Spec #25](https://github.com/wangxuyang1221/pi-ext/issues/25)，协调者已核对代码、测试、真实宿主证据和本矩阵，#29、#30、#31 全部工程验收通过。各关卡 Acceptance 保存验收记录。用户于 2026-09-22 确认手动验收通过，并要求关闭冒险与合并 main；Map 与 Spec 据此关闭。
 
 ## Acceptance matrix
 
@@ -25,4 +25,4 @@
 
 本关实际生产入口运行构建产物与离线 provider，覆盖独立 extension 和完整 package 加载。它证明真实 Pi/tmux 生命周期及名称链路，不证明在线 provider 或外部认证。#30 精确色值仅在 truecolor 环境验证。默认跳过的在线/其他集成场景没有被描述成已运行。
 
-历史 package-artifact.mjs 旧扩展数量/license 断言仍是范围外已知问题；标准发布校验已通过。保留主工作区原有 adventure/ 删除与用户原型，不创建 PR、不合并、不部署。
+历史 package-artifact.mjs 旧扩展数量/license 断言仍是范围外已知问题；标准发布校验已通过。保留主工作区原有 adventure/ 删除与用户原型。用户最终明确批准合并 main，采用快进合并，不创建 PR、不部署。
