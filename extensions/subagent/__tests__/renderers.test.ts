@@ -286,3 +286,13 @@ test("truncates long names and connected results within every terminal width", a
     }
   }
 });
+
+test("spawn titles ignore stale caller names until the allocated result arrives", () => {
+  const state = {};
+  const context = { state, lastComponent: undefined, isPartial: true, isError: false };
+  const call = renderSubagentCall("spawn", { name: "caller-selected", task: "Task" }, theme as never, context);
+  assert.doesNotMatch(call.render(120).join("\n"), /caller-selected/u);
+  renderSubagentResult("spawn", {}, { content: [], details: { operation: "spawn", ok: true,
+    agent: { ...agent, name: "Captain America" } } }, { isPartial: false, expanded: false }, theme as never, context);
+  assert.match(call.render(120).join("\n"), /Captain America/u);
+});

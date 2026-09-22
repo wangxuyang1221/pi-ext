@@ -269,7 +269,10 @@ test("uses persistent reservations to reject a fourth parallel spawn", async () 
       manager.spawn("parent-a", { task: "Task 4" }, { cwd: "/repo" }),
       /Subagent capacity reached \(3\/3\)/u,
     );
-    assert.equal((await store.load("parent-a"))?.reservations.length, 3);
+    const reservations = (await store.load("parent-a"))!.reservations;
+    assert.equal(reservations.length, 3);
+    assert.equal(new Set(reservations.map(entry => (entry as { displayName?: string }).displayName)).size, 3);
+    assert.ok(reservations.every(entry => typeof (entry as { displayName?: string }).displayName === "string"));
     assert.deepEqual((await manager.list("parent-a")).capacity, {
       active: 0,
       pending: 3,

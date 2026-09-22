@@ -321,7 +321,6 @@ test("prepares a persisted native session before delivering the initial task", a
 
     const result = await manager.spawn("parent-a", {
       task,
-      name: "Lin",
     }, {
       cwd: "/repo",
       model: "openai/gpt-test",

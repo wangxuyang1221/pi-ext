@@ -373,6 +373,8 @@ subagent_wait
 subagent_close
 ```
 
+`subagent_spawn` 自动从内置的 32 个英文漫威英雄称号中随机分配显示名，不接受自定义 `name`；旧调用残留的 `name` 也不会影响分配。所有操作仍使用 `agentId`，名称不改变任务或角色。同一父会话的直接子代理和尚未安全释放的启动预留占用名称，任务完成不会释放，确认关闭或启动失败并清理完成后才可复用。裸名耗尽时随机选择称号并追加从 2 开始的可用编号，完整名称避让已有名称。不同父会话独立分配；名称持久化后不重抽，旧会话保留原名。
+
 managed child 仍加载 lifecycle hooks 并写入 runtime state，但不注册 subagent 编排工具。合法管理拓扑只有 root 到 direct child；`target: "all"` 也只处理当前 root 的 direct children。每个 child 固定对应一个 tmux window 和一个 pane；投递前会验证 server、pane、进程实例和 pane 模式。session 改名或 pane 移动只有在实例证据仍匹配时才被接受，位置不匹配不等于进程死亡。
 
 初始 task 和后续 prompt 都采用 at-least-once 投递。每条消息会在首行加入 `[subagent:<12-char-id>]`，该标识会进入 child 模型上下文；只有 Pi 原生 session 出现对应 user turn，或 TUI 显示对应 `Steering:`/`Follow-up:` pending 项时才算成功。`subagent_prompt` 成功结果会附带 `deliveryId` 和 `confirmation`。返回的 `settledCursor` 绑定本次投递；child 消费对应 user 消息时，把运行代次 receipt 写入原生 session 的 custom entry。`subagent_wait` 只在该代次完成后返回 settled，不会把投递期间上一轮的结束当成本次完成。提交后 1 秒仍无证据时返回 `delivery_unconfirmed`，但 child 可能已经接受消息；扩展不会自动重试，调用方重试可能产生重复任务。

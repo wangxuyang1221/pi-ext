@@ -52,6 +52,7 @@ export interface LaunchMetadata {
 }
 
 export interface SpawnReservation {
+  displayName?: string;
   reservationId: string;
   processInstanceId: string;
   createdAt: string;
@@ -448,6 +449,9 @@ export function parseSessionState(value: unknown, expectedSessionId: string): Se
       throw new Error("Invalid subagent state: malformed reservation");
     }
     assertSessionId(reservation.reservationId); assertSessionId(reservation.processInstanceId);
+    if (reservation.displayName !== undefined && typeof reservation.displayName !== "string") {
+      throw new Error("Invalid subagent state: malformed reservation display name");
+    }
     if (reservation.tmux !== undefined) validateLocator(reservation.tmux);
     if (reservation.launchState !== undefined && reservation.launchState !== "reserved" && reservation.launchState !== "launching") {
       throw new Error("Invalid subagent state: malformed launch state");

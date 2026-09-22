@@ -41,10 +41,6 @@ const spawnParameters = Type.Object({
     description: "交给 subagent 的自包含初始任务。写明必要上下文和可检查的完成条件。",
     minLength: 1,
   }),
-  name: Type.Optional(Type.String({
-    description: "subagent 的显示名称；省略时自动生成。",
-    minLength: 1,
-  })),
   cwd: Type.Optional(Type.String({
     description: "subagent 的工作目录；相对路径按当前工作目录解析，省略时继承当前工作目录。",
     minLength: 1,
@@ -198,7 +194,7 @@ export function registerSubagentTools(
   pi.registerTool(withRenderer("spawn", {
     name: "subagent_spawn",
     label: "Spawn subagent",
-    description: "创建一个由当前 session 管理的 subagent，并提交初始任务。工具在 runtime 注册后返回，不等待任务完成；subagent 保留到调用 subagent_close。",
+    description: "创建一个由当前 session 管理的 subagent，随机分配漫威英雄显示名，并提交初始任务。工具在 runtime 注册后返回，不等待任务完成；subagent 保留到调用 subagent_close。",
     promptSnippet: "创建 subagent 异步执行独立任务。",
     promptGuidelines: [
       "调用 subagent_spawn 前优先通过 subagent_prompt 复用能够承接任务的已有 subagent，尤其是已掌握相关代码、文档或决策上下文的对象。已有信息不足以判断可复用对象或剩余容量时，先调用 subagent_list。",
@@ -316,7 +312,7 @@ export function registerSubagentTools(
               section: params.section,
               ...(params.detailCursor === undefined ? {} : { detailCursor: params.detailCursor }),
             };
-      const result = await manager.read(currentSessionId(ctx), params.agentId, readOptions, _signal);
+      const { agent, ...result } = await manager.read(currentSessionId(ctx), params.agentId, readOptions, _signal);
       const summarizedActivity = result.view === "recent_activity"
         ? result.activity
         : result.view === "turns"
@@ -330,7 +326,7 @@ export function registerSubagentTools(
       const details: SubagentUiDetails = {
         operation: "read",
         ok: true,
-        agent: { agentId: params.agentId, name: params.agentId, status: "running", generation: 0 },
+        agent: agent ? toAgentDisplay(agent) : { agentId: params.agentId, name: params.agentId, status: "running", generation: 0 },
         view: result.view,
         assistantCount,
         toolCount,

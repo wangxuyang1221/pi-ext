@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promis
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { test } from "vitest";
+import { HERO_NAMES } from "../src/hero-names.js";
 import subagentExtension from "../src/index.js";
 import { executeCommand } from "../src/command-executor.js";
 import { SessionStateStore } from "../src/state-store.js";
@@ -95,6 +96,9 @@ export default async function(pi){
     const spawned = await spawn();
     const { agent } = JSON.parse(spawned.content[0].text);
     pids.add(agent.tmux.panePid);
+    assert.ok(HERO_NAMES.includes(agent.name));
+    assert.equal(spawned.details.agent.name, agent.name);
+    assert.equal((await executeCommand(wrapper, ["display-message", "-p", "-t", agent.tmux.paneId, "#{window_name}"])).stdout.trim(), agent.name);
     const effective = JSON.parse(await readFile(join(root, "effective.json"), "utf8"));
     assert.equal(effective.agentDir, agentDir);
     assert.equal(effective.tmuxPath, wrapper);
@@ -106,6 +110,8 @@ export default async function(pi){
     const state = await new SessionStateStore(stateRoot).load(agent.agentId);
     assert.equal(state?.runtime.configuration?.agentDir, agentDir);
     assert.equal(state?.runtime.promptReady, true);
+    assert.equal(state?.launch?.displayName, agent.name);
+    assert.equal((await new SessionStateStore(stateRoot).load("parent"))?.children[0]?.name, agent.name);
     let session = await readFile(agent.sessionFile, "utf8");
     if (nativeAuth) {
       const deadline = performance.now() + 3000;
@@ -119,11 +125,26 @@ export default async function(pi){
       assert.doesNotMatch(command.stdout + session + JSON.stringify(state), /fixture-auth-secret|fixture-stored-secret|unrelated-secret/u);
       assert.equal((await readdir(state!.launch!.sessionDir)).some(name => name.startsWith("authentication") || name.startsWith(".auth-")), false);
     }
+    assert.equal(session.trim().split("\n").map(line => JSON.parse(line)).find(entry => entry.type === "session_info")?.name, agent.name);
     assert.match(session, /subagent_delivery/u);
     assert.match(session, /fast work/u);
     assert.doesNotMatch(session, /subagent-runtime-ready/u);
     if (delayIdentity) assert.equal(await readFile(handshakeStarted, "utf8"), "");
-    await tools.get("subagent_close").execute("close", { target: "all" }, undefined, undefined, ctx);
+    if (mode === "immediate" || mode === "full-package-fast") {
+      const execute = (kind: string, params: unknown) => tools.get("subagent_" + kind).execute(kind, params, undefined, undefined, ctx);
+      const waited = await execute("wait", { agentId: agent.agentId, afterSettled: agent.settledCursor, timeoutMs: 3000 });
+      assert.equal(waited.details.agent.name, agent.name);
+      assert.equal(waited.details.outcome, "settled");
+      const listed = await execute("list", {});
+      assert.equal(listed.details.agents[0].name, agent.name);
+      const read = await execute("read", { agentId: agent.agentId, view: "recent_activity" });
+      assert.equal(read.details.agent.name, agent.name);
+      assert.equal(Object.hasOwn(JSON.parse(read.content[0].text), "agent"), false);
+      const prompted = await execute("prompt", { agentId: agent.agentId, text: "second work" });
+      assert.equal(prompted.details.agent.name, agent.name);
+    }
+    const closed = await tools.get("subagent_close").execute("close", { target: "all" }, undefined, undefined, ctx);
+    assert.equal(closed.details.affected[0].name, agent.name);
     await handlers.get("session_shutdown")!({});
   } finally {
     const panes = await executeCommand(wrapper, ["list-panes", "-a", "-F", "#{pane_pid}"]).catch(() => undefined);

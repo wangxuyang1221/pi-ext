@@ -9,7 +9,7 @@ export function fixture(kind, outcome = "success", long = false) {
   ];
   const task = "Review subagent rendering and check narrow terminal layouts.";
   const prompt = "Also check the expanded activity view.";
-  const args = kind === "spawn" ? { name: agent.name, task, model: agent.model, thinkingLevel: agent.thinkingLevel }
+  const args = kind === "spawn" ? { task, model: agent.model, thinkingLevel: agent.thinkingLevel }
     : kind === "prompt" ? { agentId: agent.agentId, text: prompt, delivery: "steer" }
     : kind === "list" ? {} : kind === "close" ? { target: agent.agentId }
     : kind === "wait" ? { agentId: agent.agentId, afterSettled: "cursor-before", timeoutMs: 30000 }

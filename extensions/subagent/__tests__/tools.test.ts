@@ -649,3 +649,18 @@ function registerTools(
   registerSubagentTools(pi as never, manager as never);
   return registered;
 }
+
+test("spawn schema excludes caller-selected names", () => {
+  const spawn = registerTools().find(tool => tool.name === "subagent_spawn")!;
+  assert.equal(Object.hasOwn((spawn.parameters as any).properties, "name"), false);
+});
+
+test("read displays the persisted name without changing its public payload", async () => {
+  const payload = { view: "recent_activity", activity: [], cursor: "next", hasMore: false, returnedBytes: 0 };
+  const agent = { agentId: "child-a", name: "Storm", status: "settled", generation: 1 };
+  const read = registerTools({ read: vi.fn().mockResolvedValue({ ...payload, agent }) })
+    .find(tool => tool.name === "subagent_read")!;
+  const result = await executeRead(read, { agentId: "child-a" });
+  assert.equal((result.details as any).agent.name, "Storm");
+  assert.deepEqual(JSON.parse(result.content[0].text), payload);
+});

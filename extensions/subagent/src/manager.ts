@@ -1,3 +1,4 @@
+import { allocateHeroName } from "./hero-names.js";
 import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { privateEnvironmentScript } from "./auth-environment.js";
@@ -81,7 +82,6 @@ export interface SubagentManagerOptions {
 
 export interface SpawnSubagentOptions {
   task: string;
-  name?: string;
   cwd?: string;
   model?: string;
   thinkingLevel?: string;
@@ -377,8 +377,7 @@ export class SubagentManager {
       expiresAt: new Date(this.nowMs() + this.reservationTtlMs).toISOString(),
       launchState: "reserved",
     };
-    await this.reserveSpawn(parent.sessionId, reservation);
-    const displayName = options.name?.trim() || `Subagent ${parent.children.length + 1}`;
+    const displayName = await this.reserveSpawn(parent.sessionId, reservation);
     const cwd = resolve(defaults.cwd, options.cwd ?? ".");
     const model = options.model ?? defaults.model;
     const thinkingLevel = options.thinkingLevel ?? defaults.thinkingLevel;
@@ -431,8 +430,14 @@ export class SubagentManager {
         await writeFile(privateEnvironmentFile, privateEnvironmentScript(authentication), { flag: "wx", mode: 0o600 });
       }
       await writeFile(sessionFile, "", { encoding: "utf8", mode: 0o600, flag: "wx" });
-      await this.store.update(parent.sessionId, (latest) => ({ ...latest, reservations: latest.reservations.map((entry) =>
-        entry.reservationId === registrationToken ? { ...entry, launchState: "launching" } : entry) }));
+      await this.store.update(parent.sessionId, (latest) => {
+        if (latest.epoch !== parent.epoch || !latest.reservations.some(entry => (
+          entry.reservationId === registrationToken && entry.processInstanceId === processInstanceId
+        ))) throw new Error(`Spawn reservation is no longer active: ${registrationToken}`);
+        return { ...latest, reservations: latest.reservations.map(entry => (
+          entry.reservationId === registrationToken ? { ...entry, launchState: "launching" } : entry
+        )) };
+      });
       launchAttempted = true;
       locator = await this.runtime.launch({
         cwd,
@@ -836,11 +841,12 @@ export class SubagentManager {
       "sessionFile" | "agentId" | "epoch" | "leafId" | "leafPosition"
     >,
     signal?: AbortSignal,
-  ): Promise<SessionViewResult> {
+  ): Promise<SessionViewResult & { agent: ManagedAgent }> {
     return this.runOperation(parentSessionId, 5_000, signal, async () => {
       const { child } = await this.requireDirectSession(parentSessionId, agentId);
-      return readSessionView({ ...options, sessionFile: child.runtime.sessionFile,
+      const result = await readSessionView({ ...options, sessionFile: child.runtime.sessionFile,
         agentId, epoch: child.epoch, ...readLeafOptions(child) });
+      return { ...result, agent: toManagedAgent(child) };
     });
   }
 
@@ -1099,7 +1105,8 @@ export class SubagentManager {
   private async reserveSpawn(
     parentSessionId: string,
     reservation: SpawnReservation,
-  ): Promise<void> {
+  ): Promise<string> {
+    let displayName!: string;
     await this.store.update(parentSessionId, async (parent) => {
       if (this.closingNamespaces.has(parentSessionId) && !this.inFlightSpawns.has(parentSessionId)) {
         throw new Error(`Subagent namespace is closing: ${parentSessionId}`);
@@ -1119,11 +1126,17 @@ export class SubagentManager {
           `Subagent capacity reached (${used}/${this.maxActive}). Reuse an existing child with subagent_prompt, or close one before spawning another.`,
         );
       }
+      const occupied = new Set(cleanedParent.children.map(child => child.name));
+      for (const pending of cleanedParent.reservations) {
+        if (pending.displayName !== undefined) occupied.add(pending.displayName);
+      }
+      displayName = allocateHeroName(occupied);
       return {
         ...cleanedParent,
-        reservations: [...cleanedParent.reservations, reservation],
+        reservations: [...cleanedParent.reservations, { ...reservation, displayName }],
       };
     });
+    return displayName;
   }
 
   private async reapExpiredReservations(parent: SessionState): Promise<SessionState> {

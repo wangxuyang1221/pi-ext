@@ -139,7 +139,6 @@ export default function integrationExtension(pi) {
 
       const spawned = await manager.spawn(parentId, {
         task: `Reply with exactly ${markerOne}. Do not call tools.`,
-        name: "Integration child",
         ...(model ? { model } : {}),
         thinkingLevel: "minimal",
       }, {

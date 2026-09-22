@@ -242,7 +242,6 @@ function getTitleTarget(
   }
 
   return details?.agent?.name
-    ?? stringArg(args, "name")
     ?? shortAgentId(stringArg(args, "agentId") ?? stringArg(args, "target"))
     ?? (kind === "spawn" ? "child" : "subagent");
 }
