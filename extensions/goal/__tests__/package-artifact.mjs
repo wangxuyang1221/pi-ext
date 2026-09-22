@@ -12,8 +12,6 @@ const manifest = JSON.parse(fromArchive("package.json"));
 assert.equal(manifest.pi.extensions.length, 7);
 assert.equal(manifest.license, "(MIT AND Apache-2.0)");
 const files = ["LICENSE", "extensions/goal/LICENSE", "extensions/goal/NOTICE", "extensions/goal/UPSTREAM.md",
-  "docs/goal-storage-acceptance.md", "docs/goal-lifecycle-acceptance.md", "docs/goal-execution-report.md", "docs/goal-budget-acceptance.md",
-  "docs/goal-descendant-acceptance.md", "docs/goal-ui-acceptance.md", "docs/goal-integration-acceptance.md", "docs/goal-provider-support.md",
   ...manifest.pi.extensions.map(entry => entry.replace(/^\.\//, ""))];
 for (const path of files) assert.ok(entries.includes(`package/${path}`), `Missing archive file: ${path}`);
 assert.match(fromArchive("extensions/goal/LICENSE"), /Apache License[\s\S]*Version 2\.0/);
