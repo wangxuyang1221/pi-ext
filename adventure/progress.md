@@ -12,7 +12,7 @@
 
 统一 subagent 与 codex-ui 的 UI，并新增 spawn 随机漫威英雄名。Map：https://github.com/wangxuyang1221/pi-ext/issues/24。完整有效规格只在 [Spec #25](https://github.com/wangxuyang1221/pi-ext/issues/25) 维护。
 
-全部 Planning 已通关。用户已确认三个实施切片，要求 worker 使用 gpt-5.6-sol、high；当前准备执行 #29。
+全部 Planning 已通关。用户已确认三个实施切片，要求 worker 使用 gpt-6-astra、medium；当前准备执行 #29。
 
 ## Evolution
 
@@ -26,7 +26,7 @@
 
 使用简体中文沟通，text artifacts 遵循 docs/agents/repository-language-policy.md。禁止 skill-creator。
 
-主代理负责协调与验收，Implementation 依次由独立 worker 执行，fork_turns none，不继承整段对话，不再委派。用户明确选择 gpt-5.6-sol、high，优先保证此模型与推理设置。交接必须提供所需 skill 的绝对路径并要求行动前完整读取。
+主代理负责协调与验收，Implementation 依次由独立 worker 执行，fork_turns none，不继承整段对话，不再委派。用户最新改为 gpt-6-astra、medium，替代此前 sol/high。首个 sol worker 已停止，未修改文件、Issue 或启动进程。交接必须提供所需 skill 的绝对路径并要求行动前完整读取。
 
 每关执行计划由 worker 使用 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md 写入 Issue 正文；详细验证证据在 adventure/evidence/。通过后协调者追加 Acceptance、关闭关卡、更新存档并提交推送，再继续下一关。
 
