@@ -21,6 +21,8 @@ pnpm exec node adventure/prototypes/subagent-ui/demo.mjs
 - `/demo all error`：观察六类失败消息。
 - `/demo wait timeout` 与 `/demo wait interrupted`：观察等待超时、中断。
 - `/demo spawn success after long`：观察长名称，可将终端缩到 40 或 80 列。
+- `/history`：重新打开已持久化的同一会话，验证历史重建。
+- `/palette light|dark|codex-pi`：切换真实宿主主题。
 - `/quit`：退出并清理隔离运行目录。
 
 启动时可加 `--expanded` 或 `--fullscreen`。原型不会运行真实子代理。
@@ -29,7 +31,7 @@ pnpm exec node adventure/prototypes/subagent-ui/demo.mjs
 
 - Target：Pi 主对话中的 spawn、prompt、list、read、wait、close 工具调用与结果行。
 - Context：真实 Pi 0.86.0 InteractiveMode，加上当前生产 codex-ui 的编辑器、页脚、Read 和 Bash 渲染。
-- Contract：registerTool 的 renderShell self、renderCall/renderResult、共享 state、isPartial/isError 与原生展开状态。仅替换 execute 的数据来源和试验中的 renderer 样式。
+- Contract：registerTool 的 renderShell self、renderCall/renderResult、共享 state、isPartial/isError 与原生展开状态。正式模式仅替换 execute 的数据来源。
 
 ## Real and fixture
 
@@ -41,11 +43,11 @@ approximation：固定结果不能证明真实子代理的认证、调度、任�
 
 ## Files and cleanup
 
-prepare.mjs 将生产源码转译到隔离目录，只对已确认方案应用带锚点检查的 renderer 补丁。styles.mjs 仅覆盖成功结果文字颜色。未修改生产 src，也未手工编辑 dist。
+prepare.mjs 将源码直接转译到隔离目录，不再应用 renderer 源码补丁或主题代理。正式视觉规则已在生产 src 实现。加 --production 会调用构建产物中的 registerSubagentTools，保留生产 schema 与 renderCall/renderResult，仅替换 execute 为固定结果。运行此模式前先执行 pnpm run build。
 
-原版 renderer 仅在 check.mjs 中作为信息保留对照，不是可切换的 UI 方案。正式实施应把已确认的规则实现到生产源码和正式测试，不把原型源码补丁直接发布。
+check.mjs 从 Git 基准 19e82a1 读取旧 renderer 作为信息保留对照，不提供旧视觉交互入口。正式模式不替换 renderer 源码。
 
-临时运行目录位于仓库 .tmp，退出时删除。测试捕获保存在 .tmp/subagent-ui-after-*；正式预览在 previews/。没有后台服务和监听端口。
+临时运行目录位于仓库 .tmp，退出时删除。原型捕获保存在 .tmp/subagent-ui-after-*，正式模式捕获保存在 .tmp/subagent-ui-production-*。已确认原型预览在 previews/，正式证据在 adventure/evidence/implementation-30/。没有后台服务和监听端口。
 
 ## Verification
 
@@ -53,9 +55,12 @@ prepare.mjs 将生产源码转译到隔离目录，只对已确认方案应用�
 pnpm exec node adventure/prototypes/subagent-ui/check.mjs
 conda run -n codex-py312 python adventure/prototypes/subagent-ui/smoke.py
 conda run -n codex-py312 python adventure/prototypes/subagent-ui/smoke.py --fullscreen
+# 正式工具注册、schema 与 renderer 的宿主验证
+conda run -n codex-py312 python adventure/prototypes/subagent-ui/smoke.py --production
+conda run -n codex-py312 python adventure/prototypes/subagent-ui/smoke.py --production --fullscreen
 ```
 
-收敛后只验证已确认方案：40 组文字信息对照、0/1/2/12/40/80/120 列边界、六类状态、成功文字颜色、展开/折叠、长名称和窗口变化，以及退出清理、网络零调用。当前结果与预览见 [review.md](review.md)。
+收敛后只验证已确认方案：40 组文字信息对照、0/1/2/12/40/80/120 列边界、六类状态、成功文字颜色、展开/折叠、长名称和窗口变化，以及退出清理、网络零调用。原型验收与预览见 [review.md](review.md)，正式集成证据见 [implementation-30.md](../../evidence/implementation-30.md)。
 
 ## API sources
 

@@ -12,7 +12,7 @@ export function fixture(kind, outcome = "success", long = false) {
   const args = kind === "spawn" ? { name: agent.name, task, model: agent.model, thinkingLevel: agent.thinkingLevel }
     : kind === "prompt" ? { agentId: agent.agentId, text: prompt, delivery: "steer" }
     : kind === "list" ? {} : kind === "close" ? { target: agent.agentId }
-    : kind === "wait" ? { agentId: agent.agentId, timeoutMs: 30000 }
+    : kind === "wait" ? { agentId: agent.agentId, afterSettled: "cursor-before", timeoutMs: 30000 }
     : { agentId: agent.agentId, view: "recent_activity" };
   const details = { operation: kind, ok: outcome !== "error", agent, task, prompt, delivery: "steer",
     agents: [agent, { ...agent, agentId: "child-chen", name: "Chen", status: "settled" }],

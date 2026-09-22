@@ -5,14 +5,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { visibleWidth } from '@earendil-works/pi-tui';
 import { prepare } from './prepare.mjs';
 import { fixture, KINDS } from './fixtures.mjs';
-import { resultTheme } from './styles.mjs';
 import { stripVTControlCharacters } from 'node:util';
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 await mkdir(join(repo,'.tmp'),{recursive:true});
 const root=await mkdtemp(join(repo,'.tmp/ui-check-'));
 const theme={fg:(_tone,text)=>text,bold:text=>text};
 try {
- await prepare(repo,root);
+ await prepare(repo,root,{baseline:true});
  const before=await import(pathToFileURL(join(root,'before/renderers.js')));
  const after=await import(pathToFileURL(join(root,'after/renderers.js')));
  const render=(renderer,kind,outcome,expanded,width)=>{
@@ -20,7 +19,7 @@ try {
   const state={};
   const context={state,lastComponent:undefined,isPartial:outcome==='hold',isError:outcome==='error'};
   const call=renderer.renderSubagentCall(kind,args,theme,context);
-  const body=renderer.renderSubagentResult(kind,args,result,{expanded,isPartial:outcome==='hold'},resultTheme(theme),context);
+  const body=renderer.renderSubagentResult(kind,args,result,{expanded,isPartial:outcome==='hold'},theme,context);
   return [...call.render(width),...body.render(width)];
  };
  let count=0;

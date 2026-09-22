@@ -19,7 +19,8 @@ here = Path(__file__).resolve().parent
 repo = here.parents[2]
 mode = 'fullscreen' if '--fullscreen' in sys.argv else 'regular'
 style = 'after'
-output_dir = repo / '.tmp' / f'subagent-ui-{style}-{mode}'
+production = '--production' in sys.argv
+output_dir = repo / '.tmp' / f'subagent-ui-{"production" if production else style}-{mode}'
 output_dir.mkdir(parents=True, exist_ok=True)
 screen = pyte.Screen(120, 70)
 stream = pyte.Stream(screen)
@@ -98,16 +99,19 @@ def capture(name, focus=False):
     if focus:
         start = next(i for i, line in enumerate(screen.display) if "Finished waiting for" in line)
         end = next(i for i, line in enumerate(screen.display) if "Process stopped" in line) + 1
-    image = Image.new('RGB', (screen.columns * cell_w + 32, (end - start) * cell_h + 32), '#171717')
+    # Terminal default background is not encoded in ANSI cells.
+    default_bg = '#ffffff' if name == 'theme-light' else '#171717'
+    default_fg = '#24292e' if name == 'theme-light' else '#d6d6d6'
+    image = Image.new('RGB', (screen.columns * cell_w + 32, (end - start) * cell_h + 32), default_bg)
     draw = ImageDraw.Draw(image)
     for row in range(start, end):
         for col in range(screen.columns):
             char = screen.buffer[row][col]
             x, y = 16 + col * cell_w, 16 + (row - start) * cell_h
-            fg, bg = color(char.fg, '#d6d6d6'), color(char.bg, '#171717')
+            fg, bg = color(char.fg, default_fg), color(char.bg, default_bg)
             if char.reverse:
                 fg, bg = bg, fg
-            if bg != '#171717':
+            if bg != default_bg:
                 draw.rectangle((x, y, x + cell_w, y + cell_h), fill=bg)
             if char.data.strip():
                 face = marker_font if char.data == '⏺' else symbol_font if char.data == '⎿' else bold_font if char.bold else font
@@ -132,6 +136,34 @@ try:
         assert cells and all(value == expected_success for value in cells), (needle, cells, expected_success)
     capture('success')
     capture('palette', focus=True)
+    if production:
+        command('/history')
+        wait(lambda: 'Resumed session' in view(), 'persisted history reopened')
+        settle()
+        for text in ['Spawned Lin', 'Sent input to Lin', 'Listed 2 subagents', 'Read activity from Lin', 'Finished waiting for Lin', 'Closed Lin']:
+            assert text in view(), (text, view())
+        assert markers()[-6:] == ['4dff88'] * 6, markers()
+        capture('history')
+        for refresh_width in [119, 120]:
+            fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 70, refresh_width, 0, 0))
+            screen.resize(70, refresh_width)
+            settle()
+        assert 'Finished waiting for Lin' in view(), view()
+        assert markers()[-6:] == ['4dff88'] * 6, markers()
+        capture('refresh')
+        for theme_name in ['light', 'dark', 'codex-pi']:
+            command(f'/palette {theme_name}')
+            wait(lambda: f'Theme switched to {theme_name}.' in view(), f'theme {theme_name}')
+            settle()
+            assert len(markers()) >= 6, view()
+            for needle in ['Settled', 'Process stopped']:
+                cells = [screen.buffer[row][line.index(needle)].fg for row, line in enumerate(screen.display) if needle in line]
+                assert cells and all(value == '46e87c' for value in cells), (theme_name, needle, cells)
+            if theme_name == 'codex-pi':
+                assert markers()[-6:] == ['4dff88'] * 6, markers()
+            else:
+                assert len(set(markers()[-6:])) == 1 and markers()[-1] != '4dff88', markers()
+            capture(f'theme-{theme_name}')
     os.write(fd, b'\x0f')
     settle()
     assert 'Reviewed the renderer.' in view(), view()

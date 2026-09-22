@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { fixture, KINDS, OUTCOMES } from "./fixtures.mjs";
-import { STYLES, LABELS, resultTheme } from "./styles.mjs";
+import { STYLES, LABELS } from "./styles.mjs";
 
 const root = process.env.SUBAGENT_UI_ROOT;
 if (!root) throw new Error("Start with demo.mjs");
@@ -10,8 +10,10 @@ let networkAttempts = 0;
 globalThis.fetch = async () => { networkAttempts++; throw new Error("Network is disabled in this prototype"); };
 const sdk = await import("@earendil-works/pi-coding-agent");
 const ai = await import("@earendil-works/pi-ai");
-const codexUi = (await import(pathToFileURL(join(root, "runtime/codex-ui/index.js")))).default;
-const renderer = await import(pathToFileURL(join(root, "runtime/after/renderers.js")));
+const production = process.argv.includes("--production");
+const codexUi = (await import(production ? "../../../extensions/codex-ui/dist/index.js" : pathToFileURL(join(root, "runtime/codex-ui/index.js")))).default;
+const { registerSubagentTools } = production ? await import("../../../extensions/subagent/dist/tools.js") : {};
+const renderer = production ? undefined : await import(pathToFileURL(join(root, "runtime/after/renderers.js")));
 const faux = ai.fauxProvider({ provider: "openai-codex", tokensPerSecond: 1200, tokenSize: { min: 8, max: 8 } });
 const modelRuntime = await sdk.ModelRuntime.create({ credentials: new ai.InMemoryCredentialStore(), modelsStore: new ai.InMemoryModelsStore(), modelsPath: null, allowModelNetwork: false, refreshOnCreate: false });
 modelRuntime.registerNativeProvider(faux.provider);
@@ -41,11 +43,12 @@ const extension = pi => {
     return Reflect.get(target, key);
   } });
   codexUi(proxy);
-  for (const kind of KINDS) {
+  if (production) registerSubagentTools(proxy, {});
+  else for (const kind of KINDS) {
     pi.registerTool({ name: `subagent_${kind}`, label: `Subagent ${kind}`, description: "Offline visual fixture", parameters: { type: "object", additionalProperties: true }, executionMode: "parallel", renderShell: "self", execute,
       renderCall: (args, theme, context) => renderer.renderSubagentCall(kind, args, theme, context),
       renderResult: (result, options, theme, context) => {
-        return renderer.renderSubagentResult(kind, context.args, result, options, resultTheme(theme), context);
+        return renderer.renderSubagentResult(kind, context.args, result, options, theme, context);
       },
     });
   }
@@ -72,6 +75,20 @@ const extension = pi => {
     const outcome = args.trim() || "success";
     if (!["success", "error", "timeout", "interrupted"].includes(outcome)) return ctx.ui.notify("Use /finish success|error|timeout|interrupted", "info");
     release(outcome);
+  } });
+  pi.registerCommand("history", { description: "Reopen the persisted fixture session", handler: async (_args, ctx) => {
+    const path = ctx.sessionManager.getSessionFile();
+    assert.ok(path, "History verification requires a persisted session");
+    const switched = await ctx.switchSession(path, { withSession: async fresh => {
+      assert.equal(fresh.sessionManager.getSessionFile(), path);
+    } });
+    assert.equal(switched.cancelled, false);
+  } });
+  pi.registerCommand("palette", { description: "Switch the real host theme", handler: (args, ctx) => {
+    const name = args.trim() || "codex-pi";
+    const result = ctx.ui.setTheme(name);
+    assert.ok(result.success, result.error);
+    ctx.ui.notify(`Theme switched to ${name}.`, "info");
   } });
   pi.registerCommand("guide", { description: "Show controls", handler: (_args, ctx) => ctx.ui.notify(instructions, "info") });
   pi.on("agent_settled", () => { active = false; });

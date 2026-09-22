@@ -11,7 +11,7 @@ const root = await mkdtemp(join(repo, ".tmp/subagent-ui-"));
 const handlers = new Map();
 try {
   for (const dir of ["workspace", "tmp", "agent", "sessions", "runtime"]) await mkdir(join(root, dir));
-  await prepare(repo, join(root, "runtime"));
+  await prepare(repo, join(root, "runtime"), { production: process.argv.includes("--production") });
   const env = Object.fromEntries(["PATH", "TERM", "COLORTERM", "LANG", "LC_ALL"].flatMap(key => process.env[key] ? [[key, process.env[key]]] : []));
   Object.assign(env, { TMPDIR: join(root, "tmp"), PI_CODING_AGENT_DIR: join(root, "agent"), PI_CODING_AGENT_SESSION_DIR: join(root, "sessions"), PI_OFFLINE: "1", PI_SKIP_VERSION_CHECK: "1", PI_TELEMETRY: "0", SUBAGENT_UI_ROOT: root });
   const child = spawn(process.execPath, [join(here, "runtime.mjs"), ...process.argv.slice(2)], { cwd: join(root, "workspace"), env, stdio: "inherit" });

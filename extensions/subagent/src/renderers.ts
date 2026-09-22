@@ -209,13 +209,21 @@ function renderTitle(
   const suffix = getTitleSuffix(kind, args, state.details);
 
   const parts = [
-    theme.fg("dim", "•"),
+    theme.fg(callStatusColor(kind, state), "⏺"),
     theme.fg("toolTitle", theme.bold(action)),
   ];
-  if (target) parts.push(theme.fg("accent", theme.bold(target)));
+  if (target) parts.push(theme.fg("accent", target));
   if (suffix) parts.push(theme.fg("dim", suffix));
 
   return fitToWidth(parts.join(" "), width, { ellipsis: "…" });
+}
+
+// Match codex-ui markers while keeping this extension independently buildable.
+function callStatusColor(kind: SubagentToolKind, state: RendererState): "warning" | "error" | "success" {
+  if (state.isError) return "error";
+  if (state.isPartial) return "warning";
+  if (kind === "wait" && (state.details?.outcome === "timeout" || state.details?.outcome === "interrupted")) return "warning";
+  return "success";
 }
 
 function getTitleTarget(
@@ -306,7 +314,7 @@ function renderSpawn(
   expanded: boolean,
   theme: Theme,
 ): string[] {
-  const lines = [theme.fg("toolOutput", preview(details.task ?? "Initial task submitted.", 160))];
+  const lines = [theme.fg("text", preview(details.task ?? "Initial task submitted.", 160))];
   if (expanded && details.agent) {
     lines.push(renderAgentMetadata(details.agent, theme));
   }
@@ -320,7 +328,7 @@ function renderPrompt(
   theme: Theme,
 ): string[] {
   const prompt = details.prompt ?? stringArg(args, "text") ?? "Prompt delivered.";
-  const lines = [theme.fg("toolOutput", preview(prompt, 160))];
+  const lines = [theme.fg("text", preview(prompt, 160))];
   if (expanded) {
     lines.push(theme.fg("dim", `Delivery accepted as ${details.delivery ?? "steer"}; completion not implied.`));
   }
@@ -370,7 +378,7 @@ function renderRead(
     return [theme.fg("muted", parts.join(" · "))];
   }
 
-  const summary = theme.fg("muted", activitySummaryParts(details, true).join(" · "));
+  const summary = theme.fg("dim", activitySummaryParts(details, true).join(" · "));
   if (!expanded || !details.activity?.length) return [summary];
   return [summary, ...details.activity.map((activity) => renderActivity(activity, theme))];
 }
@@ -407,8 +415,8 @@ function renderClose(
 ): string[] {
   const count = details.affected?.length ?? (details.agent ? 1 : 0);
   const summary = count === 1
-    ? `${theme.fg("success", "Process stopped")}${theme.fg("dim", " · relationship removed · Extension data deleted · Pi session retained")}`
-    : `${theme.fg("success", `${count} processes stopped`)}${theme.fg("dim", " · relationships removed · Extension data deleted · Pi sessions retained")}`;
+    ? `${successText("Process stopped")}${theme.fg("dim", " · relationship removed · Extension data deleted · Pi session retained")}`
+    : `${successText(`${count} processes stopped`)}${theme.fg("dim", " · relationships removed · Extension data deleted · Pi sessions retained")}`;
   const lines = [summary];
   if (expanded && details.affected?.length) {
     lines.push(...details.affected.map((agent) => renderAgentLine(agent, theme)));
@@ -418,14 +426,14 @@ function renderClose(
 
 function prefixDetails(lines: string[], theme: Theme, width: number): string[] {
   return lines.map((line, index) => {
-    const prefix = theme.fg("dim", index === 0 ? "  └ " : "    ");
+    const prefix = theme.fg("dim", index === lines.length - 1 ? "  └ " : "  │ ");
     return fitToWidth(`${prefix}${line}`, width, { ellipsis: "…" });
   });
 }
 
 function renderAgentLine(agent: AgentDisplay, theme: Theme): string {
   return [
-    theme.fg("accent", theme.bold(agent.name)),
+    theme.fg("accent", agent.name),
     theme.fg("dim", " ["),
     renderStatus(agent.status, theme),
     theme.fg("dim", `] · generation ${agent.generation}`),
@@ -447,14 +455,14 @@ function renderStatusCounts(agents: AgentDisplay[], theme: Theme): string {
   const parts = statuses.flatMap((status) => {
     const count = agents.filter((agent) => agent.status === status).length;
     if (count === 0) return [];
-    return [`${theme.fg(statusColor(status), String(count))} ${theme.fg("muted", status)}`];
+    return [`${status === "settled" ? successText(String(count)) : theme.fg(statusColor(status), String(count))} ${theme.fg("muted", status)}`];
   });
   return parts.join(theme.fg("dim", " · "));
 }
 
 function renderStatus(status: SubagentStatus, theme: Theme): string {
   const label = status[0]?.toUpperCase() + status.slice(1);
-  const styled = theme.fg(statusColor(status), label);
+  const styled = status === "settled" ? successText(label) : theme.fg(statusColor(status), label);
   return status === "running" ? theme.bold(styled) : styled;
 }
 
@@ -474,20 +482,25 @@ function renderOutcome(
       : outcome === "timeout" || outcome === "interrupted"
         ? "warning"
         : "error";
-  return theme.fg(color, label);
+  return color === "success" ? successText(label) : theme.fg(color, label);
+}
+
+// Approved result green is independent of the theme's title marker color.
+function successText(text: string): string {
+  return `\x1b[38;2;70;232;124m${text}\x1b[39m`;
 }
 
 function renderActivity(activity: ActivityDisplay, theme: Theme): string {
   if (activity.kind === "assistant") {
     const failed = activity.stopReason === "error" || activity.stopReason === "aborted" || Boolean(activity.errorMessage);
     const text = activity.errorMessage || activity.text || activity.stopReason;
-    return `${theme.fg("muted", "assistant")}  ${theme.fg(failed ? "error" : "toolOutput", preview(text, 120))}`;
+    return `${theme.fg("muted", "assistant")}  ${theme.fg(failed ? "error" : "text", preview(text, 120))}`;
   }
   const arrow = theme.fg("dim", " → ");
   const outcome = activity.outcome === "failed" && activity.errorPreview
     ? `${activity.outcome}: ${preview(activity.errorPreview, 90)}`
     : activity.outcome;
-  const color = activity.outcome === "failed" ? "error" : "toolOutput";
+  const color = activity.outcome === "failed" ? "error" : "text";
   return `${theme.fg("muted", activity.toolName)}${arrow}${theme.fg(color, outcome)}`;
 }
 
