@@ -12,7 +12,7 @@
 
 统一 subagent 与 codex-ui 的 UI，并新增 spawn 随机漫威英雄名。Map：https://github.com/wangxuyang1221/pi-ext/issues/24。完整有效规格只在 [Spec #25](https://github.com/wangxuyang1221/pi-ext/issues/25) 维护。
 
-全部 Planning 已通关。用户已确认三个实施切片，要求 worker 使用 gpt-6-astra、medium；当前准备执行 #29。
+全部 Planning 已通关。用户已确认三个实施切片，要求 worker 使用 gpt-6-astra、medium； #29 已验收通过，下一关为 #30。
 
 ## Evolution
 
@@ -34,7 +34,7 @@
 
 工作目录 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/u，分支 adventure/subagent-ui-consistency。审核时本地与远端为 47d0c616da63c7405ec0d0adf5c9914000dc5084，worktree 干净，产品源码仍为 262824026e192e8c421ce1e1796db7b269723038。恢复时重新核对状态与正在运行的 worker。
 
-- [#29](https://github.com/wangxuyang1221/pi-ext/issues/29)：恢复完整检查与发布包校验，最小清理已删除 MCP 原型和报告的遗留引用。
+- [#29](https://github.com/wangxuyang1221/pi-ext/issues/29)：已通关。提交 11631ee 清理失效 MCP 原型和 13 份已删文档引用，完整检查通过，证据见 [implementation-29.md](evidence/implementation-29.md)。
 - [#30](https://github.com/wangxuyang1221/pi-ext/issues/30)：六类工具正式视觉集成，承担历史、刷新和主题兼容验证。本身无 #29 功能依赖，按执行顺序排在其后。
 - [#31](https://github.com/wangxuyang1221/pi-ext/issues/31)：随机英雄名与整体验收，依赖 #29、#30；承担并发、故障清理和旧状态兼容验证。
 
@@ -44,15 +44,15 @@
 
 [命名调查](evidence/hero-name-baseline.md) 记录显示名链路与锁：在父状态锁中预留名字，覆盖已登记直接子代理和未安全释放的 reservation；沿用 launch.displayName、ChildLink.name、Pi --name、tmux。旧名称保留并占用，任务完成但未关闭仍占用；不能提前释放可能仍运行的进程名称。32 个英文称号来源已核验。
 
-原基准 check 类型检查通过、2376 项测试通过、11 项跳过，但旧 MCP 原型套件无法加载。独立 build 通过，package:check 缺 docs/goal-descendant-acceptance.md。清理提交 341c22b 已删除这些资料而留下引用。另查到 extensions/goal/__tests__/package-artifact.mjs 对同一报告也有引用，#29 应核对。不能恢复已删资料或删除生产测试绕过失败。此前长路径 tmux 失败在当前短 worktree 路径已解决。
+#29 已修复基准缺口，pnpm run check 通过：2376 项通过、11 项原有跳过，类型检查、构建和标准发布校验均通过。已删报告实际共 13 份，删除历史分别为 96c9f65 与 341c22b，未恢复旧资料或删除生产测试。独立历史 package-artifact.mjs 仍有旧 extension 数及 license 断言，不在标准 check 中，本次未宣称其通过。此前长路径 tmux 失败在当前短 worktree 路径已解决。
 
 ## Current Assumptions
 
-没有阻碍规格或切片成立的未决产品问题。全部生产实施验证仍待对应 worker 执行，尚不能宣称完整 check 通过。
+没有阻碍规格或切片成立的未决产品问题。生产视觉与英雄命名尚待实施验证；#29 基础检查已通过。
 
 ## Continuation Point
 
-实施切片已获用户确认，不再询问。先完成实施准备存档，再派发 #29，依次推进 #30、#31。每个 worker 接手时核对最新 HEAD 并更新 Issue Workspace。
+实施切片已获用户确认，不再询问。 #29 已提交推送并关闭，完成本关自动保存后派发 #30，再推进 #31。每个 worker 接手时核对最新 HEAD 并更新 Issue Workspace。
 
 最后一关 worker 对照 Spec 完成整体验收、延期验证、材料与临时资源清理。协调者核验后保存并提交用户确认，Map/Spec 保持 open，等待用户确认交付时停止。
 
