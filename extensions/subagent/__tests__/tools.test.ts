@@ -632,6 +632,7 @@ function registerTools(
 ): Array<Record<string, unknown>> {
   const registered: Array<Record<string, unknown>> = [];
   const pi = {
+    on() {},
     registerTool(tool: Record<string, unknown>) {
       registered.push(tool);
     },

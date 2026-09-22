@@ -11,7 +11,7 @@ import { registerSubagentTools } from "../src/tools.js";
 for (const provider of [deepseekProvider(), openaiCodexProvider()]) {
   test(`preserves strict read variants in ${provider.id} request payloads`, async () => {
     const tools: Tool[] = [];
-    registerSubagentTools({ registerTool: (tool) => { tools.push(tool); } }, {} as never);
+    registerSubagentTools({ on() {}, registerTool: (tool) => { tools.push(tool); } }, {} as never);
     const read = tools.find((tool) => tool.name === "subagent_read");
     assert.ok(read);
     assert.ok(Type.IsUnion(read.parameters));

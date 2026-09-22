@@ -159,6 +159,8 @@ export interface WaitManagedOptions {
   afterActivity?: string;
   assistantLimit?: number;
   toolLimit?: number;
+  /** Reports the validated target once, within the existing wait deadline. */
+  onAgent?: (agent: ManagedAgent) => void;
 }
 
 export interface ManagedWaitResult extends WaitForSettledResult {
@@ -739,6 +741,8 @@ export class SubagentManager {
     try {
       return await this.runOperation(parentSessionId, options.timeoutMs === 0 ? 250 : options.timeoutMs, signal, async () => {
         initial = await this.requireDirectSession(parentSessionId, agentId);
+        currentOperation()!.signal.throwIfAborted();
+        options.onAgent?.(toManagedAgent(initial.child));
         return this.waitInternal(parentSessionId, agentId, options, currentOperation()!.signal, initial);
       });
     } catch (error) {

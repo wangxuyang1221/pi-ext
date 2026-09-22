@@ -102,6 +102,7 @@ export interface SubagentUiDetails {
 
 interface RendererState {
   details?: SubagentUiDetails;
+  waitAgent?: AgentDisplay;
   isPartial?: boolean;
   isError?: boolean;
   callComponent?: ResponsiveLinesComponent;
@@ -170,6 +171,9 @@ export function renderSubagentResult(
 ): Component {
   const state = context.state as RendererState;
   state.details = result.details;
+  if (kind === "wait" && result.details?.agent && result.details.agent.agentId === stringArg(args, "agentId")) {
+    state.waitAgent = result.details.agent;
+  }
   state.isPartial = options.isPartial;
   state.isError = context.isError || result.details?.ok === false;
 
@@ -205,7 +209,7 @@ function renderTitle(
     : state.isPartial
       ? presentation.pending
       : presentation.complete;
-  const target = getTitleTarget(kind, args, state.details);
+  const target = getTitleTarget(kind, args, state.details, state.waitAgent);
   const suffix = getTitleSuffix(kind, args, state.details);
 
   const parts = [
@@ -230,6 +234,7 @@ function getTitleTarget(
   kind: SubagentToolKind,
   args: ToolArgs,
   details: SubagentUiDetails | undefined,
+  waitAgent?: AgentDisplay,
 ): string {
   if (kind === "list") {
     const count = details?.agents?.length;
@@ -242,6 +247,7 @@ function getTitleTarget(
   }
 
   return details?.agent?.name
+    ?? (kind === "wait" && waitAgent?.agentId === stringArg(args, "agentId") ? waitAgent?.name : undefined)
     ?? shortAgentId(stringArg(args, "agentId") ?? stringArg(args, "target"))
     ?? (kind === "spawn" ? "child" : "subagent");
 }

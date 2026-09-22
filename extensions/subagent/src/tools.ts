@@ -198,9 +198,16 @@ const targetParameters = Type.Object({
 });
 
 export function registerSubagentTools(
-  pi: Pick<ExtensionAPI, "registerTool">,
+  pi: Pick<ExtensionAPI, "registerTool" | "on">,
   manager: SubagentManager,
 ): void {
+  // Returning structured failures preserves their display identity in session history.
+  pi.on("tool_result", event => {
+    if (event.toolName !== "subagent_wait") return;
+    const details = event.details as SubagentUiDetails | undefined;
+    if (details?.operation === "wait" && details.ok === false) return { isError: true };
+  });
+
   pi.registerTool(withRenderer("spawn", {
     name: "subagent_spawn",
     label: "Spawn subagent",
@@ -398,20 +405,33 @@ export function registerSubagentTools(
     ],
     parameters: waitParameters,
     async execute(_toolCallId, params, signal, onUpdate, ctx) {
-      onUpdate?.(toolResult({ waiting: true }, {
-        operation: "wait",
-        ok: true,
-        agent: { agentId: params.agentId, name: params.agentId, status: "running", generation: 0 },
-        message: "Waiting for a newer settled generation.",
-      }));
-      const result = await manager.wait(currentSessionId(ctx), params.agentId, {
-        afterSettled: params.afterSettled,
-        timeoutMs: params.timeoutMs ?? 30_000,
-        ...(params.afterActivity === undefined ? {} : { afterActivity: params.afterActivity }),
-        ...(params.assistantLimit === undefined ? {} : { assistantLimit: params.assistantLimit }),
-        ...(params.toolLimit === undefined ? {} : { toolLimit: params.toolLimit }),
-      }, signal);
-      return toolResult(result, waitDetails(result), true);
+      let agent: AgentDisplay | undefined;
+      try {
+        const result = await manager.wait(currentSessionId(ctx), params.agentId, {
+          onAgent: managed => {
+            agent = toAgentDisplay(managed);
+            onUpdate?.(toolResult({ waiting: true }, {
+              operation: "wait",
+              ok: true,
+              agent,
+              message: "Waiting for a newer settled generation.",
+            }));
+          },
+          afterSettled: params.afterSettled,
+          timeoutMs: params.timeoutMs ?? 30_000,
+          ...(params.afterActivity === undefined ? {} : { afterActivity: params.afterActivity }),
+          ...(params.assistantLimit === undefined ? {} : { assistantLimit: params.assistantLimit }),
+          ...(params.toolLimit === undefined ? {} : { toolLimit: params.toolLimit }),
+        }, signal);
+        return toolResult(result, waitDetails(result), true);
+      } catch (error) {
+        if (!agent) throw error;
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          content: [{ type: "text", text: message }],
+          details: { operation: "wait", ok: false, agent, message },
+        };
+      }
     },
   }));
 
