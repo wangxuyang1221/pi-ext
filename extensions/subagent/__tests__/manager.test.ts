@@ -118,6 +118,7 @@ test("removes failed spawn metadata when initial prompt delivery is unconfirmed"
           processInstanceId: launch.processInstanceId,
           tmux: locator,
         }));
+        await store.update("child-a", child => ({ ...child, runtime: { ...child.runtime, promptReady: true } }));
         return locator;
       },
       async sendPrompt() {},
@@ -277,6 +278,7 @@ test("prepares a persisted native session before delivering the initial task", a
           processInstanceId: launch.processInstanceId,
           tmux: locator,
         }));
+        await store.update("child-a", child => ({ ...child, runtime: { ...child.runtime, promptReady: true } }));
         return locator;
       },
       async sendPrompt(_locator, text, delivery) {

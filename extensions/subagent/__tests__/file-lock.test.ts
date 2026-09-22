@@ -148,3 +148,31 @@ test("a losing stale-lock reclaimer cannot delete a new owner's initializing dir
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("waits for a live owner's partially published record instead of parsing it as a failure", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-lock-partial-"));
+  const path = join(root, "lock");
+  await mkdir(path);
+  const ownerFile = join(path, "initializing.json");
+  await writeFile(ownerFile, "");
+  try {
+    await assert.rejects(acquireFileLock(path, undefined, 20), /Subagent control lock unavailable:/u);
+    assert.equal(await readFile(ownerFile, "utf8"), "");
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("recovers a partial record only when its named local owner has exited", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-lock-partial-"));
+  const path = join(root, "lock");
+  const stopped = spawnSync(process.execPath, ["-e", ""]);
+  assert.equal(stopped.status, 0);
+  assert.throws(() => process.kill(stopped.pid, 0), { code: "ESRCH" });
+  await mkdir(path);
+  const filename = `${Buffer.from(hostname()).toString("base64url")}.${stopped.pid}.12345678-1234-1234-1234-123456789abc.json`;
+  await writeFile(join(path, filename), "");
+  try {
+    const lock = await acquireFileLock(path, undefined, 50);
+    await lock.assertOwned();
+    await lock.release();
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

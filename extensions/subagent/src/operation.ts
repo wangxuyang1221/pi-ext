@@ -3,6 +3,12 @@ import { AsyncLocalStorage } from "node:async_hooks";
 const scope = new AsyncLocalStorage<Operation>();
 export const currentOperation = (): Operation | undefined => scope.getStore();
 
+/** Give cleanup a bounded lifetime independent of the cancelled caller. */
+export function withCleanupOperation<T>(work: () => Promise<T>): Promise<T> {
+  // Leave 100 ms within the caller's 750 ms resource-drain window.
+  return scope.exit(() => withOperation(650, undefined, work));
+}
+
 export async function withOperation<T>(timeoutMs: number, signal: AbortSignal | undefined, work: () => Promise<T>): Promise<T> {
   if (currentOperation()) return work();
   const operation = new Operation(timeoutMs, signal);

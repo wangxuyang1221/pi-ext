@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { privateEnvironmentScript } from "./auth-environment.js";
+import { rejectionMessages, type PromptRejectionCode } from "./prompt-auth.js";
 import { join, resolve } from "node:path";
 
 import { encodeActivityCursor, encodeSettledCursor } from "./cursor.js";
-import { currentOperation, DeadlineExceeded, withOperation } from "./operation.js";
+import { currentOperation, DeadlineExceeded, withCleanupOperation, withOperation } from "./operation.js";
 import { acquireFileLock, type FileLock } from "./file-lock.js";
 import {
   getDirectChild,
@@ -42,6 +44,7 @@ export const PI_SUBAGENT_MAX_ACTIVE = "PI_SUBAGENT_MAX_ACTIVE";
 export const PI_SUBAGENT_STATE_ROOT = "PI_SUBAGENT_STATE_ROOT";
 export const PI_SUBAGENT_PARENT = "PI_SUBAGENT_PARENT";
 export const PI_SUBAGENT_LAUNCH = "PI_SUBAGENT_LAUNCH";
+export const PROMPT_READY_COMMAND = "subagent-runtime-ready";
 
 const WAIT_PAYLOAD_MAX_BYTES = 72 * 1024;
 
@@ -62,6 +65,7 @@ export interface SubagentManagerOptions {
   extensionPath: string;
   piPath: string;
   environment: Record<string, string>;
+  authenticationEnvironment?: (model: string | undefined) => Promise<Record<string, string>>;
   createId?: () => string;
   now?: () => string;
   sleep?: (milliseconds: number) => Promise<void>;
@@ -135,6 +139,14 @@ export class DeliveryUnconfirmedError extends Error {
   }
 }
 
+export class DeliveryRejectedError extends Error {
+  readonly code = "delivery_rejected";
+  constructor(readonly deliveryId: string, readonly reason: PromptRejectionCode) {
+    super(`delivery_rejected: ${rejectionMessages[reason]} (deliveryId: ${deliveryId})`);
+    this.name = "DeliveryRejectedError";
+  }
+}
+
 export interface WaitManagedOptions {
   afterSettled: string;
   timeoutMs: number;
@@ -163,6 +175,7 @@ export class SubagentManager {
   private readonly extensionPath: string;
   private readonly piPath: string;
   private readonly environment: Record<string, string>;
+  private readonly authenticationEnvironment?: SubagentManagerOptions["authenticationEnvironment"];
   private readonly createId: () => string;
   private readonly now: () => string;
   private readonly sleep: (milliseconds: number) => Promise<void>;
@@ -294,6 +307,7 @@ export class SubagentManager {
     this.extensionPath = options.extensionPath;
     this.piPath = options.piPath;
     this.environment = options.environment;
+    this.authenticationEnvironment = options.authenticationEnvironment;
     this.createId = options.createId ?? randomUUID;
     this.now = options.now ?? (() => new Date().toISOString());
     this.sleep = options.sleep ?? ((milliseconds) => new Promise((resolveDelay) => {
@@ -323,7 +337,10 @@ export class SubagentManager {
     signal?: AbortSignal,
   ): Promise<ManagedAgent> {
     const operation = this.runOperation(parentSessionId, this.registrationTimeoutMs + this.promptAckTimeoutMs + 5_000, signal,
-      () => this.spawnInternal(parentSessionId, options, defaults));
+      () => {
+        const pending = this.spawnInternal(parentSessionId, options, defaults);
+        return currentOperation()?.trackResource(pending) ?? pending;
+      });
     const inFlight = this.inFlightSpawns.get(parentSessionId) ?? new Set();
     inFlight.add(operation);
     this.inFlightSpawns.set(parentSessionId, inFlight);
@@ -397,13 +414,22 @@ export class SubagentManager {
       this.extensionPath,
       ...(model ? ["--model", model] : []),
       ...(thinkingLevel ? ["--thinking", thinkingLevel] : []),
+      `/${PROMPT_READY_COMMAND} ${processInstanceId}`,
     ];
 
     let locator: TmuxLocator | undefined;
     let registeredChild: SessionState | undefined;
     let launchAttempted = false;
+    let privateEnvironmentFile: string | undefined;
+    let privateEnvironmentDirectory: string | undefined;
     try {
       await mkdir(sessionDir, { recursive: true });
+      const authentication = await this.authenticationEnvironment?.(model) ?? {};
+      if (Object.keys(authentication).length) {
+        privateEnvironmentDirectory = await mkdtemp(join(sessionDir, ".auth-"));
+        privateEnvironmentFile = join(privateEnvironmentDirectory, "environment.sh");
+        await writeFile(privateEnvironmentFile, privateEnvironmentScript(authentication), { flag: "wx", mode: 0o600 });
+      }
       await writeFile(sessionFile, "", { encoding: "utf8", mode: 0o600, flag: "wx" });
       await this.store.update(parent.sessionId, (latest) => ({ ...latest, reservations: latest.reservations.map((entry) =>
         entry.reservationId === registrationToken ? { ...entry, launchState: "launching" } : entry) }));
@@ -413,6 +439,7 @@ export class SubagentManager {
         windowName: normalizeWindowName(displayName),
         command: this.piPath,
         args,
+        ...(privateEnvironmentFile ? { privateEnvironmentFile } : {}),
         environment: {
           ...this.environment,
           PI_SUBAGENT: "1",
@@ -445,41 +472,50 @@ export class SubagentManager {
       return initialDelivery.agent;
     } catch (error) {
       if (launchAttempted && !locator) throw error;
-      if (locator) {
-        try {
-          await this.runtime.close(locator);
-          await this.confirmClosed(locator);
-        } catch (cleanupError) {
-          throw new AggregateError(
-            [error, cleanupError],
-            "Failed to clean up a failed subagent spawn",
-          );
+      const cleanup = async () => {
+        if (locator) {
+          try {
+            await this.runtime.close(locator);
+            await this.confirmClosed(locator);
+          } catch (cleanupError) {
+            throw new AggregateError(
+              [error, cleanupError],
+              "Failed to clean up a failed subagent spawn",
+            );
+          }
         }
-      }
-      const failedChildren = (await this.store.listOwned(parent)).filter((state) => (
-        state.parent?.sessionId === parent.sessionId
-        && state.parent.epoch === parent.epoch
-        && state.parent.registrationToken === registrationToken
-        && state.launch?.processInstanceId === processInstanceId
-      ));
-      if (
-        registeredChild
-        && !failedChildren.some((state) => state.sessionId === registeredChild?.sessionId)
-      ) {
-        failedChildren.push(registeredChild);
-      }
-      const failedChildIds = new Set(failedChildren.map((state) => state.sessionId));
-      await this.retireProcesses(parent.sessionId, new Set([processInstanceId]));
-      await this.store.update(parent.sessionId, (latestParent) => ({
-        ...removeDirectChildren(latestParent, failedChildIds),
-        reservations: latestParent.reservations.filter(
-          (candidate) => candidate.reservationId !== registrationToken,
-        ),
-      }));
-      for (const child of failedChildren) {
-        await this.store.delete(child.sessionId);
-      }
+        const failedChildren = (await this.store.listOwned(parent)).filter((state) => (
+          state.parent?.sessionId === parent.sessionId
+          && state.parent.epoch === parent.epoch
+          && state.parent.registrationToken === registrationToken
+          && state.launch?.processInstanceId === processInstanceId
+        ));
+        if (
+          registeredChild
+          && !failedChildren.some((state) => state.sessionId === registeredChild?.sessionId)
+        ) {
+          failedChildren.push(registeredChild);
+        }
+        const failedChildIds = new Set(failedChildren.map((state) => state.sessionId));
+        await this.retireProcesses(parent.sessionId, new Set([processInstanceId]));
+        await this.store.update(parent.sessionId, (latestParent) => ({
+          ...removeDirectChildren(latestParent, failedChildIds),
+          reservations: latestParent.reservations.filter(
+            (candidate) => candidate.reservationId !== registrationToken,
+          ),
+        }));
+        for (const child of failedChildren) {
+          await this.store.delete(child.sessionId);
+        }
+      };
+      const operation = currentOperation();
+      if (operation?.signal.aborted) {
+        try { await withCleanupOperation(cleanup); }
+        catch (cleanupError) { operation.reportCleanupError(cleanupError); }
+      } else await cleanup();
       throw error;
+    } finally {
+      if (privateEnvironmentDirectory) await rm(privateEnvironmentDirectory, { recursive: true, force: true });
     }
   }
 
@@ -936,7 +972,7 @@ export class SubagentManager {
       else await this.runtime.sendPrompt(locator, wireText, delivery);
       confirmation = await this.waitForPromptConfirmation({ child, locator, deliveryId, marker, after: baselineCursor });
     } catch (error) {
-      if (error instanceof DeliveryUnconfirmedError) throw error;
+      if (error instanceof DeliveryUnconfirmedError || error instanceof DeliveryRejectedError) throw error;
       throw new DeliveryUnconfirmedError(deliveryId, error);
     }
     return {
@@ -1017,7 +1053,7 @@ export class SubagentManager {
   }): Promise<PromptConfirmation> {
     const deadline = this.nowMs() + this.promptAckTimeoutMs;
     while (true) {
-      const [sessionResult, paneResult] = await Promise.allSettled([
+      const [sessionResult, paneResult, runtimeResult] = await Promise.allSettled([
         hasPersistedPrompt({
           sessionFile: options.child.runtime.sessionFile,
           agentId: options.child.sessionId,
@@ -1026,6 +1062,7 @@ export class SubagentManager {
           marker: options.marker,
         }),
         this.runtime.capturePane(options.locator),
+        this.store.loadRuntime(options.child.sessionId),
       ]);
       if (
         sessionResult.status === "fulfilled"
@@ -1040,6 +1077,16 @@ export class SubagentManager {
         if (paneResult.value.includes(`Follow-up: ${options.marker}`)) {
           return "follow_up_queue";
         }
+      }
+      const latest = runtimeResult.status === "fulfilled" ? runtimeResult.value : undefined;
+      const rejected = latest?.runtime.promptRejection;
+      if (latest?.epoch === options.child.epoch
+        && latest?.launch?.processInstanceId === options.child.launch?.processInstanceId
+        && latest?.parent?.sessionId === options.child.parent?.sessionId
+        && latest?.parent?.epoch === options.child.parent?.epoch
+        && latest?.parent?.registrationToken === options.child.parent?.registrationToken
+        && rejected?.deliveryId === options.deliveryId && Object.hasOwn(rejectionMessages, rejected.code)) {
+        throw new DeliveryRejectedError(options.deliveryId, rejected.code);
       }
       const remaining = deadline - this.nowMs();
       if (remaining <= 0) {
@@ -1355,18 +1402,29 @@ export class SubagentManager {
     parent: SessionState,
     reservation: SpawnReservation,
   ): Promise<SessionState> {
-    const deadline = Date.now() + this.registrationTimeoutMs;
+    const deadline = this.nowMs() + this.registrationTimeoutMs;
+    let registered: SessionState | undefined;
     while (true) {
       const matches = (await this.store.listOwned(parent)).filter((state) => (
         matchesReservation(state, parent, reservation)
       ));
-      if (matches.length > 0) {
-        return matches.sort((left, right) => (
-          right.runtime.updatedAt.localeCompare(left.runtime.updatedAt)
-        ))[0];
+      const child = matches.sort((left, right) => (
+        right.runtime.updatedAt.localeCompare(left.runtime.updatedAt)
+      ))[0];
+      if (registered && (child?.sessionId !== registered.sessionId || child.epoch !== registered.epoch)) {
+        throw new Error("Child session identity changed before prompt readiness");
       }
-      if (Date.now() >= deadline) {
-        throw new Error("Timed out waiting for child runtime registration");
+      if (child) {
+        registered = child;
+        const observed = await this.observeRuntime(child.runtime.tmux);
+        if (observed.process === "exited") throw new Error("Child runtime exited before prompt readiness");
+        if (observed.identity !== "matched" || observed.process !== "alive") {
+          throw new Error("Child runtime identity could not be confirmed before prompt readiness");
+        }
+        if (child.runtime.promptReady === true) return child;
+      }
+      if (this.nowMs() >= deadline) {
+        throw new Error(matches.length ? "Timed out waiting for child prompt readiness" : "Timed out waiting for child runtime registration");
       }
       await this.sleep(this.pollIntervalMs);
     }

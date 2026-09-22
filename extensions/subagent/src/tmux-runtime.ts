@@ -46,6 +46,7 @@ export interface TmuxLaunchOptions {
   command: string;
   args: string[];
   environment: Record<string, string>;
+  privateEnvironmentFile?: string;
 }
 
 const LOCATOR_FORMAT = "#{session_name}\t#{window_id}\t#{pane_id}\t#{pane_pid}";
@@ -92,6 +93,7 @@ export class TmuxRuntime {
       options.command,
       options.args,
       options.environment,
+      options.privateEnvironmentFile,
     );
     const newWindowArgs = [
       "new-window",
@@ -434,6 +436,7 @@ function buildShellCommand(
   command: string,
   args: string[],
   environment: Record<string, string>,
+  privateEnvironmentFile?: string,
 ): string {
   const assignments = Object.entries(environment)
     .sort(([left], [right]) => left.localeCompare(right))
@@ -450,6 +453,7 @@ function buildShellCommand(
     'TMUX="${TMUX-}"',
     'TMUX_PANE="${TMUX_PANE-}"',
     ...assignments,
+    ...(privateEnvironmentFile ? ["/bin/sh", "-c", quoteShellWord('. "$1" || exit; /bin/rm -f -- "$1" || exit; shift; exec "$@"'), "subagent-auth", quoteShellWord(privateEnvironmentFile)] : []),
     quoteShellWord(command),
     ...args.map(quoteShellWord),
   ].join(" ");

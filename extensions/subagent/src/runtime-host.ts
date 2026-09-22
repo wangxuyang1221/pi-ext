@@ -5,6 +5,7 @@ import {
 } from "./lifecycle.js";
 import { activateSession } from "./runtime-state.js";
 import { promptDeliveryId, type DeliveryReceipt } from "./delivery-receipt.js";
+import type { PromptRejectionCode } from "./prompt-auth.js";
 import {
   SessionStateStore,
   type LaunchMetadata,
@@ -30,6 +31,13 @@ export interface StartRuntimeSessionOptions {
   pid?: number;
   tmux?: TmuxLocator;
   configuration?: LaunchConfiguration;
+}
+
+interface PendingPrompt {
+  deliveryId: string;
+  sessionId: string;
+  epoch: string;
+  processInstanceId: string;
 }
 
 export class SessionRuntimeHost {
@@ -86,8 +94,9 @@ export class SessionRuntimeHost {
       ...(options.tmux ? { tmux: options.tmux } : {}),
       createEpoch: this.createEpoch,
     });
-    const { leafId: _oldLeafId, ...runtime } = state.runtime;
+    const { leafId: _oldLeafId, promptRejection: _oldRejection, ...runtime } = state.runtime;
     state = { ...state, runtime: { ...runtime,
+      ...(this.parent ? { promptReady: false } : {}),
       ...(options.leafId === null ? {} : { leafId: options.leafId }),
       leafPinned: true,
       leafPosition: options.leafPosition,
@@ -102,6 +111,16 @@ export class SessionRuntimeHost {
     await this.updateActive((state) => markAgentStarted(state, this.now()));
   }
 
+  async promptReady(processInstanceId: string, sessionId: string): Promise<void> {
+    await this.enqueue(async () => {
+      if (!this.parent || this.launch?.processInstanceId !== processInstanceId
+        || this.activeSessionId !== sessionId) return;
+      await this.store.update(sessionId, state => ({ ...state,
+        runtime: { ...state.runtime, promptReady: true, updatedAt: this.now() },
+      }));
+    });
+  }
+
   async consumePrompt(text: string): Promise<DeliveryReceipt | undefined> {
     const deliveryId = promptDeliveryId(text);
     if (!this.parent || !this.activeSessionId || !deliveryId) return undefined;
@@ -113,6 +132,31 @@ export class SessionRuntimeHost {
       generation: state.runtime.generation,
       deliveryId,
     };
+  }
+
+  async pendingPrompt(text: string, sessionId: string): Promise<PendingPrompt | undefined> {
+    const deliveryId = promptDeliveryId(text);
+    if (!deliveryId || !this.parent || !this.launch || this.activeSessionId !== sessionId) return;
+    const child = await this.store.loadRuntime(sessionId);
+    if (!child || child.runtime.busy || !["running", "settled"].includes(child.runtime.status)
+      || child.parent?.sessionId !== this.parent.sessionId || child.parent?.epoch !== this.parent.epoch
+      || child.parent?.registrationToken !== this.parent.registrationToken
+      || child.launch?.processInstanceId !== this.launch.processInstanceId
+      || !await this.store.matchesDelivery(child, deliveryId)) return;
+    return { deliveryId, sessionId, epoch: child.epoch, processInstanceId: this.launch.processInstanceId };
+  }
+
+  async rejectPrompt(pending: PendingPrompt, code: PromptRejectionCode): Promise<void> {
+    await this.enqueue(async () => {
+      if (this.activeSessionId !== pending.sessionId) return;
+      await this.store.update(pending.sessionId, child => {
+        if (child.epoch !== pending.epoch || child.launch?.processInstanceId !== pending.processInstanceId
+          || child.parent?.sessionId !== this.parent?.sessionId || child.parent?.epoch !== this.parent?.epoch
+          || child.parent?.registrationToken !== this.parent?.registrationToken
+          || child.runtime.busy || !["running", "settled"].includes(child.runtime.status)) return child;
+        return { ...child, runtime: { ...child.runtime, promptRejection: { deliveryId: pending.deliveryId, code } } };
+      });
+    });
   }
 
   async agentSettled(): Promise<void> {

@@ -262,7 +262,7 @@ test("keeps a registered spawn alive when list takes over before launch returns"
       const parent = JSON.parse(options.environment.PI_SUBAGENT_PARENT);
       const launch = JSON.parse(options.environment.PI_SUBAGENT_LAUNCH);
       await f.store.save({ ...f.child, parent, launch,
-        runtime: { ...f.child.runtime, processInstanceId: launch.processInstanceId } });
+        runtime: { ...f.child.runtime, processInstanceId: launch.processInstanceId, promptReady: true } });
       const listing = await f.manager.list("parent");
       assert.equal(listing.capacity.active, 1);
       assert.equal(listing.capacity.pending, 0);

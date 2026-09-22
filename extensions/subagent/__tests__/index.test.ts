@@ -307,6 +307,7 @@ test("keeps managed-child lifecycle hooks without registering orchestration tool
       tools.push(tool);
     }),
     appendEntry: vi.fn(),
+    registerCommand: vi.fn(),
     exec: vi.fn(),
   };
   const ctx = {
@@ -354,7 +355,16 @@ test("keeps managed-child lifecycle hooks without registering orchestration tool
     assert.equal(handlers.has("message_end"), true);
 
     await handlers.get("session_start")?.({ type: "session_start", reason: "startup" }, ctx);
+    assert.equal((await store.load("child-a"))?.runtime.promptReady, false);
+    const acknowledge = pi.registerCommand.mock.calls[0]![1].handler;
+    await acknowledge("wrong-process", ctx);
+    assert.equal((await store.load("child-a"))?.runtime.promptReady, false);
+    await acknowledge("process-a", { ...ctx, sessionManager: { ...ctx.sessionManager, getSessionId: () => "other-session" } });
+    assert.equal((await store.load("child-a"))?.runtime.promptReady, false);
     await handlers.get("resources_discover")?.({ type: "resources_discover", reason: "startup" }, ctx);
+    assert.equal((await store.load("child-a"))?.runtime.promptReady, false);
+    await acknowledge("process-a", ctx);
+    assert.equal((await store.load("child-a"))?.runtime.promptReady, true);
     assert.equal(ctx.ui.setEditorComponent.mock.calls.length, 0);
     await handlers.get("agent_start")?.({ type: "agent_start" }, ctx);
     await handlers.get("message_start")?.({ type: "message_start", message: {

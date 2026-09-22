@@ -1,17 +1,18 @@
 import { existsSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { createProvider, createAssistantMessageEventStream, type AssistantMessage, type Model, type Context, type SimpleStreamOptions } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import subagentExtension from "../../src/index.js";
 
-export default async function offlineChild(pi: ExtensionAPI): Promise<void> {
+export default async function offlineChild(pi: ExtensionAPI, installSubagent = true, nativeAuth = false): Promise<void> {
+  const { deepseekProvider } = await import(new URL("../../../../node_modules/@earendil-works/pi-ai/dist/providers/deepseek.js", import.meta.url).href);
   const extension = process.env.PI_SUBAGENT_FIXTURE_DIST === "1"
     ? (await import("../../dist/index.js")).default : subagentExtension;
   // This fixture has no network transport and cannot use stored credentials.
   globalThis.fetch = async () => { throw new Error("Network disabled in offline fixture"); };
-  const model: Model<any> = { id: "deterministic", name: "Offline fixture", provider: "subagent-fixture",
+  const model: Model<any> = { id: nativeAuth ? "deepseek-flash" : "deterministic", name: "Offline fixture", provider: nativeAuth ? "deepseek" : "subagent-fixture",
     api: "subagent-fixture", baseUrl: "https://offline.invalid", reasoning: false, input: ["text"],
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 128000, maxTokens: 4096 };
   const stream = (_model: Model<any>, context: Context, options?: SimpleStreamOptions) => {
@@ -25,6 +26,12 @@ export default async function offlineChild(pi: ExtensionAPI): Promise<void> {
         usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2,
           cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } } };
       try {
+        if (nativeAuth) {
+          const stored = JSON.parse(await readFile(join(process.env.PI_CODING_AGENT_DIR!, "auth.json"), "utf8").catch(() => "{}"));
+          const expectedKey = stored.deepseek?.key ?? process.env.DEEPSEEK_API_KEY;
+          if (!expectedKey || options?.apiKey !== expectedKey) throw new Error("Authentication precedence mismatch");
+          if (process.env.OPENAI_API_KEY) throw new Error("Unrelated credential inherited");
+        }
         result.push({ type: "start", partial: output });
         const hold = /hold:([a-z]+)/u.exec(text)?.[1];
         if (hold) {
@@ -45,7 +52,7 @@ export default async function offlineChild(pi: ExtensionAPI): Promise<void> {
     return result;
   };
   pi.registerProvider(createProvider({ id: model.provider, models: [model],
-    auth: { apiKey: { name: "Offline", resolve: async () => ({ auth: {} }) } },
+    auth: nativeAuth ? deepseekProvider().auth : { apiKey: { name: "Offline", resolve: async () => ({ auth: {} }) } },
     api: { stream, streamSimple: stream } }));
-  extension(pi);
+  if (installSubagent) extension(pi);
 }

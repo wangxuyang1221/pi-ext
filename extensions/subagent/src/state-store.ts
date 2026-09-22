@@ -3,6 +3,7 @@ import { open, readFile, mkdir, readdir, rename, rm, writeFile } from "node:fs/p
 import { dirname, join } from "node:path";
 import { acquireFileLock } from "./file-lock.js";
 import { currentOperation } from "./operation.js";
+import type { PromptRejectionCode } from "./prompt-auth.js";
 
 export const SESSION_STATE_SCHEMA_VERSION = 3;
 
@@ -71,6 +72,8 @@ export interface ChildLink {
 }
 
 export interface SessionRuntimeState {
+  promptReady?: boolean;
+  promptRejection?: { deliveryId: string; code: PromptRejectionCode };
   configuration?: LaunchConfiguration;
   status: RuntimeStatus;
   busy: boolean;
@@ -172,6 +175,22 @@ export class SessionStateStore {
       agentId: child.sessionId, sessionEpoch: child.epoch, processInstanceId: child.launch?.processInstanceId,
       deliveryId, delivery, preparedAt: new Date().toISOString(),
     }), { flag: "wx", mode: 0o600, signal: currentOperation()?.signal });
+  }
+
+  async matchesDelivery(child: SessionState, deliveryId: string): Promise<boolean> {
+    if (!child.parent || !child.launch) return false;
+    for (const id of [child.parent.sessionId, child.parent.epoch, deliveryId]) assertSessionId(id);
+    try {
+      const file = await open(join(this.root, "deliveries", child.parent.sessionId, child.parent.epoch, `${deliveryId}.json`), "r");
+      try {
+        if ((await file.stat()).size > 4096) return false;
+        const data = JSON.parse(await file.readFile("utf8"));
+        return data.schemaVersion === 1 && data.phase === "prepared" && data.deliveryId === deliveryId
+          && data.parentSessionId === child.parent.sessionId && data.namespaceEpoch === child.parent.epoch
+          && data.agentId === child.sessionId && data.sessionEpoch === child.epoch
+          && data.processInstanceId === child.launch.processInstanceId;
+      } finally { await file.close(); }
+    } catch { return false; }
   }
 
   statePath(sessionId: string): string {

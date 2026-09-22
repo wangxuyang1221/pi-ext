@@ -14,8 +14,9 @@ export interface FileLock {
 export async function acquireFileLock(path: string, signal?: AbortSignal, timeoutMs = 5_000): Promise<FileLock> {
   const deadline = performance.now() + timeoutMs;
   const token = randomUUID();
-  const owner = { pid: process.pid, host: hostname(), token };
-  const filename = `${token}.json`;
+  const owner: { pid: number; host: string; token: string } = { pid: process.pid, host: hostname(), token };
+  // Keep recovery identity available even if the owner dies during writeFile.
+  const filename = `${Buffer.from(owner.host).toString("base64url")}.${owner.pid}.${token}.json`;
   const ownerPath = join(path, filename);
   await mkdir(dirname(path), { recursive: true });
   while (true) {
@@ -34,8 +35,15 @@ export async function acquireFileLock(path: string, signal?: AbortSignal, timeou
     if (files.length === 1) {
       const stalePath = join(path, files[0]!);
       try {
-        const previous = JSON.parse(await readFile(stalePath, "utf8")) as typeof owner;
-        if (previous.host === hostname() && Number.isSafeInteger(previous.pid) && previous.pid > 0) {
+        const contents = await readFile(stalePath, "utf8");
+        let previous: typeof owner | undefined;
+        try { previous = JSON.parse(contents) as typeof owner; }
+        catch (error) {
+          if (!(error instanceof SyntaxError)) throw error;
+          const identity = /^([A-Za-z0-9_-]+)\.([0-9]+)\.([a-f0-9-]{36})\.json$/u.exec(files[0]!);
+          if (identity) previous = { host: Buffer.from(identity[1]!, "base64url").toString("utf8"), pid: Number(identity[2]), token: identity[3]! };
+        }
+        if (previous?.host === hostname() && Number.isSafeInteger(previous.pid) && previous.pid > 0) {
           let absent = false;
           try { process.kill(previous.pid, 0); }
           catch (error) { absent = (error as NodeJS.ErrnoException).code === "ESRCH"; }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { test } from "vitest";
@@ -12,9 +12,11 @@ const quote = (value: string) => `'${value.replaceAll("'", `'"'"'`)}'`;
 const enabled = process.env.PI_SUBAGENT_ISOLATED_INTEGRATION === "1";
 const fish = [process.env.PI_SUBAGENT_TEST_FISH, "/opt/homebrew/bin/fish", "/usr/bin/fish"].find((path): path is string => !!path && existsSync(path));
 
-for (const mode of ["immediate", "delayed", "fish"] as const) {
+for (const mode of ["immediate", "delayed", "fish", "full-package-fast", "full-package-delayed", "auth-env", "auth-stored", "auth-both", "auth-missing"] as const) {
 test.skipIf(!enabled || (mode === "fish" && !fish))(`production parent entry overrides a stale server with ${mode} startup`, async () => {
   const delayIdentity = mode === "delayed";
+  const nativeAuth = mode.startsWith("auth-");
+  const fullPackage = mode.startsWith("full-package") || nativeAuth;
   const root = await mkdtemp(join(process.cwd(), ".sa-production-"));
   const home = join(root, "home");
   const agentDir = join(home, "agent");
@@ -27,7 +29,12 @@ test.skipIf(!enabled || (mode === "fish" && !fish))(`production parent entry ove
   const tools = new Map<string, any>();
   try {
     await mkdir(agentDir, { recursive: true });
-    await writeFile(join(agentDir, "settings.json"), JSON.stringify({ retry: { enabled: false }, compaction: { enabled: false } }));
+    if (mode === "auth-stored" || mode === "auth-both") {
+      await writeFile(join(agentDir, "auth.json"), JSON.stringify({ deepseek: { type: "api_key", key: "fixture-stored-secret" } }), { mode: 0o600 });
+    }
+    await writeFile(join(agentDir, "settings.json"), JSON.stringify({ retry: { enabled: false }, compaction: { enabled: false },
+      ...(fullPackage ? { packages: [resolve(".")] } : {}),
+    }));
     const tmux = (await executeCommand("/usr/bin/which", ["tmux"])).stdout.trim();
     const handshakeStarted = join(root, "handshake-started");
     const identityBarrier = delayIdentity ? `
@@ -51,9 +58,9 @@ if [ "$1" = display-message ]; then
   esac
 fi
 ` : "";
-    await writeFile(wrapper, `#!/bin/sh\nexport LANG=en_US.UTF-8\n${identityBarrier}\nexec ${quote(tmux)} -S ${quote(socket)} -f /dev/null "$@"\n`, { mode: 0o700 });
+    await writeFile(wrapper, `#!/bin/sh\nexport LANG=en_US.UTF-8\n${identityBarrier}\nif [ "$1" = kill-window ]; then ${quote(tmux)} -S ${quote(socket)} capture-pane -p -S -100 -t "$3" > ${quote(join(root, "last-pane"))}; fi\nexec ${quote(tmux)} -S ${quote(socket)} -f /dev/null "$@"\n`, { mode: 0o700 });
     const cli = process.env.PI_SUBAGENT_TEST_CLI ?? resolve("node_modules/@earendil-works/pi-coding-agent/dist/cli.js");
-    await writeFile(piPath, `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(cli)} --no-extensions --no-context-files --no-skills --no-prompt-templates --no-themes --no-builtin-tools --no-approve "$@"\n`, { mode: 0o700 });
+    await writeFile(piPath, `#!/bin/sh\nexport PI_OFFLINE=1\nexec ${quote(process.execPath)} ${quote(cli)} ${fullPackage ? "" : "--no-extensions"} --no-context-files --no-skills --no-prompt-templates --no-themes --no-builtin-tools --no-approve "$@"\n`, { mode: 0o700 });
     const started = await executeCommand("/usr/bin/env", [`HOME=${home}`, `TMPDIR=${root}`, `XDG_CONFIG_HOME=${home}`, `XDG_DATA_HOME=${home}`, `XDG_CACHE_HOME=${home}`, "PI_CODING_AGENT_DIR=/old/server", "PI_SUBAGENT_TMUX_PATH=/old/tmux", "SUBAGENT_STALE_SENTINEL=must-not-inherit",
       wrapper, "new-session", "-d", "-s", "keeper", "-P", "-F", "#{pid}\t#{pane_pid}", "sleep 60"]);
     assert.equal(started.code, 0, started.stderr);
@@ -64,16 +71,28 @@ fi
 import {writeFile} from 'node:fs/promises';
 export default async function(pi){
  process.env.PI_SUBAGENT_FIXTURE_DIST=${JSON.stringify(process.env.PI_SUBAGENT_FIXTURE_DIST ?? "0")};
- await offlineChild(pi);
+ await offlineChild(pi, ${!fullPackage}, ${nativeAuth});
+ ${mode === "full-package-delayed" ? "pi.on('resources_discover', async () => { await new Promise(resolve => setTimeout(resolve, 5000)); });" : ""}
  pi.on('session_start',async()=>{await writeFile(${JSON.stringify(join(root, "effective.json"))},JSON.stringify({agentDir:process.env.PI_CODING_AGENT_DIR,tmuxPath:process.env.PI_SUBAGENT_TMUX_PATH,piPath:process.env.PI_SUBAGENT_PI_PATH,pane:process.env.TMUX_PANE,stale:process.env.SUBAGENT_STALE_SENTINEL}));});
 }`);
     const pi = { on: (name: string, handler: any) => handlers.set(name, handler), registerTool: (tool: any) => tools.set(tool.name, tool), events: { emit() {} } };
     const extension = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/index.js")).default : subagentExtension;
-    extension(pi as never, { env: { PATH: process.env.PATH, HOME: home, SHELL: "/bin/sh", LANG: "en_US.UTF-8", TERM: "xterm-256color", TMPDIR: root, PI_CODING_AGENT_DIR: agentDir, TMUX_PANE: "%parent" },
+    extension(pi as never, { env: { PATH: process.env.PATH, HOME: home, SHELL: "/bin/sh", LANG: "en_US.UTF-8", TERM: "xterm-256color", TMPDIR: root, PI_CODING_AGENT_DIR: agentDir, TMUX_PANE: "%parent",
+      ...(mode === "auth-env" || mode === "auth-both" ? { DEEPSEEK_API_KEY: "fixture-auth-secret", OPENAI_API_KEY: "unrelated-secret" } : {}),
+    },
       stateRoot, nativeSessionRoot: join(root, "native"), tmuxPath: wrapper, tmuxSessionName: "keeper", piPath, extensionPath: fixture });
     const ctx = { cwd: root, sessionManager: { getSessionId: () => "parent", getSessionFile: () => join(root, "parent.jsonl"), getLeafId: () => null, getEntries: () => [] } };
     await handlers.get("session_start")!({}, ctx);
-    const spawned = await tools.get("subagent_spawn").execute("spawn", { task: "fast work", model: "subagent-fixture/deterministic" }, undefined, undefined, ctx);
+    const spawn = () => tools.get("subagent_spawn").execute("spawn", { task: "fast work", model: nativeAuth ? "deepseek/deepseek-flash" : "subagent-fixture/deterministic" }, undefined, undefined, ctx);
+    if (mode === "auth-missing") {
+      await assert.rejects(spawn(), /delivery_rejected: Child authentication unavailable/u);
+      const parent = await new SessionStateStore(stateRoot).load("parent");
+      assert.deepEqual(parent?.children, []);
+      assert.deepEqual(parent?.reservations, []);
+      await handlers.get("session_shutdown")!({});
+      return;
+    }
+    const spawned = await spawn();
     const { agent } = JSON.parse(spawned.content[0].text);
     pids.add(agent.tmux.panePid);
     const effective = JSON.parse(await readFile(join(root, "effective.json"), "utf8"));
@@ -86,6 +105,23 @@ export default async function(pi){
     if (mode === "fish") assert.equal((await executeCommand(wrapper, ["show-options", "-gv", "default-shell"])).stdout.trim(), fish);
     const state = await new SessionStateStore(stateRoot).load(agent.agentId);
     assert.equal(state?.runtime.configuration?.agentDir, agentDir);
+    assert.equal(state?.runtime.promptReady, true);
+    let session = await readFile(agent.sessionFile, "utf8");
+    if (nativeAuth) {
+      const deadline = performance.now() + 3000;
+      while (!session.includes('"role":"assistant"') && performance.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 20));
+        session = await readFile(agent.sessionFile, "utf8");
+      }
+      const assistant = session.trim().split("\n").map(line => JSON.parse(line)).find(entry => entry.message?.role === "assistant");
+      assert.equal(assistant?.message.stopReason, "stop");
+      const command = await executeCommand("/bin/ps", ["-p", String(agent.tmux.panePid), "-o", "command="]);
+      assert.doesNotMatch(command.stdout + session + JSON.stringify(state), /fixture-auth-secret|fixture-stored-secret|unrelated-secret/u);
+      assert.equal((await readdir(state!.launch!.sessionDir)).some(name => name.startsWith("authentication") || name.startsWith(".auth-")), false);
+    }
+    assert.match(session, /subagent_delivery/u);
+    assert.match(session, /fast work/u);
+    assert.doesNotMatch(session, /subagent-runtime-ready/u);
     if (delayIdentity) assert.equal(await readFile(handshakeStarted, "utf8"), "");
     await tools.get("subagent_close").execute("close", { target: "all" }, undefined, undefined, ctx);
     await handlers.get("session_shutdown")!({});

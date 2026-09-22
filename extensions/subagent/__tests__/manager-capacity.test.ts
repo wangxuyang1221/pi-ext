@@ -71,6 +71,7 @@ test("waits for in-flight spawn before close-all returns", async () => {
           processInstanceId: launch.processInstanceId,
           tmux: baseLocator,
         }));
+        await store.update("child-a", child => ({ ...child, runtime: { ...child.runtime, promptReady: true } }));
         return baseLocator;
       },
       async sendPrompt(_locator, text) {

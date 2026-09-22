@@ -13,6 +13,7 @@ import {
   PI_SUBAGENT_MAX_ACTIVE,
   PI_SUBAGENT_PARENT,
   PI_SUBAGENT_STATE_ROOT,
+  PROMPT_READY_COMMAND,
   SubagentManager,
   type ManagedTmuxRuntime,
 } from "./manager.js";
@@ -27,6 +28,8 @@ import {
 } from "./state-store.js";
 import { TmuxRuntime } from "./tmux-runtime.js";
 import { executeCommand } from "./command-executor.js";
+import { providerEnvironment } from "./auth-environment.js";
+import { installAuthenticationPreflight } from "./prompt-auth.js";
 import { registerSubagentTools } from "./tools.js";
 import { createSubagentQuitSession, type SubagentQuitSession } from "./quit.js";
 import { assignUsage, GOAL_TASK_EVENT, registerChildUsage, usageDirectory } from "./usage.js";
@@ -103,6 +106,7 @@ export default function subagentExtension(
       [PI_SUBAGENT_TMUX_PATH]: tmuxPath,
       [PI_SUBAGENT_PI_PATH]: piPath,
     },
+    authenticationEnvironment: model => providerEnvironment(model, env),
     beforePrompt: async (parentSessionId, child) => {
       const processId = child.launch?.processInstanceId;
       if (!processId) throw new Error("Managed child has no process identity.");
@@ -122,7 +126,16 @@ export default function subagentExtension(
   if (!parent) {
     registerSubagentTools(pi, manager);
   } else if (launch) {
+    installAuthenticationPreflight(pi, host);
     registerChildUsage(pi, usageDirectory(stateRoot, launch.processInstanceId));
+    // Pi runs the CLI's initial command after interactive initialization finishes.
+    // A session_start registration alone does not mean its input loop is ready.
+    pi.registerCommand(PROMPT_READY_COMMAND, {
+      description: "Acknowledge managed child input readiness",
+      handler: async (args, ctx) => {
+        await host.promptReady(args.trim(), ctx.sessionManager.getSessionId());
+      },
+    });
   }
 
   let rootSessionId: string | undefined;
