@@ -19,8 +19,8 @@ const plans = new Map();
 const waiting = new Map();
 let serial = 0;
 let active = false;
-let style = STYLES.find(value => process.argv.includes(`--${value}`)) ?? "neutral";
-const instructions = "Subagent UI comparison\n/neutral: option 1, body text · /soft: option 2, muted green\n/before or /after: previous versions\n/demo all|spawn|prompt|list|read|wait|close success|error|hold [before|after|neutral|soft]\n/demo wait timeout · /demo wait interrupted · /demo spawn success after long\n/finish success|error|timeout|interrupted\nCtrl+O: expand/collapse · /quit: exit";
+let style = STYLES.find(value => process.argv.includes(`--${value}`)) ?? "quiet";
+const instructions = "Subagent UI comparison\n/quiet: subdued success metadata\n/neutral: option 1, body text · /soft: option 2, muted green\n/before or /after: previous versions\n/demo all|spawn|prompt|list|read|wait|close success|error|hold [before|after|neutral|soft|quiet]\n/demo wait timeout · /demo wait interrupted · /demo spawn success after long\n/finish success|error|timeout|interrupted\nCtrl+O: expand/collapse · /quit: exit";
 function release(outcome = "interrupted") { for (const finish of [...waiting.values()]) finish(outcome); }
 const extension = pi => {
   const execute = async (id, args, signal) => {

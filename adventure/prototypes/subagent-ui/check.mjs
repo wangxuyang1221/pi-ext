@@ -24,7 +24,7 @@ try {
   return [...call.render(width),...body.render(width)];
  };
  let count=0;
- for(const style of ["after","neutral","soft"]) for(const kind of KINDS) for(const outcome of ['success','error','hold',...(kind==='wait'?['timeout','interrupted']:[])]) for(const expanded of [false,true]) {
+ for(const style of ["after","neutral","soft","quiet"]) for(const kind of KINDS) for(const outcome of ['success','error','hold',...(kind==='wait'?['timeout','interrupted']:[])]) for(const expanded of [false,true]) {
   const original=render(before,kind,outcome,expanded,400);
   const candidate=render(after,kind,outcome,expanded,400,style);
   const content=lines=>lines.map(line=>stripVTControlCharacters(line).replace(/^[•⏺] /,'').replace(/^  [│└] |^    /,'')).join('\n');

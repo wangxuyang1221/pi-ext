@@ -15,8 +15,9 @@ cd /Users/wangxuyang/Code/t3code/pi-ext/.scratch/u
 pnpm exec node adventure/prototypes/subagent-ui/demo.mjs
 ```
 
-启动默认展示选项 1：成功状态文字使用正文色，并保留真实 codex-ui Read、Bash 作为参照。
+启动默认展示最新暗灰方案：成功状态文字使用 dim，与后续元信息同色，并保留真实 codex-ui Read、Bash 作为参照。
 
+- `/quiet`：最新方案，成功状态文字使用 dim #77777d，与后续元信息同色。
 - `/neutral`：选项 1，成功状态文字使用正文色 #d6d6d6。
 - `/soft`：选项 2，成功状态文字使用灰绿 #8fb89b。
 - `/before`：追加原版六类消息。
@@ -28,7 +29,7 @@ pnpm exec node adventure/prototypes/subagent-ui/demo.mjs
 - `/demo spawn success after long`：观察长名称。缩小窗口到 40 或 80 列检查截断。
 - `/quit`：退出并清理隔离运行目录。
 
-`--neutral` 和 `--soft` 可指定两个新方案，`--after` 可查看此前的亮绿色，`--before` 可从原版开始，`--expanded` 可从展开状态开始，`--fullscreen` 使用 Pi 全屏模式。每次调用的样式固定，切换不会改写上方已有消息。`/before` 和 `/after` 只是追加显示对照，不执行真实子代理。
+`--quiet` 可指定最新暗灰方案；`--neutral` 和 `--soft` 可指定之前的两个方案，`--after` 可查看此前的亮绿色，`--before` 可从原版开始，`--expanded` 可从展开状态开始，`--fullscreen` 使用 Pi 全屏模式。每次调用的样式固定，切换不会改写上方已有消息。`/before` 和 `/after` 只是追加显示对照，不执行真实子代理。
 
 ## Landing Map
 
@@ -50,7 +51,7 @@ pnpm exec node adventure/prototypes/subagent-ui/demo.mjs
 
 用户认为 Settled 的绿色过亮，已要求把两个替代方案都做出来。当前仅限 subagent 结果区的成功状态文字：Settled、Process stopped、列表中 settled 的数量/状态等。选项 1 使用主题 text，选项 2 在原型中使用固定灰绿 #8fb89b。两者的标题圆点、warning、error、正文、信息顺序和布局相同。没有修改全局主题，因此周围 Read/Bash 与 diff 颜色保持原样。
 
-styles.mjs 通过结果区专用 theme 代理实现；灰绿是原型固定色，尚不是正式主题 API 设计。两种方案均待用户选择。
+styles.mjs 通过结果区专用 theme 代理实现；灰绿是原型固定色，尚不是正式主题 API 设计。用户已否定正文色与灰绿两版。最新 quiet 方案经用户要求制作，将同一范围的成功文字映射到主题 dim，使 Settled 与其后整行元信息一致；标题圆点、警告/错误、任务与回复正文保持原样。最新方案尚待用户审阅。
 
 ## Real and fixture
 
@@ -72,12 +73,14 @@ approximation：原型展示的是设计状态样例，不能验证真实任务�
 pnpm exec node adventure/prototypes/subagent-ui/check.mjs
 conda run -n codex-py312 python adventure/prototypes/subagent-ui/smoke.py
 conda run -n codex-py312 python adventure/prototypes/subagent-ui/smoke.py --before
+conda run -n codex-py312 python adventure/prototypes/subagent-ui/smoke.py --quiet
+conda run -n codex-py312 python adventure/prototypes/subagent-ui/smoke.py --quiet --fullscreen
 conda run -n codex-py312 python adventure/prototypes/subagent-ui/smoke.py --neutral
 conda run -n codex-py312 python adventure/prototypes/subagent-ui/smoke.py --soft
 conda run -n codex-py312 python adventure/prototypes/subagent-ui/smoke.py --soft --fullscreen
 ```
 
-check.mjs 对照 120 组渲染状态，验证前后文字信息不变，并检查 0、1、2、12、40、80、120 列不越界。PTY smoke 覆盖六类消息、成功/进行中/失败、wait 超时/中断、展开折叠、长名称、80/40/120 列切换、退出与网络零调用断言。
+check.mjs 对照 160 组渲染状态，验证前后文字信息不变，并检查 0、1、2、12、40、80、120 列不越界。PTY smoke 覆盖六类消息、成功/进行中/失败、wait 超时/中断、展开折叠、长名称、80/40/120 列切换、退出与网络零调用断言。
 
 验证结果与截图见 [review.md](review.md)。视觉是否达到目标尚待用户审阅，技术验证通过不代替用户确认。
 
