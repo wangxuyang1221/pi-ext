@@ -10,50 +10,46 @@
 
 ## Current Goal or Problem
 
-统一 subagent 与 codex-ui 的 UI，并新增 spawn 随机漫威英雄名。Map：https://github.com/wangxuyang1221/pi-ext/issues/24。完整有效规格只在 [Spec #25](https://github.com/wangxuyang1221/pi-ext/issues/25) 维护。
+统一 subagent 与 codex-ui 的 UI，并新增 spawn 随机漫威英雄名。Map：https://github.com/wangxuyang1221/pi-ext/issues/24。完整规格只在 [Spec #25](https://github.com/wangxuyang1221/pi-ext/issues/25) 维护。
 
-全部 Planning 已通关。用户已确认三个实施切片，要求 worker 使用 gpt-6-astra、medium；#29、#30 已验收通过，下一关为 #31。
+全部 Planning 和 Implementation 已通关，工程验收通过，等待用户确认交付。Map 与 Spec 保持 open，此时停止推进，无需运行等待进程。
 
 ## Evolution
 
-用户确认六类工具统一到 /after，并指定成功文字 #46E87C；标题圆点仍使用主题 success。原型已收敛，不能恢复弃用颜色或方案。
+用户确认六类工具统一到 /after，指定成功文字 #46E87C，标题圆点沿用主题 success。随后确认每次 spawn 随机漫威英雄名，同父会话不重名、关闭复用、耗尽编号，调用方不决定 name。
 
-随后确认每次 spawn 随机漫威英雄名，调用方不决定 name。同一父会话避免重名、关闭复用、耗尽加编号。规划通关后暂停，现已恢复并审核实施切片。
+用户审核了三片：恢复完整检查、正式视觉集成、英雄命名与整体验收。最初选择 sol/high，随后明确改为 gpt-6-astra、medium。首个 sol worker 未产生改动即停止，三关由独立 astra/medium workers 依次完成。
 
 ## Agreed Decisions and Constraints
 
-用户批准本冒险 worktree、Issues、提交与推送，不创建 PR、不合并、不部署。保留主工作区 adventure/ 原有未提交删除，不向主工作区回写。
+用户批准本冒险 worktree、Issues、提交与推送，不创建 PR、不合并、不部署。保留主工作区 adventure/ 原有未提交删除，不回写主工作区。用户自己打开的原型进程不由本任务关闭。
 
-使用简体中文沟通，text artifacts 遵循 docs/agents/repository-language-policy.md。禁止 skill-creator。
+简体中文沟通，text artifacts 遵循 docs/agents/repository-language-policy.md。禁止 skill-creator。
 
-主代理负责协调与验收，Implementation 依次由独立 worker 执行，fork_turns none，不继承整段对话，不再委派。用户最新改为 gpt-6-astra、medium，替代此前 sol/high。首个 sol worker 已停止，未修改文件、Issue 或启动进程。交接必须提供所需 skill 的绝对路径并要求行动前完整读取。
-
-每关执行计划由 worker 使用 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md 写入 Issue 正文；详细验证证据在 adventure/evidence/。通过后协调者追加 Acceptance、关闭关卡、更新存档并提交推送，再继续下一关。
+主代理负责协调与验收。若后续需返工，使用独立 worker、gpt-6-astra/medium、fork_turns none，不再委派；交接提供所需 skill 绝对路径并要求完整读取。执行计划用 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md 写入相应 Issue，详细证据保存在 adventure/evidence/。
 
 ## Established Facts and Required Context
 
-工作目录 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/u，分支 adventure/subagent-ui-consistency。审核时本地与远端为 47d0c616da63c7405ec0d0adf5c9914000dc5084，worktree 干净，产品源码仍为 262824026e192e8c421ce1e1796db7b269723038。恢复时重新核对状态与正在运行的 worker。
+工作目录 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/u，分支 adventure/subagent-ui-consistency。产品最新提交 9dd30e42694a6e8d81c692c4ca39db23c5c5da78，已推送。之后的存档提交只更新本进度及最终验收记录。恢复时核对 git status 和正在运行的 worker，避免重复施工。
 
-- [#29](https://github.com/wangxuyang1221/pi-ext/issues/29)：已通关。提交 11631ee 清理失效 MCP 原型和 13 份已删文档引用，完整检查通过，证据见 [implementation-29.md](evidence/implementation-29.md)。
-- [#30](https://github.com/wangxuyang1221/pi-ext/issues/30)：已通关。提交 369d744 完成六类正式 UI，证据与截图见 [implementation-30.md](evidence/implementation-30.md)。2380 tests passed、11 原有 skipped；40 组信息对照、7 个宽度边界、普通/全屏各 15 个宿主场景通过。
-- [#31](https://github.com/wangxuyang1221/pi-ext/issues/31)：随机英雄名与整体验收，依赖 #29、#30；承担并发、故障清理和旧状态兼容验证。
+- [#29](https://github.com/wangxuyang1221/pi-ext/issues/29) 已关闭。11631ee 清理失效 MCP 原型 suite、scripts 及 13 份已删除报告引用，恢复完整检查。证据：[implementation-29.md](evidence/implementation-29.md)。
+- [#30](https://github.com/wangxuyang1221/pi-ext/issues/30) 已关闭。369d744 实现六类正式 UI。40 组信息对照、7 个宽度边界、普通/全屏各 15 场景通过，包含真实 Pi 历史重开、resize 刷新与三主题。证据与截图：[implementation-30.md](evidence/implementation-30.md)。
+- [#31](https://github.com/wangxuyang1221/pi-ext/issues/31) 已关闭。9dd30e4 实现锁内英雄名分配、持久化、安全释放、编号与旧状态兼容；read 复用已有状态，公开 payload 不变；公开 spawn.name 移除，残留输入不影响名称。证据：[implementation-31.md](evidence/implementation-31.md)。
 
-完整已审核 slice 保存在各 Issue 的 Slice 段。Spec 的 Implementation 段记录验收归属。
+[整体验收矩阵](evidence/subagent-ui-final-acceptance.md) 对应全部 Spec 验收项。最终 pnpm run check 通过：161 files passed、3 skipped；2393 tests passed、11 原有 skipped；类型检查、构建及标准发布包校验通过。
 
-[原型入口](prototypes/subagent-ui/README.md) 与 [验收记录](prototypes/subagent-ui/review.md) 保存已确认 /after、预览和验证边界。40 组文本对照、7 个宽度边界及普通/全屏 PTY 原型验证通过，不能代替正式 renderer 集成验收。
+另行启用最终构建的真实 Pi/隔离 tmux immediate 与 full-package-fast 两个生产场景，六工具、原生 session_info、tmux window、launch、ChildLink 名称一致。36 次并发注册得到 32 个裸名和 4 个唯一编号，关闭/故障清理、跨父会话、重载、旧名称/旧 reservation 均通过。补充启动前预留身份校验，阻止预留被回收后迟到启动。受影响视觉复验为 40 组信息、7 宽度、普通正式宿主 15 场景，其他已通过证据复用 #30。
 
-[命名调查](evidence/hero-name-baseline.md) 记录显示名链路与锁：在父状态锁中预留名字，覆盖已登记直接子代理和未安全释放的 reservation；沿用 launch.displayName、ChildLink.name、Pi --name、tmux。旧名称保留并占用，任务完成但未关闭仍占用；不能提前释放可能仍运行的进程名称。32 个英文称号来源已核验。
-
-#29 已修复基准缺口，pnpm run check 通过：2376 项通过、11 项原有跳过，类型检查、构建和标准发布校验均通过。已删报告实际共 13 份，删除历史分别为 96c9f65 与 341c22b，未恢复旧资料或删除生产测试。独立历史 package-artifact.mjs 仍有旧 extension 数及 license 断言，不在标准 check 中，本次未宣称其通过。此前长路径 tmux 失败在当前短 worktree 路径已解决。
+所有任务启动进程及隔离 socket 已清理，无持续服务或监听端口。未操作用户原型。主工作区原有删除保留。
 
 ## Current Assumptions
 
-没有阻碍规格或切片成立的未决产品问题。英雄命名尚待实施验证。生产视觉已通过真实 Pi 的历史重开、resize 刷新及三种主题验证，execute 为 fixture；精确颜色仅在 truecolor 环境验证，不能代替命名生命周期验收。
+无交付阻塞。已验证真实离线 Pi/tmux，但未验证在线 provider、外部认证或非 truecolor 终端。11 个默认 skip 未冒充已执行，本次另启用其中两个真实生产场景。历史独立 package-artifact.mjs 的扩展数量/license 旧断言不在标准 check 中，属于范围外已知问题，不宣称通过。
 
 ## Continuation Point
 
-实施切片已获用户确认，不再询问。#29、#30 已提交推送并关闭，完成本关自动保存后派发 #31，负责随机英雄命名与整体验收。每个 worker 接手时核对最新 HEAD 并更新 Issue Workspace。
+等待用户确认交付，停止自动推进。用户确认后更新 Map、Spec 和本存档并关闭 Map/Spec；不要把 Implementation 工程验收当成用户最终确认。用户提出修改时处理受影响关卡，规格变化回到对应 Planning，修订切片仍须审核。
 
-最后一关 worker 对照 Spec 完成整体验收、延期验证、材料与临时资源清理。协调者核验后保存并提交用户确认，Map/Spec 保持 open，等待用户确认交付时停止。
+用户可以从 [正式视觉入口](prototypes/subagent-ui/README.md) 查看操作方式，使用 pnpm exec node adventure/prototypes/subagent-ui/demo.mjs --production 查看当前构建的六类 UI，execute 为 fixture。代码和命名真实性以 #31 生产入口证据为准。
 
-只清理本任务启动的进程、隔离目录和端口；用户自己打开的原型进程保留。当前协调者未启动持续服务。
+远端冒险分支保留，删除须用户另行决定。没有 PR、合并或部署待自动执行。

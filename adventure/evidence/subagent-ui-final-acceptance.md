@@ -2,7 +2,7 @@
 
 ## Result
 
-对照 [Spec #25](https://github.com/wangxuyang1221/pi-ext/issues/25)，#29、#30 已通关，本次 #31 的工程验证通过，交由协调者最终验收。未关闭 #31、未写 Issue Acceptance，也未更新 Map、Spec 或 progress.md。
+对照 [Spec #25](https://github.com/wangxuyang1221/pi-ext/issues/25)，协调者已核对代码、测试、真实宿主证据和本矩阵，#29、#30、#31 全部工程验收通过。各关卡 Acceptance 保存验收记录；Map 与 Spec 保持 open，等待用户确认交付。
 
 ## Acceptance matrix
 
