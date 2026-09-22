@@ -1,6 +1,6 @@
 # Handoff
 
-> 从 Continuation Point 继续本次冒险。当前文件已替换继承的旧冒险存档；其他既有 adventure/ 材料属于历史任务，除非明确引用，不作为本次决策依据。
+> 继续当前冒险。只从本存档及明确引用的材料恢复；其他继承的 adventure/ 文件属于历史任务。
 
 ## Handoff Position
 
@@ -10,37 +10,48 @@
 
 ## Current Goal or Problem
 
-统一 subagent 与 codex-ui 的视觉。Map：https://github.com/wangxuyang1221/pi-ext/issues/24。完整有效要求只在 [Spec](https://github.com/wangxuyang1221/pi-ext/issues/25) 维护。
+统一 subagent 与 codex-ui 的 UI，并新增 spawn 随机漫威英雄名。Map 为 https://github.com/wangxuyang1221/pi-ext/issues/24，完整有效要求只在 [Spec #25](https://github.com/wangxuyang1221/pi-ext/issues/25) 维护。
+
+视觉方向 #26、视觉规则 #27 已通关。[英雄名 #28](https://github.com/wangxuyang1221/pi-ext/issues/28) 也已通关。用户要求完成本关后保存并暂停。
 
 ## Evolution
 
-用户提出 UI 不统一且尚无设计想法，显式调用 adventure。用户回复“同意”批准建图、独立 worktree 和冒险分支推送。随后两次回复“1”，分别选择先统一视觉并保留信息结构、覆盖全部六类主对话工具消息。方向关卡 #26 已通关，当前进入 #27。
+用户先选择视觉统一、保留信息结构，并覆盖全部六类消息。原型经历颜色比较后，用户明确要求收敛 /after。最后纠正颜色为 #46E87C，取代此前 #40D672；不要再询问颜色或恢复弃用方案。
+
+用户同时扩大目标：每次 spawn 随机英雄显示名。已确认调用方不再决定 name，同一父会话下避免重名，关闭后复用，名单耗尽时加编号。仍用 agentId 操作。名字池已选电影和漫画中的常见英雄。
 
 ## Agreed Decisions and Constraints
 
-- 沿用 Spec 中已确认的视觉统一方向与六类工具范围，不能重新询问已经作出的选择。
-- 用户已选择制作真实终端对照原型；具体视觉方案与实施切片尚未确认。
-- 使用本 worktree 与分支提交推送本次材料和代码，不创建 PR、不合并、不部署。
-- 主工作区有大量 adventure/ 未提交删除，必须保留，不能从 worktree 回写恢复。
-- 简体中文沟通；编辑 artifacts 前读取 docs/agents/repository-language-policy.md。禁止 skill-creator。遵循主仓库 AGENTS.md 与用户的全局约束。
-- 当前规划由主代理独立推进；进入已审核的 Implementation 后按 adventure 指派 worker，worker 不再委派。fork_turns 为 none，代码实施使用 worker 类型，并提供所需 skill 的绝对路径及要求完整读取。
+视觉最终规则见 Spec Tool presentation；英雄名已确认规则见 Spec Hero names。原型已移除 before/neutral/soft/quiet 的 UI 入口与图片，只保留已确认 /after；原版 renderer 仅在技术对照中使用。
+
+用户已批准同一冒险分支和 worktree 的创建、GitHub Issues、提交与推送。不得创建 PR、合并或部署。原型确认不代表实施切片已获批准。
+
+使用简体中文沟通，text artifacts 遵循 docs/agents/repository-language-policy.md。禁止 skill-creator。保留主工作区 adventure/ 下的未提交删除，不能从此 worktree 回写恢复。
+
+规划由主代理独立完成。进入已审核 Implementation 后按 adventure 技能委派 worker，fork_turns none、worker 类型、提供所需技能绝对路径并要求完整读取，worker 不再委派。
 
 ## Established Facts and Required Context
 
-工作目录：/Users/wangxuyang/Code/t3code/pi-ext/.scratch/u。分支：adventure/subagent-ui-consistency。基准：262824026e192e8c421ce1e1796db7b269723038。
+工作目录 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/u，分支 adventure/subagent-ui-consistency。产品源码基准 262824026e192e8c421ce1e1796db7b269723038，当前未改生产源码。继续前确认 worktree 和 git status。
 
-[源码调查](evidence/ui-baseline.md) 保存现有差异及证据边界。subagent 使用灰色 •；codex-ui 使用按工具状态着色的 ⏺。Read 与 Bash 布局不同，共用状态标记。现有折叠/展开已经存在。工具调用成功与子代理任务完成不能混同。
+[原型入口](prototypes/subagent-ui/README.md) 与 [验收记录](prototypes/subagent-ui/review.md) 保存可运行原型、预览及验证限制。收敛后 40 组文本对照、7 个宽度边界及普通/全屏 PTY 验证通过。成功文字 #46E87C，标题圆点沿用主题 success。
 
-Map 与 Spec、#26、#27 已使用 GitHub 原生子 Issue 关系。冒险分支已推送。当前已交付可运行原型，未改生产源码。原型的渲染对照与真实 PTY 检查通过。缩短 worktree 路径后，原先四项 tmux 测试通过。pnpm run check 仍因缺失历史 MCP 原型文件失败；独立构建通过，包校验因缺失 docs/goal-descendant-acceptance.md 失败。完整结果见 [原型审阅](prototypes/subagent-ui/review.md)。本次启动的原型与验证进程已退出，无持续运行服务。
+[命名源码调查](evidence/hero-name-baseline.md) 说明集成边界：displayName 写入 launch、Pi --name 与 tmux；reserveSpawn 在父状态锁内预留容量，但旧代码在锁外生成名称。要保证并发不重名，设计是在同一父锁中预留名字，排除已登记名称及有效 reservation 名称。
 
-继续时读取 [当前关卡 #27](https://github.com/wangxuyang1221/pi-ext/issues/27)、Spec 与 /Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md。如进入原型流程，读取其 references/prototyping.md；用户确认制作范围后才读取并使用 /Users/wangxuyang/.agents/skills/wangxuyang/make-a-prototype/SKILL.md。原型根目录按 adventure 要求为 adventure/prototypes/。
+pnpm run check 已执行，类型检查通过，2376 项测试通过、11 项跳过；唯一失败套件依赖基准缺失的 MCP 原型源码目录。此前独立构建通过，包校验另缺 docs/goal-descendant-acceptance.md。正式交付前需处理这些缺口，不能声称完整 check 通过。清理提交 341c22b 删除了相关资料但留下引用，建议切片审核纳入最小清理，不恢复旧资料或删除生产测试。详见命名证据 Baseline check failure。
+
+本任务验证进程结束后清理隔离运行目录。用户自己打开的原型进程不应被终止。没有为本次任务启动持续服务或端口监听。
+
+继续时读取 /Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md、Spec 与 #28；准备切片时读取 /Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md。
 
 ## Current Assumptions
 
-候选：采用 codex-ui 共用的状态标记、标题和辅助文字规则，保留 subagent 信息结构。用户已批准制作，原型已完成。候选包括按调用状态着色的 ⏺、目标名称取消加粗、正文提高对比度、辅助信息弱化、多行结果采用竖线与末行转角。具体配色、间距和状态映射仍待用户审阅。
+没有阻碍规格成立的未决产品问题。并发唯一、失败释放、旧状态兼容，以及正式主题和历史渲染仍待实施验证。32 个英文英雄称号由代理按用户确认范围整理，Marvel 官方正文已通过 MultiFetch 取得，来源可从命名证据恢复。
 
 ## Continuation Point
 
-第一关已通关并保存，当前 #27 保持 open，等待用户审阅回到 /after 后的绿色微调。读取 [README](prototypes/subagent-ui/README.md) 的运行入口与 [review.md](prototypes/subagent-ui/review.md) 的对照图、验证结果和限制。用户已批准制作，不需要再询问是否制作。用户反馈整体不错，但 Settled 过亮，要求两个方案都做。现已完成 /neutral 正文色与 /soft 灰绿 #8fb89b；只有成功结果文字不同，标题圆点保留原绿色。用户已否定这两个方案，并明确要求制作最新暗灰方案。现已加入 /quiet，把成功结果文字变为主题 dim，让 Settled 与后续元信息整行一致。用户随后选回 /after，要求绿色稍微调暗。当前 /after 默认成功文字从 #4dff88 改为 #40d672，标题圆点不变。下一步请用户审阅这个试调色值；neutral、soft、quiet 都是历史方案，不再要求用户在它们之间选择。不得把批准制作视为批准视觉方案。
+用户要求完成本关后保存并暂停，去吃饭。本次已通关 #28、移交 Spec、收敛原型并提交推送。保存后停止，不继续形成切片或派发 worker。Map 与 Spec 保持 open，规格已确定可用于实施。
 
-后续按原型制作与审阅结果确定规则，通过 #27 后移交 Spec，使用 slicing 形成切片并取得用户审核，再创建 Implementation 并逐关派发、验收。最终运行 pnpm run check 和适用的视觉核验，清理任务进程，等待用户交付确认后才关闭 Map/Spec。
+恢复后读取 Spec 和命名证据，使用 slicing 形成完整切片，交用户审核。可考虑遗留检查引用清理、六类 UI 正式集成、英雄命名三个结果，但这仅是接续建议，尚未形成或批准切片。批准后才创建 Implementation 并按 adventure 依次委派独立 worker，最后一关负责整体验收与清理。完整 pnpm run check 通过且用户确认交付后才关闭 Map/Spec。
+
+无需再询问颜色、name 覆盖、去重或名字池范围。生产代码未改，用户自己打开的原型进程保留。

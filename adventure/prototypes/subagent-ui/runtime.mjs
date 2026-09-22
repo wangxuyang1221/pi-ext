@@ -11,7 +11,7 @@ globalThis.fetch = async () => { networkAttempts++; throw new Error("Network is 
 const sdk = await import("@earendil-works/pi-coding-agent");
 const ai = await import("@earendil-works/pi-ai");
 const codexUi = (await import(pathToFileURL(join(root, "runtime/codex-ui/index.js")))).default;
-const renderers = Object.fromEntries(await Promise.all(["before", "after"].map(async style => [style, await import(pathToFileURL(join(root, `runtime/${style}/renderers.js`)))])));
+const renderer = await import(pathToFileURL(join(root, "runtime/after/renderers.js")));
 const faux = ai.fauxProvider({ provider: "openai-codex", tokensPerSecond: 1200, tokenSize: { min: 8, max: 8 } });
 const modelRuntime = await sdk.ModelRuntime.create({ credentials: new ai.InMemoryCredentialStore(), modelsStore: new ai.InMemoryModelsStore(), modelsPath: null, allowModelNetwork: false, refreshOnCreate: false });
 modelRuntime.registerNativeProvider(faux.provider);
@@ -20,7 +20,7 @@ const waiting = new Map();
 let serial = 0;
 let active = false;
 let style = STYLES.find(value => process.argv.includes(`--${value}`)) ?? "after";
-const instructions = "Subagent UI comparison\n/after: original layout, slightly darker green\n/quiet: subdued success metadata\n/neutral: option 1, body text · /soft: option 2, muted green\n/before: original production style\n/demo all|spawn|prompt|list|read|wait|close success|error|hold [before|after|neutral|soft|quiet]\n/demo wait timeout · /demo wait interrupted · /demo spawn success after long\n/finish success|error|timeout|interrupted\nCtrl+O: expand/collapse · /quit: exit";
+const instructions = "Approved subagent UI\n/after: replay six messages with Read and Bash\n/demo all|spawn|prompt|list|read|wait|close success|error|hold\n/demo wait timeout · /demo wait interrupted · /demo spawn success after long\n/finish success|error|timeout|interrupted\nCtrl+O: expand/collapse · /quit: exit";
 function release(outcome = "interrupted") { for (const finish of [...waiting.values()]) finish(outcome); }
 const extension = pi => {
   const execute = async (id, args, signal) => {
@@ -43,10 +43,9 @@ const extension = pi => {
   codexUi(proxy);
   for (const kind of KINDS) {
     pi.registerTool({ name: `subagent_${kind}`, label: `Subagent ${kind}`, description: "Offline visual fixture", parameters: { type: "object", additionalProperties: true }, executionMode: "parallel", renderShell: "self", execute,
-      renderCall: (args, theme, context) => renderers[(plans.get(context.toolCallId)?.style ?? style) === "before" ? "before" : "after"].renderSubagentCall(kind, args, theme, context),
+      renderCall: (args, theme, context) => renderer.renderSubagentCall(kind, args, theme, context),
       renderResult: (result, options, theme, context) => {
-        const variant = plans.get(context.toolCallId)?.style ?? style;
-        return renderers[variant === "before" ? "before" : "after"].renderSubagentResult(kind, context.args, result, options, resultTheme(variant, theme), context);
+        return renderer.renderSubagentResult(kind, context.args, result, options, resultTheme(theme), context);
       },
     });
   }
