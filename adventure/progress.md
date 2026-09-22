@@ -12,7 +12,7 @@
 
 统一 subagent 与 codex-ui 的 UI，并新增 spawn 随机漫威英雄名。Map：https://github.com/wangxuyang1221/pi-ext/issues/24。完整有效规格只在 [Spec #25](https://github.com/wangxuyang1221/pi-ext/issues/25) 维护。
 
-全部 Planning 已通关。用户已确认三个实施切片，要求 worker 使用 gpt-6-astra、medium； #29 已验收通过，下一关为 #30。
+全部 Planning 已通关。用户已确认三个实施切片，要求 worker 使用 gpt-6-astra、medium；#29、#30 已验收通过，下一关为 #31。
 
 ## Evolution
 
@@ -35,7 +35,7 @@
 工作目录 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/u，分支 adventure/subagent-ui-consistency。审核时本地与远端为 47d0c616da63c7405ec0d0adf5c9914000dc5084，worktree 干净，产品源码仍为 262824026e192e8c421ce1e1796db7b269723038。恢复时重新核对状态与正在运行的 worker。
 
 - [#29](https://github.com/wangxuyang1221/pi-ext/issues/29)：已通关。提交 11631ee 清理失效 MCP 原型和 13 份已删文档引用，完整检查通过，证据见 [implementation-29.md](evidence/implementation-29.md)。
-- [#30](https://github.com/wangxuyang1221/pi-ext/issues/30)：六类工具正式视觉集成，承担历史、刷新和主题兼容验证。本身无 #29 功能依赖，按执行顺序排在其后。
+- [#30](https://github.com/wangxuyang1221/pi-ext/issues/30)：已通关。提交 369d744 完成六类正式 UI，证据与截图见 [implementation-30.md](evidence/implementation-30.md)。2380 tests passed、11 原有 skipped；40 组信息对照、7 个宽度边界、普通/全屏各 15 个宿主场景通过。
 - [#31](https://github.com/wangxuyang1221/pi-ext/issues/31)：随机英雄名与整体验收，依赖 #29、#30；承担并发、故障清理和旧状态兼容验证。
 
 完整已审核 slice 保存在各 Issue 的 Slice 段。Spec 的 Implementation 段记录验收归属。
@@ -48,11 +48,11 @@
 
 ## Current Assumptions
 
-没有阻碍规格或切片成立的未决产品问题。生产视觉与英雄命名尚待实施验证；#29 基础检查已通过。
+没有阻碍规格或切片成立的未决产品问题。英雄命名尚待实施验证。生产视觉已通过真实 Pi 的历史重开、resize 刷新及三种主题验证，execute 为 fixture；精确颜色仅在 truecolor 环境验证，不能代替命名生命周期验收。
 
 ## Continuation Point
 
-实施切片已获用户确认，不再询问。 #29 已提交推送并关闭，完成本关自动保存后派发 #30，再推进 #31。每个 worker 接手时核对最新 HEAD 并更新 Issue Workspace。
+实施切片已获用户确认，不再询问。#29、#30 已提交推送并关闭，完成本关自动保存后派发 #31，负责随机英雄命名与整体验收。每个 worker 接手时核对最新 HEAD 并更新 Issue Workspace。
 
 最后一关 worker 对照 Spec 完成整体验收、延期验证、材料与临时资源清理。协调者核验后保存并提交用户确认，Map/Spec 保持 open，等待用户确认交付时停止。
 
