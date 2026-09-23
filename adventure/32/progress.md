@@ -47,7 +47,7 @@ Fast 扩展目前在加载、--fast、/fast 和 session_shutdown 保存共享配
 
 ## Continuation Point
 
-用户已审核 [完整切片](slices.md)，要求创建实施关卡后开始施工，执行代理类型为 expert。#37 已验收关闭，#38 已解锁，下一步派发全新上下文 expert 实施 #38，并负责完整 Spec 的整体验收。当前产品与证据基准为 99bc12890f9e7605dee7263580cde2ed53df0a33；派发时提供最新存档提交。
+用户已审核 [完整切片](slices.md)，要求创建实施关卡后开始施工，执行代理类型为 expert。#37 已验收关闭，#38 已于基准 740b43279b27e182aad007adcd01eab8095a2512 派发全新上下文 expert /root/roles_implementation，负责角色配置及完整 Spec 整体验收。协调者等待交付并审核证据。跨 session 接手时先检查 worker 状态，避免重复施工。
 
 派发使用 expert、fork_turns none，提供 worktree、最新提交、Spec、关卡、证据和操作限制。worker 行动前完整读取 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md、/Users/wangxuyang/.agents/skills/wangxuyang/develop-with-tdd/SKILL.md 及必要引用，不再委派。用户批准 adventure 的提交推送范围，允许本任务实现与证据提交到冒险分支。
 
