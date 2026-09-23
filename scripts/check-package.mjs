@@ -30,7 +30,6 @@ const requiredPublishedEntries = [
   "extensions/mcp/dist",
   "extensions/goal/dist",
   "extensions/skill-mentions/dist",
-  "docs/skill-mentions.md",
   "extensions/goal/LICENSE",
   "extensions/goal/UPSTREAM.md",
   "extensions/goal/NOTICE",

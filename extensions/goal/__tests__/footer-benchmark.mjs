@@ -59,7 +59,7 @@ try {
     } finally { screen.stop(); }
   }
   const passed = results.filter(r => r.implementation === "minute").every(r => r.medianCpuMs <= 60 && r.p95WallMs <= 100);
-  const report = { passed, baseline, node: process.version, pi: "0.86.0", columns: 120, rows: 40, medianCpuBudgetMs: 60, p95WallBudgetMs: 100, limitations: ["Reconstructed baseline measured after implementation", "Controlled cached text history, not arbitrary tools or images", "Tool wait uses a static label, not a spinner", "Streaming uses explicit controlled frames", "Terminal emulator CPU is not measured", "Footer theme is deterministic uncolored; message theme is dark"], results };
+  const report = { passed, baseline, node: process.version, pi: "0.87.0", columns: 120, rows: 40, medianCpuBudgetMs: 60, p95WallBudgetMs: 100, limitations: ["Reconstructed baseline measured after implementation", "Controlled cached text history, not arbitrary tools or images", "Tool wait uses a static label, not a spinner", "Streaming uses explicit controlled frames", "Terminal emulator CPU is not measured", "Footer theme is deterministic uncolored; message theme is dark"], results };
   writeFileSync(resolve(".tmp/goal-footer-benchmark.json"), JSON.stringify(report, null, 2) + "\n");
   console.log(JSON.stringify(report, null, 2));
   if (!passed) process.exitCode = 1;

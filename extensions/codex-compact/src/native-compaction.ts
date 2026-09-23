@@ -1,10 +1,10 @@
 import { responseItemEstimationView } from "./response-item-estimation.js";
+import { projectBranchMessages } from "./session-projection.js";
 import { convertResponsesTools } from "./pi-responses.js";
 import { setTimeout as sleep } from "node:timers/promises";
 import { audioTokenCount, contentTokens, imageBytes, inlineAudioPayload, inlineImagePayload, textTokens, truncateImageMessage, truncateText } from "./token-estimation.js";
 import {
 	convertToLlm,
-	sessionEntryToContextMessages,
 	type SessionEntry,
 	type ToolInfo,
 } from "@earendil-works/pi-coding-agent";
@@ -323,6 +323,13 @@ export function findNativeCheckpoint(branch: SessionEntry[], targetModelKey?: st
 		}
 		const details = parseNativeCompactionDetails(rawDetails);
 		if (details) {
+			// Encrypted history cannot be patched after the checkpoint was created.
+			const priorMessageIds = new Set(branch.slice(0, index)
+				.filter((candidate) => candidate.type === "message" || candidate.type === "custom_message")
+				.map((candidate) => candidate.id));
+			if (branch.slice(index + 1).some((candidate) => candidate.type === "context_edit" && priorMessageIds.has(candidate.targetId))) {
+				return { status: "invalid", entryIndex: index, entryId: entry.id };
+			}
 			return {
 				status: "valid",
 				checkpoint: { entryIndex: index, entryId: entry.id, details },
@@ -656,12 +663,9 @@ function entriesToResponseItems(
 	includeCompactionSummary = false,
 	beforeEntryIndex = 0,
 ): ResponseItem[] {
-	const messages = entries
-		.filter((entry) => includeCompactionSummary || entry.type !== "compaction")
-		.flatMap((entry) => sessionEntryToContextMessages(entry));
-	const skipped = entries.slice(0, beforeEntryIndex)
-		.filter((entry) => includeCompactionSummary || entry.type !== "compaction")
-		.flatMap((entry) => sessionEntryToContextMessages(entry));
+	const projected = projectBranchMessages(entries, includeCompactionSummary);
+	const messages = projected.flat();
+	const skipped = projected.slice(0, beforeEntryIndex).flat();
 	return messagesToResponseItems(model, convertToLlm(messages), tools, convertToLlm(skipped).length);
 }
 

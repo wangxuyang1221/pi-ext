@@ -18,7 +18,7 @@ export async function loadSdk(path) {
   const aiRoot = resolve(root, "../pi-ai");
   const ai = await import(pathToFileURL(join(aiRoot, "dist/index.js")));
   const versions = Object.fromEntries(await Promise.all(["pi-coding-agent", "pi-ai", "pi-agent-core"].map(async name => [name, JSON.parse(await readFile(resolve(root, "..", name, "package.json"), "utf8")).version])));
-  assert.ok(["0.86.0"].includes(versions["pi-coding-agent"]));
+  assert.ok(["0.87.0"].includes(versions["pi-coding-agent"]));
   assert.equal(new Set(Object.values(versions)).size, 1);
   return { root, sdk, ai, aiRoot, versions };
 }

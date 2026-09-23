@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { DefaultResourceLoader, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { expect, test } from "vitest";
 
-test("loads every registered extension through the Pi 0.86.0 filesystem loader", async () => {
+test("loads every registered extension through the Pi 0.87.0 filesystem loader", async () => {
   mkdirSync(".tmp", { recursive: true });
   const cwd = mkdtempSync(resolve(".tmp/pi-host-"));
   try {

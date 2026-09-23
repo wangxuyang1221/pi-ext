@@ -6,6 +6,7 @@ import { createAgentSession, createSyntheticSourceInfo, DefaultResourceLoader, g
 import { Container, stripTerminalSequences } from "@earendil-works/pi-tui";
 import skillMentions, { displayType } from "../src/index.js";
 import { decodeSnapshot } from "../src/protocol.js";
+import { RED_PIXEL_PNG } from "./png-fixture.js";
 
 const resources: { cwd: string; session?: AgentSession }[] = [];
 beforeAll(() => initTheme("dark", false));
@@ -63,7 +64,7 @@ async function harness(mode: "tui" | "rpc" | "print" | "json" = "tui", filesyste
 it.each(["prompt", "plugin-string", "plugin-blocks"])("activates punctuated references through %s with original task and ordered snapshots", async source => {
   const h = await harness("tui", true);
   const task = "用 $beta，继续 $alpha. $beta) $alpha.md $alpha.中文 $alpha-other! $unknown;";
-  const image = { type: "image" as const, data: "AA==", mimeType: "image/png" };
+  const image = { type: "image" as const, data: RED_PIXEL_PNG, mimeType: "image/png" };
   if (source === "prompt") await h.session.prompt(task, { images: [image] });
   else {
     h.pi.sendUserMessage(source === "plugin-string" ? task : [{ type: "text", text: task }, image]);
@@ -176,7 +177,7 @@ it("uses native expanded cards and only transforms strictly recognized user enve
 it("sends multiple snapshots and images in one user and displays native cards before the task", async () => {
   const h = await harness();
   const task = "用 $beta $alpha $beta $unknown 调查";
-  const image = { type: "image" as const, data: "AA==", mimeType: "image/png" };
+  const image = { type: "image" as const, data: RED_PIXEL_PNG, mimeType: "image/png" };
   await h.session.prompt(task, { images: [image] });
   expect(h.calls).toHaveLength(1);
   const users = h.calls[0].filter(message => message.role === "user"); expect(users).toHaveLength(1);

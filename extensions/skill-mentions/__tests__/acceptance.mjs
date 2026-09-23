@@ -27,7 +27,6 @@ try {
   const files = execFileSync("tar", ["-tzf", tarball], { encoding: "utf8" }).trim().split("\n").map(path => path.replace(/^package\//, ""));
   for (const path of files) assertSafePublishedPath(path);
   assert(files.includes("extensions/skill-mentions/dist/index.js"));
-  assert(files.includes("docs/skill-mentions.md"));
   const consumer = join(root, "consumer");
   writeFileSync(join(consumer, "package.json"), JSON.stringify({ private: true, type: "module", dependencies: { "pi-ext": `file:${tarball}`, ...manifest.peerDependencies, typebox: manifest.devDependencies.typebox } }, null, 2));
   // A nested workspace prevents pnpm from treating this fixture as the repository root.

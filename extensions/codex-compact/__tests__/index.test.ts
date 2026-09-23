@@ -1,5 +1,5 @@
 import { expect, test, vi } from "vitest";
-import type { SessionEntry } from "@earendil-works/pi-coding-agent";
+import { SessionManager, type SessionEntry } from "@earendil-works/pi-coding-agent";
 import codexCompactionExtension from "../src/index.js";
 import { effectiveInputForBranch, FAILED_REQUEST_KIND, NATIVE_COMPACTION_KIND } from "../src/native-compaction.js";
 
@@ -152,6 +152,74 @@ test("removes unsupported prompt cache retention from Codex requests", async () 
 
 	await expect(handlers.get("before_provider_request")?.({ payload }, ctx)).resolves.toBe(payload);
 	expect(payload).not.toHaveProperty("prompt_cache_retention");
+});
+
+test("continues a checkpointed request after Pi replaces a prior user entry", async () => {
+	const sm = SessionManager.inMemory(process.cwd());
+	sm.appendCustomEntry(NATIVE_COMPACTION_KIND, checkpointEntry().type === "custom" ? checkpointEntry().data : undefined);
+	const original = sm.appendMessage({ role: "user", content: "stale task", timestamp: 1 });
+	sm.appendContextEdit(original, { content: "revised task" });
+	sm.appendMessage({ role: "user", content: "continue", timestamp: 2 });
+	const { handlers, ctx } = installExtension();
+	(ctx as any).sessionManager = sm;
+	const input = [
+		{ role: "user", content: [{ type: "input_text", text: "revised task" }] },
+		{ role: "user", content: [{ type: "input_text", text: "continue" }] },
+	];
+	expect(JSON.stringify(sm.buildSessionProjection().messages)).not.toContain("stale task");
+	const result = await handlers.get("before_provider_request")?.({ payload: { input } }, ctx);
+	expect(ctx.abort).not.toHaveBeenCalled();
+	expect(JSON.stringify(result)).toContain("revised task");
+	expect(JSON.stringify(result)).not.toContain("stale task");
+});
+
+test("restores edited history when leaving Codex after a checkpoint", () => {
+	const sm = SessionManager.inMemory(process.cwd());
+	sm.appendCustomEntry(NATIVE_COMPACTION_KIND, checkpointEntry().type === "custom" ? checkpointEntry().data : undefined);
+	const original = sm.appendMessage({ role: "user", content: "stale task", timestamp: 1 });
+	sm.appendContextEdit(original, { content: "revised task" });
+	const { handlers, ctx } = installExtension();
+	(ctx as any).sessionManager = sm;
+	ctx.model = { provider: "other", api: "other", id: "other" } as never;
+	const result = handlers.get("context")?.({ messages: sm.buildSessionProjection().messages }, ctx);
+	expect(JSON.stringify(result)).toContain("revised task");
+	expect(JSON.stringify(result)).not.toContain("stale task");
+});
+
+test("discards an encrypted checkpoint when a later edit changes its prior history", async () => {
+	const sm = SessionManager.inMemory(process.cwd());
+	const original = sm.appendMessage({ role: "user", content: "stale task", timestamp: 1 });
+	sm.appendCustomEntry(NATIVE_COMPACTION_KIND, checkpointEntry().type === "custom" ? checkpointEntry().data : undefined);
+	sm.appendContextEdit(original, { content: "revised task" });
+	sm.appendMessage({ role: "user", content: "continue", timestamp: 2 });
+	const { handlers, ctx } = installExtension();
+	(ctx as any).sessionManager = sm;
+	const input = [
+		{ role: "user", content: [{ type: "input_text", text: "revised task" }] },
+		{ role: "user", content: [{ type: "input_text", text: "continue" }] },
+	];
+	const result = await handlers.get("before_provider_request")?.({ payload: { input } }, ctx);
+	expect(ctx.abort).not.toHaveBeenCalled();
+	expect(JSON.stringify(result)).toContain("revised task");
+	expect(JSON.stringify(result)).not.toContain("stale task");
+	expect(JSON.stringify(result)).not.toContain("opaque");
+});
+
+test("omits a post-checkpoint user entry from the Codex request", async () => {
+	const sm = SessionManager.inMemory(process.cwd());
+	sm.appendCustomEntry(NATIVE_COMPACTION_KIND, checkpointEntry().type === "custom" ? checkpointEntry().data : undefined);
+	const omitted = sm.appendMessage({ role: "user", content: "omit me", timestamp: 1 });
+	sm.appendContextEdit(omitted, null);
+	sm.appendMessage({ role: "user", content: "continue", timestamp: 2 });
+	const { handlers, ctx } = installExtension();
+	(ctx as any).sessionManager = sm;
+	const result = await handlers.get("before_provider_request")?.({ payload: { input: [
+		{ role: "user", content: [{ type: "input_text", text: "continue" }] },
+	] } }, ctx);
+	expect(ctx.abort).not.toHaveBeenCalled();
+	expect(JSON.stringify(result)).toContain("opaque");
+	expect(JSON.stringify(result)).toContain("continue");
+	expect(JSON.stringify(result)).not.toContain("omit me");
 });
 
 test.each([false, true])("reads legacy failure diagnostics with recoveryAttempted=%s without rewriting the marker", async (recoveryAttempted) => {

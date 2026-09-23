@@ -47,11 +47,9 @@
     "extensions/subagent/dist",
     "extensions/goal/dist",
     "extensions/skill-mentions/dist",
-    "docs/skill-mentions.md",
     "extensions/goal/UPSTREAM.md",
     "extensions/goal/LICENSE",
     "extensions/goal/NOTICE",
-    "docs/codex-compact-quality-validation.md",
     "themes/codex-pi.json",
     "README.md",
     "LICENSE"
@@ -122,15 +120,15 @@
     "zod": "4.4.3"
   },
   "peerDependencies": {
-    "@earendil-works/pi-ai": "0.86.0",
-    "@earendil-works/pi-coding-agent": "0.86.0",
-    "@earendil-works/pi-tui": "0.86.0",
+    "@earendil-works/pi-ai": "0.87.0",
+    "@earendil-works/pi-coding-agent": "0.87.0",
+    "@earendil-works/pi-tui": "0.87.0",
     "typebox": "*"
   },
   "devDependencies": {
-    "@earendil-works/pi-ai": "0.86.0",
-    "@earendil-works/pi-coding-agent": "0.86.0",
-    "@earendil-works/pi-tui": "0.86.0",
+    "@earendil-works/pi-ai": "0.87.0",
+    "@earendil-works/pi-coding-agent": "0.87.0",
+    "@earendil-works/pi-tui": "0.87.0",
     "@types/node": "22.19.19",
     "typebox": "1.3.7",
     "typescript": "5.9.3",

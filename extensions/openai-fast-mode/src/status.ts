@@ -19,8 +19,10 @@ export type StatusContext = {
 export function getStatusText(
   config: FastModeConfig,
   model: ModelRef | undefined,
+  excludedCodexModels?: ReadonlySet<string>,
 ): StatusText {
-  return config.enabled && findMatchingTarget(model, config.targets)
+  return config.enabled &&
+    findMatchingTarget(model, config.targets, excludedCodexModels)
     ? "fast"
     : undefined;
 }
@@ -40,9 +42,10 @@ export function updateFastStatus(
   ctx: StatusContext,
   config: FastModeConfig,
   model: ModelRef | undefined,
+  excludedCodexModels?: ReadonlySet<string>,
 ): void {
   if (!canSetTuiStatus(ctx)) return;
-  setFastIndicator(ctx, getStatusText(config, model));
+  setFastIndicator(ctx, getStatusText(config, model, excludedCodexModels));
 }
 
 export function clearFastStatus(ctx: StatusContext): void {

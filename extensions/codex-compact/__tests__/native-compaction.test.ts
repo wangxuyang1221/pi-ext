@@ -17,6 +17,8 @@ vi.mock("node:timers/promises", () => ({
 }));
 
 import { createNativeCheckpoint } from "../src/remote-compaction.js";
+import { SessionManager } from "@earendil-works/pi-coding-agent";
+import { projectBranchMessages } from "../src/session-projection.js";
 import { approximateResponseItemTokens, isContextWindowCompactionError, compactionFailureClassification, estimateCompactionWindowPrefillTokens, buildCodexHeaders, buildCompactionRequestBody, buildReplacementHistory, buildToolPayload, callRemoteCompaction, effectiveInputForBranch, findNativeCheckpoint, fullInputForBranch, NATIVE_COMPACTION_BYPASS_KIND, NATIVE_COMPACTION_BYPASS_VERSION, NATIVE_COMPACTION_KIND, NATIVE_COMPACTION_VERSION, parseNativeCompactionDetails, piContextInputForBranch, retainRecentMessages, trimFunctionCallHistoryToFitContextWindow } from "../src/native-compaction.js";
 
 afterEach(() => vi.useRealTimers());
@@ -47,6 +49,22 @@ async function captureFailure(operation: Promise<unknown>): Promise<unknown> {
 }
 
 describe("Codex compaction history", () => {
+	test("matches Pi projection for repeated user, assistant, and tool-result edits", () => {
+		const sm = SessionManager.inMemory(process.cwd());
+		const user = sm.appendMessage({ role: "user", content: "original user", timestamp: 1 });
+		const assistant = sm.appendMessage({ role: "assistant", content: [{ type: "text", text: "original assistant" }], timestamp: 2, provider: "openai-codex", api: "openai-codex-responses", model: "gpt", stopReason: "stop", usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0 } } as never);
+		const tool = sm.appendMessage({ role: "toolResult", toolCallId: "call", toolName: "read", content: [{ type: "text", text: "original tool" }], isError: false, timestamp: 3 });
+		sm.appendContextEdit(user, { content: "first revision" });
+		sm.appendContextEdit(user, { content: "final revision" });
+		sm.appendContextEdit(assistant, null);
+		sm.appendContextEdit(tool, { content: "revised tool" });
+		const branch = sm.getBranch();
+		expect(projectBranchMessages(branch).flat()).toEqual(sm.buildSessionProjection().messages);
+		expect(JSON.stringify(projectBranchMessages(branch).flat())).toContain("final revision");
+		expect(JSON.stringify(projectBranchMessages(branch).flat())).toContain("revised tool");
+		expect(JSON.stringify(projectBranchMessages(branch).flat())).not.toContain("original assistant");
+		expect(JSON.stringify(branch)).toContain("original assistant");
+	});
 	test("marks authentication failures fail-closed", async () => {
 		await expect(createNativeCheckpoint({
 			ctx: {

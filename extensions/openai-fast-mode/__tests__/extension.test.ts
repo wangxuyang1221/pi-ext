@@ -126,6 +126,7 @@ describe("piFastModeExtension registration", () => {
 
     expect([...handlers.keys()].sort()).toEqual([
       "before_provider_request",
+      "message_end",
       "model_select",
       "session_shutdown",
       "session_start",
@@ -418,8 +419,13 @@ describe("piFastModeExtension runtime behavior", () => {
       { type: "model_select", model: unmatchedCtx.model },
       unmatchedCtx,
     );
-    expectFastIndicatorHidden(unmatchedCtx);
-    expect(await request(unmatchedCtx)).toBeUndefined();
+    if (provider === "openai-codex") {
+      expectFastIndicatorShown(unmatchedCtx);
+      expect(await request(unmatchedCtx)).toEqual({ ...payload, service_tier: "priority" });
+    } else {
+      expectFastIndicatorHidden(unmatchedCtx);
+      expect(await request(unmatchedCtx)).toBeUndefined();
+    }
 
     await runHandler(
       handlers,
@@ -429,6 +435,132 @@ describe("piFastModeExtension runtime behavior", () => {
     );
     expectFastIndicatorShown(ctx);
     expect(await request()).toEqual({ ...payload, service_tier: "priority" });
+  });
+
+  it.each(["gpt-6-sol", "gpt-6-luna", "gpt-7-unlisted"]) (
+    "requests Fast for openai-codex/%s without a configured target",
+    async (id) => {
+      const root = await makeTempDir();
+      const cwd = join(root, "project");
+      const agentDir = join(root, "agent");
+      await mkdir(cwd, { recursive: true });
+
+      const { pi, handlers, commands } = createFakePi(true);
+      createPiFastModeExtension({ extensionDir: join(root, "global", "src"), agentDir })(pi as any);
+      const ctx = makeCtx(cwd, { provider: "openai-codex", id });
+      await runHandler(handlers, "session_start", { type: "session_start", reason: "startup" }, ctx);
+      expectFastIndicatorShown(ctx);
+      expect(await runHandler(handlers, "before_provider_request", {
+        type: "before_provider_request", payload: { model: id, input: [] },
+      }, ctx)).toEqual({ model: id, input: [], service_tier: "priority" });
+      expect((await readFile(getUserConfigPath(agentDir), "utf8"))).not.toContain(id);
+
+      await commands.get("fast")!.handler("off", ctx);
+      expectFastIndicatorHidden(ctx);
+      expect(await runHandler(handlers, "before_provider_request", {
+        type: "before_provider_request", payload: { model: id, input: [] },
+      }, ctx)).toBeUndefined();
+    },
+  );
+
+  it("excludes only the rejected Codex model for the rest of the session", async () => {
+    const root = await makeTempDir();
+    const cwd = join(root, "project");
+    const agentDir = join(root, "agent");
+    await mkdir(cwd, { recursive: true });
+    const { pi, handlers } = createFakePi(true);
+    createPiFastModeExtension({ extensionDir: join(root, "global", "src"), agentDir })(pi as any);
+    const model = { provider: "openai-codex", id: "gpt-7-unlisted" };
+    const ctx = makeCtx(cwd, model);
+    const request = (context = ctx) => runHandler(handlers, "before_provider_request", {
+      type: "before_provider_request", payload: { model: context.model.id, input: [] },
+    }, context);
+    await runHandler(handlers, "session_start", { type: "session_start", reason: "startup" }, ctx);
+    expect(await request()).toMatchObject({ service_tier: "priority" });
+    const error = { role: "assistant", provider: model.provider, model: model.id,
+      stopReason: "error", errorMessage: "Codex API error: service_tier priority is not supported for this model" };
+    expect(await runHandler(handlers, "message_end", { type: "message_end", message: error }, ctx)).toBeUndefined();
+    expect(error.stopReason).toBe("error");
+    expectFastIndicatorHidden(ctx);
+    expect(ctx.ui.notify).toHaveBeenCalledExactlyOnceWith(
+      "Fast mode is not supported for openai-codex/gpt-7-unlisted. This request failed. Retry to use standard mode for this model in this session.",
+      "warning",
+    );
+    expect(await request()).toBeUndefined();
+    await runHandler(handlers, "message_end", { type: "message_end", message: error }, ctx);
+    expect(ctx.ui.notify).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(await readFile(getUserConfigPath(agentDir), "utf8")).enabled).toBe(true);
+
+    const otherCtx = makeCtx(cwd, { provider: "openai-codex", id: "gpt-6-sol" });
+    await runHandler(handlers, "model_select", { type: "model_select", model: otherCtx.model }, otherCtx);
+    expectFastIndicatorShown(otherCtx);
+    expect(await request(otherCtx)).toMatchObject({ service_tier: "priority" });
+
+    await runHandler(handlers, "session_start", { type: "session_start", reason: "new" }, ctx);
+    expectFastIndicatorShown(ctx);
+    expect(await request()).toMatchObject({ service_tier: "priority" });
+  });
+
+  it.each([
+    "429 rate limit exceeded",
+    "Network error: connection reset",
+    "HTTP 400: invalid input field",
+    "Codex API error: service_tier priority is temporarily unavailable",
+  ])("keeps requesting Fast after an unrelated or ambiguous error: %s", async (errorMessage) => {
+    const root = await makeTempDir();
+    const cwd = join(root, "project");
+    await mkdir(cwd, { recursive: true });
+    const { pi, handlers } = createFakePi(true);
+    createPiFastModeExtension({ extensionDir: join(root, "global", "src"), agentDir: join(root, "agent") })(pi as any);
+    const ctx = makeCtx(cwd, { provider: "openai-codex", id: "gpt-7-unlisted" });
+    await runHandler(handlers, "session_start", { type: "session_start", reason: "startup" }, ctx);
+    const request = () => runHandler(handlers, "before_provider_request", {
+      type: "before_provider_request", payload: { model: ctx.model!.id, input: [] },
+    }, ctx);
+    expect(await request()).toMatchObject({ service_tier: "priority" });
+    await runHandler(handlers, "message_end", { type: "message_end", message: {
+      role: "assistant", provider: "openai-codex", model: ctx.model!.id,
+      stopReason: "error", errorMessage,
+    } }, ctx);
+    expect(await request()).toMatchObject({ service_tier: "priority" });
+    expectFastIndicatorShown(ctx);
+    expect(ctx.ui.notify).not.toHaveBeenCalled();
+  });
+
+  it("recognizes an explicit unsupported_service_tier code", async () => {
+    const root = await makeTempDir();
+    const cwd = join(root, "project");
+    await mkdir(cwd, { recursive: true });
+    const { pi, handlers } = createFakePi(true);
+    createPiFastModeExtension({ extensionDir: join(root, "global", "src"), agentDir: join(root, "agent") })(pi as any);
+    const ctx = makeCtx(cwd, { provider: "openai-codex", id: "gpt-7-unlisted" });
+    await runHandler(handlers, "session_start", { type: "session_start", reason: "startup" }, ctx);
+    const request = () => runHandler(handlers, "before_provider_request", {
+      type: "before_provider_request", payload: { model: ctx.model!.id },
+    }, ctx);
+    expect(await request()).toMatchObject({ service_tier: "priority" });
+    await runHandler(handlers, "message_end", { type: "message_end", message: {
+      role: "assistant", provider: "openai-codex", model: ctx.model!.id,
+      stopReason: "error", errorMessage: "Codex error: unsupported_service_tier",
+    } }, ctx);
+    expect(await request()).toBeUndefined();
+    expect(ctx.ui.notify).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not exclude a model unless this session requested Fast for it", async () => {
+    const root = await makeTempDir();
+    const cwd = join(root, "project");
+    await mkdir(cwd, { recursive: true });
+    const { pi, handlers } = createFakePi(true);
+    createPiFastModeExtension({ extensionDir: join(root, "global", "src"), agentDir: join(root, "agent") })(pi as any);
+    const ctx = makeCtx(cwd, { provider: "openai-codex", id: "gpt-7-unlisted" });
+    await runHandler(handlers, "session_start", { type: "session_start", reason: "startup" }, ctx);
+    await runHandler(handlers, "message_end", { type: "message_end", message: {
+      role: "assistant", provider: "openai-codex", model: ctx.model!.id,
+      stopReason: "error", errorMessage: "service_tier priority is not supported for this model",
+    } }, ctx);
+    expectFastIndicatorShown(ctx);
+    expect(ctx.ui.notify).not.toHaveBeenCalled();
   });
 
   it("model_select updates whether the status is visible", async () => {

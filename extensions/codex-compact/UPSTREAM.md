@@ -22,13 +22,13 @@
 
 ## Pi request compatibility
 
-请求转换以 Pi `0.86.0` 为核验基线。`src/native-compaction.ts` 复用公开的 transcript 归一化、提示更新渲染和工具状态解析，保留局部消息转换以处理 checkpoint 边界。先重建完整历史中的工具状态与消息位置，再取 checkpoint 后的输出，避免把紧邻 checkpoint 的 system 更新误当作开头提示。旧 `addedToolNames` 按目标版本宿主语义处理，不额外生成宿主已不再发送的工具加载项。
+请求转换以 Pi `0.87.0` 为当前核验基线。`src/native-compaction.ts` 复用公开的 transcript 归一化、提示更新渲染和工具状态解析，保留局部消息转换以处理 checkpoint 边界。先重建完整历史中的工具状态与消息位置，再取 checkpoint 后的输出，避免把紧邻 checkpoint 的 system 更新误当作开头提示。旧 `addedToolNames` 按目标版本宿主语义处理，不额外生成宿主已不再发送的工具加载项。
 
-`src/pi-responses.ts` 通过包 `exports` 解析公开的 Responses 工具转换函数，复用 grammar 和 strict schema 处理。Node 的解析用于避开 Pi 文件扩展加载器对 `pi-ai/*` 的前缀别名，不修改宿主或挂接其内部方法。该适配绑定当前依赖版本，真实 `DefaultResourceLoader` 测试覆盖全部七个扩展的源码加载，集成生命周期检查覆盖构建产物加载。
+`src/pi-responses.ts` 通过包 `exports` 解析公开的 Responses 工具转换函数，复用 grammar 和 strict schema 处理。Node 的解析用于避开 Pi 文件扩展加载器对 `pi-ai/*` 的前缀别名，不修改宿主或挂接其内部方法。该适配绑定当前依赖版本，真实 `DefaultResourceLoader` 测试覆盖全部八个扩展的源码加载，集成生命周期检查覆盖构建产物加载。
 
 `responses-parity.test.ts` 使用目标版本原生 converter 和 `streamSimple` 的实际网络前 payload 对照，覆盖 system sections、工具新增/移除、tool search、constrained sampling、checkpoint 后连续请求及失败重试。失败继续保留严格前缀校验，诊断只新增错误类别与首个不一致位置，不保存私有内容。
 
-Pi 的 `getAllTools()` 可能缺少 wire grammar 格式；扩展结合 transcript 工具声明与观察到的请求恢复格式。thinking 通过公开的 `clampThinkingLevel` 按实际压缩模型归一化；`off` 按 0.86.0 发送对应 effort，默认 `none`，不支持的模型则省略。
+Pi 的 `getAllTools()` 可能缺少 wire grammar 格式；扩展结合 transcript 工具声明与观察到的请求恢复格式。thinking 通过公开的 `clampThinkingLevel` 按实际压缩模型归一化；`off` 按 0.87.0 发送对应 effort，默认 `none`，不支持的模型则省略。
 
 turn-state 保留到下一条实际投递的 user message，工具循环和无新用户消息的重试不重置。queued follow-up 排队时不重置，交付时重置；steering 实际交付也作为用户边界。Pi 公共 message 事件不区分这两种直接交付来源，这里明确采用 Pi 的消息边界，不宣称与 Codex 内部 TurnContext 的 steering 生命周期完全相同。会话切换、关闭和空闲 `agent_settled` 释放当前状态；远端压缩的迟到响应不能写入新轮次。
 
@@ -45,6 +45,6 @@ turn-state 保留到下一条实际投递的 user message，工具循环和无�
 
 `codex-rs/core/src/context/contextual_user_message.rs`、`codex-rs/context-fragments/src/fragment.rs` 及对应 fragment 实现提供特殊轮次规则。`src/media/src/context.rs` 用 quick-xml 0.41.0 保留 hook 解析语义，用 serde_json 1.0.149 校验 inter-agent JSON 和 AgentPath；只判断能否反序列化，不执行这些内容。
 
-`codex-rs/protocol/src/models.rs` 的有效 ResponseItem 字段、默认值、序列化省略规则被适配为 `src/response-item-estimation.ts`，只影响估算视图，不改写实际请求。移除了超窗时只压缩最新 user turn 的恢复方式，改为明确失败且不提交新 checkpoint。请求适配层刷新当前系统指令，默认有效窗口为原始窗口的 95%，可通过 `effectiveContextWindowPercent` 覆盖。没有修改 Pi 上游，也没有增加分段压缩。当前请求指纹保护只覆盖可见 payload；Pi 未暴露完整服务端 reasoning 能力标记及后续扩展的最终 payload。默认质量测试及显式历史报告重建见 [Codex compact quality validation](../../docs/codex-compact-quality-validation.md)；合成 fixture 不代表在线质量结论。
+`codex-rs/protocol/src/models.rs` 的有效 ResponseItem 字段、默认值、序列化省略规则被适配为 `src/response-item-estimation.ts`，只影响估算视图，不改写实际请求。移除了超窗时只压缩最新 user turn 的恢复方式，改为明确失败且不提交新 checkpoint。请求适配层刷新当前系统指令，默认有效窗口为原始窗口的 95%，可通过 `effectiveContextWindowPercent` 覆盖。没有修改 Pi 上游，也没有增加分段压缩。当前请求指纹保护只覆盖可见 payload；Pi 未暴露完整服务端 reasoning 能力标记及后续扩展的最终 payload。默认质量测试及显式历史报告重建见 [质量报告脚本](../../scripts/codex-compact-quality-development-report.mjs)；合成 fixture 不代表在线质量结论。
 
 基础参考向量由 `scripts/codex-compact-reference.mjs` 生成。完整参考程序由 `scripts/codex-compact-full-reference.mjs` 构建，编译原版 protocol/utility crates 和未修改的 estimator 函数；`scripts/codex-compact-full-vectors.mjs` 生成逐项与历史聚合向量。来源、输入及产物 SHA-256 保存在测试 fixture 中。当前 276 项参考向量覆盖字段默认值、数字、媒体、饱和计数、请求包装和特殊轮次边界；真实 183 项历史的逐项、总量和 usage 增量也一致。Pi 的无 type 简写消息保留实际包装计数，完整 tools/system HTTP 包装与 Codex 的 canonical history 另行区分，不宣称未公开的服务端 tokenization 已被本地精确复现。

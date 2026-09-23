@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
-import { sessionEntryToContextMessages, type ExtensionAPI, type ExtensionContext, type SessionEntry } from "@earendil-works/pi-coding-agent";
+import { type ExtensionAPI, type ExtensionContext, type SessionEntry } from "@earendil-works/pi-coding-agent";
+import { projectBranchMessages } from "./session-projection.js";
 import { accountingFingerprint, WindowUsageAccounting } from "./usage-accounting.js";
 import { shouldAutoCompact } from "./scheduler.js";
 import { createCompactionWidget, type CompactionWidgetFactory } from "./presentation.js";
@@ -360,12 +361,12 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		if (!codexModel) {
 			if (checkpoint.status === "none") return undefined;
 			return {
-				messages: branch.flatMap((entry) => entry.type === "compaction" ? [] : sessionEntryToContextMessages(entry)),
+				messages: projectBranchMessages(branch).flat(),
 			};
 		}
 		if (checkpoint.status === "invalid" || checkpoint.status === "bypassed") {
 			return {
-				messages: branch.flatMap((entry) => entry.type === "compaction" ? [] : sessionEntryToContextMessages(entry)),
+				messages: projectBranchMessages(branch).flat(),
 			};
 		}
 		if (checkpoint.status !== "valid") return undefined;

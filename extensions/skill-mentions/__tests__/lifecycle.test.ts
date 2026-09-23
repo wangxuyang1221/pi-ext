@@ -8,6 +8,7 @@ import { initTheme } from "@earendil-works/pi-coding-agent";
 import { CodexEditor } from "../../codex-ui/src/components.js";
 import { decodeSnapshot } from "../src/protocol.js";
 import { cleanup, deferred, lifecycleFixture, textOf } from "./lifecycle-fixture.js";
+import { BLUE_PIXEL_PNG, RED_PIXEL_PNG } from "./png-fixture.js";
 
 vi.mock("node:fs/promises", async importOriginal => {
   const actual = await importOriginal<typeof import("node:fs/promises")>();
@@ -28,7 +29,7 @@ it.each([
   h.faux.setResponses([async ctx => { entered.resolve(); await release.promise; return h.respond(ctx); }, h.respond]);
   const read = vi.mocked(fs.readFile); read.mockClear();
   const run = h.session.prompt("Initial task"); await entered.promise;
-  const images = ["AA==", "BB=="].map(data => ({ type: "image" as const, data, mimeType: "image/png" }));
+  const images = [RED_PIXEL_PNG, BLUE_PIXEL_PNG].map(data => ({ type: "image" as const, data, mimeType: "image/png" }));
   try {
     for (const image of images) await h.session.prompt(task, { streamingBehavior: behavior, images: [image] });
     expect(behavior === "steer" ? h.session.getSteeringMessages() : h.session.getFollowUpMessages()).toEqual([task, task]);
@@ -209,7 +210,7 @@ it("restores interrupted JSONL with an orphan display and a truncated user witho
 
 it("clones a completed branch with images and immutable snapshots", async () => {
   const h = await lifecycleFixture();
-  const image = { type: "image" as const, data: "AA==", mimeType: "image/png" };
+  const image = { type: "image" as const, data: RED_PIXEL_PNG, mimeType: "image/png" };
   await h.session.prompt("$alpha", { images: [image] });
   const original = h.users()[0]; rmSync(h.skills[0].filePath);
   const source = h.session.sessionFile;
@@ -262,7 +263,7 @@ it("preserves skill snapshots when an earlier message_end handler clones the use
   const h = await lifecycleFixture({ extraBefore: pi => {
     pi.on("message_end", event => event.message.role === "user" ? { message: { ...event.message } } : undefined);
   } });
-  const image = { type: "image" as const, data: "AA==", mimeType: "image/png" };
+  const image = { type: "image" as const, data: RED_PIXEL_PNG, mimeType: "image/png" };
   await h.session.prompt("$alpha", { images: [image] });
   const user = h.calls[0].find(message => message.role === "user")!;
   const snapshot = decodeSnapshot(textOf(user));
@@ -356,7 +357,7 @@ it("invalidates an already rendered user when message_end changes its task", asy
 });
 
 it("activates references introduced at message_end and preserves replacement images", async () => {
-  const image = { type: "image" as const, data: "BB==", mimeType: "image/png" };
+  const image = { type: "image" as const, data: BLUE_PIXEL_PNG, mimeType: "image/png" };
   const h = await lifecycleFixture({ extraBefore: pi => {
     pi.on("message_end", event => event.message.role === "user" ? { message: { ...event.message,
       content: [{ type: "text" as const, text: "$beta introduced" }, image] } } : undefined);

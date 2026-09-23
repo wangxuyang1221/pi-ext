@@ -29,8 +29,17 @@ export function isSupportedProvider(provider: string): boolean {
 export function findMatchingTarget(
   model: ModelRef | undefined,
   targets: FastTarget[],
+  excludedCodexModels?: ReadonlySet<string>,
 ): FastTarget | undefined {
   if (!model || !isSupportedProvider(model.provider)) return undefined;
+  if (model.provider === "openai-codex") {
+    if (excludedCodexModels?.has(model.id)) return undefined;
+    return {
+      provider: model.provider,
+      model: model.id,
+      serviceTier: DEFAULT_SERVICE_TIER,
+    };
+  }
 
   return targets.find(
     (target) =>
@@ -56,10 +65,11 @@ export function getFastModePayload(
   config: FastModeConfig,
   model: ModelRef | undefined,
   payload: unknown,
+  excludedCodexModels?: ReadonlySet<string>,
 ): unknown | undefined {
   if (!config.enabled) return undefined;
 
-  const target = findMatchingTarget(model, config.targets);
+  const target = findMatchingTarget(model, config.targets, excludedCodexModels);
   if (!target) return undefined;
 
   return applyFastModePayload(

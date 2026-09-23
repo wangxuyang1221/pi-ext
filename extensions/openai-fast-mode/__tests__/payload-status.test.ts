@@ -35,16 +35,16 @@ describe("model matching", () => {
     });
   });
 
-  it("does not match provider mismatch", () => {
+  it("matches any openai-codex model regardless of configured targets", () => {
     expect(
       findMatchingTarget(
-        { provider: "openai-codex", id: "gpt-5.4" },
-        config.targets,
+        { provider: "openai-codex", id: "gpt-7-unlisted" },
+        [],
       ),
-    ).toBeUndefined();
+    ).toEqual({ provider: "openai-codex", model: "gpt-7-unlisted", serviceTier: "priority" });
   });
 
-  it("does not match model mismatch", () => {
+  it("keeps exact matching for openai models", () => {
     expect(
       findMatchingTarget({ provider: "openai", id: "gpt-4" }, config.targets),
     ).toBeUndefined();
@@ -103,14 +103,22 @@ describe("payload mutation", () => {
     });
   });
 
-  it("uses target-specific serviceTier when configured", () => {
+  it("uses the default tier for openai-codex even with a legacy target", () => {
     expect(
       getFastModePayload(
         config,
         { provider: "openai-codex", id: "gpt-5.5" },
         { a: 1 },
       ),
-    ).toEqual({ a: 1, service_tier: "flex" });
+    ).toEqual({ a: 1, service_tier: "priority" });
+  });
+
+  it("preserves the configured tier for exact openai targets", () => {
+    expect(getFastModePayload({ enabled: true, targets: [
+      { provider: "openai", model: "gpt-5.5", serviceTier: "flex" },
+    ] }, { provider: "openai", id: "gpt-5.5" }, { a: 1 })).toEqual({
+      a: 1, service_tier: "flex",
+    });
   });
 
   it("matches configured GPT-5.6 models", () => {

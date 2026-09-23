@@ -14,7 +14,7 @@
 ## Requirements
 
 - Node.js 22.19 或更高版本
-- Pi AI、Coding Agent、TUI 均为 0.86.0；当前 peer 依赖固定该版本，旧会话恢复及全扩展验证范围见 [Pi compatibility validation](docs/pi-0.86.0-compatibility-validation.md)
+- Pi AI、Coding Agent、TUI 均为 0.87.0；当前 peer 依赖固定该版本，兼容性修复与验证范围见 [Pi 0.87.0 compatibility research](docs/pi-0.87.0-upstream-research.md)
 - `subagent` 运行时需要 tmux 3.6 或兼容版本
 - 支持 24-bit color 的终端可获得最接近设计稿的颜色效果
 
@@ -50,7 +50,7 @@ Pi package 以当前用户的完整系统权限运行。安装第三方 package 
 
 候选两侧需要空格、换行、Tab 或输入边界。提交激活保留左侧限制，右侧另接受明确的句读和闭合符号，例如 `$research，继续`；`$research.md` 不激活。代码、转义和左侧紧邻正文的引用保持原文。多项引用在同一 user 请求中生效，重复项去重；未知或不可读项静默保留原文。
 
-输入框与成功快照正文显示青色整体标签，默认 cube 图标需要支持 U+F01A7 的 Nerd Font。缺字时用 `/skill-label-icon command` 切换为 `⌘` 并保存偏好。整体删除、撤销、大粘贴成本、安装和历史限制见 [Skill mentions](docs/skill-mentions.md)。
+输入框与成功快照正文显示青色整体标签，默认 cube 图标需要支持 U+F01A7 的 Nerd Font。缺字时用 `/skill-label-icon command` 切换为 `⌘` 并保存偏好。
 
 ## Goal extension
 
@@ -128,11 +128,11 @@ Codex encrypted compaction item.
 
 有效窗口默认为原始窗口的 95%，用于调度判断和压缩请求的工具输出裁剪预算。`effectiveContextWindowPercent` 接受大于 0 且不超过 100 的有限数值；若模型配置里的窗口已经扣除了余量，可设为 100，避免重复扣除。这个配置不会改变默认 90% 自动压缩阈值，也不会修改 Pi 自身的压缩调度。本地估算超窗不再直接阻止远端压缩，最终由服务端判断。
 
-插件观察到成功普通回复且历史覆盖边界仍有效时，自动压缩使用服务端 total usage 加未覆盖增量；模型、分支、前缀或检查点变化时回退本地估算。多媒体估算、特殊轮次边界及完整 Rust 差分尚未全部对齐；加载在本扩展之后的 payload 转换也无法完整观测。默认测试不依赖历史在线实验材料，也不以本地估算证明服务端 90% 阈值；报告重建入口见 [Codex compact quality validation](docs/codex-compact-quality-validation.md)。
+插件观察到成功普通回复且历史覆盖边界仍有效时，自动压缩使用服务端 total usage 加未覆盖增量；模型、分支、前缀或检查点变化时回退本地估算。多媒体估算、特殊轮次边界及完整 Rust 差分尚未全部对齐；加载在本扩展之后的 payload 转换也无法完整观测。默认测试不依赖历史在线实验材料，也不以本地估算证明服务端 90% 阈值；报告重建入口见 [质量报告脚本](scripts/codex-compact-quality-development-report.mjs)。
 
 压缩请求超过有效窗口时，扩展仍可裁剪工具输出，但不再丢弃旧 user turn 后只压缩最新一段；服务端明确拒绝完整历史时会直接失败，不提交新 checkpoint，也不进入额外的超窗恢复循环。诊断保留原始错误分类，`recoveryAttempted` 为 `false`；网络重试及 Pi 普通请求超窗后发起压缩的流程不变。保留历史的 64k 预算计入图片，并原子保留或删除图片及相邻标签。文本边界采用 UTF-8 首尾保留截断。Pi 发起压缩时，如系统提示已改变，扩展会刷新缓存指令。
 
-当前 V2 路径不消费 `/compact focus text` 的 focus text，也不执行分段压缩。离线验证方法与历史证据要求见 [Codex compact quality validation](docs/codex-compact-quality-validation.md)。
+当前 V2 路径不消费 `/compact focus text` 的 focus text，也不执行分段压缩。
 
 不要同时加载本扩展和独立的 `npm:@yeungkc/pi-codex-compact@0.0.6`，否则同一组 hooks 会执行两次。迁移现有安装时，应先验证本 package，再从 Pi settings 停用独立 npm entry 并重启或 reload。
 
@@ -140,7 +140,7 @@ Codex encrypted compaction item.
 
 ## OpenAI Fast Mode extension
 
-`openai-fast-mode` 为配置中精确匹配的 OpenAI 和 OpenAI-Codex 模型注入 `service_tier: "priority"`。可使用以下命令切换：
+`openai-fast-mode` 为配置中精确匹配的 `openai` 模型，以及 `openai-codex` 的任意模型注入 `service_tier: "priority"`。新加入 Pi 的 `openai-codex` 模型无需更新扩展名单。可使用以下命令切换：
 
 ```text
 /fast
@@ -149,9 +149,9 @@ Codex encrypted compaction item.
 /fast toggle
 ```
 
-启动参数 `--fast` 会启用并持久化 Fast Mode。全局状态继续保存在 `~/.pi/agent/extensions/pi-openai-fast-mode/config.json`；项目级状态保存在 `.pi/pi-openai-fast-mode/config.json`，迁入本仓库后无需迁移现有配置。
+启动参数 `--fast` 会启用并持久化 Fast Mode。全局状态继续保存在 `~/.pi/agent/extensions/pi-openai-fast-mode/config.json`；项目级状态保存在 `.pi/pi-openai-fast-mode/config.json`，迁入本仓库后无需迁移现有配置。旧配置中的 `openai-codex` 逐模型 targets 会在下次加载时移除，但持久化的开关保持不变。
 
-扩展通过 `setStatus("pi-openai-fast-mode", "fast")` 发布 footer 状态，并主动清理 0.3.0 使用的 below-editor widget。不要再单独加载 `npm:pi-openai-fast-mode`，否则 `/fast`、flag 和 provider hooks 会重复注册。
+若 `openai-codex` 请求明确返回模型不支持 Fast，扩展会提示 `Fast mode is not supported for openai-codex/<model>. This request failed. Retry to use standard mode for this model in this session.`，并仅在当前会话内对该模型停止注入；原因不明确的错误不会禁用 Fast。`setStatus("pi-openai-fast-mode", "fast")` 只表示扩展请求了 Fast，不保证服务端最终使用 Fast。扩展仍会清理 0.3.0 使用的 below-editor widget。不要再单独加载 `npm:pi-openai-fast-mode`，否则 `/fast`、flag 和 provider hooks 会重复注册。
 
 本目录基于 `pi-openai-fast-mode` 0.3.0 导入；精确 commit、同步范围和本地改动记录见 `extensions/openai-fast-mode/UPSTREAM.md`，上游 MIT license 见同目录 `LICENSE`。
 
@@ -258,7 +258,7 @@ Bash、Read、Edit、Write 与 MCP 工具调用统一使用静态大圆点 `⏺`
 
 Bash、Read、MCP 的正常正文统一使用 `text`，在 codex-pi 主题中为原 Bash 的亮灰 `#d6d6d6`。目录、行号、连接线与截断提示仍弱化，文件名强调色及 diff 增删色不变。未全局修改 `toolOutput`，因此 subagent、默认工具卡片和 MCP 连接状态不受影响。完整与低功耗模式均支持，低功耗 Bash 仍需展开查看正文。实现及验收见 [Tool status acceptance](docs/tool-status-acceptance.md)，正式代码的隔离 PTY 验收命令为 `pnpm run tool-status:check`。
 
-`read`、`edit`、`write`、`bash` 使用 Pi 0.86.0 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。full 模式下，每个已执行调用显示一条 `⏺ Bash(command)`，`Bash` 文字仍与 `Read`、`Edited` 对齐。尚未执行的 pending 调用暂不显示，错误或完成结果不会被隐藏。内部仍按同一 assistant 消息中的连续 Bash 维护归属，不跨 text、thinking、其他工具、缺失组件或消息合并；重复 ID 的额外组件独立显示。发现重复时，已绑定的旧成员保持原位，尚未绑定该 ID 的组件不再接管 candidate，因而旧 low-power 或缺失组件不能成为后来 full 行搬移旧命令的入口。取消旧统计标题、命令树和耗时列。长命令默认按当前宽度单行省略，展开保留完整命令及逻辑换行。
+`read`、`edit`、`write`、`bash` 使用 Pi 0.87.0 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。full 模式下，每个已执行调用显示一条 `⏺ Bash(command)`，`Bash` 文字仍与 `Read`、`Edited` 对齐。尚未执行的 pending 调用暂不显示，错误或完成结果不会被隐藏。内部仍按同一 assistant 消息中的连续 Bash 维护归属，不跨 text、thinking、其他工具、缺失组件或消息合并；重复 ID 的额外组件独立显示。发现重复时，已绑定的旧成员保持原位，尚未绑定该 ID 的组件不再接管 candidate，因而旧 low-power 或缺失组件不能成为后来 full 行搬移旧命令的入口。取消旧统计标题、命令树和耗时列。长命令默认按当前宽度单行省略，展开保留完整命令及逻辑换行。
 
 默认预览前三个终端显示行，超出时显示精确的 `… +N lines` 和实际展开绑定。正常正文使用 `text` 色，输出前缀灰色，失败正文红色；已核验的取消与超时使用警告色。无输出时分别显示 `Running…`、`(No content)` 或 `Command failed`。只在宿主明确标记失败且尾部诊断匹配时，才把退出码、取消或超时诊断提到预览首行，不根据日志中的 `Error` 判断失败。
 
@@ -268,7 +268,7 @@ Bash、Read、MCP 的正常正文统一使用 `text`，在 codex-pi 主题中为
 
 Read 在同一 assistant 消息内按调用顺序合并相邻读取，不跨 text、thinking、其他工具或消息边界。每个文件显示不加粗的主题 `accent` 文件名、暗灰目录和实际返回范围，默认附最多三屏幕行预览及余量提示。预览每行最多提取 512 个 UTF-16 代码单元，长行裁剪而不换行。全局 `app.tools.expand` 快捷键展开完整输入路径和最多 40 行源码，再次按键恢复短预览。错误、取消和续读提示保留；图片及归属不明的调用独立显示，避免宿主附件与文件名错位。分组不改执行、权限或持久化结果，不提供原型的配色与布局切换命令。双版本验证及预览开销见 [Read UI validation](docs/research/codex-ui-read-validation.md)。
 
-Read 分组按会话来源维护，显示组件重建不会被算成重复调用。唯一 ID 的历史及本轮已完成 Read 在真实历史重建、`/reload` 后仍保持分组；旧组件回调不能覆盖逻辑结果。结果按流式更新、执行结束、最终消息的优先级递进，采用 codex-ui 已收到的 `message_end` 修订，不被迟到的执行事件覆盖。Pi 0.86.0 的 `Ctrl+T` 本身已不重建工具行，本次另行验证了实际重建路径。tree 和压缩后只使用当前可见历史，普通工具事件直接更新受影响记录，不重新扫描全部历史。实现及验收见 [Read history grouping fixes](docs/codex-ui-read-history-todo.md)。
+Read 分组按会话来源维护，显示组件重建不会被算成重复调用。唯一 ID 的历史及本轮已完成 Read 在真实历史重建、`/reload` 后仍保持分组；旧组件回调不能覆盖逻辑结果。结果按流式更新、执行结束、最终消息的优先级递进，采用 codex-ui 已收到的 `message_end` 修订，不被迟到的执行事件覆盖。Pi 0.86.0 的 `Ctrl+T` 本身已不重建工具行，本次另行验证了实际重建路径。tree 和压缩后只使用当前可见历史，普通工具事件直接更新受影响记录，不重新扫描全部历史。
 
 真实重复 ID 使用各行本地参数和结果，不共享歧义数据，也不修正宿主自身按 ID 复用行的限制。图片、缺失来源/结果、从未绑定的视图仍断开分组。已接受的边界是：公开接口没有行卸载通知，插件不检测宿主无通知移除曾绑定视图的情况；不为此读取私有组件列表或增加轮询。
 

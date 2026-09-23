@@ -26,6 +26,18 @@ export type FastModeExtensionOptions = {
 
 const DEFAULT_EXTENSION_DIR = dirname(fileURLToPath(import.meta.url));
 
+function isUnsupportedFastError(message: string): boolean {
+  if (
+    /(?:^|\W)(?:unsupported_(?:service_tier|fast_mode)|(?:service_tier|fast_mode)_unsupported)(?:$|\W)/i.test(message)
+  ) {
+    return true;
+  }
+  return (
+    /\b(?:service[_ -]?tier|fast mode|priority processing)\b/i.test(message) &&
+    /\b(?:not supported|does not support|unsupported)\b/i.test(message)
+  );
+}
+
 function notifyError(
   ctx: Pick<ExtensionContext, "hasUI" | "ui">,
   error: unknown,
@@ -46,6 +58,8 @@ export function createPiFastModeExtension(
     let configPath: string | undefined;
     let loadedCwd: string | undefined;
     let currentModel: ModelRef | undefined;
+    const excludedCodexModels = new Set<string>();
+    const pendingCodexFastModels = new Set<string>();
 
     async function loadForContext(
       ctx: Pick<ExtensionContext, "cwd">,
@@ -109,7 +123,7 @@ export function createPiFastModeExtension(
           refreshCurrentModel(ctx);
           config.enabled = parseFastCommand(args, config.enabled);
           await saveCurrent(ctx);
-          updateFastStatus(ctx, config, currentModel);
+          updateFastStatus(ctx, config, currentModel, excludedCodexModels);
         } catch (error) {
           notifyError(ctx, error);
         }
@@ -119,6 +133,8 @@ export function createPiFastModeExtension(
     pi.on("session_start", async (_event, ctx) => {
       try {
         currentModel = toModelRef(ctx.model);
+        excludedCodexModels.clear();
+        pendingCodexFastModels.clear();
         await loadForContext(ctx);
 
         if (pi.getFlag("fast") === true) {
@@ -126,7 +142,7 @@ export function createPiFastModeExtension(
           await saveCurrent(ctx);
         }
 
-        updateFastStatus(ctx, config, currentModel);
+        updateFastStatus(ctx, config, currentModel, excludedCodexModels);
       } catch (error) {
         notifyError(ctx, error);
       }
@@ -134,15 +150,50 @@ export function createPiFastModeExtension(
 
     pi.on("model_select", async (event, ctx) => {
       currentModel = toModelRef(event.model) ?? toModelRef(ctx.model);
-      updateFastStatus(ctx, config, currentModel);
+      updateFastStatus(ctx, config, currentModel, excludedCodexModels);
     });
 
     pi.on("before_provider_request", (event, ctx) => {
       const model = toModelRef(ctx.model) ?? currentModel;
-      return getFastModePayload(config, model, event.payload);
+      const payload = getFastModePayload(
+        config,
+        model,
+        event.payload,
+        excludedCodexModels,
+      );
+      if (payload !== undefined && model?.provider === "openai-codex") {
+        pendingCodexFastModels.add(model.id);
+      }
+      return payload;
+    });
+
+    pi.on("message_end", (event, ctx) => {
+      const message = event.message;
+      if (message.role !== "assistant" || message.provider !== "openai-codex") return;
+      if (!pendingCodexFastModels.delete(message.model)) return;
+      if (
+        message.stopReason !== "error" ||
+        !isUnsupportedFastError(message.errorMessage ?? "")
+      ) return;
+      if (excludedCodexModels.has(message.model)) return;
+
+      excludedCodexModels.add(message.model);
+      const activeModel = toModelRef(ctx.model) ?? currentModel;
+      if (activeModel?.provider === "openai-codex" && activeModel.id === message.model) {
+        updateFastStatus(ctx, config, activeModel, excludedCodexModels);
+      }
+      if (ctx.hasUI) {
+        ctx.ui.notify(
+          `Fast mode is not supported for openai-codex/${message.model}. ` +
+            "This request failed. Retry to use standard mode for this model in this session.",
+          "warning",
+        );
+      }
     });
 
     pi.on("session_shutdown", async (_event, ctx) => {
+      excludedCodexModels.clear();
+      pendingCodexFastModels.clear();
       try {
         if (configPath) {
           await saveConfigToPath(configPath, config);

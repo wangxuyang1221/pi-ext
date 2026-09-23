@@ -25,7 +25,7 @@ test("runs a frozen plugin entry in an isolated Pi process and captures transpor
     const credentialFile = path.join(root, "credential.json"); fs.writeFileSync(credentialFile, "{}");
     const result = await plugin.runPluginCompaction({ directory, moduleDirectory, expectedModuleFingerprint: fingerprintWorkspace(moduleDirectory), sourceWorkspace, expectedWorkspaceFingerprint: fingerprintWorkspace(sourceWorkspace), credentialFile, history: [], instructions: "instructions", executionTimeoutMs: 10000 });
     expect(result.usage.input).toBe(100); expect(result.requestCount).toBe(1); expect(calls).toBe(1);
-    expect(result.piVersion).toBe("0.86.0"); expect(result.replacementHistory[0].type).toBe("compaction");
+    expect(result.piVersion).toBe("0.87.0"); expect(result.replacementHistory[0].type).toBe("compaction");
     expect(fs.existsSync(path.join(directory, "plugin/pi-home/auth.json"))).toBe(false);
     const capture = fs.readFileSync(path.join(directory, "plugin/request-0.json"), "utf8");
     expect(capture).not.toContain("authorization"); expect(capture).not.toContain("do-not-record-test-secret");
