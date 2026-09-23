@@ -1,0 +1,16 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast
+
+ ✓ extensions/subagent/__tests__/runtime-integration.test.ts (6 tests) 3526ms
+   ✓ new-session starts a child with its own pane under a fish default shell  703ms
+   ✓ new-window starts a child with its own pane under a fish default shell  589ms
+   ✓ manager single-target close removes a retained dead pane after list marks it interrupted  574ms
+   ✓ a restarted tmux server cannot make an old pane locator own a replacement  575ms
+   ✓ real tmux rename retains identity and removes a live pane on close  535ms
+   ✓ real tmux rename retains identity and removes a dead pane on close  549ms
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  23:25:10
+   Duration  3.75s (transform 73ms, setup 0ms, collect 85ms, tests 3.53s, environment 0ms, prepare 28ms)
+
