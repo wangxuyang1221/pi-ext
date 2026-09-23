@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 
 let failingDirectory: string | undefined;
 let failure: "open" | "sync" | "close" = "sync";
+const directorySyncTest = process.platform === "win32" ? it.skip : it;
 vi.mock("node:fs/promises", async importOriginal => {
   const fs = await importOriginal<typeof import("node:fs/promises")>();
   return { ...fs, open: async (...args: Parameters<typeof fs.open>) => {
@@ -28,7 +29,7 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await actualFs.rm(root, { recursive: true, force: true });
 });
 
-it.each(["open", "sync", "close"] as const)("adopts a published checkpoint after directory %s fails without double counting time", async stage => {
+directorySyncTest.each(["open", "sync", "close"] as const)("adopts a published checkpoint after directory %s fails without double counting time", async stage => {
   const root = join(process.cwd(), ".tmp", "goal-bugfix", `storage-${randomUUID()}`);
   roots.push(root);
   let now = 0;
@@ -89,7 +90,7 @@ it("matches only the exact published record identity", async () => {
   await lease.close();
 });
 
-it("retains fractional elapsed time across a published failure", async () => {
+directorySyncTest("retains fractional elapsed time across a published failure", async () => {
   const root = join(process.cwd(), ".tmp", "goal-bugfix", `storage-${randomUUID()}`);
   roots.push(root);
   let now = 0;
@@ -107,7 +108,7 @@ it("retains fractional elapsed time across a published failure", async () => {
   await lease.close();
 });
 
-it("adopts a published pause and excludes paused time", async () => {
+directorySyncTest("adopts a published pause and excludes paused time", async () => {
   const root = join(process.cwd(), ".tmp", "goal-bugfix", `storage-${randomUUID()}`);
   roots.push(root);
   let now = 0;
@@ -127,7 +128,7 @@ it("adopts a published pause and excludes paused time", async () => {
   await lease.close();
 });
 
-it("adopts a published usage receipt without charging it twice", async () => {
+directorySyncTest("adopts a published usage receipt without charging it twice", async () => {
   const root = join(process.cwd(), ".tmp", "goal-bugfix", `storage-${randomUUID()}`);
   roots.push(root);
   let now = 0;
@@ -146,7 +147,7 @@ it("adopts a published usage receipt without charging it twice", async () => {
   await lease.close();
 });
 
-it("adopts published replacement and clear identities", async () => {
+directorySyncTest("adopts published replacement and clear identities", async () => {
   const root = join(process.cwd(), ".tmp", "goal-bugfix", `storage-${randomUUID()}`);
   roots.push(root);
   let now = 0;
@@ -170,7 +171,7 @@ it("adopts published replacement and clear identities", async () => {
   await lease.close();
 });
 
-it.each([true, false])("keeps budget-limited timing when wrap-up is %s", async inFlight => {
+directorySyncTest.each([true, false])("keeps budget-limited timing when wrap-up is %s", async inFlight => {
   const root = join(process.cwd(), ".tmp", "goal-bugfix", `storage-${randomUUID()}`);
   roots.push(root);
   let now = 0;
@@ -186,4 +187,27 @@ it.each([true, false])("keeps budget-limited timing when wrap-up is %s", async i
   now = 11_000;
   expect((await lease.checkpoint(lease.snapshot)).goal?.elapsedSeconds).toBe(inFlight ? 11 : 10);
   await lease.close();
+});
+
+it("commits normally when the Windows branch skips directory sync", async () => {
+  const root = join(process.cwd(), ".tmp", "goal-bugfix", `storage-${randomUUID()}`);
+  roots.push(root);
+  let now = 0;
+  const disk = new GoalStore(root, () => now);
+  const lease = await disk.openSession({ ownerSessionId: "windows-commit", cwd: process.cwd(), sessionFile: join(root, "session.jsonl") });
+  await lease.replace("Windows commit path", lease.snapshot);
+  const originalPlatform = Object.getOwnPropertyDescriptor(process, "platform")!;
+  now = 10_000;
+  failingDirectory = root;
+  failure = "open";
+  try {
+    Object.defineProperty(process, "platform", { ...originalPlatform, value: "win32" });
+    const saved = await lease.checkpoint(lease.snapshot);
+    expect(saved.goal?.elapsedSeconds).toBe(10);
+    expect(await disk.read(saved.recordId)).toEqual(saved);
+  } finally {
+    Object.defineProperty(process, "platform", originalPlatform);
+    failingDirectory = undefined;
+    await lease.close();
+  }
 });

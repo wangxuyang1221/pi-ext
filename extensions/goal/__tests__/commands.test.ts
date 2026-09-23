@@ -9,6 +9,7 @@ import { GoalStore } from "../src/storage.js";
 import { GoalContent } from "../src/content.js";
 
 let failingDirectory: string | undefined;
+const directorySyncTest = process.platform === "win32" ? it.skip : it;
 vi.mock("node:fs/promises", async importOriginal => {
   const fs = await importOriginal<typeof import("node:fs/promises")>();
   return { ...fs, open: async (...args: Parameters<typeof fs.open>) => {
@@ -373,7 +374,7 @@ it("preserves saved content across cancelled attachment selection and failed rec
   expect(h.details.mock.calls.at(-1)?.[0]).toContain("Existing long objective");
 });
 
-it("retains content after an uncertain post-rename failure instead of deleting committed files", async () => {
+directorySyncTest("retains content after an uncertain post-rename failure instead of deleting committed files", async () => {
   const h = await harness();
   await h.run("Previous");
   vi.mocked(h.pi.sendMessage).mockClear();
@@ -388,7 +389,7 @@ it("retains content after an uncertain post-rename failure instead of deleting c
   expect(h.pi.sendMessage).not.toHaveBeenCalled();
 });
 
-it("keeps published pause and resume failures suspended until a successful explicit resume", async () => {
+directorySyncTest("keeps published pause and resume failures suspended until a successful explicit resume", async () => {
   const h = await harness();
   await h.run("Persist the stop state");
   vi.mocked(h.pi.sendMessage).mockClear();
@@ -827,7 +828,7 @@ it("keeps deferral on write failure without swallowing user input", async () => 
   h.disk.beforeRename = undefined;
 });
 
-it("keeps input and suspends after a published deferral release fails", async () => {
+directorySyncTest("keeps input and suspends after a published deferral release fails", async () => {
   const h = await harness();
   const source = await h.disk.openSession({ ownerSessionId: "source", cwd: process.cwd(), sessionFile: resolve(h.root, "source.jsonl") });
   const saved = await source.replace("Source", source.snapshot);
@@ -848,7 +849,7 @@ it("keeps input and suspends after a published deferral release fails", async ()
   expect(h.pi.sendMessage).not.toHaveBeenCalled();
 });
 
-it("suspends get_goal after its published checkpoint fails", async () => {
+directorySyncTest("suspends get_goal after its published checkpoint fails", async () => {
   let now = 0;
   const h = await harness(undefined, () => now);
   await h.run("Read a timed goal");
@@ -863,7 +864,7 @@ it("suspends get_goal after its published checkpoint fails", async () => {
   expect(h.pi.sendMessage).not.toHaveBeenCalled();
 });
 
-it("stops goal-fork after a published source checkpoint failure", async () => {
+directorySyncTest("stops goal-fork after a published source checkpoint failure", async () => {
   let now = 0;
   const h = await harness(undefined, () => now);
   await h.run("Fork a timed goal");
@@ -879,7 +880,7 @@ it("stops goal-fork after a published source checkpoint failure", async () => {
   expect(h.notify.mock.calls.at(-1)?.[0]).toContain("directory durability confirmation failed");
 });
 
-it("releases the writer after a published shutdown checkpoint failure", async () => {
+directorySyncTest("releases the writer after a published shutdown checkpoint failure", async () => {
   let now = 0;
   const h = await harness(undefined, () => now);
   await h.run("Close a timed goal");
