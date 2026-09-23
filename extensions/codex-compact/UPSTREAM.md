@@ -53,4 +53,6 @@ turn-state 保留到下一条实际投递的 user message，工具循环和无�
 
 压缩算法仍以上述 Codex `0.154.0` 为来源基线；模型目录请求的默认 `client_version` 单独采用已通过真实只读查询验证的 `0.156.0`，可通过 `metadataClientVersion` 覆盖。这不表示压缩算法或 Pi 依赖已升级到 Codex `0.156.0`。
 
+`/codex-metadata` 是本扩展新增的本地配置命令，可查看有效目录版本及来源，并通过 `version <major.minor.patch>` 或 `reset` 只修改全局配置的 `metadataClientVersion`。受信任项目覆盖仍优先；命令不查询在线最新版本，不发起模型目录请求。此命令不归因于上游 Codex。
+
 `src/capabilities.ts` 不再维护逐模型 `comp_hash` 表。`src/model-metadata.ts` 经 Pi `ModelRegistry.getApiKeyAndHeaders` 读取认证，只向官方 [models endpoint](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/codex-api/src/endpoint/models.rs) 发 GET。`comp_hash` 依照上游 [ModelInfo 定义](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/protocol/src/openai_models.rs) 是标识压缩兼容模型配置的不透明字符串。进程内目录缓存 TTL 为 300 秒，与上游 [models manager](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/models-manager/src/manager.rs) 的默认值一致；30 秒失败和未知模型限流、4 个认证 scope 上限、8 MiB 响应上限及 3 秒 HTTP 上限是本扩展的本地边界。目录缺失或请求失败时不猜 hash，旧 checkpoint 自带的 hash 保留。

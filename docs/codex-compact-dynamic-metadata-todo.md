@@ -2,15 +2,17 @@
 
 ## Understanding
 
-将 Codex 压缩 hash 的来源从逐模型固定表改为官方模型目录，接入现有选择、请求、恢复和 checkpoint 流程。完整设计唯一来源为 [implementation design](codex-compact-dynamic-metadata.md)，按 D1–D9 实现，不重新选择版本策略或失败行为。
+原动态目录改造已交付为 `98cb4e8`；本轮接续修复两个过渡状态回归，并新增用户手动设置版本的 `/codex-metadata`。完整设计唯一来源为 [implementation design](codex-compact-dynamic-metadata.md)，本轮依据 D6.2、D10 和下面 F1–F5、H13–H15 执行。T1–T6 及原 Results 保留为先前交付记录，不代表新增范围已完成。
 
 ## User Visible Changes
 
 - 在账号及配置的客户端版本可见范围内，新增模型可自动获得 hash；不需要编辑插件模型表。模型选择动作本身不查询目录，首次实际请求可能等待一次目录 GET，随后使用缓存。
 - 目录不可用、缺少对应模型或使用自定义代理时，hash 为未知，不因此阻止对话或强制压缩；上下文容量检查继续执行。离线冷启动下，旧静态表曾覆盖的模型也可能没有 hash，旧 checkpoint 已记录的 hash 仍保留。
 - 可在已有配置中设置 `metadataClientVersion`，默认 `0.156.0`。目录受客户端版本门槛影响，仍可能需要更新该配置或扩展默认值；不要求安装 Codex CLI，不自动升级 Pi 或注册模型。
+- 恢复会话后，同 hash 的 B→C 候选不再遮蔽历史 A→C 的必要过渡；从历史恢复的过渡超窗失败后，追加 error/aborted assistant 也不会让下一次请求跳过过渡。
+- 用户可通过 `/codex-metadata` 查看实际版本和来源，使用 `version <版本>` 保存全局覆盖，或 `reset` 删除全局覆盖。项目优先级保留，结果会显示项目覆盖；成功保存后下一次请求使用新配置，进行中的请求不受影响。
 
-这些变化属于用户选择的动态元数据方案的实现设计，不代表用户要求每一项内部策略。不包含提交、发布或外部配置修改。
+追加变化已获用户授权；具体内部策略由 expert 设计。不包含提交、发布或代理对真实外部配置的修改；实现和测试命令时使用仓库内隔离配置。运行产品后，用户显式执行 version/reset 才写全局配置。
 
 ## Todo
 
@@ -26,9 +28,17 @@
 
 - [x] T6：按 D9 更新 README 和 UPSTREAM，准确说明版本门槛、目录缺失和验证边界；完成 H12 后记录实际结果，确认无任务进程或临时资源遗留，交付本地改动和未覆盖项。
 
+### 3. Follow-up implementation
+
+- [x] F1：按 D6.2 重排候选解析及无有效 transition 时的历史回退；先完成局部 pending 赋值，map 写回留给 F2；满足 H13 R1/R3 和一次 resolver、一次必要历史恢复的成本约束。
+- [x] F2：按 D6.2 保存历史恢复出的 PendingSelection，保留成功、失败及生命周期清理语义；满足 H13 R2/R3，超窗重试不跳过过渡、不增加重复解析。
+- [x] F3：按 D10.2–D10.3 扩展 config.ts 的版本校验、带来源查询及单字段全局更新；满足 H14 的字段保留、原子写入、信任和错误边界，无网络及额外请求路径开销。
+- [x] F4：按 D10.1–D10.2 新增 metadata-command.ts 并在 index.ts 注册，适配现有 fake ExtensionAPI；满足 H14 的真实注册 handler 到配置到 provider hook 路径，零命令网络调用、保留运行中快照。
+- [x] F5：按 D10.4 更新 README 的 Codex Compact 节及 UPSTREAM 本地差异说明，完成 H15 后填写追加验收记录，交付实际结果和未覆盖范围。
+
 ## How To Test
 
-下面是 worker 的执行要求，尚未运行，不能把前一轮原型或旧基线结果填成这里的完成证据。按对应 Todo 先写能因旧行为失败的测试，确认 Red 后实现到 Green，再在保护测试下重构。已有通过的回归只需验证保持，不人为改坏它来制造 Red。功能和性能条件均通过才能勾选 Todo。
+H1–H12 的先前执行结果保留在原 Results 中；H13–H15 为本轮新增要求，尚未执行，不能以原型或旧基线替代。按对应 Todo 先写能因旧行为失败的测试，确认 Red 后实现到 Green，再在保护测试下重构。已有通过的回归只需验证保持，不人为改坏它来制造 Red。功能和性能条件均通过才能勾选 Todo。
 
 ### H1. Configuration
 
@@ -178,6 +188,126 @@ Red/Green 记录：T1 新测试首次运行时配置默认值与目录解析共 
 清理：检查结束后只删除了本任务创建的 `.tmp/codex-metadata-check`；`pgrep -fl '[v]itest'` 无残留进程。本任务没有启动监听服务或占用端口。
 
 未覆盖：未发送真实付费推理或压缩请求，未验证 Pi `0.87.1`，也未验证其他账号或未来目录返回。此前只读在线原型结果属于独立证据，不充当本次生产接线的在线验收。
+
+### H13. Transition regression repair
+
+设计依据为 implementation design 的 D6.2。下列用例是 F1/F2 的验收标准，尚未实现或执行。
+
+#### Setup and evidence boundary
+
+在 `extensions/codex-compact/__tests__/session-coordinator.test.ts` 增补测试，沿用该文件的 fixture 和辅助函数。所有回归测试调用真实 createSessionCoordinator/prepareRequest，不测试转录出来的决策逻辑，不直接读写私有 pending map。
+
+A = model("old")，B = model("new")，C = model("gpt-5.6-terra")；三者均为 openai-codex、openai-codex-responses、窗口 100000。使用现有 fixtureSnapshot，显式核对 A=2911、B=C=3000。shouldAutoCompact 固定 false，避免自动压缩掩盖缺失的过渡。ctx registry 可找到 A/B/C；如设置 ctx.model，应随真实选择更新，不能让测试意外失败于 ensureCurrent。
+
+用 SessionEntry 数组构造 user、带 provider/api/model 的成功 assistant、model_change 和后续 user；为条目设置稳定且唯一 ID。每次请求从当时 branch 调用真实 effectiveInputForBranch 生成 requestInput。createCheckpoint 和 resolver 用 spy 替代外部传输，appendCheckpoint 写回同一 branch，appendCheckpointBypass 写入或计数以便断言。使用 createSessionCoordinator 直接注入带 spy 的依赖即可，不必为此改生产接口或全局 fixture。
+
+此边界覆盖真实历史扫描、输入投影、失败分类、重试、状态保存和 checkpoint 重放；目录内容、远端响应及 Pi 追加失败 assistant 由 fixture 提供。测试通过不能称为在线服务或完整宿主事件循环验收。现有 index/request-lifecycle 测试由最终 check 一并运行。
+
+#### R1. Candidate fallback
+
+在 F1 修改前先编写并运行失败测试：branch 顺序为旧 user、A 成功 assistant、选择 B、选择 C、新 user。使用新 coordinator 表示会话恢复后无内存 pending，仅向它发送 B→C 的 selectModel 事件，再 prepareRequest(C)。
+
+断言选择时 resolver 未调用；请求调用 resolver 一次；createCheckpoint 恰好一次且 model 为 A；压缩输入含旧历史且不含新 user；追加的 checkpoint modelKey 为 C、compHash 为 3000；返回值含新压缩项及仅一份完整新 user。修复前应失败于压缩未发生，不能以 setup 或 import 失败作为 Red 证据。
+
+增加无 B→C 事件的对照，使用相同 branch 和新 coordinator，预期同样使用 A。另做同 hash 无历史差异的对照，把历史 assistant 改为 B，仍执行 B→C 选择，预期 createCheckpoint 为 0。不得把修复变成所有模型切换都压缩。
+
+#### R2. Recovered transition survives failure
+
+F1 后、F2 前编写跨请求测试，以 `error` 和 `aborted` 参数化：branch 为旧 user、A 成功 assistant、选择 B、首次请求 user；新 coordinator 没有 selectModel 事件或 checkpoint。createCheckpoint 前两次都抛普通 Error("context_length_exceeded")，不添加 retryWithCurrentModel 字段。
+
+第一次 prepareRequest(B) 应调用 A、B 各一次并拒绝，没有 checkpoint 或 bypass。随后在同一 branch 追加 B 的失败 assistant，stopReason 为参数值，再追加第二个 user；使用同一个 coordinator 和相同 hashes。让后续 createCheckpoint 仍抛相同错误，第二次也必须拒绝，总调用顺序为 A、B、A、B，总 resolver 次数为 2，仍无 checkpoint/bypass。修复前第二次会放行且调用数停在 2，作为 Red 证据。
+
+再将 factory 改为成功，追加新 user 并执行第三次请求：恰好新增一次 A 压缩，checkpoint 绑定 B/3000，当前 user 完整保留一次。随后在该 checkpoint 后追加新 user，再请求 B，应不新增过渡压缩。每次公开请求只新增一次 resolver 调用。
+
+#### R3. Priority and existing contracts
+
+新增或复用能精确覆盖以下输入的保护测试；不能只按测试名称推断已覆盖：
+
+- 已有属于 C 的 valid checkpoint、compHash 3000，内存候选目标为 B，当前请求 C：先清理候选，正常重放 C checkpoint，不抛目标不一致、不压缩。ctx.model 为 C 或不设置。
+- 没有 checkpoint 时保留目标 B 的候选，却请求 C：抛原文 `The pending Codex model transition targets a different model.`，不压缩、不追加 checkpoint，不能先清理候选再历史回退。
+- 已有 hash 相同/未知、downshift 仅阈值满足才压缩、无 model_change 的历史恢复、非超窗 bypass、清理/模型变化/取消、连续压缩和 user 去重测试全部保持通过。无有效过渡且无 checkpoint 的空 branch，在 requestInput 缺失时不因候选本身新增错误，复用既有场景；必要时补该边界。
+
+#### Commands and completion
+
+先按 R1、R2 时机分别保存 Red/Green 结果。每个 Red 都应是目标行为断言失败；通过后不再为凑记录反复运行。目标测试命令：
+
+```sh
+pnpm exec vitest run extensions/codex-compact/__tests__/session-coordinator.test.ts
+```
+
+完成功能和文档修改后执行完整检查。临时目录必须是本任务专用；若同名目录已存在，另选唯一名称，避免误删其他任务内容。
+
+```sh
+mkdir -p .tmp/codex-transition-review-check
+TMPDIR="$PWD/.tmp/codex-transition-review-check" pnpm run check
+git diff --check
+git status --short
+```
+
+所有类型检查、测试、构建和发布包检查应通过。代码审查设计 D6.2 的成本和状态约束，确认修复未增加 resolver/网络调用点、未修改历史 helper、未新增自动 latest 发现或改变默认版本。D10 只提供手动配置入口。记录实际测试数、跳过项、命令退出状态和仍未覆盖范围到本文件的追加验收记录；然后勾选满足完成条件的 F 项。验证后只清理本任务临时目录和进程。
+
+无需真实付费推理、真实压缩或访问凭证，也无需重跑先前动态目录探针。若测试出现与设计冲突的路径，按 handoff 的 Continuation Point 回传证据，不通过放松断言、改 helper 或扩大 scope 自行决定行为。
+
+### H14. Manual version command
+
+设计依据：implementation design D10。F3 前在 `config.test.ts` 写字段更新和来源查询失败测试；F4 前在新增 `metadata-command.test.ts` 写命令注册/解析测试，在 `index.test.ts` 写配置到下一次 provider 请求的接线测试。新导出尚不存在造成的 import 失败可记录为搭建阶段，行为 Red 必须在最小可加载接口下失败于目标断言，不能仅用 import 错误证明功能回归覆盖。
+
+#### H14.1. Isolated files and preservation
+
+使用仓库 `.tmp/` 下 mkdtemp 的独立 agent/project 目录，临时设置并恢复 `PI_CODING_AGENT_DIR`，按既有 config 测试方式隔离。不并行运行共享环境变量的测试。测试结束清理本次目录；不得读写真实 agent 配置。
+
+- global/project/default 的有效版本与来源路径必须和 `loadConfig` 一致。项目只有在 trusted=true 时读取，使用文件读调用 spy 证明 trusted=false 连项目读取也没有发生。项目合法覆盖、非法字段、无效 JSON、无法读取分别验证优先级和安全警告；普通 loadConfig 的容错行为保持。
+- 对一次 loadConfig 和一次状态查询分别计数，每个允许读取的配置文件至多一次 read/parse；禁止状态查询先 loadConfig 再重复读文件。写入命令的更新和写后状态查询分阶段计数，允许写后重新读取一次状态。
+- version 仅修改 metadataClientVersion；原三个压缩字段、未知字段和嵌套数据保持相同。reset 仅删除此属性。重新读取文件和 loadConfig 验证保存结果，不能只断言 writer 被调用。
+- 文件缺失时 version 创建文件，0600；reset 不创建文件或父目录。相同字符串设置和无字段 reset 保留原字节，不发生临时文件写入或 rename。普通文件替换后权限位保留。
+- 无效 JSON、数组/null/标量根节点、非 ENOENT 读取失败、目录或符号链接目标均拒绝写入，原内容/链接保持，错误不含原配置内容。合法对象中的非法版本字段可被设置替换或 reset 删除。
+- 注入临时文件写入失败、rename 失败，检查原文件字节完全不变、临时文件和句柄被清理、错误反馈出现而成功反馈不出现。优先局部 mock Node fs 的目标操作，保留其余真实磁盘过程；不用 chmod 假装所有运行身份都会得到 EACCES。另验证清理失败会报告，不能漏报残留。
+- 同一实例连续发起两次更新，最终版本为后一次，第一次写入前已存在的其他字段不丢失。以最终文件内容和临时文件计数验收；不声称覆盖另一个进程并发编辑。
+
+#### H14.2. Command behavior and cost
+
+捕获真实 registerMetadataCommand 注册的 handler，使用真实 config helper 和隔离文件；替代 ui.notify、stderr 和传输以观察副作用。调用前后核对文件、有效配置及计数。
+
+- 无参数：显示有效版本、来源及路径，全局目标路径、用法；无写入、认证、HTTP、sendMessage、模型变更或 checkpoint。
+- `version 0.157.0`：写全局，成功消息含保存值、全局路径、有效值与来源。存在项目 `0.158.0` 时保持项目文件字节不变，并显示项目仍覆盖。reset 在有项目覆盖时同样显示仍为项目值；无项目覆盖时回到默认值。
+- `reset` 无字段为成功无操作。空白分隔合法；`version` 缺值、额外 token、未知子命令、`latest`、预发布和 D2 非法版本均显示用法/错误，零写入。确认没有读取真实 token 或尝试在线验证指定版本。
+- hasUI=true 使用 notify；hasUI=false 输出 stderr，stdout 0 次，既不启动模型轮次也不追加会话消息。错误只显示受控类别/路径，放入配置的合成 secret 不得出现在日志。
+- 注入 notify 抛错：向 stderr 输出一次原结果，已经保存的版本保持，不重写、不回滚、不把 UI 错误转为写入失败。stderr 也抛错时 handler 安全结束；反馈通道异常不得影响正在运行的请求。
+- 用文件写入/rename spy 验证每个有变化的成功修改恰好一次替换，无变化 0 次；同一命令不得循环写入或重复保存全部配置。每个命令网络和认证调用数均为 0。
+
+#### H14.3. Registered extension and request integration
+
+`index.test.ts` 的 installExtension 及 `request-lifecycle.test.ts` 的 fake API 增加 registerCommand 捕获/空实现，生产调用不可写成可选 registerCommand。至少一个测试从真实 codexCompactionExtension 注册出的 `codex-metadata` handler 开始，保留真实 config 文件读写、真实 metadata store、coordinator 和 provider hook；只替代认证返回、远端 fetch、宿主 UI/持久化适配。沿用现有 SessionManager 投影和 streamSimple onPayload 捕获请求的模式。测试中原 configOverride 必须 unset，不能让 mocked loadConfig 返回固定值绕过命令写入。
+
+1. 在隔离全局配置中从默认版本发起 before_provider_request，让模型目录 GET 用可控 Promise 暂停，记录 query=0.156.0。目录/历史构造 A→B 不同 hash，使后续压缩会创建 checkpoint。
+2. 请求暂停期间调用注册的 `version 0.157.0`。文件保存后，确认没有新 GET/认证调用、没有 abort 原请求、没有清除候选或 checkpoint。释放第一份目录 fixture，A=2911、B=3000。完成第一请求，压缩按旧快照执行，保存的 B checkpoint hash 仍为 3000，当前 user 保留一次。
+3. 下一次请求目录 query 为 0.157.0，fixture 令 B=4000；断言后续决策和新 checkpoint 使用 4000。两次公共请求各按现有缓存规则至多一次 GET，命令本身不计入。这个测试同时防止命令粗暴 clear/cancel store 或覆盖运行中快照。
+4. 在另一实例设置可信项目覆盖，先让该项目版本产生有效目录缓存，再通过命令改全局值；下一次请求有效版本不变、复用目录缓存，不为无效的全局修改新增 GET。验证提示准确说明项目覆盖。
+
+以上 HTTP 均为 fixture，不是真实在线版本兼容性验收。用户输入的 0.157.0/0.158.0 仅测试字符串，不表示已验证官方支持这些版本。
+
+### H15. Follow-up final verification
+
+H13 的完整检查安排在 F1–F5 全部完成后统一执行一次即可，不因分章重复运行。实现时先运行相关目标文件：
+
+```sh
+pnpm exec vitest run extensions/codex-compact/__tests__/session-coordinator.test.ts
+pnpm exec vitest run extensions/codex-compact/__tests__/config.test.ts extensions/codex-compact/__tests__/metadata-command.test.ts extensions/codex-compact/__tests__/index.test.ts extensions/codex-compact/__tests__/request-lifecycle.test.ts
+```
+
+最终使用仓库内独立 TMPDIR 执行 `pnpm run check`，并运行 `git diff --check`，检查改动范围和任务临时文件、进程清理。不要重新执行已通过且没有受后续修改影响的目标测试；完整 check 是仓库要求。记录实际数量、跳过项、Red/Green、失败注入、命令零网络计数和集成路径结果。完整检查未通过时 F 项不能全部勾选。
+
+#### Follow-up results
+
+当前只完成设计和交接更新；F1–F5 全部待实现。修复前独立基线 `98cb4e8` 已运行完整 check：2528 通过、12 跳过，类型、构建和包检查通过。该结果不证明 H13/H14 新行为成立。worker 在此补充带代码版本/工作树说明的实际验收记录，不覆盖原 Results。
+
+2026-09-23 文档追加回合再次运行 `TMPDIR="$PWD/.tmp/metadata-command-design-check-20260923" pnpm run check`，退出码 0，164 个测试文件通过、3 个跳过，2528 项通过、12 项跳过，类型检查、构建和发布包检查通过；`git diff --check` 通过。源码及测试仍为 `98cb4e8`，这是文档更新时的基线检查，不是新命令或修复后的验收。本轮未写真实全局配置，检查临时目录已清理，无 vitest 或本任务命名进程残留。
+
+2026-09-23 接续实现验收：HEAD 仍为 `98cb4e8`，源码、测试、README、UPSTREAM 与本 Todo 为未提交工作树改动，未提交、推送或发布。F1 的 R1 测试先在 B→C 同 hash 候选场景失败于压缩调用 0 次，重排候选与恢复顺序后通过；无候选对照及同 hash 无历史差异对照也通过。F2 的 `error`/`aborted` 两例先在第二次请求失败于“本应拒绝却返回 undefined”，写回恢复候选后通过；A、B、A、B 的超窗调用顺序、随后成功的 A 压缩、checkpoint hash 和后续无重复压缩均通过。coordinator 目标文件 84 项通过。
+
+F3 的最小可加载配置 helper 先失败于新配置未创建、损坏目标未拒绝，随后 8 项 config 测试通过。隔离文件测试覆盖默认/全局/可信项目来源、非可信项目零读取、每个允许文件每次调用只读一次、三个压缩字段和未知嵌套字段保留、0600 新文件及旧权限保留、同值/reset 无操作、非法版本和目标拒绝、写入/rename 故障时原文件不变和临时文件清理，以及清理失败报告。F4 的命令注册测试先失败于未注册，随后命令和接线测试通过。真实注册 handler、隔离配置、真实 metadata store 和 provider hook 的集成测试显示：暂停的 `0.156.0` GET 期间执行 `version 0.157.0` 不增加认证/HTTP，也不 abort；原请求 checkpoint 为 3000，下一请求查询 `0.157.0` 并保存 hash 4000。可信项目覆盖 `0.158.0` 时改全局值不增加 GET；命令异常反馈不会回滚已保存文件。目标五个测试文件 195 项通过。上述 GET 和压缩均使用 fixture，没有在线服务、付费推理或真实宿主事件循环验收。
+
+最终执行 `TMPDIR="$PWD/.tmp/codex-transition-finalcheck-ZpD80fe0" pnpm run check` 退出码 0：165 个测试文件通过、3 个跳过，2541 项通过、12 项跳过；类型检查、构建、媒体复制及发布包检查通过。命令空白参数、项目覆盖提示和两个请求的 user 去重断言已包含在这次完整检查中。没有执行真实在线目录查询或付费推理；跨进程并发编辑同一配置文件不保证事务隔离。`git diff --check` 退出码 0。本任务创建的三个完整检查临时目录均已删除；`pgrep` 未发现 vitest、`pnpm run check` 或本任务命名的残留进程。本任务未启动监听服务或占用端口，且未写用户真实全局配置。
 
 ## Notes
 

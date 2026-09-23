@@ -7,6 +7,7 @@ import { createCompactionWidget, type CompactionWidgetFactory } from "./presenta
 import { autoCompactTokenLimit, DEFAULT_METADATA_CLIENT_VERSION, effectiveContextWindow, loadConfig } from "./config.js";
 import { type CompactionHashSnapshot } from "./capabilities.js";
 import { createModelMetadataStore } from "./model-metadata.js";
+import { registerMetadataCommand } from "./metadata-command.js";
 import { createNativeCheckpoint, type NativeCheckpointRequest } from "./remote-compaction.js";
 import { createSessionCoordinator, type RemoteCompactionReason } from "./session-coordinator.js";
 import {
@@ -103,6 +104,7 @@ function reportCompactionFailure(
 }
 
 export default function codexCompactionExtension(pi: ExtensionAPI): void {
+	registerMetadataCommand(pi);
 	const metadataStore = createModelMetadataStore();
 	const resolveCompactionHashes = (ctx: ExtensionContext, model: NonNullable<ExtensionContext["model"]>, signal?: AbortSignal) => {
 		const config = loadConfig(ctx.cwd ?? "", ctx.isProjectTrusted?.() ?? false);

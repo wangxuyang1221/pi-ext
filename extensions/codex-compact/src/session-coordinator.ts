@@ -867,18 +867,18 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			pendingBySession.delete(sessionId);
 			selection = undefined;
 		}
-		if (!selection && checkpoint.status === "none") {
-			const recoveredTransition = pendingTransitionFromBranch(branchBefore, model, ctx, hashes);
-			if (recoveredTransition) selection = recoveredTransition;
-		}
 		const checkpointModelKey = checkpoint.status === "valid"
 			? checkpoint.checkpoint.details.modelKey
 			: undefined;
 		if (selection && selection.targetModelKey !== modelKey(model)) {
 			throw new Error("The pending Codex model transition targets a different model.");
 		}
-		const pending = selection && transitionForSelection(selection, model, hashes);
+		let pending = selection && transitionForSelection(selection, model, hashes);
 		if (selection && !pending) pendingBySession.delete(sessionId);
+		if (!pending && checkpoint.status === "none") {
+			pending = pendingTransitionFromBranch(branchBefore, model, ctx, hashes);
+			if (pending) pendingBySession.set(sessionId, { previousModel: pending.previousModel, targetModelKey: pending.targetModelKey });
+		}
 		if (!requestInput && (pending || checkpoint.status === "valid")) {
 			throw new Error("The Codex request input is unavailable while replaying compaction state.");
 		}

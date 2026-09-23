@@ -2,11 +2,11 @@
 
 ## Status and Goal
 
-状态：expert 已完成实现设计，尚未实现。适用代码基线为 `6cd56605ddb33650c1674d1c34fcbfb206294985`，Pi 依赖为 `0.87.0`。执行清单与验收标准唯一来源为 [execution todo](codex-compact-dynamic-metadata-todo.md)。
+状态：动态目录实现已提交为 `98cb4e810678ce0551aa3f7bac9b16c65675d101`，位于 `feat/codex-compact-dynamic-metadata`。本次追加设计涵盖 D6.2 的两个过渡状态回归修复，以及 D10 的手动版本 slash command，二者均尚未实现。原改造基线为 `6cd56605ddb33650c1674d1c34fcbfb206294985`，Pi 依赖保持 `0.87.0`。本文是完整设计的唯一来源；执行清单与验收标准唯一来源为 [execution todo](codex-compact-dynamic-metadata-todo.md)。
 
 目标：将 `codex-compact` 的逐模型静态 `comp_hash` 表替换为真实 Codex 模型目录查询。模型出现在当前账号、当前客户端版本可见的目录后，插件无需增加模型表项即可取得它的 hash。本次不升级 Pi，不修改模型注册、上下文窗口或压缩协议。
 
-本文的具体实现选择由 expert 作出，属于用户要求的交接设计；用户明确认可的是动态元数据方向并授权本地实验，不能把这里的每个默认值写成用户逐项指定。当前会话交付止于文档，不启动 worker，不实现生产代码。
+用户已要求修复两个回归，并同意通过 slash command 手动维护目录客户端版本。默认版本保持 `0.156.0`，不自动追踪最新发布版本。本文的具体实现选择由 expert 作出，不能把每项内部决定写成用户逐项指定。当前会话交付止于设计、Todo 和 handoff，不启动 worker，不实现生产代码。
 
 ## Evidence
 
@@ -28,7 +28,7 @@
 
 ## Working Agreement
 
-- 只做本地实现与验证；不升级依赖，不提交、推送、创建 PR、合并或发布，不改用户全局配置。
+- worker 只做本地实现与验证；不升级依赖，不提交、推送、创建 PR、合并或发布。D10 授权实现“用户执行命令后保存全局配置”的产品行为，不授权代理在开发或验收时修改用户真实全局配置；测试必须隔离到仓库内目录。
 - 改 `src/` 和对应 `__tests__/`，`dist/` 只由构建生成。默认主代理独立完成，不启动 subagent。
 - 创建、修改文字产物前读取 `docs/agents/repository-language-policy.md`；中文正文，英文标题、源码注释、测试名及产品提示。
 - 工作目录外的写入或其他副作用依用户全局规则先说明并等待“同意”。必要依赖安装按用户例外处理。测试临时目录放到仓库内。
@@ -43,13 +43,13 @@
 4. 移除静态表后，离线冷启动及目录缺失的旧模型可能不再得到之前表内的 hash。这是明确的行为变化，不保留冻结名单兜底。旧 checkpoint 已保存的 hash 继续作为历史事实使用。
 5. hash 只影响压缩决策和 checkpoint 的可选 `compHash`。不把目录中的 `context_window`、提示词、名称等写回 Pi 模型，不替用户注册新模型。Pi 自身支持哪些模型仍由宿主决定。
 6. 仅支持默认官方 Codex 地址的元数据发现。自定义代理地址不额外发起目录 GET，hash 未知；它原有的远程压缩请求路径不改。不要为了让测试通过而把测试域名加进生产允许列表。
-7. 不新增通知、命令或后台刷新定时任务。目录不可用时的行为和边界写入 README。此任务不提供“所有未来模型均无需维护”或“跨模型质量已验证”的承诺。
+7. 目录查询失败不新增通知或后台刷新定时任务；D10 的显式用户命令可以显示结果和错误。目录不可用时的行为和边界写入 README。此任务不提供“所有未来模型均无需维护”或“跨模型质量已验证”的承诺。
 
 ## D2. Client Version and Configuration
 
 在既有 `pi-codex-compact.json` 中新增可选字符串 `metadataClientVersion`。默认值唯一地定义为 `DEFAULT_METADATA_CLIENT_VERSION = "0.156.0"`，位于 `config.ts`。该值是本次验证过的模型目录客户端版本，不是 Pi 版本，也不改变既有压缩算法的来源基线。
 
-沿用 `loadConfig(cwd, trusted)` 的全局和受信任项目合并规则：有效项目值覆盖全局值，全局值覆盖默认值。不可信项目的配置不读取。合法值为长度不超过 32 的稳定三段十进制版本，正则 `^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`；不接受前缀、预发布标识、空白或查询参数。非法值按既有 parseConfig 风格忽略，不遮盖其他层有效配置，不新增报错流程。
+沿用 `loadConfig(cwd, trusted)` 的全局和受信任项目合并规则：有效项目值覆盖全局值，全局值覆盖默认值。不可信项目的配置不读取。合法值为长度不超过 32 的稳定三段十进制版本，正则 `^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`；不接受前缀、预发布标识、空白或查询参数。普通配置读取中的非法值按既有 parseConfig 风格忽略，不遮盖其他层有效配置，不新增报错流程；显式命令的输入错误和状态诊断按 D10 处理。
 
 类型增加 `metadataClientVersion?: string`，保留现有部分配置调用方的源兼容。`DEFAULT_CONFIG` 包含默认值；index 的生产 resolver 使用 `loadConfig(...).metadataClientVersion ?? DEFAULT_METADATA_CLIENT_VERSION`，不在其他模块复制字面量。
 
@@ -63,10 +63,11 @@
 | --- | --- |
 | `extensions/codex-compact/src/capabilities.ts` | 移除静态表；定义只读 hash 快照、空快照、目录解析与精确查找，不访问网络或文件 |
 | `extensions/codex-compact/src/model-metadata.ts` | 新增官方目录请求、认证隔离、内存缓存、并发合并、取消和容量限制 |
-| `extensions/codex-compact/src/config.ts` | D2 字段、校验和默认值 |
+| `extensions/codex-compact/src/config.ts` | D2 字段、校验和默认值；D10 带来源查询及单字段全局更新 |
+| `extensions/codex-compact/src/metadata-command.ts` | D10 新增：命令解析、注册与结果展示；复用 config 的状态读取与全局字段更新，不访问元数据 store |
 | `extensions/codex-compact/src/session-coordinator.ts` | 注入快照 resolver；选择时只记候选，请求时判断；每操作固定快照；所有 hash 使用点迁移 |
 | `extensions/codex-compact/src/remote-compaction.ts` | 接收显式可选 `compHash`，不访问元数据；从该值生成 checkpoint 明细 |
-| `extensions/codex-compact/src/index.ts` | 创建 store、生命周期接线、配置与 resolver 注入、手动压缩快照取得 |
+| `extensions/codex-compact/src/index.ts` | 创建 store、生命周期接线、配置与 resolver 注入、手动压缩快照取得、注册 D10 命令 |
 | 对应测试及 `__tests__/fixtures/compaction-metadata.ts` | 合成元数据，禁止依赖当日在线目录；完整清单见 Todo |
 | `README.md` 的 Codex Compact 节、`extensions/codex-compact/UPSTREAM.md` | 用户行为、配置、版本边界、上游定义与新本地差异 |
 
@@ -181,11 +182,22 @@ store 保有一个生命周期 AbortController；每个 resolve 从入口起同�
 
 在内部 `RequestContinuity` 加入 `compactionHashes`；`prepareRequestInternal` 的所有递归、等待 transition/automatic 后的重入、`recoverCurrentModelInternal` 和 checkpoint factory 都传递同一快照，不能从会变化的全局 store 同步读 hash，也不能在循环里再次 resolve。
 
-在 `prepareRequestInternal` 现有读取 pending 的位置，用当前快照将 selection 解析成 transition；无 hash 差异且不 downshift 时移除候选，再执行原先的无 pending 分支。后续删除 pending 的时机和已完成 checkpoint 目标匹配规则保持不变。
+本次修复只修改 `prepareRequestInternal` 读取 selection 到 requestInput 检查之间的衔接。最终执行顺序如下，不能以“有候选”代替“有有效 transition”：
 
-顺序为：先执行现有“valid checkpoint 已属于当前模型则清掉旧候选”的规则；剩余候选的 targetModelKey 与当前模型不符时保留原错误；随后解析 reason，最后才执行需要 requestInput 的判断。无候选且 checkpoint 为 none 时才调用历史恢复 helper。不为本次任务新增“历史很短就跳过 hash transition”的优化。
+1. 从 pendingBySession 读取 selection，从现有 snapshot 读取 checkpoint。
+2. 若 checkpoint valid 且已属于当前模型，删除并清空 selection。此规则优先于目标一致性检查。
+3. 若剩余 selection.targetModelKey 与当前模型不符，抛原文 `The pending Codex model transition targets a different model.`，不得用历史恢复掩盖此错误。
+4. 用本次 hashes 调用 transitionForSelection，得到可重新赋值的 pending。selection 存在但 pending 不存在时删除候选。
+5. 仅当 pending 不存在且 checkpoint.status 严格为 `none`，调用一次 pendingTransitionFromBranch，将结果赋给 pending。若恢复成功，将 `{ previousModel: pending.previousModel, targetModelKey: pending.targetModelKey }` 写入 pendingBySession。
+6. 然后执行原 requestInput 缺失检查，historyModel 使用最终 pending.previousModel；checkpointModelKey 及后续历史投影、压缩与恢复流程保留。
 
-`pendingTransitionFromBranch` 增加 snapshot 参数，仍按既有 model-change / previous-assistant 规则定位历史模型，再用该快照判断，不增加新的全历史扫描。没有 checkpoint 且没有候选时，保留恢复路径；已有 checkpoint 的历史 hash 以 checkpoint 自带值为准。
+map 仍只保存 PendingSelection，不保存 reason 或 hash 快照。恢复结果在后续异步操作前写入，超窗失败不丢失过渡；下次请求用当次快照重新判定 reason。成功、明确 bypass、无需过渡、回到最初模型、离开 Codex 和 clear 的已有清理规则不变。不要在 catch/finally 统一删除 pending。
+
+`pendingTransitionFromBranch` 继续使用已有 model-change / previous-assistant 规则；不改“当前模型选择后出现任意 assistant 则停止恢复”的条件。第二条回归通过保存跨请求状态修复，不扩大历史扫描语义。checkpoint 为 valid、invalid、bypassed 等非 none 状态时不进入新增回退。已有 checkpoint 的历史 hash 以其自带值为准。
+
+以上处理块同步执行，不增加 await、resolver、认证或网络调用。每次内部准备只在无有效 transition 且无 checkpoint 时调用该 helper 一次，成本为现有 O(n) 分支扫描及 slice，不新增第二遍恢复扫描、额外投影或常驻历史副本。每个 session 最多保留一个候选。连续请求、clear、取消、generation 和 transition promise 规则保持。
+
+修复依据：`98cb4e8` 中先检查 selection 是否存在，再删除无效候选，导致 B→C 同 hash 遮蔽历史 A→C；历史恢复只赋局部变量，导致超窗失败后遇到 error/aborted assistant 无法再恢复。基线 `6cd5660` 在 selectModel 阶段排除无效候选，并保存恢复结果。两个回归已通过真实 coordinator 加合成外部结果复现；测试输入和独立复核边界见 Todo 的 H13。不新增“历史很短就跳过 hash transition”的规则。
 
 `recoverCurrentModel` 的公开包装同样在入口捕获状态、resolve 一次并核验后调用 internal。internal 被 prepareRequest 调用时只消费传入快照，不能重复 resolve。`prepareCompaction` 本身不判断 hash，保持它等待既有 transition 并生成完整压缩输入的行为，不为它单独发目录请求。
 
@@ -241,8 +253,73 @@ README 更新范围仅 Codex Compact 节，说明自动 hash 来源、版本默�
 
 worker 交付代码、对应测试、更新后的 README/UPSTREAM，以及 Todo 中的实际验证记录。没有通过或未执行的验证不能勾选；发现反证时按 handoff 的回传约定处理。
 
+## D10. Manual metadata version command
+
+### D10.1. User contract
+
+新增 `/codex-metadata`，独立于 `/compact`。命令可在当前未选择 Codex 模型时使用，只管理目录查询的客户端版本，不更改模型、不发起压缩、不判断某版本是否为官方最新版。
+
+| Invocation | Result |
+| --- | --- |
+| `/codex-metadata` | 只读显示有效版本、来源 default/global/project，以及来源文件路径；始终显示全局目标文件路径。显示可用的设置和 reset 用法。 |
+| `/codex-metadata version 0.156.0` | 只修改全局配置的 metadataClientVersion，输出保存值、目标路径和重新读取的当前有效版本及来源。 |
+| `/codex-metadata reset` | 只删除全局 metadataClientVersion 字段，保留文件及其他字段；显示重新计算的有效版本和来源。若可信项目仍有合法覆盖，仍以项目版本为准，不声称已恢复内置版本。 |
+
+参数先 trim，再按空白切分；只接受无参数、恰好 `version <version>` 或恰好 `reset`，关键字大小写敏感。版本复用 D2 校验，`latest`、预发布、额外参数、缺失版本、`--project` 等均报用法错误且零文件写入。不提供隐式 project 写入、交互式输入、在线版本验证或版本自动补全。
+
+全局目标为 `join(getAgentDir(), "pi-codex-compact.json")`，不能硬编码 HOME。项目配置仍只在 `ctx.isProjectTrusted()` 为 true 时读取；不可信时连项目文件都不探测。有效项目版本遮蔽全局值时，设置/reset 的结果明确包含 `Project override remains active: <version> (<path>).`。用户如需移除此覆盖，自行编辑显示的项目文件；本命令不替其改项目。
+
+命令成功保存返回后，新开始的请求使用新配置，无需 reload。正在进行的请求及其重试继续使用原快照；不取消请求、不清 coordinator、不 clear/cancel 元数据 store。缓存本来按版本隔离，设置到新版本后下次请求按现有规则取目录；设置回仍有有效缓存的旧版本允许命中。项目覆盖导致有效版本未变时，也不强制刷新。命令本身零认证、零 HTTP、零模型/会话变更。
+
+### D10.2. Structure and read semantics
+
+在 `config.ts` 增加共享的版本校验函数、带来源的只读状态函数、全局字段更新函数；`loadConfig(cwd, trusted)` 的签名和容错行为不变。建议接口如下，允许局部命名调整，语义不得改变：
+
+```ts
+function isMetadataClientVersion(value: unknown): value is string;
+type MetadataVersionStatus = {
+  version: string;
+  source: "default" | "global" | "project";
+  sourcePath?: string;
+  globalPath: string;
+  warnings: string[];
+};
+function getMetadataVersionStatus(cwd: string, trusted: boolean): MetadataVersionStatus;
+function updateGlobalMetadataClientVersion(version: string | undefined): void;
+function registerMetadataCommand(pi: Pick<ExtensionAPI, "registerCommand">): void;
+```
+
+undefined 表示 reset；更新函数自身也校验 version，不能只依赖命令解析。状态读取和 loadConfig 共用文件解析与字段校验，确保状态显示的版本与请求路径实际使用值一致。正常 JSON 对象中的非法 metadataClientVersion 仍忽略，显示来自下一优先级的有效值；命令状态可附警告说明哪个文件的版本字段被忽略。文件 ENOENT 为未配置；无效 JSON、非对象根节点或其他读取错误，状态展示安全的路径及错误类别警告，按既有读取语义回退；普通请求不因此增加通知。sourcePath 仅 default 来源可省略。
+
+`metadata-command.ts` 负责参数解析、调用这些函数、生成英文反馈并注册一个命令；`index.ts` 初始化时无条件调用 registerMetadataCommand。模块不持有 store，不添加新的依赖。命令 handler 虽按 Pi API 返回 Promise，但配置读取和更新过程同步完成，不等待远端、agent idle 或其他异步操作。
+
+反馈使用 `ctx.ui.notify`；hasUI=false 时通过 stderr 输出同样的安全文本，不能写 stdout、sendMessage 或生成模型轮次。参数/写入错误为 error，状态读取的降级诊断为 warning，正常结果为 info。捕获配置错误后不调用 ctx.abort，不追加 checkpoint、失败标记或会话消息。不要回显整个配置、凭证、原始解析异常或文件内容；仅使用受控错误类别、文件路径和版本信息。ui.notify 抛错时仅尝试向 stderr 输出一次原结果，stderr 也失败则结束反馈；不回滚已保存的文件，不把保存成功误报为写入失败，也不向运行中的请求传播反馈错误。
+
+loadConfig 和状态函数各自在单次调用中对每个允许读取的配置文件至多读取/解析一次，不通过先 loadConfig 再逐层重读来推断来源。更新命令完成写入后允许重新读取一次状态以准确显示生效来源；这些文件操作都在显式命令内，不增加普通请求的文件读取次数。
+
+### D10.3. Write semantics
+
+只在用户显式执行 version/reset 时写入。读取目标文件后直接对原始 JSON 对象增删单一字段，不使用 parseConfig 后的已过滤对象做全量保存，否则会丢失未知字段。其他已知或未知字段、嵌套对象保持语义相同。格式允许统一为两空格缩进和末尾换行。
+
+- ENOENT：version 创建所需全局目录和配置；reset 是无操作，不创建目录或文件。
+- 已有合法对象：version 写入合法字符串；reset 删除该自有属性。字段原来非法也允许覆盖或删除。
+- 设置到同一字符串，或 reset 时该字段本来不存在：无操作，不重写文件，保留原字节。
+- 已有无效 JSON、数组、null、其他非对象根节点或读取失败：拒绝修改并报告错误，不把它当空配置覆盖。状态读取仍按 D10.2 容错，两者不能混用。
+- 使用同目录唯一临时文件、排他创建、写入并关闭、rename 替换的顺序，避免写入或 rename 失败破坏原文件。失败时关闭句柄并删除本次临时文件，原文件保持字节不变；若清理失败报告安全的路径和错误类别，不能声称已清理。
+- 新文件使用 0600；已有普通文件保留权限位。临时文件独立命名，不能使用固定共享临时路径。目标为符号链接或非普通文件时拒绝修改并说明原因，避免 rename 替换链接本身。新建父目录仅发生在合法 version 请求且目标缺失时。
+
+采用同步 Node 文件 API，与现有小配置的读取方式一致，配置修改在单个 JS 调用栈内完成，同一扩展实例的两次命令按执行顺序生效。不引入进程锁、后台队列或长期缓存；其他进程/外部编辑器同时修改同一文件仍不保证无覆盖，不声称提供跨进程事务。无需引入新包或通用配置框架。
+
+### D10.4. Verification and delivery boundaries
+
+新增 `metadata-command.test.ts`；扩展 `config.test.ts`；`index.test.ts` 和 `request-lifecycle.test.ts` 的 fake ExtensionAPI 补 registerCommand。其他真实加载测试由完整检查验证，不能在生产里用可选调用掩盖不完整的 fake API。来源查询、字段保留、写入失败、注册命令到请求路径和并发快照验收见 Todo H14，成本验收为确定性文件/网络调用计数。
+
+接口依据：Context7 `/earendil-works/pi` 查询了 registerCommand/ExtensionCommandContext，但返回 main 文档，不能认定为 0.87.0 专版。已对照本仓库安装的 `node_modules/@earendil-works/pi-coding-agent/dist/core/extensions/types.d.ts`：registerCommand 参数、Promise<void> handler、hasUI、ui.notify、isProjectTrusted 均存在。实现形态可参考 `extensions/openai-fast-mode/src/index.ts` 的 `/fast`，其直接全量保存函数不满足本任务的保留未知字段及失败不破坏文件要求，不能原样复用。
+
+README 的 Codex Compact 节增加三种命令、全局写入、项目优先、reset 边界和下一次请求生效示例；UPSTREAM 将其标为本地配置管理功能，不归因于上游 Codex。本轮只修改设计文件；README 产品说明由 worker 随实现更新，避免把尚未实现的命令公布为可用功能。
+
 ## Handoff Rehearsal
 
 已按未参与讨论的 worker 视角检查：T1 有字段优先级与纯函数边界；T2 有官方请求和缓存状态规则，包括认证不可取消的宿主限制；T3 明确直接调用方省略 hash 的语义；T4 有全部旧 hash 使用点、候选转 transition 的顺序和快照传递方式；T5 有 manual/automatic 两类入口与生命周期接线；T6 有文档范围和完整验证命令。
 
-实施仍需 worker 编写测试证明上述行为成立。若当前依赖接口与所读 Pi 0.87.0 源码不同，或这些状态规则无法同时满足，按交接约定反馈反证，不自行选择另一种行为。
+追加范围已推演：D6.2 明确无效候选回退和跨请求状态保留；D10 明确命令参数、作用域、读写差异、错误、原子替换、项目覆盖、当前请求快照和测试边界。实施仍需 worker 编写测试证明这些行为成立。若当前依赖接口与所读 Pi 0.87.0 源码不同，或这些状态规则无法同时满足，按交接约定反馈反证，不自行选择另一种行为。

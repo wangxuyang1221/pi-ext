@@ -86,6 +86,19 @@ function userEntry(text: string, id = "user"): SessionEntry {
 	} as unknown as SessionEntry;
 }
 
+function assistantEntry(selected: Model<any>, id: string, stopReason = "stop"): SessionEntry {
+	return {
+		id, parentId: null, timestamp: new Date().toISOString(), type: "message",
+		message: { role: "assistant", provider: selected.provider, api: selected.api, model: selected.id,
+			stopReason, content: [{ type: "text", text: "previous answer" }] },
+	} as unknown as SessionEntry;
+}
+
+function modelChangeEntry(selected: Model<any>, id: string): SessionEntry {
+	return { id, parentId: null, timestamp: new Date().toISOString(), type: "model_change",
+		provider: selected.provider, modelId: selected.id } as SessionEntry;
+}
+
 function userInput(text: string): ResponseItem {
 	return { role: "user", content: [{ type: "input_text", text }] };
 }
@@ -120,6 +133,111 @@ function createCoordinator(
 }
 
 describe("Codex session coordinator", () => {
+	test.each([true, false])("recovers an older transition behind an equal-hash selection, selected: %s", async (selected) => {
+		const old = model("old");
+		const middle = model("new");
+		const current = model("gpt-5.6-terra");
+		expect([fixtureSnapshot.hashFor(old), fixtureSnapshot.hashFor(middle), fixtureSnapshot.hashFor(current)])
+			.toEqual(["2911", "3000", "3000"]);
+		const branch = [userEntry("old task", "old-user"), assistantEntry(old, "old-answer"),
+			modelChangeEntry(middle, "middle-change"), modelChangeEntry(current, "current-change"), userEntry("new task", "new-user")];
+		const resolver = vi.fn(resolveFixtureHashes);
+		const compressed = vi.fn(async ({ model: selectedModel, input }: { model: Model<any>; input: ResponseItem[] }) => {
+			expect(selectedModel.id).toBe(old.id);
+			expect(JSON.stringify(input)).toContain("old task");
+			expect(JSON.stringify(input)).not.toContain("new task");
+			return { details: details(modelKey(selectedModel)) };
+		});
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolver, getBranch: () => branch,
+			getAllTools: () => [], createCheckpoint: compressed,
+			appendCheckpoint: value => branch.push(customEntry(value)), appendCheckpointBypass: vi.fn(), shouldAutoCompact: () => false });
+		const ctx = context([old, middle, current]);
+		if (selected) await coordinator.selectModel({ model: current, previousModel: middle }, ctx);
+		expect(resolver).not.toHaveBeenCalled();
+		const result = await coordinator.prepareRequest(current, ctx, effectiveInputForBranch({ branch, model: current, tools: [] }));
+		expect(resolver).toHaveBeenCalledTimes(1);
+		expect(compressed).toHaveBeenCalledTimes(1);
+		const checkpoint = findNativeCheckpoint(branch, modelKey(current));
+		expect(checkpoint.status).toBe("valid");
+		if (checkpoint.status === "valid") expect(checkpoint.checkpoint.details.compHash).toBe("3000");
+		expect(result?.filter(item => item.role === "user" && JSON.stringify(item.content).includes("new task"))).toHaveLength(1);
+	});
+	test.each(["error", "aborted"])("retains a recovered transition after an over-window %s response", async (stopReason) => {
+		const old = model("old");
+		const current = model("new");
+		const branch = [userEntry("old task", "old-user"), assistantEntry(old, "old-answer"),
+			modelChangeEntry(current, "change"), userEntry("first task", "first-user")];
+		const calls: string[] = [];
+		const resolver = vi.fn(resolveFixtureHashes);
+		let fail = true;
+		const appendCheckpoint = vi.fn((value: unknown) => branch.push(customEntry(value)));
+		const appendCheckpointBypass = vi.fn();
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolver, getBranch: () => branch,
+			getAllTools: () => [], shouldAutoCompact: () => false,
+			createCheckpoint: async ({ model: selectedModel }) => {
+				calls.push(selectedModel.id);
+				if (fail) throw new Error("context_length_exceeded");
+				return { details: details(modelKey(selectedModel)) };
+			}, appendCheckpoint, appendCheckpointBypass });
+		const ctx = context([old, current]);
+		const prepare = () => coordinator.prepareRequest(current, ctx, effectiveInputForBranch({ branch, model: current, tools: [] }));
+		await expect(prepare()).rejects.toThrow("context_length_exceeded");
+		expect(calls).toEqual([old.id, current.id]);
+		branch.push(assistantEntry(current, "failed-answer", stopReason), userEntry("second task", "second-user"));
+		await expect(prepare()).rejects.toThrow("context_length_exceeded");
+		expect(calls).toEqual([old.id, current.id, old.id, current.id]);
+		expect(resolver).toHaveBeenCalledTimes(2);
+		expect(appendCheckpoint).not.toHaveBeenCalled();
+		expect(appendCheckpointBypass).not.toHaveBeenCalled();
+		fail = false;
+		branch.push(userEntry("third task", "third-user"));
+		const result = await prepare();
+		expect(calls).toEqual([old.id, current.id, old.id, current.id, old.id]);
+		const checkpoint = findNativeCheckpoint(branch, modelKey(current));
+		expect(checkpoint.status).toBe("valid");
+		if (checkpoint.status === "valid") expect(checkpoint.checkpoint.details.compHash).toBe("3000");
+		expect(result?.filter(item => item.role === "user" && JSON.stringify(item.content).includes("third task"))).toHaveLength(1);
+		branch.push(userEntry("fourth task", "fourth-user"));
+		await prepare();
+		expect(calls).toHaveLength(5);
+		expect(resolver).toHaveBeenCalledTimes(4);
+	});
+	test("keeps checkpoint priority over a stale target and rejects a mismatched target without one", async () => {
+		const old = model("old"), pendingModel = model("new"), current = model("gpt-5.6-terra");
+		const ctx = context([old, pendingModel, current]);
+		const branch = [customEntry({ ...details(modelKey(current)), compHash: "3000" }), userEntry("next")];
+		const compressed = vi.fn();
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
+			getBranch: () => branch, getAllTools: () => [], createCheckpoint: compressed,
+			appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn(), shouldAutoCompact: () => false });
+		await coordinator.selectModel({ model: pendingModel, previousModel: old }, ctx);
+		await expect(coordinator.prepareRequest(current, ctx, [{ type: "compaction", encrypted_content: "opaque" }, userInput("next")]))
+			.resolves.toEqual([{ type: "compaction", encrypted_content: "opaque" }, userInput("next")]);
+		expect(compressed).not.toHaveBeenCalled();
+
+		const empty: SessionEntry[] = [];
+		const mismatch = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
+			getBranch: () => empty, getAllTools: () => [], createCheckpoint: compressed,
+			appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn() });
+		await mismatch.selectModel({ model: pendingModel, previousModel: old }, ctx);
+		await expect(mismatch.prepareRequest(current, ctx, [userInput("next")]))
+			.rejects.toThrow("The pending Codex model transition targets a different model.");
+		expect(compressed).not.toHaveBeenCalled();
+	});
+
+	test("ignores an equal-hash selection when history belongs to the selected model", async () => {
+		const middle = model("new"), current = model("gpt-5.6-terra");
+		const branch = [userEntry("old task", "old-user"), assistantEntry(middle, "answer"),
+			modelChangeEntry(current, "change"), userEntry("new task", "new-user")];
+		const compressed = vi.fn();
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
+			getBranch: () => branch, getAllTools: () => [], createCheckpoint: compressed,
+			appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn(), shouldAutoCompact: () => false });
+		const ctx = context([middle, current]);
+		await coordinator.selectModel({ model: current, previousModel: middle }, ctx);
+		await coordinator.prepareRequest(current, ctx, effectiveInputForBranch({ branch, model: current, tools: [] }));
+		expect(compressed).not.toHaveBeenCalled();
+	});
 	test.each([true, false])("uses Pi's newest ordinary summary after model selection, overlap: %s", async (overlap) => {
 		const currentModel = getBuiltinModel("openai-codex", "gpt-5.6-sol")!;
 		const oldModel = model("legacy", "other");

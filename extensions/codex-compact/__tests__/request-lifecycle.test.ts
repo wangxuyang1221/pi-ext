@@ -37,7 +37,7 @@ function setup(automatic = false) {
     },
   };
   const appendEntry = vi.fn((customType, data) => branch.push({ id: `appended-${branch.length}`, type: "custom", customType, data }));
-  codexCompactionExtension({ on: (name: string, handler: any) => handlers.set(name, handler), getAllTools: () => [], getActiveTools: () => [], appendEntry } as never);
+  codexCompactionExtension({ on: (name: string, handler: any) => handlers.set(name, handler), registerCommand: () => {}, getAllTools: () => [], getActiveTools: () => [], appendEntry } as never);
   const emit = (name: string, event: any = {}) => handlers.get(name)?.(event, ctx);
   const select = async (model: Model<any>) => {
     const previousModel = selected;

@@ -1,5 +1,7 @@
 import { expect, test, vi } from "vitest";
 import { convertToLlm, SessionManager, type SessionEntry } from "@earendil-works/pi-coding-agent";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
 import { streamSimple } from "@earendil-works/pi-ai/api/openai-codex-responses";
 import codexCompactionExtension from "../src/index.js";
@@ -34,6 +36,7 @@ function checkpointEntry(): SessionEntry {
 
 function installExtension(branch: SessionEntry[] = [], hasUI = false, contextWindow = 100_000) {
 	const handlers = new Map<string, Handler>();
+	const commands = new Map<string, { handler: (args: string, ctx: any) => Promise<void> }>();
 	const notify = vi.fn();
 	const setStatus = vi.fn();
 	const setWidget = vi.fn();
@@ -73,12 +76,13 @@ function installExtension(branch: SessionEntry[] = [], hasUI = false, contextWin
 	};
 	const appendEntry = vi.fn();
 	codexCompactionExtension({
+		registerCommand: (name: string, options: { handler: (args: string, ctx: any) => Promise<void> }) => commands.set(name, options),
 		on: (event: string, handler: Handler) => handlers.set(event, handler),
 		getAllTools: () => [],
 		getActiveTools: () => [],
 		appendEntry,
 	} as never);
-	return { handlers, ctx, model, notify, setStatus, setWidget, appendEntry };
+	return { handlers, commands, ctx, model, notify, setStatus, setWidget, appendEntry };
 }
 
 function stubSuccessfulCompaction(encryptedContent = "opaque"): void {
@@ -87,6 +91,122 @@ function stubSuccessfulCompaction(encryptedContent = "opaque"): void {
 		'data: {"type":"response.completed","response":{"id":"response"}}',
 	].join("\n\n") + "\n\n", { headers: { "content-type": "text/event-stream" } }));
 }
+
+test("keeps an in-flight catalog snapshot when the registered command changes its version", async () => {
+	mkdirSync(join(process.cwd(), ".tmp"), { recursive: true });
+	const root = mkdtempSync(join(process.cwd(), ".tmp", "metadata-integration-"));
+	const agent = join(root, "agent");
+	const previousDir = process.env.PI_CODING_AGENT_DIR;
+	process.env.PI_CODING_AGENT_DIR = agent;
+	configOverride.value = undefined;
+	const old = getBuiltinModel("openai-codex", "gpt-5.5")!;
+	const middle = getBuiltinModel("openai-codex", "gpt-5.6-sol")!;
+	const next = { ...middle, id: "gpt-5.6-terra" };
+	const sm = SessionManager.inMemory(root);
+	sm.appendMessage({ role: "user", content: "old task", timestamp: 1 });
+	sm.appendMessage({ role: "assistant", provider: old.provider, api: old.api, model: old.id,
+		content: [{ type: "text", text: "answer" }], stopReason: "stop", timestamp: 2,
+		usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } } } as never);
+	sm.appendModelChange(middle.provider, middle.id);
+	sm.appendMessage({ role: "user", content: "first task", timestamp: 3 });
+	const { handlers, commands, ctx, appendEntry } = installExtension([], true);
+	ctx.cwd = root;
+	ctx.isProjectTrusted = () => false;
+	(ctx as any).sessionManager = sm;
+	ctx.model = middle;
+	ctx.modelRegistry.find = (provider: string, id: string) => [old, middle, next].find(candidate => candidate.provider === provider && candidate.id === id);
+	const auth = vi.fn(async () => ({ ok: true, apiKey, headers: {}, baseUrl: "https://chatgpt.com/backend-api" }));
+	ctx.modelRegistry.getApiKeyAndHeaders = auth;
+	appendEntry.mockImplementation((kind: string, data: unknown) => sm.appendCustomEntry(kind, data));
+	let release!: () => void;
+	const requests: Array<{ url: string; method: string }> = [];
+	vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
+		requests.push({ url, method: init.method ?? "GET" });
+		if (init.method === "GET") {
+			if (url.includes("0.156.0")) await new Promise<void>(resolve => { release = resolve; });
+			const newVersion = url.includes("0.157.0");
+			return new Response(JSON.stringify({ models: [
+				{ slug: old.id, comp_hash: "2911" }, { slug: middle.id, comp_hash: "3000" },
+				{ slug: next.id, comp_hash: newVersion ? "4000" : "3000" },
+			] }));
+		}
+		return new Response('data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"opaque"}}\n\ndata: {"type":"response.completed","response":{"id":"r"}}\n\n',
+			{ headers: { "content-type": "text/event-stream" } });
+	}));
+	const payloadFor = async (selected: typeof middle) => {
+		let payload: Record<string, unknown> | undefined;
+		await streamSimple(selected, { messages: convertToLlm(sm.buildSessionProjection().messages) }, {
+			apiKey, onPayload: value => { payload = value; throw new Error("Stop before network"); },
+		}).result();
+		return payload;
+	};
+	try {
+		const firstPayload = await payloadFor(middle);
+		const first = handlers.get("before_provider_request")!({ payload: firstPayload }, ctx) as Promise<unknown>;
+		await vi.waitFor(() => expect(release).toBeTypeOf("function"));
+		expect(requests.filter(request => request.method === "GET")[0]?.url).toContain("client_version=0.156.0");
+		const command = commands.get("codex-metadata")!.handler;
+		const beforeCommand = { requests: requests.length, auth: auth.mock.calls.length };
+		await command("version 0.157.0", ctx);
+		expect(readFileSync(join(agent, "pi-codex-compact.json"), "utf8")).toContain("0.157.0");
+		expect(requests).toHaveLength(beforeCommand.requests);
+		expect(auth).toHaveBeenCalledTimes(beforeCommand.auth);
+		expect(ctx.abort).not.toHaveBeenCalled();
+		release();
+		const firstResult = await first as { input?: ResponseItem[] } | undefined;
+		expect(appendEntry.mock.calls.at(-1)?.[1]).toMatchObject({ compHash: "3000" });
+		expect(firstResult?.input?.filter(item => item.role === "user" && JSON.stringify(item.content).includes("first task"))).toHaveLength(1);
+		sm.appendModelChange(next.provider, next.id);
+		sm.appendMessage({ role: "user", content: "second task", timestamp: 4 });
+		ctx.model = next;
+		await handlers.get("model_select")!({ model: next, previousModel: middle }, ctx);
+		const secondPayload = await payloadFor(next);
+		const secondResult = await handlers.get("before_provider_request")!({ payload: secondPayload }, ctx) as { input?: ResponseItem[] } | undefined;
+		expect(requests.filter(request => request.method === "GET").map(request => request.url)).toEqual([
+			expect.stringContaining("client_version=0.156.0"), expect.stringContaining("client_version=0.157.0"),
+		]);
+		expect(appendEntry.mock.calls.at(-1)?.[1]).toMatchObject({ compHash: "4000" });
+		expect(secondResult?.input?.filter(item => item.role === "user" && JSON.stringify(item.content).includes("second task"))).toHaveLength(1);
+	} finally {
+		release?.();
+		if (previousDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+		else process.env.PI_CODING_AGENT_DIR = previousDir;
+		vi.unstubAllGlobals();
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test("keeps a trusted project catalog cache when the command changes only the global version", async () => {
+	mkdirSync(join(process.cwd(), ".tmp"), { recursive: true });
+	const root = mkdtempSync(join(process.cwd(), ".tmp", "metadata-project-"));
+	const agent = join(root, "agent"), project = join(root, "project");
+	const previousDir = process.env.PI_CODING_AGENT_DIR;
+	process.env.PI_CODING_AGENT_DIR = agent;
+	mkdirSync(join(project, ".pi"), { recursive: true });
+	writeFileSync(join(project, ".pi", "pi-codex-compact.json"), '{"metadataClientVersion":"0.158.0"}');
+	const branch = [{ id: "user", type: "message", message: { role: "user", content: [{ type: "text", text: "task" }] } } as SessionEntry];
+	const { handlers, commands, ctx, notify } = installExtension(branch, true);
+	ctx.cwd = project;
+	ctx.modelRegistry.getApiKeyAndHeaders = vi.fn(async () => ({ ok: true, apiKey, headers: {}, baseUrl: "https://chatgpt.com/backend-api" }));
+	const fetchMock = vi.fn(async (url: string) => new Response(JSON.stringify({ models: [{ slug: "gpt", comp_hash: "3000" }] })));
+	vi.stubGlobal("fetch", fetchMock);
+	try {
+		const payload = { input: effectiveInputForBranch({ branch, model: ctx.model as never, tools: [] }) };
+		await handlers.get("before_provider_request")!({ payload }, ctx);
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(fetchMock.mock.calls[0]?.[0]).toContain("client_version=0.158.0");
+		await commands.get("codex-metadata")!.handler("version 0.157.0", ctx);
+		expect(notify).toHaveBeenCalledWith(expect.stringContaining("Project override remains active: 0.158.0"), "info");
+		await handlers.get("before_provider_request")!({ payload }, ctx);
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(readFileSync(join(project, ".pi", "pi-codex-compact.json"), "utf8")).toContain("0.158.0");
+	} finally {
+		if (previousDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+		else process.env.PI_CODING_AGENT_DIR = previousDir;
+		vi.unstubAllGlobals();
+		rmSync(root, { recursive: true, force: true });
+	}
+});
 
 test.each([
 	{ targetHash: "3000", transition: true },
