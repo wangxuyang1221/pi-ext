@@ -1,9 +1,9 @@
-# Implementation slices proposal
+# Implementation slices
 
-状态：待用户审核，不是已批准的实施计划。规格依据为 [Spec #33](https://github.com/wangxuyang1221/pi-ext/issues/33)，两个切片依次执行。当前未创建 Implementation Issues，未派发 worker。
+状态：用户已确认两个切片的粒度并授权施工，指定执行代理类型为 expert。规格依据为 [Spec #33](https://github.com/wangxuyang1221/pi-ext/issues/33)，两个切片依次执行。
 
-1. Slice 1 交付不依赖角色文件的子代理 Fast 设置与会话隔离。
-2. Slice 2 依赖 Slice 1，交付角色配置并负责组合后的整体验收。
+1. [Slice 1 #37](https://github.com/wangxuyang1221/pi-ext/issues/37) 交付不依赖角色文件的子代理 Fast 设置与会话隔离。
+2. [Slice 2 #38](https://github.com/wangxuyang1221/pi-ext/issues/38) 依赖 Slice 1，交付角色配置并负责组合后的整体验收。
 
 ## Slice 1: Independent subagent Fast mode
 
@@ -29,4 +29,4 @@ Slice 1 承担独立 Fast 的实际请求、共享文件隔离、会话保存恢
 
 ## Review
 
-请审核两个切片的依赖关系及粒度，确认是否需要合并或继续拆分。用户接受后再建立对应 Implementation Issues，按序派发 worker。
+用户已确认依赖顺序与粒度，无需再次审核。后续若改变切片范围或依赖，按 slicing 流程重新提交审核。

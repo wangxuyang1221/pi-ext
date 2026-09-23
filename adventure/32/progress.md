@@ -12,11 +12,11 @@
 
 ## Current Goal or Problem
 
-为 Pi subagent 增加 agent_type 配置和父子独立 Fast。入口为 [Map #32](https://github.com/wangxuyang1221/pi-ext/issues/32)，完整规格仅在 [Spec #33](https://github.com/wangxuyang1221/pi-ext/issues/33) 维护。角色配置与 Fast 规则均已确定，当前等待用户审核 [实施切片提案](slices-proposal.md)。
+为 Pi subagent 增加 agent_type 配置和父子独立 Fast。入口为 [Map #32](https://github.com/wangxuyang1221/pi-ext/issues/32)，完整规格仅在 [Spec #33](https://github.com/wangxuyang1221/pi-ext/issues/33) 维护。角色配置与 Fast 规则均已确定，已创建 [Fast 实施 #37](https://github.com/wangxuyang1221/pi-ext/issues/37) 和 [角色实施 #38](https://github.com/wangxuyang1221/pi-ext/issues/38)，准备派发第一关。
 
 ## Evolution
 
-从 main 的 501d395 建立独立 worktree 和分支。#34 确认 Pi 独立配置；#35 经逐项讨论完成，规则已移交 Spec。用户先排除角色指令，之后明确 description 只辅助主代理选择，不作为 child 指令。用户要求目录可见范围与编排工具一致，仅 root 获得。Fast #36 已确认并关闭，当前只形成待审核切片，尚未进入实施。
+从 main 的 501d395 建立独立 worktree 和分支。#34 确认 Pi 独立配置；#35 经逐项讨论完成，规则已移交 Spec。用户先排除角色指令，之后明确 description 只辅助主代理选择，不作为 child 指令。用户要求目录可见范围与编排工具一致，仅 root 获得。Fast #36 已确认并关闭，两个切片已获用户审核并授权施工，实施关卡已建立。
 
 ## Agreed Decisions and Constraints
 
@@ -29,7 +29,7 @@
 - child /fast 只保存当前子代理会话的选择，reload/resume 保留；普通 root 持久化语义保持原状。Fast 模型匹配与明确拒绝沿用既有兼容行为，不新增能力探测；未知错误不关闭 Fast，失败不自动重放。
 - Worktree：/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast；分支：adventure/subagent-profiles-fast；资料：adventure/32/。操作范围见 [Spec working agreement](https://github.com/wangxuyang1221/pi-ext/issues/33#working-agreement)，不创建 PR、不合并、不部署。
 - 遵守 [仓库语言策略](../../docs/agents/repository-language-policy.md)，修改源码与测试，不手改 dist，交付前运行 pnpm run check。工作目录外写入遵守用户 AGENTS 限制；本地任务文件均在原仓库内部。
-- 使用 adventure 流程，已确认规则不重问；主要规划收敛后用 slicing 审核切片再实施。实施由主代理协调，每关一个全新上下文 worker，提供适用 skill 绝对路径，不再委派。
+- 使用 adventure 流程，已确认规则不重问；两个切片已通过 slicing 审核，按关卡顺序实施。实施由主代理协调，每关一个全新上下文 worker，提供适用 skill 绝对路径，不再委派。
 
 ## Established Facts and Required Context
 
@@ -43,14 +43,14 @@ Fast 扩展目前在加载、--fast、/fast 和 session_shutdown 保存共享配
 
 ## Current Assumptions
 
-规格没有待用户决定的行为分歧。两切片提案尚未审核：Slice 1 先交付普通 spawn 的独立 Fast，Slice 2 再交付角色配置并完成整体验收。不要把提案当成已批准实施，不提前创建 Implementation 或派发 worker。
+无待确认的规格或切片分歧。用户最初输入 expert_worker，随后明确纠正为 expert，应使用 expert 类型执行。
 
 ## Continuation Point
 
-当前等待用户审核 [完整切片提案](slices-proposal.md) 的依赖和粒度。若用户提出调整，按 slicing skill 修订并再次审核；不得依据旧提案开始实施。
+用户已审核 [完整切片](slices.md)，要求创建实施关卡后开始施工，执行代理类型为 expert。已建立 #37 和 #38，后者原生依赖前者，均为 Map 子 Issue。当前下一步是保存本次资料后派发 #37。
 
-批准后，将每个切片完整写入 Implementation Issue，关联到 Map 并用原生依赖表示 Slice 2 依赖 Slice 1。更新 Spec 的延期验证归属和 Map，保存进度后派发首个可执行 worker。主代理进入实施后担任协调者。使用 worker agent_type、fork_turns none，明确 worktree、当前提交、Spec、切片、证据、操作限制和必须读取的 skill 绝对路径；worker 不再委派。
+派发使用 expert、fork_turns none，提供 worktree、最新提交、Spec、关卡、证据和操作限制。worker 行动前完整读取 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md、/Users/wangxuyang/.agents/skills/wangxuyang/develop-with-tdd/SKILL.md 及必要引用，不再委派。用户批准 adventure 的提交推送范围，允许本任务实现与证据提交到冒险分支。
 
-每关由 worker 使用 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md 在 Issue Execution 维护计划，完成编码和证据；行为修改应按项目适用的 TDD skill 执行。协调者核对证据来源和实际路径，不把 mock 注册或 CLI 参数断言当作真实 child 验收。Slice 2 的 worker 最后对照完整 Spec 验收，运行 pnpm run check，清理本任务进程并确认监听释放，保存推送后等待用户交付确认。Map 与 Spec 保持 open 到用户确认交付。
+主代理协调并核对交付证据，不自行绕过 worker 实施。计划只在 Implementation 正文维护，详细证据在 adventure/32/evidence。每关通过后关闭、存档并继续下一关；不通过则退回同一 worker。#38 的 worker 承担完整 Spec 整体验收，完成 pnpm run check、清理进程并确认监听释放，保存推送后等待用户交付确认。Map 与 Spec 保持 open。
 
-用户最新两次追问均是当前规划中的澄清，不是取消任务：Fast 不预先查询模型能力，按 provider/本地名单尝试并识别明确 Codex 拒绝；openai 与 openai-codex 来自 Pi 内置 provider，分别默认使用 API key 的 API 通道与 ChatGPT OAuth 通道。证据中有版本与源码入口，不需要重复询问已确定规则。
+主工作区 /Users/wangxuyang/Code/t3code/pi-ext 存在其他任务的 goal 扩展与 README 改动，勿修改或提交这些主工作区文件。冒险 worktree 的产品代码在派发前干净。
