@@ -1,8 +1,14 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { convertToLlm, SessionManager, type ExtensionContext, type SessionEntry } from "@earendil-works/pi-coding-agent";
 import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
 import { streamSimple } from "@earendil-works/pi-ai/api/openai-codex-responses";
 import type { Model } from "@earendil-works/pi-ai";
+
+vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("@earendil-works/pi-coding-agent")>();
+	return { ...actual, convertToLlm: vi.fn(actual.convertToLlm) };
+});
+import { compactionHash } from "../src/capabilities.js";
 import { createSessionCoordinator, type RemoteCompactionReason } from "../src/session-coordinator.js";
 import {
 	effectiveInputForBranch,
@@ -1089,6 +1095,385 @@ describe("Codex session coordinator", () => {
 		if (checkpoint.status !== "valid") return;
 		expect(checkpoint.checkpoint.details.preservedInput).toEqual([requestInput[0]]);
 		expect(final?.filter((item) => item.role === "user" && JSON.stringify(item.content).includes("MIDDLE_CONSTRAINT_MUST_SURVIVE"))).toEqual([requestInput[0]]);
+	});
+
+	test.each([0, 100, 100_000])("persists the edited request through two compactions with history size %i", async (historySize) => {
+		const oldModel = { ...getBuiltinModel("openai-codex", "gpt-5.5")!, contextWindow: 1_000_000 };
+		const currentModel = { ...getBuiltinModel("openai-codex", "gpt-5.6-sol")!, contextWindow: 1_000_000 };
+		expect(compactionHash(oldModel)).toBeDefined();
+		expect(compactionHash(oldModel)).not.toBe(compactionHash(currentModel));
+		const sm = SessionManager.inMemory(process.cwd());
+		if (historySize > 0) {
+			for (let index = 0; index < 5; index++) {
+				sm.appendMessage({ role: "user", content: `H${index}:` + "h".repeat(historySize - 3), timestamp: index + 1 });
+			}
+		}
+		const currentId = sm.appendMessage({ role: "user", content: "draft", timestamp: 6 });
+		const task = "start ".repeat(30_000) + "MIDDLE_CONSTRAINT_MUST_SURVIVE" + " finish".repeat(30_000);
+		sm.appendContextEdit(currentId, { content: task });
+		let payload: { input: ResponseItem[] } | undefined;
+		let payloadCount = 0;
+		const apiKey = `a.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "test" } })).toString("base64url")}.c`;
+		await streamSimple(currentModel, { messages: convertToLlm(sm.buildSessionProjection().messages) }, {
+			apiKey, onPayload: value => { payloadCount++; payload = value as { input: ResponseItem[] }; throw new Error("Stop before network"); },
+		}).result();
+		expect(payloadCount).toBe(1);
+		expect(payload).toBeDefined();
+		const requestInput = payload!.input;
+		const currentUser = requestInput.findLast((item) => item.role === "user")!;
+		expect(JSON.stringify(currentUser.content)).toContain("MIDDLE_CONSTRAINT_MUST_SURVIVE");
+		const initialUserCount = requestInput.filter((item) => item.role === "user").length;
+		const checkpoints: NativeCompactionDetails[] = [];
+		const operations: RemoteCompactionReason[] = [];
+		let calls = 0;
+		const coordinator = createSessionCoordinator({
+			getBranch: () => sm.getBranch(),
+			getAllTools: () => [],
+			createCheckpoint: async ({ model: selectedModel, input }) => {
+				calls++;
+				if (calls === 1) expect(input).not.toContainEqual(currentUser);
+				return { details: {
+					...details(modelKey(selectedModel), `opaque-${calls}`),
+					replacementHistory: buildReplacementHistory(input, { type: "compaction", encrypted_content: `opaque-${calls}` }),
+				} };
+			},
+			appendCheckpoint: value => { checkpoints.push(value); sm.appendCustomEntry(NATIVE_COMPACTION_KIND, value); },
+			appendCheckpointBypass: () => {},
+			shouldAutoCompact: () => true,
+			runCompaction: async (_ctx, reason, operation) => { operations.push(reason); return operation(); },
+		});
+		const ctx = { ...context([oldModel, currentModel]), sessionManager: sm, model: currentModel } as ExtensionContext;
+		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, ctx);
+		const conversionSpy = vi.mocked(convertToLlm);
+		conversionSpy.mockClear();
+		const final = await coordinator.prepareRequest(currentModel, ctx, requestInput);
+		const conversionCount = conversionSpy.mock.calls.length;
+		// Checkpoint receipts should not add conversions to the existing view work.
+		expect(conversionCount).toBeLessThanOrEqual(historySize === 0 ? 18 : 63);
+		expect(calls).toBe(2);
+		expect(operations).toEqual(["model-transition", "automatic"]);
+		expect(checkpoints).toHaveLength(2);
+		expect(checkpoints[0]?.preservedInput).toContainEqual(currentUser);
+		if (historySize === 100_000) {
+			expect(checkpoints[0]!.replacementHistory.filter((item) => item.role === "user").length
+				+ (checkpoints[0]!.preservedInput ?? []).filter((item) => item.role === "user").length).toBeLessThan(initialUserCount);
+		}
+		expect(checkpoints[1]?.preservedInput).toContainEqual(currentUser);
+		const effective = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] });
+		expect(effective.filter((item) => item.role === "user" && JSON.stringify(item.content) === JSON.stringify(currentUser.content))).toHaveLength(1);
+		expect(effective).toContainEqual(currentUser);
+		const subsequent = await createSessionCoordinator({
+			getBranch: () => sm.getBranch(), getAllTools: () => [],
+			createCheckpoint: async () => { throw new Error("Unexpected compaction"); },
+			appendCheckpoint: () => {}, appendCheckpointBypass: () => {},
+		}).prepareCompaction(currentModel, ctx);
+		expect(subsequent.filter((item) => item.role === "user" && JSON.stringify(item.content) === JSON.stringify(currentUser.content))).toHaveLength(1);
+		expect(subsequent).toContainEqual(currentUser);
+		expect(final?.filter((item) => item.role === "user" && JSON.stringify(item.content) === JSON.stringify(currentUser.content))).toHaveLength(1);
+	}, 30_000);
+
+	test("carries an old checkpoint request through a trimmed transition and automatic compaction", async () => {
+		const oldModel = model("old", "openai-codex", 1_000_000);
+		const currentModel = model("new", "openai-codex", 1_000_000);
+		const sm = SessionManager.inMemory(process.cwd());
+		for (let index = 0; index < 5; index++) {
+			sm.appendMessage({ role: "user", content: `H${index}:` + "h".repeat(99_997), timestamp: index + 1 });
+		}
+		const currentId = sm.appendMessage({ role: "user", content: "draft", timestamp: 6 });
+		sm.appendContextEdit(currentId, { content: "start ".repeat(30_000) + "MIDDLE_CONSTRAINT_MUST_SURVIVE" + " finish".repeat(30_000) });
+		const original = effectiveInputForBranch({ branch: sm.getBranch(), model: oldModel, tools: [] });
+		const currentUser = original.at(-1)!;
+		sm.appendCustomEntry(NATIVE_COMPACTION_KIND, {
+			...details(modelKey(oldModel), "old"),
+			replacementHistory: [...original.slice(0, -1), { type: "compaction", encrypted_content: "old" }],
+			preservedInput: [currentUser],
+		});
+		const requestInput = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [], allowCheckpointModelMismatch: true });
+		const checkpoints: NativeCompactionDetails[] = [];
+		let calls = 0;
+		const coordinator = createSessionCoordinator({
+			getBranch: () => sm.getBranch(), getAllTools: () => [],
+			createCheckpoint: async ({ model: selectedModel, input }) => {
+				calls++;
+				return { details: {
+					...details(modelKey(selectedModel), `new-${calls}`),
+					replacementHistory: buildReplacementHistory(input, { type: "compaction", encrypted_content: `new-${calls}` }),
+				} };
+			},
+			appendCheckpoint: value => { checkpoints.push(value); sm.appendCustomEntry(NATIVE_COMPACTION_KIND, value); },
+			appendCheckpointBypass: () => {}, shouldAutoCompact: () => true,
+		});
+		const ctx = { ...context([oldModel, currentModel]), sessionManager: sm, model: currentModel } as ExtensionContext;
+		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, ctx);
+		const final = await coordinator.prepareRequest(currentModel, ctx, requestInput);
+		expect(calls).toBe(2);
+		expect(checkpoints[0]?.preservedInput).toContainEqual(currentUser);
+		expect(checkpoints[0]!.replacementHistory.filter((item) => item.role === "user").length
+			+ (checkpoints[0]!.preservedInput ?? []).filter((item) => item.role === "user").length).toBeLessThan(6);
+		expect(checkpoints[1]?.preservedInput).toContainEqual(currentUser);
+		expect(effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] })).toContainEqual(currentUser);
+		expect(final?.filter((item) => item.role === "user" && JSON.stringify(item.content) === JSON.stringify(currentUser.content))).toHaveLength(1);
+	});
+
+	test("preserves a new user while recovering a checkpoint with an unavailable previous model", async () => {
+		const currentModel = model("new");
+		const retiredKey = "openai-codex:openai-codex-responses:gpt-5.5";
+		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendCustomEntry(NATIVE_COMPACTION_KIND, { ...details(retiredKey, "old"), compHash: "2911" });
+		sm.appendMessage({ role: "user", content: "new task", timestamp: 1 });
+		const requestInput = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [], allowCheckpointModelMismatch: true });
+		const currentUser = requestInput.at(-1)!;
+		let calls = 0;
+		const coordinator = createSessionCoordinator({
+			getBranch: () => sm.getBranch(), getAllTools: () => [],
+			createCheckpoint: async ({ model: selectedModel, input }) => {
+				calls++;
+				expect(selectedModel).toBe(currentModel);
+				expect(input).not.toContainEqual(currentUser);
+				return { details: details(modelKey(selectedModel), "recovered") };
+			},
+			appendCheckpoint: value => { sm.appendCustomEntry(NATIVE_COMPACTION_KIND, value); },
+			appendCheckpointBypass: () => {}, shouldAutoCompact: () => true,
+		});
+		const ctx = { ...context([currentModel]), sessionManager: sm, model: currentModel } as ExtensionContext;
+		const final = await coordinator.prepareRequest(currentModel, ctx, requestInput);
+		expect(calls).toBe(1);
+		const checkpoint = findNativeCheckpoint(sm.getBranch(), modelKey(currentModel));
+		expect(checkpoint.status).toBe("valid");
+		if (checkpoint.status !== "valid") return;
+		expect(checkpoint.checkpoint.details.preservedInput).toContainEqual(currentUser);
+		expect(effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] })).toContainEqual(currentUser);
+		expect(final?.filter((item) => item.role === "user")).toEqual([currentUser]);
+	});
+
+	test.each(["clear", "model", "abort", "edit", "new-user"] as const)("rejects a stale automatic result after %s", async (change) => {
+		const oldModel = model("old", "openai-codex", 1_000_000);
+		const currentModel = model("new", "openai-codex", 1_000_000);
+		const otherModel = model("other", "openai-codex", 1_000_000);
+		const sm = SessionManager.inMemory(process.cwd());
+		const currentId = sm.appendMessage({ role: "user", content: "current task", timestamp: 1 });
+		const requestInput = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] });
+		const controller = new AbortController();
+		const ctx = { ...context([oldModel, currentModel, otherModel]), sessionManager: sm, model: currentModel, signal: controller.signal } as ExtensionContext;
+		let release!: () => void;
+		let started!: () => void;
+		const gate = new Promise<void>((resolve) => { release = resolve; });
+		const ready = new Promise<void>((resolve) => { started = resolve; });
+		let calls = 0;
+		let appended = 0;
+		const coordinator = createSessionCoordinator({
+			getBranch: () => sm.getBranch(), getAllTools: () => [],
+			createCheckpoint: async ({ model: selectedModel }) => {
+				calls++;
+				if (calls === 2) { started(); await gate; }
+				return { details: details(modelKey(selectedModel), `opaque-${calls}`) };
+			},
+			appendCheckpoint: value => { appended++; sm.appendCustomEntry(NATIVE_COMPACTION_KIND, value); },
+			appendCheckpointBypass: () => {}, shouldAutoCompact: () => true,
+		});
+		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, ctx);
+		const pending = coordinator.prepareRequest(currentModel, ctx, requestInput);
+		const outcome = pending.then((value) => value, (error: Error) => error);
+		await ready;
+		if (change === "clear") coordinator.clear();
+		if (change === "model") {
+			(ctx as unknown as { model: Model<any> }).model = otherModel;
+			await coordinator.selectModel({ model: otherModel, previousModel: currentModel }, ctx);
+		}
+		if (change === "abort") controller.abort(new Error("canceled"));
+		if (change === "edit") sm.appendContextEdit(currentId, { content: "revised task" });
+		if (change === "new-user") sm.appendMessage({ role: "user", content: "newer task", timestamp: 2 });
+		release();
+		const result = await outcome;
+		if (change === "clear" || change === "model" || change === "abort") expect(result).toBeInstanceOf(Error);
+		expect(calls).toBe(2);
+		expect(appended).toBe(1);
+		const checkpoint = findNativeCheckpoint(sm.getBranch(), modelKey(currentModel));
+		if (change === "edit") expect(checkpoint.status).toBe("invalid");
+		else expect(checkpoint.status).toBe("valid");
+		if (checkpoint.status === "valid") expect(checkpoint.checkpoint.details.preservedInput).toContainEqual(requestInput.at(-1));
+	});
+
+	test.each(["remote", "append"] as const)("keeps the first checkpoint when the second %s fails", async (failure) => {
+		const oldModel = model("old", "openai-codex", 1_000_000);
+		const currentModel = model("new", "openai-codex", 1_000_000);
+		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendMessage({ role: "user", content: "current task", timestamp: 1 });
+		const requestInput = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] });
+		let calls = 0;
+		let appends = 0;
+		let failures = 0;
+		const coordinator = createSessionCoordinator({
+			getBranch: () => sm.getBranch(), getAllTools: () => [],
+			createCheckpoint: async ({ model: selectedModel }) => {
+				calls++;
+				if (failure === "remote" && calls === 2) throw new Error("server_error");
+				return { details: details(modelKey(selectedModel), `opaque-${calls}`) };
+			},
+			appendCheckpoint: value => {
+				appends++;
+				if (failure === "append" && appends === 2) throw new Error("disk error");
+				sm.appendCustomEntry(NATIVE_COMPACTION_KIND, value);
+			},
+			appendCheckpointBypass: () => {}, shouldAutoCompact: () => true,
+			onAutomaticCompactionFailure: () => { failures++; },
+		});
+		const ctx = { ...context([oldModel, currentModel]), sessionManager: sm, model: currentModel } as ExtensionContext;
+		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, ctx);
+		const final = await coordinator.prepareRequest(currentModel, ctx, requestInput);
+		expect(calls).toBe(2);
+		expect(failures).toBe(1);
+		const checkpoint = findNativeCheckpoint(sm.getBranch(), modelKey(currentModel));
+		expect(checkpoint.status).toBe("valid");
+		if (checkpoint.status !== "valid") return;
+		expect(checkpoint.checkpoint.details.preservedInput).toContainEqual(requestInput.at(-1));
+		expect(final?.filter((item) => item.role === "user")).toEqual([requestInput.at(-1)]);
+	});
+
+	test.each(["clear", "model", "abort", "edit", "new-user"] as const)("does not save a stale transition request after %s", async (change) => {
+		const oldModel = model("old");
+		const currentModel = model("new");
+		const otherModel = model("other");
+		const sm = SessionManager.inMemory(process.cwd());
+		const currentId = sm.appendMessage({ role: "user", content: "old task", timestamp: 1 });
+		const requestInput = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] });
+		const controller = new AbortController();
+		const ctx = { ...context([oldModel, currentModel, otherModel]), sessionManager: sm, model: currentModel, signal: controller.signal } as ExtensionContext;
+		let release!: () => void;
+		let started!: () => void;
+		const gate = new Promise<void>((resolve) => { release = resolve; });
+		const ready = new Promise<void>((resolve) => { started = resolve; });
+		let calls = 0;
+		const appended: NativeCompactionDetails[] = [];
+		const coordinator = createSessionCoordinator({
+			getBranch: () => sm.getBranch(), getAllTools: () => [],
+			createCheckpoint: async ({ model: selectedModel }) => {
+				calls++;
+				if (calls === 1) { started(); await gate; }
+				return { details: details(modelKey(selectedModel), `opaque-${calls}`) };
+			},
+			appendCheckpoint: value => { appended.push(value); sm.appendCustomEntry(NATIVE_COMPACTION_KIND, value); },
+			appendCheckpointBypass: () => {},
+		});
+		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, ctx);
+		const pending = coordinator.prepareRequest(currentModel, ctx, requestInput);
+		const outcome = pending.then((value) => value, (error: Error) => error);
+		await ready;
+		if (change === "clear") coordinator.clear();
+		if (change === "model") {
+			(ctx as unknown as { model: Model<any> }).model = otherModel;
+			await coordinator.selectModel({ model: otherModel, previousModel: currentModel }, ctx);
+		}
+		if (change === "abort") controller.abort(new Error("canceled"));
+		if (change === "edit") sm.appendContextEdit(currentId, { content: "revised task" });
+		if (change === "new-user") sm.appendMessage({ role: "user", content: "new task", timestamp: 2 });
+		release();
+		const result = await outcome;
+		if (change === "clear" || change === "model" || change === "abort") {
+			expect(result).toBeInstanceOf(Error);
+			expect(appended).toHaveLength(0);
+		} else {
+			expect(calls).toBeGreaterThan(1);
+			expect(appended.every((value) => !(value.preservedInput ?? []).some((item) => JSON.stringify(item.content) === JSON.stringify(requestInput.at(-1)?.content)))).toBe(true);
+		}
+	});
+
+	test("does not carry a receipt into another public request or a shared transition waiter", async () => {
+		const oldModel = model("old", "openai-codex", 1_000_000);
+		const currentModel = model("new", "openai-codex", 1_000_000);
+		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendMessage({ role: "user", content: "same", timestamp: 1 });
+		const requestInput = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] });
+		let release!: () => void;
+		let started!: () => void;
+		const gate = new Promise<void>((resolve) => { release = resolve; });
+		const ready = new Promise<void>((resolve) => { started = resolve; });
+		let calls = 0;
+		const coordinator = createSessionCoordinator({
+			getBranch: () => sm.getBranch(), getAllTools: () => [],
+			createCheckpoint: async ({ model: selectedModel }) => {
+				calls++;
+				if (calls === 1) { started(); await gate; }
+				return { details: details(modelKey(selectedModel), `opaque-${calls}`) };
+			},
+			appendCheckpoint: value => { sm.appendCustomEntry(NATIVE_COMPACTION_KIND, value); },
+			appendCheckpointBypass: () => {}, shouldAutoCompact: () => true,
+		});
+		const ctx = { ...context([oldModel, currentModel]), sessionManager: sm, model: currentModel } as ExtensionContext;
+		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, ctx);
+		const first = coordinator.prepareRequest(currentModel, ctx, requestInput);
+		await ready;
+		const waiter = coordinator.prepareRequest(currentModel, ctx, requestInput);
+		release();
+		const [firstResult, waiterResult] = await Promise.all([first, waiter]);
+		expect(calls).toBe(2);
+		expect(firstResult?.filter((item) => item.role === "user")).toHaveLength(1);
+		expect(waiterResult?.filter((item) => item.role === "user")).toHaveLength(1);
+		sm.appendMessage({ role: "user", content: "same", timestamp: 2 });
+		const nextInput = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] });
+		const next = await coordinator.prepareRequest(currentModel, ctx, nextInput);
+		expect(next?.filter((item) => item.role === "user" && JSON.stringify(item.content).includes("same"))).toHaveLength(2);
+	});
+
+	test("does not accept a checkpoint append that reports success without writing", async () => {
+		const oldModel = model("old");
+		const currentModel = model("new");
+		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendMessage({ role: "user", content: "current", timestamp: 1 });
+		const requestInput = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] });
+		let calls = 0;
+		let appends = 0;
+		const coordinator = createSessionCoordinator({
+			getBranch: () => sm.getBranch(), getAllTools: () => [],
+			createCheckpoint: async ({ model: selectedModel }) => { calls++; return { details: details(modelKey(selectedModel)) }; },
+			appendCheckpoint: () => { appends++; },
+			appendCheckpointBypass: () => {}, shouldAutoCompact: () => false,
+		});
+		const ctx = { ...context([oldModel, currentModel]), sessionManager: sm, model: currentModel } as ExtensionContext;
+		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, ctx);
+		expect(await coordinator.prepareRequest(currentModel, ctx, requestInput)).toBeUndefined();
+		expect(calls).toBe(1);
+		expect(appends).toBe(1);
+		expect(findNativeCheckpoint(sm.getBranch(), modelKey(currentModel)).status).toBe("none");
+	});
+
+	test("does not grant request identity when the saved checkpoint differs from the supplied details", async () => {
+		const oldModel = model("old", "openai-codex", 1_000_000);
+		const currentModel = model("new", "openai-codex", 1_000_000);
+		const sm = SessionManager.inMemory(process.cwd());
+		for (let index = 0; index < 5; index++) {
+			sm.appendMessage({ role: "user", content: `H${index}:` + "h".repeat(99_997), timestamp: index + 1 });
+		}
+		const currentId = sm.appendMessage({ role: "user", content: "draft", timestamp: 6 });
+		sm.appendContextEdit(currentId, { content: "start ".repeat(30_000) + "MIDDLE_CONSTRAINT_MUST_SURVIVE" + " finish".repeat(30_000) });
+		const requestInput = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] });
+		const currentUser = requestInput.at(-1)!;
+		let calls = 0;
+		const saved: NativeCompactionDetails[] = [];
+		const coordinator = createSessionCoordinator({
+			getBranch: () => sm.getBranch(), getAllTools: () => [],
+			createCheckpoint: async ({ model: selectedModel, input }) => {
+				calls++;
+				return { details: {
+					...details(modelKey(selectedModel), `opaque-${calls}`),
+					replacementHistory: buildReplacementHistory(input, { type: "compaction", encrypted_content: `opaque-${calls}` }),
+				} };
+			},
+			appendCheckpoint: value => {
+				const written = saved.length === 0 ? { ...value, preservedInput: [] } : value;
+				saved.push(written);
+				sm.appendCustomEntry(NATIVE_COMPACTION_KIND, written);
+			},
+			appendCheckpointBypass: () => {}, shouldAutoCompact: () => true,
+		});
+		const ctx = { ...context([oldModel, currentModel]), sessionManager: sm, model: currentModel } as ExtensionContext;
+		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, ctx);
+		const final = await coordinator.prepareRequest(currentModel, ctx, requestInput);
+		expect(calls).toBe(2);
+		expect(saved).toHaveLength(2);
+		expect(saved[1]?.preservedInput ?? []).not.toContainEqual(currentUser);
+		expect(effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] })).not.toContainEqual(currentUser);
+		expect(final?.filter((item) => item.role === "user" && JSON.stringify(item.content) === JSON.stringify(currentUser.content))).toHaveLength(1);
 	});
 
 	test("does not drop a new user that repeats a preserved user's content", async () => {

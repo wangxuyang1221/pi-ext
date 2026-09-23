@@ -233,6 +233,22 @@ type CurrentRequest =
 	| { kind: "checkpoint"; requestIndex: number; item: ResponseItem }
 	| undefined;
 
+type RequestReceipt = {
+	requestIndex: number;
+	item: ResponseItem;
+	sourceEntryId?: string;
+	checkpointEntryId: string;
+	conversationLeafId?: string;
+};
+
+type RequestContinuity = {
+	sessionId: string;
+	generation: number;
+	targetModelKey: string;
+	requestInput: ResponseItem[] | undefined;
+	receipt?: RequestReceipt;
+};
+
 function resolveCurrentRequest(
 	snapshot: ReturnType<typeof createBranchInputSnapshot>,
 	requestInput: ResponseItem[] | undefined,
@@ -442,6 +458,116 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			throw new Error("The session changed while Codex model-transition compaction was running.");
 		}
 	};
+	const validReceipt = (
+		ctx: ExtensionContext,
+		model: Model<any>,
+		snapshot: ReturnType<typeof createBranchInputSnapshot>,
+		requestInput: ResponseItem[] | undefined,
+		continuity?: RequestContinuity,
+		signal?: AbortSignal,
+	): RequestReceipt | undefined => {
+		if (!continuity?.receipt) return undefined;
+		const receipt = continuity.receipt;
+		const branch = snapshot.projection.branch as SessionEntry[];
+		const checkpoint = snapshot.checkpoint(model);
+		const sourceIndex = receipt.sourceEntryId === undefined
+			? undefined
+			: branch.findIndex((entry) => entry.id === receipt.sourceEntryId);
+		const requestItem = requestInput?.[receipt.requestIndex];
+		if (ctx.sessionManager.getSessionId() !== continuity.sessionId
+			|| generation !== continuity.generation
+			|| modelKey(model) !== continuity.targetModelKey
+			|| (ctx.model && modelKey(ctx.model) !== continuity.targetModelKey)
+			|| requestInput !== continuity.requestInput
+			|| (signal ?? ctx.signal)?.aborted
+			|| checkpoint.status !== "valid"
+			|| checkpoint.checkpoint.entryId !== receipt.checkpointEntryId
+			|| checkpoint.checkpoint.details.modelKey !== continuity.targetModelKey
+			|| conversationLeafId(branch) !== receipt.conversationLeafId
+			|| branch.slice(checkpoint.checkpoint.entryIndex + 1).some(isContextEntry)
+			|| (sourceIndex !== undefined && (sourceIndex < 0 || sourceIndex >= checkpoint.checkpoint.entryIndex))
+			|| !requestItem
+			|| requestItem.role !== "user"
+			|| requestInput?.findLastIndex((item) => item.role === "user") !== receipt.requestIndex
+			|| !isDeepStrictEqual(requestItem, receipt.item)
+			|| ![...checkpoint.checkpoint.details.replacementHistory, ...(checkpoint.checkpoint.details.preservedInput ?? [])]
+				.some((item) => item.role === "user" && sameUserOccurrence(item, receipt.item)
+					&& isDeepStrictEqual(item.content, receipt.item.content))) {
+			continuity.receipt = undefined;
+			return undefined;
+		}
+		return receipt;
+	};
+	const resolveRequest = (
+		ctx: ExtensionContext,
+		snapshot: ReturnType<typeof createBranchInputSnapshot>,
+		requestInput: ResponseItem[] | undefined,
+		historyModel: Model<any>,
+		currentModel: Model<any>,
+		systemPromptInput: ResponseItem[],
+		continuity?: RequestContinuity,
+		signal?: AbortSignal,
+	): CurrentRequest => {
+		const receipt = validReceipt(ctx, currentModel, snapshot, requestInput, continuity, signal);
+		return receipt
+			? { kind: "checkpoint", requestIndex: receipt.requestIndex, item: receipt.item }
+			: resolveCurrentRequest(snapshot, requestInput, historyModel, currentModel, systemPromptInput);
+	};
+	const saveCheckpoint = (
+		ctx: ExtensionContext,
+		model: Model<any>,
+		details: NativeCompactionDetails,
+		currentRequest: CurrentRequest,
+		before: SessionEntry[],
+		continuity?: RequestContinuity,
+		signal?: AbortSignal,
+	): void => {
+		const priorReceipt = continuity?.receipt;
+		if (continuity) continuity.receipt = undefined;
+		if (!continuity || !currentRequest) {
+			deps.appendCheckpoint(details);
+			return;
+		}
+		const beforeIds = before.map((entry) => entry.id);
+		const leafId = conversationLeafId(before);
+		deps.appendCheckpoint(details);
+		try {
+			const after = deps.getBranch(ctx);
+			const checkpoint = findNativeCheckpoint(after, modelKey(model));
+			const requestItem = continuity.requestInput?.[currentRequest.requestIndex];
+			if (ctx.sessionManager.getSessionId() !== continuity.sessionId
+				|| generation !== continuity.generation
+				|| modelKey(model) !== continuity.targetModelKey
+				|| (ctx.model && modelKey(ctx.model) !== continuity.targetModelKey)
+				|| (signal ?? ctx.signal)?.aborted
+				|| after.length !== beforeIds.length + 1
+				|| !beforeIds.every((id, index) => after[index]?.id === id)
+				|| checkpoint.status !== "valid"
+				|| checkpoint.checkpoint.entryIndex !== beforeIds.length
+				|| beforeIds.includes(checkpoint.checkpoint.entryId)
+				|| checkpoint.checkpoint.details.modelKey !== continuity.targetModelKey
+				|| !isDeepStrictEqual(checkpoint.checkpoint.details, details)
+				|| conversationLeafId(after) !== leafId
+				|| !requestItem
+				|| requestItem.role !== "user"
+				|| continuity.requestInput?.findLastIndex((item) => item.role === "user") !== currentRequest.requestIndex
+				|| !isDeepStrictEqual(requestItem, currentRequest.item)
+				|| ![...checkpoint.checkpoint.details.replacementHistory, ...(checkpoint.checkpoint.details.preservedInput ?? [])]
+					.some((item) => item.role === "user" && sameUserOccurrence(item, currentRequest.item)
+						&& isDeepStrictEqual(item.content, currentRequest.item.content))) return;
+			continuity.receipt = {
+				requestIndex: currentRequest.requestIndex,
+				item: priorReceipt && isDeepStrictEqual(priorReceipt.item, currentRequest.item)
+					? priorReceipt.item : structuredClone(currentRequest.item),
+				...(currentRequest.kind === "branch" ? { sourceEntryId: currentRequest.entryId }
+					: priorReceipt?.sourceEntryId ? { sourceEntryId: priorReceipt.sourceEntryId } : {}),
+				checkpointEntryId: checkpoint.checkpoint.entryId,
+				conversationLeafId: leafId,
+			};
+		} catch {
+			// The checkpoint is saved, but its identity cannot be confirmed.
+		}
+	};
 
 	const clear = (): void => {
 		generation++;
@@ -502,14 +628,16 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		requestInput: ResponseItem[] | undefined,
 		excludeLastAssistantError = false,
 		signal?: AbortSignal,
+		continuity?: RequestContinuity,
 	): Promise<void> => {
 		const operationSignal = signal ?? ctx.signal;
 		for (let attempt = 0; attempt < 3; attempt++) {
 			ensureCurrent(ctx, targetModelKey, startGeneration, operationSignal);
 			const branch = deps.getBranch(ctx);
+			const branchBefore = branch.slice();
 			const leafId = conversationLeafId(branch);
 			const snapshot = createBranchInputSnapshot({ branch, tools: toolsWithRequestFormats(deps.getAllTools(), basePayload, requestInput) });
-			const currentRequest = resolveCurrentRequest(snapshot, requestInput, previousModel, currentModel, systemPromptItems(ctx, currentModel));
+			const currentRequest = resolveRequest(ctx, snapshot, requestInput, previousModel, currentModel, systemPromptItems(ctx, currentModel), continuity, operationSignal);
 			const options = { excludeEntryId: currentRequest?.kind === "branch" ? currentRequest.entryId : undefined, allowCheckpointModelMismatch: true, excludeLastAssistantError };
 			const input = snapshot.view(previousModel, "effective", options).items;
 			let native: Awaited<ReturnType<CheckpointFactory>>;
@@ -541,24 +669,25 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			}
 			ensureCurrent(ctx, targetModelKey, startGeneration, operationSignal);
 			if (conversationLeafId(deps.getBranch(ctx)) !== leafId) continue;
-			deps.appendCheckpoint(rebindCheckpoint(
+			saveCheckpoint(ctx, currentModel, rebindCheckpoint(
 				preserveCurrentUser(native.details, currentRequest),
 				targetModelKey,
 				compactionHash(currentModel),
-			));
+			), currentRequest, branchBefore, continuity, operationSignal);
 			pendingBySession.delete(sessionId);
 			return;
 		}
 		throw new Error("The session changed while Codex model-transition compaction was running.");
 	};
 
-	const recoverCurrentModel = async (
+	const recoverCurrentModelInternal = async (
 		model: Model<any>,
 		ctx: ExtensionContext,
 		basePayload?: JsonObject,
 		requestInput?: ResponseItem[],
 		excludeLastAssistantError = false,
 		signal?: AbortSignal,
+		continuity?: RequestContinuity,
 	): Promise<void> => {
 		if (!isOpenAICodexModel(model)) return;
 		const operationSignal = signal ?? ctx.signal;
@@ -579,7 +708,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		if (!hashTransition) {
 			const branch = deps.getBranch(ctx);
 			const snapshot = createBranchInputSnapshot({ branch, tools: toolsWithRequestFormats(deps.getAllTools(), basePayload, requestInput) });
-			const currentRequest = resolveCurrentRequest(snapshot, requestInput, previousModel ?? model, model, systemPromptItems(ctx, model));
+			const currentRequest = resolveRequest(ctx, snapshot, requestInput, previousModel ?? model, model, systemPromptItems(ctx, model), continuity, operationSignal);
 			const input = snapshot.view(model, "effective", {
 				excludeEntryId: currentRequest?.kind === "branch" ? currentRequest.entryId : undefined,
 				allowCheckpointModelMismatch: true, excludeLastAssistantError,
@@ -590,13 +719,14 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		const gateLeafId = conversationLeafId(deps.getBranch(ctx));
 		const transition = runRemoteCompaction(ctx, "model-transition", async () => {
 			if (previousModel) {
-				await runTransition(sessionId, ctx, previousModel, modelKey(model), model, basePayload, startGeneration, requestInput, excludeLastAssistantError, operationSignal);
+				await runTransition(sessionId, ctx, previousModel, modelKey(model), model, basePayload, startGeneration, requestInput, excludeLastAssistantError, operationSignal, continuity);
 				return;
 			}
 			const branch = deps.getBranch(ctx);
+			const branchBefore = branch.slice();
 			const leafId = conversationLeafId(branch);
 			const snapshot = createBranchInputSnapshot({ branch, tools: toolsWithRequestFormats(deps.getAllTools(), basePayload, requestInput) });
-			const currentRequest = resolveCurrentRequest(snapshot, requestInput, model, model, systemPromptItems(ctx, model));
+			const currentRequest = resolveRequest(ctx, snapshot, requestInput, model, model, systemPromptItems(ctx, model), continuity, operationSignal);
 			const native = await deps.createCheckpoint({
 				ctx,
 				model,
@@ -611,11 +741,11 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			if (conversationLeafId(deps.getBranch(ctx)) !== leafId) {
 				throw new Error("The session changed while Codex model-transition compaction was running.");
 			}
-			deps.appendCheckpoint(rebindCheckpoint(
+			saveCheckpoint(ctx, model, rebindCheckpoint(
 				preserveCurrentUser(native.details, currentRequest),
 				modelKey(model),
 				currentHash,
-			));
+			), currentRequest, branchBefore, continuity, operationSignal);
 		});
 		transitionBySession.set(sessionId, transition);
 		try {
@@ -629,6 +759,14 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			if (transitionBySession.get(sessionId) === transition) transitionBySession.delete(sessionId);
 		}
 	};
+	const recoverCurrentModel = (
+		model: Model<any>,
+		ctx: ExtensionContext,
+		basePayload?: JsonObject,
+		requestInput?: ResponseItem[],
+		excludeLastAssistantError = false,
+		signal?: AbortSignal,
+	): Promise<void> => recoverCurrentModelInternal(model, ctx, basePayload, requestInput, excludeLastAssistantError, signal);
 
 	const selectModel = async (event: ModelSelectLike, ctx: ExtensionContext): Promise<void> => {
 		generation++;
@@ -667,27 +805,30 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		});
 	};
 
-	const prepareRequest = async (
+	const prepareRequestInternal = async (
 		model: Model<any>,
 		ctx: ExtensionContext,
 		requestInput: ResponseItem[] | undefined,
-		basePayload?: JsonObject,
-		skipAutomaticCompaction = false,
+		basePayload: JsonObject | undefined,
+		skipAutomaticCompaction: boolean,
+		continuity: RequestContinuity,
 	): Promise<ResponseItem[] | undefined> => {
 		const sessionId = ctx.sessionManager.getSessionId();
-		const requestGeneration = generation;
+		const requestGeneration = continuity.generation;
 		const requestSignal = ctx.signal;
 		const ensureRequestCurrent = () => ensureCurrent(ctx, modelKey(model), requestGeneration, requestSignal);
 		ensureRequestCurrent();
 		const originalRequestInput = requestInput;
 		requestInput = requestInputWithoutFailedRequests(requestInput, activeFailedRequests(rawGetBranch(ctx)));
 		const requestInputWasSanitized = requestInput !== originalRequestInput;
+		if (requestInput !== continuity.requestInput) continuity.receipt = undefined;
+		continuity.requestInput = requestInput;
 		let transitionCompactionCompleted = false;
 		const activeTransition = transitionBySession.get(sessionId);
 		if (activeTransition) {
 			await activeTransition;
 			ensureRequestCurrent();
-			return prepareRequest(model, ctx, requestInput, basePayload, false);
+			return prepareRequestInternal(model, ctx, requestInput, basePayload, false, continuity);
 		}
 		const branchBefore = deps.getBranch(ctx);
 		const tools = toolsWithRequestFormats(deps.getAllTools(), basePayload, requestInput);
@@ -720,7 +861,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			?? (checkpointModelKey && checkpointModelKey !== modelKey(model) ? resolveModel(ctx, checkpointModelKey) : undefined)
 			?? model;
 		const systemPromptInput = systemPromptItems(ctx, model);
-		const initialCurrentRequest = resolveCurrentRequest(snapshot, requestInput, historyModel, model, systemPromptInput);
+		const initialCurrentRequest = resolveRequest(ctx, snapshot, requestInput, historyModel, model, systemPromptInput, continuity, requestSignal);
 		const excludedEntryId = initialCurrentRequest?.kind === "branch" ? initialCurrentRequest.entryId : undefined;
 		const historyViews = inputViews(snapshot, historyModel, excludedEntryId);
 		const historyInput = historyViews.effective.items;
@@ -810,7 +951,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		if (activeAutomaticCompaction) {
 			await activeAutomaticCompaction;
 			ensureRequestCurrent();
-			return prepareRequest(model, ctx, requestInput, basePayload, true);
+			return prepareRequestInternal(model, ctx, requestInput, basePayload, true, continuity);
 		}
 		if (pending && pending.targetModelKey === modelKey(model)) {
 			const shouldRun = pending.reason === "hash"
@@ -822,7 +963,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 				const gateEntryId = checkpoint.status === "valid" ? checkpoint.checkpoint.entryId : conversationLeafId(branchBefore);
 				const gateLeafId = conversationLeafId(branchBefore);
 				const transition = runRemoteCompaction(ctx, "model-transition", () =>
-					runTransition(sessionId, ctx, pending.previousModel, pending.targetModelKey, model, basePayload, startGeneration, requestInput),
+					runTransition(sessionId, ctx, pending.previousModel, pending.targetModelKey, model, basePayload, startGeneration, requestInput, false, undefined, continuity),
 				);
 				transitionBySession.set(sessionId, transition);
 				try {
@@ -841,7 +982,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			}
 		}
 
-		await recoverCurrentModel(model, ctx, basePayload, requestInput);
+		await recoverCurrentModelInternal(model, ctx, basePayload, requestInput, false, undefined, continuity);
 		ensureRequestCurrent();
 		const recoveredCheckpoint = findNativeCheckpoint(deps.getBranch(ctx), modelKey(model));
 		if (recoveredCheckpoint.status === "valid" && recoveredCheckpoint.checkpoint.details.modelKey !== modelKey(model)) {
@@ -856,7 +997,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			if (activeTransition) {
 				await activeTransition;
 				ensureRequestCurrent();
-				return prepareRequest(model, ctx, requestInput, basePayload, false);
+				return prepareRequestInternal(model, ctx, requestInput, basePayload, false, continuity);
 			}
 			const activeAutomaticCompaction = automaticCompactionBySession.get(sessionId);
 			if (activeAutomaticCompaction) {
@@ -864,7 +1005,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 				ensureRequestCurrent();
 			} else if (!skipAutomaticCompaction) {
 				const automaticSnapshot = createBranchInputSnapshot({ branch, tools });
-				const currentRequest = resolveCurrentRequest(automaticSnapshot, requestInput, model, model, systemPromptInput);
+				const currentRequest = resolveRequest(ctx, automaticSnapshot, requestInput, model, model, systemPromptInput, continuity, requestSignal);
 				const automaticExcludeId = currentRequest?.kind === "branch" ? currentRequest.entryId : undefined;
 				const currentHistory = automaticSnapshot.view(model, "effective", {
 					excludeEntryId: automaticExcludeId, allowCheckpointModelMismatch: true,
@@ -875,6 +1016,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 				) {
 					const startGeneration = generation;
 					const leafId = conversationLeafId(branch);
+					const branchBefore = branch.slice();
 					const automaticCompaction = runRemoteCompaction(ctx, "automatic", async () => {
 						const native = await deps.createCheckpoint({
 							ctx,
@@ -887,7 +1029,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 						if (conversationLeafId(deps.getBranch(ctx)) !== leafId) {
 							throw new Error("The session changed while Codex automatic compaction was running.");
 						}
-						deps.appendCheckpoint(preserveCurrentUser(native.details, currentRequest));
+						saveCheckpoint(ctx, model, preserveCurrentUser(native.details, currentRequest), currentRequest, branchBefore, continuity, requestSignal);
 					});
 					automaticCompactionBySession.set(sessionId, automaticCompaction);
 					try {
@@ -913,7 +1055,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		const finalSnapshot = createBranchInputSnapshot({ branch, tools });
 		const currentCheckpoint = finalSnapshot.checkpoint(model);
 		if (currentCheckpoint.status === "bypassed") {
-			const currentRequest = resolveCurrentRequest(finalSnapshot, requestInput, model, model, systemPromptInput);
+			const currentRequest = resolveRequest(ctx, finalSnapshot, requestInput, model, model, systemPromptInput, continuity, requestSignal);
 			const rawReplay = [
 				...finalSnapshot.view(model, "effective", {
 					excludeEntryId: currentRequest?.kind === "branch" ? currentRequest.entryId : undefined,
@@ -927,28 +1069,36 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			return rawReplay;
 		}
 		if (currentCheckpoint.status !== "valid") return requestInputWasSanitized ? requestInput : undefined;
-		const initialBranchRequest = initialCurrentRequest?.kind === "branch" ? initialCurrentRequest : undefined;
-		const checkpointContainsInitialRequest = initialBranchRequest
-			&& currentCheckpoint.checkpoint.entryIndex > (snapshot.projection.sourceIndexById.get(initialBranchRequest.entryId) ?? Number.MAX_SAFE_INTEGER)
-			&& [...currentCheckpoint.checkpoint.details.replacementHistory, ...(currentCheckpoint.checkpoint.details.preservedInput ?? [])]
-				.some((item) => item.role === "user"
-					&& sameUserOccurrence(item, initialBranchRequest.item)
-					&& isDeepStrictEqual(item.content, initialBranchRequest.item.content));
-		if (checkpointContainsInitialRequest) {
-			const tailIndex = initialBranchRequest.requestIndex - initialTailStart;
-			if (tailIndex >= 0 && tailIndex < tail.length && sameUserOccurrence(tail[tailIndex]!, initialBranchRequest.item)) {
+		const finalReceipt = validReceipt(ctx, model, finalSnapshot, requestInput, continuity, requestSignal);
+		if (finalReceipt) {
+			const tailIndex = finalReceipt.requestIndex - initialTailStart;
+			if (tailIndex >= 0 && tailIndex < tail.length && isDeepStrictEqual(tail[tailIndex], finalReceipt.item)) {
 				tail = tail.filter((_item, index) => index !== tailIndex);
 			}
 		} else {
-			const preservedUser = checkpointPreservedCurrentUser(branch, requestInput, modelKey(model), currentCheckpoint);
-			if (preservedUser) {
-				const preservedUserIndex = tail.findLastIndex((item) =>
-					item.role === "user" && sameUserOccurrence(item, preservedUser),
-				);
-				if (preservedUserIndex >= 0) tail = tail.filter((_item, index) => index !== preservedUserIndex);
+			const initialBranchRequest = initialCurrentRequest?.kind === "branch" ? initialCurrentRequest : undefined;
+			const checkpointContainsInitialRequest = initialBranchRequest
+				&& currentCheckpoint.checkpoint.entryIndex > (snapshot.projection.sourceIndexById.get(initialBranchRequest.entryId) ?? Number.MAX_SAFE_INTEGER)
+				&& [...currentCheckpoint.checkpoint.details.replacementHistory, ...(currentCheckpoint.checkpoint.details.preservedInput ?? [])]
+					.some((item) => item.role === "user"
+						&& sameUserOccurrence(item, initialBranchRequest.item)
+						&& isDeepStrictEqual(item.content, initialBranchRequest.item.content));
+			if (checkpointContainsInitialRequest) {
+				const tailIndex = initialBranchRequest.requestIndex - initialTailStart;
+				if (tailIndex >= 0 && tailIndex < tail.length && sameUserOccurrence(tail[tailIndex]!, initialBranchRequest.item)) {
+					tail = tail.filter((_item, index) => index !== tailIndex);
+				}
+			} else {
+				const preservedUser = checkpointPreservedCurrentUser(branch, requestInput, modelKey(model), currentCheckpoint);
+				if (preservedUser) {
+					const preservedUserIndex = tail.findLastIndex((item) =>
+						item.role === "user" && sameUserOccurrence(item, preservedUser),
+					);
+					if (preservedUserIndex >= 0) tail = tail.filter((_item, index) => index !== preservedUserIndex);
+				}
 			}
 		}
-		const finalRequest = resolveCurrentRequest(finalSnapshot, requestInput, model, model, systemPromptInput);
+		const finalRequest = resolveRequest(ctx, finalSnapshot, requestInput, model, model, systemPromptInput, continuity, requestSignal);
 		return [
 			...finalSnapshot.view(model, "effective", {
 				excludeEntryId: finalRequest?.kind === "branch" ? finalRequest.entryId : undefined,
@@ -957,6 +1107,18 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			...tail,
 		];
 	};
+	const prepareRequest = (
+		model: Model<any>,
+		ctx: ExtensionContext,
+		requestInput: ResponseItem[] | undefined,
+		basePayload?: JsonObject,
+		skipAutomaticCompaction = false,
+	): Promise<ResponseItem[] | undefined> => prepareRequestInternal(model, ctx, requestInput, basePayload, skipAutomaticCompaction, {
+		sessionId: ctx.sessionManager.getSessionId(),
+		generation,
+		targetModelKey: modelKey(model),
+		requestInput,
+	});
 
 	const prepareCompaction = async (
 		model: Model<any>,
