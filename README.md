@@ -120,11 +120,16 @@ Codex encrypted compaction item.
 {
   "autoCompactTokenLimit": 180000,
   "autoCompactScope": "total",
-  "effectiveContextWindowPercent": 95
+  "effectiveContextWindowPercent": 95,
+  "metadataClientVersion": "0.156.0"
 }
 ```
 
 `autoCompactTokenLimit` 必须为正数，默认和上限均为模型原始 context window 的 90%。`autoCompactScope` 可设为 `total` 或 `bodyAfterPrefix`；默认使用 `total`。
+
+模型压缩 hash 来自当前账号可见的官方 Codex 模型目录。选择模型时不查询目录；首次实际请求或 Pi 发起压缩时，扩展用 Pi 已解析的认证向 `https://chatgpt.com/backend-api/codex/models` 发一次 GET，然后在进程内缓存结果。`metadataClientVersion` 默认是已验证的 `0.156.0`，只接受三段十进制版本号。受信任项目的有效配置覆盖全局配置。目录会按客户端版本和账号筛选模型；上游提高版本门槛后，可能需要把此配置改为已核验的新版本，或更新扩展默认值。扩展不依赖 Codex CLI，也不会替 Pi 注册新模型。
+
+只有当前模型与历史模型都查到非空 hash 且值不同时，hash 比较才触发过渡压缩。目录不可用、离线、未包含旧模型或使用自定义代理地址时，hash 为未知，普通对话和原有窗口缩小判断继续执行。冷启动时，过去固定表覆盖的旧模型也可能没有 hash；旧 checkpoint 已保存的 hash 仍用于恢复。目录 GET 的 HTTP 阶段最长等待 3 秒，宿主认证耗时不计入这个上限。查询成功结果缓存 5 分钟，未知模型和失败请求按 30 秒限流。
 
 有效窗口默认为原始窗口的 95%，用于调度判断和压缩请求的工具输出裁剪预算。`effectiveContextWindowPercent` 接受大于 0 且不超过 100 的有限数值；若模型配置里的窗口已经扣除了余量，可设为 100，避免重复扣除。这个配置不会改变默认 90% 自动压缩阈值，也不会修改 Pi 自身的压缩调度。本地估算超窗不再直接阻止远端压缩，最终由服务端判断。
 

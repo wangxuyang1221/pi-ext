@@ -237,6 +237,7 @@ describe("Codex compaction history", () => {
 					sessionManager: { getSessionId: () => "session" },
 				} as never,
 				model: { id: "gpt", provider: "openai-codex", api: "openai-codex-responses", reasoning: true, contextWindow: 160 } as never,
+				compHash: "opaque-current",
 				input: [{ type: "function_call_output", call_id: "1", output: "x".repeat(400) }],
 				basePayload,
 				allTools: [],
@@ -245,6 +246,8 @@ describe("Codex compaction history", () => {
 			expect(requestUrl).toBe("https://auth.example/backend-api/codex/responses");
 			expect(basePayload).toEqual(originalBasePayload);
 			expect(checkpoint.details).not.toHaveProperty("strategy");
+			expect(checkpoint.details.compHash).toBe("opaque-current");
+			expect(requestBody).not.toHaveProperty("compHash");
 			expect(parseNativeCompactionDetails(checkpoint.details)).toBeDefined();
 			expect(requestBody?.reasoning).toEqual({ effort: "high", summary: "auto" });
 			expect(requestBody?.input).toEqual(expect.arrayContaining([
@@ -252,6 +255,39 @@ describe("Codex compaction history", () => {
 			]));
 			const output = (requestBody?.input as Array<{ type?: string; output?: string }>).find((item) => item.type === "function_call_output");
 			expect(output?.output?.length).toBeLessThan(400);
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
+
+	test("persists only an explicit nonblank checkpoint hash", async () => {
+		const fetch = vi.fn(async () => new Response([
+			'data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"opaque"}}',
+			'data: {"type":"response.completed","response":{"id":"response"}}',
+		].join("\n\n") + "\n\n", { headers: { "content-type": "text/event-stream" } }));
+		vi.stubGlobal("fetch", fetch);
+		const params = {
+			ctx: {
+				getSystemPrompt: () => "instructions",
+				modelRegistry: { getApiKeyAndHeaders: async () => ({
+					ok: true,
+					apiKey: `a.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "account" } })).toString("base64url")}.c`,
+					headers: {},
+					baseUrl: "https://chatgpt.com/backend-api",
+				}) },
+				sessionManager: { getSessionId: () => "session" },
+			} as never,
+			model: { id: "gpt-5.5", provider: "openai-codex", api: "openai-codex-responses", contextWindow: 100_000 } as never,
+			input: [] as never,
+			allTools: [],
+			activeToolNames: [],
+		};
+		try {
+			expect((await createNativeCheckpoint(params)).details.compHash).toBeUndefined();
+			expect((await createNativeCheckpoint({ ...params, compHash: "  " })).details.compHash).toBeUndefined();
+			expect((await createNativeCheckpoint({ ...params, compHash: 12 as never })).details.compHash).toBeUndefined();
+			expect((await createNativeCheckpoint({ ...params, compHash: " opaque " })).details.compHash).toBe(" opaque ");
+			expect(fetch).toHaveBeenCalledTimes(4);
 		} finally {
 			vi.unstubAllGlobals();
 		}

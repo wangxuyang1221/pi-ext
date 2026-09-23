@@ -1,3 +1,4 @@
+import { fixtureSnapshot, resolveFixtureHashes } from "./fixtures/compaction-metadata.js";
 import { describe, expect, test, vi } from "vitest";
 import { convertToLlm, SessionManager, type ExtensionContext, type SessionEntry } from "@earendil-works/pi-coding-agent";
 import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
@@ -8,7 +9,6 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@earendil-works/pi-coding-agent")>();
 	return { ...actual, convertToLlm: vi.fn(actual.convertToLlm) };
 });
-import { compactionHash } from "../src/capabilities.js";
 import { createSessionCoordinator, type RemoteCompactionReason } from "../src/session-coordinator.js";
 import {
 	effectiveInputForBranch,
@@ -97,7 +97,7 @@ function createCoordinator(
 	onCompaction?: (reason: RemoteCompactionReason) => void,
 	onAutomaticFailure?: () => void,
 ) {
-	return createSessionCoordinator({
+	return createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
 		getBranch: () => branch,
 		getAllTools: () => [],
 		createCheckpoint: async ({ model: selectedModel, input, basePayload }) => ({
@@ -138,7 +138,7 @@ describe("Codex session coordinator", () => {
 		expect(payload).toBeDefined();
 		const seen: ResponseItem[][] = [];
 		let autoCalls = 0;
-		const coordinator = createSessionCoordinator({
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
 			getBranch: () => sm.getBranch(),
 			getAllTools: () => [],
 			createCheckpoint: async ({ input }) => { seen.push(input); return { details: details(modelKey(currentModel)) }; },
@@ -252,7 +252,7 @@ describe("Codex session coordinator", () => {
 		const gate = new Promise<void>((resolve) => { release = resolve; });
 		const ready = new Promise<void>((resolve) => { started = resolve; });
 		let appended = 0;
-		const coordinator = createSessionCoordinator({
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
 			getBranch: () => sm.getBranch(),
 			getAllTools: () => [],
 			createCheckpoint: async () => { started(); await gate; return { details: details(modelKey(currentModel)) }; },
@@ -578,6 +578,93 @@ describe("Codex session coordinator", () => {
 		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, context([oldModel, currentModel]));
 		await expect(coordinator.prepareRequest(currentModel, context([oldModel, currentModel]), [userInput("hello")])).resolves.toBeUndefined();
 		expect(calls).toBe(0);
+	});
+
+	test("resolves only the final model selection before the first request", async () => {
+		const firstModel = model("old");
+		const middleModel = model("other");
+		const finalModel = model("new");
+		const branch: SessionEntry[] = [];
+		const ctx = context([firstModel, middleModel, finalModel]);
+		const resolver = vi.fn(resolveFixtureHashes);
+		const compactedWith: string[] = [];
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolver,
+			getBranch: () => branch, getAllTools: () => [],
+			createCheckpoint: async ({ model: selectedModel }) => {
+				compactedWith.push(selectedModel.id);
+				return { details: details(modelKey(selectedModel)) };
+			},
+			appendCheckpoint: (value) => branch.push(customEntry(value)),
+			appendCheckpointBypass: () => {},
+		});
+		await coordinator.selectModel({ model: middleModel, previousModel: firstModel }, ctx);
+		await coordinator.selectModel({ model: firstModel, previousModel: middleModel }, ctx);
+		expect(resolver).not.toHaveBeenCalled();
+		await coordinator.prepareRequest(firstModel, ctx, [userInput("hello")]);
+		expect(compactedWith).toEqual([]);
+		await coordinator.selectModel({ model: middleModel, previousModel: firstModel }, ctx);
+		await coordinator.selectModel({ model: finalModel, previousModel: middleModel }, ctx);
+		expect(resolver).toHaveBeenCalledTimes(1);
+		await coordinator.prepareRequest(finalModel, ctx, [userInput("hello")]);
+		expect(compactedWith).toEqual([firstModel.id]);
+		expect(resolver).toHaveBeenCalledTimes(2);
+	});
+
+	test("discards a metadata result after the selected model changes", async () => {
+		const oldModel = model("old");
+		const currentModel = model("new");
+		let release!: (value: typeof fixtureSnapshot) => void;
+		const resolver = vi.fn(() => new Promise<typeof fixtureSnapshot>((resolve) => { release = resolve; }));
+		const createCheckpoint = vi.fn(async () => ({ details: details(modelKey(oldModel)) }));
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolver,
+			getBranch: () => [], getAllTools: () => [], createCheckpoint,
+			appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn(),
+		});
+		const ctx = context([oldModel, currentModel]);
+		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, ctx);
+		const pending = coordinator.prepareRequest(currentModel, ctx, [userInput("hello")]);
+		expect(resolver).toHaveBeenCalledTimes(1);
+		await coordinator.selectModel({ model: oldModel, previousModel: currentModel }, ctx);
+		release(fixtureSnapshot);
+		await expect(pending).rejects.toThrow(/session changed/);
+		expect(createCheckpoint).not.toHaveBeenCalled();
+	});
+
+	test("discards metadata when the request signal changes during resolution", async () => {
+		const selectedModel = model("new");
+		let release!: (value: typeof fixtureSnapshot) => void;
+		const resolver = vi.fn(() => new Promise<typeof fixtureSnapshot>((resolve) => { release = resolve; }));
+		const createCheckpoint = vi.fn(async () => ({ details: details(modelKey(selectedModel)) }));
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolver,
+			getBranch: () => [], getAllTools: () => [], createCheckpoint,
+			appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn(),
+		});
+		const ctx = context([selectedModel]);
+		(ctx as any).signal = new AbortController().signal;
+		const pending = coordinator.prepareRequest(selectedModel, ctx, [userInput("hello")]);
+		(ctx as any).signal = new AbortController().signal;
+		release(fixtureSnapshot);
+		await expect(pending).rejects.toThrow(/session changed/);
+		expect(createCheckpoint).not.toHaveBeenCalled();
+	});
+
+	test("discards metadata when the session changes during resolution", async () => {
+		const selectedModel = model("new");
+		let release!: (value: typeof fixtureSnapshot) => void;
+		let sessionId = "first";
+		const createCheckpoint = vi.fn(async () => ({ details: details(modelKey(selectedModel)) }));
+		const coordinator = createSessionCoordinator({
+			resolveCompactionHashes: () => new Promise((resolve) => { release = resolve; }),
+			getBranch: () => [], getAllTools: () => [], createCheckpoint,
+			appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn(),
+		});
+		const ctx = context([selectedModel]);
+		(ctx as any).sessionManager.getSessionId = () => sessionId;
+		const pending = coordinator.prepareRequest(selectedModel, ctx, [userInput("hello")]);
+		sessionId = "second";
+		release(fixtureSnapshot);
+		await expect(pending).rejects.toThrow(/session changed/);
+		expect(createCheckpoint).not.toHaveBeenCalled();
 	});
 
 	test("compacts on the first request after a known hash transition", async () => {
@@ -1100,8 +1187,8 @@ describe("Codex session coordinator", () => {
 	test.each([0, 100, 100_000])("persists the edited request through two compactions with history size %i", async (historySize) => {
 		const oldModel = { ...getBuiltinModel("openai-codex", "gpt-5.5")!, contextWindow: 1_000_000 };
 		const currentModel = { ...getBuiltinModel("openai-codex", "gpt-5.6-sol")!, contextWindow: 1_000_000 };
-		expect(compactionHash(oldModel)).toBeDefined();
-		expect(compactionHash(oldModel)).not.toBe(compactionHash(currentModel));
+		expect(fixtureSnapshot.hashFor(oldModel)).toBeDefined();
+		expect(fixtureSnapshot.hashFor(oldModel)).not.toBe(fixtureSnapshot.hashFor(currentModel));
 		const sm = SessionManager.inMemory(process.cwd());
 		if (historySize > 0) {
 			for (let index = 0; index < 5; index++) {
@@ -1125,11 +1212,13 @@ describe("Codex session coordinator", () => {
 		const initialUserCount = requestInput.filter((item) => item.role === "user").length;
 		const checkpoints: NativeCompactionDetails[] = [];
 		const operations: RemoteCompactionReason[] = [];
+		const resolver = vi.fn(resolveFixtureHashes);
 		let calls = 0;
-		const coordinator = createSessionCoordinator({
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolver,
 			getBranch: () => sm.getBranch(),
 			getAllTools: () => [],
-			createCheckpoint: async ({ model: selectedModel, input }) => {
+			createCheckpoint: async ({ model: selectedModel, input, compactionHashes }) => {
+				expect(compactionHashes).toBe(fixtureSnapshot);
 				calls++;
 				if (calls === 1) expect(input).not.toContainEqual(currentUser);
 				return { details: {
@@ -1147,6 +1236,7 @@ describe("Codex session coordinator", () => {
 		const conversionSpy = vi.mocked(convertToLlm);
 		conversionSpy.mockClear();
 		const final = await coordinator.prepareRequest(currentModel, ctx, requestInput);
+		expect(resolver).toHaveBeenCalledTimes(1);
 		const conversionCount = conversionSpy.mock.calls.length;
 		// Checkpoint receipts should not add conversions to the existing view work.
 		expect(conversionCount).toBeLessThanOrEqual(historySize === 0 ? 18 : 63);
@@ -1162,7 +1252,7 @@ describe("Codex session coordinator", () => {
 		const effective = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] });
 		expect(effective.filter((item) => item.role === "user" && JSON.stringify(item.content) === JSON.stringify(currentUser.content))).toHaveLength(1);
 		expect(effective).toContainEqual(currentUser);
-		const subsequent = await createSessionCoordinator({
+		const subsequent = await createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
 			getBranch: () => sm.getBranch(), getAllTools: () => [],
 			createCheckpoint: async () => { throw new Error("Unexpected compaction"); },
 			appendCheckpoint: () => {}, appendCheckpointBypass: () => {},
@@ -1191,7 +1281,7 @@ describe("Codex session coordinator", () => {
 		const requestInput = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [], allowCheckpointModelMismatch: true });
 		const checkpoints: NativeCompactionDetails[] = [];
 		let calls = 0;
-		const coordinator = createSessionCoordinator({
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
 			getBranch: () => sm.getBranch(), getAllTools: () => [],
 			createCheckpoint: async ({ model: selectedModel, input }) => {
 				calls++;
@@ -1224,7 +1314,7 @@ describe("Codex session coordinator", () => {
 		const requestInput = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [], allowCheckpointModelMismatch: true });
 		const currentUser = requestInput.at(-1)!;
 		let calls = 0;
-		const coordinator = createSessionCoordinator({
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
 			getBranch: () => sm.getBranch(), getAllTools: () => [],
 			createCheckpoint: async ({ model: selectedModel, input }) => {
 				calls++;
@@ -1261,7 +1351,7 @@ describe("Codex session coordinator", () => {
 		const ready = new Promise<void>((resolve) => { started = resolve; });
 		let calls = 0;
 		let appended = 0;
-		const coordinator = createSessionCoordinator({
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
 			getBranch: () => sm.getBranch(), getAllTools: () => [],
 			createCheckpoint: async ({ model: selectedModel }) => {
 				calls++;
@@ -1303,7 +1393,7 @@ describe("Codex session coordinator", () => {
 		let calls = 0;
 		let appends = 0;
 		let failures = 0;
-		const coordinator = createSessionCoordinator({
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
 			getBranch: () => sm.getBranch(), getAllTools: () => [],
 			createCheckpoint: async ({ model: selectedModel }) => {
 				calls++;
@@ -1345,7 +1435,7 @@ describe("Codex session coordinator", () => {
 		const ready = new Promise<void>((resolve) => { started = resolve; });
 		let calls = 0;
 		const appended: NativeCompactionDetails[] = [];
-		const coordinator = createSessionCoordinator({
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
 			getBranch: () => sm.getBranch(), getAllTools: () => [],
 			createCheckpoint: async ({ model: selectedModel }) => {
 				calls++;
@@ -1389,7 +1479,7 @@ describe("Codex session coordinator", () => {
 		const gate = new Promise<void>((resolve) => { release = resolve; });
 		const ready = new Promise<void>((resolve) => { started = resolve; });
 		let calls = 0;
-		const coordinator = createSessionCoordinator({
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
 			getBranch: () => sm.getBranch(), getAllTools: () => [],
 			createCheckpoint: async ({ model: selectedModel }) => {
 				calls++;
@@ -1423,7 +1513,7 @@ describe("Codex session coordinator", () => {
 		const requestInput = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] });
 		let calls = 0;
 		let appends = 0;
-		const coordinator = createSessionCoordinator({
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
 			getBranch: () => sm.getBranch(), getAllTools: () => [],
 			createCheckpoint: async ({ model: selectedModel }) => { calls++; return { details: details(modelKey(selectedModel)) }; },
 			appendCheckpoint: () => { appends++; },
@@ -1450,7 +1540,7 @@ describe("Codex session coordinator", () => {
 		const currentUser = requestInput.at(-1)!;
 		let calls = 0;
 		const saved: NativeCompactionDetails[] = [];
-		const coordinator = createSessionCoordinator({
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
 			getBranch: () => sm.getBranch(), getAllTools: () => [],
 			createCheckpoint: async ({ model: selectedModel, input }) => {
 				calls++;

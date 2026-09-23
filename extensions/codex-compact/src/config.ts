@@ -8,16 +8,24 @@ export type CodexCompactionConfig = {
 	autoCompactScope: "total" | "bodyAfterPrefix";
 	/** Pi does not expose Codex's effective-window metadata. Defaults to 95. */
 	effectiveContextWindowPercent?: number;
+	/** Version sent to the official Codex model catalog. */
+	metadataClientVersion?: string;
 };
+
+export const DEFAULT_METADATA_CLIENT_VERSION = "0.156.0";
 
 const DEFAULT_CONFIG: CodexCompactionConfig = {
 	autoCompactScope: "total",
+	metadataClientVersion: DEFAULT_METADATA_CLIENT_VERSION,
 };
 
 export function parseConfig(input: unknown): Partial<CodexCompactionConfig> {
 	if (typeof input !== "object" || input === null || Array.isArray(input)) return {};
 	const value = input as Record<string, unknown>;
 	return {
+		...(typeof value.metadataClientVersion === "string" && value.metadataClientVersion.length <= 32
+			&& /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(value.metadataClientVersion)
+			? { metadataClientVersion: value.metadataClientVersion } : {}),
 		...(typeof value.effectiveContextWindowPercent === "number" && Number.isFinite(value.effectiveContextWindowPercent)
 			&& value.effectiveContextWindowPercent > 0 && value.effectiveContextWindowPercent <= 100
 			? { effectiveContextWindowPercent: value.effectiveContextWindowPercent } : {}),

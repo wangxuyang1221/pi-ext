@@ -1,3 +1,4 @@
+import { fixtureSnapshot, resolveFixtureHashes } from "./fixtures/compaction-metadata.js";
 import { expect, test } from "vitest";
 import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
 import { normalizeContext } from "@earendil-works/pi-ai";
@@ -46,7 +47,7 @@ async function replay(m: any, messages: any[], tools: any[] = []) {
   const checkpoint = { type: "compaction", encrypted_content: "opaque" };
   const branch: any[] = [{ id: "checkpoint", type: "custom", customType: NATIVE_COMPACTION_KIND,
     data: { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(m), replacementHistory: [checkpoint] } }, ...messageEntries([...messages, current])];
-  const coordinator = createSessionCoordinator({ getBranch: () => branch, getAllTools: () => tools.map(({ constrainedSampling: _, ...info }) => info),
+  const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch, getAllTools: () => tools.map(({ constrainedSampling: _, ...info }) => info),
     createCheckpoint: async () => { throw new Error("Unexpected compaction"); }, appendCheckpoint: () => { throw new Error("Unexpected checkpoint"); }, appendCheckpointBypass: () => {} });
   const ctx = { model: m, getSystemPrompt: () => "", sessionManager: { getSessionId: () => "test" }, modelRegistry: { find: () => m } } as any;
   const output = await coordinator.prepareRequest(m, ctx, input as any, basePayload);
@@ -72,7 +73,7 @@ test("keeps a system update immediately after a checkpoint across successive req
   const checkpoint = { type: "compaction", encrypted_content: "opaque" };
   const branch: any[] = [...messageEntries(messages), { id: "checkpoint", type: "custom", customType: NATIVE_COMPACTION_KIND,
     data: { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(m), replacementHistory: [checkpoint] } }];
-  const coordinator = createSessionCoordinator({ getBranch: () => branch, getAllTools: () => [tool],
+  const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch, getAllTools: () => [tool],
     appendFailedRequest: data => branch.push({ id: "failed-marker", type: "custom", customType: FAILED_REQUEST_KIND, data }),
     createCheckpoint: async () => { throw new Error("Unexpected compaction"); }, appendCheckpoint: () => { throw new Error("Unexpected checkpoint"); }, appendCheckpointBypass: () => {} });
   const ctx = { model: m, getSystemPrompt: () => "", sessionManager: { getSessionId: () => "test", getBranch: () => branch }, modelRegistry: { find: () => m } } as any;

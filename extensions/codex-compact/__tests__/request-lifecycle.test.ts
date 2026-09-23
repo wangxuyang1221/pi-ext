@@ -2,11 +2,14 @@ import { afterEach, expect, test, vi } from "vitest";
 import type { Model } from "@earendil-works/pi-ai";
 import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
 import codexCompactionExtension from "../src/index.js";
-import { compactionHash } from "../src/capabilities.js";
+import { fixtureSnapshot } from "./fixtures/compaction-metadata.js";
 import { modelKey, NATIVE_COMPACTION_KIND } from "../src/native-compaction.js";
 
 const apiKey = `a.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "test" } })).toString("base64url")}.c`;
 const response = () => new Response('data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"new"}}\n\ndata: {"type":"response.completed","response":{"id":"r"}}\n\n');
+const metadataResponse = () => new Response(JSON.stringify({ models: [
+  { slug: "gpt-5.5", comp_hash: "2911" }, { slug: "gpt-5.6-sol", comp_hash: "3000" },
+] }));
 const user = (id: string, text: string) => ({ id, type: "message", message: { role: "user", content: [{ type: "text", text }], timestamp: 0 } });
 
 function setup(automatic = false) {
@@ -16,7 +19,7 @@ function setup(automatic = false) {
   let selected: Model<any> = target;
   const branch: any[] = [user("retained", "retained task"), {
     id: "checkpoint", type: "compaction", summary: "Codex encrypted compaction item.", firstKeptEntryId: "retained", tokensBefore: 1000,
-    details: { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(old), compHash: compactionHash(old), replacementHistory: [{ type: "compaction", encrypted_content: "opaque" }] },
+    details: { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(old), compHash: fixtureSnapshot.hashFor(old), replacementHistory: [{ type: "compaction", encrypted_content: "opaque" }] },
   }];
   if (automatic) branch.push(user("large", "x".repeat(8000)));
   branch.push(user("current", "continue"));
@@ -30,7 +33,7 @@ function setup(automatic = false) {
     sessionManager: { getSessionId: () => "session", getBranch: () => branch, getEntries: () => branch },
     modelRegistry: {
       find: (provider: string, id: string) => getBuiltinModel(provider, id),
-      getApiKeyAndHeaders: async () => ({ ok: true, apiKey, baseUrl: "https://example.test" }),
+      getApiKeyAndHeaders: async () => ({ ok: true, apiKey, baseUrl: "https://chatgpt.com/backend-api" }),
     },
   };
   const appendEntry = vi.fn((customType, data) => branch.push({ id: `appended-${branch.length}`, type: "custom", customType, data }));
@@ -106,7 +109,7 @@ test("does not retain state after settling or accept responses from an aborted p
 test("ignores a compaction response carrying state from a previous user message", async () => {
   const f = setup();
   let release!: () => void;
-  vi.stubGlobal("fetch", () => new Promise<Response>((resolve) => {
+  vi.stubGlobal("fetch", async (_url: unknown, init?: RequestInit) => init?.method === "GET" ? metadataResponse() : new Promise<Response>((resolve) => {
     release = () => {
       const result = response();
       result.headers.set("x-codex-turn-state", "stale");
@@ -137,6 +140,7 @@ test.each([
   const pendingResponse = new Promise<void>(resolve => { release = resolve; });
   let remoteSignal: AbortSignal | undefined;
   const fetchMock = vi.fn(async (_url: unknown, init: RequestInit) => {
+    if (init.method === "GET") return metadataResponse();
     remoteSignal = init.signal ?? undefined;
     started(); await pendingResponse;
     if (failed) throw new Error("HTTP 503");
@@ -153,7 +157,7 @@ test.each([
   expect(abortedAtSwitch).toBe(true);
   expect(fixture.ctx.abort).toHaveBeenCalledTimes(1);
   expect(fixture.appendEntry).not.toHaveBeenCalled();
-  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
   expect(remoteSignal?.aborted).toBe(true);
   fixture.freshSignal();
   const resumed = await fixture.emit("before_provider_request", { payload: { ...fixture.payload, model: fixture.next.id } });
@@ -166,7 +170,8 @@ test("a late old response cannot commit or abort a newer transition after repeat
   const f = setup();
   await f.emit("model_select", { model: f.target, previousModel: f.old });
   const releases: Array<() => void> = [];
-  vi.stubGlobal("fetch", () => new Promise<Response>((resolve) => releases.push(() => resolve(response()))));
+  vi.stubGlobal("fetch", async (_url: unknown, init?: RequestInit) => init?.method === "GET" ? metadataResponse()
+    : new Promise<Response>((resolve) => releases.push(() => resolve(response()))));
   const first = f.emit("before_provider_request", { payload: f.payload });
   await vi.waitFor(() => expect(releases).toHaveLength(1));
   await f.select(f.next);

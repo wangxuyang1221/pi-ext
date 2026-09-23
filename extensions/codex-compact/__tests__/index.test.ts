@@ -88,6 +88,63 @@ function stubSuccessfulCompaction(encryptedContent = "opaque"): void {
 	].join("\n\n") + "\n\n", { headers: { "content-type": "text/event-stream" } }));
 }
 
+test.each([
+	{ targetHash: "3000", transition: true },
+	{ targetHash: "2911", transition: false },
+])("discovers a future model through the registered provider hook: %j", async ({ targetHash, transition }) => {
+	const previous = { ...getBuiltinModel("openai-codex", "gpt-5.5")!, contextWindow: 1_000_000 };
+	const selected = { ...previous, id: "future-model" };
+	const sm = SessionManager.inMemory(process.cwd());
+	sm.appendMessage({ role: "user", content: "previous history", timestamp: 1 });
+	sm.appendModelChange(selected.provider, selected.id);
+	sm.appendMessage({ role: "user", content: "current task", timestamp: 2 });
+	let providerPayload: Record<string, unknown> | undefined;
+	await streamSimple(selected, { messages: convertToLlm(sm.buildSessionProjection().messages) }, {
+		apiKey, onPayload: value => { providerPayload = value; throw new Error("Stop before network"); },
+	}).result();
+	const { handlers, ctx, appendEntry } = installExtension();
+	(ctx as any).sessionManager = sm;
+	ctx.model = selected;
+	ctx.modelRegistry.find = (provider: string, id: string) => provider === selected.provider
+		? [previous, selected].find((candidate) => candidate.id === id) : undefined;
+	ctx.modelRegistry.getApiKeyAndHeaders = async () => ({ ok: true, apiKey, headers: {}, baseUrl: "https://chatgpt.com/backend-api" });
+	appendEntry.mockImplementation((kind: string, data: unknown) => sm.appendCustomEntry(kind, data));
+	const requests: Array<{ url: string; init: RequestInit }> = [];
+	vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
+		requests.push({ url, init });
+		if (init.method === "GET") return new Response(JSON.stringify({ models: [
+			{ slug: previous.id, comp_hash: "2911" }, { slug: selected.id, comp_hash: targetHash },
+		] }));
+		return new Response([
+			'data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"opaque"}}',
+			'data: {"type":"response.completed","response":{"id":"response"}}',
+		].join("\n\n") + "\n\n", { headers: { "content-type": "text/event-stream" } });
+	});
+	try {
+		await handlers.get("model_select")?.({ model: selected, previousModel: previous }, ctx);
+		expect(requests).toHaveLength(0);
+		const result = await handlers.get("before_provider_request")?.({ payload: providerPayload }, ctx) as { input?: ResponseItem[] } | undefined;
+		expect(requests.filter((request) => request.init.method === "GET")).toHaveLength(1);
+		expect(requests.filter((request) => request.init.method === "POST")).toHaveLength(transition ? 1 : 0);
+		const catalogRequest = requests.find((request) => request.init.method === "GET")!;
+		expect(catalogRequest.url).toContain("/codex/models?client_version=0.156.0");
+		expect(catalogRequest.init.body).toBeUndefined();
+		expect(new Headers(catalogRequest.init.headers).has("x-codex-turn-state")).toBe(false);
+		for (const request of requests.filter((item) => item.init.method === "POST")) {
+			expect(String(request.init.body)).not.toContain("metadataClientVersion");
+			expect(String(request.init.body)).not.toContain("context_window");
+		}
+		if (transition) {
+			expect(appendEntry.mock.calls[0]?.[1]).toMatchObject({ compHash: targetHash });
+			expect(result?.input?.filter((item) => item.role === "user" && JSON.stringify(item.content).includes("current task"))).toHaveLength(1);
+		} else expect(appendEntry).not.toHaveBeenCalled();
+		await handlers.get("before_provider_request")?.({ payload: providerPayload }, ctx);
+		expect(requests.filter((request) => request.init.method === "GET")).toHaveLength(1);
+	} finally {
+		vi.unstubAllGlobals();
+	}
+});
+
 test.each([false, true])("compacts a provider request and preserves its current user, edited: %s", async (edited) => {
 	const sm = SessionManager.inMemory(process.cwd());
 	sm.appendMessage({ role: "user", content: "previous history", timestamp: 1 });
@@ -853,13 +910,15 @@ test("cancels the provider request when marker persistence throws", async () => 
 	}] as never;
 	const { handlers, ctx, model, appendEntry } = installExtension(branch, true);
 	model.id = "gpt-5.6-sol";
+	ctx.modelRegistry.getApiKeyAndHeaders = async () => ({ ok: true, apiKey, headers: {}, baseUrl: "https://chatgpt.com/backend-api" });
 	const previousModel = { ...model, id: "gpt-5.5" };
 	await handlers.get("model_select")?.({ model, previousModel }, ctx);
 	appendEntry.mockImplementation(() => { throw new Error("disk full"); });
-	vi.stubGlobal("fetch", async () => new Response(
-		JSON.stringify({ error: { code: "policy_violation", message: "safe" } }),
-		{ status: 400 },
-	));
+	vi.stubGlobal("fetch", async (_url: unknown, init?: RequestInit) => init?.method === "GET"
+		? new Response(JSON.stringify({ models: [
+			{ slug: "gpt-5.5", comp_hash: "2911" }, { slug: "gpt-5.6-sol", comp_hash: "3000" },
+		] }))
+		: new Response(JSON.stringify({ error: { code: "policy_violation", message: "safe" } }), { status: 400 }));
 	try {
 		await expect(handlers.get("before_provider_request")?.({
 			payload: { input: [{ role: "user", content: [{ type: "input_text", text: "prompt" }] }] },
@@ -1208,10 +1267,14 @@ test.each([
 	async (reason, willRetry, fromExtension, fromHook) => {
 	const branch: SessionEntry[] = [];
 	const { handlers, ctx, notify } = installExtension(branch, true);
-	vi.stubGlobal("fetch", async () => new Response([
+	ctx.modelRegistry.getApiKeyAndHeaders = async () => ({ ok: true, apiKey, headers: {}, baseUrl: "https://chatgpt.com/backend-api" });
+	const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => init?.method === "GET"
+		? new Response(JSON.stringify({ models: [{ slug: ctx.model.id, comp_hash: "opaque-hash" }] }))
+		: new Response([
 		'data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"opaque"}}',
 		'data: {"type":"response.completed","response":{"id":"response"}}',
 	].join("\n\n") + "\n\n", { headers: { "content-type": "text/event-stream" } }));
+	vi.stubGlobal("fetch", fetchMock);
 	try {
 		const result = await handlers.get("session_before_compact")?.({
 			branchEntries: branch,
@@ -1231,6 +1294,8 @@ test.each([
 		expect(result.compaction.summary).toBe(
 			"Codex encrypted compaction item.",
 		);
+		expect(result.compaction.details).toMatchObject({ compHash: "opaque-hash" });
+		expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "GET")).toHaveLength(1);
 		expect(notify).not.toHaveBeenCalled();
 		const committedEntry = {
 			type: "compaction",
@@ -1260,6 +1325,61 @@ test.each([
 			"Codex compaction applied",
 			"info",
 		);
+	} finally {
+		vi.unstubAllGlobals();
+	}
+});
+
+test("continues Pi-triggered compaction when metadata discovery fails", async () => {
+	const { handlers, ctx, notify } = installExtension([], true);
+	ctx.modelRegistry.getApiKeyAndHeaders = async () => ({ ok: true, apiKey, headers: {}, baseUrl: "https://chatgpt.com/backend-api" });
+	const fetch = vi.fn(async (_url: string, init?: RequestInit) => init?.method === "GET"
+		? new Response("synthetic-secret", { status: 500 })
+		: new Response([
+			'data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"opaque"}}',
+			'data: {"type":"response.completed","response":{"id":"response"}}',
+		].join("\n\n") + "\n\n", { headers: { "content-type": "text/event-stream" } }));
+	vi.stubGlobal("fetch", fetch);
+	try {
+		const result = await handlers.get("session_before_compact")?.({
+			branchEntries: [], preparation: { firstKeptEntryId: "first-kept", tokensBefore: 1234 },
+			reason: "manual", willRetry: false, signal: new AbortController().signal,
+		}, ctx) as { compaction: { details: Record<string, unknown> } };
+		expect(result.compaction.details).not.toHaveProperty("compHash");
+		expect(fetch.mock.calls.map(([, init]) => init?.method)).toEqual(["GET", "POST"]);
+		expect(notify).not.toHaveBeenCalled();
+		expect(ctx.abort).not.toHaveBeenCalled();
+	} finally {
+		vi.unstubAllGlobals();
+	}
+});
+
+test("discards a late model catalog after model selection", async () => {
+	const { handlers, ctx, model, appendEntry, notify } = installExtension([], true);
+	model.id = "gpt-5.6-sol";
+	const previousModel = { ...model, id: "gpt-5.5" };
+	ctx.modelRegistry.getApiKeyAndHeaders = async () => ({ ok: true, apiKey, headers: {}, baseUrl: "https://chatgpt.com/backend-api" });
+	let release!: (response: Response) => void;
+	const fetch = vi.fn((_url: string, init?: RequestInit) => init?.method === "GET"
+		? new Promise<Response>((resolve) => { release = resolve; })
+		: Promise.resolve(new Response("Unexpected POST")));
+	vi.stubGlobal("fetch", fetch);
+	try {
+		await handlers.get("model_select")?.({ model, previousModel }, ctx);
+		const request = handlers.get("before_provider_request")?.({ payload: {
+			input: [{ role: "user", content: [{ type: "input_text", text: "current" }] }],
+		} }, ctx);
+		await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+		const nextModel = { ...model, id: "gpt-6-astra" };
+		ctx.model = nextModel;
+		await handlers.get("model_select")?.({ model: nextModel, previousModel: model }, ctx);
+		release(new Response(JSON.stringify({ models: [
+			{ slug: previousModel.id, comp_hash: "2911" }, { slug: model.id, comp_hash: "3000" },
+		] })));
+		await expect(request).resolves.toBeUndefined();
+		expect(fetch).toHaveBeenCalledTimes(1);
+		expect(appendEntry).not.toHaveBeenCalled();
+		expect(notify).not.toHaveBeenCalled();
 	} finally {
 		vi.unstubAllGlobals();
 	}

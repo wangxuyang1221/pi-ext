@@ -48,3 +48,9 @@ turn-state 保留到下一条实际投递的 user message，工具循环和无�
 `codex-rs/protocol/src/models.rs` 的有效 ResponseItem 字段、默认值、序列化省略规则被适配为 `src/response-item-estimation.ts`，只影响估算视图，不改写实际请求。移除了超窗时只压缩最新 user turn 的恢复方式，改为明确失败且不提交新 checkpoint。请求适配层刷新当前系统指令，默认有效窗口为原始窗口的 95%，可通过 `effectiveContextWindowPercent` 覆盖。没有修改 Pi 上游，也没有增加分段压缩。当前请求指纹保护只覆盖可见 payload；Pi 未暴露完整服务端 reasoning 能力标记及后续扩展的最终 payload。默认质量测试及显式历史报告重建见 [质量报告脚本](../../scripts/codex-compact-quality-development-report.mjs)；合成 fixture 不代表在线质量结论。
 
 基础参考向量由 `scripts/codex-compact-reference.mjs` 生成。完整参考程序由 `scripts/codex-compact-full-reference.mjs` 构建，编译原版 protocol/utility crates 和未修改的 estimator 函数；`scripts/codex-compact-full-vectors.mjs` 生成逐项与历史聚合向量。来源、输入及产物 SHA-256 保存在测试 fixture 中。当前 276 项参考向量覆盖字段默认值、数字、媒体、饱和计数、请求包装和特殊轮次边界；真实 183 项历史的逐项、总量和 usage 增量也一致。Pi 的无 type 简写消息保留实际包装计数，完整 tools/system HTTP 包装与 Codex 的 canonical history 另行区分，不宣称未公开的服务端 tokenization 已被本地精确复现。
+
+## Model catalog metadata
+
+压缩算法仍以上述 Codex `0.154.0` 为来源基线；模型目录请求的默认 `client_version` 单独采用已通过真实只读查询验证的 `0.156.0`，可通过 `metadataClientVersion` 覆盖。这不表示压缩算法或 Pi 依赖已升级到 Codex `0.156.0`。
+
+`src/capabilities.ts` 不再维护逐模型 `comp_hash` 表。`src/model-metadata.ts` 经 Pi `ModelRegistry.getApiKeyAndHeaders` 读取认证，只向官方 [models endpoint](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/codex-api/src/endpoint/models.rs) 发 GET。`comp_hash` 依照上游 [ModelInfo 定义](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/protocol/src/openai_models.rs) 是标识压缩兼容模型配置的不透明字符串。进程内目录缓存 TTL 为 300 秒，与上游 [models manager](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/models-manager/src/manager.rs) 的默认值一致；30 秒失败和未知模型限流、4 个认证 scope 上限、8 MiB 响应上限及 3 秒 HTTP 上限是本扩展的本地边界。目录缺失或请求失败时不猜 hash，旧 checkpoint 自带的 hash 保留。

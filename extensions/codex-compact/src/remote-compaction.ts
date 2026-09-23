@@ -1,6 +1,5 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { clampThinkingLevel, type Model } from "@earendil-works/pi-ai";
-import { compactionHash } from "./capabilities.js";
 import { effectiveContextWindow, loadConfig } from "./config.js";
 import {
 	buildCodexHeaders,
@@ -37,6 +36,7 @@ export type NativeCheckpointRequest = {
 	turnState?: string;
 	onTurnState?: (turnState: string) => void;
 	signal?: AbortSignal;
+	compHash?: string;
 	allTools: Parameters<typeof buildToolPayload>[0];
 	activeToolNames: string[];
 };
@@ -141,7 +141,7 @@ export async function createNativeCheckpoint(params: NativeCheckpointRequest): P
 			kind: NATIVE_COMPACTION_KIND,
 			version: NATIVE_COMPACTION_VERSION,
 			modelKey: modelKey(params.model),
-			...(compactionHash(params.model) ? { compHash: compactionHash(params.model) } : {}),
+			...(typeof params.compHash === "string" && params.compHash.trim() ? { compHash: params.compHash } : {}),
 			replacementHistory: buildReplacementHistory(input, remote.compactionItem),
 		},
 		usage: remote.usage,

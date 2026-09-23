@@ -4,7 +4,9 @@ import { projectBranchMessages } from "./session-projection.js";
 import { accountingFingerprint, WindowUsageAccounting } from "./usage-accounting.js";
 import { shouldAutoCompact } from "./scheduler.js";
 import { createCompactionWidget, type CompactionWidgetFactory } from "./presentation.js";
-import { autoCompactTokenLimit, effectiveContextWindow, loadConfig } from "./config.js";
+import { autoCompactTokenLimit, DEFAULT_METADATA_CLIENT_VERSION, effectiveContextWindow, loadConfig } from "./config.js";
+import { type CompactionHashSnapshot } from "./capabilities.js";
+import { createModelMetadataStore } from "./model-metadata.js";
 import { createNativeCheckpoint, type NativeCheckpointRequest } from "./remote-compaction.js";
 import { createSessionCoordinator, type RemoteCompactionReason } from "./session-coordinator.js";
 import {
@@ -101,6 +103,11 @@ function reportCompactionFailure(
 }
 
 export default function codexCompactionExtension(pi: ExtensionAPI): void {
+	const metadataStore = createModelMetadataStore();
+	const resolveCompactionHashes = (ctx: ExtensionContext, model: NonNullable<ExtensionContext["model"]>, signal?: AbortSignal) => {
+		const config = loadConfig(ctx.cwd ?? "", ctx.isProjectTrusted?.() ?? false);
+		return metadataStore.resolve({ ctx, model, clientVersion: config.metadataClientVersion ?? DEFAULT_METADATA_CLIENT_VERSION, signal });
+	};
 	const basePayloadBySession = new Map<string, JsonObject>();
 	const usageBySession = new Map<string, WindowUsageAccounting>();
 	const requestFingerprint = (ctx: ExtensionContext): string => {
@@ -227,7 +234,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 			if (presentation) clearRemoteCompactionPresentation(sessionId, presentation);
 		}
 	};
-	const createCheckpoint = (params: Pick<NativeCheckpointRequest, "ctx" | "model" | "input" | "basePayload" | "signal">) => {
+	const createCheckpoint = (params: Pick<NativeCheckpointRequest, "ctx" | "model" | "input" | "basePayload" | "signal"> & { compactionHashes: CompactionHashSnapshot }) => {
 		const lifecycleGenerationAtStart = lifecycleGeneration;
 		const sessionId = params.ctx.sessionManager.getSessionId();
 		let basePayload = params.basePayload ?? basePayloadBySession.get(sessionId);
@@ -238,6 +245,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		const turn = currentTurnState(sessionId);
 		return createNativeCheckpoint({
 			...params,
+			compHash: params.compactionHashes.hashFor(params.model),
 			basePayload,
 			turnState: turn.value,
 			onTurnState: (state) => {
@@ -251,6 +259,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 	};
 
 	const coordinator = createSessionCoordinator({
+		resolveCompactionHashes,
 		getBranch: (ctx) => ctx.sessionManager.getBranch() as SessionEntry[],
 		getAllTools: () => pi.getAllTools(),
 		createCheckpoint,
@@ -314,6 +323,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 	};
 	const clearTransient = () => {
 		lifecycleGeneration++;
+		metadataStore.clear();
 		cancelPreparingRequests();
 		clearDeferredPiCompactionNotices();
 		for (const controller of activePiCompactionControllerBySession.values()) controller.abort();
@@ -342,6 +352,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 	});
 	pi.on("model_select", (event, ctx) => {
 		lifecycleGeneration++;
+		metadataStore.cancelPending();
 		const sessionId = ctx.sessionManager.getSessionId();
 		cancelPreparingRequests(sessionId);
 		clearDeferredPiCompactionNotices(sessionId);
@@ -483,7 +494,9 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 						basePayloadBySession.get(sessionId),
 					);
 					if (lifecycleGeneration !== lifecycleGenerationAtStart) return { cancel: true };
-					native = await createCheckpoint({ ctx, model, input, signal: operationSignal });
+					const compactionHashes = await resolveCompactionHashes(ctx, model, operationSignal);
+					if (lifecycleGeneration !== lifecycleGenerationAtStart || operationSignal.aborted) return { cancel: true };
+					native = await createCheckpoint({ ctx, model, input, signal: operationSignal, compactionHashes });
 				} catch (error) {
 					if (lifecycleGeneration !== lifecycleGenerationAtStart || operationSignal.aborted) return { cancel: true };
 					reportCompactionFailure(ctx, model, error, "session_before_compact", "compaction_cancelled");

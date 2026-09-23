@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import type { ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
 import type { Model } from "@earendil-works/pi-ai";
-import { compactionHash } from "./capabilities.js";
+import { emptyCompactionHashSnapshot, type CompactionHashSnapshot } from "./capabilities.js";
 import { effectiveContextWindow, loadConfig } from "./config.js";
 import {
 	HistoryPrefixMismatchError,
@@ -40,12 +40,18 @@ export type CheckpointFactory = (params: {
 	input: ReturnType<typeof effectiveInputForBranch>;
 	basePayload?: JsonObject;
 	signal?: AbortSignal;
+	compactionHashes: CompactionHashSnapshot;
 }) => Promise<{ details: NativeCompactionDetails }>;
+
+export type ResolveCompactionHashes = (
+	ctx: ExtensionContext, currentModel: Model<any>, signal?: AbortSignal,
+) => Promise<CompactionHashSnapshot>;
 
 export type SessionCoordinatorDeps = {
 	getBranch: (ctx: ExtensionContext) => SessionEntry[];
 	getAllTools: () => Parameters<typeof effectiveInputForBranch>[0]["tools"];
 	createCheckpoint: CheckpointFactory;
+	resolveCompactionHashes: ResolveCompactionHashes;
 	appendCheckpoint: (details: NativeCompactionDetails) => void;
 	appendCheckpointBypass: (bypass: NativeCompactionBypass) => void;
 	appendFailedRequest?: (details: FailedRequestDetails) => void;
@@ -63,9 +69,12 @@ export type SessionCoordinatorDeps = {
 	) => Promise<T>;
 };
 
-type PendingTransition = {
+type PendingSelection = {
 	previousModel: Model<any>;
 	targetModelKey: string;
+};
+
+type PendingTransition = PendingSelection & {
 	reason: "hash" | "downshift";
 };
 
@@ -86,8 +95,14 @@ function hashesDiffer(previousHash: string | undefined, currentHash: string | un
 	return previousHash !== undefined && currentHash !== undefined && previousHash !== currentHash;
 }
 
-function needsTransitionCompaction(previousModel: Model<any>, currentModel: Model<any>): boolean {
-	return hashesDiffer(compactionHash(previousModel), compactionHash(currentModel));
+function transitionForSelection(
+	selection: PendingSelection, currentModel: Model<any>, hashes: CompactionHashSnapshot,
+): PendingTransition | undefined {
+	if (hashesDiffer(hashes.hashFor(selection.previousModel), hashes.hashFor(currentModel))) {
+		return { ...selection, reason: "hash" };
+	}
+	if (isModelDownshift(selection.previousModel, currentModel)) return { ...selection, reason: "downshift" };
+	return undefined;
 }
 
 function shouldRetryWithCurrentModel(error: unknown): boolean {
@@ -246,6 +261,8 @@ type RequestContinuity = {
 	generation: number;
 	targetModelKey: string;
 	requestInput: ResponseItem[] | undefined;
+	compactionHashes: CompactionHashSnapshot;
+	signal?: AbortSignal;
 	receipt?: RequestReceipt;
 };
 
@@ -403,6 +420,7 @@ function pendingTransitionFromBranch(
 	branch: SessionEntry[],
 	currentModel: Model<any>,
 	ctx: ExtensionContext,
+	hashes: CompactionHashSnapshot,
 ): PendingTransition | undefined {
 	const selectedIndex = branch.findLastIndex((entry) =>
 		entry.type === "model_change" && entry.provider === currentModel.provider && entry.modelId === currentModel.id,
@@ -425,13 +443,7 @@ function pendingTransitionFromBranch(
 		id: previousMessage.model as string,
 	}));
 	if (!previousModel || !isOpenAICodexModel(previousModel)) return undefined;
-	const hashTransition = needsTransitionCompaction(previousModel, currentModel);
-	if (!hashTransition && !isModelDownshift(previousModel, currentModel)) return undefined;
-	return {
-		previousModel,
-		targetModelKey: modelKey(currentModel),
-		reason: hashTransition ? "hash" : "downshift",
-	};
+	return transitionForSelection({ previousModel, targetModelKey: modelKey(currentModel) }, currentModel, hashes);
 }
 
 export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
@@ -448,7 +460,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		reason: RemoteCompactionReason,
 		operation: () => Promise<T>,
 	): Promise<T> => deps.runCompaction?.(ctx, reason, operation) ?? operation();
-	const pendingBySession = new Map<string, PendingTransition>();
+	const pendingBySession = new Map<string, PendingSelection>();
 	const transitionBySession = new Map<string, Promise<void>>();
 	const automaticCompactionBySession = new Map<string, Promise<void>>();
 	let generation = 0;
@@ -626,6 +638,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		basePayload: JsonObject | undefined,
 		startGeneration: number,
 		requestInput: ResponseItem[] | undefined,
+		hashes: CompactionHashSnapshot,
 		excludeLastAssistantError = false,
 		signal?: AbortSignal,
 		continuity?: RequestContinuity,
@@ -648,11 +661,12 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 					input,
 					basePayload,
 					signal: operationSignal,
+					compactionHashes: hashes,
 				});
 			} catch (firstError) {
 				ensureCurrent(ctx, targetModelKey, startGeneration, operationSignal);
 				if (
-					(modelKey(currentModel) === modelKey(previousModel) && compactionHash(currentModel) === compactionHash(previousModel))
+					(modelKey(currentModel) === modelKey(previousModel) && hashes.hashFor(currentModel) === hashes.hashFor(previousModel))
 					|| !shouldRetryWithCurrentModel(firstError)
 				) throw firstError;
 				try {
@@ -662,6 +676,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 						input: snapshot.view(currentModel, "effective", options).items,
 						basePayload,
 						signal: operationSignal,
+						compactionHashes: hashes,
 					});
 				} catch (fallbackError) {
 					throw fallbackError;
@@ -672,7 +687,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			saveCheckpoint(ctx, currentModel, rebindCheckpoint(
 				preserveCurrentUser(native.details, currentRequest),
 				targetModelKey,
-				compactionHash(currentModel),
+				hashes.hashFor(currentModel),
 			), currentRequest, branchBefore, continuity, operationSignal);
 			pendingBySession.delete(sessionId);
 			return;
@@ -683,6 +698,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 	const recoverCurrentModelInternal = async (
 		model: Model<any>,
 		ctx: ExtensionContext,
+		hashes: CompactionHashSnapshot,
 		basePayload?: JsonObject,
 		requestInput?: ResponseItem[],
 		excludeLastAssistantError = false,
@@ -701,7 +717,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		}
 		const previousModel = resolveModel(ctx, checkpoint.checkpoint.details.modelKey);
 		const previousHash = checkpoint.checkpoint.details.compHash;
-		const currentHash = compactionHash(model);
+		const currentHash = hashes.hashFor(model);
 		const hashTransition = hashesDiffer(previousHash, currentHash);
 		const downshift = previousModel ? isModelDownshift(previousModel, model) : false;
 		if (!hashTransition && !downshift) return;
@@ -719,7 +735,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		const gateLeafId = conversationLeafId(deps.getBranch(ctx));
 		const transition = runRemoteCompaction(ctx, "model-transition", async () => {
 			if (previousModel) {
-				await runTransition(sessionId, ctx, previousModel, modelKey(model), model, basePayload, startGeneration, requestInput, excludeLastAssistantError, operationSignal, continuity);
+				await runTransition(sessionId, ctx, previousModel, modelKey(model), model, basePayload, startGeneration, requestInput, hashes, excludeLastAssistantError, operationSignal, continuity);
 				return;
 			}
 			const branch = deps.getBranch(ctx);
@@ -736,6 +752,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 				}).items,
 				basePayload,
 				signal: operationSignal,
+				compactionHashes: hashes,
 			});
 			ensureCurrent(ctx, modelKey(model), startGeneration, operationSignal);
 			if (conversationLeafId(deps.getBranch(ctx)) !== leafId) {
@@ -759,14 +776,26 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			if (transitionBySession.get(sessionId) === transition) transitionBySession.delete(sessionId);
 		}
 	};
-	const recoverCurrentModel = (
+	const recoverCurrentModel = async (
 		model: Model<any>,
 		ctx: ExtensionContext,
 		basePayload?: JsonObject,
 		requestInput?: ResponseItem[],
 		excludeLastAssistantError = false,
 		signal?: AbortSignal,
-	): Promise<void> => recoverCurrentModelInternal(model, ctx, basePayload, requestInput, excludeLastAssistantError, signal);
+	): Promise<void> => {
+		const startSessionId = ctx.sessionManager.getSessionId();
+		const startGeneration = generation;
+		const operationSignal = signal ?? ctx.signal;
+		const hashes = isOpenAICodexModel(model)
+			? await deps.resolveCompactionHashes(ctx, model, operationSignal)
+			: emptyCompactionHashSnapshot("unsupported");
+		ensureCurrent(ctx, modelKey(model), startGeneration, operationSignal);
+		if (ctx.sessionManager.getSessionId() !== startSessionId || (signal === undefined && ctx.signal !== operationSignal)) {
+			throw new Error("The session changed while resolving Codex metadata.");
+		}
+		return recoverCurrentModelInternal(model, ctx, hashes, basePayload, requestInput, excludeLastAssistantError, operationSignal);
+	};
 
 	const selectModel = async (event: ModelSelectLike, ctx: ExtensionContext): Promise<void> => {
 		generation++;
@@ -784,24 +813,13 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		}
 		const pending = pendingBySession.get(sessionId);
 		const transitionPreviousModel = pending?.previousModel ?? previousModel;
-		const hashTransition = needsTransitionCompaction(transitionPreviousModel, event.model);
-		const downshift = isModelDownshift(transitionPreviousModel, event.model);
-		if (!hashTransition && !downshift) {
-			pendingBySession.delete(sessionId);
-			return;
-		}
-		if (
-			pending
-			&& modelKey(event.model) === modelKey(pending.previousModel)
-			&& compactionHash(event.model) === compactionHash(pending.previousModel)
-		) {
+		if (modelKey(event.model) === modelKey(transitionPreviousModel)) {
 			pendingBySession.delete(sessionId);
 			return;
 		}
 		pendingBySession.set(sessionId, {
-			previousModel: pending?.previousModel ?? previousModel,
+			previousModel: transitionPreviousModel,
 			targetModelKey: modelKey(event.model),
-			reason: hashTransition ? "hash" : "downshift",
 		});
 	};
 
@@ -815,8 +833,14 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 	): Promise<ResponseItem[] | undefined> => {
 		const sessionId = ctx.sessionManager.getSessionId();
 		const requestGeneration = continuity.generation;
-		const requestSignal = ctx.signal;
-		const ensureRequestCurrent = () => ensureCurrent(ctx, modelKey(model), requestGeneration, requestSignal);
+		const requestSignal = continuity.signal;
+		const hashes = continuity.compactionHashes;
+		const ensureRequestCurrent = () => {
+			ensureCurrent(ctx, modelKey(model), requestGeneration, requestSignal);
+			if (ctx.sessionManager.getSessionId() !== continuity.sessionId || ctx.signal !== requestSignal) {
+				throw new Error("The session changed while preparing the Codex request.");
+			}
+		};
 		ensureRequestCurrent();
 		const originalRequestInput = requestInput;
 		requestInput = requestInputWithoutFailedRequests(requestInput, activeFailedRequests(rawGetBranch(ctx)));
@@ -833,27 +857,28 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		const branchBefore = deps.getBranch(ctx);
 		const tools = toolsWithRequestFormats(deps.getAllTools(), basePayload, requestInput);
 		const snapshot = createBranchInputSnapshot({ branch: branchBefore, tools });
-		let pending = pendingBySession.get(sessionId);
+		let selection = pendingBySession.get(sessionId);
 		const checkpoint = snapshot.checkpoint(model);
-		if (!pending && checkpoint.status === "none") {
-			const recoveredTransition = pendingTransitionFromBranch(branchBefore, model, ctx);
-			pending = recoveredTransition;
-			if (pending) pendingBySession.set(sessionId, pending);
-		}
 		if (
-			pending
+			selection
 			&& checkpoint.status === "valid"
 			&& checkpoint.checkpoint.details.modelKey === modelKey(model)
 		) {
 			pendingBySession.delete(sessionId);
-			pending = undefined;
+			selection = undefined;
+		}
+		if (!selection && checkpoint.status === "none") {
+			const recoveredTransition = pendingTransitionFromBranch(branchBefore, model, ctx, hashes);
+			if (recoveredTransition) selection = recoveredTransition;
 		}
 		const checkpointModelKey = checkpoint.status === "valid"
 			? checkpoint.checkpoint.details.modelKey
 			: undefined;
-		if (pending && pending.targetModelKey !== modelKey(model)) {
+		if (selection && selection.targetModelKey !== modelKey(model)) {
 			throw new Error("The pending Codex model transition targets a different model.");
 		}
+		const pending = selection && transitionForSelection(selection, model, hashes);
+		if (selection && !pending) pendingBySession.delete(sessionId);
 		if (!requestInput && (pending || checkpoint.status === "valid")) {
 			throw new Error("The Codex request input is unavailable while replaying compaction state.");
 		}
@@ -907,7 +932,8 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 						model: selectedModel,
 						input: compactionInput,
 						basePayload,
-						signal: ctx.signal,
+						signal: requestSignal,
+						compactionHashes: hashes,
 					});
 					let native: Awaited<ReturnType<CheckpointFactory>>;
 					try {
@@ -915,7 +941,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 					} catch (firstError) {
 						ensureRequestCurrent();
 						if (
-							(modelKey(model) === modelKey(historyModel) && compactionHash(model) === compactionHash(historyModel))
+							(modelKey(model) === modelKey(historyModel) && hashes.hashFor(model) === hashes.hashFor(historyModel))
 							|| !shouldRetryWithCurrentModel(firstError)
 						) throw firstError;
 						try {
@@ -931,7 +957,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 					const details = rebindCheckpoint(
 						preserveRequestUser(native.details, requestInput!),
 						modelKey(model),
-						compactionHash(model),
+						hashes.hashFor(model),
 					);
 					deps.appendCheckpoint(details);
 					pendingBySession.delete(sessionId);
@@ -963,7 +989,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 				const gateEntryId = checkpoint.status === "valid" ? checkpoint.checkpoint.entryId : conversationLeafId(branchBefore);
 				const gateLeafId = conversationLeafId(branchBefore);
 				const transition = runRemoteCompaction(ctx, "model-transition", () =>
-					runTransition(sessionId, ctx, pending.previousModel, pending.targetModelKey, model, basePayload, startGeneration, requestInput, false, undefined, continuity),
+					runTransition(sessionId, ctx, pending.previousModel, pending.targetModelKey, model, basePayload, startGeneration, requestInput, hashes, false, requestSignal, continuity),
 				);
 				transitionBySession.set(sessionId, transition);
 				try {
@@ -982,12 +1008,12 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			}
 		}
 
-		await recoverCurrentModelInternal(model, ctx, basePayload, requestInput, false, undefined, continuity);
+		await recoverCurrentModelInternal(model, ctx, hashes, basePayload, requestInput, false, requestSignal, continuity);
 		ensureRequestCurrent();
 		const recoveredCheckpoint = findNativeCheckpoint(deps.getBranch(ctx), modelKey(model));
 		if (recoveredCheckpoint.status === "valid" && recoveredCheckpoint.checkpoint.details.modelKey !== modelKey(model)) {
 			const checkpointHash = recoveredCheckpoint.checkpoint.details.compHash;
-			if (hashesDiffer(checkpointHash, compactionHash(model))) {
+			if (hashesDiffer(checkpointHash, hashes.hashFor(model))) {
 				throw new Error("The latest Codex compaction checkpoint requires model-transition compaction first.");
 			}
 		}
@@ -1023,7 +1049,8 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 							model,
 							input: currentHistory,
 							basePayload,
-							signal: ctx.signal,
+							signal: requestSignal,
+							compactionHashes: hashes,
 						});
 						ensureCurrent(ctx, modelKey(model), startGeneration, requestSignal);
 						if (conversationLeafId(deps.getBranch(ctx)) !== leafId) {
@@ -1107,18 +1134,32 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			...tail,
 		];
 	};
-	const prepareRequest = (
+	const prepareRequest = async (
 		model: Model<any>,
 		ctx: ExtensionContext,
 		requestInput: ResponseItem[] | undefined,
 		basePayload?: JsonObject,
 		skipAutomaticCompaction = false,
-	): Promise<ResponseItem[] | undefined> => prepareRequestInternal(model, ctx, requestInput, basePayload, skipAutomaticCompaction, {
-		sessionId: ctx.sessionManager.getSessionId(),
-		generation,
-		targetModelKey: modelKey(model),
-		requestInput,
-	});
+	): Promise<ResponseItem[] | undefined> => {
+		const sessionId = ctx.sessionManager.getSessionId();
+		const startGeneration = generation;
+		const operationSignal = ctx.signal;
+		const hashes = isOpenAICodexModel(model)
+			? await deps.resolveCompactionHashes(ctx, model, operationSignal)
+			: emptyCompactionHashSnapshot("unsupported");
+		ensureCurrent(ctx, modelKey(model), startGeneration, operationSignal);
+		if (ctx.sessionManager.getSessionId() !== sessionId || ctx.signal !== operationSignal) {
+			throw new Error("The session changed while resolving Codex metadata.");
+		}
+		return prepareRequestInternal(model, ctx, requestInput, basePayload, skipAutomaticCompaction, {
+			sessionId,
+			generation: startGeneration,
+			targetModelKey: modelKey(model),
+			requestInput,
+			compactionHashes: hashes,
+			signal: operationSignal,
+		});
+	};
 
 	const prepareCompaction = async (
 		model: Model<any>,
