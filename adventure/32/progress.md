@@ -12,7 +12,7 @@
 
 ## Current Goal or Problem
 
-为 Pi subagent 增加 agent_type 配置和父子独立 Fast。入口为 [Map #32](https://github.com/wangxuyang1221/pi-ext/issues/32)，完整规格仅在 [Spec #33](https://github.com/wangxuyang1221/pi-ext/issues/33) 维护。角色配置与 Fast 规则均已确定，已创建 [Fast 实施 #37](https://github.com/wangxuyang1221/pi-ext/issues/37) 和 [角色实施 #38](https://github.com/wangxuyang1221/pi-ext/issues/38)，第一关已派发 expert worker。
+为 Pi subagent 增加 agent_type 配置和父子独立 Fast。入口为 [Map #32](https://github.com/wangxuyang1221/pi-ext/issues/32)，完整规格仅在 [Spec #33](https://github.com/wangxuyang1221/pi-ext/issues/33) 维护。角色配置与 Fast 规则均已确定，已创建 [Fast 实施 #37](https://github.com/wangxuyang1221/pi-ext/issues/37) 和 [角色实施 #38](https://github.com/wangxuyang1221/pi-ext/issues/38)，第一关已由 expert worker 交付并验收通过，接下来实施角色配置 #38。
 
 ## Evolution
 
@@ -37,7 +37,7 @@
 
 Fast 扩展目前在加载、--fast、/fast 和 session_shutdown 保存共享配置，因此隔离必须覆盖关闭及 reload 的 shutdown，不能只处理 spawn 参数。[Fast 规划证据](evidence/fast-planning.md) 记录了该写入边界、已通过的 session 实验，以及 provider 匹配、错误识别和 provider 来源。
 
-本 worktree 尚未安装依赖，未改产品代码、未运行项目测试或构建，没有启动本任务的服务。已用主工作区安装的 Pi 0.87.0 运行 [session-state.mjs](experiments/session-state.mjs)，证明预创建空 session 的 custom entry 在首次回复前落盘且可重新打开恢复 false；普通新 session 仍会延迟 flush。实验临时文件已清理，证据不等于真实 child 全流程验收。Spec 已把跨扩展请求与生命周期验证分配给待审核切片。
+本 worktree 已安装依赖。#37 实现提交 04feb1f，证据提交 99bc128；协调者已核对并通过验收。Fast 真实 root/child 链路记录 23 个 HTTP payload 和 11 个文件检查点，首次回复前保存、reload、无 launch 的 true/false resume、拒绝隔离均通过。pnpm run check 的 2548 tests、构建和发布包校验通过，门控生产集成另行通过。测试进程与 socket 已清理，工作区交付时干净。详情与可复跑命令见 [Fast 实施证据](evidence/fast-implementation.md)。
 
 继续时读取 /Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md 及必要引用；保存使用 /Users/wangxuyang/.agents/skills/wangxuyang/handoff/SKILL.md；实施准备使用 /Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md。
 
@@ -47,10 +47,10 @@ Fast 扩展目前在加载、--fast、/fast 和 session_shutdown 保存共享配
 
 ## Continuation Point
 
-用户已审核 [完整切片](slices.md)，要求创建实施关卡后开始施工，执行代理类型为 expert。已建立 #37 和 #38，后者原生依赖前者，均为 Map 子 Issue。已于基准 c84b602 派发 expert worker /root/fast_implementation 实施 #37。当前协调者等待该 worker 交付；跨 session 接手先检查 worker 状态与工作区，避免重复施工。
+用户已审核 [完整切片](slices.md)，要求创建实施关卡后开始施工，执行代理类型为 expert。#37 已验收关闭，#38 已解锁，下一步派发全新上下文 expert 实施 #38，并负责完整 Spec 的整体验收。当前产品与证据基准为 99bc12890f9e7605dee7263580cde2ed53df0a33；派发时提供最新存档提交。
 
 派发使用 expert、fork_turns none，提供 worktree、最新提交、Spec、关卡、证据和操作限制。worker 行动前完整读取 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md、/Users/wangxuyang/.agents/skills/wangxuyang/develop-with-tdd/SKILL.md 及必要引用，不再委派。用户批准 adventure 的提交推送范围，允许本任务实现与证据提交到冒险分支。
 
-主代理协调并核对交付证据，不自行绕过 worker 实施。计划只在 Implementation 正文维护，详细证据在 adventure/32/evidence。每关通过后关闭、存档并继续下一关；不通过则退回同一 worker。#38 的 worker 承担完整 Spec 整体验收，完成 pnpm run check、清理进程并确认监听释放，保存推送后等待用户交付确认。Map 与 Spec 保持 open。
+主代理协调并核对交付证据，不自行绕过 worker 实施。计划只在 Implementation 正文维护，详细证据在 adventure/32/evidence。#38 的 worker 承担完整 Spec 整体验收，角色默认 Fast、显式覆盖与父级继承须到实际请求验证，启动/reload 后 child 工具与模型上下文不得出现角色目录或 description。完成 pnpm run check、清理进程并确认监听释放，保存推送后等待用户交付确认。Map 与 Spec 保持 open。
 
-主工作区 /Users/wangxuyang/Code/t3code/pi-ext 存在其他任务的 goal 扩展与 README 改动，勿修改或提交这些主工作区文件。冒险 worktree 的产品代码在派发前干净。
+主工作区 /Users/wangxuyang/Code/t3code/pi-ext 存在其他任务的 goal 扩展与 README 改动，勿修改或提交这些主工作区文件。冒险 worktree 的产品代码在 #37 交付时干净。
