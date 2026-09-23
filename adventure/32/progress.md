@@ -12,7 +12,7 @@
 
 ## Current Goal or Problem
 
-为 Pi subagent 增加 agent_type 配置和父子独立 Fast。入口为 [Map #32](https://github.com/wangxuyang1221/pi-ext/issues/32)，完整规格仅在 [Spec #33](https://github.com/wangxuyang1221/pi-ext/issues/33) 维护。角色配置与 Fast 规则均已确定，已创建 [Fast 实施 #37](https://github.com/wangxuyang1221/pi-ext/issues/37) 和 [角色实施 #38](https://github.com/wangxuyang1221/pi-ext/issues/38)，准备派发第一关。
+为 Pi subagent 增加 agent_type 配置和父子独立 Fast。入口为 [Map #32](https://github.com/wangxuyang1221/pi-ext/issues/32)，完整规格仅在 [Spec #33](https://github.com/wangxuyang1221/pi-ext/issues/33) 维护。角色配置与 Fast 规则均已确定，已创建 [Fast 实施 #37](https://github.com/wangxuyang1221/pi-ext/issues/37) 和 [角色实施 #38](https://github.com/wangxuyang1221/pi-ext/issues/38)，第一关已派发 expert worker。
 
 ## Evolution
 
@@ -43,11 +43,11 @@ Fast 扩展目前在加载、--fast、/fast 和 session_shutdown 保存共享配
 
 ## Current Assumptions
 
-无待确认的规格或切片分歧。用户最初输入 expert_worker，随后明确纠正为 expert，应使用 expert 类型执行。
+无待确认的规格或切片分歧。用户已明确使用 expert 类型，实际派发成功。
 
 ## Continuation Point
 
-用户已审核 [完整切片](slices.md)，要求创建实施关卡后开始施工，执行代理类型为 expert。已建立 #37 和 #38，后者原生依赖前者，均为 Map 子 Issue。当前下一步是保存本次资料后派发 #37。
+用户已审核 [完整切片](slices.md)，要求创建实施关卡后开始施工，执行代理类型为 expert。已建立 #37 和 #38，后者原生依赖前者，均为 Map 子 Issue。已于基准 c84b602 派发 expert worker /root/fast_implementation 实施 #37。当前协调者等待该 worker 交付；跨 session 接手先检查 worker 状态与工作区，避免重复施工。
 
 派发使用 expert、fork_turns none，提供 worktree、最新提交、Spec、关卡、证据和操作限制。worker 行动前完整读取 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md、/Users/wangxuyang/.agents/skills/wangxuyang/develop-with-tdd/SKILL.md 及必要引用，不再委派。用户批准 adventure 的提交推送范围，允许本任务实现与证据提交到冒险分支。
 
