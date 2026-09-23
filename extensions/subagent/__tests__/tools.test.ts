@@ -747,3 +747,47 @@ test("resolves Fast once before spawn and preserves explicit false and true", as
   assert.equal(readFast.mock.calls.length, 2);
   assert.equal(Check(tool.parameters, { task: "work", fast: "false" }), false);
 });
+
+test("resolves role defaults and explicit overrides without forwarding selection metadata", async () => {
+  const registered: any[] = [];
+  const spawn = vi.fn().mockResolvedValue({ agentId: "child", name: "Storm", status: "idle", generation: 0 });
+  const readFast = vi.fn(async () => false);
+  const roles = new Map([
+    ["worker", { description: "Only the root should see this", model: "role/model", thinkingLevel: "high", fast: true }],
+    ["empty", {}],
+  ]);
+  registerSubagentTools({ on() {}, registerTool(tool: any) { registered.push(tool); } } as never, { spawn } as never, readFast, roles);
+  const tool = registered.find(tool => tool.name === "subagent_spawn");
+  assert.match(tool.description, /worker/u);
+  assert.match(tool.description, /Only the root should see this/u);
+  assert.match(tool.description, /empty/u);
+  const ctx = { cwd: "/repo", model: { provider: "parent", id: "model" }, thinkingLevel: "medium",
+    modelRegistry: { find: (provider: string, id: string) => ({ provider, id }) },
+    sessionManager: { getSessionId: () => "parent", getSessionFile: () => "/repo/parent.jsonl" } };
+  for (const [params, expected] of [
+    [{ agent_type: "worker" }, { model: { provider: "role", id: "model" }, thinkingLevel: "high", fast: true }],
+    [{ agent_type: "worker", model: "explicit/model", thinkingLevel: "off", fast: false }, { model: { provider: "explicit", id: "model" }, thinkingLevel: "off", fast: false }],
+    [{ agent_type: "empty" }, { model: ctx.model, fast: false }],
+    [{}, { model: ctx.model, fast: false }],
+  ] as const) {
+    await tool.execute("call", { task: "work", ...params }, undefined, undefined, ctx);
+    assert.deepEqual(spawn.mock.calls.at(-1)![1], { task: "work", ...expected });
+  }
+  assert.equal(readFast.mock.calls.length, 2);
+});
+
+test("rejects unknown roles and unregistered role models before reserving any resource", async () => {
+  const registered: any[] = [];
+  const spawn = vi.fn();
+  const readFast = vi.fn();
+  const find = vi.fn(() => undefined);
+  registerSubagentTools({ on() {}, registerTool(tool: any) { registered.push(tool); } } as never, { spawn } as never, readFast,
+    new Map([["bad-model", { model: "unknown/model" }]]));
+  const tool = registered.find(tool => tool.name === "subagent_spawn");
+  const ctx = { modelRegistry: { find } };
+  await assert.rejects(tool.execute("call", { task: "work", agent_type: "missing" }, undefined, undefined, ctx), /Unknown or invalid agent_type: missing/u);
+  assert.equal(find.mock.calls.length, 0);
+  await assert.rejects(tool.execute("call", { task: "work", agent_type: "bad-model" }, undefined, undefined, ctx), /Model not found: unknown\/model/u);
+  assert.equal(spawn.mock.calls.length, 0);
+  assert.equal(readFast.mock.calls.length, 0);
+});

@@ -384,9 +384,27 @@ subagent_close
 
 `subagent_spawn` 自动从内置的 32 个英文漫威英雄称号中随机分配显示名，不接受自定义 `name`；旧调用残留的 `name` 也不会影响分配。所有操作仍使用 `agentId`，名称不改变任务或角色。同一父会话的直接子代理和尚未安全释放的启动预留占用名称，任务完成不会释放，确认关闭或启动失败并清理完成后才可复用。裸名耗尽时随机选择称号并追加从 2 开始的可用编号，完整名称避让已有名称。不同父会话独立分配；名称持久化后不重抽，旧会话保留原名。
 
-显式填写 `model` 时必须使用完整的 `provider/model`，例如 `{"task":"调研指定问题","model":"deepseek/deepseek-flash","thinkingLevel":"medium"}`。不接受 `deepseek-flash` 等短名称或模糊匹配；模型 ID 本身可以包含 `/`，例如 `openrouter/org/model`，但完整引用必须存在于当前 Pi 模型注册表。格式错误或模型不存在时，在预留名额和启动子进程前报错。省略 `model` 时继承父模型，父会话没有可继承模型时明确报错。
+显式填写 `model` 时必须使用完整的 `provider/model`，例如 `{"task":"调研指定问题","model":"deepseek/deepseek-flash","thinkingLevel":"medium"}`。不接受 `deepseek-flash` 等短名称或模糊匹配；模型 ID 本身可以包含 `/`，例如 `openrouter/org/model`，但完整引用必须存在于当前 Pi 模型注册表。格式错误或模型不存在时，在预留名额和启动子进程前报错。调用和角色均省略 `model` 时继承父模型，父会话没有可继承模型时明确报错。
 
-`subagent_spawn` 可传入 `fast: true` 或 `fast: false`，例如 `{"task":"检查指定文件","fast":false}`。省略 `fast` 时复制调用当时主代理的开关值；父代理、子代理和其他子代理此后分别切换，互不影响。开关继承不依赖当前模型是否匹配 Fast 规则，也不修改角色文件。
+`subagent_spawn` 可传入 `fast: true` 或 `fast: false`，例如 `{"task":"检查指定文件","fast":false}`。调用和角色均省略 `fast` 时复制调用当时主代理的开关值；父代理、子代理和其他子代理此后分别切换，互不影响。开关继承不依赖当前模型是否匹配 Fast 规则，也不修改角色文件。
+
+用户角色只从 `<Pi agent directory>/agents/` 读取，默认目录为 `~/.pi/agent/agents/`，可通过 `PI_CODING_AGENT_DIR` 改变 agent directory。每个 `.jsonc` 文件定义一个角色，文件名去掉扩展名就是 `agent_type`。不读取项目 `.pi/agents/` 或 Codex 角色配置。例如 `worker.jsonc`：
+
+```jsonc
+{
+  // All fields are optional.
+  "description": "实现任务并运行相关测试",
+  "model": "deepseek/deepseek-flash",
+  "thinkingLevel": "medium",
+  "fast": false
+}
+```
+
+`description`、`model`、`thinkingLevel`、`fast` 均可省略，空对象 `{}` 也是合法角色。`thinkingLevel` 支持 `off`、`minimal`、`low`、`medium`、`high`、`xhigh`、`max`。不支持其他字段或角色指令。JSONC 支持注释和末尾逗号；语法或字段错误按文件提示，错误角色不会进入可选目录。
+
+调用 `{"task":"实现指定行为并验证","agent_type":"worker","fast":true}` 可选择角色。三个运行设置分别按显式参数、角色文件、当前 root 设置的顺序取值，`false` 可覆盖 `true`。`agent_type` 只负责选配置，不改变随机显示名或管理身份。不存在或错误的类型、无效最终模型均在预留名额和启动 child 前报错，不回退为普通启动；省略 `agent_type` 仍可普通启动。
+
+root 在启动和 `/reload` 时读取角色快照，将合法名称与可选 `description` 放入 `subagent_spawn` 工具说明。文件新增、修改、删除只在下次启动或 reload 后影响后续 spawn，改坏的角色不会沿用旧值；已启动 child 保留自身设置。不监听文件，也不在每次 spawn 时重新读取。`description` 仅供 root 选择角色，不传入 child 的 task 或系统指令；具体执行要求应写入 `task`。child 启动和 reload 都不扫描或公布角色目录，其 `/fast` 也不会改写角色文件。
 
 managed child 仍加载 lifecycle hooks 并写入 runtime state，但不注册 subagent 编排工具。合法管理拓扑只有 root 到 direct child；`target: "all"` 也只处理当前 root 的 direct children。每个 child 固定对应一个 tmux window 和一个 pane；投递前会验证 server、pane、进程实例和 pane 模式。session 改名或 pane 移动只有在实例证据仍匹配时才被接受，位置不匹配不等于进程死亡。
 

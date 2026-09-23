@@ -14,7 +14,7 @@ export async function fastProvider(logPath: string, directory: string) {
     baseUrl: "https://offline.invalid", reasoning: true, input: ["text"],
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 128000, maxTokens: 4096 };
   const key = `offline.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "fixture" } })).toString("base64url")}.fixture`;
-  const stream = (selected: any, context: any, options: any) => {
+  const stream = (selected: any, context: any, options: any, simple = false) => {
     const user = context.messages.filter((message: any) => message.role === "user").at(-1);
     const text = typeof user?.content === "string" ? user.content : user?.content?.filter((part: any) => part.type === "text").map((part: any) => part.text).join("\n") ?? "";
     const isToolTurn = context.messages.at(-1)?.role === "toolResult";
@@ -22,7 +22,7 @@ export async function fastProvider(logPath: string, directory: string) {
       : text === "reject-fast" ? { error: "unsupported_service_tier" }
       : text === "other-error" ? { error: "HTTP 400 invalid input" }
       : textStep(`reply:${text}`);
-    return adapter.stream(selected, context, { ...options, apiKey: key, transport: "sse", maxRetries: 0,
+    return (simple ? adapter.streamSimple : adapter.stream)(selected, context, { ...options, apiKey: key, transport: "sse", maxRetries: 0,
       fetch: async (_url: unknown, init: any) => {
         const payload = JSON.parse(new Headers(init.headers).get("content-encoding") === "zstd"
           ? zstdDecompressSync(init.body).toString("utf8") : String(init.body));
@@ -34,8 +34,8 @@ export async function fastProvider(logPath: string, directory: string) {
       },
     });
   };
-  return { model, provider: createProvider({ id: model.provider, models: [model],
-    auth: { apiKey: { name: "Offline", resolve: async () => ({ auth: {} }) } }, api: { stream, streamSimple: stream } } as any) };
+  return { model, provider: createProvider({ id: model.provider, models: [model, { ...model, id: "role-fixture", name: "Offline role fixture" }],
+    auth: { apiKey: { name: "Offline", resolve: async () => ({ auth: {} }) } }, api: { stream, streamSimple: (selected: any, context: any, options: any) => stream(selected, context, options, true) } } as any) };
 }
 
 export default async function install(pi: ExtensionAPI): Promise<void> {

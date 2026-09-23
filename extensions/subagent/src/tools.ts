@@ -24,28 +24,15 @@ import type {
   SessionViewResult,
 } from "./session-reader.js";
 
-const ThinkingLevelSchema = Type.Union([
-  Type.Literal("off"),
-  Type.Literal("minimal"),
-  Type.Literal("low"),
-  Type.Literal("medium"),
-  Type.Literal("high"),
-  Type.Literal("xhigh"),
-  Type.Literal("max"),
-], {
-  description: "subagent 的 thinking level；省略时继承当前设置。",
+import { modelReferencePattern, validateModelReference } from "./model-reference.js";
+import { thinkingLevels, type RoleSettings } from "./roles.js";
+
+const ThinkingLevelSchema = Type.Union(thinkingLevels.map(level => Type.Literal(level)), {
+  description: "subagent 的 thinking level；省略时采用角色设置或当前设置。",
 });
 
-const modelReferencePattern = "^[^/\\s]+/\\S+$";
-const modelReferenceRegex = new RegExp(modelReferencePattern, "u");
-
-function validateModelReference(model: unknown): void {
-  if (model !== undefined && (typeof model !== "string" || !modelReferenceRegex.test(model))) {
-    throw new Error("Model must use provider/model format, for example deepseek/deepseek-flash.");
-  }
-}
-
 const spawnParameters = Type.Object({
+  agent_type: Type.Optional(Type.String({ description: "用户角色类型；仅接受工具说明中列出的类型。省略时普通启动。", minLength: 1 })),
   task: Type.String({
     description: "交给 subagent 的自包含初始任务。写明必要上下文和可检查的完成条件。",
     minLength: 1,
@@ -55,12 +42,12 @@ const spawnParameters = Type.Object({
     minLength: 1,
   })),
   model: Type.Optional(Type.String({
-    description: "必须填写完整的 provider/model，例如 deepseek/deepseek-flash；不接受模型短名称。省略时继承当前模型。",
+    description: "必须填写完整的 provider/model，例如 deepseek/deepseek-flash；不接受模型短名称。省略时采用角色模型或当前模型。",
     minLength: 1,
     pattern: modelReferencePattern,
   })),
   thinkingLevel: Type.Optional(ThinkingLevelSchema),
-  fast: Type.Optional(Type.Boolean({ description: "子代理的 Fast 开关；省略时复制主代理当前开关，此后独立。" })),
+  fast: Type.Optional(Type.Boolean({ description: "子代理的 Fast 开关；省略时采用角色值或复制主代理当前开关，此后独立。" })),
 });
 
 const promptParameters = Type.Object({
@@ -202,6 +189,7 @@ export function registerSubagentTools(
   pi: Pick<ExtensionAPI, "registerTool" | "on">,
   manager: SubagentManager,
   readFast: () => Promise<boolean> = async () => false,
+  roles: ReadonlyMap<string, Readonly<RoleSettings>> = new Map(),
 ): void {
   // Returning structured failures preserves their display identity in session history.
   pi.on("tool_result", event => {
@@ -213,7 +201,7 @@ export function registerSubagentTools(
   pi.registerTool(withRenderer("spawn", {
     name: "subagent_spawn",
     label: "Spawn subagent",
-    description: "创建一个由当前 session 管理的 subagent，随机分配漫威英雄显示名，并提交初始任务。工具在 runtime 注册后返回，不等待任务完成；subagent 保留到调用 subagent_close。",
+    description: "创建一个由当前 session 管理的 subagent，随机分配漫威英雄显示名，并提交初始任务。工具在 runtime 注册后返回，不等待任务完成；subagent 保留到调用 subagent_close。" + roleCatalog(roles),
     promptSnippet: "创建 subagent 异步执行独立任务。",
     promptGuidelines: [
       "调用 subagent_spawn 前优先通过 subagent_prompt 复用能够承接任务的已有 subagent，尤其是已掌握相关代码、文档或决策上下文的对象。已有信息不足以判断可复用对象或剩余容量时，先调用 subagent_list。",
@@ -225,14 +213,23 @@ export function registerSubagentTools(
       return args as Static<typeof spawnParameters>;
     },
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-      validateModelReference(params.model);
-      const reference = params.model ?? (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined);
+      const role = params.agent_type === undefined ? undefined : roles.get(params.agent_type);
+      if (params.agent_type !== undefined && !role) throw new Error(`Unknown or invalid agent_type: ${params.agent_type}. Reload after fixing its role file.`);
+      const reference = params.model ?? role?.model ?? (ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined);
+      validateModelReference(reference);
       if (!reference) throw new Error("No parent model to inherit; specify a model using provider/model format.");
       const slash = reference.indexOf("/");
       const model = ctx.modelRegistry.find(reference.slice(0, slash), reference.slice(slash + 1));
       if (!model) throw new Error(`Model not found: ${reference}. Use an existing provider/model.`);
-      const fast = params.fast ?? await readFast();
-      const agent = await manager.spawn(currentSessionId(ctx), { ...params, fast, model: { provider: model.provider, id: model.id } }, {
+      const fast = params.fast ?? role?.fast ?? await readFast();
+      const thinkingLevel = params.thinkingLevel ?? role?.thinkingLevel;
+      const agent = await manager.spawn(currentSessionId(ctx), {
+        task: params.task,
+        ...(params.cwd === undefined ? {} : { cwd: params.cwd }),
+        ...(thinkingLevel === undefined ? {} : { thinkingLevel }),
+        fast,
+        model: { provider: model.provider, id: model.id },
+      }, {
         cwd: ctx.cwd,
         thinkingLevel: ctx.thinkingLevel,
       }, _signal);
@@ -567,3 +564,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export type { SessionViewResult };
+
+function roleCatalog(roles: ReadonlyMap<string, Readonly<RoleSettings>>): string {
+  if (roles.size === 0) return "\n当前没有可用的 agent_type；可省略该参数普通启动。";
+  return "\n可用的 agent_type 与用途说明如下，运行参数按显式值 > 角色值 > 当前主代理设置解析：\n"
+    + [...roles].map(([name, role]) => `- ${JSON.stringify(name)}${role.description === undefined ? "" : `: ${JSON.stringify(role.description)}`}`).join("\n");
+}

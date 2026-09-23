@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { test, vi } from "vitest";
 
 import sourceExtension from "../src/index.js";
+import * as roleLoader from "../src/roles.js";
 import type { ManagedTmuxRuntime } from "../src/manager.js";
 import { createSessionState, SessionStateStore as SourceStore } from "../src/state-store.js";
 
@@ -325,6 +326,7 @@ test("keeps managed-child lifecycle hooks without registering orchestration tool
     },
   };
 
+  const scan = vi.spyOn(roleLoader, "loadRoles");
   try {
     subagentExtension(pi as never, {
       env: {
@@ -352,6 +354,7 @@ test("keeps managed-child lifecycle hooks without registering orchestration tool
       piPath: "/usr/local/bin/pi",
     });
 
+    assert.equal(scan.mock.calls.length, 0);
     assert.deepEqual(tools, []);
     assert.deepEqual(eventNames.filter((name) => handlers.has(name)), eventNames);
     assert.equal(handlers.has("context"), true);
@@ -384,6 +387,45 @@ test("keeps managed-child lifecycle hooks without registering orchestration tool
     assert.equal(state?.runtime.generation, 1);
     assert.equal(state?.runtime.settledGeneration, 1);
   } finally {
+    scan.mockRestore();
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("loads and reports a root-only role snapshot from the configured agent directory", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".sa-index-"));
+  const agentDir = join(root, "agent");
+  const { mkdir } = await import("node:fs/promises");
+  try {
+    await mkdir(join(agentDir, "agents"), { recursive: true });
+    await writeFile(join(agentDir, "agents", "worker.jsonc"), '{"description":"ROOT_ROLE_MARKER","fast":true}');
+    await writeFile(join(agentDir, "agents", "broken.jsonc"), '{"fast":"yes"}');
+    const handlers = new Map<string, (...args: any[]) => unknown>();
+    const tools: any[] = [];
+    const notify = vi.fn();
+    subagentExtension({ on: (name: string, handler: any) => handlers.set(name, handler), registerTool: (tool: any) => tools.push(tool) } as never,
+      { env: { HOME: root, PI_CODING_AGENT_DIR: "~/agent" }, stateRoot: join(root, "state") });
+    const spawn = tools.find(tool => tool.name === "subagent_spawn");
+    assert.match(spawn.description, /ROOT_ROLE_MARKER/u);
+    assert.doesNotMatch(spawn.description, /broken/u);
+    await handlers.get("session_start")!({}, { ui: { notify }, sessionManager: { getSessionFile: () => undefined } });
+    assert.equal(notify.mock.calls.length, 1);
+    assert.match(notify.mock.calls[0][0], /broken\.jsonc: fast must be a boolean/u);
+    await writeFile(join(agentDir, "agents", "worker.jsonc"), '{"description":"CHANGED_MARKER"}');
+    assert.doesNotMatch(spawn.description, /CHANGED_MARKER/u);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("uses the default Pi agents directory under the user's home", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".sa-default-"));
+  const { mkdir } = await import("node:fs/promises");
+  try {
+    vi.stubEnv("HOME", root);
+    vi.stubEnv("PI_CODING_AGENT_DIR", undefined);
+    await mkdir(join(root, ".pi", "agent", "agents"), { recursive: true });
+    await writeFile(join(root, ".pi", "agent", "agents", "default-user.jsonc"), "{}");
+    const tools: any[] = [];
+    subagentExtension({ on() {}, registerTool: (tool: any) => tools.push(tool) } as never, { stateRoot: join(root, "state") });
+    assert.match(tools.find(tool => tool.name === "subagent_spawn").description, /default-user/u);
+  } finally { vi.unstubAllEnvs(); await rm(root, { recursive: true, force: true }); }
 });
