@@ -1,0 +1,12 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast
+
+ ✓ extensions/subagent/__tests__/roles.test.ts (2 tests) 10ms
+ ✓ extensions/subagent/__tests__/tools.test.ts (33 tests) 22ms
+ ✓ extensions/subagent/__tests__/index.test.ts (16 tests) 87ms
+
+ Test Files  3 passed (3)
+      Tests  51 passed (51)
+   Start at  23:45:24
+   Duration  633ms (transform 137ms, setup 0ms, collect 706ms, tests 120ms, environment 0ms, prepare 109ms)
+
