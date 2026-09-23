@@ -12,11 +12,11 @@
 
 ## Current Goal or Problem
 
-为 Pi subagent 增加 agent_type 配置和父子独立 Fast。入口为 [Map #32](https://github.com/wangxuyang1221/pi-ext/issues/32)，完整规格仅在 [Spec #33](https://github.com/wangxuyang1221/pi-ext/issues/33) 维护。角色配置与 Fast 规则均已确定，已创建 [Fast 实施 #37](https://github.com/wangxuyang1221/pi-ext/issues/37) 和 [角色实施 #38](https://github.com/wangxuyang1221/pi-ext/issues/38)，第一关已由 expert worker 交付并验收通过，接下来实施角色配置 #38。
+为 Pi subagent 增加 agent_type 配置和父子独立 Fast。入口为 [Map #32](https://github.com/wangxuyang1221/pi-ext/issues/32)，完整规格仅在 [Spec #33](https://github.com/wangxuyang1221/pi-ext/issues/33) 维护。两个 Implementation #37、#38 已交付、经协调者验收并关闭，完整 Spec 整体验收通过。当前等待用户确认交付，Map 与 Spec 保持 open。
 
 ## Evolution
 
-从 main 的 501d395 建立独立 worktree 和分支。#34 确认 Pi 独立配置；#35 经逐项讨论完成，规则已移交 Spec。用户先排除角色指令，之后明确 description 只辅助主代理选择，不作为 child 指令。用户要求目录可见范围与编排工具一致，仅 root 获得。Fast #36 已确认并关闭，两个切片已获用户审核并授权施工，实施关卡已建立。
+从 main 的 501d395 建立独立 worktree 和分支。#34 确认 Pi 独立配置；#35 经逐项讨论完成，规则已移交 Spec。用户先排除角色指令，之后明确 description 只辅助主代理选择，不作为 child 指令。用户要求目录可见范围与编排工具一致，仅 root 获得。Fast #36 已确认并关闭，两个切片已获用户审核并授权施工，实施关卡已建立。随后两个独立 expert 按 #37 → #38 完成实施，协调者核对真实请求、会话和文件证据后通过验收。
 
 ## Agreed Decisions and Constraints
 
@@ -39,18 +39,18 @@ Fast 扩展目前在加载、--fast、/fast 和 session_shutdown 保存共享配
 
 本 worktree 已安装依赖。#37 实现提交 04feb1f，证据提交 99bc128；协调者已核对并通过验收。Fast 真实 root/child 链路记录 23 个 HTTP payload 和 11 个文件检查点，首次回复前保存、reload、无 launch 的 true/false resume、拒绝隔离均通过。pnpm run check 的 2548 tests、构建和发布包校验通过，门控生产集成另行通过。测试进程与 socket 已清理，工作区交付时干净。详情与可复跑命令见 [Fast 实施证据](evidence/fast-implementation.md)。
 
+#38 实现提交 5c9c013，日志与证据基准 df7e4ce0c30e72e49115d12081a46236e730a7bc。完整 Spec 的 13 项要求均有验收矩阵，真实链路记录 60 个 HTTP payload、11 个 child、13 个文件检查点和 7 次拒绝。pnpm run check 的 2554 tests、类型检查、构建、发布包校验通过，门控 runtime 6、production 10、角色/Fast+host 3 tests 单独通过。记录的测试 PID 全退出、socket 不可用，无场景目录或 HTTP 监听遗留。代码和证据已推送，worker 交付时工作区干净。详细矩阵、原始日志及验证边界见 [角色实施与整体验收](evidence/roles-implementation.md)，使用方式见 [README](../../README.md)。
+
 继续时读取 /Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md 及必要引用；保存使用 /Users/wangxuyang/.agents/skills/wangxuyang/handoff/SKILL.md；实施准备使用 /Users/wangxuyang/.agents/skills/wangxuyang/slicing/SKILL.md。
 
 ## Current Assumptions
 
-无待确认的规格或切片分歧。用户已明确使用 expert 类型，实际派发成功。
+无未解决的规格或实施分歧。功能与验证均已完成，尚待用户确认交付；没有仍在执行的 worker。
 
 ## Continuation Point
 
-用户已审核 [完整切片](slices.md)，要求创建实施关卡后开始施工，执行代理类型为 expert。#37 已验收关闭，#38 已于基准 740b43279b27e182aad007adcd01eab8095a2512 派发全新上下文 expert /root/roles_implementation，负责角色配置及完整 Spec 整体验收。协调者等待交付并审核证据。跨 session 接手时先检查 worker 状态，避免重复施工。
+所有 Implementation 已关闭，整体验收已通过，代码及证据已推送到 adventure/subagent-profiles-fast。当前等待用户确认交付，不继续运行或重新派发。用户没有要求创建 PR、合并或部署。
 
-派发使用 expert、fork_turns none，提供 worktree、最新提交、Spec、关卡、证据和操作限制。worker 行动前完整读取 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md、/Users/wangxuyang/.agents/skills/wangxuyang/develop-with-tdd/SKILL.md 及必要引用，不再委派。用户批准 adventure 的提交推送范围，允许本任务实现与证据提交到冒险分支。
+用户确认交付后，按 adventure 的 Win the game 更新 Map、Spec 与本存档，把资料、验收及交付入口固定到已推送提交，核对链接可读后关闭 Map #32 与 Spec #33。远端冒险分支是否删除由用户决定，不自动删除。用户提出修改时，继续处理受影响关卡，保留已通过证据，不重新询问已确认的规格。
 
-主代理协调并核对交付证据，不自行绕过 worker 实施。计划只在 Implementation 正文维护，详细证据在 adventure/32/evidence。#38 的 worker 承担完整 Spec 整体验收，角色默认 Fast、显式覆盖与父级继承须到实际请求验证，启动/reload 后 child 工具与模型上下文不得出现角色目录或 description。完成 pnpm run check、清理进程并确认监听释放，保存推送后等待用户交付确认。Map 与 Spec 保持 open。
-
-主工作区 /Users/wangxuyang/Code/t3code/pi-ext 存在其他任务的 goal 扩展与 README 改动，勿修改或提交这些主工作区文件。冒险 worktree 的产品代码在 #37 交付时干净。
+主工作区 /Users/wangxuyang/Code/t3code/pi-ext 存在其他任务的 goal 扩展与 README 改动，勿修改或提交这些主工作区文件。所有本次交付都位于独立冒险 worktree 和分支。
