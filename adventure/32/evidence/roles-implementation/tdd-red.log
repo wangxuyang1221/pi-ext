@@ -1,0 +1,244 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast
+
+ ❯ extensions/subagent/__tests__/roles.test.ts (1 test | 1 failed) 4ms
+   × loads user JSONC roles with optional fields and ignores other directories and extensions 4ms
+     → Expected values to be strictly deep-equal:
++ actual - expected
+
++ []
+- [
+-   [
+-     'empty',
+-     {}
+-   ],
+-   [
+-     'worker',
+-     {
+-       description: 'Build things',
+-       fast: false,
+-       model: 'provider/org/model',
+-       thinkingLevel: 'high'
+-     }
+-   ]
+- ]
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/subagent/__tests__/roles.test.ts > loads user JSONC roles with optional fields and ignores other directories and extensions
+AssertionError: Expected values to be strictly deep-equal:
++ actual - expected
+
++ []
+- [
+-   [
+-     'empty',
+-     {}
+-   ],
+-   [
+-     'worker',
+-     {
+-       description: 'Build things',
+-       fast: false,
+-       model: 'provider/org/model',
+-       thinkingLevel: 'high'
+-     }
+-   ]
+- ]
+
+
+- Expected
++ Received
+
+- [
+-   [
+-     "empty",
+-     {},
+-   ],
+-   [
+-     "worker",
+-     {
+-       "description": "Build things",
+-       "fast": false,
+-       "model": "provider/org/model",
+-       "thinkingLevel": "high",
+-     },
+-   ],
+- ]
++ []
+
+ ❯ extensions/subagent/__tests__/roles.test.ts:17:12
+     15|     writeFileSync(join(root, "agents", "nested", "ignored.jsonc"), "{}…
+     16|     const snapshot = loadRoles(root);
+     17|     assert.deepEqual([...snapshot.roles], [["empty", {}], ["worker", {…
+       |            ^
+     18|     assert.deepEqual(snapshot.diagnostics, []);
+     19|   } finally { rmSync(root, { recursive: true, force: true }); }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  23:36:40
+   Duration  150ms (transform 12ms, setup 0ms, collect 12ms, tests 4ms, environment 0ms, prepare 23ms)
+
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast
+
+ ❯ extensions/subagent/__tests__/roles.test.ts (2 tests | 1 failed) 8ms
+   ✓ loads user JSONC roles with optional fields and ignores other directories and extensions 6ms
+   × isolates malformed roles and discards old values when a new snapshot is loaded 2ms
+     → ENOENT: no such file or directory, scandir '/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast/.sa-roles-wRE5Di/agents'
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/subagent/__tests__/roles.test.ts > isolates malformed roles and discards old values when a new snapshot is loaded
+Error: ENOENT: no such file or directory, scandir '/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast/.sa-roles-wRE5Di/agents'
+ ❯ loadRoles extensions/subagent/src/roles.ts:21:22
+     19|   const roles = new Map<string, Readonly<RoleSettings>>();
+     20|   const directory = join(agentDir, "agents");
+     21|   for (const file of readdirSync(directory, { withFileTypes: true }).s…
+       |                      ^
+     22|     if (!file.isFile() || !file.name.endsWith(".jsonc")) continue;
+     23|     roles.set(file.name.slice(0, -6), Object.freeze(parse(readFileSync…
+ ❯ extensions/subagent/__tests__/roles.test.ts:25:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  23:37:12
+   Duration  160ms (transform 16ms, setup 0ms, collect 18ms, tests 8ms, environment 0ms, prepare 28ms)
+
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast
+
+ ❯ extensions/subagent/__tests__/tools.test.ts (32 tests | 1 failed) 23ms
+   ✓ registers the fixed public subagent tool surface 1ms
+   ✓ publishes explicit object roots for provider tool schemas 0ms
+   ✓ removes resumable and recursive cleanup semantics from the public contract 0ms
+   ✓ uses strict read view variants with lightweight recent defaults 1ms
+   ✓ preserves read defaults, limits and cursors through preparation and execution 5ms
+   ✓ rejects invalid read arguments before manager access 8ms
+   ✓ forwards turns continuation separately from the incremental cursor 0ms
+   ✓ serializes recent activity exactly once without expanding the byte budget 0ms
+   ✓ reports turns summary metrics without duplicating turn activity in renderer details 0ms
+   ✓ returns one bounded detail page without duplicating it in renderer details 0ms
+   ✓ carries lightweight summary metrics through subagent_wait 0ms
+   ✓ returns capacity and terminal cleanup boundaries in tool payloads 0ms
+   ✓ defaults subagent_prompt execution to follow_up 0ms
+   ✓ encodes reuse, delivery, observation, wait, and close boundaries 0ms
+   ✓ spawn schema excludes caller-selected names 0ms
+   ✓ rejects invalid model reference "deepseek-flash" before calling the manager 0ms
+   ✓ rejects invalid model reference "" before calling the manager 0ms
+   ✓ rejects invalid model reference "/deepseek-flash" before calling the manager 0ms
+   ✓ rejects invalid model reference "deepseek/" before calling the manager 0ms
+   ✓ rejects invalid model reference " deepseek/deepseek-flash" before calling the manager 0ms
+   ✓ rejects invalid model reference "deepseek/deepseek-flash " before calling the manager 0ms
+   ✓ rejects invalid model reference "deepseek/deepseek-flash\n" before calling the manager 0ms
+   ✓ rejects an unknown model unknown/deepseek-flash without spawning 0ms
+   ✓ rejects an unknown model deepseek/unknown without spawning 0ms
+   ✓ rejects missing inherited model before querying the registry or spawning 0ms
+   ✓ reports the required model format before Pi schema validation 0ms
+   ✓ resolves 'deepseek/deepseek-flash' once and forwards the selected model without resolving credentials 0ms
+   ✓ resolves 'openrouter/org/model' once and forwards the selected model without resolving credentials 0ms
+   ✓ resolves undefined once and forwards the selected model without resolving credentials 0ms
+   ✓ read displays the persisted name without changing its public payload 0ms
+   ✓ resolves Fast once before spawn and preserves explicit false and true 0ms
+   × resolves role defaults and explicit overrides without forwarding selection metadata 3ms
+     → The input did not match the regular expression /worker/u. Input:
+
+'创建一个由当前 session 管理的 subagent，随机分配漫威英雄显示名，并提交初始任务。工具在 runtime 注册后返回，不等待任务完成；subagent 保留到调用 subagent_close。'
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/subagent/__tests__/tools.test.ts > resolves role defaults and explicit overrides without forwarding selection metadata
+AssertionError: The input did not match the regular expression /worker/u. Input:
+
+'创建一个由当前 session 管理的 subagent，随机分配漫威英雄显示名，并提交初始任务。工具在 runtime 注册后返回，不等待任务完成；subagent 保留到调用 subagent_close。'
+
+
+- Expected: 
+/worker/u
+
++ Received: 
+"创建一个由当前 session 管理的 subagent，随机分配漫威英雄显示名，并提交初始任务。工具在 runtime 注册后返回，不等待任务完成；subagent 保留到调用 subagent_close。"
+
+ ❯ extensions/subagent/__tests__/tools.test.ts:761:10
+    759|   registerSubagentTools({ on() {}, registerTool(tool: any) { registere…
+    760|   const tool = registered.find(tool => tool.name === "subagent_spawn");
+    761|   assert.match(tool.description, /worker/u);
+       |          ^
+    762|   assert.match(tool.description, /Only the root should see this/u);
+    763|   assert.match(tool.description, /empty/u);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 31 passed (32)
+   Start at  23:38:11
+   Duration  345ms (transform 43ms, setup 0ms, collect 187ms, tests 23ms, environment 0ms, prepare 27ms)
+
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast
+
+ ✓ extensions/subagent/__tests__/tools.test.ts (33 tests) 21ms
+ ❯ extensions/subagent/__tests__/index.test.ts (15 tests | 1 failed) 89ms
+   ✓ installs the quit editor only for a root TUI session 7ms
+   ✓ does not install the quit editor in rpc mode 4ms
+   ✓ does not install the quit editor in json mode 4ms
+   ✓ does not install the quit editor in print mode 4ms
+   ✓ wires the public tools to Pi session lifecycle events 6ms
+   ✓ releases the previous namespace controller when the root switches sessions 6ms
+   ✓ shutdown releases ownership acquired by a tool after a read-only startup 11ms
+   ✓ session switch releases ownership acquired by a tool after a read-only startup 14ms
+   ✓ production startup rolls back new control ownership after a corrupt root fails validation 6ms
+   ✓ production startup rolls back new control ownership after a old-schema root fails validation 6ms
+   ✓ production entry forwards Fast=true and effective configuration without parent pane or credentials 6ms
+   ✓ production entry forwards Fast=false and effective configuration without parent pane or credentials 5ms
+   ✓ fails fast when PI_SUBAGENT_MAX_ACTIVE is not a positive integer 0ms
+   ✓ keeps managed-child lifecycle hooks without registering orchestration tools 6ms
+   × loads and reports a root-only role snapshot from the configured agent directory 3ms
+     → The input did not match the regular expression /ROOT_ROLE_MARKER/u. Input:
+
+'创建一个由当前 session 管理的 subagent，随机分配漫威英雄显示名，并提交初始任务。工具在 runtime 注册后返回，不等待任务完成；subagent 保留到调用 subagent_close。\n' +
+  '当前没有可用的 agent_type；可省略该参数普通启动。'
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/subagent/__tests__/index.test.ts > loads and reports a root-only role snapshot from the configured agent directory
+AssertionError: The input did not match the regular expression /ROOT_ROLE_MARKER/u. Input:
+
+'创建一个由当前 session 管理的 subagent，随机分配漫威英雄显示名，并提交初始任务。工具在 runtime 注册后返回，不等待任务完成；subagent 保留到调用 subagent_close。\n' +
+  '当前没有可用的 agent_type；可省略该参数普通启动。'
+
+
+- Expected: 
+/ROOT_ROLE_MARKER/u
+
++ Received: 
+"创建一个由当前 session 管理的 subagent，随机分配漫威英雄显示名，并提交初始任务。工具在 runtime 注册后返回，不等待任务完成；subagent 保留到调用 subagent_close。
+当前没有可用的 agent_type；可省略该参数普通启动。"
+
+ ❯ extensions/subagent/__tests__/index.test.ts:405:12
+    403|       { env: { HOME: root, PI_CODING_AGENT_DIR: "~/agent" }, stateRoot…
+    404|     const spawn = tools.find(tool => tool.name === "subagent_spawn");
+    405|     assert.match(spawn.description, /ROOT_ROLE_MARKER/u);
+       |            ^
+    406|     assert.doesNotMatch(spawn.description, /broken/u);
+    407|     await handlers.get("session_start")!({}, { ui: { notify }, session…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 47 passed (48)
+   Start at  23:40:00
+   Duration  616ms (transform 117ms, setup 0ms, collect 599ms, tests 110ms, environment 0ms, prepare 56ms)
+

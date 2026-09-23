@@ -22,7 +22,11 @@ export type FastModeExtensionOptions = {
   extensionDir?: string;
   /** Test/advanced override for Pi's user-level agent directory. */
   agentDir?: string;
+  /** Controlled launch environment; defaults to the process environment. */
+  env?: Record<string, string | undefined>;
 };
+
+const SESSION_STATE_TYPE = "pi-fast-mode-session";
 
 const DEFAULT_EXTENSION_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -52,18 +56,42 @@ export function createPiFastModeExtension(
 ): ExtensionFactory {
   const extensionDir = options.extensionDir ?? DEFAULT_EXTENSION_DIR;
   const agentDir = options.agentDir;
+  const env = options.env ?? process.env;
 
   return function piFastModeExtension(pi: ExtensionAPI): void {
     let config: FastModeConfig = cloneConfig();
     let configPath: string | undefined;
     let loadedCwd: string | undefined;
+    let childSession = false;
     let currentModel: ModelRef | undefined;
     const excludedCodexModels = new Set<string>();
     const pendingCodexFastModels = new Set<string>();
 
     async function loadForContext(
-      ctx: Pick<ExtensionContext, "cwd">,
+      ctx: Pick<ExtensionContext, "cwd" | "sessionManager">,
     ): Promise<void> {
+      const sessionId = ctx.sessionManager?.getSessionId();
+      let savedEnabled: boolean | undefined;
+      const entries = ctx.sessionManager?.getEntries() ?? [];
+      for (let index = entries.length - 1; index >= 0; index--) {
+        const entry = entries[index]!;
+        if (entry.type !== "custom" || entry.customType !== SESSION_STATE_TYPE) continue;
+        const data = entry.data as { sessionId?: unknown; enabled?: unknown } | undefined;
+        if (data?.sessionId === sessionId && typeof data?.enabled === "boolean") {
+          savedEnabled = data.enabled;
+          break;
+        }
+      }
+      childSession = env.PI_SUBAGENT_PARENT !== undefined || savedEnabled !== undefined;
+      if (childSession) {
+        const launch = env.PI_SUBAGENT_LAUNCH ? JSON.parse(env.PI_SUBAGENT_LAUNCH) : {};
+        config = cloneConfig();
+        config.enabled = savedEnabled ?? (launch.fast === true);
+        configPath = undefined;
+        loadedCwd = ctx.cwd;
+        if (savedEnabled === undefined) pi.appendEntry(SESSION_STATE_TYPE, { sessionId, enabled: config.enabled });
+        return;
+      }
       const loaded = await loadConfigForScope({
         cwd: ctx.cwd,
         extensionDir,
@@ -80,20 +108,24 @@ export function createPiFastModeExtension(
     }
 
     async function ensureLoaded(
-      ctx: Pick<ExtensionContext, "cwd">,
+      ctx: Pick<ExtensionContext, "cwd" | "sessionManager">,
     ): Promise<void> {
-      if (!configPath || loadedCwd !== ctx.cwd) {
+      if ((!childSession && !configPath) || loadedCwd !== ctx.cwd) {
         await loadForContext(ctx);
       }
     }
 
     async function saveCurrent(
-      ctx: Pick<ExtensionContext, "cwd">,
+      ctx: Pick<ExtensionContext, "cwd" | "sessionManager">,
     ): Promise<void> {
-      if (!configPath || loadedCwd !== ctx.cwd) {
+      if ((!childSession && !configPath) || loadedCwd !== ctx.cwd) {
         await loadForContext(ctx);
       }
 
+      if (childSession) {
+        pi.appendEntry(SESSION_STATE_TYPE, { sessionId: ctx.sessionManager.getSessionId(), enabled: config.enabled });
+        return;
+      }
       if (!configPath) {
         throw new Error("Fast Mode config path was not resolved");
       }
@@ -104,6 +136,12 @@ export function createPiFastModeExtension(
     function refreshCurrentModel(ctx: Pick<ExtensionContext, "model">): void {
       currentModel = toModelRef(ctx.model) ?? currentModel;
     }
+
+    // Shared request contract with subagent, without cross-package source imports.
+    pi.events.on("pi-fast-mode:get-state", (data) => {
+      const request = data as { promises: Promise<boolean>[] };
+      request.promises.push(Promise.resolve(config.enabled));
+    });
 
     pi.registerFlag("fast", {
       description: "Start with Fast Mode enabled",
@@ -137,7 +175,7 @@ export function createPiFastModeExtension(
         pendingCodexFastModels.clear();
         await loadForContext(ctx);
 
-        if (pi.getFlag("fast") === true) {
+        if (!childSession && pi.getFlag("fast") === true) {
           config.enabled = true;
           await saveCurrent(ctx);
         }

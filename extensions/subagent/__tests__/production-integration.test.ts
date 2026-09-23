@@ -19,7 +19,7 @@ test.skipIf(!enabled || (mode === "fish" && !fish))(`production parent entry ove
   const delayIdentity = mode === "delayed";
   const nativeAuth = mode.startsWith("auth-");
   const fullPackage = mode.startsWith("full-package") || nativeAuth;
-  const root = await mkdtemp(join(process.cwd(), ".sa-production-"));
+  const root = await mkdtemp(join(process.cwd(), ".sa-prod-"));
   const home = join(root, "home");
   const agentDir = join(home, "agent");
   const wrapper = join(root, "tmux");

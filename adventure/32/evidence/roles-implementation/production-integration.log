@@ -1,0 +1,50 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast
+
+stdout | extensions/subagent/__tests__/production-integration.test.ts > production parent entry overrides a stale server with immediate startup
+{"cleanup":{"pids":[15074,15075,15078],"livePids":[],"socketUnavailable":true}}
+
+stdout | extensions/subagent/__tests__/production-integration.test.ts > production parent entry overrides a stale server with delayed startup
+{"cleanup":{"pids":[15436,15437,15449],"livePids":[],"socketUnavailable":true}}
+
+stdout | extensions/subagent/__tests__/production-integration.test.ts > production parent entry overrides a stale server with fish startup
+{"cleanup":{"pids":[15704,15705,15710],"livePids":[],"socketUnavailable":true}}
+
+stdout | extensions/subagent/__tests__/production-integration.test.ts > production parent entry overrides a stale server with full-package-fast startup
+{"cleanup":{"pids":[15829,15830,15833],"livePids":[],"socketUnavailable":true}}
+
+stdout | extensions/subagent/__tests__/production-integration.test.ts > production parent entry overrides a stale server with full-package-delayed startup
+{"cleanup":{"pids":[16005,16006,16010],"livePids":[],"socketUnavailable":true}}
+
+stdout | extensions/subagent/__tests__/production-integration.test.ts > production parent entry overrides a stale server with auth-env startup
+{"cleanup":{"pids":[16360,16362,16372],"livePids":[],"socketUnavailable":true}}
+
+stdout | extensions/subagent/__tests__/production-integration.test.ts > production parent entry overrides a stale server with auth-inherited startup
+{"cleanup":{"pids":[16423,16424,16427],"livePids":[],"socketUnavailable":true}}
+
+stdout | extensions/subagent/__tests__/production-integration.test.ts > production parent entry overrides a stale server with auth-stored startup
+{"cleanup":{"pids":[16564,16565,16568],"livePids":[],"socketUnavailable":true}}
+
+stdout | extensions/subagent/__tests__/production-integration.test.ts > production parent entry overrides a stale server with auth-both startup
+{"cleanup":{"pids":[16617,16618,16621],"livePids":[],"socketUnavailable":true}}
+
+stdout | extensions/subagent/__tests__/production-integration.test.ts > production parent entry overrides a stale server with auth-missing startup
+{"cleanup":{"pids":[16720,16721],"livePids":[],"socketUnavailable":true}}
+
+ ✓ extensions/subagent/__tests__/production-integration.test.ts (10 tests) 26076ms
+   ✓ production parent entry overrides a stale server with immediate startup  3657ms
+   ✓ production parent entry overrides a stale server with delayed startup  2392ms
+   ✓ production parent entry overrides a stale server with fish startup  1714ms
+   ✓ production parent entry overrides a stale server with full-package-fast startup  2596ms
+   ✓ production parent entry overrides a stale server with full-package-delayed startup  6759ms
+   ✓ production parent entry overrides a stale server with auth-env startup  1875ms
+   ✓ production parent entry overrides a stale server with auth-inherited startup  1766ms
+   ✓ production parent entry overrides a stale server with auth-stored startup  1782ms
+   ✓ production parent entry overrides a stale server with auth-both startup  1735ms
+   ✓ production parent entry overrides a stale server with auth-missing startup  1800ms
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  23:47:28
+   Duration  26.98s (transform 160ms, setup 0ms, collect 515ms, tests 26.08s, environment 0ms, prepare 75ms)
+

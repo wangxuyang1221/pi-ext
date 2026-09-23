@@ -30,6 +30,8 @@ import { TmuxRuntime } from "./tmux-runtime.js";
 import { executeCommand } from "./command-executor.js";
 import { providerEnvironment } from "./auth-environment.js";
 import { installAuthenticationPreflight } from "./prompt-auth.js";
+import { readFastState } from "./fast-state.js";
+import { loadRoles } from "./roles.js";
 import { registerSubagentTools } from "./tools.js";
 import { createSubagentQuitSession, type SubagentQuitSession } from "./quit.js";
 import { assignUsage, GOAL_TASK_EVENT, registerChildUsage, usageDirectory } from "./usage.js";
@@ -123,8 +125,9 @@ export default function subagentExtension(
     ...(options.now ? { now: options.now } : {}),
   });
 
-  if (!parent) {
-    registerSubagentTools(pi, manager);
+  const roles = parent ? undefined : loadRoles(agentDir);
+  if (roles) {
+    registerSubagentTools(pi, manager, () => readFastState(pi.events), roles.roles);
   } else if (launch) {
     installAuthenticationPreflight(pi, host);
     registerChildUsage(pi, usageDirectory(stateRoot, launch.processInstanceId));
@@ -143,6 +146,7 @@ export default function subagentExtension(
   pi.on("session_start", async (_event, ctx) => {
     quitSession?.invalidate();
     quitSession = undefined;
+    for (const diagnostic of roles?.diagnostics ?? []) ctx.ui.notify(`Subagent role ${diagnostic}`, "warning");
     const sessionFile = ctx.sessionManager.getSessionFile();
     if (!sessionFile) return;
     if (!parent) {
@@ -246,6 +250,7 @@ function parseLaunchMetadata(value: string | undefined): LaunchMetadata | undefi
     || typeof parsed.sessionDir !== "string"
     || typeof parsed.displayName !== "string"
     || typeof parsed.processInstanceId !== "string"
+    || !(parsed.fast === undefined || typeof parsed.fast === "boolean")
     || !(parsed.model === undefined || typeof parsed.model === "string")
     || !(parsed.thinkingLevel === undefined || typeof parsed.thinkingLevel === "string")
   ) {
@@ -260,6 +265,7 @@ function parseLaunchMetadata(value: string | undefined): LaunchMetadata | undefi
   }
   return {
     ...(parsed.configuration ? { configuration: parsed.configuration as LaunchMetadata["configuration"] } : {}),
+    ...(typeof parsed.fast === "boolean" ? { fast: parsed.fast } : {}),
     cwd: parsed.cwd,
     sessionDir: parsed.sessionDir,
     displayName: parsed.displayName,

@@ -1,0 +1,269 @@
+=== child ===
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast
+
+ ❯ extensions/openai-fast-mode/__tests__/child-session.test.ts (1 test | 1 failed) 6ms
+   × persists child initial true and false before any assistant without shared writes 6ms
+     → expected undefined to deeply equal { …(2) }
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/openai-fast-mode/__tests__/child-session.test.ts > persists child initial true and false before any assistant without shared writes
+AssertionError: expected undefined to deeply equal { …(2) }
+
+- Expected: 
+{
+  "enabled": true,
+  "sessionId": "01a0cecf-0e67-73a0-b7a4-4041f825b256",
+}
+
++ Received: 
+undefined
+
+ ❯ extensions/openai-fast-mode/__tests__/child-session.test.ts:41:10
+     39|       await child.start();
+     40|       expect(manager.getEntries().filter(e => e.type === "custom" && e…
+     41|         .toEqual({ sessionId: manager.getSessionId(), enabled });
+       |          ^
+     42|       expect(await readFile(file, "utf8")).toContain(`"enabled":${enab…
+     43|       expect(manager.buildSessionContext().messages).toEqual([]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  23:07:50
+   Duration  569ms (transform 32ms, setup 0ms, collect 400ms, tests 6ms, environment 0ms, prepare 42ms)
+
+
+=== restore ===
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast
+
+ ❯ extensions/openai-fast-mode/__tests__/child-session.test.ts (2 tests | 1 failed) 8ms
+   ✓ persists child initial true and false before any assistant without shared writes 5ms
+   × restores the last child command across reload and resume even without launch environment 3ms
+     → expected { input: [], service_tier: 'priority' } to be undefined
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/openai-fast-mode/__tests__/child-session.test.ts > restores the last child command across reload and resume even without launch environment
+AssertionError: expected { input: [], service_tier: 'priority' } to be undefined
+
+- Expected: 
+undefined
+
++ Received: 
+{
+  "input": [],
+  "service_tier": "priority",
+}
+
+ ❯ extensions/openai-fast-mode/__tests__/child-session.test.ts:70:29
+     68|     child = fixture(manager, agentDir, env, true);
+     69|     await child.start();
+     70|     expect(child.request()).toBeUndefined();
+       |                             ^
+     71|     await child.shutdown();
+     72|     manager = SessionManager.open(file, root);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  23:08:37
+   Duration  432ms (transform 29ms, setup 0ms, collect 267ms, tests 8ms, environment 0ms, prepare 24ms)
+
+
+=== spawn ===
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast
+
+ ❯ extensions/subagent/__tests__/tools.test.ts (31 tests | 1 failed) 26ms
+   ✓ registers the fixed public subagent tool surface 1ms
+   ✓ publishes explicit object roots for provider tool schemas 0ms
+   ✓ removes resumable and recursive cleanup semantics from the public contract 0ms
+   ✓ uses strict read view variants with lightweight recent defaults 1ms
+   ✓ preserves read defaults, limits and cursors through preparation and execution 5ms
+   ✓ rejects invalid read arguments before manager access 9ms
+   ✓ forwards turns continuation separately from the incremental cursor 0ms
+   ✓ serializes recent activity exactly once without expanding the byte budget 0ms
+   ✓ reports turns summary metrics without duplicating turn activity in renderer details 0ms
+   ✓ returns one bounded detail page without duplicating it in renderer details 0ms
+   ✓ carries lightweight summary metrics through subagent_wait 0ms
+   ✓ returns capacity and terminal cleanup boundaries in tool payloads 0ms
+   ✓ defaults subagent_prompt execution to follow_up 0ms
+   ✓ encodes reuse, delivery, observation, wait, and close boundaries 0ms
+   ✓ spawn schema excludes caller-selected names 0ms
+   ✓ rejects invalid model reference "deepseek-flash" before calling the manager 0ms
+   ✓ rejects invalid model reference "" before calling the manager 0ms
+   ✓ rejects invalid model reference "/deepseek-flash" before calling the manager 0ms
+   ✓ rejects invalid model reference "deepseek/" before calling the manager 0ms
+   ✓ rejects invalid model reference " deepseek/deepseek-flash" before calling the manager 0ms
+   ✓ rejects invalid model reference "deepseek/deepseek-flash " before calling the manager 0ms
+   ✓ rejects invalid model reference "deepseek/deepseek-flash\n" before calling the manager 0ms
+   ✓ rejects an unknown model unknown/deepseek-flash without spawning 0ms
+   ✓ rejects an unknown model deepseek/unknown without spawning 0ms
+   ✓ rejects missing inherited model before querying the registry or spawning 0ms
+   ✓ reports the required model format before Pi schema validation 0ms
+   ✓ resolves 'deepseek/deepseek-flash' once and forwards the selected model without resolving credentials 0ms
+   ✓ resolves 'openrouter/org/model' once and forwards the selected model without resolving credentials 0ms
+   ✓ resolves undefined once and forwards the selected model without resolving credentials 0ms
+   ✓ read displays the persisted name without changing its public payload 0ms
+   × resolves Fast once before spawn and preserves explicit false and true 4ms
+     → Expected values to be strictly equal:
++ actual - expected
+
++ undefined
+- true
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/subagent/__tests__/tools.test.ts > resolves Fast once before spawn and preserves explicit false and true
+AssertionError: Expected values to be strictly equal:
++ actual - expected
+
++ undefined
+- true
+
+
+simple
+
+ ❯ extensions/subagent/__tests__/tools.test.ts:744:12
+    742|   for (const value of [false, true, undefined, undefined]) {
+    743|     await tool.execute("call", { task: "work", ...(value === undefined…
+    744|     assert.equal(spawn.mock.calls.at(-1)![1].fast, value ?? parentFast…
+       |            ^
+    745|     parentFast = !parentFast;
+    746|   }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 30 passed (31)
+   Start at  23:09:16
+   Duration  419ms (transform 45ms, setup 0ms, collect 247ms, tests 26ms, environment 0ms, prepare 28ms)
+
+
+=== event ===
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast
+
+ ❯ extensions/openai-fast-mode/__tests__/child-session.test.ts (3 tests | 1 failed) 16ms
+   ✓ persists child initial true and false before any assistant without shared writes 6ms
+   ✓ restores the last child command across reload and resume even without launch environment 2ms
+   × reports the actual switch over the event contract even on an unmatched model 8ms
+     → expected false to be true // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/openai-fast-mode/__tests__/child-session.test.ts > reports the actual switch over the event contract even on an unmatched model
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ extensions/openai-fast-mode/__tests__/child-session.test.ts:95:60
+     93|     await rootSession.command("on");
+     94|     expect(rootSession.request()).toBeUndefined();
+     95|     expect(await readFastState(rootSession.events as any)).toBe(true);
+       |                                                            ^
+     96|     await rootSession.command("off");
+     97|     expect(await readFastState(rootSession.events as any)).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed (3)
+   Start at  23:10:08
+   Duration  632ms (transform 37ms, setup 0ms, collect 400ms, tests 16ms, environment 0ms, prepare 32ms)
+
+
+=== launch ===
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/subagent-profiles-fast
+
+ ❯ extensions/subagent/__tests__/index.test.ts (14 tests | 2 failed) 90ms
+   ✓ installs the quit editor only for a root TUI session 7ms
+   ✓ does not install the quit editor in rpc mode 4ms
+   ✓ does not install the quit editor in json mode 4ms
+   ✓ does not install the quit editor in print mode 4ms
+   ✓ wires the public tools to Pi session lifecycle events 7ms
+   ✓ releases the previous namespace controller when the root switches sessions 6ms
+   ✓ shutdown releases ownership acquired by a tool after a read-only startup 10ms
+   ✓ session switch releases ownership acquired by a tool after a read-only startup 14ms
+   ✓ production startup rolls back new control ownership after a corrupt root fails validation 6ms
+   ✓ production startup rolls back new control ownership after a old-schema root fails validation 5ms
+   × production entry forwards Fast=true and effective configuration without parent pane or credentials 8ms
+     → Expected values to be strictly equal:
++ actual - expected
+
++ undefined
+- true
+
+   × production entry forwards Fast=false and effective configuration without parent pane or credentials 5ms
+     → Expected values to be strictly equal:
++ actual - expected
+
++ undefined
+- false
+
+   ✓ fails fast when PI_SUBAGENT_MAX_ACTIVE is not a positive integer 0ms
+   ✓ keeps managed-child lifecycle hooks without registering orchestration tools 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/subagent/__tests__/index.test.ts > production entry forwards Fast=true and effective configuration without parent pane or credentials
+AssertionError: Expected values to be strictly equal:
++ actual - expected
+
++ undefined
+- true
+
+
+simple
+
+ ❯ extensions/subagent/__tests__/index.test.ts:250:12
+    248|     await handlers.get("session_start")!({}, ctx);
+    249|     await tools.get("subagent_spawn").execute("call", { task: "Test" }…
+    250|     assert.equal(JSON.parse(environment!.PI_SUBAGENT_LAUNCH).fast, fas…
+       |            ^
+    251|     assert.equal(environment?.PI_CODING_AGENT_DIR, join(root, "agent")…
+    252|     assert.equal(environment?.PI_SUBAGENT_TMUX_PATH, join(process.cwd(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  extensions/subagent/__tests__/index.test.ts > production entry forwards Fast=false and effective configuration without parent pane or credentials
+AssertionError: Expected values to be strictly equal:
++ actual - expected
+
++ undefined
+- false
+
+
+simple
+
+ ❯ extensions/subagent/__tests__/index.test.ts:250:12
+    248|     await handlers.get("session_start")!({}, ctx);
+    249|     await tools.get("subagent_spawn").execute("call", { task: "Test" }…
+    250|     assert.equal(JSON.parse(environment!.PI_SUBAGENT_LAUNCH).fast, fas…
+       |            ^
+    251|     assert.equal(environment?.PI_CODING_AGENT_DIR, join(root, "agent")…
+    252|     assert.equal(environment?.PI_SUBAGENT_TMUX_PATH, join(process.cwd(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 12 passed (14)
+   Start at  23:10:53
+   Duration  627ms (transform 96ms, setup 0ms, collect 389ms, tests 90ms, environment 0ms, prepare 37ms)
+

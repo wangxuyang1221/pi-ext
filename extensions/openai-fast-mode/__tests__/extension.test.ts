@@ -12,6 +12,7 @@ import {
 import { STATUS_KEY } from "../src/types.js";
 
 type FakePi = {
+  events: { on: ReturnType<typeof vi.fn> };
   registerFlag: ReturnType<typeof vi.fn>;
   registerCommand: ReturnType<typeof vi.fn>;
   getFlag: ReturnType<typeof vi.fn>;
@@ -46,6 +47,7 @@ function createFakePi(fastFlag = false): {
   const commands = new Map<string, RegisteredCommand>();
 
   const pi: FakePi = {
+    events: { on: vi.fn() },
     registerFlag: vi.fn(),
     registerCommand: vi.fn((name: string, options: RegisteredCommand) => {
       commands.set(name, options);

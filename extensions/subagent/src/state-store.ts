@@ -42,6 +42,7 @@ export interface LaunchConfiguration {
 }
 
 export interface LaunchMetadata {
+  fast?: boolean;
   configuration?: LaunchConfiguration;
   cwd: string;
   sessionDir: string;
@@ -520,6 +521,7 @@ async function readStateFile(path: string, signal?: AbortSignal): Promise<string
 function validateLaunch(launch: unknown): void {
   if (!isRecord(launch) || typeof launch.processInstanceId !== "string" || typeof launch.cwd !== "string"
     || typeof launch.sessionDir !== "string" || typeof launch.displayName !== "string") throw new Error("Invalid subagent state: malformed launch metadata");
+  if (launch.fast !== undefined && typeof launch.fast !== "boolean") throw new Error("Invalid subagent state: malformed Fast setting");
   assertSessionId(launch.processInstanceId);
   if (launch.configuration !== undefined) validateConfiguration(launch.configuration);
 }
