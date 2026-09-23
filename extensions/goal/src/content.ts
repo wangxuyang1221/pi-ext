@@ -77,8 +77,8 @@ export class GoalContent {
   /** Recognize native paste filenames without opening any candidate file. */
   candidates(objective: string): string[] {
     if (Buffer.byteLength(objective) > MAX_TEXT_BYTES) throw new Error("Goal objective exceeds the 1 MiB text limit.");
-    const prefix = (resolve(this.temporaryRoot) + "/").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const pattern = new RegExp(`(?<![^\\s\\"'\\\x60(])${prefix}pi-clipboard-[a-f0-9-]+\\.(?:png|jpg|jpeg|gif|webp)(?=$|[\\s\\"'\\\x60),])`, "g");
+    const prefix = join(resolve(this.temporaryRoot), "pi-clipboard-").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = new RegExp(`(?<![^\\s\\"'\\\x60(])${prefix}[a-f0-9-]+\\.(?:png|jpg|jpeg|gif|webp)(?=$|[\\s\\"'\\\x60),])`, "g");
     return [...new Set(objective.match(pattern) ?? [])].filter(path => IMAGE_NAME.test(basename(path)));
   }
   async prepare(objective: string, selected: string[], previous?: PreparedGoal): Promise<PreparedGoal> {

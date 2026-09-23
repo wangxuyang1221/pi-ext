@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import type { GoalRecord, Goal } from "./storage.js";
+import { GoalCommitPublishedError, type GoalRecord, type Goal } from "./storage.js";
 import { GoalLoopDetector, LOOP_WINDOW } from "./loop.js";
 import { goalCapability } from "./capability.js";
 import { isAccountUsageLimit } from "./quota.js";
@@ -19,6 +19,7 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
   let suspended = false;
   let editedPending = false;
   let userDelivered = false;
+  let externalWorkDelivered = false;
   let runGeneration = 0;
   let pending: Ticket | undefined;
   let pendingBudget: Ticket | undefined;
@@ -127,7 +128,10 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
       if (parts.some(part => part.type === "toolCall" || (part.type === "text" ? part.text.trim() : part.thinking.trim()))) activity = true;
       emptyFinal = event.message.stopReason === "stop" && !parts.some(part => part.type === "toolCall" || (part.type === "text" && part.text.trim()));
     }
-    if (event.message.role === "user" || (event.message.role === "custom" && ![GOAL_CONTEXT, GOAL_BUDGET_CONTEXT, GOAL_LOOP_CONTEXT].includes(event.message.customType))) { resetLoop(); resetEmpty(); }
+    if (event.message.role === "user" || (event.message.role === "custom" && ![GOAL_CONTEXT, GOAL_BUDGET_CONTEXT, GOAL_LOOP_CONTEXT].includes(event.message.customType))) {
+      externalWorkDelivered = true;
+      resetLoop(); resetEmpty();
+    }
     if (event.message.role === "assistant") completionBatch = event.message.content.some(part => part.type === "toolCall" && part.name === "update_goal" && part.arguments.status === "complete");
     if (valid(bound, ctx) && event.message.role === "assistant" && event.message.stopReason === "stop" && !event.message.content.some(part => part.type === "toolCall")) completedResponse = true;
   });
@@ -242,16 +246,20 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
     const capability = goalCapability(ctx);
     if (access.snapshot()?.goal && !capability.supported) ctx.ui.notify(`Automatic goal execution ${capability.reason}. Your saved goal is unchanged.`, "warning");
   });
-  pi.on("session_shutdown", () => { resetLoop(); resetEmpty(); userDelivered = false; live = false; runGeneration++; pending = undefined; pendingBudget = undefined; edits.clear(); restartRequested = false; internalCancellation = false; });
+  pi.on("session_shutdown", () => { resetLoop(); resetEmpty(); userDelivered = false; externalWorkDelivered = false; live = false; runGeneration++; pending = undefined; pendingBudget = undefined; edits.clear(); restartRequested = false; internalCancellation = false; });
   pi.on("context", async (event, ctx) => {
     // Follow-up inputs can begin another complete goal turn inside one agent run.
     const finishedGoal = completedResponse && valid(bound, ctx);
     if (completedResponse) await finishRun(ctx);
     const expected = active(ctx);
     if (expected) {
+      const checkpointGeneration = runGeneration;
       try { await access.checkpoint?.(expected, ctx); }
       catch (error) {
-        if (active(ctx)?.revision === expected.revision && active(ctx)?.recordId === expected.recordId) {
+        const current = access.snapshot();
+        if (live && runGeneration === checkpointGeneration && current?.ownerSessionId === ctx.sessionManager.getSessionId()
+          && current.recordId === expected.recordId
+          && (current.revision === expected.revision || (error instanceof GoalCommitPublishedError && error.matches(current)))) {
           suspended = true; runGeneration++; restartRequested = false; refresh(ctx);
         }
         ctx.ui.notify(`Goal storage error: ${String(error instanceof Error ? error.message : error).replace(/[\x00-\x1f\x7f]/g, " ").slice(0, 400)}`, "error");
@@ -275,12 +283,13 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
     // Delivery retires ticket authority, not persisted history. Keep the same
     // prefix on retries and native checkpoint replay, including mixed user batches.
     const messages = event.messages;
-    const protectUser = userDelivered;
+    const protectExternalWork = externalWorkDelivered;
+    externalWorkDelivered = false;
     userDelivered = false;
     if (loopWarning && valid(loopWarning, ctx) && messages.some(message =>
       message.role === "custom" && message.customType === GOAL_LOOP_CONTEXT && (message.details as Ticket)?.scheduleId === loopWarning!.scheduleId,
     )) warningDelivered = true;
-    if (staleRequest && !protectUser) {
+    if (staleRequest && !protectExternalWork) {
       // The edited turn may have finished inside this same low-level run.
       // Its stale queued predecessor must not consume the new goal's continuation.
       if (finishedGoal && active(ctx)) { restartRequested = true; restartAutomatic = true; }

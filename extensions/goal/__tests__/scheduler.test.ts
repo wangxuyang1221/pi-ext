@@ -6,12 +6,13 @@ import type { Model } from "@earendil-works/pi-ai";
 import { createSessionCoordinator } from "../../codex-compact/src/session-coordinator.js";
 import { resolveFixtureHashes } from "../../codex-compact/__tests__/fixtures/compaction-metadata.js";
 import { fullInputForBranch, NATIVE_COMPACTION_KIND } from "../../codex-compact/src/native-compaction.js";
-import type { GoalRecord } from "../src/storage.js";
+import { GoalCommitPublishedError, type GoalRecord } from "../src/storage.js";
 function harness(afterStop?: () => Promise<void>) {
   let record: GoalRecord = { schemaVersion: 1, recordId: "r", ownerSessionId: "s", cwd: "/test", sessionFile: "/test/s", revision: 1, generation: 1, continuationDeferral: false, recoveredFrom: null, goal: { goalId: "g", generation: 1, objective: "Objective", status: "active", tokensUsed: 0, elapsedSeconds: 0, createdAt: "2026-01-01", updatedAt: "2026-01-01" } };
   const handlers = new Map<string, Function[]>();
   const sendMessage = vi.fn();
   let idle = false;
+  let checkpoint: ((expected: GoalRecord) => Promise<unknown>) | undefined;
   const ctx = { mode: "tui", model: { provider: "openai-codex" }, isIdle: () => idle, sessionManager: { getSessionId: () => "s", getSessionFile: () => "/test/s" }, abort: vi.fn(), ui: { notify: vi.fn(), setStatus: vi.fn() } } as unknown as ExtensionContext;
   const emit = async (type: string, event: any = {}) => {
     if (type === "agent_settled") idle = true;
@@ -20,9 +21,10 @@ function harness(afterStop?: () => Promise<void>) {
   };
   const scheduler = registerGoalScheduler({ on: (type: string, fn: Function) => handlers.set(type, [...handlers.get(type) ?? [], fn]), sendMessage } as unknown as ExtensionAPI, {
     snapshot: () => record,
+    checkpoint: expected => checkpoint?.(expected) ?? Promise.resolve(),
     stop: async (status, expected) => { expect(expected.goal!.goalId).toBe(record.goal!.goalId); record = { ...record, goal: { ...record.goal!, status } }; await afterStop?.(); },
   });
-  return { scheduler, ctx, emit, sendMessage, get record() { return record; } };
+  return { scheduler, ctx, emit, sendMessage, setCheckpoint(value: (expected: GoalRecord) => Promise<unknown>) { checkpoint = value; }, get record() { return record; } };
 }
 it("does not enqueue automatic work ahead of pending user messages", async () => {
   const h = harness(); await h.emit("session_start");
@@ -619,4 +621,63 @@ it("keeps one pending continuation and aborts an invalid queued request without 
   expect(result.messages).toEqual([{ role: "assistant", content: [] }, queued]);
   await h.emit("context", { messages: [{ role: "user", content: "Unrelated" }] });
   expect(h.ctx.abort).toHaveBeenCalledTimes(1);
+});
+
+it.each(["before", "after"])("keeps fresh external custom work %s a stale goal ticket", async order => {
+  const h = harness();
+  await h.emit("session_start");
+  h.scheduler.start(h.ctx);
+  const stale = { role: "custom", ...h.sendMessage.mock.calls[0]![0] };
+  h.scheduler.invalidate();
+  h.record.goal!.status = "paused";
+  const external = { role: "custom", customType: "other-extension", content: "Handle this request" };
+  await h.emit("message_end", { message: external });
+  const messages = order === "before" ? [external, stale] : [stale, external, stale];
+  expect((await h.emit("context", { messages })).messages).toEqual(messages);
+  expect(h.ctx.abort).not.toHaveBeenCalled();
+});
+
+it("uses external work protection once and cancels the next stale-only batch", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  h.scheduler.start(h.ctx);
+  const first = { role: "custom", ...h.sendMessage.mock.calls[0]![0] };
+  await h.emit("message_end", { message: { role: "custom", customType: "other-extension", content: "" } });
+  h.scheduler.invalidate();
+  h.record.goal!.status = "paused";
+  await h.emit("context", { messages: [{ role: "custom", customType: "other-extension", content: "" }, first] });
+  expect(h.ctx.abort).not.toHaveBeenCalled();
+  h.record.goal!.status = "active";
+  h.scheduler.resume(h.ctx, true);
+  const second = { role: "custom", ...h.sendMessage.mock.calls.at(-1)![0] };
+  h.scheduler.invalidate();
+  h.record.goal!.status = "paused";
+  await h.emit("context", { messages: [first, second] });
+  expect(h.ctx.abort).toHaveBeenCalledTimes(1);
+});
+
+it("does not let a goal warning or input without delivery protect a stale ticket", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  h.scheduler.start(h.ctx);
+  const stale = { role: "custom", ...h.sendMessage.mock.calls[0]![0] };
+  await h.emit("message_end", { message: { role: "custom", customType: "pi-ext-goal-loop-warning", content: "Warning" } });
+  await h.emit("input", { source: "interactive", text: "Typing" });
+  h.scheduler.invalidate();
+  h.record.goal!.status = "paused";
+  await h.emit("context", { messages: [stale] });
+  expect(h.ctx.abort).toHaveBeenCalledTimes(1);
+});
+
+it("suspends a published scheduler checkpoint with an advanced revision", async () => {
+  const h = harness();
+  await h.emit("session_start");
+  h.setCheckpoint(async () => {
+    h.record.revision++;
+    throw new GoalCommitPublishedError(h.record, new Error("Injected directory sync failure"));
+  });
+  await h.emit("context", { messages: [{ role: "user", content: "Work" }] });
+  expect(h.ctx.ui.notify).toHaveBeenCalledWith(expect.stringContaining("directory durability confirmation failed"), "error");
+  h.scheduler.start(h.ctx);
+  expect(h.sendMessage).not.toHaveBeenCalled();
 });

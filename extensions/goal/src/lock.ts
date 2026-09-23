@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, open, readFile, readdir, rmdir, unlink } from "node:fs/promises";
+import { lstat, mkdir, open, readFile, readdir, rmdir, unlink } from "node:fs/promises";
 import { hostname } from "node:os";
 import { join } from "node:path";
 
@@ -41,10 +41,59 @@ export class WriterLock {
       catch { throw new Error("Goal writer changed during recovery. Try again."); }
     }
     const ownerFile = join(directory, `${randomUUID()}.json`);
-    const handle = await open(ownerFile, "wx", 0o600);
-    try { await handle.writeFile(JSON.stringify({ pid: process.pid, host: hostname(), instanceId, owner })); await handle.sync(); }
-    finally { await handle.close(); }
-    return new WriterLock(directory, ownerFile);
+    let directoryIdentity: { dev: number; ino: number } | undefined;
+    let ownerIdentity: { dev: number; ino: number } | undefined;
+    let handle: Awaited<ReturnType<typeof open>> | undefined;
+    let primary: unknown;
+    const closeErrors: unknown[] = [];
+    const same = (current: { dev: number; ino: number }, original: { dev: number; ino: number }) => current.dev === original.dev && current.ino === original.ino;
+    try {
+      const info = await lstat(directory);
+      if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("Goal writer lock directory identity is uncertain.");
+      directoryIdentity = { dev: info.dev, ino: info.ino };
+      handle = await open(ownerFile, "wx", 0o600);
+      const file = await handle.stat();
+      if (!file.isFile()) throw new Error("Goal writer owner identity is uncertain.");
+      ownerIdentity = { dev: file.dev, ino: file.ino };
+      await handle.writeFile(JSON.stringify({ pid: process.pid, host: hostname(), instanceId, owner }));
+      await handle.sync();
+    } catch (error) { primary = error; }
+    if (handle) {
+      try { await handle.close(); }
+      catch (error) { primary ??= error; if (primary !== error) closeErrors.push(error); }
+    }
+    if (primary === undefined) return new WriterLock(directory, ownerFile);
+    const cleanupErrors: unknown[] = [...closeErrors];
+    if (!directoryIdentity) cleanupErrors.push(new Error("Goal writer lock directory identity could not be verified."));
+    else {
+      const verifyDirectory = async () => {
+        try {
+          const info = await lstat(directory);
+          if (!info.isDirectory() || info.isSymbolicLink() || !same(info, directoryIdentity)) throw new Error("Goal writer lock directory changed during cleanup.");
+          return true;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+          cleanupErrors.push(error);
+          return false;
+        }
+      };
+      if (await verifyDirectory()) {
+        if (handle && !ownerIdentity) cleanupErrors.push(new Error("Goal writer owner identity could not be verified."));
+        if (ownerIdentity) {
+          try {
+            const info = await lstat(ownerFile);
+            if (!info.isFile() || info.isSymbolicLink() || !same(info, ownerIdentity)) cleanupErrors.push(new Error("Goal writer owner changed during cleanup."));
+            else await unlink(ownerFile);
+          } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") cleanupErrors.push(error); }
+        }
+        if (await verifyDirectory()) {
+          try { await rmdir(directory); }
+          catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") cleanupErrors.push(error); }
+        }
+      }
+    }
+    if (cleanupErrors.length) throw new AggregateError([primary, ...cleanupErrors], "Goal writer initialization failed and cleanup was incomplete.", { cause: primary });
+    throw primary;
   }
   async assertOwned(): Promise<void> {
     if (this.closed) throw new Error("Goal writer is closed.");

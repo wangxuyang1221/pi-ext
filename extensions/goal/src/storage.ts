@@ -36,6 +36,20 @@ export interface GoalRecord extends Owner {
   recoveredFrom: string | null;
 }
 
+export class GoalCommitPublishedError extends Error {
+  private readonly identity: { recordId: string; ownerSessionId: string; revision: number; generation: number; goalId: string | undefined; activation: number | undefined };
+  constructor(record: GoalRecord, cause: unknown) {
+    super("Goal record was published, but directory durability confirmation failed. Restore storage and use /goal resume.", { cause });
+    this.name = "GoalCommitPublishedError";
+    this.identity = { recordId: record.recordId, ownerSessionId: record.ownerSessionId, revision: record.revision, generation: record.generation, goalId: record.goal?.goalId, activation: record.goal?.activation };
+  }
+  matches(record: GoalRecord | undefined): boolean {
+    return !!record && this.identity.recordId === record.recordId && this.identity.ownerSessionId === record.ownerSessionId
+      && this.identity.revision === record.revision && this.identity.generation === record.generation
+      && this.identity.goalId === record.goal?.goalId && this.identity.activation === record.goal?.activation;
+  }
+}
+
 function validate(record: GoalRecord, recordId: string): void {
   const integer = (value: number) => Number.isSafeInteger(value) && value >= 0;
   const text = (value: unknown): value is string => typeof value === "string" && value.length > 0;
@@ -136,6 +150,7 @@ export class GoalStore {
   async commit(record: GoalRecord, assertCurrent?: () => void): Promise<void> {
     const temporary = join(this.root, `${record.recordId}.${randomUUID()}.tmp`);
     validate(record, record.recordId);
+    let published = false;
     try {
       const file = await open(temporary, "wx", 0o600);
       try { await file.writeFile(JSON.stringify(record)); await file.sync(); }
@@ -144,13 +159,15 @@ export class GoalStore {
       // Recheck after async I/O and immediately before the commit starts.
       assertCurrent?.();
       await rename(temporary, join(this.root, `${record.recordId}.json`));
+      published = true;
       // Windows does not expose directory fsync through this API. On POSIX,
       // sync the directory entry too; a post-rename error is an uncertain commit.
       if (process.platform !== "win32") {
         const directory = await open(this.root, "r");
         try { await directory.sync(); } finally { await directory.close(); }
       }
-    } finally { await unlink(temporary).catch(() => {}); }
+    } catch (error) { throw published ? new GoalCommitPublishedError(record, error) : error; }
+    finally { await unlink(temporary).catch(() => {}); }
   }
 }
 
@@ -194,14 +211,21 @@ export class GoalLease {
       const next = change(timed);
       // Do not display seconds beyond a stop checkpoint while its fsync is pending.
       this.displayAt = now;
-      try {
-        if (persist || seconds > 0) {
-          next.revision = record.revision + 1;
-          await this.store.commit(next, this.assertCurrent);
-        }
+      const adopt = () => {
         const stillTiming = next.goal?.status === "active" || (next.goal?.status === "budget_limited" && this.budgetInFlight);
         this.tick = timing && stillTiming && record.goal?.goalId === next.goal?.goalId ? this.tick + seconds * 1000 : now;
         this.current = next;
+      };
+      try {
+        if (persist || seconds > 0) {
+          next.revision = record.revision + 1;
+          try { await this.store.commit(next, this.assertCurrent); }
+          catch (error) {
+            if (error instanceof GoalCommitPublishedError && error.matches(next)) adopt();
+            throw error;
+          }
+        }
+        adopt();
         return this.snapshot;
       } finally { this.displayAt = undefined; this.notifyDisplay(); }
     });

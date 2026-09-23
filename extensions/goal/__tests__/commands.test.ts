@@ -8,12 +8,26 @@ import goalExtension, { registerGoal } from "../src/index.js";
 import { GoalStore } from "../src/storage.js";
 import { GoalContent } from "../src/content.js";
 
+let failingDirectory: string | undefined;
+vi.mock("node:fs/promises", async importOriginal => {
+  const fs = await importOriginal<typeof import("node:fs/promises")>();
+  return { ...fs, open: async (...args: Parameters<typeof fs.open>) => {
+    const handle = await fs.open(...args);
+    if (String(args[0]) !== failingDirectory || args[1] !== "r") return handle;
+    return new Proxy(handle, { get(target, property) {
+      if (property === "sync") return async () => { throw new Error("Post-rename sync failure"); };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } });
+  } };
+});
+
 const cleanups: Array<() => Promise<void>> = [];
-afterEach(async () => { for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
-async function harness(config?: unknown) {
+afterEach(async () => { failingDirectory = undefined; for (const cleanup of cleanups.splice(0).reverse()) await cleanup(); });
+async function harness(config?: unknown, now?: () => number) {
   const root = await mkdtemp(resolve(".goal-command-test-"));
   cleanups.push(() => rm(root, { recursive: true, force: true }));
-  const disk = new GoalStore(resolve(root, "goals"));
+  const disk = new GoalStore(resolve(root, "goals"), now);
   const manager = SessionManager.create(process.cwd(), resolve(root, "sessions"));
   const commands = new Map<string, { handler: (args: string, ctx: ExtensionCommandContext) => Promise<void> }>();
   const events = new Map<string, (event: unknown, ctx: ExtensionCommandContext) => Promise<void>>();
@@ -363,15 +377,40 @@ it("retains content after an uncertain post-rename failure instead of deleting c
   const h = await harness();
   await h.run("Previous");
   vi.mocked(h.pi.sendMessage).mockClear();
-  const original = h.disk.commit.bind(h.disk);
-  vi.spyOn(h.disk, "commit").mockImplementationOnce(async (...args) => { await original(...args); throw new Error("Post-rename sync failure"); });
+  failingDirectory = h.disk.root;
   const text = "Uncertain but committed ".repeat(250);
   await h.run(text);
+  failingDirectory = undefined;
   const saved = (await h.disk.records())[0]!;
   expect(saved.goal!.content).toBeDefined();
   expect(await new GoalContent(resolve(h.disk.root, "content"), h.root).expand(saved.goal!)).toBe(text.trim());
-  expect(h.notify.mock.calls.at(-1)?.[0]).toContain("Post-rename sync failure");
+  expect(h.notify.mock.calls.at(-1)?.[0]).toContain("directory durability confirmation failed");
   expect(h.pi.sendMessage).not.toHaveBeenCalled();
+});
+
+it("keeps published pause and resume failures suspended until a successful explicit resume", async () => {
+  const h = await harness();
+  await h.run("Persist the stop state");
+  vi.mocked(h.pi.sendMessage).mockClear();
+  failingDirectory = h.disk.root;
+  await h.run("pause");
+  failingDirectory = undefined;
+  expect((await h.disk.records())[0]!.goal?.status).toBe("paused");
+  expect(h.notify.mock.calls.at(-1)?.[0]).toContain("directory durability confirmation failed");
+  await h.events.get("input")!({ source: "interactive", text: "Unrelated work" }, h.ctx);
+  await h.events.get("context")!({ messages: [] }, h.ctx);
+  await h.events.get("agent_end")!({ messages: [] }, h.ctx);
+  expect(h.pi.sendMessage).not.toHaveBeenCalled();
+  failingDirectory = h.disk.root;
+  await h.run("resume");
+  failingDirectory = undefined;
+  expect((await h.disk.records())[0]!.goal?.status).toBe("active");
+  expect(h.notify.mock.calls.at(-1)?.[0]).toContain("directory durability confirmation failed");
+  await h.events.get("context")!({ messages: [] }, h.ctx);
+  expect(h.pi.sendMessage).not.toHaveBeenCalled();
+  await h.run("resume");
+  expect(h.notify.mock.calls.at(-1)?.[0]).toBe("Goal active.");
+  expect((await h.disk.records())[0]!.goal?.status).toBe("active");
 });
 
 it("does not install an independent goal loop or tools inside a managed child", () => {
@@ -786,6 +825,73 @@ it("keeps deferral on write failure without swallowing user input", async () => 
   expect(await h.disk.read(inherited.recordId)).toEqual(inherited);
   expect(h.notify.mock.calls.at(-1)?.[0]).toContain("Gate write failure");
   h.disk.beforeRename = undefined;
+});
+
+it("keeps input and suspends after a published deferral release fails", async () => {
+  const h = await harness();
+  const source = await h.disk.openSession({ ownerSessionId: "source", cwd: process.cwd(), sessionFile: resolve(h.root, "source.jsonl") });
+  const saved = await source.replace("Source", source.snapshot);
+  await source.close();
+  const target = await h.disk.openSession({ ownerSessionId: h.manager.getSessionId(), cwd: process.cwd(), sessionFile: h.manager.getSessionFile()! });
+  const inherited = await target.inherit(saved);
+  await target.close();
+  await h.run("");
+  vi.mocked(h.pi.sendMessage).mockClear();
+  failingDirectory = h.disk.root;
+  expect(await h.events.get("input")!({ source: "interactive", text: "User input" }, h.ctx)).toBeUndefined();
+  failingDirectory = undefined;
+  const published = (await h.disk.read(inherited.recordId))!;
+  expect(published.continuationDeferral).toBe(false);
+  expect(published.revision).toBe(inherited.revision + 1);
+  expect(h.notify.mock.calls.at(-1)?.[0]).toContain("directory durability confirmation failed");
+  await h.events.get("agent_end")!({ messages: [] }, h.ctx);
+  expect(h.pi.sendMessage).not.toHaveBeenCalled();
+});
+
+it("suspends get_goal after its published checkpoint fails", async () => {
+  let now = 0;
+  const h = await harness(undefined, () => now);
+  await h.run("Read a timed goal");
+  vi.mocked(h.pi.sendMessage).mockClear();
+  const tools = new Map(vi.mocked(h.pi.registerTool).mock.calls.map(([tool]) => [tool.name, tool]));
+  now = 1_000;
+  failingDirectory = h.disk.root;
+  await expect(tools.get("get_goal")!.execute("id", {}, undefined, undefined, h.ctx)).rejects.toThrow("directory durability confirmation failed");
+  failingDirectory = undefined;
+  expect((await h.disk.records())[0]!.goal?.elapsedSeconds).toBe(1);
+  await h.events.get("agent_end")!({ messages: [] }, h.ctx);
+  expect(h.pi.sendMessage).not.toHaveBeenCalled();
+});
+
+it("stops goal-fork after a published source checkpoint failure", async () => {
+  let now = 0;
+  const h = await harness(undefined, () => now);
+  await h.run("Fork a timed goal");
+  h.ctx.waitForIdle = vi.fn(async () => {});
+  h.ctx.fork = vi.fn();
+  vi.mocked(h.ctx.ui.select).mockImplementation(async (_title, choices) => choices[1]);
+  now = 1_000;
+  failingDirectory = h.disk.root;
+  await h.commands.get("goal-fork")!.handler("", h.ctx);
+  failingDirectory = undefined;
+  expect(h.ctx.fork).not.toHaveBeenCalled();
+  expect((await h.disk.records())[0]!.goal?.elapsedSeconds).toBe(1);
+  expect(h.notify.mock.calls.at(-1)?.[0]).toContain("directory durability confirmation failed");
+});
+
+it("releases the writer after a published shutdown checkpoint failure", async () => {
+  let now = 0;
+  const h = await harness(undefined, () => now);
+  await h.run("Close a timed goal");
+  now = 1_000;
+  failingDirectory = h.disk.root;
+  await h.events.get("session_shutdown")!({}, h.ctx);
+  failingDirectory = undefined;
+  expect(h.notify.mock.calls.at(-1)?.[0]).toContain("directory durability confirmation failed");
+  expect((await h.disk.records())[0]!.goal?.elapsedSeconds).toBe(1);
+  const reopened = await h.disk.openSession({ ownerSessionId: h.manager.getSessionId(), cwd: process.cwd(), sessionFile: h.manager.getSessionFile()! });
+  expect(reopened.snapshot.goal?.elapsedSeconds).toBe(1);
+  await reopened.close();
 });
 
 it("does not report write failures as success and retries a failed history mirror", async () => {

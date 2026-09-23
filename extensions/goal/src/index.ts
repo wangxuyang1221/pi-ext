@@ -7,7 +7,7 @@ import { goalCapability } from "./capability.js";
 import { resolveGoalBudget } from "./budget.js";
 import { registerGoalAccounting } from "./accounting.js";
 import { registerChildAccounting } from "./children.js";
-import { GoalStore, type GoalLease, type GoalRecord, type Owner } from "./storage.js";
+import { GoalCommitPublishedError, GoalStore, type GoalLease, type GoalRecord, type Owner } from "./storage.js";
 import { registerGoalTools } from "./tools.js";
 import { GOAL_LOOP_PAUSED, registerGoalScheduler } from "./scheduler.js";
 import { GoalPresentation, GOAL_DISPLAY_EVENT, GOAL_DISPLAY_REQUEST, formatGoalSeconds } from "./presentation.js";
@@ -109,11 +109,15 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
   let mirrorDirty = false;
   const report = (ctx: ExtensionContext, error: unknown) => ctx.ui.notify(`Goal storage error: ${safe(error instanceof Error ? error.message : String(error))}`, "error");
   const commit = async <T>(ctx: ExtensionContext, expected: GoalRecord, work: () => Promise<T>): Promise<T> => {
+    const operationLease = lease;
+    const operationEpoch = epoch;
     try { return await work(); }
     catch (error) {
       // A stale operation must not suspend a newer goal or session.
       const current = lease?.snapshot;
-      if (live && ctx.sessionManager.getSessionId() === sessionId && current?.recordId === expected.recordId && current.revision === expected.revision) scheduler.suspend(ctx);
+      if (live && epoch === operationEpoch && lease === operationLease && ctx.sessionManager.getSessionId() === sessionId
+        && current?.ownerSessionId === sessionId && current.recordId === expected.recordId
+        && (current.revision === expected.revision || (error instanceof GoalCommitPublishedError && error.matches(current)))) scheduler.suspend(ctx);
       throw error;
     }
   };
@@ -270,11 +274,12 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
     assertCurrent(ctx);
     const started = epoch;
     try {
-      await lease.releaseDeferral(lease.snapshot);
+      const expected = lease.snapshot;
+      await commit(ctx, expected, () => lease!.releaseDeferral(expected));
       if (started === epoch) mirror(ctx);
     } catch (error) {
       if (started === epoch) report(ctx, error);
-      // Do not consume the user's input. A failed write keeps the saved gate.
+      // Keep the user's input; a published gate release remains suspended.
     }
   });
   const command = (handler: (args: string, ctx: ExtensionCommandContext, started: number) => Promise<void>) => async (args: string, ctx: ExtensionCommandContext) => {
@@ -316,7 +321,8 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
       }
       await ctx.waitForIdle();
       if (started !== epoch || !lease) return;
-      const snapshot = await lease.checkpoint(lease.snapshot);
+      const expected = lease.snapshot;
+      const snapshot = await commit(ctx, expected, () => lease!.checkpoint(expected));
       if (started !== epoch) return;
       mirror(ctx);
       if (position === "at") entryId = ctx.sessionManager.getLeafId() ?? undefined;
@@ -597,7 +603,9 @@ export function registerGoal(pi: ExtensionAPI, store: GoalStore, options: { conf
       if (!goalCapability(ctx).supported) return (await store.records()).find(record => record.ownerSessionId === ctx.sessionManager.getSessionId());
       await bind(ctx, false);
       await children.checkpoint(ctx);
-      return lease ? lease.checkpoint(lease.snapshot) : undefined;
+      if (!lease) return undefined;
+      const expected = lease.snapshot;
+      return commit(ctx, expected, () => lease!.checkpoint(expected));
     },
     create: async (ctx, objective, budget) => {
       assertCurrent(ctx);
