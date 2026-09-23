@@ -17,7 +17,7 @@ const fish = [process.env.PI_SUBAGENT_TEST_FISH, "/opt/homebrew/bin/fish", "/usr
 const quote = (value: string) => `'${value.replaceAll("'", `'"'"'`)}'`;
 
 test.skipIf(!tmux || !fish).each(["new-session", "new-window"])("%s starts a child with its own pane under a fish default shell", async (mode) => {
-  const root = await mkdtemp(join(process.cwd(), ".subagent-fish-"));
+  const root = await mkdtemp(join(process.cwd(), ".sa-fish-"));
   const wrapper = join(root, "tmux");
   const pids = new Set<number>();
   const alive = () => [...pids].filter(pid => { try { process.kill(pid, 0); return true; } catch { return false; } });
@@ -59,7 +59,7 @@ test.skipIf(!tmux || !fish).each(["new-session", "new-window"])("%s starts a chi
 });
 
 test.skipIf(!tmux)("manager single-target close removes a retained dead pane after list marks it interrupted", async () => {
-  const root = await mkdtemp(join(process.cwd(), ".subagent-runtime-real-"));
+  const root = await mkdtemp(join(process.cwd(), ".sa-real-"));
   const wrapper = join(root, "tmux");
   const pids = new Set<number>();
   const alive = () => [...pids].filter(pid => { try { process.kill(pid, 0); return true; } catch { return false; } });
@@ -102,7 +102,7 @@ test.skipIf(!tmux)("manager single-target close removes a retained dead pane aft
 });
 
 test.skipIf(!tmux)("a restarted tmux server cannot make an old pane locator own a replacement", async () => {
-  const root = await mkdtemp(join(process.cwd(), ".subagent-runtime-real-"));
+  const root = await mkdtemp(join(process.cwd(), ".sa-real-"));
   const wrapper = join(root, "tmux");
   const pids = new Set<number>();
   const alive = () => [...pids].filter(pid => { try { process.kill(pid, 0); return true; } catch { return false; } });
@@ -138,7 +138,7 @@ test.skipIf(!tmux)("a restarted tmux server cannot make an old pane locator own 
 });
 
 test.skipIf(!tmux).each(["live", "dead"])("real tmux rename retains identity and removes a %s pane on close", async (mode) => {
-  const root = await mkdtemp(join(process.cwd(), ".subagent-runtime-real-"));
+  const root = await mkdtemp(join(process.cwd(), ".sa-real-"));
   const socket = join(root, "socket");
   const wrapper = join(root, "tmux");
   let pid: number | undefined;

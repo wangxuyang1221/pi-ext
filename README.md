@@ -156,7 +156,9 @@ Codex encrypted compaction item.
 /fast toggle
 ```
 
-启动参数 `--fast` 会启用并持久化 Fast Mode。全局状态继续保存在 `~/.pi/agent/extensions/pi-openai-fast-mode/config.json`；项目级状态保存在 `.pi/pi-openai-fast-mode/config.json`，迁入本仓库后无需迁移现有配置。旧配置中的 `openai-codex` 逐模型 targets 会在下次加载时移除，但持久化的开关保持不变。
+普通 root 会话的启动参数 `--fast` 会启用并持久化 Fast Mode。全局状态继续保存在 `~/.pi/agent/extensions/pi-openai-fast-mode/config.json`；项目级状态保存在 `.pi/pi-openai-fast-mode/config.json`，迁入本仓库后无需迁移现有配置。旧配置中的 `openai-codex` 逐模型 targets 会在下次加载时移除，但持久化的开关保持不变。
+
+managed child 的 Fast 开关保存在自己的 Pi session 中，不写上述共享配置。child 内的 `/fast` 在首次模型回复前即可保存，`/reload` 或恢复同一会话时保留最后值，已保存值优先于启动初值。
 
 若 `openai-codex` 请求明确返回模型不支持 Fast，扩展会提示 `Fast mode is not supported for openai-codex/<model>. This request failed. Retry to use standard mode for this model in this session.`，并仅在当前会话内对该模型停止注入；原因不明确的错误不会禁用 Fast。`setStatus("pi-openai-fast-mode", "fast")` 只表示扩展请求了 Fast，不保证服务端最终使用 Fast。扩展仍会清理 0.3.0 使用的 below-editor widget。不要再单独加载 `npm:pi-openai-fast-mode`，否则 `/fast`、flag 和 provider hooks 会重复注册。
 
@@ -383,6 +385,8 @@ subagent_close
 `subagent_spawn` 自动从内置的 32 个英文漫威英雄称号中随机分配显示名，不接受自定义 `name`；旧调用残留的 `name` 也不会影响分配。所有操作仍使用 `agentId`，名称不改变任务或角色。同一父会话的直接子代理和尚未安全释放的启动预留占用名称，任务完成不会释放，确认关闭或启动失败并清理完成后才可复用。裸名耗尽时随机选择称号并追加从 2 开始的可用编号，完整名称避让已有名称。不同父会话独立分配；名称持久化后不重抽，旧会话保留原名。
 
 显式填写 `model` 时必须使用完整的 `provider/model`，例如 `{"task":"调研指定问题","model":"deepseek/deepseek-flash","thinkingLevel":"medium"}`。不接受 `deepseek-flash` 等短名称或模糊匹配；模型 ID 本身可以包含 `/`，例如 `openrouter/org/model`，但完整引用必须存在于当前 Pi 模型注册表。格式错误或模型不存在时，在预留名额和启动子进程前报错。省略 `model` 时继承父模型，父会话没有可继承模型时明确报错。
+
+`subagent_spawn` 可传入 `fast: true` 或 `fast: false`，例如 `{"task":"检查指定文件","fast":false}`。省略 `fast` 时复制调用当时主代理的开关值；父代理、子代理和其他子代理此后分别切换，互不影响。开关继承不依赖当前模型是否匹配 Fast 规则，也不修改角色文件。
 
 managed child 仍加载 lifecycle hooks 并写入 runtime state，但不注册 subagent 编排工具。合法管理拓扑只有 root 到 direct child；`target: "all"` 也只处理当前 root 的 direct children。每个 child 固定对应一个 tmux window 和一个 pane；投递前会验证 server、pane、进程实例和 pane 模式。session 改名或 pane 移动只有在实例证据仍匹配时才被接受，位置不匹配不等于进程死亡。
 

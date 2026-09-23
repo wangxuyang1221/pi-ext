@@ -60,6 +60,7 @@ const spawnParameters = Type.Object({
     pattern: modelReferencePattern,
   })),
   thinkingLevel: Type.Optional(ThinkingLevelSchema),
+  fast: Type.Optional(Type.Boolean({ description: "子代理的 Fast 开关；省略时复制主代理当前开关，此后独立。" })),
 });
 
 const promptParameters = Type.Object({
@@ -200,6 +201,7 @@ const targetParameters = Type.Object({
 export function registerSubagentTools(
   pi: Pick<ExtensionAPI, "registerTool" | "on">,
   manager: SubagentManager,
+  readFast: () => Promise<boolean> = async () => false,
 ): void {
   // Returning structured failures preserves their display identity in session history.
   pi.on("tool_result", event => {
@@ -229,7 +231,8 @@ export function registerSubagentTools(
       const slash = reference.indexOf("/");
       const model = ctx.modelRegistry.find(reference.slice(0, slash), reference.slice(slash + 1));
       if (!model) throw new Error(`Model not found: ${reference}. Use an existing provider/model.`);
-      const agent = await manager.spawn(currentSessionId(ctx), { ...params, model: { provider: model.provider, id: model.id } }, {
+      const fast = params.fast ?? await readFast();
+      const agent = await manager.spawn(currentSessionId(ctx), { ...params, fast, model: { provider: model.provider, id: model.id } }, {
         cwd: ctx.cwd,
         thinkingLevel: ctx.thinkingLevel,
       }, _signal);

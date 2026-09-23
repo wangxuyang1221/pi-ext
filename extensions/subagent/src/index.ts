@@ -30,6 +30,7 @@ import { TmuxRuntime } from "./tmux-runtime.js";
 import { executeCommand } from "./command-executor.js";
 import { providerEnvironment } from "./auth-environment.js";
 import { installAuthenticationPreflight } from "./prompt-auth.js";
+import { readFastState } from "./fast-state.js";
 import { registerSubagentTools } from "./tools.js";
 import { createSubagentQuitSession, type SubagentQuitSession } from "./quit.js";
 import { assignUsage, GOAL_TASK_EVENT, registerChildUsage, usageDirectory } from "./usage.js";
@@ -124,7 +125,7 @@ export default function subagentExtension(
   });
 
   if (!parent) {
-    registerSubagentTools(pi, manager);
+    registerSubagentTools(pi, manager, () => readFastState(pi.events));
   } else if (launch) {
     installAuthenticationPreflight(pi, host);
     registerChildUsage(pi, usageDirectory(stateRoot, launch.processInstanceId));
@@ -246,6 +247,7 @@ function parseLaunchMetadata(value: string | undefined): LaunchMetadata | undefi
     || typeof parsed.sessionDir !== "string"
     || typeof parsed.displayName !== "string"
     || typeof parsed.processInstanceId !== "string"
+    || !(parsed.fast === undefined || typeof parsed.fast === "boolean")
     || !(parsed.model === undefined || typeof parsed.model === "string")
     || !(parsed.thinkingLevel === undefined || typeof parsed.thinkingLevel === "string")
   ) {
@@ -260,6 +262,7 @@ function parseLaunchMetadata(value: string | undefined): LaunchMetadata | undefi
   }
   return {
     ...(parsed.configuration ? { configuration: parsed.configuration as LaunchMetadata["configuration"] } : {}),
+    ...(typeof parsed.fast === "boolean" ? { fast: parsed.fast } : {}),
     cwd: parsed.cwd,
     sessionDir: parsed.sessionDir,
     displayName: parsed.displayName,

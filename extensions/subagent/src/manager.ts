@@ -87,6 +87,7 @@ export interface SubagentModel {
 }
 
 export interface SpawnSubagentOptions {
+  fast?: boolean;
   task: string;
   cwd?: string;
   model?: SubagentModel;
@@ -398,6 +399,7 @@ export class SubagentManager {
       registrationToken,
     };
     const launch: LaunchMetadata = {
+      fast: options.fast ?? false,
       ...(this.environment.PI_CODING_AGENT_DIR && this.environment.PI_SUBAGENT_TMUX_PATH ? { configuration: {
         protocolVersion: SESSION_STATE_SCHEMA_VERSION,
         agentDir: this.environment.PI_CODING_AGENT_DIR,

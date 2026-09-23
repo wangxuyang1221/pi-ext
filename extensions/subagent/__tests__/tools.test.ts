@@ -716,7 +716,7 @@ test.each([
   await (tool.execute as any)("call", params, undefined, undefined, ctx);
   assert.deepEqual(find.mock.calls, [[provider, id]]);
   assert.equal(spawn.mock.calls.length, 1);
-  assert.deepEqual(spawn.mock.calls[0], ["parent", { task: "work", model: selected }, { cwd: "/repo", thinkingLevel: "medium" }, undefined]);
+  assert.deepEqual(spawn.mock.calls[0], ["parent", { task: "work", fast: false, model: selected }, { cwd: "/repo", thinkingLevel: "medium" }, undefined]);
 });
 
 test("read displays the persisted name without changing its public payload", async () => {
@@ -727,4 +727,23 @@ test("read displays the persisted name without changing its public payload", asy
   const result = await executeRead(read, { agentId: "child-a" });
   assert.equal((result.details as any).agent.name, "Storm");
   assert.deepEqual(JSON.parse(result.content[0].text), payload);
+});
+
+test("resolves Fast once before spawn and preserves explicit false and true", async () => {
+  let parentFast = true;
+  const readFast = vi.fn(async () => { await Promise.resolve(); return parentFast; });
+  const spawn = vi.fn().mockResolvedValue({ agentId: "child", name: "Storm", status: "idle", generation: 0 });
+  const registered: any[] = [];
+  registerSubagentTools({ on() {}, registerTool: (tool: any) => registered.push(tool) } as never, { spawn } as never, readFast);
+  const tool = registered.find(tool => tool.name === "subagent_spawn");
+  const ctx = { cwd: "/repo", model: { provider: "openai-codex", id: "unlisted" },
+    modelRegistry: { find: () => ({ provider: "openai-codex", id: "unlisted" }) },
+    sessionManager: { getSessionId: () => "parent", getSessionFile: () => "parent.jsonl" } };
+  for (const value of [false, true, undefined, undefined]) {
+    await tool.execute("call", { task: "work", ...(value === undefined ? {} : { fast: value }) }, undefined, undefined, ctx);
+    assert.equal(spawn.mock.calls.at(-1)![1].fast, value ?? parentFast);
+    parentFast = !parentFast;
+  }
+  assert.equal(readFast.mock.calls.length, 2);
+  assert.equal(Check(tool.parameters, { task: "work", fast: "false" }), false);
 });

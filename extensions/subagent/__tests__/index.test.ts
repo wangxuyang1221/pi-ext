@@ -227,7 +227,7 @@ test.each(["corrupt", "old-schema"])("production startup rolls back new control 
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
-test("production entry forwards effective agent and tmux configuration without parent pane or credentials", async () => {
+test.each([true, false])("production entry forwards Fast=%s and effective configuration without parent pane or credentials", async (fast) => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-index-test-"));
   try {
     const handlers = new Map<string, (...args: any[]) => unknown>();
@@ -237,7 +237,8 @@ test("production entry forwards effective agent and tmux configuration without p
       async launch(options) { environment = options.environment; throw new Error("Captured launch"); },
       async sendPrompt() {}, async capturePane() { return ""; }, async isAlive() { return false; }, async close() {},
     };
-    const pi = { on: (name: string, handler: any) => handlers.set(name, handler), registerTool: (tool: any) => tools.set(tool.name, tool) };
+    const pi = { on: (name: string, handler: any) => handlers.set(name, handler), registerTool: (tool: any) => tools.set(tool.name, tool),
+      events: { emit: (name: string, request: any) => { if (name === "pi-fast-mode:get-state") request.promises.push(Promise.resolve().then(() => fast)); } } };
     subagentExtension(pi as never, { store: new SessionStateStore(root), stateRoot: root, nativeSessionRoot: join(root, "native"), runtime,
       env: { PATH: "/usr/bin", PI_CODING_AGENT_DIR: join(root, "agent"), TMUX_PANE: "%parent", OPENAI_API_KEY: "do-not-transfer" },
       tmuxPath: "./custom/tmux", piPath: "./custom/pi",
@@ -246,6 +247,7 @@ test("production entry forwards effective agent and tmux configuration without p
     const ctx = { cwd: root, model, modelRegistry: { find: () => model }, sessionManager: { getSessionId: () => "parent", getSessionFile: () => join(root, "parent.jsonl"), getLeafId: () => null, getEntries: () => [] } };
     await handlers.get("session_start")!({}, ctx);
     await tools.get("subagent_spawn").execute("call", { task: "Test" }, undefined, undefined, ctx).catch(() => undefined);
+    assert.equal(JSON.parse(environment!.PI_SUBAGENT_LAUNCH).fast, fast);
     assert.equal(environment?.PI_CODING_AGENT_DIR, join(root, "agent"));
     assert.equal(environment?.PI_SUBAGENT_TMUX_PATH, join(process.cwd(), "custom/tmux"));
     assert.equal(environment?.PI_SUBAGENT_PI_PATH, join(process.cwd(), "custom/pi"));
