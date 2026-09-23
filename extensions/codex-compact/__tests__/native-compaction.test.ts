@@ -17,9 +17,9 @@ vi.mock("node:timers/promises", () => ({
 }));
 
 import { createNativeCheckpoint } from "../src/remote-compaction.js";
-import { SessionManager } from "@earendil-works/pi-coding-agent";
+import { convertToLlm, SessionManager, type SessionEntry } from "@earendil-works/pi-coding-agent";
 import { projectBranchMessages } from "../src/session-projection.js";
-import { approximateResponseItemTokens, isContextWindowCompactionError, compactionFailureClassification, estimateCompactionWindowPrefillTokens, buildCodexHeaders, buildCompactionRequestBody, buildReplacementHistory, buildToolPayload, callRemoteCompaction, effectiveInputForBranch, findNativeCheckpoint, fullInputForBranch, NATIVE_COMPACTION_BYPASS_KIND, NATIVE_COMPACTION_BYPASS_VERSION, NATIVE_COMPACTION_KIND, NATIVE_COMPACTION_VERSION, parseNativeCompactionDetails, piContextInputForBranch, retainRecentMessages, trimFunctionCallHistoryToFitContextWindow } from "../src/native-compaction.js";
+import { approximateResponseItemTokens, isContextWindowCompactionError, compactionFailureClassification, estimateCompactionWindowPrefillTokens, buildCodexHeaders, buildCompactionRequestBody, buildReplacementHistory, buildToolPayload, callRemoteCompaction, createBranchInputSnapshot, effectiveInputForBranch, findNativeCheckpoint, fullInputForBranch, modelKey, NATIVE_COMPACTION_BYPASS_KIND, NATIVE_COMPACTION_BYPASS_VERSION, NATIVE_COMPACTION_KIND, NATIVE_COMPACTION_VERSION, parseNativeCompactionDetails, piContextInputForBranch, retainRecentMessages, trimFunctionCallHistoryToFitContextWindow } from "../src/native-compaction.js";
 
 afterEach(() => vi.useRealTimers());
 
@@ -49,6 +49,97 @@ async function captureFailure(operation: Promise<unknown>): Promise<unknown> {
 }
 
 describe("Codex compaction history", () => {
+	test("matches Pi context and attributes only the newest overlapping summary", () => {
+		const sm = SessionManager.inMemory(process.cwd());
+		const first = sm.appendMessage({ role: "user", content: "U1", timestamp: 1 });
+		const oldSummary = sm.appendCompaction("C1", first, 0);
+		const second = sm.appendMessage({ role: "user", content: "U2", timestamp: 2 });
+		const newSummary = sm.appendCompaction("C2", first, 0);
+		const third = sm.appendMessage({ role: "user", content: "U3", timestamp: 3 });
+		const snapshot = createBranchInputSnapshot({ branch: sm.getBranch(), tools: [] });
+		const view = snapshot.view(remoteModel, "pi-context");
+		expect(view.items).toEqual(piContextInputForBranch({ branch: sm.getBranch(), model: remoteModel, tools: [] }));
+		expect(JSON.stringify(view.items)).not.toContain("C1");
+		expect(JSON.stringify(view.items)).toContain("C2");
+		expect([...view.userSources.values()]).toEqual([newSummary, first, second, third]);
+		expect([...view.userSources.values()]).not.toContain(oldSummary);
+		expect(snapshot.view(remoteModel, "effective")).toBe(view);
+		const excludedFirstKept = snapshot.view(remoteModel, "pi-context", { excludeEntryId: first });
+		expect(JSON.stringify(excludedFirstKept.items)).toContain("C2");
+		expect([...excludedFirstKept.userSources.values()]).not.toContain(first);
+		expect([...excludedFirstKept.userSources.values()]).toContain(third);
+		expect(snapshot.projection.piContext().some((entry) => entry.sourceEntry.id === first)).toBe(true);
+	});
+	test("keeps separate source ids when raw entries share one user message object", () => {
+		const shared = { role: "user", content: "shared", timestamp: 1 };
+		const branch = [
+			{ id: "first", parentId: null, type: "message", message: shared },
+			{ id: "second", parentId: "first", type: "message", message: shared },
+		] as SessionEntry[];
+		const view = createBranchInputSnapshot({ branch, tools: [] }).view(remoteModel, "full-history");
+		expect([...view.userSources]).toEqual([[0, "first"], [1, "second"]]);
+		expect(branch[0]?.type === "message" && branch[0].message).toBe(shared);
+		expect(branch[1]?.type === "message" && branch[1].message).toBe(shared);
+	});
+	test("does not invent source ids for a native prefix and offsets the live tail", () => {
+		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendMessage({ role: "user", content: "old", timestamp: 1 });
+		sm.appendCustomEntry(NATIVE_COMPACTION_KIND, {
+			kind: NATIVE_COMPACTION_KIND, version: NATIVE_COMPACTION_VERSION, modelKey: modelKey(remoteModel),
+			replacementHistory: [{ type: "compaction", encrypted_content: "opaque" }],
+			preservedInput: [{ role: "user", content: [{ type: "input_text", text: "persisted" }] }],
+		});
+		const tail = sm.appendMessage({ role: "user", content: "live", timestamp: 2 });
+		const view = createBranchInputSnapshot({ branch: sm.getBranch(), tools: [] }).view(remoteModel, "effective");
+		expect(view.items).toHaveLength(3);
+		expect([...view.userSources]).toEqual([[2, tail]]);
+		expect(Object.keys(view.items[2]!)).not.toContain("sourceEntryId");
+	});
+	test("maps custom user output without assigning an index to an empty user", () => {
+		const sm = SessionManager.inMemory(process.cwd());
+		const first = sm.appendMessage({ role: "user", content: "first", timestamp: 1 });
+		const empty = sm.appendMessage({ role: "user", content: [], timestamp: 2 });
+		const custom = sm.appendCustomMessageEntry("note", "custom", false);
+		const view = createBranchInputSnapshot({ branch: sm.getBranch(), tools: [] }).view(remoteModel, "full-history");
+		expect([...view.userSources.values()]).toEqual([first, custom]);
+		expect([...view.userSources.values()]).not.toContain(empty);
+		expect(view.items.filter((item) => item.role === "user")).toHaveLength(2);
+	});
+	test("serializes each semantic snapshot view once and keeps model compat distinct", () => {
+		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendMessage({ role: "user", content: "current", timestamp: 1 });
+		const branch = sm.getBranch();
+		const spy = vi.fn(convertToLlm);
+		const lookupSpy = vi.fn(findNativeCheckpoint);
+		const snapshot = createBranchInputSnapshot({ branch, tools: [], convertMessages: spy, lookupCheckpoint: lookupSpy });
+		const first = snapshot.view(remoteModel, "full-history");
+		expect(lookupSpy).toHaveBeenCalledTimes(1);
+		const afterFirst = spy.mock.calls.length;
+		expect(afterFirst).toBeGreaterThan(0);
+		expect(snapshot.view(remoteModel, "full-history")).toBe(first);
+		expect(snapshot.view(remoteModel, "pi-context")).toBe(first);
+		expect(snapshot.view(remoteModel, "effective")).toBe(first);
+		expect(spy).toHaveBeenCalledTimes(afterFirst);
+		expect(lookupSpy).toHaveBeenCalledTimes(1);
+		const excluded = snapshot.view(remoteModel, "full-history", { excludeEntryId: branch[0]!.id });
+		const afterExclude = spy.mock.calls.length;
+		expect(excluded.items).toEqual([]);
+		expect(snapshot.view(remoteModel, "full-history", { excludeEntryId: branch[0]!.id })).toBe(excluded);
+		expect(spy).toHaveBeenCalledTimes(afterExclude);
+		const sameModel = { ...remoteModel };
+		expect(snapshot.view(sameModel, "full-history")).toBe(first);
+		expect(spy).toHaveBeenCalledTimes(afterExclude);
+		const differentCompat = { ...remoteModel, compat: { supportsDeveloperRole: false } };
+		expect(snapshot.view(differentCompat, "full-history")).not.toBe(first);
+		expect(spy.mock.calls.length).toBeGreaterThan(afterExclude);
+		expect(lookupSpy).toHaveBeenCalledTimes(1);
+		snapshot.view({ ...remoteModel, id: "other-model" }, "full-history");
+		expect(lookupSpy).toHaveBeenCalledTimes(2);
+		const newId = sm.appendMessage({ role: "user", content: "later", timestamp: 2 });
+		expect(snapshot.view(remoteModel, "full-history")).toBe(first);
+		expect([...first.userSources.values()]).not.toContain(newId);
+		expect([...createBranchInputSnapshot({ branch: sm.getBranch(), tools: [] }).view(remoteModel, "full-history").userSources.values()]).toContain(newId);
+	});
 	test("matches Pi projection for repeated user, assistant, and tool-result edits", () => {
 		const sm = SessionManager.inMemory(process.cwd());
 		const user = sm.appendMessage({ role: "user", content: "original user", timestamp: 1 });

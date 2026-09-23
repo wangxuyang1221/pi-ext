@@ -1,7 +1,16 @@
 import { expect, test, vi } from "vitest";
-import { SessionManager, type SessionEntry } from "@earendil-works/pi-coding-agent";
+import { convertToLlm, SessionManager, type SessionEntry } from "@earendil-works/pi-coding-agent";
+import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
+import { streamSimple } from "@earendil-works/pi-ai/api/openai-codex-responses";
 import codexCompactionExtension from "../src/index.js";
-import { effectiveInputForBranch, FAILED_REQUEST_KIND, NATIVE_COMPACTION_KIND } from "../src/native-compaction.js";
+import { loadConfig } from "../src/config.js";
+import { effectiveInputForBranch, FAILED_REQUEST_KIND, NATIVE_COMPACTION_KIND, type ResponseItem } from "../src/native-compaction.js";
+
+const configOverride = vi.hoisted(() => ({ value: undefined as { autoCompactScope: "total"; autoCompactTokenLimit: number } | undefined }));
+vi.mock("../src/config.js", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../src/config.js")>();
+	return { ...actual, loadConfig: (...args: Parameters<typeof actual.loadConfig>) => configOverride.value ?? actual.loadConfig(...args) };
+});
 
 type Handler = (event: any, ctx: any) => unknown;
 
@@ -78,6 +87,97 @@ function stubSuccessfulCompaction(encryptedContent = "opaque"): void {
 		'data: {"type":"response.completed","response":{"id":"response"}}',
 	].join("\n\n") + "\n\n", { headers: { "content-type": "text/event-stream" } }));
 }
+
+test.each([false, true])("compacts a provider request and preserves its current user, edited: %s", async (edited) => {
+	const sm = SessionManager.inMemory(process.cwd());
+	sm.appendMessage({ role: "user", content: "previous history", timestamp: 1 });
+	const task = "start ".repeat(30_000) + "MIDDLE_CONSTRAINT_MUST_SURVIVE" + " finish".repeat(30_000);
+	const currentId = sm.appendMessage({ role: "user", content: edited ? "original task" : task, timestamp: 2 });
+	if (edited) sm.appendContextEdit(currentId, { content: task });
+	const prompt = "i".repeat(1_000);
+	const selectedModel = { ...getBuiltinModel("openai-codex", "gpt-5.6-sol")!, contextWindow: 1_000_000 };
+	let providerPayload: Record<string, unknown> | undefined;
+	await streamSimple(selectedModel, { messages: [{ role: "system", content: prompt, timestamp: 0 }, ...convertToLlm(sm.buildSessionProjection().messages)] }, {
+		apiKey, onPayload: value => { providerPayload = value; throw new Error("Stop before network"); },
+	}).result();
+	expect(providerPayload).toBeDefined();
+	expect(typeof providerPayload!.instructions).toBe("string");
+	expect((providerPayload!.instructions as string).length).toBeGreaterThanOrEqual(1_000);
+	const { handlers, ctx, appendEntry } = installExtension();
+	(ctx as any).sessionManager = sm;
+	ctx.model = selectedModel;
+	ctx.getSystemPrompt = () => prompt;
+	ctx.modelRegistry.find = (provider: string, id: string) => provider === selectedModel.provider && id === selectedModel.id ? selectedModel : undefined;
+	appendEntry.mockImplementation((kind: string, data: unknown) => sm.appendCustomEntry(kind, data));
+	configOverride.value = { autoCompactScope: "total", autoCompactTokenLimit: 100 };
+	expect(loadConfig(ctx.cwd, true).autoCompactTokenLimit).toBe(100);
+	const posted: ResponseItem[][] = [];
+	vi.stubGlobal("fetch", async (_url: string, init?: RequestInit) => {
+		posted.push((JSON.parse(String(init?.body)) as { input: ResponseItem[] }).input);
+		return new Response([
+			'data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"opaque"}}',
+			'data: {"type":"response.completed","response":{"id":"response"}}',
+		].join("\n\n") + "\n\n", { headers: { "content-type": "text/event-stream" } });
+	});
+	try {
+		const final = await handlers.get("before_provider_request")?.({ payload: providerPayload }, ctx) as { input: ResponseItem[] };
+		expect(ctx.abort).not.toHaveBeenCalled();
+		expect(posted).toHaveLength(1);
+		expect(JSON.stringify(posted[0]).includes("MIDDLE_CONSTRAINT_MUST_SURVIVE")).toBe(false);
+		const matching = final.input.filter(item => item.role === "user" && JSON.stringify(item.content).includes("MIDDLE_CONSTRAINT_MUST_SURVIVE"));
+		expect(matching).toHaveLength(1);
+		expect(matching[0]).toEqual((providerPayload!.input as ResponseItem[]).at(-1));
+		expect(appendEntry).toHaveBeenCalledWith(NATIVE_COMPACTION_KIND, expect.anything());
+		expect(ctx.abort).not.toHaveBeenCalled();
+	} finally {
+		configOverride.value = undefined;
+		vi.unstubAllGlobals();
+	}
+});
+
+test("automatically compacts a real provider payload after overlapping Pi summaries", async () => {
+	const sm = SessionManager.inMemory(process.cwd());
+	const first = sm.appendMessage({ role: "user", content: "U1", timestamp: 1 });
+	sm.appendCompaction("C1", first, 0);
+	sm.appendMessage({ role: "user", content: "U2", timestamp: 2 });
+	sm.appendCompaction("C2", first, 0);
+	const selectedModel = { ...getBuiltinModel("openai-codex", "gpt-5.6-sol")!, contextWindow: 1_000_000 };
+	sm.appendModelChange(selectedModel.provider, selectedModel.id);
+	sm.appendMessage({ role: "user", content: "U3", timestamp: 3 });
+	const prompt = "i".repeat(1_000);
+	let providerPayload: Record<string, unknown> | undefined;
+	await streamSimple(selectedModel, { messages: [{ role: "system", content: prompt, timestamp: 0 }, ...convertToLlm(sm.buildSessionProjection().messages)] }, {
+		apiKey, onPayload: value => { providerPayload = value; throw new Error("Stop before network"); },
+	}).result();
+	const { handlers, ctx, appendEntry } = installExtension();
+	(ctx as any).sessionManager = sm;
+	ctx.model = selectedModel;
+	ctx.getSystemPrompt = () => prompt;
+	ctx.modelRegistry.find = (provider: string, id: string) => provider === selectedModel.provider && id === selectedModel.id ? selectedModel : undefined;
+	appendEntry.mockImplementation((kind: string, data: unknown) => sm.appendCustomEntry(kind, data));
+	configOverride.value = { autoCompactScope: "total", autoCompactTokenLimit: 100 };
+	const posted: ResponseItem[][] = [];
+	vi.stubGlobal("fetch", async (_url: string, init?: RequestInit) => {
+		posted.push((JSON.parse(String(init?.body)) as { input: ResponseItem[] }).input);
+		return new Response([
+			'data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"opaque"}}',
+			'data: {"type":"response.completed","response":{"id":"response"}}',
+		].join("\n\n") + "\n\n", { headers: { "content-type": "text/event-stream" } });
+	});
+	try {
+		await handlers.get("model_select")?.({ model: selectedModel, previousModel: { provider: "other", api: "other", id: "legacy" } }, ctx);
+		const final = await handlers.get("before_provider_request")?.({ payload: providerPayload }, ctx) as { input: ResponseItem[] };
+		expect(posted).toHaveLength(1);
+		expect(JSON.stringify(posted[0])).toContain("C2");
+		expect(JSON.stringify(posted[0])).not.toContain("C1");
+		expect(JSON.stringify(posted[0])).not.toContain("U3");
+		expect(final.input.filter((item) => item.role === "user" && JSON.stringify(item.content).includes("U3"))).toHaveLength(1);
+		expect(ctx.abort).not.toHaveBeenCalled();
+	} finally {
+		configOverride.value = undefined;
+		vi.unstubAllGlobals();
+	}
+});
 
 function piCompactionEvent(
 	branch: SessionEntry[],

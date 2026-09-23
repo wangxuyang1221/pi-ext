@@ -1,9 +1,12 @@
 import { describe, expect, test } from "vitest";
-import type { ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
+import { convertToLlm, SessionManager, type ExtensionContext, type SessionEntry } from "@earendil-works/pi-coding-agent";
+import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
+import { streamSimple } from "@earendil-works/pi-ai/api/openai-codex-responses";
 import type { Model } from "@earendil-works/pi-ai";
 import { createSessionCoordinator, type RemoteCompactionReason } from "../src/session-coordinator.js";
 import {
 	effectiveInputForBranch,
+	buildReplacementHistory,
 	findNativeCheckpoint,
 	modelKey,
 	FAILED_REQUEST_KIND,
@@ -111,6 +114,173 @@ function createCoordinator(
 }
 
 describe("Codex session coordinator", () => {
+	test.each([true, false])("uses Pi's newest ordinary summary after model selection, overlap: %s", async (overlap) => {
+		const currentModel = getBuiltinModel("openai-codex", "gpt-5.6-sol")!;
+		const oldModel = model("legacy", "other");
+		const sm = SessionManager.inMemory(process.cwd());
+		const first = sm.appendMessage({ role: "user", content: "U1", timestamp: 1 });
+		sm.appendCompaction("C1", first, 0);
+		const second = sm.appendMessage({ role: "user", content: "U2", timestamp: 2 });
+		sm.appendCompaction("C2", overlap ? first : second, 0);
+		sm.appendModelChange(currentModel.provider, currentModel.id);
+		sm.appendMessage({ role: "user", content: "U3", timestamp: 3 });
+		let payload: { input: ResponseItem[] } | undefined;
+		const apiKey = `a.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "test" } })).toString("base64url")}.c`;
+		await streamSimple(currentModel, { messages: convertToLlm(sm.buildSessionProjection().messages) }, {
+			apiKey, onPayload: value => { payload = value as { input: ResponseItem[] }; throw new Error("Stop before network"); },
+		}).result();
+		expect(payload).toBeDefined();
+		const seen: ResponseItem[][] = [];
+		let autoCalls = 0;
+		const coordinator = createSessionCoordinator({
+			getBranch: () => sm.getBranch(),
+			getAllTools: () => [],
+			createCheckpoint: async ({ input }) => { seen.push(input); return { details: details(modelKey(currentModel)) }; },
+			appendCheckpoint: value => { sm.appendCustomEntry(NATIVE_COMPACTION_KIND, value); },
+			appendCheckpointBypass: () => {},
+			shouldAutoCompact: () => { autoCalls++; return true; },
+		});
+		const ctx = context([currentModel, oldModel]);
+		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, ctx);
+		const manual = await coordinator.prepareCompaction(currentModel, ctx);
+		expect(JSON.stringify(manual)).toContain("C2");
+		expect(JSON.stringify(manual)).not.toContain("C1");
+		const final = await coordinator.prepareRequest(currentModel, ctx, payload!.input);
+		expect(autoCalls).toBe(1);
+		expect(seen).toHaveLength(1);
+		expect(JSON.stringify(seen[0])).toContain("C2");
+		expect(JSON.stringify(seen[0])).not.toContain("C1");
+		expect(JSON.stringify(seen[0])).not.toContain("U3");
+		expect(final?.filter((item) => item.role === "user" && JSON.stringify(item.content).includes("U3"))).toHaveLength(1);
+	});
+	test("preserves the edited current user outside automatic compaction", async () => {
+		const currentModel = model("new", "openai-codex", 1_000_000);
+		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendMessage({ role: "user", content: "previous history", timestamp: 1 });
+		const currentId = sm.appendMessage({ role: "user", content: "original task", timestamp: 2 });
+		const task = "start ".repeat(30_000) + "MIDDLE_CONSTRAINT_MUST_SURVIVE" + " finish".repeat(30_000);
+		sm.appendContextEdit(currentId, { content: task });
+		const branch = sm.getBranch();
+		const requestInput = effectiveInputForBranch({ branch, model: currentModel, tools: [] });
+		const seen: ResponseItem[][] = [];
+		const coordinator = createCoordinator(branch, async (_selected, input) => {
+			seen.push(input);
+			return details(modelKey(currentModel));
+		}, () => true);
+		const final = await coordinator.prepareRequest(currentModel, context([currentModel]), requestInput);
+		expect(seen).toHaveLength(1);
+		expect(JSON.stringify(seen[0])).not.toContain("MIDDLE_CONSTRAINT_MUST_SURVIVE");
+		const checkpoint = findNativeCheckpoint(branch, modelKey(currentModel));
+		expect(checkpoint.status).toBe("valid");
+		if (checkpoint.status !== "valid") return;
+		expect(checkpoint.checkpoint.details.preservedInput).toEqual([requestInput.at(-1)]);
+		expect(final?.filter((item) => item.role === "user" && JSON.stringify(item.content).includes("MIDDLE_CONSTRAINT_MUST_SURVIVE"))).toEqual([requestInput.at(-1)]);
+	});
+	test("binds the latest edited user by source after an omitted and same-text history user", async () => {
+		const currentModel = model("new");
+		const sm = SessionManager.inMemory(process.cwd());
+		const omitted = sm.appendMessage({ role: "user", content: "omit", timestamp: 1 });
+		sm.appendMessage({ role: "user", content: "same", timestamp: 2 });
+		const current = sm.appendMessage({ role: "user", content: "draft", timestamp: 3 });
+		sm.appendContextEdit(omitted, null);
+		sm.appendContextEdit(current, { content: "intermediate" });
+		sm.appendContextEdit(current, { content: "same" });
+		const branch = sm.getBranch();
+		const requestInput = effectiveInputForBranch({ branch, model: currentModel, tools: [] });
+		const seen: ResponseItem[][] = [];
+		const coordinator = createCoordinator(branch, async (_selected, input) => {
+			seen.push(input);
+			return details(modelKey(currentModel));
+		}, () => true);
+		const final = await coordinator.prepareRequest(currentModel, context([currentModel]), requestInput);
+		expect(seen).toHaveLength(1);
+		expect(seen[0]?.filter((item) => item.role === "user")).toEqual([userInput("same")]);
+		const checkpoint = findNativeCheckpoint(branch, modelKey(currentModel));
+		expect(checkpoint.status).toBe("valid");
+		if (checkpoint.status !== "valid") return;
+		expect(checkpoint.checkpoint.details.preservedInput).toEqual([requestInput.at(-1)]);
+		expect(final?.filter((item) => item.role === "user" && JSON.stringify(item.content).includes("same"))).toHaveLength(1);
+	});
+
+	test("keeps an extra same-text payload user after the latest branch user", async () => {
+		const currentModel = model("new");
+		const branch = [userEntry("same", "history"), userEntry("same", "branch-current")];
+		const base = effectiveInputForBranch({ branch, model: currentModel, tools: [] });
+		const requestInput = [...base, userInput("same")];
+		const seen: ResponseItem[][] = [];
+		const coordinator = createCoordinator(branch, async (_selected, input) => {
+			seen.push(input);
+			return details(modelKey(currentModel));
+		}, () => true);
+		const final = await coordinator.prepareRequest(currentModel, context([currentModel]), requestInput);
+		expect(seen[0]?.filter((item) => item.role === "user")).toHaveLength(2);
+		expect(final?.filter((item) => item.role === "user" && JSON.stringify(item.content).includes("same"))).toHaveLength(1);
+	});
+	test("preserves the exact image and text item for an edited current user", async () => {
+		const currentModel = getBuiltinModel("openai-codex", "gpt-5.6-sol")!;
+		const sm = SessionManager.inMemory(process.cwd());
+		const current = sm.appendMessage({ role: "user", content: "draft", timestamp: 1 });
+		sm.appendContextEdit(current, { content: [
+			{ type: "text", text: "inspect this image" },
+			{ type: "image", data: "AA==", mimeType: "image/png" },
+		] });
+		const branch = sm.getBranch();
+		const requestInput = effectiveInputForBranch({ branch, model: currentModel, tools: [] });
+		const coordinator = createCoordinator(branch, async () => details(modelKey(currentModel)), () => true);
+		const final = await coordinator.prepareRequest(currentModel, context([currentModel]), requestInput);
+		const checkpoint = findNativeCheckpoint(branch, modelKey(currentModel));
+		expect(checkpoint.status).toBe("valid");
+		if (checkpoint.status !== "valid") return;
+		expect(checkpoint.checkpoint.details.preservedInput).toEqual([requestInput[0]]);
+		expect(final?.filter((item) => item.role === "user")).toEqual([requestInput[0]]);
+		expect(JSON.stringify(final)).toContain("input_image");
+	});
+	test("does not append a checkpoint after a new edit arrives during automatic compaction", async () => {
+		const currentModel = model("new", "openai-codex", 1_000_000);
+		const sm = SessionManager.inMemory(process.cwd());
+		const current = sm.appendMessage({ role: "user", content: "original", timestamp: 1 });
+		sm.appendContextEdit(current, { content: "first revision" });
+		const requestInput = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] });
+		let release!: () => void;
+		let started!: () => void;
+		const gate = new Promise<void>((resolve) => { release = resolve; });
+		const ready = new Promise<void>((resolve) => { started = resolve; });
+		let appended = 0;
+		const coordinator = createSessionCoordinator({
+			getBranch: () => sm.getBranch(),
+			getAllTools: () => [],
+			createCheckpoint: async () => { started(); await gate; return { details: details(modelKey(currentModel)) }; },
+			appendCheckpoint: () => { appended++; },
+			appendCheckpointBypass: () => {},
+			shouldAutoCompact: () => true,
+		});
+		const pending = coordinator.prepareRequest(currentModel, context([currentModel]), requestInput);
+		await ready;
+		sm.appendContextEdit(current, { content: "second revision" });
+		release();
+		await pending;
+		expect(appended).toBe(0);
+		expect(findNativeCheckpoint(sm.getBranch(), modelKey(currentModel)).status).toBe("none");
+	});
+	test("does not treat a later custom message as an unanswered branch user", async () => {
+		const currentModel = model("new");
+		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendMessage({ role: "user", content: "earlier user", timestamp: 1 });
+		sm.appendCustomMessageEntry("note", "later custom", false);
+		const branch = sm.getBranch();
+		const requestInput = effectiveInputForBranch({ branch, model: currentModel, tools: [] });
+		const seen: ResponseItem[][] = [];
+		const coordinator = createCoordinator(branch, async (_selected, input) => {
+			seen.push(input);
+			return details(modelKey(currentModel));
+		}, () => true);
+		await coordinator.prepareRequest(currentModel, context([currentModel]), requestInput);
+		expect(seen[0]).toEqual(requestInput);
+		const checkpoint = findNativeCheckpoint(branch, modelKey(currentModel));
+		expect(checkpoint.status).toBe("valid");
+		if (checkpoint.status !== "valid") return;
+		expect(checkpoint.checkpoint.details.preservedInput).toBeUndefined();
+	});
 	test("invalidates an old transition before retrying or committing after model selection", async () => {
 		const old = model("old"), target = model("new"), next = model("other");
 		const branch = [customEntry(details(modelKey(old))), userEntry("continue")];
@@ -864,6 +1034,61 @@ describe("Codex session coordinator", () => {
 
 		expect(compactedInput).toEqual([]);
 		expect(input).toEqual([{ type: "compaction", encrypted_content: "transition" }, userInput("current")]);
+	});
+
+	test("restores a checkpoint user when a second compaction truncates the same wire id", async () => {
+		const oldModel = model("old");
+		const currentModel = model("new");
+		const fullUser: ResponseItem = { type: "message", id: "current-wire", role: "user", content: [{ type: "input_text", text: "head MIDDLE_CONSTRAINT_MUST_SURVIVE tail" }] };
+		const truncatedUser: ResponseItem = { ...fullUser, content: [{ type: "input_text", text: "head [truncated] tail" }] };
+		const branch = [customEntry({ ...details(modelKey(oldModel), "old"), preservedInput: [fullUser] })];
+		const coordinator = createCoordinator(branch, async () => ({
+			...details(modelKey(currentModel), "new"),
+			replacementHistory: [truncatedUser, { type: "compaction", encrypted_content: "new" }],
+		}));
+		const ctx = context([oldModel, currentModel]);
+		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, ctx);
+		const final = await coordinator.prepareRequest(currentModel, ctx, [{ type: "compaction", encrypted_content: "old" }, fullUser]);
+		const checkpoint = findNativeCheckpoint(branch, modelKey(currentModel));
+		expect(checkpoint.status).toBe("valid");
+		if (checkpoint.status !== "valid") return;
+		expect(checkpoint.checkpoint.details.preservedInput).toEqual([fullUser]);
+		expect(final?.filter((item) => item.role === "user" && JSON.stringify(item.content).includes("MIDDLE_CONSTRAINT_MUST_SURVIVE"))).toEqual([fullUser]);
+	});
+
+	test("keeps the complete edited task through transition then automatic compaction", async () => {
+		const oldModel = model("old", "openai-codex", 1_000_000);
+		const currentModel = model("new", "openai-codex", 1_000_000);
+		const sm = SessionManager.inMemory(process.cwd());
+		const current = sm.appendMessage({ role: "user", content: "draft", timestamp: 1 });
+		const task = "start ".repeat(30_000) + "MIDDLE_CONSTRAINT_MUST_SURVIVE" + " finish".repeat(30_000);
+		sm.appendContextEdit(current, { content: task });
+		const branch = sm.getBranch();
+		const requestInput = effectiveInputForBranch({ branch, model: currentModel, tools: [] });
+		let calls = 0;
+		const coordinator = createCoordinator(branch, async (selectedModel, input) => {
+			calls++;
+			if (calls === 1) {
+				expect(selectedModel).toBe(oldModel);
+				expect(input).toEqual([]);
+			} else {
+				expect(selectedModel).toBe(currentModel);
+				expect(input.filter((item) => item.role === "user")).toEqual([requestInput[0]]);
+			}
+			return {
+				...details(modelKey(selectedModel)),
+				replacementHistory: buildReplacementHistory(input, { type: "compaction", encrypted_content: `opaque-${calls}` }),
+			};
+		}, () => true);
+		const ctx = context([oldModel, currentModel]);
+		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, ctx);
+		const final = await coordinator.prepareRequest(currentModel, ctx, requestInput);
+		expect(calls).toBe(2);
+		const checkpoint = findNativeCheckpoint(branch, modelKey(currentModel));
+		expect(checkpoint.status).toBe("valid");
+		if (checkpoint.status !== "valid") return;
+		expect(checkpoint.checkpoint.details.preservedInput).toEqual([requestInput[0]]);
+		expect(final?.filter((item) => item.role === "user" && JSON.stringify(item.content).includes("MIDDLE_CONSTRAINT_MUST_SURVIVE"))).toEqual([requestInput[0]]);
 	});
 
 	test("does not drop a new user that repeats a preserved user's content", async () => {

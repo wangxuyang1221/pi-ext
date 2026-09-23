@@ -1,11 +1,11 @@
-import { expect, test, vi } from "vitest";
-import * as native from "../src/native-compaction.js";
+import { expect, test } from "vitest";
 import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
 import { normalizeContext } from "@earendil-works/pi-ai";
 import { convertResponsesMessages } from "@earendil-works/pi-ai/api/openai-responses-shared";
 import { streamSimple } from "@earendil-works/pi-ai/api/openai-codex-responses";
+import { convertToLlm, SessionManager } from "@earendil-works/pi-coding-agent";
 import { createSessionCoordinator } from "../src/session-coordinator.js";
-import { fullInputForBranch, modelKey, NATIVE_COMPACTION_KIND, FAILED_REQUEST_KIND } from "../src/native-compaction.js";
+import { createBranchInputSnapshot, fullInputForBranch, modelKey, NATIVE_COMPACTION_KIND, FAILED_REQUEST_KIND } from "../src/native-compaction.js";
 
 const providerNames = new Set(["openai", "openai-codex", "opencode"]);
 const image = { type: "image", data: "AA==", mimeType: "image/png" };
@@ -13,6 +13,26 @@ const model = (id = "gpt-5.6-sol") => getBuiltinModel("openai-codex", id)!;
 const assistant = (m: any, content: any[]) => ({ role: "assistant", provider: m.provider, api: m.api, model: m.id, content, stopReason: "toolUse", timestamp: 0,
   usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } } });
 const messageEntries = (messages: any[]) => messages.map((message, i) => ({ id: `message-${i}`, type: "message", message })) as any[];
+
+test("matches provider wire input after overlapping Pi compactions", async () => {
+  const m = model();
+  const sm = SessionManager.inMemory(process.cwd());
+  const first = sm.appendMessage({ role: "user", content: "U1", timestamp: 1 });
+  sm.appendCompaction("C1", first, 0);
+  sm.appendMessage({ role: "user", content: "U2", timestamp: 2 });
+  sm.appendCompaction("C2", first, 0);
+  sm.appendMessage({ role: "user", content: "U3", timestamp: 3 });
+  let payload: any;
+  const apiKey = `a.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "test" } })).toString("base64url")}.c`;
+  await streamSimple(m, { messages: convertToLlm(sm.buildSessionProjection().messages) }, {
+    apiKey, onPayload: value => { payload = value; throw new Error("Stop before network"); },
+  }).result();
+  expect(payload).toBeDefined();
+  const view = createBranchInputSnapshot({ branch: sm.getBranch(), tools: [] }).view(m, "pi-context");
+  expect(view.items).toEqual(payload.input);
+  expect(JSON.stringify(view.items)).not.toContain("C1");
+  expect(JSON.stringify(view.items)).toContain("C2");
+});
 
 async function replay(m: any, messages: any[], tools: any[] = []) {
   const current = { role: "user", content: [{ type: "text", text: "continue" }], timestamp: 1 };
@@ -118,12 +138,14 @@ test("matches a model that folds system updates into its leading instructions", 
   ]);
 });
 
-test.each([10, 100])("does not rebuild identical raw history views for %i messages", async (count) => {
-  const spy = vi.spyOn(native, "fullInputForBranch");
-  try {
-    await replay(model(), Array.from({ length: count }, (_, i) => ({ role: "user", content: [{ type: "text", text: `history-${i}` }], timestamp: i })));
-    expect(spy).toHaveBeenCalledTimes(1);
-  } finally { spy.mockRestore(); }
+test.each([10, 100])("reuses each input view for %i messages", (count) => {
+  const m = model();
+  const branch = messageEntries(Array.from({ length: count }, (_, i) => ({ role: "user", content: [{ type: "text", text: `history-${i}` }], timestamp: i })));
+  const snapshot = createBranchInputSnapshot({ branch, tools: [] });
+  const first = snapshot.view(m, "full-history");
+  expect(snapshot.view(m, "full-history")).toBe(first);
+  expect(snapshot.view(m, "effective")).toBe(snapshot.view(m, "pi-context"));
+  expect(first.userSources.size).toBe(count);
 });
 
 test("replays grammar calls and outputs from Pi payload metadata omitted by getAllTools", async () => {

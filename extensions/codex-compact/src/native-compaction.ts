@@ -1,7 +1,8 @@
 import { responseItemEstimationView } from "./response-item-estimation.js";
-import { projectBranchMessages } from "./session-projection.js";
+import { createBranchProjectionSnapshot, type ProjectedBranchEntry } from "./session-projection.js";
 import { convertResponsesTools } from "./pi-responses.js";
 import { setTimeout as sleep } from "node:timers/promises";
+import { isDeepStrictEqual } from "node:util";
 import { audioTokenCount, contentTokens, imageBytes, inlineAudioPayload, inlineImagePayload, textTokens, truncateImageMessage, truncateText } from "./token-estimation.js";
 import {
 	convertToLlm,
@@ -85,6 +86,13 @@ export function isContextWindowCompactionError(error: unknown): boolean {
 
 export type JsonObject = Record<string, unknown>;
 export type ResponseItem = JsonObject & { type?: string };
+export type ResponseInputView = { items: ResponseItem[]; userSources: ReadonlyMap<number, string> };
+export type InputViewKind = "full-history" | "pi-context" | "effective";
+export type InputViewOptions = {
+	excludeEntryId?: string;
+	excludeLastAssistantError?: boolean;
+	allowCheckpointModelMismatch?: boolean;
+};
 
 export type FailedRequestDiagnostics = {
 	phase: "before_provider_request";
@@ -500,12 +508,14 @@ function messagesToResponseItems(
 	messages: Message[],
 	tools: ToolInfo[],
 	skipMessages = 0,
-): ResponseItem[] {
+	sourceByMessage?: WeakMap<Message, string>,
+): ResponseInputView {
 	const retainedMessages = new Set(messages.slice(skipMessages));
 	const compat = model.compat as OpenAIResponsesCompat | undefined;
 	const context = resolveTranscript(normalizeContext({ messages, ...(messages.some(message => message.role === "system") ? {} : { tools }) }), compat?.supportsMidConvoSystemMessages);
 	messages = context.messages;
 	const items: ResponseItem[] = [];
+	const userSources = new Map<number, string>();
 	const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
 	for (const tool of getDeclaredTools(messages)) toolsByName.set(tool.name, { ...toolsByName.get(tool.name), ...tool } as ToolInfo);
 	const supportsAdditionalTools = compat?.supportsAdditionalTools === true;
@@ -553,6 +563,8 @@ function messagesToResponseItems(
 			flushOrphanedToolCalls();
 			const content = contentToUserParts(imageAwareContent(message.content, model, "(image omitted: model does not support images)"));
 			if (content.length === 0) continue;
+			const source = sourceByMessage?.get(message as Message);
+			if (source !== undefined) userSources.set(items.length, source);
 			items.push({ role: "user", content });
 		} else if (message.role === "assistant" && Array.isArray(message.content)) {
 			flushOrphanedToolCalls();
@@ -642,7 +654,13 @@ function messagesToResponseItems(
 	}
 	flushOrphanedToolCalls();
 
-	return skipMessages > 0 ? items.slice(tailStart ?? items.length) : items;
+	const start = skipMessages > 0 ? tailStart ?? items.length : 0;
+	return {
+		items: start > 0 ? items.slice(start) : items,
+		userSources: start > 0
+			? new Map([...userSources].filter(([index]) => index >= start).map(([index, id]) => [index - start, id]))
+			: userSources,
+	};
 }
 
 export function loadedToolNamesFromItems(items: ResponseItem[]): Set<string> {
@@ -656,108 +674,121 @@ export function loadedToolNamesFromItems(items: ResponseItem[]): Set<string> {
 	return loadedToolNames;
 }
 
-function entriesToResponseItems(
-	model: Model<any>,
-	entries: SessionEntry[],
-	tools: ToolInfo[],
-	includeCompactionSummary = false,
-	beforeEntryIndex = 0,
-): ResponseItem[] {
-	const projected = projectBranchMessages(entries, includeCompactionSummary);
-	const messages = projected.flat();
-	const skipped = projected.slice(0, beforeEntryIndex).flat();
-	return messagesToResponseItems(model, convertToLlm(messages), tools, convertToLlm(skipped).length);
-}
-
-export function fullInputForBranch(params: {
-	branch: SessionEntry[];
-	model: Model<any>;
-	tools: ToolInfo[];
-}): ResponseItem[] {
-	return entriesToResponseItems(params.model, params.branch, params.tools);
-}
-
-export function piContextInputForBranch(params: {
-	branch: SessionEntry[];
-	model: Model<any>;
-	tools: ToolInfo[];
-}): ResponseItem[] {
-	const checkpoint = findNativeCheckpoint(params.branch, modelKey(params.model));
-	if (checkpoint.status === "invalid" || checkpoint.status === "bypassed") return fullInputForBranch(params);
-	const remoteCheckpoint = checkpoint.status === "valid";
-	const boundaryEnd = checkpoint.status === "valid" ? checkpoint.checkpoint.entryIndex : params.branch.length;
-	let firstKeptEntryId: string | undefined;
-	let compactionIndex = -1;
-	for (let index = boundaryEnd - 1; index >= 0; index--) {
-		const candidate = params.branch[index];
-		if (candidate?.type === "compaction" && typeof candidate.firstKeptEntryId === "string") {
-			firstKeptEntryId = candidate.firstKeptEntryId;
-			compactionIndex = index;
-			break;
+function projectedToResponseView(
+	model: Model<any>, projected: readonly ProjectedBranchEntry[], tools: ToolInfo[],
+	excludeIds: ReadonlySet<string>, beforeSourceIndex = 0, convertMessages: typeof convertToLlm = convertToLlm,
+): ResponseInputView {
+	const sourceByMessage = new WeakMap<Message, string>();
+	const messages: Message[] = [];
+	let skipMessages = 0;
+	for (const entry of projected) {
+		if (excludeIds.has(entry.sourceEntry.id)) continue;
+		const converted = convertMessages(entry.messages);
+		if (entry.sourceIndex < beforeSourceIndex) skipMessages += converted.length;
+		for (const message of converted) {
+			const owned = message.role === "user" ? { ...message } : message;
+			if (owned.role === "user") sourceByMessage.set(owned, entry.sourceEntry.id);
+			messages.push(owned);
 		}
 	}
-	if (checkpoint.status === "valid") {
-		const entry = params.branch[checkpoint.checkpoint.entryIndex];
-		if (entry?.type === "compaction" && typeof entry.firstKeptEntryId === "string") {
-			firstKeptEntryId = entry.firstKeptEntryId;
-			compactionIndex = checkpoint.checkpoint.entryIndex;
+	return messagesToResponseItems(model, messages, tools, skipMessages, sourceByMessage);
+}
+
+export function createBranchInputSnapshot(params: {
+	branch: SessionEntry[];
+	tools: ToolInfo[];
+	convertMessages?: typeof convertToLlm;
+	lookupCheckpoint?: typeof findNativeCheckpoint;
+}) {
+	const projection = createBranchProjectionSnapshot(params.branch);
+	const branch = projection.branch as SessionEntry[];
+	const cache = new Map<Model<any>, Map<string, ResponseInputView>>();
+	const nativeRanges = new Map<number, readonly ProjectedBranchEntry[]>();
+	const checkpoints = new Map<string, CheckpointLookup>();
+	const checkpoint = (model: Model<any>) => {
+		const key = modelKey(model);
+		let result = checkpoints.get(key);
+		if (!result) checkpoints.set(key, result = (params.lookupCheckpoint ?? findNativeCheckpoint)(branch, key));
+		return result;
+	};
+	const view = (model: Model<any>, kind: InputViewKind, options: InputViewOptions = {}): ResponseInputView => {
+		const lookup = checkpoint(model);
+		if (kind === "effective" && lookup.status === "valid" && !options.allowCheckpointModelMismatch
+			&& lookup.checkpoint.details.modelKey !== modelKey(model)) {
+			throw new Error("The latest Codex compaction checkpoint requires model-transition compaction first.");
 		}
-	}
-	if (!firstKeptEntryId) return fullInputForBranch(params);
-	const firstKeptIndex = params.branch.findIndex((candidate) => candidate.id === firstKeptEntryId);
-	if (firstKeptIndex < 0) return fullInputForBranch(params);
-	const contextEntries = remoteCheckpoint || compactionIndex < 0
-		? params.branch.slice(firstKeptIndex)
-		: [
-			params.branch[compactionIndex]!,
-			...params.branch.slice(firstKeptIndex, compactionIndex),
-			...params.branch.slice(compactionIndex + 1),
-		];
-	return entriesToResponseItems(params.model, contextEntries, params.tools, !remoteCheckpoint);
+		const normalizedKind = kind === "effective" && lookup.status !== "valid" ? "pi-context" : kind;
+		const key = `${normalizedKind}|${options.excludeEntryId ?? ""}|${options.excludeLastAssistantError ? 1 : 0}`;
+		const equivalentModel = [...cache.keys()].find((candidate) => isDeepStrictEqual(candidate, model));
+		let byKind = cache.get(equivalentModel ?? model);
+		if (!byKind) cache.set(model, byKind = new Map());
+		const cached = byKind.get(key);
+		if (cached) return cached;
+		const excluded = new Set<string>();
+		if (options.excludeEntryId) excluded.add(options.excludeEntryId);
+		if (options.excludeLastAssistantError) {
+			const lastAssistant = branch.findLast((entry) => entry.type === "message" && entry.message.role === "assistant");
+			if (lastAssistant) excluded.add(lastAssistant.id);
+		}
+		let result: ResponseInputView;
+		if (normalizedKind === "full-history") {
+			result = projectedToResponseView(model, projection.fullHistory(), params.tools, excluded, 0, params.convertMessages);
+		} else if (normalizedKind === "effective" && lookup.status === "valid") {
+			const prefix = [
+				...lookup.checkpoint.details.replacementHistory.map((item) => structuredClone(item)),
+				...(lookup.checkpoint.details.preservedInput ?? []).map((item) => structuredClone(item)),
+			];
+			const tail = projectedToResponseView(model, projection.fullHistory(), params.tools, excluded, lookup.checkpoint.entryIndex + 1, params.convertMessages);
+			result = { items: [...prefix, ...tail.items], userSources: new Map([...tail.userSources].map(([index, id]) => [index + prefix.length, id])) };
+		} else if (lookup.status === "invalid" || lookup.status === "bypassed") {
+			result = view(model, "full-history", options);
+		} else if (lookup.status === "valid") {
+			let firstKeptId: string | undefined;
+			const own = branch[lookup.checkpoint.entryIndex];
+			if (own?.type === "compaction") firstKeptId = own.firstKeptEntryId;
+			if (!firstKeptId) {
+				for (let index = lookup.checkpoint.entryIndex - 1; index >= 0; index--) {
+					const entry = branch[index];
+					if (entry?.type === "compaction") { firstKeptId = entry.firstKeptEntryId; break; }
+				}
+			}
+			const firstIndex = firstKeptId ? projection.sourceIndexById.get(firstKeptId) : undefined;
+			if (firstIndex === undefined) result = view(model, "full-history", options);
+			else {
+				let nativeRange = nativeRanges.get(firstIndex);
+				if (!nativeRange) {
+					nativeRange = createBranchProjectionSnapshot(branch.slice(firstIndex)).fullHistory()
+						.map((entry) => ({ ...entry, sourceIndex: entry.sourceIndex + firstIndex }));
+					nativeRanges.set(firstIndex, nativeRange);
+				}
+				result = projectedToResponseView(model, nativeRange, params.tools, excluded, 0, params.convertMessages);
+			}
+		} else {
+			const latestCompaction = branch.findLast((entry) => entry.type === "compaction");
+			const firstIndex = latestCompaction?.type === "compaction" ? projection.sourceIndexById.get(latestCompaction.firstKeptEntryId) : undefined;
+			result = !latestCompaction || firstIndex === undefined
+				? view(model, "full-history", options)
+				: projectedToResponseView(model, projection.piContext(), params.tools, excluded, 0, params.convertMessages);
+		}
+		byKind.set(key, result);
+		return result;
+	};
+	return { projection, checkpoint, view };
+}
+
+export function fullInputForBranch(params: { branch: SessionEntry[]; model: Model<any>; tools: ToolInfo[] }): ResponseItem[] {
+	return createBranchInputSnapshot(params).view(params.model, "full-history").items;
+}
+
+export function piContextInputForBranch(params: { branch: SessionEntry[]; model: Model<any>; tools: ToolInfo[] }): ResponseItem[] {
+	return createBranchInputSnapshot(params).view(params.model, "pi-context").items;
 }
 
 export function effectiveInputForBranch(params: {
-	branch: SessionEntry[];
-	model: Model<any>;
-	tools: ToolInfo[];
-	excludeLastAssistantError?: boolean;
-	allowCheckpointModelMismatch?: boolean;
+	branch: SessionEntry[]; model: Model<any>; tools: ToolInfo[];
+	excludeLastAssistantError?: boolean; allowCheckpointModelMismatch?: boolean;
 }): ResponseItem[] {
-	let branch = params.branch;
-	if (params.excludeLastAssistantError) {
-		const lastAssistantIndex = branch.findLastIndex(
-			(entry) => entry.type === "message" && entry.message.role === "assistant",
-		);
-		if (lastAssistantIndex >= 0) {
-			branch = branch.filter((_entry, index) => index !== lastAssistantIndex);
-		}
-	}
-
-	const checkpoint = findNativeCheckpoint(branch, modelKey(params.model));
-	if (checkpoint.status === "valid") {
-		if (
-			!params.allowCheckpointModelMismatch
-			&& checkpoint.checkpoint.details.modelKey !== modelKey(params.model)
-		) {
-			throw new Error("The latest Codex compaction checkpoint requires model-transition compaction first.");
-		}
-		const prefix = [
-			...checkpoint.checkpoint.details.replacementHistory.map((item) => structuredClone(item)),
-			...(checkpoint.checkpoint.details.preservedInput ?? []).map((item) => structuredClone(item)),
-		];
-		return [
-			...prefix,
-			...entriesToResponseItems(
-				params.model,
-				branch,
-				params.tools,
-				false,
-				checkpoint.checkpoint.entryIndex + 1,
-			),
-		];
-	}
-
-	return piContextInputForBranch({ branch, model: params.model, tools: params.tools });
+	return createBranchInputSnapshot(params).view(params.model, "effective", params).items;
 }
 
 export function approximateTokenCount(value: unknown): number {
