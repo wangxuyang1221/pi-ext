@@ -6,12 +6,23 @@ import {
   renderMcpToolResult,
 } from "../src/renderers.js";
 
-const { wrapSpy } = vi.hoisted(() => ({ wrapSpy: vi.fn() }));
+const { wrapSpy, widthSpy, truncateSpy } = vi.hoisted(() => ({
+  wrapSpy: vi.fn(), widthSpy: vi.fn(), truncateSpy: vi.fn(),
+}));
 vi.mock("@earendil-works/pi-tui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@earendil-works/pi-tui")>();
-  return { ...actual, wrapTextWithAnsi: (...args: Parameters<typeof actual.wrapTextWithAnsi>) => {
-    wrapSpy(...args); return actual.wrapTextWithAnsi(...args);
-  } };
+  return {
+    ...actual,
+    wrapTextWithAnsi: (...args: Parameters<typeof actual.wrapTextWithAnsi>) => {
+      wrapSpy(...args); return actual.wrapTextWithAnsi(...args);
+    },
+    visibleWidth: (...args: Parameters<typeof actual.visibleWidth>) => {
+      widthSpy(...args); return actual.visibleWidth(...args);
+    },
+    truncateToWidth: (...args: Parameters<typeof actual.truncateToWidth>) => {
+      truncateSpy(...args); return actual.truncateToWidth(...args);
+    },
+  };
 });
 
 const TOOL_NAMES = {
@@ -31,6 +42,141 @@ function stripAnsi(value: string): string {
 }
 
 describe("MCP tool renderers", () => {
+  it("reuses unchanged call and preview layouts without segmentation, measurement or styling", () => {
+    const segment = vi.spyOn(Intl.Segmenter.prototype, "segment");
+    try {
+      const color = vi.fn((_name: string, text: string) => text);
+      const theme = { ...createTheme(), fg: color } as Theme;
+      const context = { state: {}, isError: false, isPartial: false, lastComponent: undefined };
+      const call = renderMcpToolCall({ query: "中文🙂" }, TOOL_NAMES, theme, context);
+      const result = renderMcpToolResult({ content: [{ type: "text", text: "中🙂e\u0301".repeat(2000) }] },
+        { expanded: false, isPartial: false }, theme, context);
+      const expected = [call.render(120), result.render(120)];
+      expect(segment).toHaveBeenCalled();
+      expect(widthSpy).toHaveBeenCalled();
+      expect(truncateSpy).toHaveBeenCalled();
+      segment.mockClear(); widthSpy.mockClear(); truncateSpy.mockClear(); wrapSpy.mockClear(); color.mockClear();
+      for (let i = 0; i < 100; i++) {
+        expect(call.render(120)).toEqual(expected[0]);
+        expect(result.render(120)).toEqual(expected[1]);
+      }
+      expect(segment).not.toHaveBeenCalled();
+      expect(widthSpy).not.toHaveBeenCalled();
+      expect(truncateSpy).not.toHaveBeenCalled();
+      expect(wrapSpy).not.toHaveBeenCalled();
+      expect(color).not.toHaveBeenCalled();
+    } finally { segment.mockRestore(); }
+  });
+
+  it.each([50, 500, 2000])("does not re-layout unchanged history of %i rows", count => {
+    const theme = createTheme();
+    const rows = Array.from({ length: count }, (_, index) => {
+      const context = { state: {}, isError: false, isPartial: false, lastComponent: undefined };
+      return [
+        renderMcpToolCall({ query: `row-${index} 中文🙂` }, TOOL_NAMES, theme, context),
+        renderMcpToolResult({ content: [{ type: "text", text: `row-${index} 中文🙂e\u0301` }] },
+          { expanded: index % 10 === 0, isPartial: false }, theme, context),
+      ];
+    }).flat();
+    for (const row of rows) row.render(120);
+    const segment = vi.spyOn(Intl.Segmenter.prototype, "segment");
+    try {
+      widthSpy.mockClear(); truncateSpy.mockClear(); wrapSpy.mockClear();
+      for (let frame = 0; frame < 100; frame++) for (const row of rows) row.render(120);
+      expect(segment.mock.calls.length).toBe(0);
+      expect(widthSpy.mock.calls.length).toBe(0);
+      expect(truncateSpy.mock.calls.length).toBe(0);
+      expect(wrapSpy.mock.calls.length).toBe(0);
+      rows[0]!.invalidate();
+      rows[0]!.render(120);
+      const changed = [segment.mock.calls.length, widthSpy.mock.calls.length, truncateSpy.mock.calls.length];
+      expect(changed[2]).toBeGreaterThan(0);
+      for (const row of rows) row.render(120);
+      expect([segment.mock.calls.length, widthSpy.mock.calls.length, truncateSpy.mock.calls.length]).toEqual(changed);
+    } finally { segment.mockRestore(); }
+  });
+
+  it("replaces its single layout on resize and invalidation without discarding prepared JSON", () => {
+    const parse = vi.spyOn(JSON, "parse");
+    const color = vi.fn((_name: string, text: string) => text);
+    try {
+      const theme = { ...createTheme(), fg: color } as Theme;
+      const result = { content: [{ type: "text", text: '{"message":"中文🙂 long text"}' }] };
+      const context = { isError: false, isPartial: false, lastComponent: undefined };
+      const component = renderMcpToolResult(result, { expanded: true, isPartial: false }, theme, context);
+      const wide = component.render(120);
+      expect(component.render(120)).toBe(wide);
+      for (let i = 0; i < 10; i++) {
+        for (const width of [24, 120, 0, 120]) {
+          color.mockClear(); truncateSpy.mockClear();
+          const lines = component.render(width);
+          if (width === 0) expect(truncateSpy.mock.calls.length).toBe(0);
+          else {
+            expect(truncateSpy.mock.calls.length).toBeGreaterThan(0);
+            expect(color.mock.calls.length).toBeGreaterThan(0);
+          }
+          color.mockClear(); truncateSpy.mockClear();
+          expect(component.render(width)).toBe(lines);
+          expect(color.mock.calls.length).toBe(0);
+          expect(truncateSpy.mock.calls.length).toBe(0);
+        }
+      }
+      component.invalidate();
+      expect(component.render(120)).toEqual(wide);
+      expect(color.mock.calls.length).toBeGreaterThan(0);
+      expect(parse).toHaveBeenCalledTimes(1);
+    } finally { parse.mockRestore(); }
+  });
+
+  it("updates a cached call for shared success, failure and warning states", () => {
+    const theme = { ...createTheme(), fg: (name: string, text: string) => `<${name}>${text}</${name}>` } as Theme;
+    const context = { state: {}, isError: false, isPartial: false, lastComponent: undefined };
+    const call = renderMcpToolCall({}, TOOL_NAMES, theme, context);
+    expect(call.render(120).join("\n")).toContain("Calling");
+    for (const [content, isError, color] of [
+      ["done", false, "success"],
+      ["denied", true, "error"],
+      ['MCP tool "mcp__MultiFetch__fetch_json" was cancelled.', true, "warning"],
+      ['MCP tool "mcp__MultiFetch__fetch_json" failed: [MCP:MultiFetch/fetch_json] Connection timed out after 30000ms', true, "warning"],
+      ["denied again", true, "error"],
+    ] as const) {
+      renderMcpToolResult({ content: [{ type: "text", text: content }] },
+        { expanded: false, isPartial: false }, theme, { ...context, isError });
+      const title = call.render(120).join("\n");
+      expect(title).toContain(`<${color}>⏺</${color}>`);
+      expect(title).toContain(isError ? "Call failed for" : "Called");
+    }
+  });
+
+  it("repaints reused components after argument, result, option and theme updates", () => {
+    const theme = createTheme();
+    const context = { state: {}, isError: false, isPartial: false, lastComponent: undefined };
+    let call = renderMcpToolCall({ query: "old" }, TOOL_NAMES, theme, context);
+    expect(call.render(120).join("\n")).toContain("old");
+    call = renderMcpToolCall({ query: "new 中文🙂" }, TOOL_NAMES, theme, { ...context, lastComponent: call });
+    expect(call.render(120).join("\n")).toContain("new 中文🙂");
+    const results = [undefined, { content: [{ type: "text", text: "partial" }] },
+      { content: [{ type: "text", text: '{"rows":[1,2,3,4,5,6]}' }] },
+      { content: [], details: { structuredContent: { rows: [7, 8] } } }];
+    let component;
+    for (const result of results) for (const expanded of [false, true, false]) for (const isPartial of [true, false]) {
+      const options = { expanded, isPartial };
+      component = renderMcpToolResult(result, options, theme, { ...context, lastComponent: component });
+      const fresh = renderMcpToolResult(result, options, theme, context);
+      for (const width of [24, 120]) expect(component.render(width)).toEqual(fresh.render(width));
+    }
+    let palette = "dark";
+    const mutableTheme = { ...theme, fg: (name: string, text: string) => `<${palette}:${name}>${text}` } as Theme;
+    const result = { content: [{ type: "text", text: "hello" }] };
+    const options = { expanded: false, isPartial: false };
+    component = renderMcpToolResult(result, options, mutableTheme, context);
+    const dark = component.render(120);
+    palette = "light";
+    component.invalidate();
+    expect(component.render(120)).not.toEqual(dark);
+    expect(component.render(120)).toEqual(renderMcpToolResult(result, options, mutableTheme, context).render(120));
+  });
+
   it("keeps JSON punctuation, escaped quotes, backslashes and Unicode inside strings intact", () => {
     const value = { a: '中文, : "quoted, :" \\ path', b: [true, null] };
     const component = renderMcpToolResult({ content: [{ type: "text", text: JSON.stringify(value) }] },

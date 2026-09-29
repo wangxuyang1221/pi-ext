@@ -366,21 +366,26 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		return coordinator.selectModel(event, ctx);
 	});
 
-	pi.on("context", (event, ctx) => {
+	// `context` collapses system deltas when a handler removes the Pi summary.
+	// Own the full transcript so provider replay and branch-prefix validation agree.
+	pi.on("context_with_system", (event, ctx) => {
 		const branch = ctx.sessionManager.getBranch() as SessionEntry[];
 		const model = ctx.model;
 		const codexModel = isOpenAICodexModel(model);
 		const checkpoint = findNativeCheckpoint(branch, codexModel ? modelKey(model) : undefined);
+		const replayFullHistory = () => {
+			const messages = projectBranchMessages(branch).flat();
+			const head = event.messages[0];
+			// Legacy branches can start with a user before their first system delta.
+			// Keep Pi's existing baseline rather than dropping its prompt/tool declarations.
+			return { messages: head?.role === "system" && messages[0]?.role !== "system" ? [head, ...messages] : messages };
+		};
 		if (!codexModel) {
 			if (checkpoint.status === "none") return undefined;
-			return {
-				messages: projectBranchMessages(branch).flat(),
-			};
+			return replayFullHistory();
 		}
 		if (checkpoint.status === "invalid" || checkpoint.status === "bypassed") {
-			return {
-				messages: projectBranchMessages(branch).flat(),
-			};
+			return replayFullHistory();
 		}
 		if (checkpoint.status !== "valid") return undefined;
 		return {

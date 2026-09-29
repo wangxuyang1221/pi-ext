@@ -1,12 +1,12 @@
 import { expect, test, vi } from "vitest";
-import { convertToLlm, SessionManager, type SessionEntry } from "@earendil-works/pi-coding-agent";
+import { convertToLlm, ExtensionRunner, SessionManager, type SessionEntry } from "@earendil-works/pi-coding-agent";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
 import { streamSimple } from "@earendil-works/pi-ai/api/openai-codex-responses";
 import codexCompactionExtension from "../src/index.js";
 import { loadConfig } from "../src/config.js";
-import { effectiveInputForBranch, FAILED_REQUEST_KIND, NATIVE_COMPACTION_KIND, type ResponseItem } from "../src/native-compaction.js";
+import { piContextInputForBranch, effectiveInputForBranch, FAILED_REQUEST_KIND, NATIVE_COMPACTION_KIND, type ResponseItem } from "../src/native-compaction.js";
 
 const configOverride = vi.hoisted(() => ({ value: undefined as { autoCompactScope: "total"; autoCompactTokenLimit: number } | undefined }));
 vi.mock("../src/config.js", async (importOriginal) => {
@@ -84,6 +84,52 @@ function installExtension(branch: SessionEntry[] = [], hasUI = false, contextWin
 	} as never);
 	return { handlers, commands, ctx, model, notify, setStatus, setWidget, appendEntry };
 }
+
+test("preserves mid-conversation system updates through the real context runner and provider serialization", async () => {
+	const sm = SessionManager.inMemory(process.cwd());
+	sm.appendMessage({ role: "system", content: "", sections: { tools: "Initial tools" }, timestamp: 1 });
+	const kept = sm.appendMessage({ role: "user", content: "Kept task", timestamp: 2 });
+	sm.appendCompaction("Older history", kept, 1000);
+	sm.appendCustomEntry(NATIVE_COMPACTION_KIND, (checkpointEntry() as any).data);
+	sm.appendMessage({ role: "system", content: "", sections: { tools: "Reordered tools" }, timestamp: 3 });
+	sm.appendMessage({ role: "user", content: "Continue", timestamp: 4 });
+	const { handlers, ctx, model } = installExtension(sm.getBranch());
+	model.compat = { supportsMidConvoSystemMessages: true, supportsAdditionalTools: true };
+	const runner = new ExtensionRunner([{ path: "codex-compact", handlers: new Map([...handlers].map(([name, fn]) => [name, [fn]])) }] as never,
+		{} as never, process.cwd(), sm, {} as never);
+	runner.createContext = () => ctx as never;
+	const errors: unknown[] = [];
+	runner.onError(error => errors.push(error));
+	const transformed = await runner.emitContext(sm.buildSessionProjection().messages);
+	let input: ResponseItem[] | undefined;
+	const response = await streamSimple({ ...getBuiltinModel("openai-codex", "gpt-5.5")!, ...model } as never, { messages: convertToLlm(transformed) }, {
+		apiKey, onPayload: payload => { input = (payload as { input: ResponseItem[] }).input; throw new Error("Stop before network"); },
+	}).result();
+	expect(response.errorMessage).toBe("Stop before network");
+	expect(errors).toEqual([]);
+	expect(input).toEqual(piContextInputForBranch({ branch: sm.getBranch(), model: model as never, tools: [] }));
+	expect(transformed.filter(message => message.role === "system")).toHaveLength(2);
+});
+
+test("retains the leading system baseline when replaying legacy history after an invalid checkpoint", async () => {
+	const sm = SessionManager.inMemory(process.cwd());
+	sm.appendMessage({ role: "user", content: "Legacy first message", timestamp: 1 });
+	sm.appendMessage({ role: "system", content: "", sections: { rules: "Historical rules" }, timestamp: 2 });
+	const kept = sm.appendMessage({ role: "user", content: "Retained task", timestamp: 3 });
+	sm.appendCompaction("Summary", kept, 1000);
+	sm.appendCustomEntry(NATIVE_COMPACTION_KIND, { kind: NATIVE_COMPACTION_KIND, version: 2 });
+	const { handlers, ctx } = installExtension(sm.getBranch());
+	const runner = new ExtensionRunner([{ path: "codex-compact", handlers: new Map([...handlers].map(([name, fn]) => [name, [fn]])) }] as never,
+		{} as never, process.cwd(), sm, {} as never);
+	runner.createContext = () => ctx as never;
+	const errors: unknown[] = [];
+	runner.onError(error => errors.push(error));
+	const original = sm.buildSessionProjection().messages;
+	const transformed = await runner.emitContext(original);
+	expect(errors).toEqual([]);
+	expect(transformed[0]).toEqual(original[0]);
+	expect(transformed.filter(message => message.role === "user").map(message => message.content)).toEqual(["Legacy first message", "Retained task"]);
+});
 
 function stubSuccessfulCompaction(encryptedContent = "opaque"): void {
 	vi.stubGlobal("fetch", async () => new Response([
@@ -458,7 +504,7 @@ test("restores edited history when leaving Codex after a checkpoint", () => {
 	const { handlers, ctx } = installExtension();
 	(ctx as any).sessionManager = sm;
 	ctx.model = { provider: "other", api: "other", id: "other" } as never;
-	const result = handlers.get("context")?.({ messages: sm.buildSessionProjection().messages }, ctx);
+	const result = handlers.get("context_with_system")?.({ messages: sm.buildSessionProjection().messages }, ctx);
 	expect(JSON.stringify(result)).toContain("revised task");
 	expect(JSON.stringify(result)).not.toContain("stale task");
 });
@@ -691,7 +737,7 @@ test.each(["session_tree", "session_start"])("does not clear or abort a newer re
 test("filters Pi compaction summaries after a valid V2 checkpoint", () => {
 	const { handlers, ctx } = installExtension([checkpointEntry()]);
 
-	const result = handlers.get("context")?.(
+	const result = handlers.get("context_with_system")?.(
 		{
 			messages: [
 				{ role: "compactionSummary", content: [{ type: "text", text: "OLD SUMMARY" }] },
@@ -741,7 +787,7 @@ test("replays the full branch for a non-Codex model after a V2 compaction", () =
 	ctx.model.provider = "anthropic";
 	ctx.model.api = "anthropic-messages";
 
-	const result = handlers.get("context")?.({
+	const result = handlers.get("context_with_system")?.({
 		messages: [
 			{ role: "compactionSummary", content: [{ type: "text", text: "V2 marker only" }] },
 			{ role: "user", content: [{ type: "text", text: "tail context" }] },
@@ -788,7 +834,7 @@ test("replays the full branch when a native checkpoint is malformed", () => {
 	] as never;
 	const { handlers, ctx } = installExtension(branch);
 
-	const result = handlers.get("context")?.(
+	const result = handlers.get("context_with_system")?.(
 		{ messages: [{ role: "compactionSummary", content: [{ type: "text", text: "OLD SUMMARY" }] }] },
 		ctx,
 	);

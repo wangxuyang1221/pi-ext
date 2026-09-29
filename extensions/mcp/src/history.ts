@@ -1,7 +1,9 @@
 import { closeSync, constants, fstatSync, openSync, readSync } from "node:fs";
-import { parseSessionEntries } from "@earendil-works/pi-coding-agent";
+import { open } from "node:fs/promises";
 
-export const MAX_HISTORY_FILE_BYTES = 64 * 1024 * 1024;
+// Bound a single JSONL record, not the complete session (which may contain many images).
+export const MAX_HISTORY_RECORD_BYTES = 64 * 1024 * 1024;
+export const HISTORY_READ_CHUNK_BYTES = 64 * 1024;
 export const MAX_HISTORY_IDENTITIES = 4096;
 export const MAX_HISTORY_NAME_BYTES = 1024;
 
@@ -14,6 +16,12 @@ export interface HistoryIdentity {
 
 /** Collects MCP display identities across all session branches. */
 export function collectHistoryIdentities(entries: readonly unknown[]): HistoryIdentity[] {
+  const collector = createHistoryCollector();
+  for (const entry of entries) collector.accept(entry);
+  return collector.values();
+}
+
+function createHistoryCollector() {
   const identities = new Map<string, HistoryIdentity>();
   const conflicts = new Set<string>();
   const add = (name: unknown, details?: unknown): void => {
@@ -47,9 +55,9 @@ export function collectHistoryIdentities(entries: readonly unknown[]): HistoryId
     identities.set(name, identity);
     if (identities.size > MAX_HISTORY_IDENTITIES) throw new Error("MCP history identity limit exceeded");
   };
-  for (const entry of entries) {
+  const accept = (entry: unknown): void => {
     const row = record(entry);
-    if (row?.type !== "message") continue;
+    if (row?.type !== "message") return;
     const message = record(row.message);
     if (message?.role === "assistant" && Array.isArray(message.content)) {
       for (const block of message.content) {
@@ -57,19 +65,59 @@ export function collectHistoryIdentities(entries: readonly unknown[]): HistoryId
         if (value?.type === "toolCall") add(value.name);
       }
     } else if (message?.role === "toolResult") add(message.toolName, message.details);
-  }
-  return [...identities.values()];
+  };
+  return { accept, values: () => [...identities.values()] };
 }
 
-/** Reads a bounded session file without opening or migrating a SessionManager. */
-export function readHistoryIdentities(path: string): HistoryIdentity[] {
-  const content = readBoundedFile(path, MAX_HISTORY_FILE_BYTES);
-  const entries = parseSessionEntries(content);
-  const lineCount = content.split("\n").filter((line) => line.trim()).length;
-  if (entries.length !== lineCount || entries.some((entry) => !record(entry))) {
-    throw new Error("Malformed MCP history JSONL");
-  }
-  return collectHistoryIdentities(entries);
+/** Scans JSONL once, retaining only the current record and bounded display identities. */
+export async function readHistoryIdentities(path: string): Promise<HistoryIdentity[]> {
+  const fd = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  try {
+    const before = await fd.stat();
+    if (!before.isFile()) throw new Error("Unsafe MCP history file");
+    const collector = createHistoryCollector();
+    let fragments: Buffer[] = [];
+    let recordBytes = 0;
+    const append = (fragment: Buffer) => {
+      recordBytes += fragment.length;
+      if (recordBytes > MAX_HISTORY_RECORD_BYTES) throw new Error("Oversized MCP history JSONL record");
+      if (fragment.length) fragments.push(fragment);
+    };
+    const consume = () => {
+      const line = Buffer.concat(fragments, recordBytes).toString("utf8").trim();
+      fragments = [];
+      recordBytes = 0;
+      if (!line) return;
+      let entry: unknown;
+      try { entry = JSON.parse(line); }
+      catch { throw new Error("Malformed MCP history JSONL"); }
+      if (!record(entry)) throw new Error("Malformed MCP history JSONL");
+      collector.accept(entry);
+    };
+    let bytes = 0;
+    while (bytes <= before.size) {
+      // Async bounded reads yield between chunks; never allocate from the file size.
+      const buffer = Buffer.allocUnsafe(Math.min(HISTORY_READ_CHUNK_BYTES, before.size - bytes + 1));
+      const { bytesRead } = await fd.read(buffer, 0, buffer.length, bytes);
+      if (!bytesRead) break;
+      bytes += bytesRead;
+      if (bytes > before.size) throw new Error("MCP history file changed while reading");
+      const chunk = buffer.subarray(0, bytesRead);
+      let start = 0;
+      for (let end = chunk.indexOf(10); end !== -1; end = chunk.indexOf(10, start)) {
+        append(chunk.subarray(start, end));
+        consume();
+        start = end + 1;
+      }
+      append(chunk.subarray(start));
+    }
+    consume();
+    const after = await fd.stat();
+    if (bytes !== before.size || after.size !== before.size || after.mtimeMs !== before.mtimeMs || after.ctimeMs !== before.ctimeMs) {
+      throw new Error("MCP history file changed while reading");
+    }
+    return collector.values();
+  } finally { await fd.close(); }
 }
 
 /** Reads only regular files, rejecting symlinks, growth, and oversized input. */

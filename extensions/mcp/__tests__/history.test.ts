@@ -1,28 +1,52 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, truncateSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, truncateSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
-import { collectHistoryIdentities, MAX_HISTORY_FILE_BYTES, readBoundedFile, readHistoryIdentities } from "../src/history.js";
+import { describe, expect, it, vi } from "vitest";
+import * as promises from "node:fs/promises";
+import { collectHistoryIdentities, HISTORY_READ_CHUNK_BYTES, MAX_HISTORY_RECORD_BYTES, readBoundedFile, readHistoryIdentities } from "../src/history.js";
+
+vi.mock("node:fs/promises", async importOriginal => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  return { ...actual, open: vi.fn(actual.open) };
+});
 
 const call = (name: string) => ({ type: "message", message: { role: "assistant", content: [{ type: "toolCall", name, arguments: { secret: "never persist" } }] } });
 const result = (name: string, server: string, tool: string) => ({ type: "message", message: { role: "toolResult", toolName: name, isError: true, details: { mcp: true, server, tool } } });
 
 describe("history identities", () => {
-  it("reads legacy JSONL without rewriting bytes and reports corrupt lines", () => {
+  it("reads a session larger than 64 MiB incrementally and keeps cross-record identity conflicts", async () => {
+    mkdirSync(".tmp", { recursive: true });
+    const dir = mkdtempSync(join(process.cwd(), ".tmp/history-large-"));
+    const path = join(dir, "session.jsonl");
+    let ticks = 0;
+    const timer = setInterval(() => ticks++, 0);
+    try {
+      writeFileSync(path, JSON.stringify(result("mcp__a__b__c", "a__b", "c")) + "\n");
+      const image = JSON.stringify({ type: "message", message: { role: "toolResult", toolName: "mcp__old__query", content: [{ type: "image", data: "A".repeat(1024 * 1024), mimeType: "image/png" }] } }) + "\n";
+      for (let i = 0; i < 65; i++) appendFileSync(path, image);
+      appendFileSync(path, JSON.stringify(result("mcp__a__b__c", "a", "b__c")) + "\n" + JSON.stringify(result("mcp__a__b__c", "a__b", "c")));
+      expect(await readHistoryIdentities(path)).toEqual([
+        { fullName: "mcp__a__b__c" },
+        { fullName: "mcp__old__query", serverName: "old", toolName: "query" },
+      ]);
+      expect(ticks).toBeGreaterThan(1);
+    } finally { clearInterval(timer); rmSync(dir, { recursive: true, force: true }); }
+  });
+  it("reads legacy JSONL without rewriting bytes and reports corrupt lines", async () => {
     mkdirSync(".tmp", { recursive: true });
     const dir = mkdtempSync(join(process.cwd(), ".tmp/history-"));
     const path = join(dir, "session.jsonl");
     try {
       const data = JSON.stringify({ type: "session", version: 1 }) + "\n" + JSON.stringify(call("mcp__old__query"));
       writeFileSync(path, data);
-      expect(readHistoryIdentities(path)).toEqual([{ fullName: "mcp__old__query", serverName: "old", toolName: "query" }]);
+      expect(await readHistoryIdentities(path)).toEqual([{ fullName: "mcp__old__query", serverName: "old", toolName: "query" }]);
       expect(readFileSync(path, "utf8")).toBe(data);
       writeFileSync(path, data + "\n{broken");
-      expect(() => readHistoryIdentities(path)).toThrow();
+      await expect(readHistoryIdentities(path)).rejects.toThrow();
       expect(readFileSync(path, "utf8")).toBe(data + "\n{broken");
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 
-  it("bounds file reads before allocation and rejects session symlinks without changing their target", () => {
+  it("bounds records and handoff reads and rejects session symlinks without changing their target", async () => {
     mkdirSync(".tmp", { recursive: true });
     const dir = mkdtempSync(join(process.cwd(), ".tmp/history-"));
     try {
@@ -31,11 +55,57 @@ describe("history identities", () => {
       expect(readBoundedFile(path, 32)).toHaveLength(32);
       expect(() => readBoundedFile(path, 31)).toThrow();
       symlinkSync(path, join(dir, "link"));
-      expect(() => readHistoryIdentities(join(dir, "link"))).toThrow();
+      await expect(readHistoryIdentities(join(dir, "link"))).rejects.toThrow();
       expect(readFileSync(path, "utf8")).toBe("x".repeat(32));
-      truncateSync(path, MAX_HISTORY_FILE_BYTES + 1);
-      expect(() => readHistoryIdentities(path)).toThrow("oversized");
+      truncateSync(path, MAX_HISTORY_RECORD_BYTES + 1);
+      await expect(readHistoryIdentities(path)).rejects.toThrow("Oversized");
       expect(collectHistoryIdentities([call(`mcp__x__${"a".repeat(1016)}`)])[0].fullName).toHaveLength(1024);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+
+  it.each(["grow", "shrink", "rewrite", "read-error"])("rejects %s during a bounded scan and closes the file", async change => {
+    mkdirSync(".tmp", { recursive: true });
+    const dir = mkdtempSync(join(process.cwd(), ".tmp/history-change-"));
+    const path = join(dir, "session");
+    const data = JSON.stringify({ ...call("mcp__x__read"), padding: "x".repeat(HISTORY_READ_CHUNK_BYTES * 2) }) + "\n";
+    writeFileSync(path, data);
+    const fd = await promises.open(path, "r");
+    const realRead = fd.read.bind(fd);
+    const lengths: number[] = [];
+    const closed = vi.spyOn(fd, "close");
+    vi.spyOn(promises, "open").mockResolvedValueOnce(fd);
+    vi.spyOn(fd, "read").mockImplementation((async (...args: any[]) => {
+      lengths.push(args[2]);
+      const result = await (realRead as any)(...args);
+      if (lengths.length === 1) {
+        if (change === "grow") appendFileSync(path, "{}\n");
+        if (change === "shrink") truncateSync(path, 0);
+        if (change === "rewrite") { await new Promise(resolve => setTimeout(resolve, 10)); writeFileSync(path, data); }
+        if (change === "read-error") throw new Error("Injected read failure");
+      }
+      return result;
+    }) as any);
+    try {
+      await expect(readHistoryIdentities(path)).rejects.toThrow();
+      expect(lengths.every(length => length <= HISTORY_READ_CHUNK_BYTES)).toBe(true);
+      expect(closed).toHaveBeenCalledOnce();
+    } finally { vi.restoreAllMocks(); rmSync(dir, { recursive: true, force: true }); }
+  });
+
+  it("decodes UTF-8 across chunk boundaries, ignores blank lines and rejects non-object JSON", async () => {
+    mkdirSync(".tmp", { recursive: true });
+    const dir = mkdtempSync(join(process.cwd(), ".tmp/history-unicode-"));
+    const path = join(dir, "session");
+    try {
+      const prefix = '{"padding":"';
+      const padding = "x".repeat(HISTORY_READ_CHUNK_BYTES - Buffer.byteLength(prefix) - 1);
+      writeFileSync(path, prefix + padding + '中文🙂","type":"message","message":{"role":"toolResult","toolName":"mcp__中文__查询"}}\r\n\n  \n');
+      expect(await readHistoryIdentities(path)).toEqual([{ fullName: "mcp__中文__查询", serverName: "中文", toolName: "查询" }]);
+      for (const value of ["null", "[]", "42", "{broken"]) {
+        writeFileSync(path, value);
+        await expect(readHistoryIdentities(path)).rejects.toThrow("Malformed");
+      }
+      await expect(readHistoryIdentities(dir)).rejects.toThrow("Unsafe");
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 

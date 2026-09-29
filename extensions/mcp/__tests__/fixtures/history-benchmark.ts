@@ -32,7 +32,7 @@ export default async function benchmark(_pi: ExtensionAPI): Promise<void> {
       for (let iteration = 0; iteration < 6; iteration += 1) {
         global.gc?.();
         const start = performance.now();
-        const identities = baseline ? [] : readHistoryIdentities(path);
+        const identities = baseline ? [] : await readHistoryIdentities(path);
         const extracted = performance.now();
         const handoff = new HistoryHandoff(base);
         if (!baseline) handoff.publish(identities);
