@@ -20,7 +20,7 @@ NODE = shutil.which("node")
 ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\)")
 
 
-def session(path, cwd, extra_tools=0):
+def session(path, cwd, extra_tools=0, history_mib=0):
     stamp = "2026-09-11T00:00:00.000Z"
     entries = [{"type": "session", "version": 3, "id": path.stem, "cwd": str(cwd), "timestamp": stamp}]
     def add(id, parent, message):
@@ -33,12 +33,20 @@ def session(path, cwd, extra_tools=0):
     for index in range(extra_tools):
         add(f"extra{index}", None, {"role": "toolResult", "toolCallId": f"extra-call-{index}", "toolName": f"mcp__extra__tool{index}", "content": [{"type": "text", "text": "synthetic-extra"}], "isError": False})
     add("user0002", "result01", {"role": "user", "content": "Synthetic follow-up"})
-    path.write_text("\n".join(json.dumps(entry) for entry in entries) + "\n")
+    with path.open("w") as output:
+        for entry in entries[:-1]:
+            output.write(json.dumps(entry) + "\n")
+        # Off-branch synthetic images exercise extraction without changing the visible transcript.
+        for index in range(history_mib):
+            output.write(json.dumps({"type": "message", "id": f"image-{index}", "parentId": None, "timestamp": stamp,
+                "message": {"role": "toolResult", "toolCallId": f"image-call-{index}", "toolName": "mcp__offline__old-tool",
+                    "content": [{"type": "image", "data": "A" * (1024 * 1024), "mimeType": "image/png"}], "isError": False, "timestamp": 1}}) + "\n")
+        output.write(json.dumps(entries[-1]) + "\n")
 
 
-def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0, memory=False, extra_tools=0):
+def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0, memory=False, extra_tools=0, pi_version="0.85.1", history_mib=0):
     package = json.loads((pi_root / "package.json").read_text())
-    assert package["version"] == "0.85.1", package["version"]
+    assert package["version"] == pi_version, package["version"]
     cli = pi_root / "dist/bundle/cli.js"
     (ROOT / ".tmp").mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="mcp-resume-", dir=ROOT / ".tmp") as temporary:
@@ -51,7 +59,7 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
             "retry": {"maxAttempts": 1, "background": False}}} if live else {}}))
         history = run / "sessions" / "history.jsonl"
         imported = run / "import.jsonl"
-        session(history, run, extra_tools)
+        session(history, run, extra_tools, history_mib)
         session(imported, run)
         other = run / "untrusted"
         (other / ".pi").mkdir(parents=True)
@@ -76,7 +84,7 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
         args = [NODE, str(cli), "--no-extensions", "--extension", str(extension), "--extension",
                 str(ROOT / "extensions/mcp/__tests__/fixtures/resume-ui-extension.ts"), "--session-dir", str(run / "sessions"),
                 "--no-context-files", "--no-skills", "--no-prompt-templates", "--offline"]
-        args += ["--no-session", "--provider", "mcp-ui-host-fixture", "--model", "ui-test"] if memory else ["--session", str(history)] if cold_mode == "session" else [f"--{cold_mode}"]
+        args += ["--no-session", "--provider", "mcp-ui-host-fixture", "--model", "ui-test"] if memory else ["--provider", "mcp-ui-host-fixture", "--model", "ui-test"] if cold_mode == "blank" else ["--session", str(history)] if cold_mode == "session" else [f"--{cold_mode}"]
         pid, fd = pty.fork()
         if pid == 0:
             os.chdir(run)
@@ -134,6 +142,10 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
                 os.write(fd, b"\r")
             text = until("MCP UI host ready")
             timings[name] = round(time.monotonic() - start, 3)
+            # Identical redraws may be elided on same-content reloads. A blank-to-history
+            # switch must paint its restored rows before any resize or manual refresh.
+            if name in {"blank-resume", "resume-live-offline"}:
+                check(text, name + "-first-paint")
             fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 50, 119, 0, 0))
             os.kill(pid, signal.SIGWINCH)
             receive(0.3)
@@ -141,6 +153,7 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
             os.kill(pid, signal.SIGWINCH)
             text = receive(0.3)
             check(text, name)
+            return text
 
         def check(text, scene):
             server_tool = "local / echo" if live else "offline / old-tool"
@@ -160,6 +173,9 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
             text = until("MCP UI host ready")
             timings["cold"] = round(time.monotonic() - start, 3)
             remember_children()
+            if cold_mode == "blank":
+                assert not live, "Use the live case separately from blank startup"
+                text = replacement("blank-resume", f"/fixture-resume {history}")
             if live:
                 os.write(fd, b"Run the fixture call\r")
                 live_text = until("MCP-LIVE-DONE")
@@ -226,7 +242,7 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
             assert str(run) not in subprocess.check_output(["ps", "-axo", "command="], text=True)
             leftovers = list((run / "agent").glob("mcp-history/*"))
             assert not leftovers, leftovers
-            print(json.dumps({"pi": package["version"], "baseline": baseline, "live": live, "memory": memory, "extra_tools": extra_tools, "cold_mode": cold_mode, "timings_seconds": timings,
+            print(json.dumps({"pi": package["version"], "baseline": baseline, "live": live, "memory": memory, "extra_tools": extra_tools, "cold_mode": cold_mode, "history_mib": history_mib, "timings_seconds": timings,
                               "peak_rss": usage.ru_maxrss, "pid": pid, "exited": exited, "ports": [], "repeat_resources": resources, "child_pids_exited": sorted(owned_children), "handoff_files": len(leftovers)}))
         finally:
             if not exited:
@@ -248,11 +264,13 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--pi-root", type=Path, required=True)
+    parser.add_argument("--pi-version", default="0.85.1")
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--live", action="store_true")
-    parser.add_argument("--cold-mode", choices=["session", "continue", "resume"], default="session")
+    parser.add_argument("--cold-mode", choices=["session", "continue", "resume", "blank"], default="session")
     parser.add_argument("--repeat", type=int, default=0)
     parser.add_argument("--memory", action="store_true")
     parser.add_argument("--extra-tools", type=int, default=0)
+    parser.add_argument("--history-mib", type=int, default=0)
     options = parser.parse_args()
-    run_case(options.pi_root, options.baseline, options.live or options.memory, options.cold_mode, options.repeat, options.memory, options.extra_tools)
+    run_case(options.pi_root, options.baseline, options.live or options.memory, options.cold_mode, options.repeat, options.memory, options.extra_tools, options.pi_version, options.history_mib)

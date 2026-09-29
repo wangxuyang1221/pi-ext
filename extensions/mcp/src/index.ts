@@ -383,7 +383,7 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
       handoff.clear();
       if (event.reason === "resume") {
         if (!event.targetSessionFile) throw new Error("Missing MCP history target session file");
-        handoff.publish(readHistoryIdentities(event.targetSessionFile));
+        handoff.publish(await readHistoryIdentities(event.targetSessionFile));
       } else if (event.reason === "reload" || event.reason === "fork") {
         handoff.publish(collectHistoryIdentities(ctx.sessionManager.getEntries()));
       }

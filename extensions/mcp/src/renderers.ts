@@ -69,6 +69,8 @@ const SENSITIVE_ARGUMENT_KEY = /api[-_]?key|access[-_]?token|authorization|passw
 
 class ResponsiveLinesComponent implements Component {
   private renderer: (width: number) => string[] = () => [];
+  private state?: McpRowState;
+  private layout?: { width: number; status: McpRowState["mcpStatus"]; warning: boolean | undefined; lines: string[] };
   // One bounded, unthemed result per host row. No width history or global cache.
   private prepared?: { content: unknown; structured: unknown; hasDetails: boolean; presentation: ResultPresentation };
 
@@ -84,17 +86,28 @@ class ResponsiveLinesComponent implements Component {
     return this.prepared.presentation;
   }
 
-  setRenderer(renderer: (width: number) => string[]): void {
+  setRenderer(renderer: (width: number) => string[], state?: McpRowState): void {
     this.renderer = renderer;
+    this.state = state;
+    this.invalidate();
   }
 
   render(width: number): string[] {
     const safeWidth = normalizeWidth(width);
-    if (safeWidth === 0) return [];
-    return this.renderer(safeWidth).map((line) => truncateToWidth(line, safeWidth, ""));
+    // The host builds the call renderer before the result renderer updates shared status.
+    // Observe these scalars at paint time, without invalidating the host recursively.
+    const status = this.state?.mcpStatus;
+    const warning = this.state?.mcpWarning;
+    if (this.layout?.width === safeWidth && this.layout.status === status && this.layout.warning === warning) {
+      return this.layout.lines;
+    }
+    const lines = safeWidth === 0 ? []
+      : this.renderer(safeWidth).map((line) => truncateToWidth(line, safeWidth, ""));
+    this.layout = { width: safeWidth, status, warning, lines };
+    return lines;
   }
 
-  invalidate(): void {}
+  invalidate(): void { this.layout = undefined; }
 }
 
 export function renderMcpToolCall(
@@ -115,7 +128,7 @@ export function renderMcpToolCall(
     state.mcpWarning === true,
     theme,
     width,
-  )]);
+  )], state);
   return component;
 }
 

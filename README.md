@@ -141,6 +141,8 @@ Codex encrypted compaction item.
 
 压缩请求超过有效窗口时，扩展仍可裁剪工具输出，但不再丢弃旧 user turn 后只压缩最新一段；服务端明确拒绝完整历史时会直接失败，不提交新 checkpoint，也不进入额外的超窗恢复循环。诊断保留原始错误分类，`recoveryAttempted` 为 `false`；网络重试及 Pi 普通请求超窗后发起压缩的流程不变。保留历史的 64k 预算计入图片，并原子保留或删除图片及相邻标签。文本边界采用 UTF-8 首尾保留截断。Pi 发起压缩时，如系统提示已改变，扩展会刷新缓存指令。
 
+恢复已有压缩历史时，扩展通过 `context_with_system` 保留初始系统提示与中途更新的顺序，再校验请求历史前缀。MCP 工具顺序或声明变化不会因移除 Pi 摘要而丢失系统更新；真实前缀不匹配仍中止请求，不删除检查点或自动重压缩来绕过校验。
+
 当前 V2 路径不消费 `/compact focus text` 的 focus text，也不执行分段压缩。
 
 不要同时加载本扩展和独立的 `npm:@yeungkc/pi-codex-compact@0.0.6`，否则同一组 hooks 会执行两次。迁移现有安装时，应先验证本 package，再从 Pi settings 停用独立 npm entry 并重启或 reload。
@@ -349,7 +351,9 @@ pi \
 
 MCP 成功结果默认显示最多五个视觉行的明亮正文，连接线与末尾截断标记 `...` 弱化；成功圆点变绿，不显示 Completed、类型或字节摘要。Ctrl+O 展开详情，正文亮度一致，仍受展示上限约束。失败保留红色错误正文；能匹配本扩展宿主诊断的取消、超时显示黄色及 `Interrupted`、`Timed out` 提示。服务器返回的普通错误文字不据此改判状态。MCP 不依赖 codex-ui，也使用相同的圆点与配色。
 
-MCP 历史现在独立于连接恢复显示。冷恢复扫描全部分支；进程内 resume/import/fork/clone/reload 通过短寿命、仅含显示 identity 的交接文件提前注册 renderer。历史占位始终拒绝执行，实时 discovery 仍使用当前 schema；离线时停用实时工具，但已排队的实时调用保留原有安全重连路径。首次从没有交接 hook 的旧版本部署时，请重启 Pi 后恢复会话。用户级安装可跨 cwd 恢复；项目级插件在目标 cwd 不再加载、host 明确过滤工具定义或历史读取超限时，可能显示默认样式。具体限制和 Pi 0.85.1 验收见 [MCP resume UI acceptance](docs/mcp-resume-ui-acceptance.md)。
+MCP 历史独立于连接恢复显示。冷恢复扫描全部分支；进程内 resume/import/fork/clone/reload 通过短寿命、仅含显示 identity 的交接文件提前注册 renderer。`/resume` 按 64 KiB 块异步扫描目标 JSONL，不再限制整个会话为 64 MiB；单条记录仍限制为 64 MiB，最多保留 4096 个不同工具身份，单个名称最多 1024 字节。扫描期间文件变化、JSONL 损坏、非普通文件及符号链接会使恢复失败，且不发布不完整交接数据。
+
+历史占位始终拒绝执行，实时 discovery 仍使用当前 schema；离线时停用实时工具，但已排队的实时调用保留原有安全重连路径。首次从没有交接 hook 的旧版本部署时，请重启 Pi 后恢复会话。用户级安装可跨 cwd 恢复；项目级插件在目标 cwd 不再加载、host 明确过滤工具定义或历史读取失败时，可能显示默认样式。大会话及 Codex 前缀修复的验收见 [Session resume fixes](docs/session-resume-fixes-todo.md)。
 
 内存 diagnostics 使用每服务器有界 ring buffer，并对控制字符、常见凭据和过长字段进行清理。文件日志默认关闭；启用后写入有界 JSONL，并保留一个 `.1` 轮转备份。Stdio stderr 使用 pipe 捕获到 diagnostics，不直接写入 Pi 终端。脱敏是降低风险的措施，不是保存或分享日志的安全保证。
 
