@@ -39,7 +39,7 @@ expert 执行者 Thor 完成产品实现、正式组合验证和证据。主代�
 - 运行版本为 Pi 0.87.0、Node v22.22.2、pnpm 11.9.0。当前 harness 的 Pi 文档是 0.87.1，后续改动仍须核对目标接口版本。
 - 原型保存在 [README](prototypes/goal-tool-ui/README.md)，可追溯选择依据，不再是最终实现入口。不要把原型内存 GoalAccess 当作正式路径。
 - 原 expert 执行者 Thor 已按用户要求关闭，不能继续复用其 runtime。
-- 用户已批准修改 `~/.pi/agent/settings.json`，只禁用主工作区 Goal 并加载本 worktree 的 `extensions/goal/dist/index.js`。用 Pi 0.87.1 的实际 package resolver 核验只有一个 Goal 启用，其他扩展仍来自主工作区。验收后清理 worktree 前必须先处理此安装指向。
+- 手动验收期间曾将 Goal 安装指向冒险 worktree。交付合并后，用户批准切回 main 并移除该 worktree。现已恢复 `~/.pi/agent/settings.json` 的原 package 配置，用 Pi 0.87.1 实际 package resolver 确认仅主工作区 `extensions/goal/dist/index.js` 启用，再通过 `git worktree remove` 移除 `goal-tool-ui` 目录。本地与远端分支保留，其他 worktree 未修改。
 - 用户随后报告旧原型无法启动，已复现并修复 prepare 清单漏掉生产 renderers 的回归。启动导入测试先失败后通过，组件和两个真实 PTY 模式均通过，完整 check 仍为 2604 passed / 13 skipped。见[修复记录](evidence/prototype-startup-repair.md)。本次未改产品代码。
 
 ## Current Assumptions
@@ -48,8 +48,8 @@ expert 执行者 Thor 完成产品实现、正式组合验证和证据。主代�
 
 ## Continuation Point
 
-产品交付完成。将本存档和[合并验证](evidence/merge-validation.md)提交推送，在 Map 与 Spec 固定材料链接，核验可读后关闭两者。
+产品交付完成，Map 与 Spec 已关闭。用户另行批准的安装配置回切与冒险 worktree 清理也已完成。[合并验证](evidence/merge-validation.md)记录产品合并时的检查，后续清理状态以本存档为准。
 
 1. 集成 main 最新 MCP/恢复改动的提交为 `b004be35d509db1be86083b07d4a1795d6cd0347`。用户原有 33 个删除项和 1 个新增文档单独提交为 `255c14ad94ec08b5d9fd332a23ddc8de3b908ac6`。最终 main 的完整 check 为 2622 passed / 13 skipped，主工作区构建已更新。
-2. 本地安装仍指向冒险 worktree。要回切 `~/.pi/agent/settings.json`，先说明工作目录外写入范围并取得用户“同意”；在此之前保留 worktree。分支删除另行确认。
+2. 本地安装已切回 main，冒险 worktree 已删除。当前 Pi 会话需 `/reload` 或重启以加载新路径。本地和远端冒险分支仍保留，删除分支须另行确认。
 3. 后续若用户提出产品调整，按受影响要求重开关卡，实施使用 expert；原 Thor 已关闭。
