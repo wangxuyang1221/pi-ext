@@ -1,0 +1,2 @@
+{"passed":true,"standalone":false,"scenarios":["empty","failure","mixed-production-tools","active","paused","blocked","complete","long-controls","budget_limited","usage_limited","incomplete-usage","explicit-cancellation","history","reload","restart","print-read","baseline-contract"],"modelCalls":45,"pid":54266}
+{"cleanup":true,"pid":54266,"rootRemoved":true}

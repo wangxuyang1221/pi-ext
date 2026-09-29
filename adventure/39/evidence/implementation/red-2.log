@@ -1,0 +1,34 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/goal-tool-ui
+
+ ❯ extensions/goal/__tests__/renderers.test.ts (2 tests | 1 failed) 22ms
+   × expands exact snapshot fields and keeps unbounded and incomplete usage explicit 13ms
+     → expected '\n⏺ Read goal · Complete\n  ⎿  First …' to contain 'Observed usage only'
+   ✓ renders the three registered tools as summary without changing model results 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/goal/__tests__/renderers.test.ts > expands exact snapshot fields and keeps unbounded and incomplete usage explicit
+AssertionError: expected '\n⏺ Read goal · Complete\n  ⎿  First …' to contain 'Observed usage only'
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- Observed usage only[39m
+[31m+[39m
+[31m+ ⏺ Read goal · Complete[39m
+[31m+   ⎿  First line[39m
+[31m+ 最后一行🙂[39m
+[31m+      12.5k tokens · 3m 12s[39m
+
+ ❯ extensions/goal/__tests__/renderers.test.ts:37:22
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  10:47:22
+   Duration  438ms (transform 23ms, setup 0ms, collect 273ms, tests 22ms, environment 0ms, prepare 31ms)
+

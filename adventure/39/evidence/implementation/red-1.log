@@ -1,0 +1,41 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/goal-tool-ui
+
+ ❯ extensions/goal/__tests__/renderers.test.ts (1 test | 1 failed) 18ms
+   × renders the three registered tools as summary without changing model results 9ms
+     → expected '\n                                   …' to contain '⏺ Read goal · Complete'
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/goal/__tests__/renderers.test.ts > renders the three registered tools as summary without changing model results
+AssertionError: expected '\n                                   …' to contain '⏺ Read goal · Complete'
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- ⏺ Read goal · Complete[39m
+[31m+[39m
+[31m+                                                                                                     [39m
+[31m+  get_goal                                                                                           [39m
+[31m+  {"goal":{"threadId":"test-session","objective":"统一 Goal 工具                                     [39m
+[31m+  UI","status":"complete","tokenBudget":50000,"tokensUsed":12480,"timeUsedSeconds":192,"createdAt":1 [39m
+[31m+  767225600,"updatedAt":1767225792},"usageVisibility":"observed","remainingTokens":37520,"completion [39m
+[31m+  BudgetReport":null}                                                                                [39m
+[31m+                                                                                                     [39m
+
+ ❯ extensions/goal/__tests__/renderers.test.ts:34:24
+     32|     const { row, result } = await completed(name);
+     33|     const snapshot = JSON.stringify(result);
+     34|     expect(plain(row)).toContain(`⏺ ${title} · Complete`);
+       |                        ^
+     35|     expect(plain(row)).toContain("⎿  统一 Goal 工具 UI");
+     36|     expect(plain(row)).toContain("12.5k / 50k tokens · 3m 12s");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  10:46:18
+   Duration  1.01s (transform 49ms, setup 0ms, collect 640ms, tests 18ms, environment 0ms, prepare 86ms)
+

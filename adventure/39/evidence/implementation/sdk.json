@@ -1,0 +1,870 @@
+{
+  "passed": true,
+  "standalone": false,
+  "pid": 54266,
+  "versions": {
+    "node": "v22.22.2",
+    "pi": "0.87.0"
+  },
+  "scenarios": [
+    "empty",
+    "failure",
+    "mixed-production-tools",
+    "active",
+    "paused",
+    "blocked",
+    "complete",
+    "long-controls",
+    "budget_limited",
+    "usage_limited",
+    "incomplete-usage",
+    "explicit-cancellation",
+    "history",
+    "reload",
+    "restart",
+    "print-read",
+    "baseline-contract"
+  ],
+  "mixed": [
+    {
+      "toolName": "bash",
+      "input": {
+        "command": "printf 'Real Bash output\\n'"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Real Bash output\n"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "toolName": "create_goal",
+      "input": {
+        "objective": "统一 Goal 工具 UI",
+        "token_budget": 500000
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"统一 Goal 工具 UI\",\"status\":\"active\",\"tokenBudget\":500000,\"tokensUsed\":0,\"timeUsedSeconds\":0,\"createdAt\":1790651491,\"updatedAt\":1790651491},\"usageVisibility\":\"observed\",\"remainingTokens\":500000,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "统一 Goal 工具 UI",
+          "status": "active",
+          "tokenBudget": 500000,
+          "tokensUsed": 0,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651491,
+          "updatedAt": 1790651491
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": 500000,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "write",
+      "input": {
+        "path": "ui-note.txt",
+        "content": "Before edit\n"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Successfully wrote to ui-note.txt"
+        }
+      ],
+      "details": {
+        "codexWrite": {
+          "version": 1,
+          "action": "Added",
+          "patch": "--- ui-note.txt\n+++ ui-note.txt\n@@ -0,0 +1,1 @@\n+Before edit\n"
+        }
+      },
+      "isError": false
+    },
+    {
+      "toolName": "get_goal",
+      "input": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"统一 Goal 工具 UI\",\"status\":\"active\",\"tokenBudget\":500000,\"tokensUsed\":273,\"timeUsedSeconds\":1,\"createdAt\":1790651491,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":499727,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "统一 Goal 工具 UI",
+          "status": "active",
+          "tokenBudget": 500000,
+          "tokensUsed": 273,
+          "timeUsedSeconds": 1,
+          "createdAt": 1790651491,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": 499727,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "edit",
+      "input": {
+        "path": "ui-note.txt",
+        "edits": [
+          {
+            "oldText": "Before edit",
+            "newText": "After edit"
+          }
+        ]
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Successfully replaced 1 block(s) in ui-note.txt."
+        }
+      ],
+      "details": {
+        "diff": "-1 Before edit\n+1 After edit",
+        "patch": "--- ui-note.txt\n+++ ui-note.txt\n@@ -1,1 +1,1 @@\n-Before edit\n+After edit\n",
+        "firstChangedLine": 1
+      },
+      "isError": false
+    },
+    {
+      "toolName": "update_goal",
+      "input": {
+        "status": "complete"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"统一 Goal 工具 UI\",\"status\":\"complete\",\"tokenBudget\":500000,\"tokensUsed\":555,\"timeUsedSeconds\":1,\"createdAt\":1790651491,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":499445,\"completionBudgetReport\":\"Goal achieved. Report final usage from this tool result's structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language.\"}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "统一 Goal 工具 UI",
+          "status": "complete",
+          "tokenBudget": 500000,
+          "tokensUsed": 555,
+          "timeUsedSeconds": 1,
+          "createdAt": 1790651491,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": 499445,
+        "completionBudgetReport": "Goal achieved. Report final usage from this tool result's structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language."
+      },
+      "isError": false
+    }
+  ],
+  "results": [
+    {
+      "toolName": "get_goal",
+      "input": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":null,\"usageVisibility\":\"observed\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": null,
+        "usageVisibility": "observed",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "update_goal",
+      "input": {
+        "status": "complete"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Cannot update goal because this thread has no goal."
+        }
+      ],
+      "details": {},
+      "isError": true
+    },
+    {
+      "toolName": "bash",
+      "input": {
+        "command": "printf 'Real Bash output\\n'"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Real Bash output\n"
+        }
+      ],
+      "isError": false
+    },
+    {
+      "toolName": "create_goal",
+      "input": {
+        "objective": "统一 Goal 工具 UI",
+        "token_budget": 500000
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"统一 Goal 工具 UI\",\"status\":\"active\",\"tokenBudget\":500000,\"tokensUsed\":0,\"timeUsedSeconds\":0,\"createdAt\":1790651491,\"updatedAt\":1790651491},\"usageVisibility\":\"observed\",\"remainingTokens\":500000,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "统一 Goal 工具 UI",
+          "status": "active",
+          "tokenBudget": 500000,
+          "tokensUsed": 0,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651491,
+          "updatedAt": 1790651491
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": 500000,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "write",
+      "input": {
+        "path": "ui-note.txt",
+        "content": "Before edit\n"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Successfully wrote to ui-note.txt"
+        }
+      ],
+      "details": {
+        "codexWrite": {
+          "version": 1,
+          "action": "Added",
+          "patch": "--- ui-note.txt\n+++ ui-note.txt\n@@ -0,0 +1,1 @@\n+Before edit\n"
+        }
+      },
+      "isError": false
+    },
+    {
+      "toolName": "get_goal",
+      "input": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"统一 Goal 工具 UI\",\"status\":\"active\",\"tokenBudget\":500000,\"tokensUsed\":273,\"timeUsedSeconds\":1,\"createdAt\":1790651491,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":499727,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "统一 Goal 工具 UI",
+          "status": "active",
+          "tokenBudget": 500000,
+          "tokensUsed": 273,
+          "timeUsedSeconds": 1,
+          "createdAt": 1790651491,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": 499727,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "edit",
+      "input": {
+        "path": "ui-note.txt",
+        "edits": [
+          {
+            "oldText": "Before edit",
+            "newText": "After edit"
+          }
+        ]
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Successfully replaced 1 block(s) in ui-note.txt."
+        }
+      ],
+      "details": {
+        "diff": "-1 Before edit\n+1 After edit",
+        "patch": "--- ui-note.txt\n+++ ui-note.txt\n@@ -1,1 +1,1 @@\n-Before edit\n+After edit\n",
+        "firstChangedLine": 1
+      },
+      "isError": false
+    },
+    {
+      "toolName": "update_goal",
+      "input": {
+        "status": "complete"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"统一 Goal 工具 UI\",\"status\":\"complete\",\"tokenBudget\":500000,\"tokensUsed\":555,\"timeUsedSeconds\":1,\"createdAt\":1790651491,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":499445,\"completionBudgetReport\":\"Goal achieved. Report final usage from this tool result's structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language.\"}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "统一 Goal 工具 UI",
+          "status": "complete",
+          "tokenBudget": 500000,
+          "tokensUsed": 555,
+          "timeUsedSeconds": 1,
+          "createdAt": 1790651491,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": 499445,
+        "completionBudgetReport": "Goal achieved. Report final usage from this tool result's structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language."
+      },
+      "isError": false
+    },
+    {
+      "toolName": "create_goal",
+      "input": {
+        "objective": "Unbounded goal"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Unbounded goal\",\"status\":\"active\",\"tokenBudget\":null,\"tokensUsed\":0,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Unbounded goal",
+          "status": "active",
+          "tokenBudget": null,
+          "tokensUsed": 0,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "update_goal",
+      "input": {
+        "status": "paused"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Unbounded goal\",\"status\":\"paused\",\"tokenBudget\":null,\"tokensUsed\":192,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Unbounded goal",
+          "status": "paused",
+          "tokenBudget": null,
+          "tokensUsed": 192,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "update_goal",
+      "input": {
+        "status": "blocked"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Unbounded goal\",\"status\":\"blocked\",\"tokenBudget\":null,\"tokensUsed\":192,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Unbounded goal",
+          "status": "blocked",
+          "tokenBudget": null,
+          "tokensUsed": 192,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "update_goal",
+      "input": {
+        "status": "complete"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Unbounded goal\",\"status\":\"complete\",\"tokenBudget\":null,\"tokensUsed\":192,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Unbounded goal",
+          "status": "complete",
+          "tokenBudget": null,
+          "tokensUsed": 192,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "create_goal",
+      "input": {
+        "objective": "中文🙂第一行\u001b]52;c;YQ==\u0007\u001b[2J\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \nLONG-GOAL-END"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"中文🙂第一行\\u001b]52;c;YQ==\\u0007\\u001b[2J\\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \\nLONG-GOAL-END\",\"status\":\"active\",\"tokenBudget\":null,\"tokensUsed\":0,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "中文🙂第一行\u001b]52;c;YQ==\u0007\u001b[2J\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \nLONG-GOAL-END",
+          "status": "active",
+          "tokenBudget": null,
+          "tokensUsed": 0,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "get_goal",
+      "input": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"中文🙂第一行\\u001b]52;c;YQ==\\u0007\\u001b[2J\\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \\nLONG-GOAL-END\",\"status\":\"active\",\"tokenBudget\":null,\"tokensUsed\":1079,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "中文🙂第一行\u001b]52;c;YQ==\u0007\u001b[2J\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \nLONG-GOAL-END",
+          "status": "active",
+          "tokenBudget": null,
+          "tokensUsed": 1079,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "update_goal",
+      "input": {
+        "status": "complete"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"中文🙂第一行\\u001b]52;c;YQ==\\u0007\\u001b[2J\\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \\nLONG-GOAL-END\",\"status\":\"complete\",\"tokenBudget\":null,\"tokensUsed\":1702,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "中文🙂第一行\u001b]52;c;YQ==\u0007\u001b[2J\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \nLONG-GOAL-END",
+          "status": "complete",
+          "tokenBudget": null,
+          "tokensUsed": 1702,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "create_goal",
+      "input": {
+        "objective": "Small budget",
+        "token_budget": 1
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Small budget\",\"status\":\"active\",\"tokenBudget\":1,\"tokensUsed\":0,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":1,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Small budget",
+          "status": "active",
+          "tokenBudget": 1,
+          "tokensUsed": 0,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": 1,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "get_goal",
+      "input": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Small budget\",\"status\":\"budget_limited\",\"tokenBudget\":1,\"tokensUsed\":558,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":0,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Small budget",
+          "status": "budget_limited",
+          "tokenBudget": 1,
+          "tokensUsed": 558,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": 0,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "update_goal",
+      "input": {
+        "status": "complete"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Small budget\",\"status\":\"complete\",\"tokenBudget\":1,\"tokensUsed\":558,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":0,\"completionBudgetReport\":\"Goal achieved. Report final usage from this tool result's structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language.\"}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Small budget",
+          "status": "complete",
+          "tokenBudget": 1,
+          "tokensUsed": 558,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": 0,
+        "completionBudgetReport": "Goal achieved. Report final usage from this tool result's structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language."
+      },
+      "isError": false
+    },
+    {
+      "toolName": "create_goal",
+      "input": {
+        "objective": "Incomplete usage goal"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Incomplete usage goal\",\"status\":\"active\",\"tokenBudget\":null,\"tokensUsed\":0,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Incomplete usage goal",
+          "status": "active",
+          "tokenBudget": null,
+          "tokensUsed": 0,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "get_goal",
+      "input": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Incomplete usage goal\",\"status\":\"active\",\"tokenBudget\":null,\"tokensUsed\":0,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"incomplete: reported tokens include only observed usage\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Incomplete usage goal",
+          "status": "active",
+          "tokenBudget": null,
+          "tokensUsed": 0,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "incomplete: reported tokens include only observed usage",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "update_goal",
+      "input": {
+        "status": "paused"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Incomplete usage goal\",\"status\":\"paused\",\"tokenBudget\":null,\"tokensUsed\":0,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"incomplete: reported tokens include only observed usage\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Incomplete usage goal",
+          "status": "paused",
+          "tokenBudget": null,
+          "tokensUsed": 0,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "incomplete: reported tokens include only observed usage",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "get_goal",
+      "input": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Incomplete usage goal\",\"status\":\"paused\",\"tokenBudget\":null,\"tokensUsed\":0,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"incomplete: reported tokens include only observed usage\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Incomplete usage goal",
+          "status": "paused",
+          "tokenBudget": null,
+          "tokensUsed": 0,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "incomplete: reported tokens include only observed usage",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "update_goal",
+      "input": {
+        "status": "complete"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Incomplete usage goal\",\"status\":\"complete\",\"tokenBudget\":null,\"tokensUsed\":0,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"incomplete: reported tokens include only observed usage\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Incomplete usage goal",
+          "status": "complete",
+          "tokenBudget": null,
+          "tokensUsed": 0,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "incomplete: reported tokens include only observed usage",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "create_goal",
+      "input": {
+        "objective": "Provider quota goal"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Provider quota goal\",\"status\":\"active\",\"tokenBudget\":null,\"tokensUsed\":0,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Provider quota goal",
+          "status": "active",
+          "tokenBudget": null,
+          "tokensUsed": 0,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "get_goal",
+      "input": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Provider quota goal\",\"status\":\"usage_limited\",\"tokenBudget\":null,\"tokensUsed\":190,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Provider quota goal",
+          "status": "usage_limited",
+          "tokenBudget": null,
+          "tokensUsed": 190,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "update_goal",
+      "input": {
+        "status": "complete"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Provider quota goal\",\"status\":\"complete\",\"tokenBudget\":null,\"tokensUsed\":190,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Provider quota goal",
+          "status": "complete",
+          "tokenBudget": null,
+          "tokensUsed": 190,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    },
+    {
+      "toolName": "get_goal",
+      "input": {},
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"goal\":{\"threadId\":\"01a0eb25-6388-723b-9fdd-7945670f1f8e\",\"objective\":\"Provider quota goal\",\"status\":\"complete\",\"tokenBudget\":null,\"tokensUsed\":190,\"timeUsedSeconds\":0,\"createdAt\":1790651492,\"updatedAt\":1790651492},\"usageVisibility\":\"observed\",\"remainingTokens\":null,\"completionBudgetReport\":null}"
+        }
+      ],
+      "details": {
+        "goal": {
+          "threadId": "01a0eb25-6388-723b-9fdd-7945670f1f8e",
+          "objective": "Provider quota goal",
+          "status": "complete",
+          "tokenBudget": null,
+          "tokensUsed": 190,
+          "timeUsedSeconds": 0,
+          "createdAt": 1790651492,
+          "updatedAt": 1790651492
+        },
+        "usageVisibility": "observed",
+        "remainingTokens": null,
+        "completionBudgetReport": null
+      },
+      "isError": false
+    }
+  ],
+  "modelCalls": 45,
+  "networkAttempts": 0,
+  "errors": [],
+  "unexpectedModelErrors": []
+}

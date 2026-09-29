@@ -1,0 +1,43 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/goal-tool-ui
+
+ ❯ extensions/goal/__tests__/renderers.test.ts (4 tests | 1 failed) 30ms
+   × falls back safely for malformed details and sanitizes only display text at every width 14ms
+     → expected '\n\u001b[38;2;181;189;104m⏺\u001b[39m…' not to match /\u001b\[2J|\u001b\]52|[\u0007\u009b\…/u
+   ✓ separates invocation lifecycle from every goal status and recognizes only exact cancellation 2ms
+   ✓ expands exact snapshot fields and keeps unbounded and incomplete usage explicit 5ms
+   ✓ renders the three registered tools as summary without changing model results 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  extensions/goal/__tests__/renderers.test.ts > falls back safely for malformed details and sanitizes only display text at every width
+AssertionError: expected '\n\u001b[38;2;181;189;104m⏺\u001b[39m…' not to match /\u001b\[2J|\u001b\]52|[\u0007\u009b\…/u
+
+[32m- Expected:[39m 
+/\u001b\[2J|\u001b\]52|[\u0007\u009b\u202e]/u
+
+[31m+ Received:[39m 
+"
+[38;2;181;189;104m⏺[39m Updated g[0m…[0m
+[38;2;102;102;102m  ⎿  [39m中文🙂[2J]52;c;YQ==[0m…[0m
+[38;2;102;102;102m     12.5k [0m…[0m
+[38;2;255;255;0m     Observe[39m
+[38;2;255;255;0m     d usage[39m
+[38;2;255;255;0m     only[39m"
+
+ ❯ extensions/goal/__tests__/renderers.test.ts:43:36
+     41|       const lines = row.render(width);
+     42|       expect(lines.every(line => visibleWidth(line) <= width), `Overfl…
+     43|       expect(lines.join("\n")).not.toMatch(/\u001b\[2J|\u001b\]52|[\u0…
+       |                                    ^
+     44|       if (width >= 40) expect(plain(row, width)).toContain("Observed u…
+     45|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  10:49:55
+   Duration  644ms (transform 34ms, setup 0ms, collect 451ms, tests 30ms, environment 0ms, prepare 41ms)
+

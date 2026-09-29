@@ -1,5 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
+import { goalRenderers } from "./renderers.js";
 import { StringEnum } from "@earendil-works/pi-ai";
 import type { Goal, GoalRecord } from "./storage.js";
 import { GET_DESCRIPTION, CREATE_DESCRIPTION, UPDATE_DESCRIPTION, OBJECTIVE_DESCRIPTION, BUDGET_DESCRIPTION, STATUS_DESCRIPTION, CONTINUATION_TEMPLATE, UPDATED_TEMPLATE, BUDGET_TEMPLATE } from "./upstream.js";
@@ -36,9 +37,9 @@ function validateCall(args: unknown, allowed: string[], signal?: AbortSignal): a
 }
 /** Register the three upstream goal tools, with strict argument schemas. */
 export function registerGoalTools(pi: ExtensionAPI, access: GoalToolAccess): void {
-  pi.registerTool({ name: "get_goal", label: "Get goal", description: GET_DESCRIPTION, parameters: Type.Object({}, { additionalProperties: false }),
+  pi.registerTool({ ...goalRenderers("get_goal"), name: "get_goal", label: "Get goal", description: GET_DESCRIPTION, parameters: Type.Object({}, { additionalProperties: false }),
     execute: async (_id, args, signal, _update, ctx) => { validateCall(args, [], signal); return response(await access.get(ctx)); } });
-  pi.registerTool({ name: "create_goal", label: "Create goal", description: CREATE_DESCRIPTION,
+  pi.registerTool({ ...goalRenderers("create_goal"), name: "create_goal", label: "Create goal", description: CREATE_DESCRIPTION,
     parameters: Type.Object({ objective: Type.String({ description: OBJECTIVE_DESCRIPTION }), token_budget: Type.Optional(Type.Integer({ description: BUDGET_DESCRIPTION })) }, { additionalProperties: false }),
     execute: async (_id, args, signal, _update, ctx) => {
       validateCall(args, ["objective", "token_budget"], signal);
@@ -46,7 +47,7 @@ export function registerGoalTools(pi: ExtensionAPI, access: GoalToolAccess): voi
       if (args.token_budget !== undefined && (!Number.isSafeInteger(args.token_budget) || args.token_budget <= 0)) throw new Error("Goal budgets must be positive safe integers when provided.");
       return response(await access.create(ctx, args.objective.trim(), args.token_budget));
     } });
-  pi.registerTool({ name: "update_goal", label: "Update goal", description: UPDATE_DESCRIPTION,
+  pi.registerTool({ ...goalRenderers("update_goal"), name: "update_goal", label: "Update goal", description: UPDATE_DESCRIPTION,
     parameters: Type.Object({ status: StringEnum(["complete", "blocked", "paused"] as const, { description: STATUS_DESCRIPTION }) }, { additionalProperties: false }),
     execute: async (_id, args, signal, _update, ctx) => {
       validateCall(args, ["status"], signal);

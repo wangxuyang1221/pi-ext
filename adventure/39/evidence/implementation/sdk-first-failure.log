@@ -1,0 +1,1290 @@
+{"cleanup":true,"pid":95923,"rootRemoved":true}
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+... Skipped lines
+
+  [
+    {
+      content: [
+        {
+          text: '{"goal":null,"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}',
+...
+      toolName: 'get_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: 'Cannot update goal because this thread has no goal.',
+...
+      toolName: 'update_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"统一 Goal 工具 UI","status":"active","tokenBudget":500000,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":500000,"completionBudgetReport":null}',
+...
+      toolName: 'create_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"统一 Goal 工具 UI","status":"active","tokenBudget":500000,"tokensUsed":273,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":499727,"completionBudgetReport":null}',
+...
+      toolName: 'get_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"统一 Goal 工具 UI","status":"complete","tokenBudget":500000,"tokensUsed":555,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":499445,"completionBudgetReport":"Goal achieved. Report final usage from this tool result\'s structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language."}',
+...
+      toolName: 'update_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Unbounded goal","status":"active","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}',
+...
+      toolName: 'create_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Unbounded goal","status":"paused","tokenBudget":null,"tokensUsed":192,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}',
+...
+      toolName: 'update_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Unbounded goal","status":"blocked","tokenBudget":null,"tokensUsed":192,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}',
+...
+      toolName: 'update_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Unbounded goal","status":"complete","tokenBudget":null,"tokensUsed":192,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}',
+...
+      toolName: 'update_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"中文🙂第一行\\u001b]52;c;YQ==\\u0007\\u001b[2J\\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \\nLONG-GOAL-END","status":"active","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}',
+...
+      toolName: 'create_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"中文🙂第一行\\u001b]52;c;YQ==\\u0007\\u001b[2J\\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \\nLONG-GOAL-END","status":"active","tokenBudget":null,"tokensUsed":1079,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}',
+...
+      toolName: 'get_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"中文🙂第一行\\u001b]52;c;YQ==\\u0007\\u001b[2J\\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \\nLONG-GOAL-END","status":"complete","tokenBudget":null,"tokensUsed":1702,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}',
+...
+      toolName: 'update_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Small budget","status":"active","tokenBudget":1,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":1,"completionBudgetReport":null}',
+...
+      toolName: 'create_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Small budget","status":"budget_limited","tokenBudget":1,"tokensUsed":552,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":0,"completionBudgetReport":null}',
+...
+      toolName: 'get_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Small budget","status":"complete","tokenBudget":1,"tokensUsed":552,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":0,"completionBudgetReport":"Goal achieved. Report final usage from this tool result\'s structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language."}',
+...
+      toolName: 'update_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"active","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}',
+...
+      toolName: 'create_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"active","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"incomplete: reported tokens include only observed usage","remainingTokens":null,"completionBudgetReport":null}',
+...
+      toolName: 'get_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"paused","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"incomplete: reported tokens include only observed usage","remainingTokens":null,"completionBudgetReport":null}',
+...
+      toolName: 'update_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"paused","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"incomplete: reported tokens include only observed usage","remainingTokens":null,"completionBudgetReport":null}',
+...
+      toolName: 'get_goal',
+-     usage: undefined
+    },
+    {
+      content: [
+        {
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"complete","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"incomplete: reported tokens include only observed usage","remainingTokens":null,"completionBudgetReport":null}',
+...
+      toolName: 'update_goal',
+-     usage: undefined
+    }
+  ]
+
+    at file:///Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/goal-tool-ui/extensions/goal/__tests__/tool-ui-runtime.mjs:148:12 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-1',
+      toolName: 'get_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":null,"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: null,
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535623
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-2',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: 'Cannot update goal because this thread has no goal.'
+        }
+      ],
+      details: {},
+      isError: true,
+      timestamp: 1790650535626
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-4',
+      toolName: 'create_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"统一 Goal 工具 UI","status":"active","tokenBudget":500000,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":500000,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: '统一 Goal 工具 UI',
+          status: 'active',
+          tokenBudget: 500000,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: 500000,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535662
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-6',
+      toolName: 'get_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"统一 Goal 工具 UI","status":"active","tokenBudget":500000,"tokensUsed":273,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":499727,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: '统一 Goal 工具 UI',
+          status: 'active',
+          tokenBudget: 500000,
+          tokensUsed: 273,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: 499727,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535682
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-8',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"统一 Goal 工具 UI","status":"complete","tokenBudget":500000,"tokensUsed":555,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":499445,"completionBudgetReport":"Goal achieved. Report final usage from this tool result\'s structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language."}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: '统一 Goal 工具 UI',
+          status: 'complete',
+          tokenBudget: 500000,
+          tokensUsed: 555,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: 499445,
+        completionBudgetReport: "Goal achieved. Report final usage from this tool result's structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language."
+      },
+      isError: false,
+      timestamp: 1790650535710
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-9',
+      toolName: 'create_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Unbounded goal","status":"active","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Unbounded goal',
+          status: 'active',
+          tokenBudget: null,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535722
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-10',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Unbounded goal","status":"paused","tokenBudget":null,"tokensUsed":192,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Unbounded goal',
+          status: 'paused',
+          tokenBudget: null,
+          tokensUsed: 192,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535739
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-11',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Unbounded goal","status":"blocked","tokenBudget":null,"tokensUsed":192,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Unbounded goal',
+          status: 'blocked',
+          tokenBudget: null,
+          tokensUsed: 192,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535750
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-12',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Unbounded goal","status":"complete","tokenBudget":null,"tokensUsed":192,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Unbounded goal',
+          status: 'complete',
+          tokenBudget: null,
+          tokensUsed: 192,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535761
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-13',
+      toolName: 'create_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"中文🙂第一行\\u001b]52;c;YQ==\\u0007\\u001b[2J\\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \\nLONG-GOAL-END","status":"active","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: '中文🙂第一行\x1B]52;c;YQ==\x07\x1B[2J\n' +
+            '检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \n' +
+            'LONG-GOAL-END',
+          status: 'active',
+          tokenBudget: null,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535772
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-14',
+      toolName: 'get_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"中文🙂第一行\\u001b]52;c;YQ==\\u0007\\u001b[2J\\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \\nLONG-GOAL-END","status":"active","tokenBudget":null,"tokensUsed":1079,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: '中文🙂第一行\x1B]52;c;YQ==\x07\x1B[2J\n' +
+            '检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \n' +
+            'LONG-GOAL-END',
+          status: 'active',
+          tokenBudget: null,
+          tokensUsed: 1079,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535783
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-15',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"中文🙂第一行\\u001b]52;c;YQ==\\u0007\\u001b[2J\\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \\nLONG-GOAL-END","status":"complete","tokenBudget":null,"tokensUsed":1702,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: '中文🙂第一行\x1B]52;c;YQ==\x07\x1B[2J\n' +
+            '检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \n' +
+            'LONG-GOAL-END',
+          status: 'complete',
+          tokenBudget: null,
+          tokensUsed: 1702,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535802
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-16',
+      toolName: 'create_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Small budget","status":"active","tokenBudget":1,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":1,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Small budget',
+          status: 'active',
+          tokenBudget: 1,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: 1,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535815
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-17',
+      toolName: 'get_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Small budget","status":"budget_limited","tokenBudget":1,"tokensUsed":552,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":0,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Small budget',
+          status: 'budget_limited',
+          tokenBudget: 1,
+          tokensUsed: 552,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: 0,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535840
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-18',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Small budget","status":"complete","tokenBudget":1,"tokensUsed":552,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":0,"completionBudgetReport":"Goal achieved. Report final usage from this tool result\'s structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language."}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Small budget',
+          status: 'complete',
+          tokenBudget: 1,
+          tokensUsed: 552,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: 0,
+        completionBudgetReport: "Goal achieved. Report final usage from this tool result's structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language."
+      },
+      isError: false,
+      timestamp: 1790650535854
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-19',
+      toolName: 'create_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"active","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Incomplete usage goal',
+          status: 'active',
+          tokenBudget: null,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535868
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-20',
+      toolName: 'get_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"active","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"incomplete: reported tokens include only observed usage","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Incomplete usage goal',
+          status: 'active',
+          tokenBudget: null,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'incomplete: reported tokens include only observed usage',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535880
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-21',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"paused","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"incomplete: reported tokens include only observed usage","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Incomplete usage goal',
+          status: 'paused',
+          tokenBudget: null,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'incomplete: reported tokens include only observed usage',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535901
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-22',
+      toolName: 'get_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"paused","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"incomplete: reported tokens include only observed usage","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Incomplete usage goal',
+          status: 'paused',
+          tokenBudget: null,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'incomplete: reported tokens include only observed usage',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535908
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-23',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"complete","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"incomplete: reported tokens include only observed usage","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Incomplete usage goal',
+          status: 'complete',
+          tokenBudget: null,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'incomplete: reported tokens include only observed usage',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      isError: false,
+      timestamp: 1790650535922
+    }
+  ],
+  expected: [
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-1',
+      toolName: 'get_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":null,"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: null,
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535623
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-2',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: 'Cannot update goal because this thread has no goal.'
+        }
+      ],
+      details: {},
+      usage: undefined,
+      isError: true,
+      timestamp: 1790650535626
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-4',
+      toolName: 'create_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"统一 Goal 工具 UI","status":"active","tokenBudget":500000,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":500000,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: '统一 Goal 工具 UI',
+          status: 'active',
+          tokenBudget: 500000,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: 500000,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535662
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-6',
+      toolName: 'get_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"统一 Goal 工具 UI","status":"active","tokenBudget":500000,"tokensUsed":273,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":499727,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: '统一 Goal 工具 UI',
+          status: 'active',
+          tokenBudget: 500000,
+          tokensUsed: 273,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: 499727,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535682
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-8',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"统一 Goal 工具 UI","status":"complete","tokenBudget":500000,"tokensUsed":555,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":499445,"completionBudgetReport":"Goal achieved. Report final usage from this tool result\'s structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language."}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: '统一 Goal 工具 UI',
+          status: 'complete',
+          tokenBudget: 500000,
+          tokensUsed: 555,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: 499445,
+        completionBudgetReport: "Goal achieved. Report final usage from this tool result's structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language."
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535710
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-9',
+      toolName: 'create_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Unbounded goal","status":"active","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Unbounded goal',
+          status: 'active',
+          tokenBudget: null,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535722
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-10',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Unbounded goal","status":"paused","tokenBudget":null,"tokensUsed":192,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Unbounded goal',
+          status: 'paused',
+          tokenBudget: null,
+          tokensUsed: 192,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535739
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-11',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Unbounded goal","status":"blocked","tokenBudget":null,"tokensUsed":192,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Unbounded goal',
+          status: 'blocked',
+          tokenBudget: null,
+          tokensUsed: 192,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535750
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-12',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Unbounded goal","status":"complete","tokenBudget":null,"tokensUsed":192,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Unbounded goal',
+          status: 'complete',
+          tokenBudget: null,
+          tokensUsed: 192,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535761
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-13',
+      toolName: 'create_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"中文🙂第一行\\u001b]52;c;YQ==\\u0007\\u001b[2J\\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \\nLONG-GOAL-END","status":"active","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: '中文🙂第一行\x1B]52;c;YQ==\x07\x1B[2J\n' +
+            '检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \n' +
+            'LONG-GOAL-END',
+          status: 'active',
+          tokenBudget: null,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535772
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-14',
+      toolName: 'get_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"中文🙂第一行\\u001b]52;c;YQ==\\u0007\\u001b[2J\\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \\nLONG-GOAL-END","status":"active","tokenBudget":null,"tokensUsed":1079,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: '中文🙂第一行\x1B]52;c;YQ==\x07\x1B[2J\n' +
+            '检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \n' +
+            'LONG-GOAL-END',
+          status: 'active',
+          tokenBudget: null,
+          tokensUsed: 1079,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535783
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-15',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"中文🙂第一行\\u001b]52;c;YQ==\\u0007\\u001b[2J\\n检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \\nLONG-GOAL-END","status":"complete","tokenBudget":null,"tokensUsed":1702,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: '中文🙂第一行\x1B]52;c;YQ==\x07\x1B[2J\n' +
+            '检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 检查 Goal summary 与真实工具同屏，保留模型数据。🙂 \n' +
+            'LONG-GOAL-END',
+          status: 'complete',
+          tokenBudget: null,
+          tokensUsed: 1702,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535802
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-16',
+      toolName: 'create_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Small budget","status":"active","tokenBudget":1,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":1,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Small budget',
+          status: 'active',
+          tokenBudget: 1,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: 1,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535815
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-17',
+      toolName: 'get_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Small budget","status":"budget_limited","tokenBudget":1,"tokensUsed":552,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":0,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Small budget',
+          status: 'budget_limited',
+          tokenBudget: 1,
+          tokensUsed: 552,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: 0,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535840
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-18',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Small budget","status":"complete","tokenBudget":1,"tokensUsed":552,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":0,"completionBudgetReport":"Goal achieved. Report final usage from this tool result\'s structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language."}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Small budget',
+          status: 'complete',
+          tokenBudget: 1,
+          tokensUsed: 552,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: 0,
+        completionBudgetReport: "Goal achieved. Report final usage from this tool result's structured goal fields. If `goal.tokenBudget` is present, include token usage from `goal.tokensUsed` and `goal.tokenBudget`. If `goal.timeUsedSeconds` is greater than 0, summarize elapsed time in a concise, human-friendly form appropriate to the response language."
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535854
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-19',
+      toolName: 'create_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"active","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"observed","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Incomplete usage goal',
+          status: 'active',
+          tokenBudget: null,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'observed',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535868
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-20',
+      toolName: 'get_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"active","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"incomplete: reported tokens include only observed usage","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Incomplete usage goal',
+          status: 'active',
+          tokenBudget: null,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'incomplete: reported tokens include only observed usage',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535880
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-21',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"paused","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"incomplete: reported tokens include only observed usage","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Incomplete usage goal',
+          status: 'paused',
+          tokenBudget: null,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'incomplete: reported tokens include only observed usage',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535901
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-22',
+      toolName: 'get_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"paused","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"incomplete: reported tokens include only observed usage","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Incomplete usage goal',
+          status: 'paused',
+          tokenBudget: null,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'incomplete: reported tokens include only observed usage',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535908
+    },
+    {
+      role: 'toolResult',
+      toolCallId: 'ui-23',
+      toolName: 'update_goal',
+      content: [
+        {
+          type: 'text',
+          text: '{"goal":{"threadId":"01a0eb16-ceb2-7750-bfb0-2a5a86c32c56","objective":"Incomplete usage goal","status":"complete","tokenBudget":null,"tokensUsed":0,"timeUsedSeconds":0,"createdAt":1790650535,"updatedAt":1790650535},"usageVisibility":"incomplete: reported tokens include only observed usage","remainingTokens":null,"completionBudgetReport":null}'
+        }
+      ],
+      details: {
+        goal: {
+          threadId: '01a0eb16-ceb2-7750-bfb0-2a5a86c32c56',
+          objective: 'Incomplete usage goal',
+          status: 'complete',
+          tokenBudget: null,
+          tokensUsed: 0,
+          timeUsedSeconds: 0,
+          createdAt: 1790650535,
+          updatedAt: 1790650535
+        },
+        usageVisibility: 'incomplete: reported tokens include only observed usage',
+        remainingTokens: null,
+        completionBudgetReport: null
+      },
+      usage: undefined,
+      isError: false,
+      timestamp: 1790650535922
+    }
+  ],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.22.2

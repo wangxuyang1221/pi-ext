@@ -1,0 +1,11 @@
+
+ RUN  v3.2.4 /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/goal-tool-ui
+
+ ✓ extensions/goal/__tests__/tools.test.ts (4 tests) 5ms
+ ✓ extensions/goal/__tests__/renderers.test.ts (4 tests) 71ms
+
+ Test Files  2 passed (2)
+      Tests  8 passed (8)
+   Start at  10:51:08
+   Duration  636ms (transform 53ms, setup 0ms, collect 665ms, tests 76ms, environment 0ms, prepare 85ms)
+
