@@ -4,7 +4,7 @@
 
 Goal 工具与真实 Bash、Write、Edit 同屏时，带用量的摘要与更简短的摘要，哪种更协调、便于阅读？通过同一批调用切换显示密度、展开详情和调整窗口宽度判断。
 
-本原型属于 [Planning #42](https://github.com/wangxuyang1221/pi-ext/issues/42)。用户已同意制作范围，尚未选择最终方案。
+本原型属于 [Planning #42](https://github.com/wangxuyang1221/pi-ext/issues/42)。用户审阅后已选择 summary 并要求收敛，完整规则见 [Spec #40](https://github.com/wangxuyang1221/pi-ext/issues/40)。以下双变体入口保留用于追溯对照，不会在正式产品中提供密度切换。
 
 ## Run
 
@@ -47,7 +47,7 @@ node adventure/39/prototypes/goal-tool-ui/demo.mjs --fullscreen
 | `/fixture-theme light` | 检查浅色主题，`/fixture-theme codex-pi` 恢复 |
 | `/guide` | 再次显示操作提示 |
 
-审阅主要回答：默认是否需要用量行，Goal 与其他工具的间距和信息层级是否协调。展开字段、错误提示也是候选，不因原型可运行而视作已确认。
+本轮审阅已回答默认信息密度问题，采用保留用量行的 summary，其他展示沿该原型基线收敛。正式实现的异常数据回退与兼容性仍按 Spec 验收，不因用户接受原型而省略。
 
 ## Landing Map
 
@@ -85,7 +85,7 @@ Fixture 与 approximation：
 
 详细记录见 [prototype-validation.md](../../evidence/prototype-validation.md)，终端文本与日志见 [evidence/prototype](../../evidence/prototype/)。
 
-尚未验证或不由原型证明：真实 Goal 存储和调度集成、历史 session 重启、reload、所有异常数据回退及生产性能。原型已运行但视觉选择仍须用户体验确认。
+尚未验证或不由原型证明：真实 Goal 存储和调度集成、历史 session 重启、reload、所有异常数据回退及生产性能。用户已确认 summary 展示基线；上述生产路径仍待正式实施验证。
 
 ## Reuse and cleanup
 

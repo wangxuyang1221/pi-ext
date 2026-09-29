@@ -2,9 +2,9 @@
 
 ## Result
 
-原型已制作并通过技术检查，可交用户体验。此结论只支持在真实 Pi TUI 中比较两种摘要，不表示用户已选定方案，也不表示正式 Goal 集成已完成。
+本报告记录原型交付时的技术检查，支持在真实 Pi TUI 中比较两种摘要，不证明正式 Goal 集成已完成。
 
-入口：[prototype README](../prototypes/goal-tool-ui/README.md)。所属 [Planning #42](https://github.com/wangxuyang1221/pi-ext/issues/42) 继续保持 open，等待原型审阅。
+后续审阅：用户已选择 summary 并要求收敛，[Planning #42](https://github.com/wangxuyang1221/pi-ext/issues/42) 已通关，有效要求移交 [Spec #40](https://github.com/wangxuyang1221/pi-ext/issues/40)。入口：[prototype README](../prototypes/goal-tool-ui/README.md)。
 
 ## Environment and boundaries
 
@@ -78,6 +78,6 @@ pnpm run check
 
 ## Limits and next decision
 
-目前需要用户实际体验并选择默认信息密度，或提出调整。原型中的字段和错误布局也仍是候选，不自动写为 Spec 已确认要求。
+原型交付时需等待用户选择信息密度，该决定后来已完成，用户选择 summary。当前等待实施切片审核；以 Spec 保存的收敛方案为准，不将原型验证结论扩大为生产验收结论。
 
 不覆盖正式 Goal 存储、调度、恢复和计量正确性，不证明所有历史数据或 reload/重启路径兼容，也不代替生产性能验证。最终设计确认后，再形成实施切片与相应验收范围。
