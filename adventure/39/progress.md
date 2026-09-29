@@ -31,24 +31,25 @@
 
 - `extensions/goal/src/tools.ts` 注册三个 Goal 工具，尚无 `renderCall`、`renderResult`，返回 JSON 文本与结构化 details。这是源码事实，不是运行时视觉验证。
 - `extensions/codex-ui/src/tools.ts` 为 Bash、Write、Edit 等工具定义专用渲染。具体规则尚待核对。
-- 本轮只建立工作区与 Issues，未修改产品代码，未运行测试。
+- 已建立工作区与 Issues，并核对当前工具渲染和 Pi 0.87.0 类型与实现。仍未修改产品代码，未运行测试。
+- [渲染基线](evidence/rendering-baseline.md) 保存源码、API 依据和两个信息密度候选。codex-ui 使用 self shell、主题色圆点、缩进结果和已有展开操作；独立 extension 内附加 renderer 有 subagent 的实现先例。
 - [Map #39](https://github.com/wangxuyang1221/pi-ext/issues/39)：查看进度与入口。
 - [Spec #40](https://github.com/wangxuyang1221/pi-ext/issues/40)：读取已确认范围和操作约定。
 - [已通关 Planning #41](https://github.com/wangxuyang1221/pi-ext/issues/41)：范围确认依据。
-- [当前 Planning #42](https://github.com/wangxuyang1221/pi-ext/issues/42)：展示规则与集成方案，未通关，尚未形成候选设计。
+- [当前 Planning #42](https://github.com/wangxuyang1221/pi-ext/issues/42)：展示规则与集成方案，未通关，已形成默认摘要的信息密度候选，待用户选择。
 - 使用 `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md` 及对应 Issue 模板推进；写材料前读取 `docs/agents/repository-language-policy.md`。
 - 项目依赖 Pi `0.87.0`；当前 harness 文档路径是 `0.87.1`。设计时核验目标版本文档或源码，不将两者混同。
 
 ## Current Assumptions
 
-沿用 codex-ui 现有渲染组件可能足以完成统一，但尚未核验跨扩展集成方式。默认摘要、展开字段、异常规则及是否制作原型均未获用户确认。
+候选技术路线是在 Goal 内附加 renderer，保持独立构建，与 codex-ui 使用相同视觉约定，不改变 execute。源码与 API 足以支持该路线的可行性，尚无运行时验证。默认摘要、展开字段、异常规则及是否制作原型均未获用户确认。
 
 ## Continuation Point
 
-首关通关后的自动保存。保存后继续推进 #42，不等待用户再次发出开始指令。
+首关自动保存已提交推送并核对远端文件。当前正在推进 #42，下一步请用户选择默认收起视图的信息密度。
 
-1. 核对 codex-ui 的工具标题、状态、间距和折叠习惯，以及 Pi 对应版本的渲染 API 和跨扩展集成方式。
-2. 根据现有代码与文档形成展示候选，每次只问一个产品决策。需要原型时先读取 adventure 的 Prototyping 流程，与用户商定范围。
+1. 候选 A 为约三行，操作与目标状态、目标预览、tokens/预算和耗时。候选 B 为更短的操作、目标状态与目标预览，统计移至展开。推荐 A，用户尚未选择。
+2. 选择后继续逐项确认详情与异常规则。需要原型时先读取 adventure 的 Prototyping 流程，与用户商定范围。
 3. 用户确认且必要技术证据足够后，关闭 #42，更新 Spec 并保存。
 4. 使用 slicing 形成切片，用户审核后创建 Implementation 并派发 worker；不得把范围确认当作实现方案或切片确认。
 5. 实施后核对证据，完成整体验收和资源清理，提交用户确认。Map 和 Spec 保持 open，直到用户确认交付。
