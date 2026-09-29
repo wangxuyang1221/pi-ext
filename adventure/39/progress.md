@@ -38,7 +38,9 @@ expert 执行者 Thor 完成产品实现、正式组合验证和证据。主代�
 - 测试运行时进程已退出，隔离目录删除，无遗留监听端口。协调者新增测试隔离目录也已删除。
 - 运行版本为 Pi 0.87.0、Node v22.22.2、pnpm 11.9.0。当前 harness 的 Pi 文档是 0.87.1，后续改动仍须核对目标接口版本。
 - 原型保存在 [README](prototypes/goal-tool-ui/README.md)，可追溯选择依据，不再是最终实现入口。不要把原型内存 GoalAccess 当作正式路径。
-- 可复用的 expert 执行者 Thor：agentId `01a0eb0b-d85e-7176-b089-dc1d2c38a344`，最后一轮已 settled。当前保留上下文供用户审阅后可能的调整；续接先核对 runtime 状态和工作区，避免重复施工。
+- 原 expert 执行者 Thor 已按用户要求关闭，不能继续复用其 runtime。
+- 用户已批准修改 `~/.pi/agent/settings.json`，只禁用主工作区 Goal 并加载本 worktree 的 `extensions/goal/dist/index.js`。用 Pi 0.87.1 的实际 package resolver 核验只有一个 Goal 启用，其他扩展仍来自主工作区。验收后清理 worktree 前必须先处理此安装指向。
+- 用户随后报告旧原型无法启动，已复现并修复 prepare 清单漏掉生产 renderers 的回归。启动导入测试先失败后通过，组件和两个真实 PTY 模式均通过，完整 check 仍为 2604 passed / 13 skipped。见[修复记录](evidence/prototype-startup-repair.md)。本次未改产品代码。
 
 ## Current Assumptions
 
@@ -48,6 +50,6 @@ expert 执行者 Thor 完成产品实现、正式组合验证和证据。主代�
 
 等待用户最终确认交付，停止推进。
 
-1. 用户提出调整时，先明确受影响的要求与关卡，优先复用 Thor expert，传递新增目标、范围和验收条件。设计变化先重开 Planning；局部修复重开 #43，完成后重新核对受影响证据。
+1. 用户提出调整时，先明确受影响的要求与关卡，需要实施时使用 expert 执行者，传递新增目标、范围和验收条件；原 Thor 已关闭。设计变化先重开 Planning；局部修复重开 #43，完成后重新核对受影响证据。
 2. 用户确认交付后，按 adventure 更新 Map、Spec 与存档，将交付、验收和最终存档链接固定到已推送的提交，核验远端可读后关闭 Map 和 Spec。
 3. 远端分支是否删除另由用户决定，不把删除作为自动清理。不创建 PR、不合并、不部署，除非用户另行明确授权并处理相应流程。

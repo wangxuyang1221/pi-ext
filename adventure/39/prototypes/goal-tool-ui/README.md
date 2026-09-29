@@ -59,7 +59,7 @@ node adventure/39/prototypes/goal-tool-ui/demo.mjs --fullscreen
 
 真实部分：
 
-- 启动时将当前 worktree 的 codex-ui 源码、Goal 的 tools/upstream 源码转译到临时目录，没有源代码补丁，不编辑 dist。
+- 启动时将当前 worktree 的 codex-ui 源码、Goal 的 tools/upstream/renderers 源码转译到临时目录，没有源代码补丁，不编辑 dist。
 - 真实 Pi 的模型事件、工具执行、历史行渲染、主题与展开行为。
 - 原 Goal 的参数 schema、execute 内校验和 response 序列化。
 - Bash 执行固定 printf 命令，Write/Edit 操作固定临时文件，均由原有工具执行。
@@ -77,15 +77,16 @@ Fixture 与 approximation：
 
 已通过：
 
-- `node --test adventure/39/prototypes/goal-tool-ui/renderers.test.mjs`，4 个真实 ToolExecutionComponent 回归测试。
+- `node --test adventure/39/prototypes/goal-tool-ui/prepare.test.mjs adventure/39/prototypes/goal-tool-ui/renderers.test.mjs`，1 个转译后实际导入检查、4 个真实 ToolExecutionComponent 回归测试。
 - `conda run --no-capture-output -n codex-py312 python adventure/39/prototypes/goal-tool-ui/smoke.py`。
 - 同一 smoke 加 `--fullscreen`，验证另一种真实交互模式。
 - smoke 覆盖启动、三个工具与现有工具同屏、实时切换变体、原生展开、长目标、40/80/120 列窗口、错误、无目标、paused/blocked、无预算、计量不完整、运行到完成、主题切换、运行中退出与临时目录清理。
-- `pnpm run check`：类型检查、2599 个测试通过、13 个既有测试跳过、构建和发布包检查通过。原型测试另行运行，不把仓库 check 代替原型验证。
+- 原型启动修复后重新运行 `pnpm run check`：类型检查、2604 个测试通过、13 个既有测试跳过、构建和发布包检查通过。原型测试另行运行，不把仓库 check 代替原型验证。
+- 启动回归曾报 `ERR_MODULE_NOT_FOUND`：生产 tools 新增 renderers 依赖后，原型未转译该文件。已补齐清单，并由新增导入测试和两个真实 PTY 模式验证。详见 [启动修复记录](../../evidence/prototype-startup-repair.md)。
 
 详细记录见 [prototype-validation.md](../../evidence/prototype-validation.md)，终端文本与日志见 [evidence/prototype](../../evidence/prototype/)。
 
-尚未验证或不由原型证明：真实 Goal 存储和调度集成、历史 session 重启、reload、所有异常数据回退及生产性能。用户已确认 summary 展示基线；上述生产路径仍待正式实施验证。
+尚未验证或不由原型证明：真实 Goal 存储和调度集成、历史 session 重启、reload、所有异常数据回退及生产性能。用户已确认 summary 展示基线；上述生产路径已在[正式实施验收](../../evidence/implementation-verification.md)中单独验证，不由本原型证明。
 
 ## Reuse and cleanup
 
@@ -93,7 +94,7 @@ Fixture 与 approximation：
 - `prepare.mjs`：转译原有源码，不修改源码内容。
 - `runtime.mjs`：真实 SDK 启动、fixture 访问、固定脚本和对照命令。
 - `renderers.mjs`：两个候选布局，仅挂载在原型入口。
-- `renderers.test.mjs`、`smoke.py`：组件测试与真实 PTY 检查。
+- `prepare.test.mjs`、`renderers.test.mjs`、`smoke.py`：启动依赖、组件测试与真实 PTY 检查。
 
 可直接复用场景清单、fixture 和 smoke 方法。默认不把实验 renderer 迁移到生产，正式实现应按用户确认的规则重新落实类型、兼容、性能及回归覆盖。
 
