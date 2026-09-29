@@ -10,13 +10,13 @@
 
 ## Current Goal or Problem
 
-Goal 的三个工具已正式接入 summary 展示，产品提交 `a8249404b5adaded97dee4929423160bbf59dda7` 已推送，Implementation #43 与整体验收通过。当前等待用户最终确认交付，Map #39 与 Spec #40 保持 open，不继续实施。
+Goal 的三个工具已正式接入 summary 展示，产品提交 `a8249404b5adaded97dee4929423160bbf59dda7`。用户已确认手动验收通过，要求合并 main；代码已合入主工作区并通过最终检查。本场交付完成，归档后关闭 Map #39 与 Spec #40。安装配置回切 main 和分支清理不属于未完成的产品需求。
 
 ## Evolution
 
 用户认为 Goal 功能工作良好，只要求 UI 与 codex-ui 工具统一，并确认不改 footer 和 `/goal`。在真实 TUI 比较原型后，用户选择 summary、要求收敛。随后审核唯一实施切片，并指定 subagent 使用 expert。
 
-expert 执行者 Thor 完成产品实现、正式组合验证和证据。主代理独立核对源码及测试路径，复跑组件与工具测试并核对结构化证据，第一次验收通过，关闭 #43。未创建 PR、未合并 main、未部署。
+expert 执行者 Thor 完成产品实现、正式组合验证和证据。主代理独立核对源码及测试路径，复跑组件与工具测试并核对结构化证据，第一次验收通过，关闭 #43。用户后来确认手动验收通过并授权合并 main，同时要求提交主工作区原有改动。已完成合并与单独提交，未创建 PR、未部署。
 
 ## Agreed Decisions and Constraints
 
@@ -24,12 +24,12 @@ expert 执行者 Thor 完成产品实现、正式组合验证和证据。主代�
 - 固定 summary：操作与目标状态、单行目标预览、tokens/可选预算和耗时；使用 Pi 原生展开查看完整详情。无密度配置或原型命令进入产品。
 - 产品改动只有 `extensions/goal/src/renderers.ts` 与 `extensions/goal/src/tools.ts` 的 renderer 接入。执行、schema、description、response、存储/调度/计量、footer 和其他工具均未修改。
 - 仓库 `wangxuyang1221/pi-ext`，分支 `adventure/goal-tool-ui`，worktree `/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/goal-tool-ui`，资料 `adventure/39/`。
-- 用户允许创建更新本场 Issues、提交和推送本分支。禁止纳入原工作区已有改动，不创建 PR、不合并、不部署。远端分支清理由用户决定。
+- 用户允许创建更新本场 Issues、提交和推送，最终明确批准合并 main，并单独授权提交原工作区全部未提交内容。仍不创建 PR、不部署；远端分支清理由用户决定。
 - 主代理负责协调与 Acceptance；用户要求执行 subagent 为 expert，执行者不得再委派。源码和测试按 TDD 修改，不手动改 dist。
 
 ## Established Facts and Required Context
 
-- [Map #39](https://github.com/wangxuyang1221/pi-ext/issues/39) 当前为等待最终确认；[Spec #40](https://github.com/wangxuyang1221/pi-ext/issues/40) 已实施；[Implementation #43](https://github.com/wangxuyang1221/pi-ext/issues/43) 已关闭，保存完整 slice、执行计划、交付、验证和第一次 Acceptance。
+- [Map #39](https://github.com/wangxuyang1221/pi-ext/issues/39) 与 [Spec #40](https://github.com/wangxuyang1221/pi-ext/issues/40) 已获用户最终交付确认，归档时将材料固定到提交链接；[Implementation #43](https://github.com/wangxuyang1221/pi-ext/issues/43) 已关闭，保存完整 slice、执行计划、交付、验证和第一次 Acceptance。
 - [slices.md](slices.md) 是已获审核的唯一切片；Planning #41/#42 均已通关。
 - [执行者验收矩阵](evidence/implementation-verification.md) 按 Spec 7 项 Acceptance 和全部 Deferred verification 提供正式代码证据，包含运行命令、失败修正、输入替代边界与资源清理。
 - [协调者验收](evidence/coordinator-acceptance.md) 记录独立源码/证据核对和 9/9 组件/工具测试复跑。实现没有改变执行与数据路径，组合/独立 SDK、两个真实 PTY 模式的路径覆盖充分，无返工项。
@@ -44,12 +44,12 @@ expert 执行者 Thor 完成产品实现、正式组合验证和证据。主代�
 
 ## Current Assumptions
 
-无未决技术方案或已知验收失败。技术验收通过不等于用户最终确认。未经用户要求，不合并或删除分支。
+无未决技术方案或已知验收失败。用户已明确确认交付并批准合并；尚未要求删除分支。
 
 ## Continuation Point
 
-等待用户最终确认交付，停止推进。
+产品交付完成。将本存档和[合并验证](evidence/merge-validation.md)提交推送，在 Map 与 Spec 固定材料链接，核验可读后关闭两者。
 
-1. 用户提出调整时，先明确受影响的要求与关卡，需要实施时使用 expert 执行者，传递新增目标、范围和验收条件；原 Thor 已关闭。设计变化先重开 Planning；局部修复重开 #43，完成后重新核对受影响证据。
-2. 用户确认交付后，按 adventure 更新 Map、Spec 与存档，将交付、验收和最终存档链接固定到已推送的提交，核验远端可读后关闭 Map 和 Spec。
-3. 远端分支是否删除另由用户决定，不把删除作为自动清理。不创建 PR、不合并、不部署，除非用户另行明确授权并处理相应流程。
+1. 集成 main 最新 MCP/恢复改动的提交为 `b004be35d509db1be86083b07d4a1795d6cd0347`。用户原有 33 个删除项和 1 个新增文档单独提交为 `255c14ad94ec08b5d9fd332a23ddc8de3b908ac6`。最终 main 的完整 check 为 2622 passed / 13 skipped，主工作区构建已更新。
+2. 本地安装仍指向冒险 worktree。要回切 `~/.pi/agent/settings.json`，先说明工作目录外写入范围并取得用户“同意”；在此之前保留 worktree。分支删除另行确认。
+3. 后续若用户提出产品调整，按受影响要求重开关卡，实施使用 expert；原 Thor 已关闭。
