@@ -1,6 +1,6 @@
 # Goal tool UI implementation slice
 
-状态：待用户审核。用户已确认原型 summary 方案，本列表尚未获审核，不创建或派发 Implementation。
+状态：已获用户审核。用户确认单切片的范围和粒度，并指定执行 subagent 使用 `agent_type: expert`。
 
 依据：[Spec #40](https://github.com/wangxuyang1221/pi-ext/issues/40)。本次只需要一个垂直切片，三个工具共用展示规则，不按工具或测试工序拆关。
 
@@ -17,4 +17,4 @@
 
 ## Review
 
-等待用户确认单切片的范围、依赖和粒度。审核通过后将以上完整内容放入 Implementation Issue，执行计划只在该 Issue 正文维护。
+用户已确认。以上完整内容移入对应 Implementation Issue，执行计划只在该 Issue 正文维护。执行者使用 expert 类型，承担 worker 的编码、验证和交付职责。

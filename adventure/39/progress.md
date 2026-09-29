@@ -10,13 +10,13 @@
 
 ## Current Goal or Problem
 
-将 `get_goal`、`create_goal`、`update_goal` 的对话展示与 codex-ui 中 Bash、Write、Edit 等工具统一。用户已审阅真实原型并选择 summary，规划已收敛，Spec 已确定可用于实施。当前等待用户审核唯一实施切片，尚未创建 Implementation 或派发 worker。
+将 `get_goal`、`create_goal`、`update_goal` 的对话展示与 codex-ui 中 Bash、Write、Edit 等工具统一。用户已审阅真实原型并选择 summary，规划已收敛，Spec 已确定可用于实施。用户已审核唯一实施切片，并指定 `agent_type: expert`。已创建 Implementation #43，准备派发执行；主代理转为协调者。
 
 ## Evolution
 
 用户认为 Goal 功能工作良好，问题仅在 UI。不扩大到 footer 和 `/goal`。用户先同意创建独立冒险及提交推送，再确认只改三个工具。无法凭文字选密度后，同意在 #42 制作 summary/minimal 对照原型。
 
-原型完成后，用户明确认可 summary 并要求收敛。已关闭 Planning #42，并把有效要求移交 Spec #40。不再反复询问是否制作原型或选择哪种密度，正式产品不增加变体切换。原型制作批准、原型选择、实施切片审核是不同决定；最后一项尚待确认。
+原型完成后，用户明确认可 summary 并要求收敛。已关闭 Planning #42，并把有效要求移交 Spec #40。不再反复询问是否制作原型或选择哪种密度，正式产品不增加变体切换。原型制作批准、原型选择、实施切片审核是不同决定；最后一项也已获用户确认，执行者类型明确指定为 expert。
 
 ## Agreed Decisions and Constraints
 
@@ -27,7 +27,7 @@
 - worktree `/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/goal-tool-ui`，资料目录 `adventure/39/`。
 - 只提交和推送本场代码与资料，不创建 PR、不合并、不部署。原工作区已有文档删除，不能纳入本场。
 - 产品基准为 main 的 `31f1ed84526cd9df5fc035e881245cbefb627e00`。当前分支增加的是本场资料和原型，未修改产品源码。
-- 实施切片经用户审核后，由主代理担任协调者，派发独立 worker，一次推进一关。worker 不再委派，主代理不代替 worker 编码。
+- 实施切片已获用户审核。主代理担任协调者，使用 `agent_type: expert` 派发独立执行者，承担 worker 职责。执行者不再委派，主代理不代替其编码。
 - 正式实现修改 src 与对应测试，不手动编辑 dist；完成前运行 `pnpm run check`。
 
 ## Established Facts and Required Context
@@ -39,20 +39,19 @@
 - 原型切换密度曾因重绘回调重复注册无限增长导致内存耗尽，已修复并增加每行一个 invalidator 的回归测试。正式实现不需要全局密度切换注册机制。
 - 原型证明布局与真实宿主挂载，不证明正式 Goal 组合、历史恢复、非 TUI、所有异常数据与性能。这些已分配给唯一实施切片的整体验收。
 - [Map #39](https://github.com/wangxuyang1221/pi-ext/issues/39)：当前阶段和入口；[Planning #41](https://github.com/wangxuyang1221/pi-ext/issues/41) 与 [Planning #42](https://github.com/wangxuyang1221/pi-ext/issues/42) 均已通关。
-- [slices.md](slices.md)：唯一切片的完整待审核文本。不要把它当作已批准列表。
+- [slices.md](slices.md)：已审核的唯一切片。完整内容已写入 [Implementation #43](https://github.com/wangxuyang1221/pi-ext/issues/43)，该 Issue 的 Execution 是唯一执行计划入口。
 - 使用 `/Users/wangxuyang/.agents/skills/wangxuyang/adventure/SKILL.md` 和其 Issue 模板推进；写材料前读取 `docs/agents/repository-language-policy.md`。
 - 项目和已验证原型的 Pi 版本为 0.87.0，当前 harness 文档是 0.87.1，接口行为须核对目标版本。Node v22.22.2、pnpm 11.9.0，worktree 已完成 frozen-lockfile 安装。
 
 ## Current Assumptions
 
-无阻碍切片的未决方案。一个切片足以同时交付三个工具的共同展示规则、接入和整体验收，避免按工具或测试工序人为拆关。该粒度仍待用户审核。
+无阻碍切片的未决方案。一个切片足以同时交付三个工具的共同展示规则、接入和整体验收，避免按工具或测试工序人为拆关。该粒度已获用户确认。
 
 ## Continuation Point
 
-当前等待用户审核一个实施切片。规划已通关，Map 和 Spec 保持 open，尚无 Implementation。
+进入 [Implementation #43](https://github.com/wangxuyang1221/pi-ext/issues/43)。Map 和 Spec 保持 open。#43 已关联 Map 和已通关 Planning 的原生依赖。
 
-1. 向用户提交 [slices.md](slices.md) 的完整范围、依赖、验收与边界。若用户调整，修订后再审核；不提前派发 worker。
-2. 用户审核通过后，在 slices.md 标明已确认，创建 Implementation 为 Map 的子 Issue，按原生依赖关联已通关 Planning；Issue 包含完整 slice、工作区、代码基准与操作范围。
-3. 保存后派发独立 worker，提供 Spec、关卡、原型与验证入口、worktree、操作限制。必须传入 write-todo-list 和 develop-with-tdd 的绝对 SKILL.md 路径，要求行动前读取。执行计划只维护在 Implementation Issue 正文。
-4. worker 完成后由协调者核对正式代码的证据，尤其是 Spec Deferred verification。原型结果不能代替正式 Goal + codex-ui 组合验收；不足则交回原 worker。
-5. 唯一切片包含整体验收和资源清理。通过后保存，提交用户确认交付；得到最终确认才关闭 Map/Spec。远端分支清理由用户决定。
+1. 本次保存后立即使用 `agent_type: expert` 派发执行者，提供 Spec、#43、原型与证据入口、worktree 和操作限制。行动前完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md` 与 `/Users/wangxuyang/.agents/skills/wangxuyang/develop-with-tdd/SKILL.md`；执行计划只维护在 #43 正文。
+2. 跨 session 接手先检查 subagent runtime 与工作区，勿重复派发。执行者活跃时协调者不改产品代码；需要结果时等待。
+3. 完成后协调者核对正式代码证据，特别是 Spec Deferred verification。原型结果不能代替正式 Goal + codex-ui 组合验收；不足则更新 Acceptance 并交回原执行者。
+4. 唯一切片包含整体验收和资源清理。通过后关闭 #43、保存进度，提交用户确认交付；得到最终确认才关闭 Map/Spec。远端分支清理由用户决定。
