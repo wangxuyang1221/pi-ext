@@ -25,7 +25,7 @@
 
 - [ ] 修复 `scripts/test.mjs` 的进程生命周期。正常结束、非零退出、启动失败、取消与强制终止走同一个幂等清理流程；先确认任务进程停止，再删除临时目录。重复信号不重复启动清理，忽略信号的子进程在有界期限内被强制停止。无法确认停止时返回明确失败并保留诊断目录，不误杀用户进程。仅在确有复用需要时抽取小型进程管理 helper，不重写无关评估 runner。
 - [x] 将 `scripts/test.mjs` 的环境继承改为允许名单，再显式设置仓库内 HOME、agentDir、TMP、XDG 和 Windows 配置目录。保留已盘点的必要测试开关，拒绝隐式认证、用户配置和会话路径透传；测试在自身内部注入的虚构凭据不受影响。构造环境只遍历一次，不为每个测试重复扫描系统配置或调用外部命令。
-- [ ] 在 `extensions/codex-ui/__tests__/` 补齐真实宿主的异常 Write 参数验收。通过实际工具注册、宿主参数校验和执行路径验证拒绝及无文件变更，保留现有 fallback 折叠、展开和正常调用渲染断言；不能以手工注入 `isError: true` 代替执行结果。
+- [x] 在 `extensions/codex-ui/__tests__/` 补齐真实宿主的 Write 参数验收。按用户确认保留宿主语义：缺失、对象、数组验证拒绝和无文件变更，null/数字验证转换后的确切内容及真实成功结果。保留现有 fallback 折叠、展开和正常调用渲染断言；不能以手工注入 `isError: true` 代替执行结果。
 
 ### 3. Deliver
 
@@ -41,7 +41,7 @@
 - 覆盖 `SIGINT`、重复取消、子进程忽略终止信号、pnpm 提前退出留下后代、正常成功及失败退出。启动失败可在 spawn 边界注入，进程树清理不能仅靠 mock 证明。加一个不属于本任务的受控对照进程，确认不会误杀；对照进程也由测试最终清理。
 - **凭据隔离。** 外部父进程向真实 wrapper 注入虚构值，至少覆盖 OpenAI key、Bedrock bearer token、web identity token 文件、AWS 容器凭据 URI、profile/credentials/config 路径及 Google credentials。子进程断言这些变量不存在，隔离的 ModelRuntime 不因这些输入获得可用认证来源。禁止真实 token、真实身份文件读取及远端请求。
 - 同时断言必要的 PATH、平台变量、源码/dist 集成开关正常传递；目录覆盖仍指向仓库隔离目录。不能让测试直接继承真实父环境来验证允许名单。
-- **异常参数。** 固定离线 provider 响应仅用于产生 `write` tool call，分别提供缺失 content、`null`、数字、对象和数组。调用必须经过真实宿主及仓库工具定义，观察实际失败 tool result，并确认新文件未创建、既有文件字节未变化。增加合法字符串对照，确认正常写入及自定义渲染仍有效。不得伪造校验后的 tool result。
+- **Write 参数。** 固定离线 provider 响应仅用于产生 `write` tool call，分别提供缺失 content、`null`、数字、对象和数组。调用必须经过真实宿主及仓库工具定义。缺失、对象、数组须拒绝且文件不变；null/数字按已核验且用户确认保留的宿主转换语义，验证执行器收到字符串、文件确切内容和真实成功结果。增加合法字符串对照，保留 fallback 及自定义渲染验收。不得伪造校验后的 tool result。
 
 ### Failure investigation
 
@@ -74,6 +74,12 @@ pnpm run codex-compact:quality:check
 - 在 macOS、Linux、Windows 上验证通用 wrapper；Unix 专用 tmux/PTY 验收仍只在支持平台运行。未获得某平台实际执行证据时明确标为未验证，不以 mock 或 skip 代替。
 - accounting 与 tmux 在根因处理前可能继续失败，必须分别记录，不能将新修复通过等同于整份升级通过。被 fail-fast 阻断的 terminal 或 dist 路径使用独立隔离入口补验，不能用补验覆盖失败记录。
 - 日志写入新的仓库内证据目录，不覆盖原审阅记录。结束前核对受管进程、私有 tmux socket 和监听端口均已清理。
+
+## Current status
+
+Write 与 wrapper 两项主检查失败已修复。wrapper 的实际失败是退出期间信号 0 探测返回 EPERM，被误当成不可恢复错误；现在继续原有有界等待，只有 ESRCH 才确认组不存在。新增暂时/持续 EPERM 回归均通过，真实八路并行取消从 4/8 失败变为 8/8 通过。
+
+`pnpm run check` 连续三次完整通过，`2644 passed / 13 skipped`；pack dry run 通过。Linux/Windows 未实跑，detached 资源强杀仍未验证，因此跨平台生命周期总项不勾选。tmux 按用户要求暂不处理，Goal SDK 的兼容性差异仍保留。详见 [main check validation](pi-0.99.1-main-check-validation.md)。下方状态是此前各轮的历史记录。
 
 ## Test fixes status
 

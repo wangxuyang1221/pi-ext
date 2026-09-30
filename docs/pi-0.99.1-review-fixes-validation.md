@@ -1,5 +1,9 @@
 # Pi 0.99.1 review fixes validation
 
+## Current result
+
+后续 Write/wrapper 修复已让主检查连续三次完整通过，`2644 passed / 13 skipped`，pack dry run 通过。详情见 [main check validation](pi-0.99.1-main-check-validation.md)。下文保留此前修复和调研各阶段的结果，旧失败数字不代表当前工作区。tmux 空锁与 SDK 队列兼容性差异仍未改变，Linux/Windows 未实际运行。
+
 ## Status
 
 用户已授权执行 [review fixes todo](pi-0.99.1-review-fixes-todo.md)。本轮完成凭据允许名单、macOS 普通测试进程组清理、真实 Write 执行验收及 Goal/tmux 故障调查。整份清单尚未通过，生产 `src/` 没有修改。

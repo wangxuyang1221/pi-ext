@@ -485,7 +485,7 @@ pnpm run check
 
 `pnpm test` 只继承必要系统变量和明确列出的离线验收开关，不透传 AWS/OpenAI/Google 认证环境或外部 Pi 会话路径。Unix 普通 worker 使用独占进程组，正常退出或可处理的取消会先确认组内进程停止，再删除隔离目录；无法确认时保留目录并失败。此路径已在 macOS 验证。Windows 使用 Job Object，但 Linux/Windows 尚无本轮实跑证据；PTY 新会话和私有 tmux server 仍由各自夹具清理，不在普通进程组取消保证内。
 
-审阅修复尚未全部通过。Fast 顺序测试和 Goal 的 TUI/SDK 分组验收已修正，accounting 整组通过；SDK 取消后不自动执行排队输入的兼容性差异仍保留。主检查尚有两个 Write 类型转换预期冲突，以及完整套件中的 wrapper HOME 清理断言失败，tmux 空锁暂未处理。当前结果见 [test fixes validation](docs/pi-0.99.1-test-fixes-validation.md)。
+主检查已连续三次完整通过，`2644 passed / 13 skipped`。Write 测试按宿主转换契约验收；wrapper 对退出探测中的暂时 EPERM 继续有界等待，只有确认进程组不存在后才删除目录。Fast 和 Goal 测试已修正，accounting 整组此前通过；SDK 取消后不自动执行排队输入的兼容性差异仍保留，tmux 空锁暂未处理。当前结果与平台限制见 [main check validation](docs/pi-0.99.1-main-check-validation.md)。
 
 常用命令：
 

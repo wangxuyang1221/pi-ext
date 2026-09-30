@@ -168,6 +168,45 @@ test.skipIf(process.platform === "win32")("retains diagnostics when process owne
   } finally { kill.mockRestore(); rmSync(directory, { recursive: true, force: true }); }
 });
 
+test.skipIf(process.platform === "win32")("waits for confirmed group disappearance after transient EPERM probes", async () => {
+  const directory = mkdtempSync(resolve(".tmp/test-transient-probe-"));
+  const original = process.kill;
+  let denied = 0, confirmedAbsent = false;
+  const kill = vi.spyOn(process, "kill").mockImplementation((pid, signal) => {
+    if (pid < 0 && signal === 0 && denied < 3) {
+      denied++;
+      throw Object.assign(new Error("Group probe temporarily unavailable"), { code: "EPERM" });
+    }
+    try { return original(pid, signal); }
+    catch (error: any) {
+      if (pid < 0 && signal === 0 && error.code === "ESRCH") {
+        assert.equal(existsSync(directory), true, "Directory must remain until absence is confirmed");
+        confirmedAbsent = true;
+      }
+      throw error;
+    }
+  });
+  try {
+    assert.equal(await runTestProcess(process.execPath, ["-e", ""], { directory, env: baseEnv() }), 0);
+    assert.equal(denied, 3);
+    assert.equal(confirmedAbsent, true);
+    assert.equal(existsSync(directory), false);
+  } finally { kill.mockRestore(); rmSync(directory, { recursive: true, force: true }); }
+});
+
+test.skipIf(process.platform === "win32")("retains the directory when EPERM probes never confirm group disappearance", async () => {
+  const directory = mkdtempSync(resolve(".tmp/test-persistent-probe-"));
+  const original = process.kill;
+  const kill = vi.spyOn(process, "kill").mockImplementation((pid, signal) => {
+    if (pid < 0 && signal === 0) throw Object.assign(new Error("Group probe unavailable"), { code: "EPERM" });
+    return original(pid, signal);
+  });
+  try {
+    await assert.rejects(runTestProcess(process.execPath, ["-e", ""], { directory, env: baseEnv() }), /Owned test process group .* did not stop/);
+    assert.equal(existsSync(directory), true);
+  } finally { kill.mockRestore(); rmSync(directory, { recursive: true, force: true }); }
+});
+
 const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 const portOpen = (port: number) => new Promise<boolean>(resolve => {
   const socket = createConnection({ host: "127.0.0.1", port });
@@ -199,9 +238,10 @@ test("stops real Vitest workers and listeners before removing their home on canc
     execution.child.kill("SIGTERM");
     const result = await Promise.race([execution.exited, delay(10000).then(() => { throw new Error("Wrapper cancellation did not finish"); })]);
     assert.notEqual(result[0], 0);
+    if (process.platform !== "win32") assert.equal(result[0], 143, `Wrapper did not complete SIGTERM cleanup:\n${execution.output()}`);
     await until(() => !alive(state!.pid), "Vitest worker survived wrapper cancellation", 1000);
     assert.equal(await portOpen(state!.port), false);
-    await until(() => !existsSync(state!.home), "Isolated home survived verified cleanup");
+    await until(() => !existsSync(state!.home), `Isolated home survived verified cleanup:\n${execution.output()}`);
     assert.equal(alive(unrelated.pid!), true, "Unrelated process was terminated");
   } finally {
     // Independent supervision also cleans up the intentionally failing Red run.

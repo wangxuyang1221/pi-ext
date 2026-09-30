@@ -1,5 +1,9 @@
 # Pi 0.99.1 test fixes validation
 
+## Follow-up result
+
+本文件保留 Fast/Goal 修复当轮的结果。后续用户授权修复 Write 与 wrapper 后，主检查已连续三次完整通过，`2644 passed / 13 skipped`。下面记录的三个主检查失败已经处理，不再代表当前状态。详情及未验证平台见 [main check validation](pi-0.99.1-main-check-validation.md)。
+
 ## Scope
 
 用户在 Fast/Goal 调研后授权修复测试。本轮只修改 `extensions/subagent/__tests__/fast-production.test.ts` 和 `extensions/goal/__tests__/provider-runtime.mjs`，同步文档。保留此前升级改动，不修改生产 `src/`、Write 测试或 tmux 锁逻辑，不提交、发布或部署。

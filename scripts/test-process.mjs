@@ -11,7 +11,13 @@ const killWaitMs = 3000;
 
 function groupExists(pid) {
   try { process.kill(-pid, 0); return true; }
-  catch (error) { if (error.code === "ESRCH") return false; throw error; }
+  catch (error) {
+    if (error.code === "ESRCH") return false;
+    // EPERM is not proof of absence. Darwin can report it while a group exits;
+    // keep waiting within the existing deadline and require ESRCH before cleanup.
+    if (error.code === "EPERM") return true;
+    throw error;
+  }
 }
 function signalGroup(pid, signal) {
   try { process.kill(-pid, signal); }

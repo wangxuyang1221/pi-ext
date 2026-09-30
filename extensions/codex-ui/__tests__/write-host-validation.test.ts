@@ -9,12 +9,16 @@ import { test } from "vitest";
 import { registerCodexTools } from "../src/tools.js";
 
 const cases = [
-  { name: "missing", args: {}, valid: false },
-  ...[null, 123, {}, []].map(content => ({ name: JSON.stringify(content), args: { content }, valid: false })),
-  { name: "string", args: { content: "new contents\n" }, valid: true },
+  { name: "missing", args: {}, expected: undefined },
+  { name: "null coerced to string", args: { content: null }, expected: "null" },
+  { name: "number coerced to string", args: { content: 123 }, expected: "123" },
+  { name: "object", args: { content: {} }, expected: undefined },
+  { name: "array", args: { content: [] }, expected: undefined },
+  { name: "string", args: { content: "new contents\n" }, expected: "new contents\n" },
 ];
 
-test.each(cases)("validates Write content $name through the real host without mutating rejected targets", async ({ args, valid }) => {
+test.each(cases)("validates Write content $name through the real host without mutating rejected targets", async ({ args, expected }) => {
+  const valid = expected !== undefined;
   mkdirSync(".tmp", { recursive: true });
   const cwd = mkdtempSync(resolve(".tmp/write-host-"));
   let session: AgentSession | undefined;
@@ -28,14 +32,15 @@ test.each(cases)("validates Write content $name through the real host without mu
     // Substitute only model responses, not host validation, tool execution, or results.
     faux.setResponses([fauxAssistantMessage(calls, { stopReason: "toolUse" }), fauxAssistantMessage("Done")]);
     const settingsManager = SettingsManager.inMemory({ retry: { enabled: false }, compaction: { enabled: false } });
-    let write: ToolDefinition | undefined, executed = 0;
+    let write: ToolDefinition | undefined;
+    const executedContent: unknown[] = [];
     const errors: unknown[] = [];
     const loader = new DefaultResourceLoader({ cwd, agentDir: join(cwd, "agent"), settingsManager,
       noExtensions: true, noSkills: true, noThemes: true, noContextFiles: true, noPromptTemplates: true,
       extensionFactories: [pi => registerCodexTools({ ...pi, registerTool: tool => {
         if (tool.name !== "write") { pi.registerTool(tool); return; }
         write = tool;
-        pi.registerTool({ ...tool, execute: (...input) => { executed++; return tool.execute(...input); } });
+        pi.registerTool({ ...tool, execute: (...input) => { executedContent.push(input[1].content); return tool.execute(...input); } });
       } })] });
     await loader.reload();
     ({ session } = await createAgentSession({ cwd, agentDir: join(cwd, "agent"), resourceLoader: loader, settingsManager,
@@ -46,10 +51,10 @@ test.each(cases)("validates Write content $name through the real host without mu
     const results = session.messages.filter(message => message.role === "toolResult");
     assert.equal(results.length, 2, JSON.stringify(session.messages));
     assert.deepEqual(errors, []);
-    assert.equal(executed, valid ? 2 : 0, `Invalid arguments must be rejected before entering the repository executor: ${JSON.stringify({ results, existing: readFileSync(existing, "utf8"), fresh: existsSync(fresh) ? readFileSync(fresh, "utf8") : null })}`);
-    assert.equal(readFileSync(existing, "utf8"), valid ? "new contents\n" : "original contents\n");
+    assert.deepEqual(executedContent, valid ? [expected, expected] : [], "Only validated strings may reach the repository executor");
+    assert.equal(readFileSync(existing, "utf8"), valid ? expected : "original contents\n");
     assert.equal(existsSync(fresh), valid);
-    if (valid) assert.equal(readFileSync(fresh, "utf8"), "new contents\n");
+    if (valid) assert.equal(readFileSync(fresh, "utf8"), expected);
     initTheme("dark", false);
     for (const [index, result] of results.entries()) {
       assert.equal(result.isError, !valid);
@@ -57,8 +62,14 @@ test.each(cases)("validates Write content $name through the real host without mu
         { showImages: false }, write, { requestRender() {} } as any, cwd);
       row.setArgsComplete(); row.updateResult(result); row.setExpanded(true);
       const rendered = row.render(100).map(stripTerminalSequences).join("\n");
-      if (valid) assert.match(rendered, /Edited|Added|Write/u);
-      else {
+      if (valid) {
+        const action = index === 0 ? "Edited" : "Added";
+        assert.equal((result.details as { codexWrite: { action: string } }).codexWrite.action, action);
+        // Raw non-string arguments use the host's fallback call header even after execution coerces them.
+        if ("content" in args && typeof args.content === "string") assert.ok(rendered.includes(action));
+        else assert.match(rendered, /write\s/u);
+        assert.ok(rendered.includes(expected.trimEnd()), "Successful output must render the actual written content");
+      } else {
         const diagnosis = result.content.filter(part => part.type === "text").map(part => part.text).join("\n");
         assert.match(diagnosis, /content/u);
         assert.match(diagnosis, /valid|string|required/iu);
