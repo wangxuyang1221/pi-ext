@@ -20,6 +20,7 @@ pid, fd = pty.fork()
 if pid == 0:
     os.chdir(repo)
     os.environ["TERM"] = "xterm-256color"
+    os.environ["COLORTERM"] = "truecolor"
     os.execvp("node", ["node", str(here / "demo.mjs"), *sys.argv[1:]])
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 60, 120, 0, 0))
 screen = pyte.Screen(120, 60)

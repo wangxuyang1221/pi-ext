@@ -55,6 +55,7 @@ export async function runFixedBoundary({ directory, specification, credentials, 
     const file = `codex-compact-quality-${name}.mjs`;
     return [file, sha(fs.readFileSync(new URL(file, import.meta.url)))];
   }));
+  config.runnerFingerprints["pi-host.mjs"] = sha(fs.readFileSync(new URL("pi-host.mjs", import.meta.url)));
   let schedule = makeSchedule(config);
   if (retry) {
     const attempt = makeRetrySchedule({ ...retry, executorFingerprints: config.runnerFingerprints });
@@ -100,7 +101,7 @@ export async function runFixedBoundary({ directory, specification, credentials, 
         output = await adapters.cli({ ...common, executable: config.cli.executable, binarySha256: config.cli.binarySha256, credentialFile: credentials.cli });
       } else {
         const plugin = config.plugins[job.arm];
-        output = await adapters.plugin({ ...common, moduleDirectory: plugin.directory, expectedModuleFingerprint: plugin.fingerprint, credentialFile: credentials.pi });
+        output = await adapters.plugin({ ...common, moduleDirectory: plugin.directory, expectedModuleFingerprint: plugin.fingerprint, expectedPiVersion: plugin.piVersion ?? "0.87.0", credentialFile: credentials.pi });
       }
       assert.ok(Array.isArray(output.replacementHistory) && output.replacementHistory.length > 0, "Missing compaction history");
     } else {

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, test, vi } from "vitest";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { ToolExecutionComponent, type ExtensionAPI, type ExtensionContext, type Theme, type ToolDefinition } from "@earendil-works/pi-coding-agent";
+import { ToolExecutionComponent, type ExtensionAPI, type ExtensionToolContext, type Theme, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, type TUI } from "@earendil-works/pi-tui";
 import search from "../src/index.ts";
 import { CodexError, runResponsesSearch } from "../src/codex.ts";
@@ -39,7 +39,9 @@ async function harness() {
   const ctx = { mode: "tui", cwd: process.cwd(), isProjectTrusted: () => false,
     modelRegistry: { getApiKeyForProvider: async () => "fixture-token" },
     sessionManager: { getSessionId: () => "fixture-session" },
-  } as unknown as ExtensionContext;
+    tools: [],
+    executeTool: async () => { throw new Error("Unexpected nested tool call in search fixture"); },
+  } as unknown as ExtensionToolContext;
   await events.get("session_start")!({}, ctx);
   const requestRender = vi.fn();
   const row = new ToolExecutionComponent(tool!.name, "search-test", params, { showImages: false }, tool!, { requestRender } as unknown as TUI, ctx.cwd);

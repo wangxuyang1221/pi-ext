@@ -6,6 +6,8 @@ import { once } from "node:events";
 import * as plugin from "../../../scripts/codex-compact-quality-plugin.mjs";
 import { fingerprintWorkspace } from "../../../scripts/codex-compact-quality-tools.mjs";
 
+const expectedPiVersion = JSON.parse(fs.readFileSync(new URL("../../../package.json", import.meta.url), "utf8")).devDependencies["@earendil-works/pi-coding-agent"];
+
 test("runs a frozen plugin entry in an isolated Pi process and captures transport without headers", async () => {
   expect(typeof plugin.runPluginCompaction).toBe("function");
   const root = fs.mkdtempSync(path.join(process.cwd(), ".tmp/quality-plugin-"));
@@ -23,9 +25,13 @@ test("runs a frozen plugin entry in an isolated Pi process and captures transpor
     const sourceWorkspace = path.join(root, "source"); fs.mkdirSync(sourceWorkspace); fs.writeFileSync(path.join(sourceWorkspace, "file.txt"), "baseline");
     const directory = path.join(root, "job"); fs.mkdirSync(directory);
     const credentialFile = path.join(root, "credential.json"); fs.writeFileSync(credentialFile, "{}");
-    const result = await plugin.runPluginCompaction({ directory, moduleDirectory, expectedModuleFingerprint: fingerprintWorkspace(moduleDirectory), sourceWorkspace, expectedWorkspaceFingerprint: fingerprintWorkspace(sourceWorkspace), credentialFile, history: [], instructions: "instructions", executionTimeoutMs: 10000 });
+    const result = await plugin.runPluginCompaction({ directory, moduleDirectory, expectedModuleFingerprint: fingerprintWorkspace(moduleDirectory), sourceWorkspace, expectedWorkspaceFingerprint: fingerprintWorkspace(sourceWorkspace), credentialFile, expectedPiVersion, history: [], instructions: "instructions", executionTimeoutMs: 10000 });
     expect(result.usage.input).toBe(100); expect(result.requestCount).toBe(1); expect(calls).toBe(1);
-    expect(result.piVersion).toBe("0.87.0"); expect(result.replacementHistory[0].type).toBe("compaction");
+    expect(result.piVersion).toBe(expectedPiVersion); expect(result.replacementHistory[0].type).toBe("compaction");
+    const plan = JSON.parse(fs.readFileSync(path.join(directory, "plugin/configuration.json"), "utf8"));
+    expect(plan.piVersion).toBe(expectedPiVersion);
+    expect(result.runtime.versions).toEqual(plan.runtime.versions);
+    expect(Object.values(result.runtime.versions)).toEqual(Array(4).fill(expectedPiVersion));
     expect(fs.existsSync(path.join(directory, "plugin/pi-home/auth.json"))).toBe(false);
     const capture = fs.readFileSync(path.join(directory, "plugin/request-0.json"), "utf8");
     expect(capture).not.toContain("authorization"); expect(capture).not.toContain("do-not-record-test-secret");
@@ -33,7 +39,10 @@ test("runs a frozen plugin entry in an isolated Pi process and captures transpor
     expect(fs.readFileSync(path.join(sourceWorkspace, "file.txt"), "utf8")).toBe("baseline");
   } finally {
     const stderr = path.join(root, "job/plugin/stderr.log");
-    if (fs.existsSync(stderr)) fs.copyFileSync(stderr, path.join(process.cwd(), ".tmp/codex-quality", `${path.basename(root)}.stderr.log`), fs.constants.COPYFILE_EXCL);
+    if (fs.existsSync(stderr)) {
+      fs.mkdirSync(path.join(process.cwd(), ".tmp/codex-quality"), { recursive: true });
+      fs.copyFileSync(stderr, path.join(process.cwd(), ".tmp/codex-quality", `${path.basename(root)}.stderr.log`), fs.constants.COPYFILE_EXCL);
+    }
     server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); fs.rmSync(root, { recursive: true, force: true });
   }
 }, 15000);
@@ -45,7 +54,7 @@ function fixture(code: string) {
   const sourceWorkspace = path.join(root, "source"); fs.mkdirSync(sourceWorkspace);
   const directory = path.join(root, "job"); fs.mkdirSync(directory);
   const credentialFile = path.join(root, "credentials.json"); fs.writeFileSync(credentialFile, "{}");
-  return { root, options: { directory, moduleDirectory, expectedModuleFingerprint: fingerprintWorkspace(moduleDirectory), sourceWorkspace, expectedWorkspaceFingerprint: fingerprintWorkspace(sourceWorkspace), credentialFile, history: [], instructions: "instructions" } };
+  return { root, options: { directory, moduleDirectory, expectedModuleFingerprint: fingerprintWorkspace(moduleDirectory), sourceWorkspace, expectedWorkspaceFingerprint: fingerprintWorkspace(sourceWorkspace), credentialFile, expectedPiVersion, history: [], instructions: "instructions" } };
 }
 
 test("preserves a native preflight refusal without bypassing it or inventing a model request", async () => {
@@ -57,6 +66,21 @@ test("preserves a native preflight refusal without bypassing it or inventing a m
     expect(failure.workerFailure.requestCount).toBe(0);
     expect(fs.existsSync(path.join(options.directory, "plugin/result.json"))).toBe(false);
     expect(fs.existsSync(path.join(options.directory, "plugin/pi-home/auth.json"))).toBe(false);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test.each(["0.1.0", undefined])("rejects a mismatched runtime before loading plugin code, preserving the legacy default %s", async expected => {
+  const { root, options } = fixture('throw new Error("Plugin must not load on the wrong host");');
+  try {
+    await expect(plugin.runPluginCompaction({ ...options, expectedPiVersion: expected })).rejects.toThrow(/worker failed/);
+    const directory = path.join(options.directory, "plugin");
+    const config = JSON.parse(fs.readFileSync(path.join(directory, "configuration.json"), "utf8"));
+    expect(config.piVersion).toBe(expected ?? "0.87.0");
+    expect(fs.readFileSync(path.join(directory, "stderr.log"), "utf8")).toContain("Installed Pi runtime version mismatch");
+    expect(fs.readFileSync(path.join(directory, "stderr.log"), "utf8")).not.toContain("Plugin must not load");
+    expect(fs.existsSync(path.join(directory, "result.json"))).toBe(false);
+    expect(fs.existsSync(path.join(directory, "pi-home/auth.json"))).toBe(false);
+    expect(JSON.parse(fs.readFileSync(path.join(directory, "cleanup.json"), "utf8")).groupStopped).toBe(true);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 

@@ -57,7 +57,7 @@ it.each([
   expect(h.errors).toEqual([]);
 });
 
-it.each(["error", "aborted"] as const)("persists the first user snapshot after a provider %s without rereading on resume", async stopReason => {
+it.each(["error", "aborted"] as const)("persists the first user snapshot before a provider %s without rereading on resume", async stopReason => {
   const h = await lifecycleFixture(), entered = deferred(), release = deferred();
   h.faux.setResponses([async ctx => {
     h.calls.push(structuredClone(ctx.messages)); entered.resolve(); await release.promise;
@@ -66,7 +66,12 @@ it.each(["error", "aborted"] as const)("persists the first user snapshot after a
   const run = h.session.prompt("$alpha"); await entered.promise;
   try {
     expect(h.users()).toHaveLength(1); expect(h.displays()).toHaveLength(1);
-    expect(existsSync(h.session.sessionFile!)).toBe(false);
+    expect(existsSync(h.session.sessionFile!)).toBe(true);
+    const entries = readFileSync(h.session.sessionFile!, "utf8").trim().split("\n").map(line => JSON.parse(line));
+    const user = entries.find(entry => entry.type === "message" && entry.message.role === "user");
+    expect(decodeSnapshot(textOf(user.message))).toEqual(decodeSnapshot(textOf(h.users()[0].message)));
+    expect(user.message.content).toEqual(h.calls[0].find(message => message.role === "user")!.content);
+    expect(entries.filter(entry => entry.type === "message" && entry.message.role === "assistant")).toEqual([]);
   } finally { release.resolve(); }
   await run;
   const file = h.session.sessionFile!;

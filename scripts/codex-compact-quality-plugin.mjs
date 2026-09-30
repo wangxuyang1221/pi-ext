@@ -11,13 +11,14 @@ import { assertRunDirectory } from "./codex-compact-quality-runner.mjs";
 import { fingerprintWorkspace } from "./codex-compact-quality-tools.mjs";
 import { stopProcessGroup } from "./codex-compact-quality-process.mjs";
 import { usageCounts } from "./codex-compact-quality-metrics.mjs";
+import { inspectPiHost, piVersion as installedPiVersion } from "./pi-host.mjs";
 
 const save = (directory, name, value) => fs.writeFileSync(path.join(directory, name), JSON.stringify(value, null, 2) + "\n", { flag: "wx", mode: 0o600 });
 const hash = value => createHash("sha256").update(value).digest("hex");
 
 export async function runPluginCompaction({ directory, moduleDirectory, expectedModuleFingerprint,
   sourceWorkspace, expectedWorkspaceFingerprint, credentialFile, history, instructions,
-  executionTimeoutMs = 300_000, onProcess = async () => {} }) {
+  expectedPiVersion = "0.87.0", executionTimeoutMs = 300_000, onProcess = async () => {} }) {
   assert.ok(Number.isSafeInteger(executionTimeoutMs) && executionTimeoutMs > 0, "Invalid plugin execution deadline");
   directory = path.join(assertRunDirectory(directory), "plugin");
   moduleDirectory = assertRunDirectory(moduleDirectory);
@@ -30,7 +31,8 @@ export async function runPluginCompaction({ directory, moduleDirectory, expected
   fs.cpSync(sourceWorkspace, workspace, { recursive: true });
   assert.deepEqual(fingerprintWorkspace(workspace), expectedWorkspaceFingerprint, "Plugin copied workspace changed");
   const configuration = { directory, home, workspace, moduleDirectory, expectedModuleFingerprint, expectedWorkspaceFingerprint,
-    history, instructions, executionTimeoutMs, model: "gpt-5.6-sol", effort: "medium", piVersion: "0.87.0", natural90PercentEvidence: false };
+    history, instructions, executionTimeoutMs, model: "gpt-5.6-sol", effort: "medium", piVersion: expectedPiVersion,
+    runtime: inspectPiHost(undefined, installedPiVersion), natural90PercentEvidence: false };
   save(directory, "configuration.json", configuration);
   let child, stdout, stderr, result;
   const started = performance.now();
@@ -53,7 +55,7 @@ export async function runPluginCompaction({ directory, moduleDirectory, expected
     const [code, signal] = await exited;
     assert.equal(code, 0, `Plugin worker failed: ${code ?? signal}`);
     result = JSON.parse(fs.readFileSync(path.join(directory, "worker-result.json"), "utf8"));
-    assert.equal(result.piVersion, "0.87.0", "Plugin runtime version mismatch");
+    assert.equal(result.piVersion, expectedPiVersion, "Plugin runtime version mismatch");
     assert.equal(result.inputHistorySha256, hash(JSON.stringify(history)), "Plugin history fingerprint mismatch");
     assert.deepEqual(fingerprintWorkspace(workspace), expectedWorkspaceFingerprint, "Plugin compaction changed workspace");
     result.executionElapsedMs = performance.now() - started;
@@ -82,9 +84,8 @@ async function worker(configurationFile) {
   const moduleDirectory = assertRunDirectory(config.moduleDirectory);
   assert.deepEqual(fingerprintWorkspace(moduleDirectory), config.expectedModuleFingerprint, "Worker plugin fingerprint mismatch");
   assert.deepEqual(fingerprintWorkspace(config.workspace), config.expectedWorkspaceFingerprint, "Worker workspace fingerprint mismatch");
-  const packageFile = new URL("../package.json", import.meta.resolve("@earendil-works/pi-coding-agent"));
-  const piVersion = JSON.parse(fs.readFileSync(packageFile, "utf8")).version;
-  assert.equal(piVersion, "0.87.0", "Installed Pi runtime version mismatch");
+  const host = inspectPiHost(undefined, config.piVersion);
+  const piVersion = host.versions["pi-coding-agent"];
   const { ModelRuntime, ModelRegistry } = await import("@earendil-works/pi-coding-agent");
   const runtime = await ModelRuntime.create({ authPath: path.join(config.home, "auth.json"), modelsPath: null,
     refreshOnCreate: false, allowModelNetwork: false, signal: AbortSignal.timeout(config.executionTimeoutMs) });
@@ -134,7 +135,7 @@ async function worker(configurationFile) {
     assert.equal(checkpoint.details.version, 2, "Unexpected checkpoint version");
     assert.equal(checkpoint.details.modelKey, "openai-codex:openai-codex-responses:gpt-5.6-sol", "Checkpoint model mismatch");
     assert.ok(checkpoint.details.replacementHistory.some(item => item.type === "compaction" && typeof item.encrypted_content === "string" && item.encrypted_content.length > 0), "Missing plugin compaction payload");
-    save(directory, "worker-result.json", { piVersion, source: "frozen-plugin-native-entry", model: config.model, effort: config.effort,
+    save(directory, "worker-result.json", { piVersion, runtime: host, source: "frozen-plugin-native-entry", model: config.model, effort: config.effort,
       inputHistorySha256: hash(JSON.stringify(config.history)), replacementHistory: checkpoint.details.replacementHistory,
       usage: checkpoint.usage ? usageCounts(checkpoint.usage, "pi") : null, requestCount: requests.length,
       compactionElapsedMs, natural90PercentEvidence: false });

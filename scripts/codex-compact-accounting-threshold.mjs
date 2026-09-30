@@ -5,6 +5,8 @@ import extension from "../extensions/codex-compact/dist/index.js";
 import { WindowUsageAccounting } from "../extensions/codex-compact/dist/usage-accounting.js";
 import { NATIVE_COMPACTION_KIND } from "../extensions/codex-compact/dist/native-compaction.js";
 import { scoreAnswer } from "./codex-compact-cases.mjs";
+import { inspectPiHost } from "./pi-host.mjs";
+const piVersion = inspectPiHost().versions["pi-coding-agent"];
 
 const root = path.resolve(".tmp/codex-accounting");
 const agentDir = path.join(root, "pi-home");
@@ -43,7 +45,7 @@ const loader = new DefaultResourceLoader({ cwd: root, agentDir, settingsManager:
 }] });
 await loader.reload();
 const { session } = await createAgentSession({ cwd: root, agentDir, modelRuntime: runtime, model, thinkingLevel: "medium", noTools: "all", sessionManager: manager, settingsManager: settings, resourceLoader: loader });
-const result = { piVersion: "0.87.0", model: model.id, effort: "medium", rawWindow: 272000, autoLimit: 244800, effectiveWindow: 258400, piNativeAutoCompaction: false, observations, measurements: [] };
+const result = { piVersion, model: model.id, effort: "medium", rawWindow: 272000, autoLimit: 244800, effectiveWindow: 258400, piNativeAutoCompaction: false, observations, measurements: [] };
 const timer = setTimeout(() => { void session.abort(); }, 900000);
 const lastResponse = () => session.messages.findLast((message) => message.role === "assistant");
 try {

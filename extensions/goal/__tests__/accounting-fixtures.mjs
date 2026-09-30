@@ -3,6 +3,7 @@ import { readFile, realpath } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { responseEvents } from "./budget-fixtures.mjs";
+import { expectedPiVersion } from "../../../scripts/pi-host.mjs";
 
 export const families = ["completions", "responses", "anthropic", "google", "codex", "custom"];
 export const apiNames = { completions: "openai-completions", responses: "openai-responses", anthropic: "anthropic-messages", google: "google-generative-ai", codex: "openai-codex-responses", custom: "goal-accounting-custom" };
@@ -12,13 +13,13 @@ export const cache90 = usage(50, 10, 30, 20, 8);
 export const text = (value = usage(), extra = {}) => ({ text: "Offline accounting progress", usage: value, ...extra });
 export const tool = (name, args, value = cacheOnly, extra = {}) => ({ tool: { name, args }, usage: value, ...extra });
 
-export async function loadSdk(path) {
+export async function loadSdk(path, expectedVersion = expectedPiVersion) {
   const root = await realpath(resolve(path ?? "node_modules/@earendil-works/pi-coding-agent"));
   const sdk = await import(pathToFileURL(join(root, "dist/index.js")));
   const aiRoot = resolve(root, "../pi-ai");
   const ai = await import(pathToFileURL(join(aiRoot, "dist/index.js")));
   const versions = Object.fromEntries(await Promise.all(["pi-coding-agent", "pi-ai", "pi-agent-core"].map(async name => [name, JSON.parse(await readFile(resolve(root, "..", name, "package.json"), "utf8")).version])));
-  assert.ok(["0.87.0"].includes(versions["pi-coding-agent"]));
+  assert.equal(versions["pi-coding-agent"], expectedVersion, "Installed Pi accounting runtime version mismatch");
   assert.equal(new Set(Object.values(versions)).size, 1);
   return { root, sdk, ai, aiRoot, versions };
 }
@@ -80,7 +81,7 @@ export async function offlineModels(loaded, onCall = () => {}) {
       assert.equal(typeof step?.then, "undefined", "Use step.wait for asynchronous gates");
       if (step.family) assert.equal(family, step.family);
       const id = step.id ?? `accounting_${index}`;
-      requests.push({ index, family, api: requestModel.api, provider: requestModel.provider, tools: (context.tools ?? []).map(t => t.name) });
+      requests.push({ index, family, api: requestModel.api, provider: requestModel.provider, tools: (context.tools ?? ai.getCurrentTools(context.messages)).map(t => t.name) });
       onCall({ family, index, context, options, step });
       if (family === "custom") {
         const result = ai.createAssistantMessageEventStream();
@@ -107,7 +108,7 @@ export async function offlineModels(loaded, onCall = () => {}) {
         const sent = replacement ?? payload;
         const definitions = family === "google" ? (sent.config?.tools ?? []).flatMap(t => t.functionDeclarations ?? []) : (sent.tools ?? []).map(t => t.function ?? t);
         const names = definitions.map(t => t.name);
-        for (const expected of context.tools ?? []) assert.ok(names.includes(expected.name), `Native ${family} request omitted function tool ${expected.name}`);
+        for (const expected of context.tools ?? ai.getCurrentTools(context.messages)) assert.ok(names.includes(expected.name), `Native ${family} request omitted function tool ${expected.name}`);
         requests.at(-1).serializedTools = names;
         return replacement;
       };

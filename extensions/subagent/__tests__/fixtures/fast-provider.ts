@@ -4,7 +4,8 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { createProvider } from "@earendil-works/pi-ai";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { VERSION, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { inspectPiHost } from "../../../../scripts/pi-host.mjs";
 import { responseEvents, textStep, toolStep } from "../../../goal/__tests__/budget-fixtures.mjs";
 
 /** Replace only Codex HTTP transport, retaining its real request builder and SSE parser. */
@@ -42,7 +43,7 @@ export default async function install(pi: ExtensionAPI): Promise<void> {
   const directory = process.env.HOME!;
   pi.registerProvider((await fastProvider(join(directory, `payload-${process.pid}.jsonl`), directory)).provider);
   pi.on("session_start", async (_event, ctx) => {
-    await writeFile(join(directory, `start-${process.pid}.json`), JSON.stringify({ sessionId: ctx.sessionManager.getSessionId(),
+    await writeFile(join(directory, `start-${process.pid}.json`), JSON.stringify({ hostVersion: VERSION, versions: inspectPiHost().versions, sessionId: ctx.sessionManager.getSessionId(),
       entries: ctx.sessionManager.getEntries(), tools: pi.getAllTools(), launch: process.env.PI_SUBAGENT_LAUNCH,
       parent: process.env.PI_SUBAGENT_PARENT }));
   });

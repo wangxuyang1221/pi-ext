@@ -27,7 +27,7 @@ async function runtimeFor(cwd, manager, fixture, family, factories, mode) {
     return { ...await sdk.createAgentSessionFromServices({ services, sessionManager, sessionStartEvent, model: fixture.models[family], noTools: "builtin" }), services, diagnostics: services.diagnostics };
   };
   const runtime = await sdk.createAgentSessionRuntime(create, { cwd, agentDir: join(root, "agent"), sessionManager: manager });
-  const bind = session => session.bindExtensions({ mode, uiContext: { notify: (message, level) => notices.push({ message, level }), setStatus() {}, setWidget() {}, confirm: async () => true }, commandContextActions: { waitForIdle: () => runtime.session.waitForIdle(), reload: () => runtime.session.reload() }, onError: error => errors.push(error.message) });
+  const bind = session => session.bindExtensions({ mode, uiContext: { notify: (message, level) => notices.push({ message, level }), setStatus() {}, setWidget() {}, getEditorComponent: () => undefined, setEditorComponent() {}, confirm: async () => true }, commandContextActions: { waitForIdle: () => runtime.session.waitForIdle(), reload: () => runtime.session.reload() }, onError: error => errors.push(error) });
   runtime.setRebindSession(bind); await bind(runtime.session);
   return { runtime, notices, errors, modelRuntime };
 }
@@ -60,6 +60,9 @@ if (childMode) {
       process.disconnect();
     }
   });
+  const initialCommand = spec.args.at(-1);
+  assert.match(initialCommand, /^\/subagent-runtime-ready /, "Missing managed child readiness command");
+  await runtime.session.prompt(initialCommand);
   process.send({ type: "ready", locator });
 } else {
   const results = [], processes = [];

@@ -50,6 +50,7 @@ test("freezes creation scopes across all four arms and retains new files through
   const root = fs.mkdtempSync(path.join(process.cwd(), ".tmp/quality-fixed-create-"));
   try {
     const specification = creationFixture(root);
+    specification.plugins.new.piVersion = "0.99.1";
     const directory = path.join(root, "run"); fs.mkdirSync(directory);
     let requests = 0, compactions = 0;
     const compact = async (options: any) => {
@@ -60,7 +61,10 @@ test("freezes creation scopes across all four arms and retains new files through
       }
       return { replacementHistory: [{ type: "compaction", encrypted_content: "test-checkpoint" }], usage: null };
     };
-    const adapters = { plugin: compact, cli: compact, continuation: runContinuation };
+    const adapters = { plugin: async (options: any) => {
+      expect(options.expectedPiVersion).toBe(path.basename(options.moduleDirectory) === "new" ? "0.99.1" : "0.87.0");
+      return compact(options);
+    }, cli: compact, continuation: runContinuation };
     const send = async ({ body }: any) => {
       requests++;
       expect(body.tools).toEqual(creationContinuationTools);
@@ -79,6 +83,9 @@ test("freezes creation scopes across all four arms and retains new files through
     expect(result.results).toHaveLength(16);
     expect(result.results.every((row: any) => row.status === "completed")).toBe(true);
     expect(compactions).toBe(6); expect(requests).toBe(16);
+    const plan = JSON.parse(fs.readFileSync(path.join(directory, "schedule.json"), "utf8")).payload.specification;
+    expect(plan.plugins.new.piVersion).toBe("0.99.1");
+    expect(plan.plugins.old).not.toHaveProperty("piVersion");
     const continuations = result.results.filter((row: any) => row.value?.phase === "continuation");
     expect(new Set(continuations.map((row: any) => row.value.arm)).size).toBe(4);
     expect(new Set(continuations.map((row: any) => row.value.output.workspacePath)).size).toBe(8);

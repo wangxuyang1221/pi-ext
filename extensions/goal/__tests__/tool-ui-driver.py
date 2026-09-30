@@ -1,4 +1,4 @@
-"""Exercise production Goal and codex-ui in Pi 0.87.0 InteractiveMode."""
+"""Exercise production Goal and codex-ui in the repository Pi InteractiveMode."""
 import codecs
 import errno
 import fcntl
@@ -21,7 +21,10 @@ import pyte
 repo = Path(__file__).resolve().parents[3]
 mode = "fullscreen" if "--fullscreen" in sys.argv else "regular"
 root = Path(tempfile.mkdtemp(prefix="goal-ui-pty-", dir=repo / ".tmp"))
-evidence = repo / "adventure/39/evidence/implementation"
+evidence = Path(os.environ.get("GOAL_UI_EVIDENCE", str(repo / ".tmp/goal-ui-evidence"))).resolve()
+assert evidence.is_relative_to(repo), "Evidence must stay inside the repository"
+evidence.mkdir(parents=True, exist_ok=True)
+pi_version = json.loads((repo / "node_modules/@earendil-works/pi-coding-agent/package.json").read_text())["version"]
 status = None
 pid = fd = None
 screens = {}
@@ -205,6 +208,6 @@ finally:
     shutil.rmtree(root)
     ports = subprocess.run(["lsof", "-nP", "-a", "-p", ",".join(map(str, processes)), "-iTCP", "-sTCP:LISTEN"], capture_output=True, text=True)
     assert not ports.stdout, ports.stdout
-    report = {"passed": passed, "mode": mode, "pids": processes, "rootRemoved": not root.exists(), "listeningPorts": [], "screens": screens}
+    report = {"passed": passed, "piVersion": pi_version, "mode": mode, "pids": processes, "rootRemoved": not root.exists(), "listeningPorts": [], "screens": screens}
     (evidence / f"pty-{mode}.json").write_text(json.dumps(report, ensure_ascii=False, indent=2))
     print(json.dumps({key: value for key, value in report.items() if key != "screens"}))

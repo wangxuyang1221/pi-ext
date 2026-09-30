@@ -298,7 +298,12 @@ test("write keeps completed malformed arguments inside the host fallback boundar
     const row = new ToolExecutionComponent("write", "invalid", { path: "src/new.ts", content },
       { showImages: false }, write, { requestRender() {} }, "/repo");
     row.setArgsComplete();
-    assert.deepEqual(row.render(80).map(line => stripTerminalSequences(line).trimEnd()).filter(Boolean), ["write"]);
+    assert.deepEqual(row.render(80).map(line => stripTerminalSequences(line).trimEnd()).filter(Boolean),
+      [`write path="src/new.ts" content=${JSON.stringify(content) ?? String(content)}`]);
+    row.setExpanded(true);
+    const expanded = row.render(80).map(stripTerminalSequences).join("\n");
+    assert.match(expanded, /path: src\/new\.ts/u);
+    assert.match(expanded, new RegExp(`content: ${JSON.stringify(content) ?? String(content)}`.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     row.updateResult({ content: [{ type: "text", text: "Invalid arguments" }], isError: true });
     assert.match(row.render(80).map(stripTerminalSequences).join("\n"), /Invalid arguments/u);
     assert.doesNotMatch(row.render(80).map(stripTerminalSequences).join("\n"), /0 lines/u);

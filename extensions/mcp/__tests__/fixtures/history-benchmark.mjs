@@ -3,8 +3,10 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const root = resolve(process.env.PI_MCP_TEST_PI_ROOT ?? '');
-if (JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version !== '0.85.1') throw new Error('Expected Pi 0.85.1');
+const root = resolve(process.env.PI_MCP_TEST_PI_ROOT ?? 'node_modules/@earendil-works/pi-coding-agent');
+const expectedVersion = process.env.PI_MCP_TEST_PI_VERSION ?? JSON.parse(readFileSync('package.json', 'utf8')).devDependencies['@earendil-works/pi-coding-agent'];
+if (JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version !== expectedVersion) throw new Error(`Expected Pi ${expectedVersion}`);
+process.env.PI_MCP_TEST_PI_VERSION = expectedVersion;
 const repo = process.cwd();
 mkdirSync('.tmp', { recursive: true });
 const run = mkdtempSync(resolve('.tmp/mcp-benchmark-'));

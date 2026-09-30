@@ -16,6 +16,7 @@ import termios
 import time
 
 ROOT = Path(__file__).resolve().parents[3]
+PI_VERSION = json.loads((ROOT / "package.json").read_text())["devDependencies"]["@earendil-works/pi-coding-agent"]
 NODE = shutil.which("node")
 ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\)")
 
@@ -44,10 +45,10 @@ def session(path, cwd, extra_tools=0, history_mib=0):
         output.write(json.dumps(entries[-1]) + "\n")
 
 
-def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0, memory=False, extra_tools=0, pi_version="0.85.1", history_mib=0):
+def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0, memory=False, extra_tools=0, pi_version=PI_VERSION, history_mib=0):
     package = json.loads((pi_root / "package.json").read_text())
     assert package["version"] == pi_version, package["version"]
-    cli = pi_root / "dist/bundle/cli.js"
+    cli = pi_root / "dist/cli.js"
     (ROOT / ".tmp").mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="mcp-resume-", dir=ROOT / ".tmp") as temporary:
         run = Path(temporary)
@@ -80,7 +81,7 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
                     "XDG_CACHE_HOME": str(run / "cache"), "JITI_FS_CACHE": str(run / "cache"),
                     "PI_CODING_AGENT_DIR": str(run / "agent"), "PI_CODING_AGENT_SESSION_DIR": str(run / "sessions"),
                     "PI_MCP_CONFIG": str(config), "PI_OFFLINE": "1", "PI_TELEMETRY": "0",
-                    "MCP_HISTORY_UNTRUSTED_CWD": str(other), "MCP_HISTORY_LIVE": "1" if live else "0", "MCP_HISTORY_TRACE": str(run / "trace.jsonl")})
+                    "MCP_HISTORY_UNTRUSTED_CWD": str(other), "MCP_HISTORY_LIVE": "1" if live else "0", "MCP_HISTORY_TRACE": str(run / "trace.jsonl"), "MCP_HISTORY_READY": str(run / "ready.jsonl")})
         args = [NODE, str(cli), "--no-extensions", "--extension", str(extension), "--extension",
                 str(ROOT / "extensions/mcp/__tests__/fixtures/resume-ui-extension.ts"), "--session-dir", str(run / "sessions"),
                 "--no-context-files", "--no-skills", "--no-prompt-templates", "--offline"]
@@ -134,13 +135,24 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
             assert expected in text, f"Missing {expected!r}: {text!r}"
             return text + receive(0.3)
 
+        def ready_count():
+            marker = run / "ready.jsonl"
+            return len(marker.read_text().splitlines()) if marker.exists() else 0
+
         def replacement(name, command):
             start = time.monotonic()
+            previous_ready = ready_count()
             os.write(fd, ("\x15" + command + "\r").encode())
             if name == "import":
                 until("Replace current session")
                 os.write(fd, b"\r")
-            text = until("MCP UI host ready")
+            # Session replacement can repaint away session_start notifications.
+            text = ""
+            deadline = time.monotonic() + 20
+            while ready_count() <= previous_ready and time.monotonic() < deadline:
+                text += receive(0.1)
+            assert ready_count() > previous_ready, f"No replacement readiness event: {name}: {text!r}"
+            text += receive(0.3)
             timings[name] = round(time.monotonic() - start, 3)
             # Identical redraws may be elided on same-content reloads. A blank-to-history
             # switch must paint its restored rows before any resize or manual refresh.
@@ -263,8 +275,8 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--pi-root", type=Path, required=True)
-    parser.add_argument("--pi-version", default="0.85.1")
+    parser.add_argument("--pi-root", type=Path, default=ROOT / "node_modules/@earendil-works/pi-coding-agent")
+    parser.add_argument("--pi-version", default=PI_VERSION)
     parser.add_argument("--baseline", action="store_true")
     parser.add_argument("--live", action="store_true")
     parser.add_argument("--cold-mode", choices=["session", "continue", "resume", "blank"], default="session")

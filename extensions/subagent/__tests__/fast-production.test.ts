@@ -10,6 +10,7 @@ import { SessionStateStore } from "../src/state-store.js";
 import { createPiFastModeExtension } from "../../openai-fast-mode/src/index.js";
 import { getUserConfigPath } from "../../openai-fast-mode/src/config.js";
 import { fastProvider } from "./fixtures/fast-provider.js";
+import { inspectPiHost } from "../../../scripts/pi-host.mjs";
 
 const quote = (value: string) => `'${value.replaceAll("'", `'"'"'`)}'`;
 const enabled = process.env.PI_SUBAGENT_ISOLATED_INTEGRATION === "1";
@@ -29,7 +30,7 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
   const children: any[] = [];
   let session: Awaited<ReturnType<typeof createAgentSession>>["session"] | undefined;
   let resumed: typeof session;
-  const report: Record<string, any> = { requests: {}, checkpoints: [], cleanup: {} };
+  const report: Record<string, any> = { host: inspectPiHost(), requests: {}, checkpoints: [], cleanup: {} };
   try {
     await mkdir(agentDir, { recursive: true });
     const configPath = getUserConfigPath(agentDir);
@@ -98,6 +99,11 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
       const child = JSON.parse(result.content[0].text).agent;
       children.push(child); pids.add(child.tmux.panePid);
       await until(() => lines(join(home, `payload-${child.tmux.panePid}.jsonl`)), value => value.length > 0, "child first payload");
+      const start = JSON.parse(await readFile(join(home, `start-${child.tmux.panePid}.json`), "utf8"));
+      assert.equal(start.hostVersion, report.host.versions["pi-coding-agent"]);
+      assert.deepEqual(start.versions, report.host.versions);
+      report.childVersions ??= [];
+      report.childVersions.push({ pid: child.tmux.panePid, versions: start.versions });
       return child;
     };
     const rejectSpawn = async (agent_type: string, message: RegExp) => {
@@ -176,8 +182,14 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
     assert.equal((await payloads(b))[0].payload.model, "fast-fixture");
     assert.equal((await payloads(b))[0].payload.reasoning.effort, "low");
     assert.equal((await payloads(b))[0].payload.service_tier, undefined);
-    assert.equal((await lines(b.sessionFile)).findIndex(entry => entry.customType === entryType)
-      < (await lines(b.sessionFile)).findIndex(entry => entry.message?.role === "assistant"), true);
+    const initialTranscript = await until(() => lines(b.sessionFile),
+      entries => entries.some(entry => entry.message?.role === "assistant"), "first child assistant persisted");
+    const fastIndex = initialTranscript.findIndex(entry => entry.customType === entryType);
+    const assistantIndex = initialTranscript.findIndex(entry => entry.message?.role === "assistant");
+    assert.ok(fastIndex >= 0, "Initial Fast state must be persisted");
+    assert.equal(initialTranscript[fastIndex].data.enabled, false);
+    assert.ok(assistantIndex >= 0, "First assistant must be persisted");
+    assert.ok(fastIndex < assistantIndex, "Fast state must precede the first assistant");
     const c = await spawn("child-inherited-on", { agent_type: "empty" });
     assert.equal(c.model, "openai-codex/fast-fixture");
     assert.equal(c.thinkingLevel, "medium");

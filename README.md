@@ -14,7 +14,7 @@
 ## Requirements
 
 - Node.js 22.19 或更高版本
-- Pi AI、Coding Agent、TUI 均为 0.87.0；当前 peer 依赖固定该版本，兼容性修复与验证范围见 [Pi 0.87.0 compatibility research](docs/pi-0.87.0-upstream-research.md)
+- 开发、测试和发布支持版本均为 Pi AI、Coding Agent、TUI `0.99.1`，三个 Pi peer 依赖精确固定为 `0.99.1`。只声明支持此版本，不承诺旧版或其他版本兼容。当前验证结果及未通过项见 [infrastructure validation](docs/pi-0.99.1-infrastructure-validation.md)
 - `subagent` 运行时需要 tmux 3.6 或兼容版本
 - 支持 24-bit color 的终端可获得最接近设计稿的颜色效果
 
@@ -271,7 +271,7 @@ Bash、Read、Edit、Write 与 MCP 工具调用统一使用静态大圆点 `⏺`
 
 Bash、Read、MCP 的正常正文统一使用 `text`，在 codex-pi 主题中为原 Bash 的亮灰 `#d6d6d6`。目录、行号、连接线与截断提示仍弱化，文件名强调色及 diff 增删色不变。未全局修改 `toolOutput`，因此 subagent、默认工具卡片和 MCP 连接状态不受影响。完整与低功耗模式均支持，低功耗 Bash 仍需展开查看正文。实现及验收见 [Tool status acceptance](docs/tool-status-acceptance.md)，正式代码的隔离 PTY 验收命令为 `pnpm run tool-status:check`。
 
-`read`、`edit`、`write`、`bash` 使用 Pi 0.87.0 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。full 模式下，每个已执行调用显示一条 `⏺ Bash(command)`，`Bash` 文字仍与 `Read`、`Edited` 对齐。尚未执行的 pending 调用暂不显示，错误或完成结果不会被隐藏。内部仍按同一 assistant 消息中的连续 Bash 维护归属，不跨 text、thinking、其他工具、缺失组件或消息合并；重复 ID 的额外组件独立显示。发现重复时，已绑定的旧成员保持原位，尚未绑定该 ID 的组件不再接管 candidate，因而旧 low-power 或缺失组件不能成为后来 full 行搬移旧命令的入口。取消旧统计标题、命令树和耗时列。长命令默认按当前宽度单行省略，展开保留完整命令及逻辑换行。
+`read`、`edit`、`write`、`bash` 使用 Pi 0.99.1 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。full 模式下，每个已执行调用显示一条 `⏺ Bash(command)`，`Bash` 文字仍与 `Read`、`Edited` 对齐。尚未执行的 pending 调用暂不显示，错误或完成结果不会被隐藏。内部仍按同一 assistant 消息中的连续 Bash 维护归属，不跨 text、thinking、其他工具、缺失组件或消息合并；重复 ID 的额外组件独立显示。发现重复时，已绑定的旧成员保持原位，尚未绑定该 ID 的组件不再接管 candidate，因而旧 low-power 或缺失组件不能成为后来 full 行搬移旧命令的入口。取消旧统计标题、命令树和耗时列。长命令默认按当前宽度单行省略，展开保留完整命令及逻辑换行。
 
 默认预览前三个终端显示行，超出时显示精确的 `… +N lines` 和实际展开绑定。正常正文使用 `text` 色，输出前缀灰色，失败正文红色；已核验的取消与超时使用警告色。无输出时分别显示 `Running…`、`(No content)` 或 `Command failed`。只在宿主明确标记失败且尾部诊断匹配时，才把退出码、取消或超时诊断提到预览首行，不根据日志中的 `Error` 判断失败。
 
@@ -481,17 +481,39 @@ pnpm install --frozen-lockfile --ignore-scripts
 pnpm run check
 ```
 
+`pnpm run check` 包含八个发布扩展及独立 codex-search 的类型检查、离线测试、构建、包校验，以及源码和构建入口的真实宿主加载检查。测试使用仓库内的临时 HOME、agentDir 和缓存目录，不读取用户的 Pi 配置。加载检查还确认本仓库 `/mcp` 替换 builtin MCP 的警告与实际加载结果。
+
+`pnpm test` 只继承必要系统变量和明确列出的离线验收开关，不透传 AWS/OpenAI/Google 认证环境或外部 Pi 会话路径。Unix 普通 worker 使用独占进程组，正常退出或可处理的取消会先确认组内进程停止，再删除隔离目录；无法确认时保留目录并失败。此路径已在 macOS 验证。Windows 使用 Job Object，但 Linux/Windows 尚无本轮实跑证据；PTY 新会话和私有 tmux server 仍由各自夹具清理，不在普通进程组取消保证内。
+
+审阅修复尚未全部通过。Fast 顺序测试和 Goal 的 TUI/SDK 分组验收已修正，accounting 整组通过；SDK 取消后不自动执行排队输入的兼容性差异仍保留。主检查尚有两个 Write 类型转换预期冲突，以及完整套件中的 wrapper HOME 清理断言失败，tmux 空锁暂未处理。当前结果见 [test fixes validation](docs/pi-0.99.1-test-fixes-validation.md)。
+
 常用命令：
 
 ```bash
 pnpm run typecheck
+pnpm run web-search:typecheck
 pnpm test
 pnpm run build
 pnpm run package:check
+pnpm run host:check
 pnpm pack --dry-run
 pnpm run prototype:tui
 pnpm run prototype:subagent-ui
 ```
+
+真实宿主验收在 macOS 或 Linux 上单独运行，需要 tmux、`conda` 的 `codex-py312` 环境和 `pyte`。先构建，随后串行执行，避免另一项构建清理正在使用的 `dist/`：
+
+```bash
+pnpm run build
+pnpm run host:tmux:check
+pnpm run host:accounting:check
+pnpm run host:pty:check
+pnpm run host:benchmark:check
+```
+
+这些入口记录仓库宿主及相关 Pi 包的实际版本，隔离配置和凭据，并调用各驱动的清理逻辑；不保证强杀驱动后仍能回收脱离进程组的资源。tmux 入口覆盖源码与构建实现。CI 保留 Linux、macOS、Windows 的通用检查矩阵；上述 Unix 专用验收不加入 Windows 的默认检查。跳过的测试不能算作通过，也不要同时运行多个会清理构建产物的验收入口。已有失败和未运行项见 [infrastructure validation](docs/pi-0.99.1-infrastructure-validation.md)。
+
+新的 fixed-boundary 质量评估必须在 `specification.plugins.old.piVersion` 和 `specification.plugins.new.piVersion` 中明确指定宿主版本。当前基线使用 `0.99.1`。直接调用 `runPluginCompaction()` 时传入 `expectedPiVersion`。未指定版本的历史冻结入口仍要求 `0.87.0`；worker 会拒绝不匹配的宿主，结果记录实际版本。旧质量分数不作为新版基线，历史报告不重写。默认验收不运行付费请求。
 
 仓库不提交 `dist/`、编译缓存或本地运行日志。CI 从源码构建，并检查是否有被忽略的文件仍受 Git 跟踪。`extensions/codex-compact/src/media/` 中的预编译 WASM、manifest、许可证和第三方源码包是普通构建的输入，继续纳入版本控制；普通构建只校验并复制这些资源，不调用 Rust。`prepack` 会重建八个扩展，发布包只包含编译产物、theme、README、goal 验收报告、license 和上游 attribution。包同时包含 MIT 本地实现与 Apache-2.0 的 Codex goal 复制内容，metadata 使用 `MIT AND Apache-2.0`；具体文件归属见 `extensions/goal/UPSTREAM.md`、`LICENSE` 和 `NOTICE`，不把上游内容改授 MIT。
 

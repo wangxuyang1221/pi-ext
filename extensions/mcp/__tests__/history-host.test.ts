@@ -8,7 +8,8 @@ import { HistoryHandoff } from "../src/history-handoff.js";
 
 const root = resolve(process.env.PI_MCP_TEST_PI_ROOT ?? "node_modules/@earendil-works/pi-coding-agent");
 const version = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
-if (process.env.PI_MCP_TEST_PI_ROOT && version !== "0.85.1") throw new Error(`Expected Pi 0.85.1, got ${version}`);
+const expectedVersion = process.env.PI_MCP_TEST_PI_VERSION ?? JSON.parse(readFileSync("package.json", "utf8")).devDependencies["@earendil-works/pi-coding-agent"];
+if (version !== expectedVersion) throw new Error(`Expected Pi ${expectedVersion}, got ${version}`);
 const host = await import(pathToFileURL(join(root, "dist/index.js")).href);
 const loader = await import(pathToFileURL(join(root, "dist/core/extensions/loader.js")).href);
 const name = "mcp__offline__old-tool";

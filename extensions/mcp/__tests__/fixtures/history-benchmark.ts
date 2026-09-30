@@ -8,7 +8,7 @@ import { HistoryHandoff } from "../../src/history-handoff.js";
 
 /** Measures bounded extraction and real loader registration with synthetic history. */
 export default async function benchmark(_pi: ExtensionAPI): Promise<void> {
-  if (VERSION !== "0.85.1") throw new Error(`Expected Pi 0.85.1, got ${VERSION}`);
+  if (VERSION !== process.env.PI_MCP_TEST_PI_VERSION) throw new Error(`Expected Pi ${process.env.PI_MCP_TEST_PI_VERSION}, got ${VERSION}`);
   const root = process.env.PI_MCP_TEST_PI_ROOT!;
   const loader = await import(pathToFileURL(join(root, "dist/core/extensions/loader.js")).href);
   const baseline = process.env.MCP_BENCH_BASELINE === "1";

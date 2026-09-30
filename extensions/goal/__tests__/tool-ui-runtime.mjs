@@ -199,7 +199,10 @@ try {
       assert.deepEqual(expected, { content: result.content, details: result.details });
     }
     const report = { passed: true, standalone, pid: process.pid, versions: { node: process.version, pi: JSON.parse(await readFile(join(repo, "node_modules/@earendil-works/pi-coding-agent/package.json"))).version }, scenarios: ["empty", "failure", "mixed-production-tools", "active", "paused", "blocked", "complete", "long-controls", "budget_limited", "usage_limited", "incomplete-usage", "explicit-cancellation",  "history", "reload", "restart", "print-read", "baseline-contract"], mixed, results, modelCalls: faux.state.callCount, networkAttempts, errors, unexpectedModelErrors };
-    await writeFile(join(repo, `adventure/39/evidence/implementation/sdk${standalone ? "-standalone" : ""}.json`), JSON.stringify(report, null, 2));
+    const evidence = resolve(process.env.GOAL_UI_EVIDENCE ?? join(repo, ".tmp/goal-ui-evidence"));
+    assert.ok(evidence.startsWith(repo + "/"), "Evidence must stay inside the repository");
+    await mkdir(evidence, { recursive: true });
+    await writeFile(join(evidence, `sdk${standalone ? "-standalone" : ""}.json`), JSON.stringify(report, null, 2));
     console.log(JSON.stringify({ passed: true, standalone, scenarios: report.scenarios, modelCalls: faux.state.callCount, pid: process.pid }));
   }
 } finally {

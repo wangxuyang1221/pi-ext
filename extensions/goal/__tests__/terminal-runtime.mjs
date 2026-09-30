@@ -50,7 +50,7 @@ async function scenario(name, check, options = {}) {
       try {
         const index = requests.length + 1;
         requests.push({ index, provider: model.provider, api: model.api, model: model.id, maxTokens: opts?.maxTokens, deferredRequested: opts?.deferred ?? false, modelMaxTokens: model.maxTokens,
-          tools: context.tools?.map(t => t.name) ?? [], before: await goal() });
+          tools: (context.tools ?? ai.getCurrentTools(context.messages)).map(t => t.name), before: await goal() });
         const step = steps.shift();
         if (!step) { unexpectedRequests++; throw new Error("No scripted response remains"); }
         const value = typeof step === "function" ? await step({ index, model, context, signal: opts?.signal }) : step;

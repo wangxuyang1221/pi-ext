@@ -9,6 +9,8 @@ import { HERO_NAMES } from "../src/hero-names.js";
 import subagentExtension from "../src/index.js";
 import { executeCommand } from "../src/command-executor.js";
 import { SessionStateStore } from "../src/state-store.js";
+import { inspectPiHost } from "../../../scripts/pi-host.mjs";
+import { traceRuntime } from "./fixtures/trace-runtime.js";
 
 const quote = (value: string) => `'${value.replaceAll("'", `'"'"'`)}'`;
 const enabled = process.env.PI_SUBAGENT_ISOLATED_INTEGRATION === "1";
@@ -29,6 +31,7 @@ test.skipIf(!enabled || (mode === "fish" && !fish))(`production parent entry ove
   const pids = new Set<number>();
   const handlers = new Map<string, (...args: any[]) => unknown>();
   const tools = new Map<string, any>();
+  const finishTrace = await traceRuntime(mode, root);
   try {
     await mkdir(agentDir, { recursive: true });
     if (mode === "auth-stored" || mode === "auth-both") {
@@ -61,7 +64,9 @@ if [ "$1" = display-message ]; then
 fi
 ` : "";
     await writeFile(wrapper, `#!/bin/sh\nexport LANG=en_US.UTF-8\n${identityBarrier}\nif [ "$1" = kill-window ]; then ${quote(tmux)} -S ${quote(socket)} capture-pane -p -S -100 -t "$3" > ${quote(join(root, "last-pane"))}; fi\nexec ${quote(tmux)} -S ${quote(socket)} -f /dev/null "$@"\n`, { mode: 0o700 });
-    const cli = process.env.PI_SUBAGENT_TEST_CLI ?? resolve("node_modules/@earendil-works/pi-coding-agent/dist/cli.js");
+    const host = inspectPiHost();
+    const cli = process.env.PI_SUBAGENT_TEST_CLI ?? host.cli;
+    assert.equal(resolve(cli), host.cli, "Integration must use the pinned repository CLI");
     await writeFile(piPath, `#!/bin/sh\nexport PI_OFFLINE=1\nexec ${quote(process.execPath)} ${quote(cli)} ${fullPackage ? "" : "--no-extensions"} --no-context-files --no-skills --no-prompt-templates --no-themes --no-builtin-tools --no-approve "$@"\n`, { mode: 0o700 });
     const started = await executeCommand("/usr/bin/env", [`HOME=${home}`, `TMPDIR=${root}`, `XDG_CONFIG_HOME=${home}`, `XDG_DATA_HOME=${home}`, `XDG_CACHE_HOME=${home}`, "PI_CODING_AGENT_DIR=/old/server", "PI_SUBAGENT_TMUX_PATH=/old/tmux", "SUBAGENT_STALE_SENTINEL=must-not-inherit",
       wrapper, "new-session", "-d", "-s", "keeper", "-P", "-F", "#{pid}\t#{pane_pid}", "sleep 60"]);
@@ -71,11 +76,13 @@ fi
     const fixture = join(root, "child.ts");
     await writeFile(fixture, `import offlineChild from ${JSON.stringify(pathToFileURL(resolve("extensions/subagent/__tests__/fixtures/offline-child.ts")).href)};
 import {writeFile} from 'node:fs/promises';
+import {VERSION} from '@earendil-works/pi-coding-agent';
+import {inspectPiHost} from ${JSON.stringify(pathToFileURL(resolve("scripts/pi-host.mjs")).href)};
 export default async function(pi){
  process.env.PI_SUBAGENT_FIXTURE_DIST=${JSON.stringify(process.env.PI_SUBAGENT_FIXTURE_DIST ?? "0")};
  await offlineChild(pi, ${!fullPackage}, ${nativeAuth});
  ${mode === "full-package-delayed" ? "pi.on('resources_discover', async () => { await new Promise(resolve => setTimeout(resolve, 5000)); });" : ""}
- pi.on('session_start',async()=>{await writeFile(${JSON.stringify(join(root, "effective.json"))},JSON.stringify({agentDir:process.env.PI_CODING_AGENT_DIR,tmuxPath:process.env.PI_SUBAGENT_TMUX_PATH,piPath:process.env.PI_SUBAGENT_PI_PATH,pane:process.env.TMUX_PANE,stale:process.env.SUBAGENT_STALE_SENTINEL}));});
+ pi.on('session_start',async()=>{await writeFile(${JSON.stringify(join(root, "effective.json"))},JSON.stringify({hostVersion:VERSION,versions:inspectPiHost().versions,agentDir:process.env.PI_CODING_AGENT_DIR,tmuxPath:process.env.PI_SUBAGENT_TMUX_PATH,piPath:process.env.PI_SUBAGENT_PI_PATH,pane:process.env.TMUX_PANE,stale:process.env.SUBAGENT_STALE_SENTINEL}));});
 }`);
     const pi = { on: (name: string, handler: any) => handlers.set(name, handler), registerTool: (tool: any) => tools.set(tool.name, tool), events: { emit() {} } };
     const extension = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/index.js")).default : subagentExtension;
@@ -123,6 +130,9 @@ export default async function(pi){
     assert.equal(spawned.details.agent.name, agent.name);
     assert.equal((await executeCommand(wrapper, ["display-message", "-p", "-t", agent.tmux.paneId, "#{window_name}"])).stdout.trim(), agent.name);
     const effective = JSON.parse(await readFile(join(root, "effective.json"), "utf8"));
+    assert.equal(effective.hostVersion, host.versions["pi-coding-agent"]);
+    assert.deepEqual(effective.versions, host.versions);
+    console.log(JSON.stringify({ mode, host, child: { hostVersion: effective.hostVersion, versions: effective.versions, pid: agent.tmux.panePid } }));
     assert.equal(effective.agentDir, agentDir);
     assert.equal(effective.tmuxPath, wrapper);
     assert.equal(effective.piPath, piPath);
@@ -171,16 +181,20 @@ export default async function(pi){
     assert.equal(closed.details.affected[0].name, agent.name);
     await handlers.get("session_shutdown")!({});
   } finally {
-    const panes = await executeCommand(wrapper, ["list-panes", "-a", "-F", "#{pane_pid}"]).catch(() => undefined);
-    if (panes?.code === 0) for (const pid of panes.stdout.trim().split("\n").map(Number)) if (pid > 0) pids.add(pid);
-    await executeCommand(wrapper, ["kill-server"]).catch(() => undefined);
-    const alive = () => [...pids].filter((pid) => { try { process.kill(pid, 0); return true; } catch { return false; } });
-    const deadline = performance.now() + 2000;
-    while (alive().length && performance.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10));
-    assert.deepEqual(alive(), []);
-    assert.notEqual((await executeCommand(wrapper, ["list-sessions"])).code, 0);
-    console.log(JSON.stringify({ cleanup: { pids: [...pids], livePids: alive(), socketUnavailable: true } }));
-    await rm(root, { recursive: true, force: true });
+    try {
+      await finishTrace();
+    } finally {
+      const panes = await executeCommand(wrapper, ["list-panes", "-a", "-F", "#{pane_pid}"]).catch(() => undefined);
+      if (panes?.code === 0) for (const pid of panes.stdout.trim().split("\n").map(Number)) if (pid > 0) pids.add(pid);
+      await executeCommand(wrapper, ["kill-server"]).catch(() => undefined);
+      const alive = () => [...pids].filter((pid) => { try { process.kill(pid, 0); return true; } catch { return false; } });
+      const deadline = performance.now() + 2000;
+      while (alive().length && performance.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10));
+      assert.deepEqual(alive(), []);
+      assert.notEqual((await executeCommand(wrapper, ["list-sessions"])).code, 0);
+      console.log(JSON.stringify({ cleanup: { pids: [...pids], livePids: alive(), socketUnavailable: true } }));
+      await rm(root, { recursive: true, force: true });
+    }
   }
 }, 30000);
 }
