@@ -18,8 +18,9 @@ export function skillAutocomplete(current: AutocompleteProvider, commands: () =>
     applyCompletion(lines, row, col, item, prefix) {
       if (!prefix.startsWith("$") || !item.value.startsWith("$")) return current.applyCompletion(lines, row, col, item, prefix);
       const result = [...lines];
-      result[row] = lines[row].slice(0, col - prefix.length) + item.value + lines[row].slice(col);
-      return { lines: result, cursorLine: row, cursorCol: col - prefix.length + item.value.length };
+      const suffix = lines[row].slice(col);
+      result[row] = lines[row].slice(0, col - prefix.length) + item.value + (suffix.startsWith(" ") ? "" : " ") + suffix;
+      return { lines: result, cursorLine: row, cursorCol: col - prefix.length + item.value.length + 1 };
     },
     shouldTriggerFileCompletion: (...args) => current.shouldTriggerFileCompletion?.(...args) ?? true,
   };

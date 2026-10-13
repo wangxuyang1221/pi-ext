@@ -1,8 +1,9 @@
 import { beforeAll, expect, it } from "vitest";
-import { initTheme, Theme, type KeybindingsManager } from "@earendil-works/pi-coding-agent";
-import { getKeybindings, stripTerminalSequences, visibleWidth, type TUI, type TuiMouseEvent } from "@earendil-works/pi-tui";
+import { initTheme, Theme, type KeybindingsManager, type SlashCommandInfo } from "@earendil-works/pi-coding-agent";
+import { CombinedAutocompleteProvider, getKeybindings, stripTerminalSequences, visibleWidth, type TUI, type TuiMouseEvent } from "@earendil-works/pi-tui";
 import { CodexEditor } from "../../codex-ui/src/components.js";
 import { createLabelEditor } from "../src/label-editor.js";
+import { skillAutocomplete } from "../src/autocomplete.js";
 import { LabelNativeEditor } from "../src/editor-surface.js";
 import { icons, labelReferences, layoutLabels, type IconMode } from "../src/labels.js";
 
@@ -34,6 +35,39 @@ function fixture(host: string, icon: IconMode, names = ["alpha", "beta"]) {
   return { editor, base, tui, terminal };
 }
 const cases = ["native", "codex"].flatMap(host => (["cube", "command"] as const).map(icon => ({ host, icon })));
+it.each(cases)("edits a real completion space independently and restores undo in $host/$icon", async ({ host, icon }) => {
+  for (const key of ["\t", "\r"]) {
+    for (const query of ["$al", "$alpha"]) {
+      const { editor } = fixture(host, icon);
+      const commands = ["alpha", "alphabet"].map(name => ({ name: `skill:${name}`, source: "skill", description: name })) as SlashCommandInfo[];
+      editor.setAutocompleteProvider(skillAutocomplete(new CombinedAutocompleteProvider([], process.cwd()), () => commands));
+      let submitted: string | undefined;
+      editor.onSubmit = text => { submitted = text; };
+      for (const char of query) editor.handleInput(char);
+      await new Promise(resolve => setTimeout(resolve, 80));
+      expect(editor.isShowingAutocomplete()).toBe(true);
+      editor.handleInput(key);
+      expect(submitted).toBeUndefined();
+      expect(editor.getText()).toBe("$alpha ");
+      expect(editor.getCursor()).toEqual({ line: 0, col: 7 });
+      editor.handleInput("\x1b[D"); expect(editor.getCursor().col).toBe(6);
+      editor.handleInput("\x1b[C"); expect(editor.getCursor().col).toBe(7);
+      editor.handleInput("\x7f"); expect(editor.getText()).toBe("$alpha");
+      editor.handleInput(",");
+      expect(editor.render(80).map(stripTerminalSequences).join("\n")).toContain(` ${icons[icon]}alpha,`);
+      editor.handleInput("\x1b[45;5u"); expect(editor.getText()).toBe("$alpha");
+      editor.handleInput("\x7f"); expect(editor.getText()).toBe("");
+      editor.handleInput("\x1b[45;5u"); expect(editor.getText()).toBe("$alpha");
+      editor.handleInput("\x1b[45;5u"); expect(editor.getText()).toBe("$alpha ");
+      editor.handleInput("\x1b[45;5u"); expect(editor.getText()).toBe(query);
+      expect(editor.getCursor().col).toBe(query.length);
+      // Restored handwritten text must not become an atomic label.
+      editor.handleInput("\x7f"); expect(editor.getText()).toBe(query.slice(0, -1));
+      editor.setText("");
+    }
+  }
+});
+
 it.each(cases)("preserves full long names through narrow viewports and resize in $host/$icon", ({ host, icon }) => {
   const name = "a".repeat(1024), { editor, terminal } = fixture(host, icon, [name]);
   editor.setText("prefix $" + name + " suffix");
@@ -55,8 +89,8 @@ it.each(cases)("preserves full long names through narrow viewports and resize in
 
 it.each(cases)("maps wrapped vertical motion and mouse clicks to label boundaries in $host/$icon", ({ host, icon }) => {
   const { editor } = fixture(host, icon); editor.setText("abc $alpha tail"); editor.handleInput("\x01");
-  const rendered = editor.render(13).map(stripTerminalSequences);
-  const row = rendered.findIndex(line => line.includes(` ${icons[icon]} alpha `));
+  const rendered = editor.render(11).map(stripTerminalSequences);
+  const row = rendered.findIndex(line => line.includes(` ${icons[icon]}alpha `));
   expect(row).toBeGreaterThan(0);
   const x = rendered[row].indexOf(icons[icon]);
   // Cube is a supplementary-plane character but its terminal width is one cell.
@@ -64,15 +98,15 @@ it.each(cases)("maps wrapped vertical motion and mouse clicks to label boundarie
   expect(editor.getCursor().col).toBe(4);
   editor.handleInput("\x1b[C"); expect(editor.getCursor().col).toBe(10);
   editor.handleInput("\x1b[D"); expect(editor.getCursor().col).toBe(4);
-  editor.render(13); editor.handleInput("\x1b[B");
+  editor.render(11); editor.handleInput("\x1b[B");
   expect(editor.getCursor().col).toBe(11);
-  editor.render(13); editor.handleInput("\x1b[A"); expect(editor.getCursor().col).toBe(4);
-  editor.handleInput("\x1b[C"); editor.render(13); editor.handleInput("\x1b[B"); expect(editor.getCursor().col).toBe(15);
-  editor.render(13); editor.handleInput("\x1b[A"); expect(editor.getCursor().col).toBe(10);
+  editor.render(11); editor.handleInput("\x1b[A"); expect(editor.getCursor().col).toBe(4);
+  editor.handleInput("\x1b[C"); editor.render(11); editor.handleInput("\x1b[B"); expect(editor.getCursor().col).toBe(15);
+  editor.render(11); editor.handleInput("\x1b[A"); expect(editor.getCursor().col).toBe(10);
   expect(editor.getText()).toBe("abc $alpha tail");
 });
 
-it.each(cases)("maps all three display spaces without new source stops in $host/$icon", ({ host, icon }) => {
+it.each(cases)("maps the prefix display space without new source stops in $host/$icon", ({ host, icon }) => {
   const { editor, base } = fixture(host, icon), source = "abc  $alpha  tail";
   for (const width of [8, 16, 80]) {
     editor.setText(source);
@@ -85,27 +119,27 @@ it.each(cases)("maps all three display spaces without new source stops in $host/
         return cell.label && cell.text === " " ? [{ x, y: row + 1 }] : [];
       });
     });
-    expect(spaces).toHaveLength(3);
-    for (const [index, point] of spaces.entries()) {
+    expect(spaces).toHaveLength(1);
+    for (const point of spaces) {
       editor.setText(source); editor.render(width);
       editor.handleMouse({ type: "click", button: "left", ...point } as TuiMouseEvent);
-      expect(editor.getCursor()).toEqual({ line: 0, col: index === 2 ? 11 : 5 });
-      editor.handleInput(index === 2 ? "\x1b[D" : "\x1b[C");
-      expect(editor.getCursor().col).toBe(index === 2 ? 5 : 11);
-      editor.handleInput(index === 2 ? "\x1b[3~" : "\x7f");
+      expect(editor.getCursor()).toEqual({ line: 0, col: 5 });
+      editor.handleInput("\x1b[C");
+      expect(editor.getCursor().col).toBe(11);
+      editor.handleInput("\x7f");
       expect(editor.getText()).toBe("abc    tail");
       editor.handleInput("\x1b[45;5u"); expect(editor.getExpandedText()).toBe(source);
     }
   }
   editor.setText(source);
-  expect(editor.render(80).map(stripTerminalSequences).join("\n")).toContain(`abc   ${icons[icon]} alpha   tail`);
+  expect(editor.render(80).map(stripTerminalSequences).join("\n")).toContain(`abc   ${icons[icon]}alpha  tail`);
 });
 
-it.each(cases)("snaps a supplementary-name suffix space after the whole source in $host/$icon", ({ host, icon }) => {
+it.each(cases)("maps a real space after a supplementary-name label in $host/$icon", ({ host, icon }) => {
   const { editor, base } = fixture(host, icon, ["𠮷"]);
   editor.setText("$𠮷 tail"); editor.render(80);
-  // Prefix space, icon, gap and the two-cell name precede the suffix space.
-  editor.handleMouse({ type: "click", button: "left", x: base.getPaddingX() + 5, y: 1 } as TuiMouseEvent);
+  // Prefix space, icon and the two-cell name precede the source space.
+  editor.handleMouse({ type: "click", button: "left", x: base.getPaddingX() + 4, y: 1 } as TuiMouseEvent);
   expect(editor.getCursor()).toEqual({ line: 0, col: 3 });
   editor.handleInput("X"); expect(editor.getText()).toBe("$𠮷X tail");
   editor.handleInput("\x1b[45;5u"); expect(editor.getExpandedText()).toBe("$𠮷 tail");
@@ -139,8 +173,8 @@ it("maps projected clicks when native cursor keys are function keys", () => {
   bindings.setUserBindings({ ...previous, "tui.editor.cursorLeft": "f1", "tui.editor.cursorRight": "f2" });
   try {
     const { editor } = fixture("native", "command"); editor.setText("abc $alpha tail");
-    const rows = editor.render(13).map(stripTerminalSequences), y = rows.findIndex(row => row.includes(" ⌘ alpha "));
-    editor.handleMouse({ type: "click", button: "left", x: 1, y, width: 13, height: rows.length } as TuiMouseEvent);
+    const rows = editor.render(11).map(stripTerminalSequences), y = rows.findIndex(row => row.includes(" ⌘alpha "));
+    editor.handleMouse({ type: "click", button: "left", x: 1, y, width: 11, height: rows.length } as TuiMouseEvent);
     expect(editor.getCursor().col).toBe(4);
   } finally { bindings.setUserBindings(previous); }
 });

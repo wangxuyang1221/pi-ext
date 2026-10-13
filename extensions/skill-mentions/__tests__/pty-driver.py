@@ -170,10 +170,10 @@ def editor():
 
 
 def assert_label_style(glyph):
-    row = max(index for index, line in enumerate(screen.display) if "Use  " + glyph + " alpha " in line)
+    row = max(index for index, line in enumerate(screen.display) if "Use  " + glyph + "alpha " in line)
     column = screen.display[row].index(glyph)
     background = screen.buffer[row][column - 2].bg
-    for offset in range(-1, 8):
+    for offset in range(-1, 6):
         char = screen.buffer[row][column + offset]
         assert char.fg == "8df9fd" and not char.bold and char.bg == background, char
 
@@ -239,7 +239,7 @@ try:
         preference = root / "agent/skill-mentions.json"
         wait(lambda: preference.exists() and json.loads(preference.read_text())["icon"] == icon, "persist icon")
         paste("Use $alpha")
-        assert "Use  " + glyph + " alpha " in "\n".join(screen.display), view()
+        assert "Use  " + glyph + "alpha " in "\n".join(screen.display), view()
         colored = [char for row in screen.buffer.values() for char in row.values() if char.data == glyph]
         assert colored and any(char.fg == "8df9fd" and not char.bold for char in colored), colored
         assert_label_style(glyph)
@@ -256,8 +256,8 @@ try:
         assert editor() == "Use $alpha"
         send("\x05")
         if mode.endswith("fullscreen"):
-            for offset, source_column in [(-1, 4), (1, 4), (7, 10)]:
-                row = max(index for index, line in enumerate(screen.display) if "Use  " + glyph + " alpha " in line)
+            for offset, source_column in [(-1, 4), (1, 4), (6, 10)]:
+                row = max(index for index, line in enumerate(screen.display) if "Use  " + glyph + "alpha " in line)
                 column = screen.display[row].index(glyph) + offset
                 send(f"\x1b[<0;{column + 1};{row + 1}M\x1b[<0;{column + 1};{row + 1}m")
                 send("X")
@@ -267,10 +267,22 @@ try:
                 assert editor() == source
             send("\x05")
         submit("Use $alpha", ["alpha"])
-        assert "Use  " + glyph + " alpha " in "\n".join(screen.display), view()
+        assert "Use  " + glyph + "alpha " in "\n".join(screen.display), view()
         assert_label_style(glyph)
         screens[f"label-{icon}"] = view()
-    checks.append("both icons retain all three prototype spaces, truecolor normal weight and inherited background in input/body; whole Delete/Backspace, configured undo and fullscreen space hit targets")
+        for key in ["\t", "\r"]:
+            send("$al")
+            send(key)
+            assert editor() == "$alpha "
+            send("\x7f")
+            assert editor() == "$alpha"
+            send(",")
+            assert editor() == "$alpha,"
+            assert glyph + "alpha," in view(), view()
+            submit("$alpha,", ["alpha"])
+            assert glyph + "alpha," in view(), view()
+        checks.append(f"{icon} Tab/Enter completion inserts a deletable real space and punctuation touches the label in input and submitted body")
+    checks.append("both icons retain prefix spacing without a display-only suffix, truecolor normal weight and inherited background in input/body; whole Delete/Backspace, configured undo and fullscreen space hit targets")
 
     paste("$alpha")
     send("\x7f")
@@ -287,7 +299,7 @@ try:
     for expected in ["a", "", "$alpha"]:
         send("\x1b[19~")
         assert editor() == expected, editor()
-    assert "⌘ alpha" in view(), view()
+    assert "⌘alpha" in view(), view()
     screens["undo-after-click-or-history"] = view()
     send("\x03")
     checks.append("consecutive undo after same-position fullscreen click or no-op historyNext restores a, empty draft and the complete alpha label")
@@ -300,7 +312,7 @@ try:
     assert editor() == "$" + long_name
     # Fullscreen reserves plain PageUp/PageDown for the transcript viewport.
     send("\x1b[5;5~" if mode.endswith("fullscreen") else "\x1b[5~")
-    assert "⌘ long-" in view(), view()
+    assert "⌘long-" in view(), view()
     screens["tall-label-page-up"] = view()
     send("\x1b[6;5~" if mode.endswith("fullscreen") else "\x1b[6~")
     send("\x7f")
@@ -321,7 +333,7 @@ try:
     settle(0.6)
     assert editor() == "abc $alpha tail"
     screens["label-narrow-resize"] = view()
-    assert "⌘ alpha" in view(), view()
+    assert "⌘alpha" in view(), view()
     send("\x01")
     send("\x1b[B")
     send("\x1b[A")
@@ -332,7 +344,7 @@ try:
     settle(0.6)
     if mode.endswith("fullscreen"):
         # Pi 0.86 only dispatches application mouse events in fullscreen mode.
-        draft_row = max(index for index, row in enumerate(screen.display) if "abc  ⌘ alpha  tail" in row)
+        draft_row = max(index for index, row in enumerate(screen.display) if "abc  ⌘alpha tail" in row)
         draft_column = screen.display[draft_row].index("⌘") + 2
         send(f"\x1b[<0;{draft_column};{draft_row + 1}M\x1b[<0;{draft_column};{draft_row + 1}m")
         send("X")
@@ -353,7 +365,7 @@ try:
     large_paste = "folded $alpha " + "p" * 2048
     paste(large_paste)
     paste(" $beta")
-    assert "[paste #" in view() and "⌘ beta" in view(), view()
+    assert "[paste #" in view() and "⌘beta" in view(), view()
     send("\x7f")
     assert editor() == large_paste + " "
     send("\x1b[19~")
@@ -379,7 +391,7 @@ try:
         wait(lambda: len(events("ready")) == before + 1, "reload a folded draft")
         settle(0.5)
         assert editor() == large_paste + " $beta"
-        assert "[paste #" in view() and "⌘ beta" in view(), view()
+        assert "[paste #" in view() and "⌘beta" in view(), view()
         assert len(events("request")) == requests_before
         send("\x7f")
         assert editor() == large_paste + " "
@@ -399,17 +411,19 @@ try:
         assert len(events("tool")) == 1 and not events("tool")[-1]["isError"], events("tool")
         result = [message for message in events("request")[-1] if message["role"] == "toolResult"][-1]
         assert text(result) == "Tool literal $alpha", result
-        assert "⌘ alpha" in view() and editor() == ""
+        assert "⌘alpha" in view() and editor() == ""
         checks.append("all eight extensions coexist with a real local stdio MCP call; tool dollars stay literal and no subagent or remote provider runs")
 
     for char in "$alpha":
         send(char)
     wait(lambda: "Alpha fixture" in view(), "complete handwritten candidate")
     send("\t")
-    assert editor() == "$alpha"
+    assert editor() == "$alpha "
+    send("\x1b[19~")
+    assert editor() == "$alpha", editor()
     send("\x1b[19~")
     assert editor() == "", editor()
-    checks.append("confirming an unchanged handwritten name adds no visual-only undo")
+    checks.append("confirming a complete handwritten name adds one undoable real space")
 
     for query, key, complete in [("$al", "\t", "$alpha"), ("$be", "\r", "$beta")]:
         paste("首行\n用  后文")
@@ -471,6 +485,7 @@ try:
                 before = len(events("request"))
                 send("\t" if source == "menu-tab" else "\r")
                 assert len(events("request")) == before, "Selection must not send"
+                send("\x7f")
                 send(suffix)
         assert editor() == punctuated
         submit(punctuated, ["alpha", "beta"])
@@ -547,14 +562,14 @@ try:
     paste(same_task)
     second = submit(same_task, ["alpha"])
     assert first["requestId"] != second["requestId"]
-    assert "同文  ⌘ alpha   ⌘ beta" in view() and "同文  ⌘ alpha  $beta" in view(), view()
+    assert "同文  ⌘alpha  ⌘beta" in view() and "同文  ⌘alpha $beta" in view(), view()
     screens["equal-tasks-distinct-success"] = view()
     before = len(events("ready"))
     paste("/reload")
     send("\r")
     wait(lambda: len(events("ready")) == before + 1, "reload equal task snapshots")
     settle(0.5)
-    assert "同文  ⌘ alpha   ⌘ beta" in view() and "同文  ⌘ alpha  $beta" in view(), view()
+    assert "同文  ⌘alpha  ⌘beta" in view() and "同文  ⌘alpha $beta" in view(), view()
     screens["equal-tasks-after-reload"] = view()
     checks.append("identical tasks bind distinct success sets live and after reload without rereading deleted beta")
     paste("缺失 $beta, $alpha! $unknown.")
@@ -623,7 +638,7 @@ try:
     decoder = codecs.getincrementaldecoder("utf-8")("strict")
     wait(lambda: len(events("ready")) > ready_count, "resume real CLI")
     settle(1)
-    assert "⌘ alpha" in view() and "\U000f01a7 alpha" not in view(), view()
+    assert "⌘alpha" in view() and "\U000f01a7alpha" not in view(), view()
     send("\x10")
     assert editor() == "排队 $alpha，继续"
     assert "pi-ext-skill-mentions version" not in view()

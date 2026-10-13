@@ -88,7 +88,7 @@ it.each(["native", "codex"] as const)("%s restores snapshot drafts and history t
   editor.setText(envelope); expect(h.changed).toHaveBeenLastCalledWith(task);
   if (kind === "codex") {
     expect(editor).toBeInstanceOf(CodexEditor);
-    expect(editor.render(80).map(stripTerminalSequences).map(line => line.replaceAll(" \u{f01a7} alpha ", "$alpha").trimEnd()))
+    expect(editor.render(80).map(stripTerminalSequences).map(line => line.replaceAll(" \u{f01a7}alpha", "$alpha").trimEnd()))
       .toEqual(h.base!.render(80).map(stripTerminalSequences).map(line => line.trimEnd()));
     expect(h.base!.setText).toBe(CodexEditor.prototype.setText);
   } else expect((editor as CustomEditor).embedWorkingStatus).toBe(true);
@@ -118,7 +118,7 @@ it.each(["native", "codex"] as const)("%s preserves ordinary JSON, native slash 
   if (h.base) expect(h.base.focused).toBe(true);
   editor.setText("Use "); editor.handleInput("$");
   await new Promise(resolve => setTimeout(resolve, 80));
-  editor.handleInput("\r"); expect(editor.getText()).toBe("Use $alpha"); expect(h.submitted).not.toHaveBeenCalled();
+  editor.handleInput("\r"); expect(editor.getText()).toBe("Use $alpha "); expect(h.submitted).not.toHaveBeenCalled();
   editor.handleInput("\r"); expect(h.submitted).toHaveBeenLastCalledWith("Use $alpha");
   editor.setText(""); editor.handleInput("/"); await new Promise(resolve => setTimeout(resolve, 80));
   editor.handleInput("\t"); expect(editor.getText()).toBe("/help ");

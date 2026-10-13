@@ -173,7 +173,7 @@ export function createLabelEditor(base: CustomEditor, options: LabelEditorOption
   };
   const targetColumn = (row: number, column: number) => {
     const line = visual[row]; let total = 0;
-    for (const cell of line.cells) { if (total + cell.width > column) return cell.hitTarget ?? cell.start; total += cell.width; }
+    for (const cell of line.cells) { if (total + cell.width > column) return cell.start; total += cell.width; }
     return line.end;
   };
   const methods: Record<string, Function> = {

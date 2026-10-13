@@ -28,6 +28,14 @@ it("queries only discovered skill names, preserves metadata and does not match d
   expect(await provider.getSuggestions(["$unknown"], 0, 8, options)).toBeNull();
 });
 
+it.each(["", " ", "  after", "\ttext"])("adds or reuses one completion space before %j", suffix => {
+  const provider = skillAutocomplete(new CombinedAutocompleteProvider([], process.cwd()), () => commands);
+  const lines = ["before", `$al${suffix}`, "after"];
+  const result = provider.applyCompletion(lines, 1, 3, { value: "$alpha", label: "alpha" }, "$al");
+  expect(result).toEqual({ lines: ["before", `$alpha${suffix.startsWith(" ") ? suffix : " " + suffix}`, "after"], cursorLine: 1, cursorCol: 7 });
+  expect(lines).toEqual(["before", `$al${suffix}`, "after"]);
+});
+
 for (const kind of ["native", "codex"]) {
   it(`${kind}: handwritten, pasted and selected punctuated references submit identically`, async () => {
     const expected = "用 $alpha，继续 $beta.";
@@ -45,6 +53,7 @@ for (const kind of ["native", "codex"]) {
           editor.handleInput(source === "menu-tab" ? "\t" : "\r");
           expect(submit).not.toHaveBeenCalled();
           expect(editor.isShowingAutocomplete()).toBe(false);
+          editor.handleInput("\x7f"); // Remove the completion space before punctuation.
           for (const char of suffix) editor.handleInput(char);
         }
       }
@@ -78,9 +87,9 @@ for (const kind of ["native", "codex"]) {
     pasted.handleInput(`\x1b[200~${expected}\x1b[201~`);
     const selected = editorFor(kind); selected.setText("用 ");
     for (const char of "$al") selected.handleInput(char);
-    await settle(); selected.handleInput("\t"); selected.handleInput(" ");
+    await settle(); selected.handleInput("\t");
     for (const char of "$be") selected.handleInput(char);
-    await settle(); selected.handleInput("\r");
+    await settle(); selected.handleInput("\r"); selected.handleInput("\x7f");
     for (const editor of [handwritten, pasted, selected]) {
       expect(editor.getText()).toBe(expected);
       const snapshot = await loadSnapshot(editor.getText(), commands, async path => `BODY ${path}`);
