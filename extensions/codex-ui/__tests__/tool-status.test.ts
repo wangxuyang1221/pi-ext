@@ -6,7 +6,9 @@ import { stripTerminalSequences, visibleWidth, type Component } from "@earendil-
 import { registerCodexTools } from "../src/tools.js";
 import { renderMcpToolCall, renderMcpToolResult } from "../../mcp/src/renderers.js";
 
-const colors = { dim: 240, warning: 220, success: 82, error: 196, text: 252, toolOutput: 244, accent: 81 };
+const glyph = (name: string) => ({ bash: "$", read: "@", edit: "~", write: "~", mcp: "⏺" })[name]!;
+const successTone = (name: string) => name === "mcp" ? "success" : "muted";
+const colors = { muted: 245, dim: 240, warning: 220, success: 82, error: 196, text: 252, toolOutput: 244, accent: 81 };
 function theme(offset = 0): Theme {
   return {
     fg: (name: string, text: string) => `\x1b[38;5;${(colors[name as keyof typeof colors] ?? 250) + offset}m${text}\x1b[39m`,
@@ -100,14 +102,14 @@ test("recognizes native abort diagnostics without treating arbitrary error prose
     item.ctx.executionStarted = true;
     const interrupted = tool.name === "bash" ? "partial output\n\nCommand aborted" : "Operation aborted";
     const output = item.result(interrupted, true);
-    expect(output[0]).toContain(palette.fg("warning", "⏺"));
+    expect(output[0]).toContain(palette.fg("warning", glyph(tool.name)));
     item.ctx.expanded = true;
     expect(item.paint().join("\n")).toContain(tool.name === "bash" ? "Command aborted" : "Operation aborted");
-    if (tool.name === "bash") expect(item.result("partial output\n\nCommand timed out after 0.1 seconds", true)[0]).toContain(palette.fg("warning", "⏺"));
+    if (tool.name === "bash") expect(item.result("partial output\n\nCommand timed out after 0.1 seconds", true)[0]).toContain(palette.fg("warning", "$"));
     for (const ordinary of ["Operation aborted while parsing a log", "Command aborted\n\nCommand exited with code 1", "request timeout configuration is invalid"]) {
-      expect(item.result(ordinary, true)[0]).toContain(palette.fg("error", "⏺"));
+      expect(item.result(ordinary, true)[0]).toContain(palette.fg("error", glyph(tool.name)));
     }
-    expect(item.result(interrupted, false)[0]).toContain(palette.fg("success", "⏺"));
+    expect(item.result(interrupted, false)[0]).toContain(palette.fg("muted", glyph(tool.name)));
   }
 });
 
@@ -155,9 +157,9 @@ test("keeps mixed group colors independent and reuses captured output across pai
     for (const palette of [theme(), theme(1)]) {
       items[0]!.setTheme(palette);
       const lines = items[0]!.paint();
-      const markers = lines.filter(line => stripTerminalSequences(line).trimStart().startsWith("⏺"));
+      const markers = lines.filter(line => stripTerminalSequences(line).trimStart().startsWith(glyph(name)));
       expect(markers).toHaveLength(count);
-      for (let index = 0; index < count; index++) expect(markers[index]).toContain(palette.fg(index === 1 ? "error" : index === 2 ? "warning" : "success", "⏺"));
+      for (let index = 0; index < count; index++) expect(markers[index]).toContain(palette.fg(index === 1 ? "error" : index === 2 ? "warning" : "muted", glyph(name)));
       const baseline = reads.mock.calls.length;
       for (let paint = 0; paint < 10; paint++) expect(items[0]!.paint()).toEqual(lines);
       expect(reads.mock.calls.length).toBe(baseline);
@@ -175,7 +177,7 @@ test("does not reread a low-power Bash failure to recolor an unchanged row", () 
   const baseline = read.mock.calls.length;
   for (const palette of [theme(), theme(1)]) {
     item.setTheme(palette);
-    for (let paint = 0; paint < 10; paint++) expect(item.paint()[0]).toContain(palette.fg("warning", "⏺"));
+    for (let paint = 0; paint < 10; paint++) expect(item.paint()[0]).toContain(palette.fg("warning", "$"));
   }
   expect(read.mock.calls.length).toBe(baseline);
 });
@@ -193,14 +195,14 @@ test("preserves native abort and Bash timeout diagnostics through serialization"
       const error = await tool.execute("abort", args, controller.signal, undefined, context).catch(error => error);
       expect(error).toBeInstanceOf(Error);
       const content = JSON.parse(JSON.stringify([{ type: "text", text: error.message }]));
-      expect(row(tool).resultContent(content, true)[0], `${tool.name}: ${error.message}`).toContain(theme().fg("warning", "⏺"));
+      expect(row(tool).resultContent(content, true)[0], `${tool.name}: ${error.message}`).toContain(theme().fg("warning", glyph(tool.name)));
     }
     const bash = h.registered.find(tool => tool.name === "bash")!;
     const error = await bash.execute("timeout", { command: "printf 'partial output\\n'; sleep 2", timeout: 0.05 }, undefined, undefined, context).catch(error => error);
     expect(error).toBeInstanceOf(Error);
     expect(error.message).toContain("partial output");
     expect(error.message).toContain("Command timed out after 0.05 seconds");
-    expect(row(bash).result(error.message, true)[0]).toContain(theme().fg("warning", "⏺"));
+    expect(row(bash).result(error.message, true)[0]).toContain(theme().fg("warning", "$"));
     h.emit("session_shutdown", {});
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });
@@ -214,15 +216,15 @@ test("uses yellow static markers from argument generation through execution in b
       item.ctx.argsComplete = argsComplete;
       const pending = item.paint();
       if (tool.name === "bash" && !lowPower) expect(pending).toEqual([]);
-      else expect(pending[0]).toContain(palette.fg("warning", "⏺") + " ");
+      else expect(pending[0]).toContain(palette.fg("warning", glyph(tool.name)) + " ");
       vi.advanceTimersByTime(30_000);
       expect(item.paint()).toEqual(pending);
     }
     item.ctx.executionStarted = true;
-    expect(item.paint()[0]).toContain(palette.fg("warning", "⏺") + " ");
-    expect(item.result("hello")[0]).toContain(palette.fg("success", "⏺") + " ");
-    expect(item.result("Permission denied", true)[0]).toContain(palette.fg("error", "⏺") + " ");
-    expect(visibleWidth("⏺")).toBe(1);
+    expect(item.paint()[0]).toContain(palette.fg("warning", glyph(tool.name)) + " ");
+    expect(item.result("hello")[0]).toContain(palette.fg(successTone(tool.name), glyph(tool.name)) + " ");
+    expect(item.result("Permission denied", true)[0]).toContain(palette.fg("error", glyph(tool.name)) + " ");
+    expect(visibleWidth(glyph(tool.name))).toBe(1);
     vi.advanceTimersByTime(30_000);
     expect(item.ctx.invalidate).not.toHaveBeenCalled();
   }

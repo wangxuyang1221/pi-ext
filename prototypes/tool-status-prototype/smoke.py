@@ -31,6 +31,7 @@ output = bytearray()
 screens = {}
 before = "--before" in sys.argv
 production = "--production" in sys.argv
+success_color = "85858a" if production else "4dff88"
 low_power = "--lowpower" in sys.argv
 mcp_only = "--mcp-only" in sys.argv
 target = "mcp" if mcp_only else "all"
@@ -86,8 +87,14 @@ def color_at(text, offset=0):
 def marker_colors():
     colors = []
     for y, line in enumerate(screen.display):
-        if line.lstrip().startswith(("⏺", "├─ ⏺")):
-            colors.append(screen.buffer[y][line.index("⏺")].fg)
+        prefixes = ("$ Bash", "@ ", "~ Writing", "~ Editing", "~ Write", "~ Edit", "~ Added", "⌕ Call") if production else ("⏺ ",)
+        stripped = line.lstrip()
+        if stripped.startswith("├─ "):
+            stripped = stripped[3:]
+        for prefix in prefixes:
+            if stripped.startswith(prefix):
+                colors.append(screen.buffer[y][line.index(prefix)].fg)
+                break
     return colors
 
 try:
@@ -98,7 +105,7 @@ try:
     if not before:
         colors = marker_colors()
         assert len(colors) >= call_count, colors
-        assert colors[-call_count:] == ["4dff88"] * call_count, colors
+        assert colors[-call_count:] == [success_color] * call_count, colors
         for content in (["Found 2 results"] if mcp_only else ["export const status", "Found 2 results"] if low_power else ["Test Files", "export const status", "Found 2 results"]):
             assert color_at(content) == "d6d6d6", (content, color_at(content))
         if not mcp_only:
@@ -154,7 +161,7 @@ try:
         wait(lambda: "(2/4 tests)" in view(), "streaming Bash result")
         wait(lambda: "Playback complete." in view(), "playback finishes")
         settle()
-        assert marker_colors()[-5:] == ["4dff88"] * 5
+        assert marker_colors()[-5:] == [success_color] * 5
         command("/play batch")
         for tool in ["read", "bash", "edit", "write", "mcp"]:
             label = f"Batch playback: {tool} / mixed"
@@ -164,7 +171,7 @@ try:
                 screens["batch-read-running"] = view()
             wait(lambda: "Playback frame finished." in view().split(label)[-1], f"batch {tool} finishes")
             colors = marker_colors()[-3:]
-            assert colors == ["4dff88", "ff6b6b", "ffe66d"], (tool, colors, view())
+            assert colors == [success_color, "ff6b6b", "ffe66d"], (tool, colors, view())
             screens[f"batch-{tool}"] = view()
         wait(lambda: "Playback complete." in view(), "batch playlist finishes")
         settle()
@@ -177,7 +184,7 @@ try:
             screen.resize(60, width)
             settle(0.6)
             assert "▾ Read 3 files" in view(), view()
-            assert marker_colors()[-3:] == ["4dff88", "ff6b6b", "ffe66d"]
+            assert marker_colors()[-3:] == [success_color, "ff6b6b", "ffe66d"]
             screens[f"batch-width-{width}"] = view()
         os.write(fd, b"\x0f")
         settle()
@@ -192,7 +199,7 @@ try:
         command(f"/batch {history_tool} mixed")
         wait(lambda: "Fixture finished." in view().split(f"Batch fixture: {history_tool} / mixed")[-1], "production history fixture")
         settle()
-        expected = ["4dff88", "ff6b6b", "ffe66d"]
+        expected = [success_color, "ff6b6b", "ffe66d"]
         assert marker_colors()[-3:] == expected
         command("/fixture-theme light")
         wait(lambda: marker_colors()[-3:] != expected, "theme change repaints group colors")

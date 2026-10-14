@@ -114,7 +114,7 @@ quit
         for (let i = 0; i < rows.length; i++) {
           const text = rows[i];
           if (!/(?:Writing|Editing|Added|Edited|failed) /u.test(text)) continue;
-          const column = text.indexOf('⏺');
+          const column = text.indexOf('~');
           if (column < 0) continue;
           const cell = buffer.getLine(buffer.viewportY + i).getCell(column);
           markers.push({ text, dim: cell.isDim(), fg: cell.getFgColor() });
@@ -129,16 +129,16 @@ quit
     fs.writeFileSync(path.join(scratch, `write-cli-${pkg.version}.json`), JSON.stringify(evidence, null, 2));
     const view = phase => phases.find(item => item.phase === phase).visible;
     for (const phase of ['pending', 'pending-expanded']) {
-      assert.match(view(phase), /⏺ Writing new.ts/u, `${mode}/${phase}`);
+      assert.match(view(phase), /~ Writing new.ts/u, `${mode}/${phase}`);
       assert.doesNotMatch(view(phase), /item0|\+20|more lines/u);
     }
-    assert.match(view('pending-edit'), /⏺ Editing edit.ts/u);
+    assert.match(view('pending-edit'), /~ Editing edit.ts/u);
     for (const phase of ['completed', 'collapsed', 'reload', 'restarted']) {
-      assert.match(view(phase), /⏺ Added new.ts \(\+20 -0\)/u, `${mode}/${phase}`);
-      assert.match(view(phase), /⏺ Edited existing.ts \(\+1 -1\)/u);
-      assert.match(view(phase), /⏺ Edited edit.ts \(\+1 -1\)/u);
-      assert.match(view(phase), /⏺ Write failed/u);
-      assert.match(view(phase), /⏺ Edit failed/u);
+      assert.match(view(phase), /~ Added new.ts \(\+20 -0\)/u, `${mode}/${phase}`);
+      assert.match(view(phase), /~ Edited existing.ts \(\+1 -1\)/u);
+      assert.match(view(phase), /~ Edited edit.ts \(\+1 -1\)/u);
+      assert.match(view(phase), /~ Write failed/u);
+      assert.match(view(phase), /~ Edit failed/u);
       assert.match(view(phase), /Diff unavailable/u);
       assert.match(view(phase), /… 8 more lines/u);
       assert.doesNotMatch(view(phase), /item19/u);
@@ -148,9 +148,9 @@ quit
     const settledMarkers = phases.find(item => item.phase === 'completed').markers;
     const palette = JSON.parse(fs.readFileSync(path.join(repository, 'themes/codex-pi.json')));
     const color = key => parseInt(palette.vars[palette.colors[key]].slice(1), 16);
-    for (const marker of settledMarkers.filter(item => /⏺ (?:Added|Edited)/u.test(item.text))) assert.equal(marker.fg, color('success'));
-    for (const marker of settledMarkers.filter(item => /⏺ (?:Write|Edit) failed/u.test(item.text))) assert.equal(marker.fg, color('error'));
-    const pendingMarker = phases.find(item => item.phase === 'pending').markers.find(item => item.text.includes('⏺ Writing'));
+    for (const marker of settledMarkers.filter(item => /~ (?:Added|Edited)/u.test(item.text))) assert.equal(marker.fg, color('muted'));
+    for (const marker of settledMarkers.filter(item => /~ (?:Write|Edit) failed/u.test(item.text))) assert.equal(marker.fg, color('error'));
+    const pendingMarker = phases.find(item => item.phase === 'pending').markers.find(item => item.text.includes('~ Writing'));
     assert.equal(pendingMarker.fg, color('warning'));
     const ends = events.filter(event => event.type === 'tool_execution_end').sort((a, b) => a.toolCallId.localeCompare(b.toolCallId));
     assert.equal(ends.length, 7);

@@ -156,7 +156,7 @@ test("expanded running state settles after an empty final result without resetti
     pipeline.row.setExpanded(false);
     assert.match(plain(), /\(No content\)/u);
     assert.equal(pipeline.row.render(120).length, 3);
-    assert.match(plain(), /⏺ Bash\(/u);
+    assert.match(plain(), /\$ Bash\(/u);
   } finally { pipeline.dispose(); }
 });
 

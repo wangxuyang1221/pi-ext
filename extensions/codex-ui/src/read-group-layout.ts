@@ -86,7 +86,7 @@ function renderMember(member: ReadMember, expanded: boolean, grouped: boolean, t
       meta = `L${member.offset ?? 1}–${(member.offset ?? 1) + lineCount - 1} · ${meta}`;
     }
     if (!pending && member.details?.truncation?.truncated) meta += " · truncated";
-    const mark = toolStatusMarker(theme, status);
+    const mark = toolStatusMarker(theme, status, "@");
     const heading = `${mark} ${grouped ? "" : theme.fg("toolTitle", theme.bold("Read")) + " "}${theme.fg("accent", filename)}${theme.fg("dim", `  ${dir}`)}`;
     const lines = [withMetadata(heading, theme.fg(failed ? failureColor : "dim", ` · ${meta}`), width)];
     if (expanded) {

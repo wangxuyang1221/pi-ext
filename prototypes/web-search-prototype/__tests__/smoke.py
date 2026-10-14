@@ -68,8 +68,8 @@ def command(value):
     os.write(fd, value.encode() + b"\r")
 
 def search_colors():
-    return [screen.buffer[y][line.index("⏺")].fg for y, line in enumerate(screen.display)
-            if "⏺ " in line and any(word in line for word in ["Searched web", "Searching web", "Web search"]) ]
+    return [screen.buffer[y][line.index("⌕")].fg for y, line in enumerate(screen.display)
+            if "⌕ " in line and any(word in line for word in ["Searched web", "Searching web", "Web search"]) ]
 
 try:
     wait(lambda: "2/5 queries completed" in view(), "streaming progress")
@@ -79,7 +79,7 @@ try:
     settle()
     assert "Extension issues" not in view(), view()
     assert "17 sources · 5 queries" in view(), view()
-    assert search_colors()[-1] == "4dff88", search_colors()
+    assert search_colors()[-1] == "85858a", search_colors()
     screens["success"] = view()
     os.write(fd, b"\x0f")
     wait(lambda: "https://example.com/research/17" in view(), "native expansion")
@@ -105,7 +105,7 @@ try:
     wait(lambda: "1/2 succeeded · 1 failed" in view(), "adjacent batch")
     settle()
     lines = view().splitlines()
-    positions = [i for i, line in enumerate(lines) if "⏺ Searched web" in line]
+    positions = [i for i, line in enumerate(lines) if "⌕ Searched web" in line]
     a, b = positions[-2:]
     assert b - a == 3, (a, b, lines[a:b+1])
     assert not lines[a + 2].strip(), lines[a:b+1]

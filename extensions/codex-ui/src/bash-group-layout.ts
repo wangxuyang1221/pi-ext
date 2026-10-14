@@ -49,7 +49,7 @@ function capture(member: BashMember, expanded: boolean): string[] {
 }
 function commandLines(member: BashMember, expanded: boolean, theme: Theme, width: number): string[] {
   const status = member.status === "failed" && diagnostic(member)?.warning ? "interrupted" : member.status;
-  const prefix = width >= 8 ? `${toolStatusMarker(theme, status)} ${theme.bold("Bash")}(` : "";
+  const prefix = width >= 8 ? `${toolStatusMarker(theme, status, "$")} ${theme.bold("Bash")}(` : "";
   const continuation = width >= 8 ? "  " : "";
   const cache = member.cache;
   const key = ["group-command", cache.identity(member), member.commandRevision, expanded, width].join("\0");

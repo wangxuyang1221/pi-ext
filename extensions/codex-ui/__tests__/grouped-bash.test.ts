@@ -224,7 +224,7 @@ test("streaming membership and arguments refresh the first row without losing un
     const b = h.row("b", "bash", true); b.updateArgs({ command: "printf updated" });
     assert.deepEqual(plain(a), []);
     a.markExecutionStarted(); b.markExecutionStarted();
-    assert.equal(plain(a).join("\n").match(/⏺ Bash\(/gu)?.length, 2);
+    assert.equal(plain(a).join("\n").match(/\$ Bash\(/gu)?.length, 2);
     assert.match(plain(a).join("\n"), /printf updated/u);
     assert.equal(b.render(120).length, 0);
     const orphan = h.row("unknown"); orphan.markExecutionStarted();
@@ -364,7 +364,7 @@ test("host errors preserve timeout and cancellation reasons without fabricating 
     b.updateResult(result("Command timed out after 2 seconds\noriginal detail\nextra detail", true)); c.updateResult(result("Command cancelled", true));
     for (const expanded of [false, true]) {
       [a, b, c].forEach(row => row.setExpanded(expanded)); const rendered = plain(a).join("\n");
-      assert.equal(rendered.match(/⏺ Bash\(/gu)?.length, 3);
+      assert.equal(rendered.match(/\$ Bash\(/gu)?.length, 3);
       for (const output of ["this is successful output", "Command timed out", "Command cancelled"]) assert(rendered.includes(output));
       assert.doesNotMatch(rendered, /Exit code|\d+\.\d+s/u);
     }

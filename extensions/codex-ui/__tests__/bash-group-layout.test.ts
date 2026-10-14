@@ -22,8 +22,8 @@ function fixture(status: BashStatus = "completed", command = "git status --short
 test("Claude Bash shows one bracketed command and a text-colored capture with dim prefixes", () => {
   const theme = getThemeByName("dark");
   const lines = renderBashGroup(fixture(), false, theme, 180, "ctrl+shift+o/alt+o");
-  assert.deepEqual(lines.map(stripTerminalSequences), ["⏺ Bash(git status --short)", "  ⎿  output", "     ", "     last"]);
-  assert.equal(lines[0], theme.fg("success", "⏺") + " " + theme.bold("Bash") + "(git status --short)");
+  assert.deepEqual(lines.map(stripTerminalSequences), ["$ Bash(git status --short)", "  ⎿  output", "     ", "     last"]);
+  assert.equal(lines[0], theme.fg("muted", "$") + " " + theme.bold("Bash") + "(git status --short)");
   assert.equal(lines[1], theme.fg("dim", "  ⎿  ") + theme.fg("text", "output"));
 });
 
@@ -59,7 +59,7 @@ test("pending calls stay hidden and live or empty results have explicit content"
 test("long commands use a single ellipsis and expand without losing text at narrow widths", () => {
   const theme = getThemeByName("dark");
   const group = fixture("completed", "x".repeat(200));
-  assert.equal(stripTerminalSequences(renderBashGroup(group, false, theme, 64, "ctrl+o")[0]!), "⏺ Bash(" + "x".repeat(55) + "…)");
+  assert.equal(stripTerminalSequences(renderBashGroup(group, false, theme, 64, "ctrl+o")[0]!), "$ Bash(" + "x".repeat(55) + "…)");
   const huge = fixture("completed", "q".repeat(50 * 1024));
   assert.equal(stripTerminalSequences(renderBashGroup(huge, true, theme, 1, "").join("")).match(/q/gu)?.length, 50 * 1024);
   for (const status of ["pending", "running", "completed", "failed"] as const) {
@@ -88,13 +88,13 @@ test("verified host diagnostics lead collapsed errors without changing the expan
     group.members[0]!.content = [{ type: "text", text: original }];
     const collapsed = renderBashGroup(group, false, theme, 100, "ctrl+o");
     assert.equal(collapsed[1], theme.fg("dim", "  ⎿  ") + theme.fg(color, diagnostic));
-    assert.equal(stripTerminalSequences(collapsed[0]!).startsWith("⏺ Bash("), true);
+    assert.equal(stripTerminalSequences(collapsed[0]!).startsWith("$ Bash("), true);
     const expanded = renderBashGroup(group, true, theme, 100, "ctrl+o").slice(1).map(line => stripTerminalSequences(line).slice(5)).join("\n");
     assert.equal(expanded, original);
   }
   const success = fixture("completed");
   success.members[0]!.content = [{ type: "text", text: "Error: harmless\n\nCommand exited with code 7" }];
-  assert(renderBashGroup(success, false, theme, 100, "")[0]!.includes(theme.fg("success", "⏺")));
+  assert(renderBashGroup(success, false, theme, 100, "")[0]!.includes(theme.fg("muted", "$")));
   assert.doesNotMatch(renderBashGroup(success, false, theme, 100, "").join("\n"), /Error: Exit code/u);
   const unknown = fixture("failed");
   unknown.members[0]!.content = [{ type: "text", text: "Permission denied" }];
@@ -155,14 +155,14 @@ test("theme changes restyle the preview without rereading the capture", () => {
   for (const theme of themes) {
     const collapsed = renderBashGroup(group, false, theme, 180, "ctrl+x");
     assert.equal(reads, 1);
-    assert(collapsed[0]!.includes(theme.fg("success", "⏺")));
+    assert(collapsed[0]!.includes(theme.fg("muted", "$")));
     assert.equal(collapsed[1], theme.fg("dim", "  ⎿  ") + theme.fg("text", "output"));
   }
   renderBashGroup(group, true, themes[0]!, 180, "ctrl+x");
   const warmedReads = reads;
   for (const theme of themes) {
     const expanded = renderBashGroup(group, true, theme, 180, "ctrl+x");
-    assert(expanded[0]!.includes(theme.fg("success", "⏺")));
+    assert(expanded[0]!.includes(theme.fg("muted", "$")));
     assert.equal(expanded[1], theme.fg("dim", "  ⎿  ") + theme.fg("text", "output"));
     assert.equal(reads, warmedReads);
   }

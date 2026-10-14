@@ -66,7 +66,7 @@ test("reload discovers already-created fresh rows before first session_start", (
     a.updateResult(result("first")); b.updateResult(result("second"));
     assert.match(text(b), /second/u);
     h.emit("session_start", { reason: "reload" });
-    assert.equal(text(a).match(/⏺ Bash\(/gu)?.length, 2);
+    assert.equal(text(a).match(/\$ Bash\(/gu)?.length, 2);
     assert.match(text(a), /second/u);
     assert.deepEqual(b.render(120), []);
     h.emit("session_shutdown");
@@ -151,10 +151,10 @@ test("changing source separators reassigns already bound rows without swallowing
     h.declare([call("a"), { type: "text", text: "break" }, call("b"), call("c")]);
     assert.match(text(a), /Bash\(printf a\)/u);
     assert.doesNotMatch(text(a), /printf b|printf c/u);
-    assert.equal(text(b).match(/⏺ Bash\(/gu)?.length, 2);
+    assert.equal(text(b).match(/\$ Bash\(/gu)?.length, 2);
     assert.equal(c.render(120).length, 0);
     h.declare([call("a"), call("b"), call("c")]);
-    assert.equal(text(a).match(/⏺ Bash\(/gu)?.length, 3);
+    assert.equal(text(a).match(/\$ Bash\(/gu)?.length, 3);
     assert.equal(b.render(120).length, 0);
   } finally { h.dispose(); }
 });
@@ -164,7 +164,7 @@ test("missing leaders and duplicate IDs remain independently visible", () => {
   try {
     h.declare([call("a"), call("b")]); const b = h.row("b"); b.markExecutionStarted();
     assert.match(text(b), /printf b/u);
-    const a = h.row("a"); a.markExecutionStarted(); assert.equal(text(a).match(/⏺ Bash\(/gu)?.length, 2);
+    const a = h.row("a"); a.markExecutionStarted(); assert.equal(text(a).match(/\$ Bash\(/gu)?.length, 2);
     const duplicate = h.row("b"); duplicate.markExecutionStarted(); assert.match(text(duplicate), /printf b/u);
     assert.equal(b.render(120).length, 0);
   } finally { h.dispose(); }
@@ -211,7 +211,7 @@ test("recovery follows the host compaction projection instead of inventing hidde
     const a = h.row("kept-a"); const b = h.row("kept-b");
     a.updateResult(result("kept")); b.updateResult(result("kept-b"));
     const projectsTail = sessionEntryToContextMessages(h.entries[0]).some(message => message.role === "assistant");
-    assert.equal(text(a).match(/⏺ Bash\(/gu)?.length, projectsTail ? 2 : 1);
+    assert.equal(text(a).match(/\$ Bash\(/gu)?.length, projectsTail ? 2 : 1);
     assert.equal(b.render(120).length === 0, projectsTail);
     assert.doesNotMatch(text(a), /\d+\.\d+s/u);
   } finally { h.dispose(); }

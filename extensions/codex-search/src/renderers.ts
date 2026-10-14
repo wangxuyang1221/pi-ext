@@ -19,7 +19,7 @@ function failureOf(value: unknown): SearchFailureMetadata["searchFailure"] | und
   const failure = (value as Partial<SearchFailureMetadata>).searchFailure;
   return failure && typeof failure.kind === "string" && typeof failure.cancelled === "boolean" ? failure : undefined;
 }
-const tones = { pending: "dim", running: "warning", completed: "success", partial: "warning", failed: "error", timed_out: "warning", interrupted: "warning", unknown: "dim" } as const;
+const tones = { pending: "warning", running: "warning", completed: "muted", partial: "warning", failed: "error", timed_out: "warning", interrupted: "warning", unknown: "dim" } as const;
 const titles: Record<Status, string> = { pending: "Searching web", running: "Searching web", completed: "Searched web", partial: "Searched web", failed: "Web search failed", timed_out: "Web search timed out", interrupted: "Web search interrupted", unknown: "Web search" };
 function resultStatus(details: WebSearchDetails | undefined, partial: boolean, error: boolean, failure: SearchFailureMetadata["searchFailure"] | undefined): Status {
   if (error) return failure?.cancelled ? "interrupted" : failure?.kind === "timeout" ? "timed_out" : "failed";
@@ -108,7 +108,7 @@ export function createSearchRenderers(config: ResolvedConfig, labelsFor: (args: 
       const queries = Array.isArray(args.queries) ? args.queries.filter((q): q is string => typeof q === "string") : [];
       return component(context.lastComponent, width => {
         const status = currentSummary(state)?.status ?? (context.executionStarted ? "running" : "pending");
-        const head = `${theme.fg(tones[status], "⏺")} ${theme.fg("toolTitle", theme.bold(titles[status]))}`;
+        const head = `${theme.fg(tones[status], "⌕")} ${theme.fg("toolTitle", theme.bold(titles[status]))}`;
         const suffix = queries.length > 1 ? ` +${count(queries.length - 1, "query", "queries")}` : "";
         const available = width - visibleWidth(head) - visibleWidth(suffix) - 3;
         const preview = queries.length && available >= 5 ? ` (${truncateToWidth(clean(queries[0]!.slice(0, 512)) + (queries[0]!.length > 512 ? "…" : ""), available)}${suffix})`

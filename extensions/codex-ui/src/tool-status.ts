@@ -1,6 +1,6 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
 
-export const TOOL_STATUS_GLYPH = "⏺";
+export const TOOL_STATUS_GLYPH = "~";
 export type ToolFailureStatus = "failed" | "interrupted" | "timed_out";
 export type ToolStatus = "pending" | "running" | "completed" | ToolFailureStatus;
 
@@ -27,6 +27,6 @@ export function toolStatusColor(status: ToolStatus): typeof COLORS[ToolStatus] {
   return COLORS[status];
 }
 
-export function toolStatusMarker(theme: Theme, status: ToolStatus): string {
-  return theme.fg(toolStatusColor(status), TOOL_STATUS_GLYPH);
+export function toolStatusMarker(theme: Theme, status: ToolStatus, glyph = TOOL_STATUS_GLYPH): string {
+  return theme.fg(status === "completed" ? "muted" : toolStatusColor(status), glyph);
 }

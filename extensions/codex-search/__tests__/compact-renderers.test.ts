@@ -33,17 +33,17 @@ test("search renders two compact lines and only one host-owned separator", () =>
   const output = lines();
   assert.equal(output.length, 3);
   assert.equal(output[0], "");
-  assert.match(output[1]!, /^⏺ Searched web \(Anthropic 官方回应 \+1 query\)/);
+  assert.match(output[1]!, /^⌕ Searched web \(Anthropic 官方回应 \+1 query\)/);
   assert.match(output[2]!, /^  └ 2 sources · 2 queries · 6s/);
   assert(!output.join("\n").includes("responses/high/live"));
-  assert(row.render(100)[1]!.includes(theme.fg("success", "⏺")));
+  assert(row.render(100)[1]!.includes(theme.fg("muted", "⌕")));
   const adjacent = [...output, ...output];
   assert(adjacent[2]!.trim() && !adjacent[3]!.trim() && adjacent[4]!.trim());
 });
 
 test("progress and partial failure update the same row with warning priority", () => {
   const { row, lines } = harness();
-  assert(row.render(100)[1]!.includes(theme.fg("dim", "⏺")));
+  assert(row.render(100)[1]!.includes(theme.fg("warning", "⌕")));
   row.markExecutionStarted();
   const progress = result(); Object.assign(progress.details, { partial: true, total: 2, completed: 1, successes: [], queryCount: 2 });
   row.updateResult(progress, true);
@@ -52,23 +52,23 @@ test("progress and partial failure update the same row with warning priority", (
   partial.details.failures.push({ query: "Second query", kind: "unknown", message: "Unavailable" });
   row.updateResult(partial);
   assert.match(lines(40)[2]!, /1\/2 succeeded · 1 failed/);
-  assert(row.render(40)[1]!.includes(theme.fg("warning", "⏺")));
+  assert(row.render(40)[1]!.includes(theme.fg("warning", "⌕")));
 });
 
 test("missing metadata never invents success and persisted diagnostics retain timeout or cancellation", () => {
   const { row, lines } = harness();
   row.updateResult({ content: [{ type: "text", text: "Legacy output" }], details: undefined, isError: false });
-  assert.match(lines()[1]!, /⏺ Web search/);
+  assert.match(lines()[1]!, /⌕ Web search/);
   assert.match(lines()[2]!, /Legacy output/);
   assert(!lines().join("\n").includes("0 sources"));
   for (const [kind, cancelled, title, color] of [["timeout", false, "timed out", "warning"], ["unknown", true, "interrupted", "warning"], ["unknown", false, "failed", "error"]] as const) {
     row.updateResult({ content: [{ type: "text", text: "Actual diagnostic" }], details: { searchFailure: { kind, cancelled } }, isError: true });
     assert.match(lines()[1]!, new RegExp(title));
     assert.match(lines()[2]!, /Actual diagnostic/);
-    assert(row.render(100)[1]!.includes(theme.fg(color, "⏺")));
+    assert(row.render(100)[1]!.includes(theme.fg(color, "⌕")));
   }
   row.updateResult({ content: [{ type: "text", text: "The word timeout in arbitrary prose" }], details: undefined, isError: true });
-  assert(row.render(100)[1]!.includes(theme.fg("error", "⏺")));
+  assert(row.render(100)[1]!.includes(theme.fg("error", "⌕")));
 });
 
 test("expansion preserves queries, settings, source URLs and bounded result text", () => {
@@ -92,7 +92,7 @@ test("incomplete final metadata is not labelled successful and typed legacy time
   row.updateResult({ content: value.content, details: { ...result().details, failedQueryCount: undefined }, isError: false });
   assert(!lines()[1]!.includes("Searched web"));
   row.updateResult({ content: value.content, details: { ...result().details, successes: [{}] }, isError: false });
-  assert.match(lines()[1]!, /⏺ Web search/);
+  assert.match(lines()[1]!, /⌕ Web search/);
 });
 
 test("expand hints honor configured bindings and untrusted text cannot emit control sequences", () => {

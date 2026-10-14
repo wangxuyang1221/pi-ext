@@ -179,7 +179,7 @@ managed child 的 Fast 开关保存在自己的 Pi session 中，不写上述共
 - 原生消息位置的单行思考摘要，流式与完成后保持同一规则
 - 隐藏 streaming working row；运行时窗口标题使用 80ms 单色转圈，正文思考状态仍保持静态
 - Read 连续文件分组与每文件三行短预览，以及 `edit`、`write` 的紧凑 renderer
-- Bash 逐条显示 `⏺ Bash(command)` 与前三行输出，按 `Ctrl+O` 原位展开完整命令和已捕获输出
+- Bash 逐条显示 `$ Bash(command)` 与前三行输出，按 `Ctrl+O` 原位展开完整命令和已捕获输出
 
 每段连续 Thinking 从第一个完整、独占源文本行的 `**标题**` 出现时，就在原生消息位置显示 `• 标题`。后续完整标题原地替换，尚未闭合的标题不覆盖上一条；超长标题截断为一行，无标题正文不充当摘要。输入框上方不再安装思考 widget，也不预留它的空白区。
 
@@ -187,7 +187,7 @@ managed child 的 Fast 开关保存在自己的 Pi session 中，不写上述共
 
 这消除了思考延迟补入导致的工具行位移，不代表整个 Pi 零重绘。新增工具、回复、输入和 resize 仍会正常改变布局。实现、缓存边界和性能差异见 [Inline reasoning](docs/plans/codex-ui-inline-reasoning.md#results)。更新后请重启 Pi 并恢复会话，不要只依赖 `/reload` 更新模块。
 
-Write / Edit 从参数生成到执行结束前，都显示黄色静态 `⏺ Writing / Editing` 与路径，目录弱化、文件名突出，不计行或展示中间内容，Ctrl+O 不增加进行中内容。成功圆点绿色，失败圆点红色，可靠识别的中断为黄色；错误正文不重复加叉。
+Write / Edit 从参数生成到执行结束前，都显示黄色静态 `~ Writing / Editing` 与路径，目录弱化、文件名突出，不计行或展示中间内容，Ctrl+O 不增加进行中内容。成功前缀灰色，失败前缀红色，可靠识别的中断为黄色；错误正文不重复加叉。
 
 本地 Write 在内置文件队列中采集旧内容，新建成功显示 `Added`，覆盖显示 `Edited`。普通模式复用 Edit 的行号、增删统计与 diff 样式，默认显示 12 个 diff 行，灰色省略提示紧随正文，Ctrl+O 展开已保存的 diff。low-power 只识别新建或覆盖，不读取旧正文、不生成 Write diff。缺少变化元数据的旧 Write 结果暂时保留原有总行数摘要，不推测新建或覆盖。
 
@@ -267,11 +267,11 @@ pi-codex() {
 
 仓库不会自动修改 Shell 配置，也不提供一个假定 `pi install` 会加入 `PATH` 的 package bin。
 
-Bash、Read、Edit、Write 与 MCP 工具调用统一使用静态大圆点 `⏺`，标记后一个空格，工具标题加粗。参数生成、可见等待态和执行中统一黄色，成功绿色，失败红色；可靠识别的中断或超时用黄色并保留诊断。标记只随执行事件变化，不增加计时器、旋转或闪烁。Read、Bash 保留原生分组，Edit、Write、MCP 仍是独立调用，不新增 batch 卡片。
+工具前缀按用途区分：Bash 使用 `$`、Read 使用 `@`、Edit/Write 使用 `~`，codex-search 的普通搜索和可识别的 MCP 搜索使用 `⌕`。标记后一个空格，工具标题加粗。参数生成、可见等待态和执行中统一黄色，成功使用主题 muted 灰色，失败红色；可靠识别的中断或超时用黄色并保留诊断。非搜索 MCP、subagent、goal 及独立浏览器操作 UI 保持原样。标记只随执行事件变化，不增加计时器、旋转或闪烁。Read、Bash 保留原生分组，Edit、Write、MCP 仍是独立调用，不新增 batch 卡片。
 
 Bash、Read、MCP 的正常正文统一使用 `text`，在 codex-pi 主题中为原 Bash 的亮灰 `#d6d6d6`。目录、行号、连接线与截断提示仍弱化，文件名强调色及 diff 增删色不变。未全局修改 `toolOutput`，因此 subagent、默认工具卡片和 MCP 连接状态不受影响。完整与低功耗模式均支持，低功耗 Bash 仍需展开查看正文。实现及验收见 [Tool status acceptance](docs/tool-status-acceptance.md)，正式代码的隔离 PTY 验收命令为 `pnpm run tool-status:check`。
 
-`read`、`edit`、`write`、`bash` 使用 Pi 0.99.1 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。full 模式下，每个已执行调用显示一条 `⏺ Bash(command)`，`Bash` 文字仍与 `Read`、`Edited` 对齐。尚未执行的 pending 调用暂不显示，错误或完成结果不会被隐藏。内部仍按同一 assistant 消息中的连续 Bash 维护归属，不跨 text、thinking、其他工具、缺失组件或消息合并；重复 ID 的额外组件独立显示。发现重复时，已绑定的旧成员保持原位，尚未绑定该 ID 的组件不再接管 candidate，因而旧 low-power 或缺失组件不能成为后来 full 行搬移旧命令的入口。取消旧统计标题、命令树和耗时列。长命令默认按当前宽度单行省略，展开保留完整命令及逻辑换行。
+`read`、`edit`、`write`、`bash` 使用 Pi 0.99.1 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。full 模式下，每个已执行调用显示一条 `$ Bash(command)`，`Bash` 文字仍与 `Read`、`Edited` 对齐。尚未执行的 pending 调用暂不显示，错误或完成结果不会被隐藏。内部仍按同一 assistant 消息中的连续 Bash 维护归属，不跨 text、thinking、其他工具、缺失组件或消息合并；重复 ID 的额外组件独立显示。发现重复时，已绑定的旧成员保持原位，尚未绑定该 ID 的组件不再接管 candidate，因而旧 low-power 或缺失组件不能成为后来 full 行搬移旧命令的入口。取消旧统计标题、命令树和耗时列。长命令默认按当前宽度单行省略，展开保留完整命令及逻辑换行。
 
 默认预览前三个终端显示行，超出时显示精确的 `… +N lines` 和实际展开绑定。正常正文使用 `text` 色，输出前缀灰色，失败正文红色；已核验的取消与超时使用警告色。无输出时分别显示 `Running…`、`(No content)` 或 `Command failed`。只在宿主明确标记失败且尾部诊断匹配时，才把退出码、取消或超时诊断提到预览首行，不根据日志中的 `Error` 判断失败。
 
@@ -349,7 +349,7 @@ pi \
 
 传给模型的 MCP text 与序列化非 text 内容合计限制为 50 KiB、2000 行，最多序列化 24 个非 text block；`details` 中的 structured output 也限制为 50 KiB。超限 raw 输出不会自动落盘。工具提示会要求 agent 缩小结果或使用 server pagination；需要完整数据时应按服务端 cursor/page/limit 分段获取。
 
-MCP 成功结果默认显示最多五个视觉行的明亮正文，连接线与末尾截断标记 `...` 弱化；成功圆点变绿，不显示 Completed、类型或字节摘要。Ctrl+O 展开详情，正文亮度一致，仍受展示上限约束。失败保留红色错误正文；能匹配本扩展宿主诊断的取消、超时显示黄色及 `Interrupted`、`Timed out` 提示。服务器返回的普通错误文字不据此改判状态。MCP 不依赖 codex-ui，也使用相同的圆点与配色。
+MCP 成功结果默认显示最多五个视觉行的明亮正文，连接线与末尾截断标记 `...` 弱化；搜索工具的成功前缀 `⌕` 为灰色，其他工具保留绿色圆点，不显示 Completed、类型或字节摘要。Ctrl+O 展开详情，正文亮度一致，仍受展示上限约束。失败保留红色错误正文；能匹配本扩展宿主诊断的取消、超时显示黄色及 `Interrupted`、`Timed out` 提示。服务器返回的普通错误文字不据此改判状态。MCP 不依赖 codex-ui。工具名包含独立的 `search` 单词片段时使用搜索前缀，例如 `search`、`web_search_exa`；服务器名称不参与分类。无法明确拆分的历史工具名保持原样，未知工具不会被默认归为搜索。
 
 MCP 历史独立于连接恢复显示。冷恢复扫描全部分支；进程内 resume/import/fork/clone/reload 通过短寿命、仅含显示 identity 的交接文件提前注册 renderer。`/resume` 按 64 KiB 块异步扫描目标 JSONL，不再限制整个会话为 64 MiB；单条记录仍限制为 64 MiB，最多保留 4096 个不同工具身份，单个名称最多 1024 字节。扫描期间文件变化、JSONL 损坏、非普通文件及符号链接会使恢复失败，且不发布不完整交接数据。
 

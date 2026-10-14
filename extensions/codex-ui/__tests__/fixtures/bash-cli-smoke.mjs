@@ -155,7 +155,7 @@ quit
     evidence.samples.push({ mode, pid, phases, events, entries, finalSessionFile, forkEntries });
     fs.writeFileSync(path.join(evidenceDirectory, 'evidence.json'), JSON.stringify(evidence, null, 2));
     const view = phase => phases.find(item => item.phase === phase).visible;
-    assert.doesNotMatch(view('pending'), /⏺ Bash\(/u);
+    assert.doesNotMatch(view('pending'), /\$ Bash\(/u);
     assert.match(view('running'), /first/u);
     assert.match(view('running'), /… \+1 lines \(ctrl\+o to expand\)/u);
     assert.match(phases.find(item => item.phase === 'expanded-top').transcript, /END-COMMAND/u);

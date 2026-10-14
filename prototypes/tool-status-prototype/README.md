@@ -116,4 +116,4 @@ Ctrl+O 使用原生工具展开/折叠。参数 `--before` 切换到改动前的
 
 这是一次性视觉决策工具。可直接采用的是状态映射、固定 glyph 和保留工具正文布局的决定。`status.mjs` 的纯渲染逻辑可作为正式 helper 的起点；临时源码替换、fixture outcome map、播放脚本、并行执行覆盖和 faux provider 不应迁入生产。
 
-该方案已接入正式 renderer，各扩展仍可独立加载与构建。保留此目录用于视觉对照和隔离 PTY 验收，生产入口不得加载其中的播放脚本或执行覆盖。
+本目录默认仍重播原有圆点方案。正式 renderer 已更新为 `$` Bash、`@` Read、`~` Edit/Write 和 `⌕` 搜索，成功前缀为 muted 灰色；`--production` 与 `pnpm run tool-status:check` 校验这一正式版本。各扩展仍可独立加载与构建。保留此目录用于历史视觉对照和隔离 PTY 验收，生产入口不得加载其中的播放脚本或执行覆盖。

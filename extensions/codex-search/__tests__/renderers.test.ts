@@ -58,8 +58,8 @@ test("production search uses the shared semantic palette without background padd
   assert(!/\x1b\[48;/.test(raw), "Search must not inherit the green host background");
   assert(raw.includes(theme.fg("toolTitle", theme.bold("Searched web"))));
   assert(raw.includes(theme.fg("text", "3 sources")));
-  assert(raw.includes(theme.fg("success", "⏺")));
-  assert.equal(raw.split(green).length - 1, 1);
+  assert(raw.includes(theme.fg("muted", "⌕")));
+  assert.equal(raw.split(green).length - 1, 0);
   assert.equal(stripTerminalSequences(raw).match(/responses\/medium\/live/g)?.length, undefined);
 });
 
@@ -92,7 +92,7 @@ test("real execution drives event-based progress with no periodic redraw timer",
   const value = await pending;
   row.updateResult({ ...value, isError: false });
   assert.equal(vi.getTimerCount(), 0);
-  assert(output().includes("⏺"));
+  assert(output().includes("⌕"));
   assert(!output().includes("Searching"));
   assert(stripTerminalSequences(output()).includes(" · 1s"));
   const calls = requestRender.mock.calls.length;
@@ -145,7 +145,7 @@ test("partial failure keeps successful sources but never displays a success chec
   const value = await tool.execute("search-test", params, undefined, update => row.updateResult({ ...update, isError: false }, true), ctx);
   row.updateResult({ ...value, isError: false });
   assert(stripTerminalSequences(output()).includes("1/2 succeeded · 1 failed"));
-  assert(output().includes(theme.fg("warning", "⏺")));
+  assert(output().includes(theme.fg("warning", "⌕")));
   assert(!output().includes("✓"));
   row.setExpanded(true);
   assert(output().includes("Fixture failure"));
@@ -185,7 +185,7 @@ test("history, theme changes, expanded links, and narrow terminals preserve cont
   themes.setThemeInstance(light);
   row.invalidate();
   assert(!output().includes(green));
-  assert(output().includes(light.fg("success", "⏺")));
+  assert(output().includes(light.fg("muted", "⌕")));
   assert(!/\x1b\[48;/.test(output()));
   assert.equal(vi.getTimerCount(), 0);
 });

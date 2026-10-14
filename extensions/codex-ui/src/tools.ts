@@ -1002,7 +1002,7 @@ function renderBashTimelineSummary(
   const branch = width >= visibleWidth(`${BASH_TIMELINE_BRANCH}${TOOL_STATUS_GLYPH} Bash`)
     ? theme.fg("dim", BASH_TIMELINE_BRANCH)
     : "";
-  const prefix = `${branch}${toolStatusMarker(theme, status === "failed" ? failureStatus ?? status : status)} ${theme.fg("toolTitle", theme.bold("Bash"))} ${theme.fg("muted", status)}`;
+  const prefix = `${branch}${toolStatusMarker(theme, status === "failed" ? failureStatus ?? status : status, "$")} ${theme.fg("toolTitle", theme.bold("Bash"))} ${theme.fg("muted", status)}`;
   const primaryWidth = getBashSummaryPrimaryWidth(width);
   const prefixWidth = visibleWidth(prefix);
   const primary = prefixWidth >= primaryWidth

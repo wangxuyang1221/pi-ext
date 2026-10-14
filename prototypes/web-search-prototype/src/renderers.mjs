@@ -1,6 +1,6 @@
 import { keyHint } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
-import { TOOL_STATUS_GLYPH, toolStatusMarker } from "../../../extensions/codex-ui/src/tool-status.ts";
+import { toolStatusMarker } from "../../../extensions/codex-ui/src/tool-status.ts";
 
 const component = render => ({ render, invalidate() {} });
 const clean = value => String(value ?? "").replace(/[\x00-\x1f\x7f-\x9f]/g, " ").replace(/\s+/g, " ").trim();
@@ -27,7 +27,7 @@ export function createSearchRenderers() {
         const title = status === "completed" || status === "partial" ? "Searched web"
           : status === "failed" ? "Web search failed" : status === "timed_out" ? "Web search timed out"
           : status === "interrupted" ? "Web search interrupted" : "Searching web";
-        const marker = status === "partial" ? theme.fg("warning", TOOL_STATUS_GLYPH) : toolStatusMarker(theme, status);
+        const marker = status === "partial" ? theme.fg("warning", "⌕") : toolStatusMarker(theme, status, "⌕");
         const head = `${marker} ${theme.fg("toolTitle", theme.bold(title))}`;
         const queries = Array.isArray(args.queries) ? args.queries : [];
         const suffix = queries.length > 1 ? ` +${count(queries.length - 1, "query", "queries")}` : "";

@@ -29,7 +29,7 @@ test("completed search uses two compact lines and only the host leading blank", 
   const lines = plain(tool);
   assert.equal(lines.length, 3);
   assert.equal(lines[0], "");
-  assert.match(lines[1], /^⏺ Searched web .*\+4 queries/);
+  assert.match(lines[1], /^⌕ Searched web .*\+4 queries/);
   assert.match(lines[2], /^  └ 1 source · 5 queries · 6s/);
   assert(!lines.join("\n").includes("responses/high/live"));
   const adjacent = [...lines, ...lines];
@@ -42,11 +42,11 @@ test("progress updates in place and partial failures remain visible on narrow te
   assert.match(plain(tool)[2], /2\/5 queries completed/);
   tool.updateResult(result({ status: "partial", completed: 5, failed: 1 }));
   assert.match(plain(tool, 40)[2], /4\/5 succeeded · 1 failed/);
-  assert(tool.render(40)[1].includes(theme.fg("warning", "⏺")));
+  assert(tool.render(40)[1].includes(theme.fg("warning", "⌕")));
   for (const status of ["timed_out", "interrupted", "failed"]) {
     tool.updateResult(result({ status, message: status === "timed_out" ? "Request timed out" : "Fixture stopped" }));
     assert.match(plain(tool).join("\n"), status === "timed_out" ? /Request timed out/ : /Fixture stopped/);
-    assert(tool.render(100)[1].includes(theme.fg(status === "failed" ? "error" : "warning", "⏺")));
+    assert(tool.render(100)[1].includes(theme.fg(status === "failed" ? "error" : "warning", "⌕")));
   }
   for (const width of [1, 12, 24, 40, 80, 120]) assert(tool.render(width).every(line => visibleWidth(line) <= width));
 });
