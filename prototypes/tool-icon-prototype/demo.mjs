@@ -10,7 +10,7 @@ const root = await mkdtemp(join(repo, '.tmp/tool-icon-'));
 const handlers = new Map();
 try {
   for (const dir of ['workspace', 'home', 'tmp', 'agent', 'sessions', 'runtime']) await mkdir(join(root, dir));
-  await prepare(repo, join(root, 'runtime'), process.argv.includes('--before'), process.argv.includes('--symbols'));
+  await prepare(repo, join(root, 'runtime'), process.argv.includes('--before'), process.argv.includes('--symbols'), process.argv.includes('--subagent'), process.argv.includes('--production'));
   const env = Object.fromEntries(['PATH', 'TERM', 'COLORTERM', 'LANG', 'LC_ALL'].flatMap(key => process.env[key] ? [[key, process.env[key]]] : []));
   Object.assign(env, {
     HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'), PI_CODING_AGENT_DIR: join(root, 'agent'),
@@ -18,16 +18,24 @@ try {
     PI_TELEMETRY: '0', TOOL_STATUS_ROOT: root, TOOL_STATUS_REPO: repo,
     TOOL_STATUS_PRODUCTION: '1', TOOL_STATUS_FULLSCREEN: process.argv.includes('--fullscreen') ? '1' : '0',
   });
-  const child = spawn(process.execPath, [join(root, 'runtime/runtime.mjs')], { cwd: join(root, 'workspace'), env, stdio: 'inherit' });
+  let child;
+  let stopping = false;
   for (const signal of ['SIGTERM', 'SIGHUP', 'SIGINT']) {
-    const handler = () => child.kill(signal);
+    const handler = () => { stopping = true; child?.kill(signal); };
     handlers.set(signal, handler);
     process.on(signal, handler);
   }
-  process.exitCode = await new Promise((done, reject) => {
-    child.once('error', reject);
-    child.once('exit', code => done(code ?? 1));
-  });
+  const launches = process.argv.includes('--production') && process.argv.includes('--restart') ? 2 : 1;
+  for (let attempt = 0; attempt < launches && !stopping; attempt++) {
+    child = spawn(process.execPath, [join(root, 'runtime/runtime.mjs')], {
+      cwd: join(root, 'workspace'), env: { ...env, TOOL_STATUS_RESUME: attempt ? '1' : '0' }, stdio: 'inherit',
+    });
+    process.exitCode = await new Promise((done, reject) => {
+      child.once('error', reject);
+      child.once('exit', code => done(code ?? 1));
+    });
+    if (process.exitCode !== 0) break;
+  }
 } finally {
   for (const [signal, handler] of handlers) process.off(signal, handler);
   await rm(root, { recursive: true, force: true });

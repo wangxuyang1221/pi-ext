@@ -56,7 +56,13 @@ export function patchSymbols(file, source) {
   return source;
 }
 
-export async function prepare(repo, target, before = false, symbols = false) {
+export function patchSubagent(source) {
+  source = replaceOnce(source, 'theme.fg(callStatusColor(kind, state), "⏺")', 'theme.fg(callStatusColor(kind, state), "󱙺")');
+  source = replaceOnce(source, 'function callStatusColor(kind: SubagentToolKind, state: RendererState): "warning" | "error" | "success"', 'function callStatusColor(kind: SubagentToolKind, state: RendererState): "warning" | "error" | "muted"');
+  return replaceOnce(source, '\n  return "success";\n}', '\n  return "muted";\n}');
+}
+
+export async function prepare(repo, target, before = false, symbols = false, subagent = false, productionSubagent = false) {
   for (const extension of ['codex-ui', 'mcp']) {
     await mkdir(join(target, extension), { recursive: true });
     const { stdout } = await git('git', ['ls-tree', '-r', '--name-only', BASELINE, '--', `extensions/${extension}/src`], { cwd: repo });
@@ -69,6 +75,16 @@ export async function prepare(repo, target, before = false, symbols = false) {
       ).outputText);
     }
   }
+  await mkdir(join(target, 'subagent'), { recursive: true });
+  for (const file of ['renderers', 'layout']) {
+    const path = `extensions/subagent/src/${file}.ts`;
+    const source = productionSubagent ? await readFile(join(repo, path), 'utf8') : await readBaselineSource(repo, path);
+    await writeFile(join(target, `subagent/${file}.js`), ts.transpileModule(
+      file === 'renderers' && !before && !productionSubagent ? patchSubagent(source) : source,
+      { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } },
+    ).outputText);
+  }
+  await writeFile(join(target, 'subagent-demo.mjs'), await readFile(join(repo, 'prototypes/tool-icon-prototype/subagent-demo.mjs'), 'utf8'));
   const theme = JSON.parse(await readFile(join(repo, 'themes/codex-pi.json'), 'utf8'));
   await writeFile(join(target, 'codex-pi.json'), JSON.stringify(theme));
   const base = join(repo, 'prototypes/tool-status-prototype');
@@ -78,6 +94,9 @@ export async function prepare(repo, target, before = false, symbols = false) {
   }
   runtime = replaceOnce(runtime, '"Tool status prototype · "', '"Tool icon prototype · "');
   runtime = replaceOnce(runtime, '"Unified style"', JSON.stringify(before ? 'Original dots' : symbols ? 'Status symbols: $ Bash / @ Read / ~ Edit & Write / ⌕ Search' : 'Command ⌘ / Tool ⚙︎'));
-  runtime = replaceOnce(runtime, 'mcpOnly ? "/demo mcp success" : "/demo all success"', 'mcpOnly ? "/demo mcp success" : "/play"');
+  runtime = 'import { registerSubagentDemo } from "./subagent-demo.mjs";\n' + runtime;
+  runtime = replaceOnce(runtime, '  codexUi?.(proxy);', '  codexUi?.(proxy);\n  registerSubagentDemo(pi, faux, ai, busy);');
+  runtime = replaceOnce(runtime, '/play · /play mixed · /play batch · /play stop', '/agents mixed|success|error · /play · /play mixed · /play batch · /play stop');
+  runtime = replaceOnce(runtime, 'mcpOnly ? "/demo mcp success" : "/demo all success"', JSON.stringify(subagent ? '/agents mixed' : '/play'));
   await writeFile(join(target, 'runtime.mjs'), runtime);
 }

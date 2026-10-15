@@ -56,7 +56,7 @@ test("states the terminal close boundary in text", () => {
   );
   const output = render(details, state);
 
-  assert.equal(call.render(120).join("\n"), "⏺ Closed Lin");
+  assert.equal(call.render(120).join("\n"), "󱙺 Closed Lin");
   assert.equal(
     output,
     "  └ Process stopped · relationship removed · Extension data deleted · Pi session retained",
@@ -225,8 +225,8 @@ test("uses call status markers independently of the agent lifecycle", () => {
       }, { expanded: false, isPartial: false }, coloredTheme as never, {
         state, lastComponent: undefined, isPartial: false, isError: outcome === "error",
       });
-      const color = outcome === "error" ? "error" : outcome === "success" ? "success" : "warning";
-      assert.ok(call.render(500)[0]?.startsWith(`<${color}>⏺</${color}>`), `${operation}/${outcome}`);
+      const color = outcome === "error" ? "error" : outcome === "success" ? "muted" : "warning";
+      assert.ok(call.render(500)[0]?.startsWith(`<${color}>󱙺</${color}>`), `${operation}/${outcome}`);
       if (outcome !== "pending" && operation !== "list") {
         assert.ok(call.render(500)[0]?.includes("<accent>Lin</accent>"), `${operation}: target is not bold`);
       }
@@ -252,7 +252,7 @@ test("preserves expanded information with body text, dim summaries and connected
   assert.deepEqual(collapsed.render(500), ['<dim>  └ </dim><dim>1 assistant · 1 tool</dim>']);
 });
 
-test("keeps success result text green without changing theme success markers", () => {
+test("keeps agent success result text green while muting the call prefix", () => {
   const coloredTheme = { fg: (color: string, text: string) => `<${color}>${text}</${color}>`, bold: (text: string) => text };
   for (const operation of ["wait", "close", "list", "spawn"] as const) {
     const details: SubagentUiDetails = { operation, ok: true, agent: { ...agent, status: "settled" }, agents: [{ ...agent, status: "settled" }], outcome: "settled" };
@@ -263,7 +263,7 @@ test("keeps success result text green without changing theme success markers", (
       const body = renderSubagentResult(operation, {}, { content: [], details }, { expanded, isPartial: false }, coloredTheme as never, context).render(500).join("\n");
       if (operation !== "spawn" || expanded) assert.ok(body.includes("\x1b[38;2;70;232;124m"), `${operation}/${expanded}`);
       assert.ok(!body.includes("<success>"), `${operation}: result must use approved green`);
-      assert.ok(call.render(500)[0]?.startsWith("<success>⏺</success>"));
+      assert.ok(call.render(500)[0]?.startsWith("<muted>󱙺</muted>"));
     }
   }
 });

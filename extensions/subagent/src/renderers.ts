@@ -213,7 +213,8 @@ function renderTitle(
   const suffix = getTitleSuffix(kind, args, state.details);
 
   const parts = [
-    theme.fg(callStatusColor(kind, state), "⏺"),
+    // Nerd Fonts nf-md-robot_outline (U+F167A); agent lifecycle colors stay independent.
+    theme.fg(callStatusColor(kind, state), "󱙺"),
     theme.fg("toolTitle", theme.bold(action)),
   ];
   if (target) parts.push(theme.fg("accent", target));
@@ -223,11 +224,11 @@ function renderTitle(
 }
 
 // Match codex-ui markers while keeping this extension independently buildable.
-function callStatusColor(kind: SubagentToolKind, state: RendererState): "warning" | "error" | "success" {
+function callStatusColor(kind: SubagentToolKind, state: RendererState): "warning" | "error" | "muted" {
   if (state.isError) return "error";
   if (state.isPartial) return "warning";
   if (kind === "wait" && (state.details?.outcome === "timeout" || state.details?.outcome === "interrupted")) return "warning";
-  return "success";
+  return "muted";
 }
 
 function getTitleTarget(

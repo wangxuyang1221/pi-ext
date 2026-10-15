@@ -267,7 +267,7 @@ pi-codex() {
 
 仓库不会自动修改 Shell 配置，也不提供一个假定 `pi install` 会加入 `PATH` 的 package bin。
 
-工具前缀按用途区分：Bash 使用 `$`、Read 使用 `@`、Edit/Write 使用 `~`，codex-search 的普通搜索和可识别的 MCP 搜索使用 `⌕`。标记后一个空格，工具标题加粗。参数生成、可见等待态和执行中统一黄色，成功使用主题 muted 灰色，失败红色；可靠识别的中断或超时用黄色并保留诊断。非搜索 MCP、subagent、goal 及独立浏览器操作 UI 保持原样。标记只随执行事件变化，不增加计时器、旋转或闪烁。Read、Bash 保留原生分组，Edit、Write、MCP 仍是独立调用，不新增 batch 卡片。
+工具前缀按用途区分：Bash 使用 `$`、Read 使用 `@`、Edit/Write 使用 `~`，codex-search 的普通搜索和可识别的 MCP 搜索使用 `⌕`。标记后一个空格，工具标题加粗。参数生成、可见等待态和执行中统一黄色，成功使用主题 muted 灰色，失败红色；可靠识别的中断或超时用黄色并保留诊断。subagent 的六类调用使用 `󱙺`，即 Nerd Font 的 `nf-md-robot_outline`，成功灰色、等待及运行黄色、失败红色，wait 超时或中断黄色；agent 自身状态配色不变。该图标需要包含 U+F167A 的 Nerd Font，缺字可能显示方框，不提供自动字体检测或回退。非搜索 MCP、goal 及独立浏览器操作 UI 保持原样。标记只随执行事件变化，不增加计时器、旋转或闪烁。Read、Bash 保留原生分组，Edit、Write、MCP 仍是独立调用，不新增 batch 卡片。
 
 Bash、Read、MCP 的正常正文统一使用 `text`，在 codex-pi 主题中为原 Bash 的亮灰 `#d6d6d6`。目录、行号、连接线与截断提示仍弱化，文件名强调色及 diff 增删色不变。未全局修改 `toolOutput`，因此 subagent、默认工具卡片和 MCP 连接状态不受影响。完整与低功耗模式均支持，低功耗 Bash 仍需展开查看正文。实现及验收见 [Tool status acceptance](docs/tool-status-acceptance.md)，正式代码的隔离 PTY 验收命令为 `pnpm run tool-status:check`。
 
