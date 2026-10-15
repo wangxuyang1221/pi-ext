@@ -20,8 +20,11 @@ pnpm run prototype:web-search
 # Current production renderer with offline fixtures
 pnpm run prototype:web-search --production
 
-# Production checks, including reload and process restart
+# Production checks, including reload, process restart, and in-process resume
 pnpm run web-search:check
+
+# Actual extension registration and in-process session switching
+pnpm run web-search:resume:check
 
 # Optional fullscreen host
 pnpm run prototype:web-search --fullscreen
@@ -49,6 +52,14 @@ pnpm run prototype:web-search:check
 | `/quit` | 退出，清理隔离 workspace |
 
 Ctrl+O 使用 Pi 原生工具展开/折叠，会同时影响其他工具，不是单独的搜索面板。展开后的长列表通过宿主滚动查看。窗口可自由缩放。
+
+## Resume regression
+
+Pi 会话内 resume 的顺序是先重建历史 UI，再执行 `session_start`。只在 `session_start` 注册搜索工具会导致旧记录退回通用绿色工具框，即使结果 details 完整也无法自动恢复。
+
+正式扩展现在加载时同步注册隐藏的历史展示定义，`session_start` 再按配置替换为可执行工具。展示定义不读取配置、不调用网络，直接执行会拒绝；禁用搜索仍可显示历史，不会因此启用搜索或 standalone 操作。
+
+`extensions/codex-search/__tests__/resume-tui.py` 通过真实 CLI 加载完整搜索扩展，先打开空白 fixture，再调用宿主 `switchSession` 恢复搜索记录，检查紧凑标题、展开、主题及 reload。覆盖普通、全屏与禁用搜索；`--global-host` 可补验 PATH 中的 Pi。所有会话与配置均在仓库 `.tmp/` 内生成，不打开或修改用户原始会话。该测试与只注入 renderer 的旧播放测试互补，不能用后者代替注册顺序验证。
 
 ## Proposed behavior
 

@@ -24,6 +24,9 @@ import {
 import { registerSettingsCommand } from "./command.ts";
 import {
   STANDALONE_TOOL_NAME,
+  DEFAULT_BATCH_SIZE,
+  DEFAULT_FRESHNESS,
+  DEFAULT_SEARCH_CONTEXT_SIZE,
   type Freshness,
   isProjectTrustedContext,
   loadConfig,
@@ -624,6 +627,18 @@ export default function codexWebSearchExtension(pi: ExtensionAPI) {
   const animations = new SearchAnimations();
   const diagnostics = new Map<string, SearchFailureMetadata["searchFailure"]>();
   let generation = 0;
+  // Interactive resume paints history before session_start. Register display definitions
+  // synchronously, without reading project configuration or enabling tool execution.
+  for (const searchApi of ["responses", "standalone"] as const) {
+    const toolName = searchApi === "responses" ? "codex_search" : STANDALONE_TOOL_NAME;
+    pi.registerTool({
+      ...buildTool({ enabled: false, toolName, searchApi, standaloneEnabled: false,
+        defaultFreshness: DEFAULT_FRESHNESS, defaultSearchContextSize: DEFAULT_SEARCH_CONTEXT_SIZE,
+        batchSize: DEFAULT_BATCH_SIZE, sources: {} }, animations),
+      exposure: "hidden",
+      execute: async () => { throw new Error(`${toolName} is display-only until enabled by the session configuration.`); },
+    });
+  }
   registerSettingsCommand(pi);
   pi.on("session_shutdown", () => { generation++; diagnostics.clear(); animations.dispose(); });
   pi.on("agent_settled", () => diagnostics.clear());
@@ -638,6 +653,12 @@ export default function codexWebSearchExtension(pi: ExtensionAPI) {
 
   pi.on("session_start", async (_event, ctx) => {
     const config = await loadConfig(ctx.cwd, isProjectTrustedContext(ctx));
+    // Older hosts ignore exposure, so also remove disabled definitions from the model's tools.
+    const disabledTools = new Set([
+      ...(!config.enabled ? ["codex_search"] : []),
+      ...(!config.enabled || !config.standaloneEnabled ? [STANDALONE_TOOL_NAME] : []),
+    ]);
+    pi.setActiveTools(pi.getActiveTools().filter(name => !disabledTools.has(name)));
     if (!config.enabled) return;
 
     const current = ++generation;

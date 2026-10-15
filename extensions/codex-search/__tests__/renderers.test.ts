@@ -34,7 +34,8 @@ function result() {
 async function harness() {
   const events = new Map<string, (...args: any[]) => any>();
   let tool: ToolDefinition | undefined;
-  search({ registerCommand() {}, on(event: string, handler: (...args: any[]) => any) { events.set(event, handler); },
+  search({ registerCommand() {}, getActiveTools() { return []; }, setActiveTools() {},
+    on(event: string, handler: (...args: any[]) => any) { events.set(event, handler); },
     registerTool(value: ToolDefinition) { tool = value; } } as unknown as ExtensionAPI);
   const ctx = { mode: "tui", cwd: process.cwd(), isProjectTrusted: () => false,
     modelRegistry: { getApiKeyForProvider: async () => "fixture-token" },
