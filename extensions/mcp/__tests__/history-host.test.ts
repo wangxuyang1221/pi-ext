@@ -12,6 +12,7 @@ const expectedVersion = process.env.PI_MCP_TEST_PI_VERSION ?? JSON.parse(readFil
 if (version !== expectedVersion) throw new Error(`Expected Pi ${expectedVersion}, got ${version}`);
 const host = await import(pathToFileURL(join(root, "dist/index.js")).href);
 const loader = await import(pathToFileURL(join(root, "dist/core/extensions/loader.js")).href);
+const { theme } = await import(pathToFileURL(join(root, "dist/modes/interactive/theme/theme.js")).href);
 const name = "mcp__offline__old-tool";
 let directory: string | undefined;
 const inherited = process.env.PI_CODING_AGENT_DIR;
@@ -44,13 +45,15 @@ describe(`MCP history real loader, registry, and row on Pi ${version}`, () => {
     host.initTheme("dark", false);
     const row = new host.ToolExecutionComponent(name, "call", { query: "safe" }, { showImages: false },
       session.getToolDefinition(name), { requestRender() {} }, directory);
+    expect(row.render(120).join("\n")).toContain(theme.fg("warning", "⌁"));
     for (const isError of [false, true]) {
       row.updateResult({ content: [{ type: "text", text: "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight" }], isError });
       for (const expanded of [false, true]) {
         row.setExpanded(expanded);
         for (const width of [1, 24, 60, 120]) expect(row.render(width).every((line: string) => visibleWidth(line) <= width)).toBe(true);
         const text = row.render(120).map(stripTerminalSequences).join("\n");
-        expect(text).toContain(isError ? "Call failed for offline / old-tool" : "Called offline / old-tool");
+        expect(text).toContain(isError ? "⌁ Call failed for offline / old-tool" : "⌁ Called offline / old-tool");
+        expect(row.render(120).join("\n")).toContain(theme.fg(isError ? "error" : "muted", "⌁"));
       }
     }
     const live = { ...definition, description: "current schema", parameters: { type: "object", properties: { current: { type: "string" } } } };

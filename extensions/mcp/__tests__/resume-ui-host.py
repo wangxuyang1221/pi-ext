@@ -174,7 +174,7 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
                 assert f"Called {server_tool}" not in text, (scene, text)
                 assert full_name in text and ('"text"' if live else '"query"') in text, (scene, text)
             else:
-                assert f"Called {server_tool}" in text, (scene, text)
+                assert f"⌁ Called {server_tool}" in text, (scene, text)
                 assert ('"text"' if live else '"query": "synthetic-argument"') not in text, (scene, text)
 
         try:
@@ -191,7 +191,7 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
             if live:
                 os.write(fd, b"Run the fixture call\r")
                 live_text = until("MCP-LIVE-DONE")
-                assert "Called local / echo" in live_text, live_text
+                assert "⌁ Called local / echo" in live_text, live_text
                 trace = [json.loads(line) for line in (run / "trace.jsonl").read_text().splitlines()]
                 assert len(trace) == 1 and not trace[0]["isError"], trace
                 assert trace[0]["details"]["mcp"] is True
@@ -218,7 +218,7 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
                 os.write(fd, b"/fixture-tree branchres\r")
                 tree = until("branch-error")
                 if not baseline:
-                    assert "Call failed for mcp__branch__old__tool" in tree, tree
+                    assert "⌁ Call failed for mcp__branch__old__tool" in tree, tree
                 os.write(fd, b"\x15/fixture-tree result01\r")
                 until("synthetic-result")
                 replacement("clone", "/fixture-clone user0002")

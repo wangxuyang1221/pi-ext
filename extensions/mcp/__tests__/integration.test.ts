@@ -54,7 +54,7 @@ describe("MCP Pi API and renderer integration", () => {
       const renderContext = { state: {}, isError: true, isPartial: false, executionStarted: true, lastComponent: undefined };
       const call = tool.renderCall({ text: "hello" }, theme, renderContext);
       const body = tool.renderResult(result, { isPartial: false, expanded: true }, theme, renderContext);
-      expect(call.render(120)[0]).toContain("\x1b[33m⏺\x1b[39m");
+      expect(call.render(120)[0]).toContain("\x1b[33m⌁\x1b[39m");
       expect(body.render(120).join("\n")).toContain(`\x1b[33m${outcome === "cancelled" ? "Interrupted" : "Timed out"}\x1b[39m`);
       expect(fixture.count("tools/call")).toBe(1);
     } finally {

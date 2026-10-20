@@ -120,14 +120,8 @@ export function renderMcpToolCall(
   const argumentSummary = formatMcpToolArguments(args);
   const state = context.state ?? {};
   state.mcpNames = names;
-  // Ambiguous persisted identities keep their original marker.
-  const segments = "fullName" in names ? names.fullName.split("__") : undefined;
-  const toolName = "toolName" in names ? names.toolName
-    : segments?.length === 3 && segments[0] === "mcp" ? segments[2]! : "";
-  const search = /(?:^|[_-])search(?:$|[_-])/i.test(toolName);
   component.setRenderer((width) => [formatMcpCallLine(
     names,
-    search,
     argumentSummary,
     context.isPartial || state.mcpStatus === undefined || state.mcpStatus === "pending",
     context.isError || state.mcpStatus === "error",
@@ -168,7 +162,6 @@ function getResponsiveComponent(previous: Component | undefined): ResponsiveLine
 
 function formatMcpCallLine(
   names: McpToolNames,
-  search: boolean,
   argumentSummary: string,
   isPartial: boolean,
   isError: boolean,
@@ -181,7 +174,7 @@ function formatMcpCallLine(
     ? sanitizeDiagnosticText(names.fullName, DEFAULT_FIELD_BYTES)
     : `${sanitizeDiagnosticText(names.serverName, DEFAULT_FIELD_BYTES)} / ${sanitizeDiagnosticText(names.toolName, DEFAULT_FIELD_BYTES)}`;
   const base = [
-    theme.fg(isError ? warning ? "warning" : "error" : isPartial ? "warning" : search ? "muted" : "success", search ? "⌕" : "⏺"),
+    theme.fg(isError ? warning ? "warning" : "error" : isPartial ? "warning" : "muted", "⌁"),
     theme.fg("toolTitle", theme.bold(action)),
     theme.fg("accent", theme.bold(displayName)),
   ].join(" ");

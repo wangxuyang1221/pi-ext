@@ -87,7 +87,7 @@ def color_at(text, offset=0):
 def marker_colors():
     colors = []
     for y, line in enumerate(screen.display):
-        prefixes = ("$ Bash", "@ ", "~ Writing", "~ Editing", "~ Write", "~ Edit", "~ Added", "⌕ Call") if production else ("⏺ ",)
+        prefixes = ("$ Bash", "@ ", "~ Writing", "~ Editing", "~ Write", "~ Edit", "~ Added", "⌁ Call") if production else ("⏺ ",)
         stripped = line.lstrip()
         if stripped.startswith("├─ "):
             stripped = stripped[3:]

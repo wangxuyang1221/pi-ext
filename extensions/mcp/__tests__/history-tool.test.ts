@@ -12,7 +12,7 @@ describe("history tools", () => {
     expect(tool.parameters).toMatchObject({ type: "object", properties: {} });
     const context = { state: {}, isPartial: false, isError: false, lastComponent: undefined } as any;
     tool.renderResult!({ content: [{ type: "text", text: "ok" }], details: undefined }, { expanded: false, isPartial: false }, theme, context);
-    expect(tool.renderCall!({}, theme, context).render(120).join("\n")).toContain("Called mcp__a__b__c");
+    expect(tool.renderCall!({}, theme, context).render(120)).toEqual(["⌁ Called mcp__a__b__c"]);
     await expect(tool.execute("id", {}, undefined, undefined, {} as any)).rejects.toThrow("history-only");
   });
 });

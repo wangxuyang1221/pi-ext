@@ -267,7 +267,7 @@ pi-codex() {
 
 仓库不会自动修改 Shell 配置，也不提供一个假定 `pi install` 会加入 `PATH` 的 package bin。
 
-工具前缀按用途区分：Bash 使用 `$`、Read 使用 `@`、Edit/Write 使用 `~`，codex-search 的普通搜索和可识别的 MCP 搜索使用 `⌕`。标记后一个空格，工具标题加粗。参数生成、可见等待态和执行中统一黄色，成功使用主题 muted 灰色，失败红色；可靠识别的中断或超时用黄色并保留诊断。subagent 的六类调用使用 `󱙺`，即 Nerd Font 的 `nf-md-robot_outline`，成功灰色、等待及运行黄色、失败红色，wait 超时或中断黄色；agent 自身状态配色不变。该图标需要包含 U+F167A 的 Nerd Font，缺字可能显示方框，不提供自动字体检测或回退。非搜索 MCP、goal 及独立浏览器操作 UI 保持原样。标记只随执行事件变化，不增加计时器、旋转或闪烁。Read、Bash 保留原生分组，Edit、Write、MCP 仍是独立调用，不新增 batch 卡片。
+工具前缀按用途区分：Bash 使用 `$`、Read 使用 `@`、Edit/Write 使用 `~`，codex-search 的普通搜索使用 `⌕`，所有 MCP 调用统一使用 `⌁`。标记后一个空格，工具标题加粗且起始列对齐。参数生成、可见等待态和执行中统一黄色，成功使用主题 muted 灰色，失败红色；可靠识别的中断或超时用黄色并保留诊断。subagent 的六类调用使用 `󱙺`，即 Nerd Font 的 `nf-md-robot_outline`，成功灰色、等待及运行黄色、失败红色，wait 超时或中断黄色；agent 自身状态配色不变。该图标需要包含 U+F167A 的 Nerd Font，缺字可能显示方框，不提供自动字体检测或回退。goal 及非 MCP 的独立浏览器操作 UI 保持原样。标记只随执行事件变化，不增加计时器、旋转或闪烁。Read、Bash 保留原生分组，Edit、Write、MCP 仍是独立调用，不新增 batch 卡片。
 
 Bash、Read、MCP 的正常正文统一使用 `text`，在 codex-pi 主题中为原 Bash 的亮灰 `#d6d6d6`。目录、行号、连接线与截断提示仍弱化，文件名强调色及 diff 增删色不变。未全局修改 `toolOutput`，因此 subagent、默认工具卡片和 MCP 连接状态不受影响。完整与低功耗模式均支持，低功耗 Bash 仍需展开查看正文。实现及验收见 [Tool status acceptance](docs/tool-status-acceptance.md)，正式代码的隔离 PTY 验收命令为 `pnpm run tool-status:check`。
 
@@ -349,7 +349,7 @@ pi \
 
 传给模型的 MCP text 与序列化非 text 内容合计限制为 50 KiB、2000 行，最多序列化 24 个非 text block；`details` 中的 structured output 也限制为 50 KiB。超限 raw 输出不会自动落盘。工具提示会要求 agent 缩小结果或使用 server pagination；需要完整数据时应按服务端 cursor/page/limit 分段获取。
 
-MCP 成功结果默认显示最多五个视觉行的明亮正文，连接线与末尾截断标记 `...` 弱化；搜索工具的成功前缀 `⌕` 为灰色，其他工具保留绿色圆点，不显示 Completed、类型或字节摘要。Ctrl+O 展开详情，正文亮度一致，仍受展示上限约束。失败保留红色错误正文；能匹配本扩展宿主诊断的取消、超时显示黄色及 `Interrupted`、`Timed out` 提示。服务器返回的普通错误文字不据此改判状态。MCP 不依赖 codex-ui。工具名包含独立的 `search` 单词片段时使用搜索前缀，例如 `search`、`web_search_exa`；服务器名称不参与分类。无法明确拆分的历史工具名保持原样，未知工具不会被默认归为搜索。
+MCP 成功结果默认显示最多五个视觉行的明亮正文，连接线与末尾截断标记 `...` 弱化；所有工具使用灰色成功前缀 `⌁`，不显示 Completed、类型或字节摘要。Ctrl+O 展开详情，正文亮度一致，仍受展示上限约束。失败保留红色错误正文；能匹配本扩展宿主诊断的取消、超时显示黄色及 `Interrupted`、`Timed out` 提示。服务器返回的普通错误文字不据此改判状态。MCP 不依赖 codex-ui。图标不按工具名或服务名分类，新调用与恢复的历史记录统一使用 `⌁`；无法明确拆分的历史工具名仍按完整名称显示，不改变身份判定。
 
 MCP 历史独立于连接恢复显示。冷恢复扫描全部分支；进程内 resume/import/fork/clone/reload 通过短寿命、仅含显示 identity 的交接文件提前注册 renderer。`/resume` 按 64 KiB 块异步扫描目标 JSONL，不再限制整个会话为 64 MiB；单条记录仍限制为 64 MiB，最多保留 4096 个不同工具身份，单个名称最多 1024 字节。扫描期间文件变化、JSONL 损坏、非普通文件及符号链接会使恢复失败，且不发布不完整交接数据。
 

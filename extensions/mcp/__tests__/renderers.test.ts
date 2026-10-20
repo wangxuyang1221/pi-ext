@@ -42,6 +42,18 @@ function stripAnsi(value: string): string {
 }
 
 describe("MCP tool renderers", () => {
+  it("does not replace symbols or recolor successful result text when the prefix changes", () => {
+    const color = vi.fn((_name: string, text: string) => text);
+    const theme = { ...createTheme(), fg: color } as Theme;
+    const body = "Literal symbols: ⏺ ⌕ ⌁";
+    const result = renderMcpToolResult({ content: [{ type: "text", text: body }] },
+      { expanded: false, isPartial: false }, theme,
+      { state: {}, isError: false, isPartial: false, lastComponent: undefined });
+    expect(result.render(120)).toEqual([`  └ ${body}`]);
+    expect(color).toHaveBeenCalledWith("text", body);
+    expect(color.mock.calls.some(([tone]) => tone === "muted")).toBe(false);
+  });
+
   it("reuses unchanged call and preview layouts without segmentation, measurement or styling", () => {
     const segment = vi.spyOn(Intl.Segmenter.prototype, "segment");
     try {
@@ -134,7 +146,7 @@ describe("MCP tool renderers", () => {
     const call = renderMcpToolCall({}, TOOL_NAMES, theme, context);
     expect(call.render(120).join("\n")).toContain("Calling");
     for (const [content, isError, color] of [
-      ["done", false, "success"],
+      ["done", false, "muted"],
       ["denied", true, "error"],
       ['MCP tool "mcp__MultiFetch__fetch_json" was cancelled.', true, "warning"],
       ['MCP tool "mcp__MultiFetch__fetch_json" failed: [MCP:MultiFetch/fetch_json] Connection timed out after 30000ms', true, "warning"],
@@ -143,7 +155,7 @@ describe("MCP tool renderers", () => {
       renderMcpToolResult({ content: [{ type: "text", text: content }] },
         { expanded: false, isPartial: false }, theme, { ...context, isError });
       const title = call.render(120).join("\n");
-      expect(title).toContain(`<${color}>⏺</${color}>`);
+      expect(title).toContain(`<${color}>⌁</${color}>`);
       expect(title).toContain(isError ? "Call failed for" : "Called");
     }
   });
@@ -273,7 +285,7 @@ describe("MCP tool renderers", () => {
       renderMcpToolResult({ content: [{ type: "text", text: isError ? "denied" : "ok" }], details: { isError } },
         { isPartial: false, expanded: false }, theme, context);
       const title = call.render(128).join("\n");
-      expect(title).toContain(isError ? "<error>⏺</error>" : "<success>⏺</success>");
+      expect(title).toContain(isError ? "<error>⌁</error>" : "<muted>⌁</muted>");
       expect(title).toContain(isError ? "Call failed for" : "Called");
     }
   });
@@ -299,7 +311,7 @@ describe("MCP tool renderers", () => {
     );
 
     expect(stripAnsi(call.render(128).join("\n"))).toBe(
-      `⏺ Called MultiFetch / fetch_json (${url})`,
+      `⌁ Called MultiFetch / fetch_json (${url})`,
     );
     const collapsed = stripAnsi(result.render(128).join("\n"));
     expect(collapsed).toBe('  └ {"items": [1, 2]}');
@@ -357,12 +369,12 @@ describe("MCP tool renderers", () => {
       { isError: true, isPartial: false, lastComponent: undefined },
     );
 
-    expect(stripAnsi(runningCall.render(128)[0] ?? "")).toContain("⏺ Calling MultiFetch / fetch_json");
+    expect(stripAnsi(runningCall.render(128)[0] ?? "")).toContain("⌁ Calling MultiFetch / fetch_json");
     expect(stripAnsi(runningResult.render(128)[0] ?? "")).toBe(
       "  └ Running · waiting for response",
     );
     expect(stripAnsi(failedCall.render(128)[0] ?? "")).toContain(
-      "⏺ Call failed for MultiFetch / fetch_json",
+      "⌁ Call failed for MultiFetch / fetch_json",
     );
     expect(stripAnsi(failedResult.render(128)[0] ?? "")).toContain(
       "  └ Failed · request timed out after 30s · ctrl+o expand",
@@ -408,7 +420,7 @@ describe("MCP tool renderers", () => {
     expect(output).toContain("[redacted]");
     expect(output).not.toContain("private-token");
     expect(output).not.toContain("also-private");
-    expect(output).toContain("⏺ Calling MultiFetch / fetch_json");
+    expect(output).toContain("⌁ Calling MultiFetch / fetch_json");
   });
 
   it("uses structured content when an MCP result has no text blocks", () => {

@@ -13,24 +13,24 @@ test("uses category glyphs with muted success and unchanged warning or error sta
   }
 });
 
-test("only classifies explicit search tool names, never server names or arbitrary substrings", () => {
-  for (const [names, search] of [
-    [{ serverName: "exa", toolName: "web_search_exa" }, true],
-    [{ serverName: "fixture", toolName: "search" }, true],
-    [{ serverName: "search", toolName: "fetch_json" }, false],
-    [{ serverName: "fixture", toolName: "research" }, false],
-    [{ fullName: "mcp__exa__web_search_exa" }, true],
-    [{ fullName: "mcp__search__fetch_json" }, false],
-    [{ fullName: "unrecognized_search" }, false],
-    [{ fullName: "mcp__server__ambiguous__search" }, false],
+test("uses the same MCP prefix and muted success for every live or historical identity", () => {
+  for (const names of [
+    { serverName: "exa", toolName: "web_search_exa" },
+    { serverName: "fixture", toolName: "search" },
+    { serverName: "search", toolName: "fetch_json" },
+    { serverName: "fixture", toolName: "research" },
+    { fullName: "mcp__exa__web_search_exa" },
+    { fullName: "mcp__search__fetch_json" },
+    { fullName: "unrecognized_search" },
+    { fullName: "mcp__server__ambiguous__search" },
   ] as const) {
     const state = {};
     const context = { state, lastComponent: undefined, isPartial: false, isError: false };
     const call = renderMcpToolCall({}, names, theme, context);
-    expect(call.render(120)[0]).toContain(`<warning>${search ? "⌕" : "⏺"}</warning>`);
+    expect(call.render(120)[0]).toMatch(/^<warning>⌁<\/warning> <toolTitle>Calling<\/toolTitle> /);
     renderMcpToolResult({ content: [{ type: "text", text: "Found results" }] }, { isPartial: false, expanded: false }, theme, context);
-    expect(call.render(120)[0]).toContain(search ? "<muted>⌕</muted>" : "<success>⏺</success>");
+    expect(call.render(120)[0]).toMatch(/^<muted>⌁<\/muted> <toolTitle>Called<\/toolTitle> /);
     renderMcpToolResult({ content: [{ type: "text", text: "Permission denied" }] }, { isPartial: false, expanded: false }, theme, { ...context, isError: true });
-    expect(call.render(120)[0]).toContain(`<error>${search ? "⌕" : "⏺"}</error>`);
+    expect(call.render(120)[0]).toMatch(/^<error>⌁<\/error> <toolTitle>Call failed for<\/toolTitle> /);
   }
 });

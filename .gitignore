@@ -32,6 +32,7 @@ prototypes/*
 !prototypes/goal-footer-prototype/
 !prototypes/tool-status-prototype/
 !prototypes/tool-icon-prototype/
+!prototypes/mcp-icon-prototype/
 !prototypes/web-search-prototype/
 prototypes/goal-footer-prototype/.tmp/
 prototypes/goal-runtime-probe/.isolated-agent/

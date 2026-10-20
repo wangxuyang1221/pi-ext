@@ -6,8 +6,7 @@ import { stripTerminalSequences, visibleWidth, type Component } from "@earendil-
 import { registerCodexTools } from "../src/tools.js";
 import { renderMcpToolCall, renderMcpToolResult } from "../../mcp/src/renderers.js";
 
-const glyph = (name: string) => ({ bash: "$", read: "@", edit: "~", write: "~", mcp: "⏺" })[name]!;
-const successTone = (name: string) => name === "mcp" ? "success" : "muted";
+const glyph = (name: string) => ({ bash: "$", read: "@", edit: "~", write: "~", mcp: "⌁" })[name]!;
 const colors = { muted: 245, dim: 240, warning: 220, success: 82, error: 196, text: 252, toolOutput: 244, accent: 81 };
 function theme(offset = 0): Theme {
   return {
@@ -124,18 +123,18 @@ test("recognizes only MCP host cancellation and normalized timeout envelopes", (
     'MCP connection failed for "test": [MCP:test] Connection timed out after 100ms',
   ]) {
     const failed = item.result(diagnostic, true);
-    expect(failed[0]).toContain(theme().fg("warning", "⏺"));
+    expect(failed[0]).toContain(theme().fg("warning", "⌁"));
     expect(failed.join("\n")).toContain(theme().fg("warning", diagnostic.includes("timed out") ? "Timed out" : "Interrupted"));
     item.ctx.expanded = true;
     const detailLines = item.paint().slice(2);
     expect(detailLines.map(line => stripTerminalSequences(line).trim()).join(" ")).toBe(diagnostic);
     expect(detailLines.every(line => line.startsWith("    \x1b[38;5;220m"))).toBe(true);
-    expect(item.result(diagnostic, false)[0]).toContain(theme().fg("success", "⏺"));
-    expect(item.result(diagnostic, true, { mcp: true, isError: true })[0]).toContain(theme().fg("error", "⏺"));
+    expect(item.result(diagnostic, false)[0]).toContain(theme().fg("muted", "⌁"));
+    expect(item.result(diagnostic, true, { mcp: true, isError: true })[0]).toContain(theme().fg("error", "⌁"));
   }
   for (const diagnostic of ['Request cancelled', 'timeout while parsing data', 'MCP tool "mcp__other__query" was cancelled.',
     'MCP tool "mcp__test__query" failed: [MCP:test/query] MCP request failed: Request cancelled']) {
-    expect(item.result(diagnostic, true)[0]).toContain(theme().fg("error", "⏺"));
+    expect(item.result(diagnostic, true)[0]).toContain(theme().fg("error", "⌁"));
   }
 });
 
@@ -222,7 +221,7 @@ test("uses yellow static markers from argument generation through execution in b
     }
     item.ctx.executionStarted = true;
     expect(item.paint()[0]).toContain(palette.fg("warning", glyph(tool.name)) + " ");
-    expect(item.result("hello")[0]).toContain(palette.fg(successTone(tool.name), glyph(tool.name)) + " ");
+    expect(item.result("hello")[0]).toContain(palette.fg("muted", glyph(tool.name)) + " ");
     expect(item.result("Permission denied", true)[0]).toContain(palette.fg("error", glyph(tool.name)) + " ");
     expect(visibleWidth(glyph(tool.name))).toBe(1);
     vi.advanceTimersByTime(30_000);
