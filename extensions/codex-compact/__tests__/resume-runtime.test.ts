@@ -76,6 +76,8 @@ test.each(["goal", "user-after-abort", "goal-after-abort"])("continues %s throug
   });
   await loader.reload();
   const { session } = await createAgentSession({ cwd: root, agentDir: join(root, "agent"), modelRuntime, model, resourceLoader: loader,
+    // Pi 1.3 restores the recorded tool set. Explicitly add the goal tools to this legacy fixture.
+    tools: ["fixture_read", "fixture_late", "create_goal", "get_goal", "update_goal"],
     sessionManager: manager, settingsManager });
   const notices: string[] = [];
   const errors: unknown[] = [];

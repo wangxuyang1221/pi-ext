@@ -22,7 +22,13 @@
 
 ## Pi request compatibility
 
-请求转换以 Pi `0.87.0` 为当前核验基线。`src/native-compaction.ts` 复用公开的 transcript 归一化、提示更新渲染和工具状态解析，保留局部消息转换以处理 checkpoint 边界。先重建完整历史中的工具状态与消息位置，再取 checkpoint 后的输出，避免把紧邻 checkpoint 的 system 更新误当作开头提示。旧 `addedToolNames` 按目标版本宿主语义处理，不额外生成宿主已不再发送的工具加载项。
+请求转换原始核验基线为 Pi `0.87.0`。`src/native-compaction.ts` 复用公开的 transcript 归一化、提示更新渲染和工具状态解析，保留局部消息转换以处理 checkpoint 边界。先重建完整历史中的工具状态与消息位置，再取 checkpoint 后的输出，避免把紧邻 checkpoint 的 system 更新误当作开头提示。旧 `addedToolNames` 按目标版本宿主语义处理，不额外生成宿主已不再发送的工具加载项。
+
+跨模型 thinking 回放已单独对齐 Pi `1.3.0` 的 [#10995](https://github.com/earendil-works/pi/issues/10995)：provider、API 或 model 任一不同即丢弃 thinking，不生成普通回答，也不推进文本编号；同模型有效签名中的 reasoning 原样保留，包括空可读文本和 encrypted content。判断在现有 content 遍历内完成，不增加全历史转换或跨请求缓存。
+
+`responses-parity.test.ts` 新增 22 项离线回归，使用 Pi `1.3.0` 实际网络前 payload 对照完整 input、顺序和 ID，覆盖三种身份差异、thinking 边界、checkpoint 前后、模型切换后连续请求、手动压缩、历史不变性和普通内容不匹配的拒绝路径；访问计数检查 N/2N 混合 blocks 线性增长。本次插件 1051 项测试通过，全仓库 2686 项通过、13 项既有测试跳过，类型检查、构建、发布包及 source/dist 加载检查通过。复跑曾出现既有 test-wrapper fixture JSON 读写竞争和 subagent reliability 目录清理失败；已保留失败记录，两项单独复测通过，未修改这些无关用例。测试禁止真实网络，不代表线上 V2 质量已验证。
+
+这只是 thinking 行为适配，不是整个插件的 Pi `1.3.0` 兼容声明。隐藏工具声明投影差异仍未修复，见[兼容性审查 F2](../../docs/pi-0.87.1-to-1.3.0-codex-compact-review.md#f2-hidden-tool-declarations)。
 
 `src/pi-responses.ts` 通过包 `exports` 解析公开的 Responses 工具转换函数，复用 grammar 和 strict schema 处理。Node 的解析用于避开 Pi 文件扩展加载器对 `pi-ai/*` 的前缀别名，不修改宿主或挂接其内部方法。该适配绑定当前依赖版本，真实 `DefaultResourceLoader` 测试覆盖全部八个扩展的源码加载，集成生命周期检查覆盖构建产物加载。
 

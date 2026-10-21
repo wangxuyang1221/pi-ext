@@ -14,7 +14,7 @@
 ## Requirements
 
 - Node.js 22.19 或更高版本
-- 开发、测试和发布支持版本均为 Pi AI、Coding Agent、TUI `0.99.1`，三个 Pi peer 依赖精确固定为 `0.99.1`。只声明支持此版本，不承诺旧版或其他版本兼容。当前验证结果及未通过项见 [infrastructure validation](docs/pi-0.99.1-infrastructure-validation.md)
+- 开发、测试和发布支持版本均为 Pi AI、Coding Agent、TUI `1.3.0`，三个 Pi peer 依赖精确固定为 `1.3.0`。只声明支持此版本，不承诺旧版或其他版本兼容。MCP 接入选择、共享 UI 和验证范围见 [MCP integration status](docs/native-mcp-migration.md)；旧版记录保留在 [infrastructure validation](docs/pi-0.99.1-infrastructure-validation.md)。
 - `subagent` 运行时需要 tmux 3.6 或兼容版本
 - 支持 24-bit color 的终端可获得最接近设计稿的颜色效果
 
@@ -271,7 +271,7 @@ pi-codex() {
 
 Bash、Read、MCP 的正常正文统一使用 `text`，在 codex-pi 主题中为原 Bash 的亮灰 `#d6d6d6`。目录、行号、连接线与截断提示仍弱化，文件名强调色及 diff 增删色不变。未全局修改 `toolOutput`，因此 subagent、默认工具卡片和 MCP 连接状态不受影响。完整与低功耗模式均支持，低功耗 Bash 仍需展开查看正文。实现及验收见 [Tool status acceptance](docs/tool-status-acceptance.md)，正式代码的隔离 PTY 验收命令为 `pnpm run tool-status:check`。
 
-`read`、`edit`、`write`、`bash` 使用 Pi 0.99.1 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。full 模式下，每个已执行调用显示一条 `$ Bash(command)`，`Bash` 文字仍与 `Read`、`Edited` 对齐。尚未执行的 pending 调用暂不显示，错误或完成结果不会被隐藏。内部仍按同一 assistant 消息中的连续 Bash 维护归属，不跨 text、thinking、其他工具、缺失组件或消息合并；重复 ID 的额外组件独立显示。发现重复时，已绑定的旧成员保持原位，尚未绑定该 ID 的组件不再接管 candidate，因而旧 low-power 或缺失组件不能成为后来 full 行搬移旧命令的入口。取消旧统计标题、命令树和耗时列。长命令默认按当前宽度单行省略，展开保留完整命令及逻辑换行。
+`read`、`edit`、`write`、`bash` 使用 Pi 1.3.0 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。full 模式下，每个已执行调用显示一条 `$ Bash(command)`，`Bash` 文字仍与 `Read`、`Edited` 对齐。尚未执行的 pending 调用暂不显示，错误或完成结果不会被隐藏。内部仍按同一 assistant 消息中的连续 Bash 维护归属，不跨 text、thinking、其他工具、缺失组件或消息合并；重复 ID 的额外组件独立显示。发现重复时，已绑定的旧成员保持原位，尚未绑定该 ID 的组件不再接管 candidate，因而旧 low-power 或缺失组件不能成为后来 full 行搬移旧命令的入口。取消旧统计标题、命令树和耗时列。长命令默认按当前宽度单行省略，展开保留完整命令及逻辑换行。
 
 默认预览前三个终端显示行，超出时显示精确的 `… +N lines` 和实际展开绑定。正常正文使用 `text` 色，输出前缀灰色，失败正文红色；已核验的取消与超时使用警告色。无输出时分别显示 `Running…`、`(No content)` 或 `Command failed`。只在宿主明确标记失败且尾部诊断匹配时，才把退出码、取消或超时诊断提到预览首行，不根据日志中的 `Error` 判断失败。
 
@@ -301,6 +301,18 @@ pi \
 ```
 
 ## MCP extension
+
+本 package 默认加载仓库 MCP 插件，由它管理连接、工具执行和 `/mcp`。MCP 渲染与文本清理模块维护在 codex-ui 中，仓库插件通过薄适配层复用；无需启用 codex-ui 扩展本身。当前不安装内置 MCP 的专用 UI 适配器。
+
+Pi 1.3.0 中可在 `~/.pi/agent/settings.json` 顶层 `extensions` 数组追加以下禁用项，避免每次启动提示 `/mcp` 替代内置实现：
+
+```json
+{
+  "extensions": ["-builtin:mcp"]
+}
+```
+
+这是需要合并的配置片段，不要覆盖其他扩展设置。确保 package 设置未排除 `extensions/mcp/dist/index.js`，修改后重启 Pi。此项仅禁用内置 MCP，不关闭 Codemode。以下服务器配置使用仓库插件的格式，超时单位为毫秒，不是内置 MCP 的秒值。
 
 在项目中创建 `.pi/mcp.json`，或在全局创建 `~/.pi/agent/mcp.json`。配置支持 JSON comments、trailing commas，以及 `stdio`、`streamable-http`、`http` 兼容别名和 legacy `sse` transport。
 
@@ -349,7 +361,7 @@ pi \
 
 传给模型的 MCP text 与序列化非 text 内容合计限制为 50 KiB、2000 行，最多序列化 24 个非 text block；`details` 中的 structured output 也限制为 50 KiB。超限 raw 输出不会自动落盘。工具提示会要求 agent 缩小结果或使用 server pagination；需要完整数据时应按服务端 cursor/page/limit 分段获取。
 
-MCP 成功结果默认显示最多五个视觉行的明亮正文，连接线与末尾截断标记 `...` 弱化；所有工具使用灰色成功前缀 `⌁`，不显示 Completed、类型或字节摘要。Ctrl+O 展开详情，正文亮度一致，仍受展示上限约束。失败保留红色错误正文；能匹配本扩展宿主诊断的取消、超时显示黄色及 `Interrupted`、`Timed out` 提示。服务器返回的普通错误文字不据此改判状态。MCP 不依赖 codex-ui。图标不按工具名或服务名分类，新调用与恢复的历史记录统一使用 `⌁`；无法明确拆分的历史工具名仍按完整名称显示，不改变身份判定。
+MCP 成功结果默认显示最多五个视觉行的明亮正文，连接线与末尾截断标记 `...` 弱化；所有工具使用灰色成功前缀 `⌁`，不显示 Completed、类型或字节摘要。Ctrl+O 展开详情，正文亮度一致，仍受展示上限约束。失败保留红色错误正文；能匹配本扩展宿主诊断的取消、超时显示黄色及 `Interrupted`、`Timed out` 提示。服务器返回的普通错误文字不据此改判状态。仓库 MCP 无需启用 codex-ui 扩展，但通过薄适配层复用其构建出的渲染和文本清理模块；样式只在 `extensions/codex-ui/src/mcp-renderers.ts` 维护。图标不按工具名或服务名分类，新调用与恢复的历史记录统一使用 `⌁`；无法明确拆分的历史工具名仍按完整名称显示，不改变身份判定。
 
 MCP 历史独立于连接恢复显示。冷恢复扫描全部分支；进程内 resume/import/fork/clone/reload 通过短寿命、仅含显示 identity 的交接文件提前注册 renderer。`/resume` 按 64 KiB 块异步扫描目标 JSONL，不再限制整个会话为 64 MiB；单条记录仍限制为 64 MiB，最多保留 4096 个不同工具身份，单个名称最多 1024 字节。扫描期间文件变化、JSONL 损坏、非普通文件及符号链接会使恢复失败，且不发布不完整交接数据。
 
@@ -485,7 +497,7 @@ pnpm run check
 
 `pnpm test` 只继承必要系统变量和明确列出的离线验收开关，不透传 AWS/OpenAI/Google 认证环境或外部 Pi 会话路径。Unix 普通 worker 使用独占进程组，正常退出或可处理的取消会先确认组内进程停止，再删除隔离目录；无法确认时保留目录并失败。此路径已在 macOS 验证。Windows 使用 Job Object，但 Linux/Windows 尚无本轮实跑证据；PTY 新会话和私有 tmux server 仍由各自夹具清理，不在普通进程组取消保证内。
 
-主检查已连续三次完整通过，`2644 passed / 13 skipped`。Write 测试按宿主转换契约验收；wrapper 对退出探测中的暂时 EPERM 继续有界等待，只有确认进程组不存在后才删除目录。Fast 和 Goal 测试已修正，accounting 整组此前通过；SDK 取消后不自动执行排队输入的兼容性差异仍保留，tmux 空锁暂未处理。当前结果与平台限制见 [main check validation](docs/pi-0.99.1-main-check-validation.md)。
+0.99.1 历史主检查曾连续三次完整通过，`2644 passed / 13 skipped`；此记录不代表 1.3.0 的验收结果。Write 测试按宿主转换契约验收；wrapper 对退出探测中的暂时 EPERM 继续有界等待，只有确认进程组不存在后才删除目录。Fast 和 Goal 测试已修正，accounting 整组此前通过；SDK 取消后不自动执行排队输入的兼容性差异仍保留，tmux 空锁暂未处理。当前结果与平台限制见 [main check validation](docs/pi-0.99.1-main-check-validation.md)。
 
 常用命令：
 
@@ -513,7 +525,7 @@ pnpm run host:benchmark:check
 
 这些入口记录仓库宿主及相关 Pi 包的实际版本，隔离配置和凭据，并调用各驱动的清理逻辑；不保证强杀驱动后仍能回收脱离进程组的资源。tmux 入口覆盖源码与构建实现。CI 保留 Linux、macOS、Windows 的通用检查矩阵；上述 Unix 专用验收不加入 Windows 的默认检查。跳过的测试不能算作通过，也不要同时运行多个会清理构建产物的验收入口。已有失败和未运行项见 [infrastructure validation](docs/pi-0.99.1-infrastructure-validation.md)。
 
-新的 fixed-boundary 质量评估必须在 `specification.plugins.old.piVersion` 和 `specification.plugins.new.piVersion` 中明确指定宿主版本。当前基线使用 `0.99.1`。直接调用 `runPluginCompaction()` 时传入 `expectedPiVersion`。未指定版本的历史冻结入口仍要求 `0.87.0`；worker 会拒绝不匹配的宿主，结果记录实际版本。旧质量分数不作为新版基线，历史报告不重写。默认验收不运行付费请求。
+新的 fixed-boundary 质量评估必须在 `specification.plugins.old.piVersion` 和 `specification.plugins.new.piVersion` 中明确指定宿主版本。历史基线使用 `0.99.1`；1.3.0 需要单独指定版本并重新生成证据。直接调用 `runPluginCompaction()` 时传入 `expectedPiVersion`。未指定版本的历史冻结入口仍要求 `0.87.0`；worker 会拒绝不匹配的宿主，结果记录实际版本。旧质量分数不作为新版基线，历史报告不重写。默认验收不运行付费请求。
 
 仓库不提交 `dist/`、编译缓存或本地运行日志。CI 从源码构建，并检查是否有被忽略的文件仍受 Git 跟踪。`extensions/codex-compact/src/media/` 中的预编译 WASM、manifest、许可证和第三方源码包是普通构建的输入，继续纳入版本控制；普通构建只校验并复制这些资源，不调用 Rust。`prepack` 会重建八个扩展，发布包只包含编译产物、theme、README、goal 验收报告、license 和上游 attribution。包同时包含 MIT 本地实现与 Apache-2.0 的 Codex goal 复制内容，metadata 使用 `MIT AND Apache-2.0`；具体文件归属见 `extensions/goal/UPSTREAM.md`、`LICENSE` 和 `NOTICE`，不把上游内容改授 MIT。
 

@@ -577,23 +577,12 @@ function messagesToResponseItems(
 			for (const block of message.content) {
 				if (!isJsonObject(block)) continue;
 				if (block.type === "thinking") {
-					if (!sameModel && block.redacted === true) continue;
-					if (sameModel && typeof block.thinkingSignature === "string") {
+					if (!sameModel) continue;
+					if (typeof block.thinkingSignature === "string") {
 						try {
 							const reasoning = JSON.parse(block.thinkingSignature);
 							if (isJsonObject(reasoning) && reasoning.type === "reasoning") items.push(structuredClone(reasoning));
 						} catch {}
-					} else if (!sameModel && typeof block.thinking === "string" && block.thinking.trim()) {
-						const id = textIndex === 0 ? `msg_pi_${messageIndex}` : `msg_pi_${messageIndex}_${textIndex}`;
-						textIndex++;
-						items.push({
-							type: "message",
-							role: "assistant",
-							id,
-							status: "completed",
-							phase: undefined,
-							content: [{ type: "output_text", text: sanitizeUnicode(block.thinking), annotations: [] }],
-						});
 					}
 					continue;
 				}

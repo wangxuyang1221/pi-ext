@@ -4,7 +4,7 @@ import { visibleWidth } from "@earendil-works/pi-tui";
 import {
   renderMcpToolCall,
   renderMcpToolResult,
-} from "../src/renderers.js";
+} from "../src/mcp-renderers.js";
 
 const { wrapSpy, widthSpy, truncateSpy } = vi.hoisted(() => ({
   wrapSpy: vi.fn(), widthSpy: vi.fn(), truncateSpy: vi.fn(),
@@ -42,6 +42,30 @@ function stripAnsi(value: string): string {
 }
 
 describe("MCP tool renderers", () => {
+  it("handles official MCP errors without relying on legacy details", () => {
+    const context = { state: {}, isError: false, isPartial: false, lastComponent: undefined };
+    const result = renderMcpToolResult({ content: [{ type: "text", text: "Permission denied" }],
+      details: { server: "exa", tool: "fetch" }, isError: true },
+    { expanded: false, isPartial: false }, createTheme(), context);
+    expect(result.render(120).join("\n")).toContain("Failed");
+    expect(context.state).toMatchObject({ mcpStatus: "error" });
+  });
+
+  it.each([null, [1, 2], { answer: 42 }])("renders structured-only official results: %j", value => {
+    const result = renderMcpToolResult({ content: [], details: { server: "exa", tool: "fetch" },
+      structuredContent: { content: [], structuredContent: value } },
+    { expanded: false, isPartial: false }, createTheme(),
+    { state: {}, isError: false, isPartial: false, lastComponent: undefined });
+    expect(result.render(120).join("\n")).toContain(JSON.stringify(value).replace(/([,:])/g, "$1 "));
+  });
+
+  it("keeps the official full-output file discoverable below a long collapsed preview", () => {
+    const result = renderMcpToolResult({ content: [{ type: "text", text: "line\n".repeat(200) }],
+      details: { server: "exa", tool: "fetch", fullOutputPath: "/tmp/pi-output.txt" } },
+    { expanded: false, isPartial: false }, createTheme(),
+    { state: {}, isError: false, isPartial: false, lastComponent: undefined });
+    expect(result.render(120).join("\n")).toContain("Full output: /tmp/pi-output.txt");
+  });
   it("does not replace symbols or recolor successful result text when the prefix changes", () => {
     const color = vi.fn((_name: string, text: string) => text);
     const theme = { ...createTheme(), fg: color } as Theme;

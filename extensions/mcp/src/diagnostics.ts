@@ -3,6 +3,8 @@ import { appendFile, chmod, mkdir, rename, rm, stat } from "node:fs/promises";
 import { dirname } from "node:path";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { truncateToWidth } from "@earendil-works/pi-tui";
+import { DEFAULT_FIELD_BYTES, sanitizeDiagnosticText, truncateUtf8, sanitizeControls, redactString } from "../../codex-ui/dist/mcp-text.js";
+export { DEFAULT_FIELD_BYTES, sanitizeDiagnosticText, truncateUtf8 } from "../../codex-ui/dist/mcp-text.js";
 import type {
   McpErrorCategory,
   McpFileLogConfig,
@@ -13,7 +15,6 @@ export const DEFAULT_DIAGNOSTIC_EVENTS = 100;
 export const DEFAULT_DIAGNOSTIC_BYTES = 64 * 1024;
 export const DEFAULT_STDERR_LINES = 100;
 export const DEFAULT_STDERR_BYTES = 64 * 1024;
-export const DEFAULT_FIELD_BYTES = 4 * 1024;
 export const DEFAULT_USER_MESSAGE_WIDTH = 300;
 export const DEFAULT_FILE_LOG_BYTES = 1024 * 1024;
 export const DEFAULT_DIAGNOSTIC_CLOSE_TIMEOUT_MS = 1_000;
@@ -94,7 +95,6 @@ interface FileSinkState {
   failed?: string;
 }
 
-const INTERNAL_HTTP_OBSERVATION_PATTERN = /__PI_MCP_HTTP_OBSERVATION_[0-9]+__(?:\r?\n)?/g;
 const SENSITIVE_KEY = /(?:^|[-_.])(?:authorization|proxy-authorization|cookie|set-cookie|api[-_]?key|token|access[-_]?token|refresh[-_]?token|password|passwd|secret|client[-_]?secret|private[-_]?key)(?:$|[-_.])/i;
 const SENSITIVE_CONTAINER_KEY = /^(?:env|headers)$/i;
 const TEMPORARY_DNS_CODES = new Set(["EAI_AGAIN", "ENOTFOUND"]);
@@ -538,17 +538,6 @@ export function sanitizeDiagnosticValue(value: unknown, maxBytes = DEFAULT_FIELD
   }
 }
 
-export function sanitizeDiagnosticText(value: string, maxBytes = DEFAULT_FIELD_BYTES): string {
-  try {
-    return truncateUtf8(
-      redactString(sanitizeControls(value)),
-      positiveInteger(maxBytes, DEFAULT_FIELD_BYTES),
-    ).value;
-  } catch {
-    return "[unavailable]";
-  }
-}
-
 export function summarizeHtml(value: string, httpStatus?: number): string {
   if (!/<(?:!doctype\s+html|html|head|body|title)\b/i.test(value)) return value;
   const titleMatch = value.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
@@ -561,32 +550,6 @@ export function summarizeHtml(value: string, httpStatus?: number): string {
   return rayMatch
     ? `${prefix}: ${title} (Cloudflare Ray ID ${rayMatch[1]})`
     : `${prefix}: ${title}`;
-}
-
-export function truncateUtf8(
-  value: string,
-  maxBytes: number,
-): { value: string; truncated: boolean; originalBytes: number } {
-  const limit = Math.max(1, Math.floor(maxBytes));
-  const originalBytes = Buffer.byteLength(value, "utf8");
-  if (originalBytes <= limit) return { value, truncated: false, originalBytes };
-  const suffix = `… [truncated; originalBytes=${originalBytes}]`;
-  const suffixBytes = Buffer.byteLength(suffix, "utf8");
-  const decoration = suffixBytes <= limit ? suffix : "";
-  const target = Math.max(0, limit - Buffer.byteLength(decoration, "utf8"));
-  let output = "";
-  let bytes = 0;
-  for (const character of value) {
-    const nextBytes = Buffer.byteLength(character, "utf8");
-    if (bytes + nextBytes > target) break;
-    output += character;
-    bytes += nextBytes;
-  }
-  return {
-    value: `${output}${decoration}`,
-    truncated: true,
-    originalBytes,
-  };
 }
 
 function sanitizeValue(value: unknown, maxBytes: number, depth = 0, seen = new WeakSet<object>(), key?: string): unknown {
@@ -625,24 +588,6 @@ function sanitizeNormalizedError(error: McpNormalizedError, maxBytes: number): M
     DEFAULT_USER_MESSAGE_WIDTH,
   );
   return value;
-}
-
-function sanitizeControls(value: string): string {
-  return value
-    .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, "")
-    .replace(/\x1b(?:\[[0-?]*[ -/]*[@-~]|[@-_])/g, "")
-    .replace(/\r\n?/g, "\n")
-    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/g, "");
-}
-
-function redactString(value: string): string {
-  let output = value.replace(INTERNAL_HTTP_OBSERVATION_PATTERN, "");
-  output = output.replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi, "$1 [redacted]");
-  output = output.replace(/\b(Authorization|Proxy-Authorization|Cookie|Set-Cookie)\s*:\s*[^\n]+/gi, "$1: [redacted]");
-  output = output.replace(/([?&](?:api[-_]?key|token|access[-_]?token|refresh[-_]?token|password|passwd|secret|client[-_]?secret)=)[^&#\s]*/gi, "$1[redacted]");
-  output = output.replace(/(["']?(?:api[-_]?key|token|access[-_]?token|refresh[-_]?token|password|passwd|secret|client[-_]?secret)["']?\s*[:=]\s*["']?)[^\s,"';&}]+/gi, "$1[redacted]");
-  output = output.replace(/\b(https?:\/\/)([^\s/@:]+):([^\s/@]+)@/gi, "$1[redacted]:[redacted]@");
-  return output;
 }
 
 function sanitizeSensitiveContainer(value: unknown): unknown {

@@ -34,7 +34,7 @@ describe(`MCP history real loader, registry, and row on Pi ${version}`, () => {
     expect(definition.description).toBe("");
     const session = Object.create(host.AgentSession.prototype);
     Object.assign(session, {
-      agent: { state: { tools: [] } }, _toolRegistry: new Map(), _toolDefinitions: new Map(),
+      agent: { state: { tools: [] } }, _toolRegistry: new Map(), _toolDefinitions: new Map(), _pendingToolNames: new Set(),
       _baseToolDefinitions: new Map(), _customTools: [], _rebuildSystemPrompt: () => "fixture",
       _extensionRunner: { getAllRegisteredTools: () => [...extension.tools.values()] },
     });
@@ -64,7 +64,7 @@ describe(`MCP history real loader, registry, and row on Pi ${version}`, () => {
     session.setActiveToolsByName([name]);
     expect(session.getActiveToolNames()).toEqual([name]);
     await expect(definition.execute("id", {})).rejects.toThrow("history-only");
-    session._excludedToolNames = new Set([name]);
+    session._excludedTools = (toolName: string) => toolName === name;
     session._refreshToolRegistry();
     session.setActiveToolsByName([name]);
     expect(session.getToolDefinition(name)).toBeUndefined();

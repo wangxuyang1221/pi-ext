@@ -73,7 +73,6 @@ export class CodexHeader implements Component {
 }
 
 const PLACEHOLDER = "Ask Pi to do anything";
-const FULL_RESET = "\x1b[0m";
 
 export class CodexEditor extends CustomEditor {
   constructor(
@@ -150,13 +149,9 @@ function addPrompt(line: string, theme: Theme, showPlaceholder: boolean): string
 
   if (!showPlaceholder) return prompted;
 
-  const resetIndex = prompted.indexOf(FULL_RESET);
-  const placeholder = theme.fg("dim", PLACEHOLDER);
-  if (resetIndex === -1) {
-    return `${prompted}${placeholder}`;
-  }
-
-  const insertionPoint = resetIndex + FULL_RESET.length;
-  prompted = `${prompted.slice(0, insertionPoint)}${placeholder}${prompted.slice(insertionPoint)}`;
-  return prompted;
+  // Pi 1.3 uses cursor markers instead of a full ANSI reset around the empty cell.
+  // Remove only right padding, preserving both the hardware and fake cursor markers.
+  const prefix = prompted.trimEnd();
+  const gap = " ".repeat(Math.max(0, 2 - visibleWidth(prefix)));
+  return `${prefix}${gap}${theme.fg("dim", PLACEHOLDER)}`;
 }
