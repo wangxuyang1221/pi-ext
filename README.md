@@ -180,6 +180,7 @@ managed child 的 Fast 开关保存在自己的 Pi session 中，不写上述共
 - 隐藏 streaming working row；运行时窗口标题使用 80ms 单色转圈，正文思考状态仍保持静态
 - Read 连续文件分组与每文件三行短预览，以及 `edit`、`write` 的紧凑 renderer
 - Bash 逐条显示 `$ Bash(command)` 与前三行输出，按 `Ctrl+O` 原位展开完整命令和已捕获输出
+- Codemode 调用树与 `/inspect` 面板，分别显示父脚本输出和子调用结果
 
 每段连续 Thinking 从第一个完整、独占源文本行的 `**标题**` 出现时，就在原生消息位置显示 `• 标题`。后续完整标题原地替换，尚未闭合的标题不覆盖上一条；超长标题截断为一行，无标题正文不充当摘要。输入框上方不再安装思考 widget，也不预留它的空白区。
 
@@ -194,6 +195,16 @@ Write / Edit 从参数生成到执行结束前，都显示黄色静态 `~ Writin
 Write / Edit 的 diff 显示层在高亮和背景填充之前移除回车及原始终端控制序列，避免 CRLF 行被补齐空格擦空。CSI 按完整终结字符范围识别，光标序列后紧接的源码保持完整；OSC 等字符串控制序列若到行尾仍未闭合，则隐藏该行剩余 payload，不延伸到下一源码行。磁盘内容和持久化 patch 保持原样。
 
 Write diff 采集限制为旧、新文本各 1 MiB，合计 4000 行，保存的 patch 不超过 2 MiB。不可读或超限时保留真实成功标题，普通模式显示 `Diff unavailable`，不编造增删数。Write / Edit 每行只高亮前 4096 个 UTF-16 单元，其余内容保留。已通过 Pi 0.84.3 与 0.85.1 的普通、全屏 CLI 验收；测试及性能边界见 [Write / Edit validation](docs/codex-ui-write-edit-validation.md)。
+
+### Codemode call tree
+
+Pi 1.3.0 的 codemode 使用调用树显示。收起时预览前 5 项并标出剩余数量，按 `app.tools.expand` 的实际绑定展开，默认 `Ctrl+O`。兄弟调用按开始顺序排列，多层调用保留父子归属。Read/Bash 沿用现有正文布局，Edit/Write 在捕获数据足够时显示原有 diff；未知工具和模型辅助调用使用通用摘要。
+
+父脚本完成不表示所有子调用成功。被脚本捕获的失败仍显示警告，第 5 项以后的失败也不会被隐藏。中断、超时和缺失状态分别说明；状态未知不推断为成功，也不暗示此前文件修改已经回滚。`Output to model` 显示脚本返回给模型的内容，子工具原始结果另行展示。
+
+`/inspect` 打开当前分支最近一次 codemode。`Tab` / `Shift+Tab` 切换 Calls、Script、Output，上下键选择调用，翻页键滚动，取消键关闭；面板提示使用当前快捷键绑定。宽屏分栏，窄屏只显示所选详情。原始结果仅在本进程有界缓存中保留，不新增持久化；重启、切换分支、reload 或 compaction 后只重建宿主保留的元数据，缺失正文、参数或 diff 会明确提示。图片只提供占位，不缓存二进制预览。
+
+显示层最多保留 32 个父记录、每父 1024 项、合计 4096 个子项；原始子结果和派生布局各按 4 MiB 预算淘汰。超过预算只影响 UI 详情，不改变执行结果。`/lowpower on` 将子项正文改为短预览。生产入口只提供调用树，不提供原型的布局切换和测试命令。契约、预算及验收见 [Codemode validation](docs/codex-ui-codemode-validation.md)，复验命令为 `pnpm run codemode:check`。
 
 ### Tool execution settings
 
@@ -231,7 +242,7 @@ SDK 内存覆盖、自定义 settings 存储和宿主自定义执行器不在自
 
 ### Low-power rendering
 
-`/lowpower on` 只负责简化 `write`、`edit`、`bash` 的渲染；`/lowpower off` 恢复完整工具输出，`/lowpower status` 仅查询当前状态。两种模式都会隐藏 Pi 内置的 streaming working row，并使用同一套原位单行思考摘要。窗口标题独立使用 `80ms` 单色转圈，与自动 compact 相同帧序列；项目名和会话名保持固定，不再播放动态省略号。按单调时钟选择帧，延迟后跳过错过的帧，不补播；仅写入 OSC 标题，不请求正文重绘。动画跨重试和自动 compact 保持运行，任务 settled、取消完成或会话退出时停止，恢复静态标题；手动 compact 也有标题反馈。默认 package manifest 将 `codex-ui` 放在 `codex-compact` 前加载，使标题在耗时压缩 handler 开始前启动；手动分别加载扩展时也需保持这个相对顺序。两种 low-power 模式行为一致，工具计时器不受影响。
+`/lowpower on` 只负责简化 `write`、`edit`、`bash` 和 codemode 子项的渲染；`/lowpower off` 恢复完整工具输出，`/lowpower status` 仅查询当前状态。两种模式都会隐藏 Pi 内置的 streaming working row，并使用同一套原位单行思考摘要。窗口标题独立使用 `80ms` 单色转圈，与自动 compact 相同帧序列；项目名和会话名保持固定，不再播放动态省略号。按单调时钟选择帧，延迟后跳过错过的帧，不补播；仅写入 OSC 标题，不请求正文重绘。动画跨重试和自动 compact 保持运行，任务 settled、取消完成或会话退出时停止，恢复静态标题；手动 compact 也有标题反馈。默认 package manifest 将 `codex-ui` 放在 `codex-compact` 前加载，使标题在耗时压缩 handler 开始前启动；手动分别加载扩展时也需保持这个相对顺序。两种 low-power 模式行为一致，工具计时器不受影响。
 
 启用 Pi 的 `terminal.showTerminalProgress` 后，终端原生 edge progress 仍由 Pi 管理，不进入 TUI 行渲染管线。Low-power 状态仅保存在当前 extension instance 中；`/new`、`/resume`、`/fork`、`/reload` 或进程重启会重新加载扩展，并恢复为默认关闭。
 

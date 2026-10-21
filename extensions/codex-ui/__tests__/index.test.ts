@@ -208,7 +208,7 @@ test("lowpower command rejects invalid arguments without changing mode", async (
 test("lowpower command completes only supported arguments", async () => {
   const { command } = createLowPowerCommandHarness();
 
-  assert.equal(command.description, "Toggle low-power rendering for write, edit, and bash");
+  assert.equal(command.description, "Toggle low-power rendering for write, edit, bash, and codemode");
   assert.deepEqual(await command.getArgumentCompletions?.(""), [
     { value: "on", label: "on" },
     { value: "off", label: "off" },

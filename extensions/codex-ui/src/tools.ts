@@ -16,6 +16,7 @@ import {
   type ExtensionContext,
   type KeybindingsManager,
   type Theme,
+  type ToolRenderers,
 } from "@earendil-works/pi-coding-agent";
 import {
   stripTerminalSequences,
@@ -159,7 +160,7 @@ export function registerCodexTools(
   pi: ExtensionAPI,
   factories: CodexToolFactories = DEFAULT_FACTORIES,
   services: CodexToolRenderServices = {},
-): void {
+): ReadonlyMap<string, ToolRenderers> {
   const getReadDefinition = createDefinitionCache(factories.read);
   const getEditDefinition = createDefinitionCache(factories.edit);
   // Injected factories may target remote filesystems; never probe local paths for them.
@@ -442,6 +443,7 @@ export function registerCodexTools(
     },
   };
   pi.registerTool(bashTool);
+  return new Map<string, ToolRenderers>([["read", readTool as unknown as ToolRenderers], ["edit", editTool as unknown as ToolRenderers], ["write", writeTool as unknown as ToolRenderers], ["bash", bashTool as unknown as ToolRenderers]]);
 }
 
 export function parseDisplayDiff(diff: string): DisplayDiffLine[] {

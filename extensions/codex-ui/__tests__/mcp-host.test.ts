@@ -71,7 +71,10 @@ it("executes and renders repository MCP tools through direct calls and codemode"
     const renderers = runner.resolveToolRenderers(definition.name, () => definition)!;
     expect(renderers.renderShell).toBe("self");
     const codemode = session.getToolDefinition("codemode")!;
-    expect(runner.resolveToolRenderers("codemode", () => codemode)).toBe(codemode);
+    const executeCodemode = codemode.execute;
+    const codemodeRenderers = runner.resolveToolRenderers("codemode", () => codemode)!;
+    expect(codemodeRenderers.renderShell).toBe("self");
+    expect(session.getToolDefinition("codemode")!.execute).toBe(executeCodemode);
 
     await session.prompt("Call the MCP echo tool directly.");
     const result = session.messages.find(message => message.role === "toolResult" && message.toolName === definition.name);
@@ -98,6 +101,14 @@ it("executes and renders repository MCP tools through direct calls and codemode"
     expect(script.isError, JSON.stringify(script)).not.toBe(true);
     expect(JSON.stringify(script.content)).toContain("Script MCP result");
     expect(fixture.count("tools/call")).toBe(2);
+    const scriptRow = new ToolExecutionComponent("codemode", "script-call", {}, { showImages: false },
+      { ...codemode, ...codemodeRenderers }, { requestRender() {} } as never, root);
+    scriptRow.updateResult(script);
+    const scriptText = stripTerminalSequences(scriptRow.render(120).join("\n"));
+    expect(scriptText).toContain("Codemode");
+    expect(scriptText).toContain("Script completed");
+    expect(scriptText).toContain("mcp__remote__echo");
+    expect(session.getToolDefinition("codemode")!.execute).toBe(executeCodemode);
   } finally {
     if (session) {
       await session.extensionRunner?.emit({ type: "session_shutdown", reason: "exit" });

@@ -7,6 +7,7 @@ import {
 
 import { CodexEditor, CodexFooter, CodexHeader } from "./components.js";
 import { registerCodexTools, type CodexToolFactories, type CodexToolRenderServices } from "./tools.js";
+import { registerCodemodeUi } from "./codemode.js";
 import { ReasoningSummary } from "./reasoning-summary.js";
 import { registerTerminalTitleSpinner } from "./terminal-title.js";
 import { readGoalDisplay, type GoalFooterDisplay } from "./goal-display.js";
@@ -32,14 +33,20 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
   const reasoningSummary = new ReasoningSummary();
   const installTitleSpinner = registerTerminalTitleSpinner(pi);
 
-  registerCodexTools(pi, options.toolFactories, {
+  const nativeRenderers = registerCodexTools(pi, options.toolFactories, {
     getExecutionOptions: options.getExecutionOptions,
     getKeybindings: () => currentKeybindings,
     isLowPowerEnabled: () => lowPowerEnabled,
   });
 
+  const codemode = registerCodemodeUi(pi, {
+    nativeRenderers,
+    getKeybindings: () => currentKeybindings,
+    isLowPowerEnabled: () => lowPowerEnabled,
+  });
+
   pi.registerCommand("lowpower", {
-    description: "Toggle low-power rendering for write, edit, and bash",
+    description: "Toggle low-power rendering for write, edit, bash, and codemode",
     getArgumentCompletions(prefix) {
       const normalizedPrefix = prefix.trim().toLowerCase();
       const matches = LOW_POWER_ARGUMENTS
@@ -65,6 +72,7 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
       } else {
         lowPowerEnabled = !lowPowerEnabled;
       }
+      codemode.refresh();
       hideInlineWorkingRow(ctx.ui);
       ctx.ui.setStatus("codex-ui-lowpower", lowPowerEnabled ? "Low power" : undefined);
       ctx.ui.notify(`Low power: ${lowPowerEnabled ? "on" : "off"}`, "info");
