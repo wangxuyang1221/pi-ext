@@ -2,7 +2,7 @@
 
 ## Understanding
 
-在 Pi `1.3.0` 上完成 codex-compact 的七项修复，并补齐它们共同依赖的来源追踪、请求快照、异步提交保护和集成验收。只修改本仓库插件，不要求修改上游 Pi；生产修复已落地，执行记录见下文。I16 的 Linux 实机验证尚未完成；其余已勾选项表示本地实现及对应离线验证完成，不代表真实服务端验收。
+在 Pi `1.3.0` 上完成 codex-compact 的七项修复，并补齐它们共同依赖的来源追踪、请求快照、异步提交保护和集成验收。只修改本仓库插件，不要求修改上游 Pi。第一轮实现及离线验证记录见下文；复审指出的四项回归已按[第二轮修复 TODO](codex-compact-plugin-repair-round-2-todo.md)完成本地行为验证。I10、I13 由第二轮的旧来源证明及共享容量额度补齐，F4 的失败请求清理和 F6/F7 的端到端认证终止也纳入正式回归。第二轮完整检查及交付状态以该 TODO 的 Evidence Record 为准。I16 尚缺完整 Linux 验收，外部复审的 fixture 通过结果不代表全仓检查完成。
 
 依据为 [研究报告](codex-compact-plugin-repair-proof.md)及其 36 组离线探针。研究基线是 `8667f5fdd41419f7475e5dc5a2421cef19dfccb0`；隔离候选通过不等于生产代码已修复。此前的 [Pi 1.3 compatibility todo](codex-compact-pi-1.3-compatibility-todo.md)保留其已完成范围，本计划接续处理其余问题。
 
@@ -58,13 +58,13 @@
 
 - [x] **I8 — 将压缩输入、保留历史和当前输入分开，修复 F3。** 建立共用 compaction plan，分别表示 `compactionInput`、`retentionInput`、`preservedInput`、受保护 suffix 及其来源/覆盖。只把确认为本次待发送且尚无执行进展的输入从历史压缩与 retention 排除，最终补回一次；已经执行工具的历史进入正常压缩规则，不无限保护整段任务。移除按最后 wire user 和全文相等决定补回的逻辑，不用 stopReason、manual 或 willRetry 推断任务完成。
 - [x] **I9 — 持久化并解析必要的来源/覆盖元数据。** 按 L1 扩展新 checkpoint 的可选字段，同步 writer、parser 校验、续压、分支恢复和序列化 round trip，避免 parser 静默丢字段。两个同文但不同 entry 的输入保持独立；synthetic tool result 关联调用来源，不伪造独立 entry。元数据不存储重复的完整消息正文。
-- [x] **I10 — 实现旧 checkpoint 的保守兼容与原子替换。** 缺少来源元数据时，只采用可唯一证明或可证明有效回放一致的映射；不按相似文本删除、不改写 opaque 内容、不原地清空旧保留历史。无法证明时保留旧 checkpoint 并中止本次操作；只有新结果通过回放与适用性校验、完成 I12–I13 的预算处置后才提交替换，失败和取消均不损坏旧状态。预算处置允许“本地仍估算超窗但交给 provider 判断”的结果，不要求本地估算必须低于窗口。
+- [x] **I10 — 实现旧 checkpoint 的保守兼容与原子替换。** 缺少来源元数据时，只采用可唯一证明或可证明有效回放一致的映射；不按相似文本删除、不改写 opaque 内容、不原地清空旧保留历史。无法证明时保留旧 checkpoint 并中止本次操作；只有新结果通过回放与适用性校验、完成 I12–I13 的预算处置后才提交替换，失败和取消均不损坏旧状态。预算处置允许“本地仍估算超窗但交给 provider 判断”的结果，不要求本地估算必须低于窗口。复审发现的旧格式 pending user manual 遗漏已由第二轮 R2-1 补齐，包含可证明迁移、不可证明取消与持久化验证。
 
 #### Complete request budget
 
 - [x] **I11 — 用最终组装请求做容量判断，修复 F6 的遗漏。** 共用估算入口覆盖 opaque prefix、retained history、受保护 suffix、当前输入及附件、instructions/tools；保持 L3 确定的 scope 与 usage 语义。移除 no-tail 对“存在可压缩历史且最终请求超窗”场景的错误短路；远程 compaction input 仍只包含允许压缩的历史，不能为触发调度而把新输入塞入历史。
 - [x] **I12 — 按剩余窗口缩减旧明文，并复查组装结果。** 64k 保留为历史明文预算上限，实际预算受 effective window 减去不可缩减部分后的余额约束，不重复扣除 95% margin。收到新 opaque 结果后，以统一 estimator 重新组装并估算，计入截断标记、结构和附件成本；采用有限、单调缩减的本地调整，显式处理无进展。不能使用探针单例中的 22-token 差值作为固定修正值，也不能假设旧 opaque 已覆盖所有将删掉的保留文本。
-- [x] **I13 — 限制容量修复次数并保留正常发送机会。** 每个 logical request 最多一次本地估算触发的远程历史修复，以及一次实际 provider overflow 后的恢复；内部 HTTP retry 独立按原有上限计数，checkpoint 更新不得重置 logical attempt。新输入或模型变化按 L3 建立新 scope。无进一步可压历史或本地估算仍偏高时，不截断当前输入，允许正常 provider 尝试；实际 overflow 且无收益/已达上限时明确结束恢复，不循环重压。
+- [x] **I13 — 限制容量修复次数并保留正常发送机会。** 每个 logical request 最多一次本地估算触发的远程历史修复，以及一次实际 provider overflow 后的恢复；内部 HTTP retry 独立按原有上限计数，checkpoint 更新不得重置 logical attempt。新输入或模型变化按 L3 建立新 scope。无进一步可压历史或本地估算仍偏高时，不截断当前输入，允许正常 provider 尝试；实际 overflow 且无收益/已达上限时明确结束恢复，不循环重压。复审发现的同 hash 容量下切遗漏已由第二轮 R2-4 补齐，两个容量入口和 automatic 共用额度，新 scope 与 hash 迁移对照保持通过。
 
 #### Transport and test infrastructure
 

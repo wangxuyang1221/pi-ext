@@ -19,6 +19,7 @@ vi.mock("node:timers/promises", () => ({
 import { createNativeCheckpoint } from "../src/remote-compaction.js";
 import { convertToLlm, SessionManager, type SessionEntry } from "@earendil-works/pi-coding-agent";
 import { projectBranchMessages } from "../src/session-projection.js";
+import { compactionInputPlan, isTerminalCompactionFailure, UnprovenPreservedInputError } from "../src/native-compaction.js";
 import { approximateResponseItemTokens, isContextWindowCompactionError, compactionFailureClassification, estimateCompactionWindowPrefillTokens, buildCodexHeaders, buildCompactionRequestBody, buildReplacementHistory, buildToolPayload, callRemoteCompaction, createBranchInputSnapshot, effectiveInputForBranch, findNativeCheckpoint, fullInputForBranch, modelKey, NATIVE_COMPACTION_BYPASS_KIND, NATIVE_COMPACTION_BYPASS_VERSION, NATIVE_COMPACTION_KIND, NATIVE_COMPACTION_VERSION, parseNativeCompactionDetails, piContextInputForBranch, retainRecentMessages, trimFunctionCallHistoryToFitContextWindow } from "../src/native-compaction.js";
 
 afterEach(() => vi.useRealTimers());
@@ -49,6 +50,93 @@ async function captureFailure(operation: Promise<unknown>): Promise<unknown> {
 }
 
 describe("Codex compaction history", () => {
+	test("classifies only the typed unproven pending input diagnostic", () => {
+		expect(compactionFailureClassification(new UnprovenPreservedInputError())).toBe("preserved_input_source_unproven");
+		expect(compactionFailureClassification(Object.assign(new Error("unknown"), { code: "preserved_input_source_unproven" }))).toBe("compaction_failed");
+	});
+	test.each([401, 403])("preserves typed HTTP %i failure even with an empty body", async status => {
+		const fetch = vi.fn(async () => new Response("", { status }));
+		vi.stubGlobal("fetch", fetch);
+		try {
+			const error = await captureFailure(callRemoteCompaction(remoteRequest()));
+			expect(error).toMatchObject({ compactionHttpStatus: status, compactionTerminalReason: status === 401 ? "authentication" : "permission", retryWithCurrentModel: false });
+			expect(isTerminalCompactionFailure(error)).toBe(true);
+			expect(Object.keys(error as Error)).not.toContain("compactionHttpStatus");
+			expect(fetch).toHaveBeenCalledTimes(1);
+		} finally { vi.unstubAllGlobals(); }
+	});
+	test.each([401, 403])("keeps HTTP %i terminal after its body deadline and releases resources", async status => {
+		vi.useFakeTimers();
+		const cancel = vi.fn();
+		const body = new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(new TextEncoder().encode("partial")); }, cancel });
+		const fetch = vi.fn(async () => new Response(body, { status }));
+		vi.stubGlobal("fetch", fetch);
+		try {
+			const result = captureFailure(callRemoteCompaction(remoteRequest()));
+			await vi.advanceTimersByTimeAsync(300_001);
+			const error = await result;
+			expect(error).toMatchObject({ compactionHttpStatus: status, retryWithCurrentModel: false });
+			expect(isTerminalCompactionFailure(error)).toBe(true);
+			expect(fetch).toHaveBeenCalledTimes(1);
+			expect(cancel).toHaveBeenCalledTimes(1);
+			expect(body.locked).toBe(false);
+			expect(vi.getTimerCount()).toBe(0);
+		} finally { vi.unstubAllGlobals(); }
+	});
+	test("migrates a uniquely proven legacy pending suffix without retaining it as history", () => {
+		const sm = SessionManager.inMemory(process.cwd());
+		const earlier = sm.appendMessage({ role: "user", content: "earlier", timestamp: 0 });
+		const pending = sm.appendMessage({ role: "user", content: "pending", timestamp: 1 });
+		const custom = sm.appendCustomMessageEntry("note", "complete suffix", false);
+		const original = createBranchInputSnapshot({ branch: sm.getBranch(), tools: [] }).view(remoteModel, "full-history");
+		const details = { kind: NATIVE_COMPACTION_KIND, version: NATIVE_COMPACTION_VERSION, modelKey: modelKey(remoteModel),
+			replacementHistory: [original.items[0]!, { type: "compaction", encrypted_content: "opaque" }], preservedInput: original.items.slice(1) };
+		sm.appendCompaction("legacy", earlier, 100, details);
+		const tail = sm.appendCustomMessageEntry("note", "live tail", false);
+		const snapshot = createBranchInputSnapshot({ branch: sm.getBranch(), tools: [] });
+		const plan = compactionInputPlan(snapshot, remoteModel);
+		expect(plan.input).toEqual(details.replacementHistory);
+		expect(plan.preservedInput).toEqual([...details.preservedInput, snapshot.view(remoteModel, "effective").items.at(-1)]);
+		expect(plan.preservedInputSources).toEqual([pending, custom, tail]);
+		expect(details).not.toHaveProperty("preservedInputSources");
+	});
+	test.each(["truncated", "duplicate", "missing suffix", "edited", "conflicting sources", "stale sources"])("rejects unproven pending input with %s", kind => {
+		const sm = SessionManager.inMemory(process.cwd());
+		if (kind === "duplicate") sm.appendMessage({ role: "user", content: "pending", timestamp: 0 });
+		const pending = sm.appendMessage({ role: "user", content: "pending", timestamp: 1 });
+		sm.appendCustomMessageEntry("note", "suffix", false);
+		const original = createBranchInputSnapshot({ branch: sm.getBranch(), tools: [] }).view(remoteModel, "full-history");
+		const preservedInput = original.items.slice(kind === "duplicate" ? 1 : 0);
+		if (kind === "edited" || kind === "stale sources") sm.appendContextEdit(pending, { content: "changed" });
+		sm.appendCompaction("legacy", pending, 100, { kind: NATIVE_COMPACTION_KIND, version: NATIVE_COMPACTION_VERSION, modelKey: modelKey(remoteModel),
+			replacementHistory: [...(kind === "truncated" ? [{ role: "user", content: [{ type: "input_text", text: "pend..." }] }] : []), { type: "compaction", encrypted_content: "opaque" }],
+			preservedInput: kind === "missing suffix" ? preservedInput.slice(0, 1) : preservedInput,
+			...(kind === "conflicting sources" ? { preservedInputSources: ["another", null] } : kind === "stale sources" ? { preservedInputSources: [pending, null] } : {}) });
+		const branch = sm.getBranch();
+		const before = structuredClone(branch);
+		expect(findNativeCheckpoint(branch, modelKey(remoteModel)).status).toBe("valid");
+		expect(() => compactionInputPlan(createBranchInputSnapshot({ branch, tools: [] }), remoteModel)).toThrowError(expect.objectContaining({ code: "preserved_input_source_unproven" }));
+		expect(branch).toEqual(before);
+	});
+	test.each([1000, 2000, 4000])("indexes legacy occurrences with bounded conversion and identity work for %i users", count => {
+		const sm = SessionManager.inMemory(process.cwd());
+		for (let index = 0; index < count; index++) sm.appendMessage({ role: "user", content: `unique-${index}`, timestamp: index });
+		const branch = sm.getBranch();
+		const original = createBranchInputSnapshot({ branch, tools: [] }).view(remoteModel, "full-history");
+		sm.appendCompaction("legacy", branch[0]!.id, 100, { kind: NATIVE_COMPACTION_KIND, version: NATIVE_COMPACTION_VERSION, modelKey: modelKey(remoteModel),
+			replacementHistory: [...original.items.slice(0, -1), { type: "compaction", encrypted_content: "opaque" }], preservedInput: original.items.slice(-1) });
+		const convert = vi.fn(convertToLlm);
+		const snapshot = createBranchInputSnapshot({ branch: sm.getBranch(), tools: [], convertMessages: convert });
+		const encode = vi.spyOn(JSON, "stringify");
+		try {
+			const plan = compactionInputPlan(snapshot, remoteModel);
+			expect(plan.preservedInputSources).toEqual([branch.at(-1)!.id]);
+			expect(convert.mock.calls.length).toBeLessThanOrEqual(3 * (count + 1));
+			const itemCalls = encode.mock.calls.filter(([value]) => value && typeof value === "object" && (value as { role?: string }).role === "user");
+			expect(itemCalls).toHaveLength(2 * count);
+			expect(new Set(itemCalls.map(([value]) => value)).size).toBe(itemCalls.length);
+		} finally { encode.mockRestore(); }
+	});
 	test("round trips optional source coverage and rejects malformed mappings", () => {
 		const details = { kind: NATIVE_COMPACTION_KIND, version: NATIVE_COMPACTION_VERSION, modelKey: modelKey(remoteModel),
 			replacementHistory: [{ type: "compaction", encrypted_content: "opaque" }],
@@ -75,6 +163,8 @@ describe("Codex compaction history", () => {
 		try {
 			const error = await captureFailure(callRemoteCompaction(remoteRequest()));
 			expect(error).toMatchObject({ retryWithCurrentModel: false });
+			expect(error).toMatchObject({ compactionHttpStatus: 403, compactionTerminalReason: "permission" });
+			expect(isTerminalCompactionFailure(error)).toBe(true);
 			expect(String(error)).toContain("403");
 			expect(fetchMock).toHaveBeenCalledTimes(1);
 			expect(body.locked).toBe(false);

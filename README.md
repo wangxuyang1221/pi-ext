@@ -147,7 +147,11 @@ Codex encrypted compaction item.
 
 Pi 1.3.0 的 active projection、pending tool calls 期间的 system 顺序，以及 function/grammar item ID 规则已对齐。待发送的真实 user entry 与随后 custom context 按来源一起保留；已经执行过的历史仍受 retention 预算约束。新 checkpoint 保存可选的 `preservedInputSources`，不以文本相同合并两次提交。请求开始时固定历史、工具、提示词和模型；远程等待期间这些信息变化会取消提交，并保留旧 checkpoint。
 
+旧 V2 checkpoint 缺少来源字段时，只有完整 preserved 后缀及 retained user 都能唯一映射到原始 entry，才允许继续压缩。旧保留区含无法映射的截断副本、重复来源或缺失后缀时，取消本次压缩，保留旧 checkpoint，并报告 `preserved_input_source_unproven`。请求失败后提交新输入时，失败输入与请求 payload 使用同一冻结标记清理，完整投影校验继续生效。
+
 历史明文的 64k tokens 现在是上限。实际预算还要扣除新 opaque、待发送输入、instructions 和 tools，并在截断后复查；最多 16 次本地调整，不会为满足本地估算截断本次输入。同一请求最多执行一次本地估算触发的远程修复，写入 checkpoint 不重置次数；Pi 对真实 overflow 另保留一次 compact-and-retry。仅因本地估算偏高且自动压缩失败，不禁止正常 provider 尝试。认证、策略和明确的 context-window 错误仍按原分类结束。
+
+同 hash 的模型窗口下切与 automatic 压缩共用这一次本地容量修复，修复失败或写入 checkpoint 都不重置额度；不同 hash 所需的协议迁移独立处理。自动压缩的真实 HTTP 401/403 会终止当前请求，空正文、读取超时、超限或读取失败都不会让原请求继续发送。
 
 实际 provider payload 可用于严格验证 hidden declarations 和 forced prompt。工具只新增时检查至多四个候选策略，只有完整 input、instructions、tools 匹配且有效回放一致才接受。工具移除、重声明场景支持精确普通投影；隐藏策略若无法证明则拒绝。forced 路径信任本 handler 观察到的 `instructions`，不独立验证提示词来源，也不支持任意 context hook 或后续 handler 改写。
 

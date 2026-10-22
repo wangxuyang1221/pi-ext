@@ -85,6 +85,25 @@ function installExtension(branch: SessionEntry[] = [], hasUI = false, contextWin
 	return { handlers, commands, ctx, model, notify, setStatus, setWidget, appendEntry };
 }
 
+test("reports unproven pending input through the compaction hook without exposing its text", async () => {
+	const sm = SessionManager.inMemory(process.cwd());
+	const user = sm.appendMessage({ role: "user", content: "private pending text", timestamp: 1 });
+	sm.appendCompaction("legacy", user, 100, { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: "openai-codex:openai-codex-responses:gpt",
+		replacementHistory: [{ role: "user", content: [{ type: "input_text", text: "private truncated" }] }, { type: "compaction", encrypted_content: "opaque" }],
+		preservedInput: [{ role: "user", content: [{ type: "input_text", text: "private pending text" }] }] });
+	const { handlers, ctx, notify, appendEntry } = installExtension(sm.getBranch(), true);
+	const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unexpected network"));
+	try {
+		await expect(handlers.get("session_before_compact")?.({ branchEntries: sm.getBranch(), preparation: { firstKeptEntryId: user, tokensBefore: 100 },
+			reason: "manual", willRetry: false, signal: new AbortController().signal }, ctx)).resolves.toEqual({ cancel: true });
+		expect(notify).toHaveBeenCalledWith(expect.stringContaining("code=preserved_input_source_unproven"), "error");
+		expect(notify.mock.calls.flat().join(" ")).toContain("the pending input cannot be preserved safely; the existing checkpoint was kept; review the pending input before retrying manually");
+		expect(notify.mock.calls.flat().join(" ")).not.toContain("private");
+		expect(fetch).not.toHaveBeenCalled();
+		expect(appendEntry).not.toHaveBeenCalled();
+	} finally { fetch.mockRestore(); }
+});
+
 test("preserves mid-conversation system updates through the real context runner and provider serialization", async () => {
 	const sm = SessionManager.inMemory(process.cwd());
 	sm.appendMessage({ role: "system", content: "", sections: { tools: "Initial tools" }, timestamp: 1 });

@@ -11,6 +11,9 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
 });
 import { createSessionCoordinator, type RemoteCompactionReason } from "../src/session-coordinator.js";
 import * as config from "../src/config.js";
+import { shouldAutoCompact } from "../src/scheduler.js";
+import { createNativeCheckpoint } from "../src/remote-compaction.js";
+import { approximateCompactionRequestTokens } from "../src/native-compaction.js";
 import {
 	effectiveInputForBranch,
 	buildReplacementHistory,
@@ -134,6 +137,70 @@ function createCoordinator(
 }
 
 describe("Codex session coordinator", () => {
+	test.each(["new user", "clear", "model"])("grants a fresh capacity allowance after %s", async change => {
+		const old = model("old", "openai-codex", 100_000), next = model("other", "openai-codex", 1000);
+		const branch = [userEntry("history".repeat(2000), "history"), assistantEntry(old, "answer"), userEntry("p".repeat(3700), "pending")];
+		const compact = vi.fn(async selected => ({ ...details(modelKey(selected)), replacementHistory: [userInput("retained"), ...details(modelKey(selected)).replacementHistory] }));
+		const coordinator = createCoordinator(branch, compact, () => true);
+		const ctx = context([old, next], "");
+		const input = effectiveInputForBranch({ branch, model: next, tools: [] });
+		await coordinator.selectModel({ previousModel: old, model: next }, ctx);
+		await coordinator.prepareRequest(next, ctx, input, { instructions: "", tools: [] });
+		expect(compact).toHaveBeenCalledTimes(1);
+		await coordinator.prepareRequest(next, ctx, input, { instructions: "", tools: [] });
+		expect(compact).toHaveBeenCalledTimes(1);
+		if (change === "new user") branch.push(userEntry("p".repeat(3700), "same-text-new-occurrence"));
+		else if (change === "clear") coordinator.clear();
+		else await coordinator.selectModel({ previousModel: next, model: { ...old, contextWindow: 500 } }, ctx);
+		await coordinator.prepareRequest(change === "model" ? { ...old, contextWindow: 500 } : next, ctx,
+			change === "new user" ? effectiveInputForBranch({ branch, model: next, tools: [] }) : input, { instructions: "", tools: [] });
+		expect(compact).toHaveBeenCalledTimes(2);
+	});
+	test.each(["temporary compaction failure", "context_length_exceeded"])("consumes the capacity allowance before a failed downshift with %s", async message => {
+		const old = model("old", "openai-codex", 100_000), next = model("other", "openai-codex", 1000);
+		const branch = [userEntry("history".repeat(2000), "history"), assistantEntry(old, "answer"), userEntry("p".repeat(3700), "pending")];
+		const error = Object.assign(new Error(message), { retryWithCurrentModel: false });
+		const compact = vi.fn(async () => { throw error; });
+		const coordinator = createCoordinator(branch, compact, () => true);
+		const ctx = context([old, next], "");
+		const input = effectiveInputForBranch({ branch, model: next, tools: [] });
+		await coordinator.selectModel({ previousModel: old, model: next }, ctx);
+		await expect(coordinator.prepareRequest(next, ctx, input, { instructions: "", tools: [] })).rejects.toBe(error);
+		await coordinator.prepareRequest(next, ctx, input, { instructions: "", tools: [] }).catch(() => undefined);
+		expect(compact).toHaveBeenCalledTimes(1);
+	});
+	test.each(["selection", "checkpoint", "direct recovery"])("shares the same-hash capacity allowance through %s", async entry => {
+		const old = model("old", "openai-codex", 100_000), next = model("other", "openai-codex", 1000);
+		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendMessage({ role: "user", content: "history".repeat(2000), timestamp: 0 });
+		sm.appendMessage(assistantEntry(old, "answer").message as never);
+		if (entry !== "selection") sm.appendCustomEntry(NATIVE_COMPACTION_KIND, { ...details(modelKey(old)), compHash: "2911" });
+		const text = "p".repeat(3700);
+		sm.appendMessage({ role: "user", content: text, timestamp: 1 });
+		const input = effectiveInputForBranch({ branch: sm.getBranch(), model: next, tools: [], allowCheckpointModelMismatch: true });
+		const reasons: RemoteCompactionReason[] = [];
+		const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response('data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"opaque"}}\n\ndata: {"type":"response.completed","response":{"id":"compact"}}\n\n', { headers: { "content-type": "text/event-stream" } }));
+		const apiKey = `a.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "test" } })).toString("base64url")}.c`;
+		const ctx = { ...context([old, next], ""), model: next, sessionManager: sm,
+			modelRegistry: { find: (provider: string, id: string) => [old, next].find(m => m.provider === provider && m.id === id), getApiKeyAndHeaders: async () => ({ ok: true, apiKey }) } } as never;
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => sm.getBranch(), getAllTools: () => [],
+			createCheckpoint: params => createNativeCheckpoint({ ...params, compHash: params.compactionHashes.hashFor(params.model), allTools: [], activeToolNames: [] }),
+			appendCheckpoint: value => sm.appendCustomEntry(NATIVE_COMPACTION_KIND, value), appendCheckpointBypass: vi.fn(),
+			shouldAutoCompact: ({ model, input, reason }) => shouldAutoCompact({ status: { activeContextTokens: approximateCompactionRequestTokens({ input, instructions: "", tools: [] }),
+				contextWindow: config.effectiveContextWindow({ autoCompactScope: "total" }, model.contextWindow) }, limit: config.autoCompactTokenLimit({ autoCompactScope: "total" }, model.contextWindow), scope: "total", reason }),
+			runCompaction: async (_ctx, reason, operation) => { reasons.push(reason); return operation(); } });
+		try {
+			if (entry === "selection") await coordinator.selectModel({ previousModel: old, model: next }, ctx);
+			if (entry === "direct recovery") await coordinator.recoverCurrentModel(next, ctx, { instructions: "", tools: [] }, input);
+			const output = await coordinator.prepareRequest(next, ctx, input, { instructions: "", tools: [] });
+			expect(output).toEqual([{ type: "compaction", encrypted_content: "opaque" }, userInput(text)]);
+			expect(approximateCompactionRequestTokens({ input: output!, instructions: "", tools: [] })).toBeGreaterThan(config.effectiveContextWindow({ autoCompactScope: "total" }, next.contextWindow));
+			expect(fetch).toHaveBeenCalledTimes(1);
+			expect(reasons).toEqual(["model-transition"]);
+			await coordinator.prepareRequest(next, ctx, input, { instructions: "", tools: [] });
+			expect(fetch).toHaveBeenCalledTimes(1);
+		} finally { fetch.mockRestore(); }
+	});
 	test("freezes direct recovery evidence before metadata resolution", async () => {
 		const old = model("old"), next = model("new");
 		const branch = [userEntry("old"), customEntry({ ...details(modelKey(old)), compHash: "2911" })];

@@ -8,9 +8,13 @@
 
 请求证据在首次异步等待前固定，结果提交前核验 branch 内容、模型、提示词、工具和 generation。来源保存在 V2 checkpoint 的可选 `preservedInputSources` 中；旧记录继续读取，但不伪造来源。派生 wire ID 使用 Pi 归一化后的消息顺序；跨 checkpoint 工具组保留完整 call/results，已覆盖的 system update 不随组复活。
 
+第二轮修复补齐旧 checkpoint 的 pending input 证明。缺少来源时，只接受完整 preserved 后缀与原投影相等、user occurrence 唯一、replacement user 可映射到更早未复用 entry 的结构；无法映射的截断副本直接取消，旧 checkpoint 不变。取消通过 `preserved_input_source_unproven` 诊断，属于本插件的兼容保护，不归因于 Codex 上游。失败请求在冻结入口成对清理 branch/input，后续阶段复用固定失败 entry ID，并对原始证据变化拒绝提交。
+
 投影匹配最多检查四个候选策略，比较完整 input、instructions 和 tools，并要求所有匹配候选具有相同有效回放。工具移除/重声明后无法证明的 hidden 策略及任意 context hook 不在隐式支持范围。强制提示词以本 handler 看到的 instructions 为权威，后续 provider handlers 的变换不可观测。provider 请求之外的压缩需仍有效的已观察快照，或 README 中的 `manualProjection` 契约；`forcedPrompt` 是完整字符串，不能从 Pi 回合结束后的基础 prompt 推断。
 
 64k 历史明文上限受实际剩余窗口约束；新 opaque、受保护输入和请求前缀先占预算，截断后至多 16 次本地调整。一次 logical request 的本地自动修复最多一次，Pi overflow compact-and-retry 独立最多一次。错误 body 最多读取 300 秒和 1 MiB，保留 status 分类，不完整诊断不触发模型 fallback。
+
+同 hash 容量下切和 automatic 共用本地额度，hash 不兼容迁移独立。HTTP 401/403 在 transport 保留结构化 status 与终止原因，automatic coordinator 据此终止当前请求，不依赖错误正文。第二轮设计、逐项 Red/Green 和最终检查入口见 [round 2 todo](../../docs/codex-compact-plugin-repair-round-2-todo.md)；仍只覆盖固定 Pi `1.3.0` 与已声明的投影契约。
 
 `repair-runtime.test.ts` 使用真实 AgentSession、ExtensionRunner、converter、持久化和恢复，仅替换目录发现与网络响应，覆盖 manual/threshold/overflow、重复 overflow 和 hidden/forced hooks。`full-reference.test.ts` 的 decoder mock 改为逐用例安装并恢复。Darwin 离线验证不能代替 Linux 实机或真实服务端 encrypted checkpoint 验证；完整检查结果见 TODO 的执行记录。
 

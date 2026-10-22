@@ -60,6 +60,7 @@ type RemoteCompactionPresentation = {
 };
 
 function failureNextStep(code: string): string {
+	if (code === "preserved_input_source_unproven") return "the pending input cannot be preserved safely; the existing checkpoint was kept; review the pending input before retrying manually";
 	if (code === "authentication" || AUTHENTICATION_FAILURE_CODE_PATTERN.test(code)) {
 		return "check Codex authentication and retry manually";
 	}

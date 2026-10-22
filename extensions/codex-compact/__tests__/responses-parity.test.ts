@@ -7,6 +7,7 @@ import { streamSimple } from "@earendil-works/pi-ai/api/openai-codex-responses";
 import { convertToLlm, SessionManager } from "@earendil-works/pi-coding-agent";
 import { createSessionCoordinator } from "../src/session-coordinator.js";
 import { resolveRequestProjection } from "../src/request-projection.js";
+import { createNativeCheckpoint } from "../src/remote-compaction.js";
 import { createBranchInputSnapshot, fullInputForBranch, HistoryPrefixMismatchError, modelKey, NATIVE_COMPACTION_KIND, FAILED_REQUEST_KIND } from "../src/native-compaction.js";
 
 const providerNames = new Set(["openai", "openai-codex", "opencode"]);
@@ -15,6 +16,96 @@ const model = (id = "gpt-5.6-sol") => getBuiltinModel("openai-codex", id)!;
 const assistant = (m: any, content: any[]) => ({ role: "assistant", provider: m.provider, api: m.api, model: m.id, content, stopReason: "toolUse", timestamp: 0,
   usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } } });
 const messageEntries = (messages: any[]) => messages.map((message, i) => ({ id: `message-${i}`, type: "message", message })) as any[];
+
+test.each([401, 403, 503])("classifies empty HTTP %i through automatic remote compaction", async status => {
+  const m = model();
+  const messages = [{ role: "system", content: "head", timestamp: 0 }, { role: "user", content: "history", timestamp: 1 },
+    { ...assistant(m, [{ type: "text", text: "done" }]), stopReason: "stop" }, { role: "user", content: "pending", timestamp: 2 }];
+  const branch = messageEntries(messages);
+  const payload = await providerPayload(m, messages);
+  const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response("", { status }));
+  const append = vi.fn(), softFailure = vi.fn();
+  const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch, getAllTools: () => [],
+    shouldAutoCompact: () => true, createCheckpoint: params => createNativeCheckpoint({ ...params, allTools: [], activeToolNames: [] }),
+    appendCheckpoint: append, appendCheckpointBypass: vi.fn(), onAutomaticCompactionFailure: softFailure });
+  const apiKey = `a.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "test" } })).toString("base64url")}.c`;
+  try {
+    const request = coordinator.prepareRequest(m, { model: m, getSystemPrompt: () => "head", sessionManager: { getSessionId: () => "test" },
+      modelRegistry: { find: () => m, getApiKeyAndHeaders: async () => ({ ok: true, apiKey }) } } as any, payload.input, payload);
+    if (status === 503) await expect(request).resolves.toBeUndefined();
+    else await expect(request).rejects.toMatchObject({ compactionHttpStatus: status });
+    expect(fetch).toHaveBeenCalledTimes(status === 503 ? 3 : 1);
+    expect(append).not.toHaveBeenCalled();
+    expect(softFailure).toHaveBeenCalledTimes(status === 503 ? 1 : 0);
+  } finally { fetch.mockRestore(); }
+});
+
+test.each([[false, "normal"], [true, "normal"], [true, "hidden"], [true, "forced"], [true, "both"]] as const)("sanitizes a complete provider payload before projection with checkpoint=%s and %s", async (checkpoint, mode) => {
+  const m = { ...model(), compat: { supportsAdditionalTools: true, supportsMidConvoSystemMessages: true } };
+  const tools = ["visible", "hidden"].map(name => ({ name, description: name, parameters: { type: "object", properties: {} } }));
+  const sm = SessionManager.inMemory(process.cwd());
+  sm.appendMessage({ role: "system", content: "head", toolsAdded: tools, timestamp: 0 } as any);
+  if (checkpoint) {
+    sm.appendMessage({ role: "user", content: "old", timestamp: 1 });
+    sm.appendCustomEntry(NATIVE_COMPACTION_KIND, { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(m),
+      replacementHistory: [{ type: "compaction", encrypted_content: "opaque" }] });
+  }
+  const failed = sm.appendMessage({ role: "user", content: "same", timestamp: 2 });
+  sm.appendCustomEntry(FAILED_REQUEST_KIND, { kind: FAILED_REQUEST_KIND, entryId: failed });
+  const second = sm.appendMessage({ role: "user", content: "same", timestamp: 3 });
+  sm.appendCustomEntry(FAILED_REQUEST_KIND, { kind: FAILED_REQUEST_KIND, entryId: second });
+  sm.appendMessage({ role: "user", content: "same", timestamp: 3 });
+  const hidden = mode === "hidden" || mode === "both", forced = mode === "forced" || mode === "both";
+  const messages = convertToLlm(sm.buildSessionProjection().messages).map(message => message.role === "system" ? { ...message,
+    ...(forced ? { content: "Forced prompt" } : {}), toolsAdded: message.toolsAdded?.filter(tool => !hidden || tool.name !== "hidden") } : message);
+  const payload = await providerPayload(m, messages);
+  const compact = vi.fn();
+  const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => sm.getBranch(), getAllTools: () => tools as any,
+    createCheckpoint: compact, appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn() });
+  const output = await coordinator.prepareRequest(m, { model: m, getSystemPrompt: () => "head", sessionManager: sm, modelRegistry: { find: () => m } } as any, payload.input, payload);
+  expect(output).toEqual([...(checkpoint ? [{ type: "compaction", encrypted_content: "opaque" }] : []),
+    { role: "user", content: [{ type: "input_text", text: "same" }] }]);
+  expect(compact).not.toHaveBeenCalled();
+  expect(payload.input.filter((item: any) => item.role === "user" && item.content[0].text === "same")).toHaveLength(3);
+  await expect(coordinator.recoverCurrentModel(m, { model: m, getSystemPrompt: () => "head", sessionManager: sm, modelRegistry: { find: () => m } } as any, payload, payload.input)).resolves.toBeUndefined();
+  const changed = structuredClone(payload);
+  changed.input.at(-1).content[0].text = "unauthorized edit";
+  await expect(coordinator.prepareRequest(m, { model: m, getSystemPrompt: () => "head", sessionManager: sm, modelRegistry: { find: () => m } } as any, changed.input, changed)).rejects.toThrow();
+});
+
+test.each(["prepare", "recover"])("rejects changed raw failed-request evidence during %s", async entry => {
+  for (const phase of ["metadata", "remote success", "remote error", "remote fallback"]) for (const change of ["failed user", "marker", "new marker"]) {
+    const m = model(), old = model("gpt-5.5");
+    const messages = [{ role: "system", content: "head", timestamp: 0 }, { role: "user", content: "history", timestamp: 1 },
+      { ...assistant(old, [{ type: "text", text: "done" }]), stopReason: "stop" },
+      { role: "user", content: "failed", timestamp: 2 }, { role: "user", content: "current", timestamp: 3 }];
+    const branch = messageEntries(messages);
+    branch.splice(3, 0, { id: "checkpoint", type: "custom", customType: NATIVE_COMPACTION_KIND,
+      data: { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(old), compHash: "2911", replacementHistory: [{ type: "compaction", encrypted_content: "opaque" }] } });
+    const marker = { id: "marker", type: "custom", customType: FAILED_REQUEST_KIND, data: { kind: FAILED_REQUEST_KIND, entryId: "message-3" } };
+    branch.splice(5, 0, marker);
+    const payload = await providerPayload(m, messages);
+    const mutate = () => {
+      if (change === "failed user") (branch.find(item => item.id === "message-3") as any).message.content = "edited failed input";
+      else if (change === "marker") marker.data.entryId = "changed-target";
+      else branch.push({ ...marker, id: "new-marker" });
+    };
+    const remoteError = Object.assign(new Error("remote failed"), { retryWithCurrentModel: phase === "remote fallback" });
+    const compact = vi.fn(async () => { mutate(); if (phase === "remote error" || phase === "remote fallback") throw remoteError;
+      return { details: { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(m), replacementHistory: [{ type: "compaction", encrypted_content: "new" }] } }; });
+    const append = vi.fn(), bypass = vi.fn();
+    const coordinator = createSessionCoordinator({ resolveCompactionHashes: async () => { if (phase === "metadata") mutate(); return fixtureSnapshot; },
+      getBranch: () => branch, getAllTools: () => [], createCheckpoint: compact as any, appendCheckpoint: append, appendCheckpointBypass: bypass });
+    const ctx = { model: m, getSystemPrompt: () => "head", sessionManager: { getSessionId: () => "test" },
+      modelRegistry: { find: (_provider: string, id: string) => [m, old].find(selected => selected.id === id) } } as any;
+    const result = entry === "prepare" ? coordinator.prepareRequest(m, ctx, payload.input, payload) : coordinator.recoverCurrentModel(m, ctx, payload, payload.input);
+    if (phase === "remote error") await expect(result, `${entry}/${phase}/${change}`).rejects.toBe(remoteError);
+    else await expect(result, `${entry}/${phase}/${change}`).rejects.toThrow(/changed/);
+    expect(compact).toHaveBeenCalledTimes(phase === "metadata" ? 0 : 1);
+    expect(append).not.toHaveBeenCalled();
+    expect(bypass).not.toHaveBeenCalled();
+  }
+});
 
 test("uses the observed hidden projection for automatic compaction before the first checkpoint", async () => {
   const m = { ...model(), compat: { supportsAdditionalTools: true, supportsMidConvoSystemMessages: true } };

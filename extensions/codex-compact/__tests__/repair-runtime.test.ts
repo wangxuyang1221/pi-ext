@@ -1,5 +1,6 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { zstdDecompressSync } from "node:zlib";
 import { expect, test, vi } from "vitest";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { InMemoryCredentialStore, InMemoryModelsStore } from "@earendil-works/pi-ai";
@@ -7,7 +8,7 @@ import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
 import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
 import { streamSimple } from "@earendil-works/pi-ai/api/openai-codex-responses";
 import compact from "../src/index.js";
-import { findNativeCheckpoint, modelKey, NATIVE_COMPACTION_KIND } from "../src/native-compaction.js";
+import { createBranchInputSnapshot, findNativeCheckpoint, modelKey, NATIVE_COMPACTION_KIND, retainRecentMessages } from "../src/native-compaction.js";
 
 const configuration = vi.hoisted(() => ({ manualProjection: { hiddenTools: [] as string[], forcedPrompt: undefined as string | undefined } }));
 
@@ -28,6 +29,128 @@ function answer(index: number, tokens = 10) {
   return sse([{ type: "response.output_item.added", output_index: 0, item }, { type: "response.output_item.done", output_index: 0, item },
     { type: "response.completed", response: { id: `r_${index}`, status: "completed", usage: { input_tokens: tokens, output_tokens: 5 } } }]);
 }
+
+test.each([401, 403])("aborts the real SDK provider request after empty automatic HTTP %i", async status => {
+  const root = await mkdtemp(join(process.cwd(), ".tmp/auth-runtime-"));
+  const manager = SessionManager.create(root, join(root, "sessions"));
+  const model = { ...getBuiltinModel("openai-codex", "gpt-5.5")!, contextWindow: 1000,
+    compat: { supportsMidConvoSystemMessages: true, supportsAdditionalTools: true } };
+  manager.appendModelChange(model.provider, model.id);
+  manager.appendMessage({ role: "system", content: "Fixed prompt", timestamp: 0 } as never);
+  manager.appendMessage({ role: "user", content: "history".repeat(2000), timestamp: 1 });
+  manager.appendMessage({ role: "assistant", content: [{ type: "text", text: "done" }], stopReason: "stop",
+    provider: model.provider, api: model.api, model: model.id, timestamp: 2, usage: { input: 0, output: 0, totalTokens: 0, cacheRead: 0, cacheWrite: 0 } } as never);
+  const credentials = new InMemoryCredentialStore();
+  await credentials.modify(model.provider, async () => ({ type: "oauth", access: apiKey, refresh: "offline", expires: Date.now() + 600_000 }));
+  const runtime = await ModelRuntime.create({ credentials, modelsStore: new InMemoryModelsStore(), modelsPath: null, allowModelNetwork: false, refreshOnCreate: false });
+  runtime.registerNativeProvider(openaiCodexProvider());
+  const settings = SettingsManager.inMemory({ compaction: { enabled: false }, retry: { enabled: false }, cacheWarming: "off" });
+  const loader = new DefaultResourceLoader({ cwd: root, agentDir: join(root, "agent"), settingsManager: settings,
+    noExtensions: true, noSkills: true, noThemes: true, noContextFiles: true, noPromptTemplates: true,
+    systemPromptOverride: () => "Fixed prompt", extensionFactories: [compact] });
+  await loader.reload();
+  const { session } = await createAgentSession({ cwd: root, agentDir: join(root, "agent"), modelRuntime: runtime, model,
+    resourceLoader: loader, sessionManager: manager, settingsManager: settings, tools: [] });
+  const providerPayloads: any[] = [];
+  const provider = vi.fn(async (_request: unknown, init?: RequestInit) => {
+    const body = new Headers(init?.headers).get("content-encoding") === "zstd"
+      ? zstdDecompressSync(init!.body as Uint8Array).toString("utf8") : String(init?.body);
+    providerPayloads.push(JSON.parse(body));
+    return answer(1);
+  });
+  const remote = vi.fn(async () => new Response("", { status }));
+  const notice = vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.stubGlobal("fetch", remote);
+  session.agent.streamFunction = (selected, context, options) => streamSimple(selected as never, context,
+    { ...options, apiKey, transport: "sse", maxRetries: 0, fetch: provider });
+  try {
+    await session.bindExtensions({});
+    await session.prompt("pending"); await session.waitForIdle();
+    expect(remote).toHaveBeenCalledTimes(1);
+    expect(provider).not.toHaveBeenCalled();
+    expect(findNativeCheckpoint(manager.getBranch(), modelKey(model)).status).toBe("none");
+    expect(notice.mock.calls.flat().join(" ")).toContain("outcome=request_aborted");
+    expect(notice.mock.calls.flat().join(" ")).not.toContain("compaction_skipped");
+    remote.mockImplementation(async () => sse([{ type: "response.output_item.done", item: { type: "compaction", encrypted_content: "after-failure" } },
+      { type: "response.completed", response: { id: "compact" } }]));
+    await session.prompt("new request after failure"); await session.waitForIdle();
+    expect(remote).toHaveBeenCalledTimes(2);
+    expect(provider).toHaveBeenCalledTimes(1);
+    expect(providerPayloads[0].input.filter((item: any) => item.role === "user" && item.content[0]?.text === "pending")).toEqual([]);
+    expect(providerPayloads[0].input.filter((item: any) => item.role === "user" && item.content[0]?.text === "new request after failure")).toHaveLength(1);
+    expect(providerPayloads[0].input).toContainEqual({ type: "compaction", encrypted_content: "after-failure" });
+  } finally {
+    await session.abort(); await session.waitForIdle();
+    await session.extensionRunner.emit({ type: "session_shutdown", reason: "exit" }); session.dispose();
+    notice.mockRestore(); vi.unstubAllGlobals(); await rm(root, { recursive: true, force: true });
+  }
+}, 25_000);
+
+test.each(["provable", "truncated"])("handles %s legacy pending input through persisted SDK manual compaction", async kind => {
+  const root = await mkdtemp(join(process.cwd(), ".tmp/legacy-runtime-"));
+  const manager = SessionManager.create(root, join(root, "sessions"));
+  const model = { ...getBuiltinModel("openai-codex", "gpt-5.5")!, contextWindow: 800_000,
+    compat: { supportsMidConvoSystemMessages: true, supportsAdditionalTools: true } };
+  manager.appendModelChange(model.provider, model.id);
+  manager.appendMessage({ role: "system", content: "Fixed prompt", timestamp: 0 } as never);
+  const text = "BEGIN_" + "x".repeat(280_000) + "_END";
+  const user = manager.appendMessage({ role: "user", content: text, timestamp: 1 });
+  manager.appendMessage({ role: "assistant", content: [{ type: "text", text: "partial" }], stopReason: "aborted",
+    provider: model.provider, api: model.api, model: model.id, timestamp: 2, usage: { input: 0, output: 0, totalTokens: 0, cacheRead: 0, cacheWrite: 0 } } as never);
+  const item = createBranchInputSnapshot({ branch: manager.getBranch(), tools: [] }).view(model, "full-history").items.at(-1)!;
+  const retained = retainRecentMessages([item], 64_000);
+  expect(retained).toHaveLength(1);
+  expect(retained[0]).not.toEqual(item);
+  expect(JSON.stringify(retained[0])).toContain("truncated");
+  const details = { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(model), compHash: "2911",
+    replacementHistory: [...(kind === "truncated" ? retained : []),
+      { type: "compaction", encrypted_content: "legacy-opaque" }], preservedInput: [item] };
+  manager.appendCompaction("legacy", user, 100, details);
+  const credentials = new InMemoryCredentialStore();
+  await credentials.modify(model.provider, async () => ({ type: "oauth", access: apiKey, refresh: "offline", expires: Date.now() + 600_000 }));
+  const runtime = await ModelRuntime.create({ credentials, modelsStore: new InMemoryModelsStore(), modelsPath: null, allowModelNetwork: false, refreshOnCreate: false });
+  runtime.registerNativeProvider(openaiCodexProvider());
+  const settings = SettingsManager.inMemory({ compaction: { enabled: false, keepRecentTokens: 1 }, retry: { enabled: false }, cacheWarming: "off" });
+  const loader = new DefaultResourceLoader({ cwd: root, agentDir: join(root, "agent"), settingsManager: settings,
+    noExtensions: true, noSkills: true, noThemes: true, noContextFiles: true, noPromptTemplates: true,
+    systemPromptOverride: () => "Fixed prompt", extensionFactories: [compact] });
+  await loader.reload();
+  const { session } = await createAgentSession({ cwd: root, agentDir: join(root, "agent"), modelRuntime: runtime, model,
+    resourceLoader: loader, sessionManager: manager, settingsManager: settings, tools: [] });
+  const remote = vi.fn(async () => sse([{ type: "response.output_item.done", item: { type: "compaction", encrypted_content: "migrated-opaque" } },
+    { type: "response.completed", response: { id: "compact" } }]));
+  const notice = vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.stubGlobal("fetch", remote);
+  try {
+    await session.bindExtensions({});
+    const compacted = session.compact();
+    if (kind === "truncated") {
+      await expect(compacted).rejects.toThrow(/cancel/i);
+      expect(notice.mock.calls.flat().join(" ")).toContain("code=preserved_input_source_unproven");
+      expect(notice.mock.calls.flat().join(" ")).toContain("the pending input cannot be preserved safely; the existing checkpoint was kept; review the pending input before retrying manually");
+      expect(notice.mock.calls.flat().join(" ")).not.toContain("BEGIN_");
+      expect(remote).not.toHaveBeenCalled();
+      expect(findNativeCheckpoint(manager.getBranch(), modelKey(model))).toMatchObject({ status: "valid", checkpoint: { details } });
+    } else {
+      await compacted;
+      manager.appendMessage({ role: "assistant", content: [{ type: "text", text: "another partial" }], stopReason: "aborted",
+        provider: model.provider, api: model.api, model: model.id, timestamp: Date.now(), usage: { input: 0, output: 0, totalTokens: 0, cacheRead: 0, cacheWrite: 0 } } as never);
+      await session.compact();
+      expect(remote).toHaveBeenCalledTimes(2);
+      const current = findNativeCheckpoint(manager.getBranch(), modelKey(model));
+      expect(current).toMatchObject({ status: "valid", checkpoint: { details: { preservedInput: [item], preservedInputSources: [user] } } });
+      expect(createBranchInputSnapshot({ branch: manager.getBranch(), tools: [] }).view(model, "effective").items.filter(item => item.role === "user")).toEqual([item]);
+    }
+    const reopened = SessionManager.open(manager.getSessionFile()!, join(root, "reopened"));
+    expect(findNativeCheckpoint(reopened.getBranch(), modelKey(model))).toEqual(findNativeCheckpoint(manager.getBranch(), modelKey(model)));
+    expect(createBranchInputSnapshot({ branch: reopened.getBranch(), tools: [] }).view(model, "effective").items.filter(item => item.role === "user"))
+      .toEqual(kind === "truncated" ? [...details.replacementHistory.filter(item => item.role === "user"), item] : [item]);
+  } finally {
+    await session.abort(); await session.waitForIdle();
+    await session.extensionRunner.emit({ type: "session_shutdown", reason: "exit" }); session.dispose();
+    notice.mockRestore(); vi.unstubAllGlobals(); await rm(root, { recursive: true, force: true });
+  }
+}, 25_000);
 
 test.each(["manual", "threshold", "overflow", "repeated-overflow"])("repairs long input through the real SDK %s lifecycle", async kind => {
   const root = await mkdtemp(join(process.cwd(), ".tmp/repair-runtime-"));

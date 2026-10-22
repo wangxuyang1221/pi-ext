@@ -75,6 +75,15 @@ export function isFailClosedCompactionError(message: string): boolean {
 	return FAIL_CLOSED_ERROR_PATTERN.test(message);
 }
 
+export function isTerminalCompactionFailure(error: unknown): boolean {
+	if (typeof error === "object" && error !== null) {
+		const failure = error as { compactionHttpStatus?: unknown; compactionTerminalReason?: unknown };
+		if (failure.compactionHttpStatus === 401 || failure.compactionHttpStatus === 403
+			|| failure.compactionTerminalReason === "authentication" || failure.compactionTerminalReason === "permission") return true;
+	}
+	return isFailClosedCompactionError(error instanceof Error ? error.message : String(error));
+}
+
 export function isContextWindowCompactionError(error: unknown): boolean {
 	const message = error instanceof Error ? error.message : String(error);
 	if (isFailClosedCompactionError(message) || USAGE_LIMIT_MESSAGE_PATTERN.test(message) || /invalid_prompt/i.test(message)) return false;
@@ -109,6 +118,14 @@ export class HistoryPrefixMismatchError extends Error {
 	constructor(readonly mismatchIndex: number) {
 		super("The Codex request changed before model-transition compaction completed.");
 		this.name = "HistoryPrefixMismatchError";
+	}
+}
+
+export class UnprovenPreservedInputError extends Error {
+	readonly code = "preserved_input_source_unproven";
+	constructor() {
+		super("The pending input in the current checkpoint cannot be safely attributed. Compaction was cancelled and the existing checkpoint was preserved.");
+		this.name = "UnprovenPreservedInputError";
 	}
 }
 
@@ -842,6 +859,66 @@ export type CompactionInputPlan = {
 	assertCurrent?: () => void;
 };
 
+function legacyPendingInputPlan(
+	snapshot: ReturnType<typeof createBranchInputSnapshot>, model: Model<any>, options: InputViewOptions, userEntryId: string,
+): CompactionInputPlan {
+	const fail = (): never => { throw new UnprovenPreservedInputError(); };
+	const lookup = snapshot.checkpoint(model);
+	if (lookup.status !== "valid") return fail();
+	const checkpoint = lookup.checkpoint;
+	const details = checkpoint.details;
+	const effective = snapshot.view(model, "effective", { ...options, allowCheckpointModelMismatch: true });
+	const full = snapshot.view(model, "full-history", options);
+	const pendingIndices = [...full.userSources].filter(([, source]) => source === userEntryId).map(([index]) => index);
+	if (pendingIndices.length !== 1) return fail();
+	const pendingIndex = pendingIndices[0]!;
+	const before = snapshot.view(model, "full-history", { ...options, excludeEntryIds: [
+		...(options.excludeEntryIds ?? []), ...snapshot.projection.branch.slice(checkpoint.entryIndex + 1).map(entry => entry.id),
+	] });
+	const beforeIndices = [...before.userSources].filter(([, source]) => source === userEntryId).map(([index]) => index);
+	if (beforeIndices.length !== 1) return fail();
+	const start = beforeIndices[0]!;
+	const preserved = details.preservedInput;
+	if (!preserved?.length || !isDeepStrictEqual(preserved, before.items.slice(start))) return fail();
+
+	const identities = new WeakMap<ResponseItem, string>();
+	const identity = (item: ResponseItem): string => {
+		let key = identities.get(item);
+		if (key === undefined) {
+			key = JSON.stringify(item, (_key, value) => isJsonObject(value)
+				? Object.fromEntries(Object.keys(value).sort().map(field => [field, value[field]])) : value);
+			identities.set(item, key);
+		}
+		return key;
+	};
+	const occurrences = new Map<string, { index: number; source: string } | null>();
+	for (const [index, source] of full.userSources) {
+		const key = identity(full.items[index]!);
+		occurrences.set(key, occurrences.has(key) ? null : { index, source });
+	}
+	const sources = preserved.map((item, offset) => {
+		if (item.role !== "user") return null;
+		const occurrence = occurrences.get(identity(item));
+		if (!occurrence || occurrence.source !== before.userSources.get(start + offset)
+			|| occurrence.index < pendingIndex || !isDeepStrictEqual(item, full.items[occurrence.index])) return fail();
+		return occurrence.source;
+	});
+	const used = new Set<string>(sources.filter((source): source is string => source !== null));
+	for (const item of details.replacementHistory) {
+		if (item.role !== "user") continue;
+		const occurrence = occurrences.get(identity(item));
+		if (!occurrence || occurrence.index >= pendingIndex || used.has(occurrence.source)
+			|| !isDeepStrictEqual(item, full.items[occurrence.index])) return fail();
+		used.add(occurrence.source);
+	}
+	const tailOffset = details.replacementHistory.length + preserved.length;
+	return {
+		input: details.replacementHistory,
+		preservedInput: [...preserved, ...effective.items.slice(tailOffset)],
+		preservedInputSources: [...sources, ...effective.items.slice(tailOffset).map((_, offset) => effective.userSources.get(tailOffset + offset) ?? null)],
+	};
+}
+
 export function compactionInputPlan(snapshot: ReturnType<typeof createBranchInputSnapshot>, model: Model<any>, options: InputViewOptions = {}): CompactionInputPlan {
 	const view = snapshot.view(model, "effective", { ...options, allowCheckpointModelMismatch: true });
 	const branch = snapshot.projection.branch;
@@ -850,6 +927,15 @@ export function compactionInputPlan(snapshot: ReturnType<typeof createBranchInpu
 	const checkpoint = snapshot.checkpoint(model);
 	const consumed = branch.slice(index + 1).some(item => item.type === "message" && (item.message.role === "toolResult"
 		|| (item.message.role === "assistant" && item.message.stopReason !== "error" && item.message.stopReason !== "aborted")));
+	if (entry && !consumed && checkpoint.status === "valid" && index < checkpoint.checkpoint.entryIndex) {
+		if (checkpoint.checkpoint.details.preservedInputSources === undefined) return legacyPendingInputPlan(snapshot, model, options, entry.id);
+		const full = snapshot.view(model, "full-history", options);
+		const actual = [...full.userSources].filter(([, source]) => source === entry.id);
+		const preserved = [...view.userSources].filter(([, source]) => source === entry.id);
+		if (actual.length !== 1 || preserved.length !== 1 || !isDeepStrictEqual(full.items[actual[0]![0]], view.items[preserved[0]![0]])) {
+			throw new UnprovenPreservedInputError();
+		}
+	}
 	const requestIndex = entry && !consumed && (checkpoint.status !== "valid" || index > checkpoint.checkpoint.entryIndex
 		|| checkpoint.checkpoint.details.preservedInputSources?.includes(entry.id))
 		? [...view.userSources].find(([_, source]) => source === entry.id)?.[0] : undefined;
@@ -1352,6 +1438,14 @@ function markCompactionCode<T extends Error>(error: T, code: string): T {
 	return error;
 }
 
+function markCompactionHttpFailure<T extends Error>(error: T, status: number): T {
+	Object.defineProperty(error, "compactionHttpStatus", { value: status, enumerable: false, configurable: true });
+	if (status === 401 || status === 403) Object.defineProperty(error, "compactionTerminalReason", {
+		value: status === 401 ? "authentication" : "permission", enumerable: false, configurable: true,
+	});
+	return error;
+}
+
 function shouldRetryCompaction(error: unknown): boolean {
 	const retry = compactionRetry(error);
 	return retry === "automatic" || retry === "explicit";
@@ -1402,6 +1496,7 @@ const CANONICAL_COMPACTION_ERROR_CODES = new Set([
 ]);
 
 export function compactionFailureClassification(error: unknown): string {
+	if (error instanceof UnprovenPreservedInputError) return error.code;
 	if (error instanceof HistoryPrefixMismatchError) return error.code;
 	const code = compactionErrorCode(error);
 	if (code) {
@@ -1504,7 +1599,7 @@ function classifyHttpCompactionError(
 		|| USAGE_LIMIT_MESSAGE_PATTERN.test(body);
 	const retryable = isRetryableStatus(status) && !terminal;
 	const error = markCompactionRetry(
-		new Error(`${prefix} (${status}): ${body || "HTTP error"}`),
+		markCompactionHttpFailure(new Error(`${prefix} (${status}): ${body || "HTTP error"}`), status),
 		retryable ? "explicit" : "none",
 	);
 	return { error: markFallbackEligibility(markCompactionCode(error, code), fallback), retryable };
