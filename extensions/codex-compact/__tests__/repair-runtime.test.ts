@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { zstdDecompressSync } from "node:zlib";
 import { expect, test, vi } from "vitest";
-import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
+import { createAgentSession, createCodemodeExtension, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { InMemoryCredentialStore, InMemoryModelsStore } from "@earendil-works/pi-ai";
 import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
 import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
@@ -29,6 +29,42 @@ function answer(index: number, tokens = 10) {
   return sse([{ type: "response.output_item.added", output_index: 0, item }, { type: "response.output_item.done", output_index: 0, item },
     { type: "response.completed", response: { id: `r_${index}`, status: "completed", usage: { input_tokens: tokens, output_tokens: 5 } } }]);
 }
+
+test("sends the first SDK request with the real codemode reachability callback", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".tmp/codemode-request-"));
+  const model = getBuiltinModel("openai-codex", "gpt-6-astra")!;
+  const credentials = new InMemoryCredentialStore();
+  await credentials.modify(model.provider, async () => ({ type: "oauth", access: apiKey, refresh: "offline", expires: Date.now() + 600_000 }));
+  const runtime = await ModelRuntime.create({ credentials, modelsStore: new InMemoryModelsStore(), modelsPath: null, allowModelNetwork: false, refreshOnCreate: false });
+  runtime.registerNativeProvider(openaiCodexProvider());
+  const settings = SettingsManager.inMemory({ defaultTools: ["+codemode"], compaction: { enabled: false }, retry: { enabled: false }, cacheWarming: "off" });
+  const loader = new DefaultResourceLoader({ cwd: root, agentDir: join(root, "agent"), settingsManager: settings,
+    noExtensions: true, noSkills: true, noThemes: true, noContextFiles: true, noPromptTemplates: true,
+    systemPromptOverride: () => "Fixed prompt", extensionFactories: [createCodemodeExtension({ models: false }), compact] });
+  await loader.reload();
+  expect(loader.getExtensions().errors).toEqual([]);
+  const { session } = await createAgentSession({ cwd: root, agentDir: join(root, "agent"), modelRuntime: runtime, model,
+    resourceLoader: loader, sessionManager: SessionManager.inMemory(root), settingsManager: settings });
+  const provider = vi.fn(async () => answer(1));
+  const network = vi.fn(async () => { throw new Error("Unexpected network request"); });
+  const notice = vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.stubGlobal("fetch", network);
+  session.agent.streamFunction = (selected, context, options) => streamSimple(selected as never, context,
+    { ...options, apiKey, transport: "sse", maxRetries: 0, fetch: provider });
+  try {
+    await session.bindExtensions({});
+    expect(typeof session.getAllTools().find(tool => tool.name === "codemode")?.reachesTools).toBe("function");
+    await session.prompt("hello"); await session.waitForIdle();
+    expect(provider).toHaveBeenCalledTimes(1);
+    expect(notice).not.toHaveBeenCalled();
+    expect(network).not.toHaveBeenCalled();
+    expect(session.agent.state.messages.at(-1)).toMatchObject({ role: "assistant", stopReason: "stop" });
+  } finally {
+    await session.abort(); await session.waitForIdle();
+    await session.extensionRunner.emit({ type: "session_shutdown", reason: "exit" }); session.dispose();
+    notice.mockRestore(); vi.unstubAllGlobals(); await rm(root, { recursive: true, force: true });
+  }
+});
 
 test.each([401, 403])("aborts the real SDK provider request after empty automatic HTTP %i", async status => {
   const root = await mkdtemp(join(process.cwd(), ".tmp/auth-runtime-"));

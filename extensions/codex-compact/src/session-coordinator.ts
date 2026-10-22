@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import type { ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
+import type { ExtensionContext, SessionEntry, ToolInfo } from "@earendil-works/pi-coding-agent";
 import type { Model } from "@earendil-works/pi-ai";
 import { emptyCompactionHashSnapshot, type CompactionHashSnapshot } from "./capabilities.js";
 import { effectiveContextWindow, loadConfig } from "./config.js";
@@ -499,6 +499,15 @@ function pendingTransitionFromBranch(
 	return transitionForSelection({ previousModel, targetModelKey: modelKey(currentModel) }, currentModel, hashes);
 }
 
+function snapshotTools(tools: ToolInfo[]): ToolInfo[] {
+	return tools.map(tool => {
+		// Runtime callbacks cannot be cloned. Keep their identity so replacing one still
+		// invalidates the snapshot, while declaration data is copied independently.
+		const { reachesTools, ...data } = tool;
+		return { ...structuredClone(data), ...(Object.hasOwn(tool, "reachesTools") ? { reachesTools } : {}) };
+	});
+}
+
 export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 	const rawGetBranch = deps.getBranch;
 	deps = {
@@ -888,7 +897,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		const { branch, rawBranch, requestInputWasSanitized, failedUserIds } = evidence;
 		requestInput = evidence.requestInput;
 		basePayload = evidence.basePayload;
-		const tools = structuredClone(deps.getAllTools());
+		const tools = snapshotTools(deps.getAllTools());
 		const prompt = ctx.getSystemPrompt();
 		const originalModel = model;
 		model = structuredClone(model);
@@ -1237,7 +1246,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		const { branch: initialBranch, rawBranch, requestInputWasSanitized, failedUserIds } = evidence;
 		requestInput = evidence.requestInput;
 		basePayload = evidence.basePayload;
-		const initialTools = structuredClone(deps.getAllTools());
+		const initialTools = snapshotTools(deps.getAllTools());
 		const initialPrompt = ctx.getSystemPrompt();
 		const originalModel = model;
 		model = structuredClone(model);
@@ -1311,7 +1320,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		prepareCompactionPlan: async (model: Model<any>, ctx: ExtensionContext, excludeLastAssistantError = false, signal?: AbortSignal, basePayload?: JsonObject) => {
 			const sessionId = ctx.sessionManager.getSessionId();
 			const branch = structuredClone(deps.getBranch(ctx));
-			const tools = structuredClone(deps.getAllTools());
+			const tools = snapshotTools(deps.getAllTools());
 			const prompt = ctx.getSystemPrompt();
 			const startGeneration = generation;
 			const modelSnapshot = structuredClone(model);

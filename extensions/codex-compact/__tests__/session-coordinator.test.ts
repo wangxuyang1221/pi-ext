@@ -342,6 +342,48 @@ describe("Codex session coordinator", () => {
 		await expect(coordinator.prepareRequest(m, context([m]), input)).rejects.toThrow(/changed/);
 		expect(append).not.toHaveBeenCalled();
 	});
+	test.each(["request", "recovery"] as const)("preserves callback and nested declaration checks during %s metadata resolution", async entry => {
+		for (const change of ["none", "callback", "schema"] as const) {
+			const m = model("old");
+			const branch = [userEntry("hello")];
+			const tool = { name: "script", description: "Script", parameters: { type: "object", properties: { code: { type: "string" } } },
+				reachesTools: () => ["read"] };
+			const append = vi.fn();
+			const coordinator = createSessionCoordinator({ getBranch: () => branch, getAllTools: () => [tool],
+				resolveCompactionHashes: async () => {
+					if (change === "callback") tool.reachesTools = () => ["write"];
+					if (change === "schema") tool.parameters.properties.code.type = "number";
+					return fixtureSnapshot;
+				},
+				createCheckpoint: vi.fn(), appendCheckpoint: append, appendCheckpointBypass: vi.fn() });
+			const ctx = context([m]);
+			const result = entry === "request" ? coordinator.prepareRequest(m, ctx) : coordinator.recoverCurrentModel(m, ctx);
+			if (change === "none") await expect(result).resolves.toBeUndefined();
+			else await expect(result).rejects.toThrow(/changed/);
+			expect(append).not.toHaveBeenCalled();
+		}
+	});
+
+	test("keeps manual compaction snapshots independent while retaining callback identity", async () => {
+		const configured = vi.spyOn(config, "loadConfig").mockReturnValue({ manualProjection: { hiddenTools: [] } } as never);
+		try {
+			for (const change of ["none", "callback", "schema"] as const) {
+				const m = model("old"), branch = [userEntry("history")];
+				const tool = { name: "script", description: "Script", parameters: { type: "object", properties: { code: { type: "string" } } },
+					reachesTools: () => ["read"] };
+				const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch,
+					getAllTools: () => [tool], createCheckpoint: vi.fn(), appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn() });
+				const plan = await coordinator.prepareCompactionPlan(m, context([m]));
+				expect(plan.preservedInput).toEqual([userInput("history")]);
+				expect(plan.assertCurrent).toBeTypeOf("function");
+				if (change === "callback") tool.reachesTools = () => ["write"];
+				if (change === "schema") tool.parameters.properties.code.type = "number";
+				if (change === "none") expect(() => plan.assertCurrent!()).not.toThrow();
+				else expect(() => plan.assertCurrent!()).toThrow(/changed/);
+			}
+		} finally { configured.mockRestore(); }
+	});
+
 	test("repairs over-window retained history even when only the current user follows the checkpoint", async () => {
 		const m = model("old", "openai-codex", 128_000);
 		const old = userInput("a".repeat(255_900));
