@@ -145,6 +145,24 @@ Codex encrypted compaction item.
 
 当前 V2 路径不消费 `/compact focus text` 的 focus text，也不执行分段压缩。
 
+Pi 1.3.0 的 active projection、pending tool calls 期间的 system 顺序，以及 function/grammar item ID 规则已对齐。待发送的真实 user entry 与随后 custom context 按来源一起保留；已经执行过的历史仍受 retention 预算约束。新 checkpoint 保存可选的 `preservedInputSources`，不以文本相同合并两次提交。请求开始时固定历史、工具、提示词和模型；远程等待期间这些信息变化会取消提交，并保留旧 checkpoint。
+
+历史明文的 64k tokens 现在是上限。实际预算还要扣除新 opaque、待发送输入、instructions 和 tools，并在截断后复查；最多 16 次本地调整，不会为满足本地估算截断本次输入。同一请求最多执行一次本地估算触发的远程修复，写入 checkpoint 不重置次数；Pi 对真实 overflow 另保留一次 compact-and-retry。仅因本地估算偏高且自动压缩失败，不禁止正常 provider 尝试。认证、策略和明确的 context-window 错误仍按原分类结束。
+
+实际 provider payload 可用于严格验证 hidden declarations 和 forced prompt。工具只新增时检查至多四个候选策略，只有完整 input、instructions、tools 匹配且有效回放一致才接受。工具移除、重声明场景支持精确普通投影；隐藏策略若无法证明则拒绝。forced 路径信任本 handler 观察到的 `instructions`，不独立验证提示词来源，也不支持任意 context hook 或后续 handler 改写。
+
+在 provider 请求之外发起压缩，包括 `/compact` 和 Pi 自身的 threshold/overflow hook，若工具可见性无法由仍有效的已观察快照确定，需要显式配置 `manualProjection`。普通配置且没有隐藏声明时使用：
+
+```json
+{
+  "manualProjection": { "hiddenTools": [] }
+}
+```
+
+使用隐藏声明时列出实际隐藏的工具名；使用强制提示词时再提供非空字符串 `forcedPrompt`，例如 `{"manualProjection":{"hiddenTools":["internal_tool"],"forcedPrompt":"Your exact forced prompt"}}`。这是受控投影契约，配置必须与扩展实际规则保持一致。Pi 在回合结束后会恢复基础 system prompt，因此不能用布尔开关让插件从 `getSystemPrompt()` 猜出之前的 forced prompt。无工具配置可以直接压缩；信息不足时只取消本次压缩并报告原因。会话、历史、工具或提示词变化会使观察快照失效。
+
+非成功 HTTP 响应的 body 使用固定 300 秒总时限和 1 MiB 诊断上限，持续收到 chunk 不会延长时限。读取不完整时不允许模型 fallback；401/403 和无法区分 quota 的 429 不重试，503 保持最多两次额外 HTTP retry。成功 SSE 仍使用原有 idle timeout。离线验收和边界见 [repair todo](docs/codex-compact-plugin-repair-todo.md)。
+
 不要同时加载本扩展和独立的 `npm:@yeungkc/pi-codex-compact@0.0.6`，否则同一组 hooks 会执行两次。迁移现有安装时，应先验证本 package，再从 Pi settings 停用独立 npm entry 并重启或 reload。
 
 本目录基于 `@yeungkc/pi-codex-compact` 0.0.6 导入；精确 commit、同步范围和本地改动记录见 `extensions/codex-compact/UPSTREAM.md`，上游 MIT license 见同目录 `LICENSE`。

@@ -1,8 +1,26 @@
 import { describe, expect, test } from "vitest";
 import { SessionManager } from "@earendil-works/pi-coding-agent";
 import { createBranchProjectionSnapshot } from "../src/session-projection.js";
+import { appendPreservedInput, compactionInputPlan, createBranchInputSnapshot, findNativeCheckpoint, modelKey, NATIVE_COMPACTION_KIND } from "../src/native-compaction.js";
+import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
 
 describe("Codex branch projection", () => {
+	test("keeps source-owned pending input outside repeated compaction after checkpoint round trip", () => {
+		const model = getBuiltinModel("openai-codex", "gpt-5.6-sol")!;
+		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendMessage({ role: "user", content: "pending".repeat(50_000), timestamp: 1 });
+		sm.appendCustomMessageEntry("context", "following context", false);
+		const first = compactionInputPlan(createBranchInputSnapshot({ branch: sm.getBranch(), tools: [] }), model);
+		const opaque = { type: "compaction", encrypted_content: "opaque" };
+		const details = appendPreservedInput({ kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(model), replacementHistory: [opaque] }, first.preservedInput, first.preservedInputSources);
+		sm.appendCustomEntry(NATIVE_COMPACTION_KIND, JSON.parse(JSON.stringify(details)));
+		const parsed = findNativeCheckpoint(sm.getBranch(), modelKey(model));
+		expect(parsed.status).toBe("valid");
+		const second = compactionInputPlan(createBranchInputSnapshot({ branch: sm.getBranch(), tools: [] }), model);
+		expect(second.input).toEqual([opaque]);
+		expect(second.preservedInput).toEqual(first.preservedInput);
+		expect(second.preservedInputSources).toEqual(first.preservedInputSources);
+	});
 	test.each(["overlap", "separate", "retain-none"])("matches Pi source messages with %s ordinary compaction", (mode) => {
 		const sm = SessionManager.inMemory(process.cwd());
 		sm.appendMessage({ role: "system", content: "initial system", timestamp: 0 });

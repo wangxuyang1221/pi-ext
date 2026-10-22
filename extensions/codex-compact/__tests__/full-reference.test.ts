@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fullEstimatorCases } from "../../../scripts/codex-compact-full-cases.mjs";
 import { approximateCompactionRequestTokens, approximateResponseItemTokens } from "../src/native-compaction.js";
 import * as decoder from "../src/media-decoder.js";
@@ -10,8 +10,8 @@ const reference = JSON.parse(readFileSync(new URL("./fixtures/codex-full-referen
 const originalDecode = decoder.decodeOriginalImageBytes;
 // The native oracle was built with macOS CLI features. Other platform policies
 // are independently exercised by media-decoder.test.ts, without mocking bytes.
-vi.spyOn(decoder, "decodeOriginalImageBytes").mockImplementation((url) => originalDecode(url, "darwin"));
-afterAll(() => vi.restoreAllMocks());
+beforeEach(() => { vi.spyOn(decoder, "decodeOriginalImageBytes").mockImplementation((url) => originalDecode(url, "darwin")); });
+afterEach(() => vi.restoreAllMocks());
 
 describe("original Rust full ResponseItem estimator", () => {
 	it.each(fullEstimatorCases())("normalizes and estimates $name like pinned serde and history.rs", (entry) => {

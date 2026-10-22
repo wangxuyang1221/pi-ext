@@ -9,7 +9,7 @@ import {
 	type SessionEntry,
 	type ToolInfo,
 } from "@earendil-works/pi-coding-agent";
-import { calculateCost, getDeclaredTools, normalizeContext, resolveTranscript, resolveTranscriptTools, renderSystemMessageUpdate, type OpenAIResponsesCompat, type Tool, type SystemMessage, type Message, type Model, type Usage } from "@earendil-works/pi-ai";
+import { calculateCost, getDeclaredTools, getCurrentSystemMessage, getSystemMessageText, normalizeContext, resolveTranscript, resolveTranscriptTools, renderSystemMessageUpdate, type OpenAIResponsesCompat, type Tool, type SystemMessage, type Message, type Model, type Usage } from "@earendil-works/pi-ai";
 
 export const NATIVE_COMPACTION_KIND = "openai-codex-native-compaction";
 export const NATIVE_COMPACTION_BYPASS_KIND = "openai-codex-native-compaction-bypass";
@@ -86,10 +86,12 @@ export function isContextWindowCompactionError(error: unknown): boolean {
 
 export type JsonObject = Record<string, unknown>;
 export type ResponseItem = JsonObject & { type?: string };
-export type ResponseInputView = { items: ResponseItem[]; userSources: ReadonlyMap<number, string> };
+export type ResponseInputView = { items: ResponseItem[]; userSources: ReadonlyMap<number, string>; instructions?: string; tools?: JsonObject[] };
+export type RequestProjectionPolicy = { hiddenNames: ReadonlySet<string>; forcedPrompt?: string };
 export type InputViewKind = "full-history" | "pi-context" | "effective";
 export type InputViewOptions = {
 	excludeEntryId?: string;
+	excludeEntryIds?: readonly string[];
 	excludeLastAssistantError?: boolean;
 	allowCheckpointModelMismatch?: boolean;
 };
@@ -124,6 +126,8 @@ export interface NativeCompactionDetails {
 	modelKey: string;
 	compHash?: string;
 	preservedInput?: ResponseItem[];
+	/** Source entry IDs aligned with preservedInput; null denotes an unknown or synthetic source. */
+	preservedInputSources?: (string | null)[];
 	replacementHistory: ResponseItem[];
 }
 
@@ -269,6 +273,9 @@ export function parseNativeCompactionDetails(value: unknown): NativeCompactionDe
 	if (value.preservedInput !== undefined) {
 		if (!Array.isArray(value.preservedInput) || preservedInput === undefined || preservedInput.length !== value.preservedInput.length) return undefined;
 	}
+	const sources = value.preservedInputSources;
+	if (sources !== undefined && (!Array.isArray(sources) || sources.length !== preservedInput?.length
+		|| !sources.every(source => source === null || (typeof source === "string" && source.length > 0)))) return undefined;
 	if (value.strategy !== undefined && value.strategy !== "v2") return undefined;
 	const compactionItems = replacementHistory.filter((item) => item.type === "compaction");
 	if (
@@ -285,6 +292,7 @@ export function parseNativeCompactionDetails(value: unknown): NativeCompactionDe
 		modelKey: value.modelKey,
 		...(typeof value.compHash === "string" ? { compHash: value.compHash } : {}),
 		...(preservedInput ? { preservedInput: preservedInput.map((item) => structuredClone(item)) } : {}),
+		...(Array.isArray(sources) ? { preservedInputSources: sources.slice() as (string | null)[] } : {}),
 		replacementHistory: replacementHistory.map((item) => structuredClone(item)),
 	};
 }
@@ -503,6 +511,51 @@ function responseTool(tool: Tool, deferLoading: boolean, supportsStrictMode: boo
 	return convertResponsesTools([tool], { strict: null, supportsStrictMode, supportsOpenAIGrammarTools, toolSearchResult: deferLoading })[0] as unknown as JsonObject;
 }
 
+/** Keep system updates behind a complete tool group without losing message identity. */
+function orderToolGroups(messages: Message[], retained: Set<Message>): Message[] {
+	const ordered: Message[] = [];
+	let calls: Extract<Message, { role: "assistant" }> | undefined;
+	const results = new Set<string>();
+	const group: Message[] = [];
+	const held: Message[] = [];
+	const close = () => {
+		if (calls) {
+			for (const call of calls.content) {
+				if (call.type !== "toolCall" || results.has(call.id)) continue;
+				const result: Message = { role: "toolResult", toolCallId: call.id, toolName: call.name,
+					content: [{ type: "text", text: "No result provided" }], isError: true, timestamp: 0 };
+				group.push(result);
+				ordered.push(result);
+			}
+			if (group.some(message => retained.has(message))) for (const message of group) retained.add(message);
+		}
+		group.length = 0;
+		calls = undefined;
+		results.clear();
+		ordered.push(...held);
+		held.length = 0;
+	};
+	for (const message of messages) {
+		if (message.role === "assistant" || message.role === "user") close();
+		if (message.role === "assistant") {
+			if (message.stopReason === "error" || message.stopReason === "aborted") continue;
+			if (Array.isArray(message.content) && message.content.some(block => block.type === "toolCall")) {
+				calls = message;
+				group.push(message);
+			}
+		} else if (message.role === "toolResult") {
+			results.add(message.toolCallId);
+			if (calls) group.push(message);
+		} else if (message.role === "system" && calls) {
+			held.push(message);
+			continue;
+		}
+		ordered.push(message);
+	}
+	close();
+	return ordered;
+}
+
 function messagesToResponseItems(
 	model: Model<any>,
 	messages: Message[],
@@ -513,7 +566,7 @@ function messagesToResponseItems(
 	const retainedMessages = new Set(messages.slice(skipMessages));
 	const compat = model.compat as OpenAIResponsesCompat | undefined;
 	const context = resolveTranscript(normalizeContext({ messages, ...(messages.some(message => message.role === "system") ? {} : { tools }) }), compat?.supportsMidConvoSystemMessages);
-	messages = context.messages;
+	messages = orderToolGroups(context.messages, retainedMessages);
 	const items: ResponseItem[] = [];
 	const userSources = new Map<number, string>();
 	const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
@@ -539,9 +592,8 @@ function messagesToResponseItems(
 	let messageIndex = 0;
 
 	let sourceIndex = 0;
-	let tailStart: number | undefined;
+	const retainedItems = new Set<number>();
 	for (const message of messages as unknown as JsonObject[]) {
-		if (tailStart === undefined && retainedMessages.has(message as unknown as Message)) tailStart = items.length;
 		const isLeadingSystemMessage = sourceIndex++ === 0 && message.role === "system";
 		const itemCountBefore = items.length;
 		if (message.role === "system") {
@@ -613,7 +665,7 @@ function messagesToResponseItems(
 					}
 					// Keep result pairing independent of whether the wire call retains its item ID.
 					normalizedToolCallIds.set(block.id, sameModel ? block.id : itemId === undefined ? callId : `${callId}|${itemId}`);
-					if ((sameProviderApi && !sameModel && itemId?.startsWith("fc_")) || (!custom && !itemId?.startsWith("fc_"))) itemId = undefined;
+					if ((sameProviderApi && !sameModel) || !itemId?.startsWith(custom ? "ctc_" : "fc_")) itemId = undefined;
 					pendingToolCalls.set(block.id, { callId, custom });
 					const args = isJsonObject(block.arguments) ? block.arguments : {};
 					const tool = toolsByName.get(String(block.name));
@@ -639,16 +691,26 @@ function messagesToResponseItems(
 			items.push({ type: grammarToolNames.has(String(message.toolName)) ? "custom_tool_call_output" : "function_call_output", call_id: callId, output: toolResultOutput(message, model) });
 		}
 		if (message.role === "assistant" && items.length === itemCountBefore) continue;
+		if (skipMessages === 0 || retainedMessages.has(message as unknown as Message)) {
+			for (let index = itemCountBefore; index < items.length; index++) retainedItems.add(index);
+		}
 		if (!isLeadingSystemMessage) messageIndex++;
 	}
 	flushOrphanedToolCalls();
 
-	const start = skipMessages > 0 ? tailStart ?? items.length : 0;
+	const selectedItems: ResponseItem[] = [];
+	const selectedSources = new Map<number, string>();
+	for (let index = 0; index < items.length; index++) {
+		if (skipMessages > 0 && !retainedItems.has(index)) continue;
+		const source = userSources.get(index);
+		if (source !== undefined) selectedSources.set(selectedItems.length, source);
+		selectedItems.push(items[index]!);
+	}
 	return {
-		items: start > 0 ? items.slice(start) : items,
-		userSources: start > 0
-			? new Map([...userSources].filter(([index]) => index >= start).map(([index, id]) => [index - start, id]))
-			: userSources,
+		items: selectedItems,
+		instructions: context.messages[0]?.role === "system" ? getSystemMessageText(context.messages[0]) : "",
+		tools: transcriptTools.requestTools.map(tool => responseTool(tool, false, supportsStrictMode, supportsGrammar)),
+		userSources: selectedSources,
 	};
 }
 
@@ -688,12 +750,26 @@ export function createBranchInputSnapshot(params: {
 	tools: ToolInfo[];
 	convertMessages?: typeof convertToLlm;
 	lookupCheckpoint?: typeof findNativeCheckpoint;
+	projectionPolicy?: RequestProjectionPolicy;
 }) {
 	const projection = createBranchProjectionSnapshot(params.branch);
 	const branch = projection.branch as SessionEntry[];
 	const cache = new Map<Model<any>, Map<string, ResponseInputView>>();
-	const nativeRanges = new Map<number, readonly ProjectedBranchEntry[]>();
 	const checkpoints = new Map<string, CheckpointLookup>();
+	const tools = params.projectionPolicy ? params.tools.filter(tool => !params.projectionPolicy!.hiddenNames.has(tool.name)) : params.tools;
+	const transform = (entries: readonly ProjectedBranchEntry[]): readonly ProjectedBranchEntry[] => {
+		const policy = params.projectionPolicy;
+		if (!policy) return entries;
+		const projected = entries.map(entry => ({ ...entry, messages: entry.messages.map(message => message.role !== "system" ? message : {
+			...message,
+			toolsAdded: message.toolsAdded?.filter(tool => !policy.hiddenNames.has(tool.name)),
+			toolsRemoved: message.toolsRemoved?.filter(tool => !policy.hiddenNames.has(tool.name)),
+		}) }));
+		if (policy.forcedPrompt === undefined || !entries[0]) return projected;
+		const current = getCurrentSystemMessage(convertToLlm(projected.flatMap(entry => entry.messages)));
+		return [{ ...entries[0], sourceIndex: -1, messages: [{ role: "system", content: policy.forcedPrompt, timestamp: 0,
+			toolsAdded: current?.toolsAdded ?? tools }] }, ...projected.map(entry => ({ ...entry, messages: entry.messages.filter(message => message.role !== "system") }))];
+	};
 	const checkpoint = (model: Model<any>) => {
 		const key = modelKey(model);
 		let result = checkpoints.get(key);
@@ -707,13 +783,13 @@ export function createBranchInputSnapshot(params: {
 			throw new Error("The latest Codex compaction checkpoint requires model-transition compaction first.");
 		}
 		const normalizedKind = kind === "effective" && lookup.status !== "valid" ? "pi-context" : kind;
-		const key = `${normalizedKind}|${options.excludeEntryId ?? ""}|${options.excludeLastAssistantError ? 1 : 0}`;
+		const key = `${normalizedKind}|${options.excludeEntryId ?? ""}|${JSON.stringify(options.excludeEntryIds ?? [])}|${options.excludeLastAssistantError ? 1 : 0}`;
 		const equivalentModel = [...cache.keys()].find((candidate) => isDeepStrictEqual(candidate, model));
 		let byKind = cache.get(equivalentModel ?? model);
 		if (!byKind) cache.set(model, byKind = new Map());
 		const cached = byKind.get(key);
 		if (cached) return cached;
-		const excluded = new Set<string>();
+		const excluded = new Set<string>(options.excludeEntryIds);
 		if (options.excludeEntryId) excluded.add(options.excludeEntryId);
 		if (options.excludeLastAssistantError) {
 			const lastAssistant = branch.findLast((entry) => entry.type === "message" && entry.message.role === "assistant");
@@ -721,43 +797,32 @@ export function createBranchInputSnapshot(params: {
 		}
 		let result: ResponseInputView;
 		if (normalizedKind === "full-history") {
-			result = projectedToResponseView(model, projection.fullHistory(), params.tools, excluded, 0, params.convertMessages);
+			result = projectedToResponseView(model, transform(projection.fullHistory()), tools, excluded, 0, params.convertMessages);
 		} else if (normalizedKind === "effective" && lookup.status === "valid") {
 			const prefix = [
 				...lookup.checkpoint.details.replacementHistory.map((item) => structuredClone(item)),
 				...(lookup.checkpoint.details.preservedInput ?? []).map((item) => structuredClone(item)),
 			];
-			const tail = projectedToResponseView(model, projection.fullHistory(), params.tools, excluded, lookup.checkpoint.entryIndex + 1, params.convertMessages);
-			result = { items: [...prefix, ...tail.items], userSources: new Map([...tail.userSources].map(([index, id]) => [index + prefix.length, id])) };
+			const tail = projectedToResponseView(model, transform(projection.fullHistory()), tools, excluded, lookup.checkpoint.entryIndex + 1, params.convertMessages);
+			const sources = new Map([...tail.userSources].map(([index, id]) => [index + prefix.length, id]));
+			lookup.checkpoint.details.preservedInputSources?.forEach((source, index) => {
+				if (source && lookup.checkpoint.details.preservedInput?.[index]?.role === "user") sources.set(lookup.checkpoint.details.replacementHistory.length + index, source);
+			});
+			result = { ...tail, items: [...prefix, ...tail.items], userSources: sources };
 		} else if (lookup.status === "invalid" || lookup.status === "bypassed") {
 			result = view(model, "full-history", options);
 		} else if (lookup.status === "valid") {
-			let firstKeptId: string | undefined;
-			const own = branch[lookup.checkpoint.entryIndex];
-			if (own?.type === "compaction") firstKeptId = own.firstKeptEntryId;
-			if (!firstKeptId) {
-				for (let index = lookup.checkpoint.entryIndex - 1; index >= 0; index--) {
-					const entry = branch[index];
-					if (entry?.type === "compaction") { firstKeptId = entry.firstKeptEntryId; break; }
-				}
-			}
-			const firstIndex = firstKeptId ? projection.sourceIndexById.get(firstKeptId) : undefined;
-			if (firstIndex === undefined) result = view(model, "full-history", options);
-			else {
-				let nativeRange = nativeRanges.get(firstIndex);
-				if (!nativeRange) {
-					nativeRange = createBranchProjectionSnapshot(branch.slice(firstIndex)).fullHistory()
-						.map((entry) => ({ ...entry, sourceIndex: entry.sourceIndex + firstIndex }));
-					nativeRanges.set(firstIndex, nativeRange);
-				}
-				result = projectedToResponseView(model, nativeRange, params.tools, excluded, 0, params.convertMessages);
-			}
+			const active = (branch.some(entry => entry.type === "compaction") ? projection.piContext() : projection.fullHistory()).map((entry) => ({
+				...entry,
+				messages: entry.messages.filter((message) => message.role !== "compactionSummary"),
+			}));
+			result = projectedToResponseView(model, transform(active), tools, excluded, 0, params.convertMessages);
 		} else {
 			const latestCompaction = branch.findLast((entry) => entry.type === "compaction");
 			const firstIndex = latestCompaction?.type === "compaction" ? projection.sourceIndexById.get(latestCompaction.firstKeptEntryId) : undefined;
 			result = !latestCompaction || firstIndex === undefined
 				? view(model, "full-history", options)
-				: projectedToResponseView(model, projection.piContext(), params.tools, excluded, 0, params.convertMessages);
+				: projectedToResponseView(model, transform(projection.piContext()), tools, excluded, 0, params.convertMessages);
 		}
 		byKind.set(key, result);
 		return result;
@@ -767,6 +832,44 @@ export function createBranchInputSnapshot(params: {
 
 export function fullInputForBranch(params: { branch: SessionEntry[]; model: Model<any>; tools: ToolInfo[] }): ResponseItem[] {
 	return createBranchInputSnapshot(params).view(params.model, "full-history").items;
+}
+
+export type CompactionInputPlan = {
+	input: ResponseItem[];
+	preservedInput: ResponseItem[];
+	preservedInputSources: (string | null)[];
+	basePayload?: JsonObject;
+	assertCurrent?: () => void;
+};
+
+export function compactionInputPlan(snapshot: ReturnType<typeof createBranchInputSnapshot>, model: Model<any>, options: InputViewOptions = {}): CompactionInputPlan {
+	const view = snapshot.view(model, "effective", { ...options, allowCheckpointModelMismatch: true });
+	const branch = snapshot.projection.branch;
+	const index = branch.findLastIndex(entry => entry.type === "message" && entry.message.role === "user");
+	const entry = branch[index];
+	const checkpoint = snapshot.checkpoint(model);
+	const consumed = branch.slice(index + 1).some(item => item.type === "message" && (item.message.role === "toolResult"
+		|| (item.message.role === "assistant" && item.message.stopReason !== "error" && item.message.stopReason !== "aborted")));
+	const requestIndex = entry && !consumed && (checkpoint.status !== "valid" || index > checkpoint.checkpoint.entryIndex
+		|| checkpoint.checkpoint.details.preservedInputSources?.includes(entry.id))
+		? [...view.userSources].find(([_, source]) => source === entry.id)?.[0] : undefined;
+	if (requestIndex === undefined) return { input: view.items, preservedInput: [], preservedInputSources: [] };
+	return {
+		input: view.items.slice(0, requestIndex),
+		preservedInput: view.items.slice(requestIndex),
+		preservedInputSources: view.items.slice(requestIndex).map((_, offset) => view.userSources.get(requestIndex + offset) ?? null),
+	};
+}
+
+export function appendPreservedInput(details: NativeCompactionDetails, input: ResponseItem[], sources?: (string | null)[]): NativeCompactionDetails {
+	if (input.length === 0) return details;
+	return {
+		...details,
+		preservedInput: [...(details.preservedInput ?? []), ...structuredClone(input)],
+		...((sources || details.preservedInputSources) ? {
+			preservedInputSources: [...(details.preservedInputSources ?? (details.preservedInput ?? []).map(() => null)), ...(sources ?? input.map(() => null))],
+		} : {}),
+	};
 }
 
 export function piContextInputForBranch(params: { branch: SessionEntry[]; model: Model<any>; tools: ToolInfo[] }): ResponseItem[] {
@@ -1446,6 +1549,50 @@ async function withCompactionTimeout<T>(
 	}
 }
 
+/** Error diagnostics have one total deadline and bounded storage, independent of SSE idle time. */
+async function readErrorBody(response: Response, controller: AbortController, signal?: AbortSignal): Promise<{ text: string; complete: boolean }> {
+	if (signal?.aborted) throw abortError(signal);
+	if (!response.body) return { text: "", complete: true };
+	const reader = response.body.getReader();
+	const decoder = new TextDecoder();
+	// Error JSON is normally tiny. Keep enough diagnostics without buffering an arbitrary response.
+	const maxBytes = 1024 * 1024;
+	let bytes = 0;
+	let text = "";
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	let onAbort: () => void = () => {};
+	let complete = false;
+	const interrupted = new Promise<void>((resolve, reject) => {
+		onAbort = () => reject(abortError(signal!));
+		signal?.addEventListener("abort", onAbort, { once: true });
+		timer = setTimeout(() => {
+			controller.abort(new Error("OpenAI Codex compaction error body timed out."));
+			resolve();
+		}, V2_COMPACTION_IDLE_TIMEOUT_MS);
+	});
+	const read = async () => {
+		while (true) {
+			const chunk = await reader.read();
+			if (chunk.done) { text += decoder.decode(); complete = true; return; }
+			const remaining = maxBytes - bytes;
+			text += decoder.decode(chunk.value.subarray(0, remaining), { stream: true });
+			bytes += chunk.value.byteLength;
+			if (bytes >= maxBytes) { controller.abort(new Error("OpenAI Codex compaction error body exceeded the diagnostic limit.")); return; }
+		}
+	};
+	try {
+		await Promise.race([read().catch(() => {}), interrupted]);
+		if (signal?.aborted) throw abortError(signal);
+		return { text, complete };
+	} finally {
+		if (timer !== undefined) clearTimeout(timer);
+		signal?.removeEventListener("abort", onAbort);
+		// Do not await a transport's potentially stalled cancel hook.
+		void reader.cancel().catch(() => {});
+		reader.releaseLock();
+	}
+}
+
 async function parseSseResponse(
 	response: Response,
 	signal?: AbortSignal,
@@ -1718,12 +1865,21 @@ export async function callRemoteCompaction(params: {
 					turnStateCaptured = true;
 				}
 				if (!response.ok) {
-					const body = await response.text().catch(() => "");
+					const body = await readErrorBody(response, attemptController, params.signal);
 					const classified = classifyHttpCompactionError(
 						response.status,
-						body || response.statusText,
+						body.text || response.statusText,
 						"OpenAI Codex compaction failed",
 					);
+					if (!body.complete) {
+						markFallbackEligibility(classified.error, false);
+						classified.error.message += " (error body incomplete)";
+						// A truncated 429 cannot distinguish rate limiting from exhausted quota.
+						if (response.status < 500) {
+							classified.retryable = false;
+							markCompactionRetry(classified.error, "none");
+						}
+					}
 					if (!classified.retryable || attempt === MAX_REMOTE_RETRIES) throw classified.error;
 					lastError = classified.error;
 					await delay(parseRetryDelay(response) ?? 1000 * 2 ** attempt, params.signal);

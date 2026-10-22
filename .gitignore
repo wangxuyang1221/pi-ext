@@ -20,6 +20,7 @@ __pycache__/
 handoff/
 .scratch/
 prototypes/*
+!prototypes/codex-compact-repair-proof/
 !prototypes/codex-ui-performance/
 !prototypes/codex-bash-ui-prototype/
 !prototypes/codex-tool-summary-prototype/

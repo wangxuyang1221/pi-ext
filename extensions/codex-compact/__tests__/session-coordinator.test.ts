@@ -10,6 +10,7 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
 	return { ...actual, convertToLlm: vi.fn(actual.convertToLlm) };
 });
 import { createSessionCoordinator, type RemoteCompactionReason } from "../src/session-coordinator.js";
+import * as config from "../src/config.js";
 import {
 	effectiveInputForBranch,
 	buildReplacementHistory,
@@ -133,6 +134,165 @@ function createCoordinator(
 }
 
 describe("Codex session coordinator", () => {
+	test("freezes direct recovery evidence before metadata resolution", async () => {
+		const old = model("old"), next = model("new");
+		const branch = [userEntry("old"), customEntry({ ...details(modelKey(old)), compHash: "2911" })];
+		const compact = vi.fn(async () => ({ details: details(modelKey(next)) }));
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: async () => { (branch[0] as any).message.content = "changed"; return fixtureSnapshot; },
+			getBranch: () => branch, getAllTools: () => [], createCheckpoint: compact, appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn() });
+		await expect(coordinator.recoverCurrentModel(next, context([old, next]))).rejects.toThrow(/changed/);
+		expect(compact).not.toHaveBeenCalled();
+	});
+	test("reserves an unpersisted request suffix in a model transition budget", async () => {
+		const old = model("old"), next = model("new", "openai-codex", 1000);
+		const branch = [userEntry("history")];
+		const compact = vi.fn(async () => ({ details: details(modelKey(next)) }));
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch, getAllTools: () => [],
+			createCheckpoint: compact, appendCheckpoint: value => branch.push(customEntry(value)), appendCheckpointBypass: vi.fn() });
+		const ctx = context([old, next]);
+		await coordinator.selectModel({ previousModel: old, model: next }, ctx);
+		const current = userInput("fresh".repeat(500));
+		await coordinator.prepareRequest(next, ctx, [userInput("history"), current]);
+		expect(compact.mock.calls[0]?.[0]).toMatchObject({ input: [userInput("history")], protectedInput: [current], replayContextWindow: 1000 });
+	});
+	test.each(["declaration", "branch"])("preserves the old checkpoint when %s changes during transition", async change => {
+		const old = model("old"), next = model("new");
+		const branch = [userEntry("old"), customEntry({ ...details(modelKey(old)), compHash: "2911" })];
+		const tool = { name: "read", description: "old", parameters: { type: "object", properties: {} } };
+		const bypass = vi.fn(), append = vi.fn();
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch, getAllTools: () => [tool] as never,
+			createCheckpoint: async () => {
+				if (change === "declaration") tool.description = "new";
+				else (branch[0] as any).message.content = "edited";
+				return { details: details(modelKey(next)) };
+			}, appendCheckpoint: append, appendCheckpointBypass: bypass });
+		await expect(coordinator.prepareRequest(next, context([old, next]), [...details(modelKey(old)).replacementHistory, userInput("pending")])).rejects.toThrow(/changed/);
+		expect(append).not.toHaveBeenCalled();
+		expect(bypass).not.toHaveBeenCalled();
+	});
+	test("rejects unproven transition input without guessing that the last wire user is human", async () => {
+		const old = model("old"), next = model("new");
+		const branch = [userEntry("actual branch")];
+		const compact = vi.fn(async () => details(modelKey(next)));
+		const coordinator = createCoordinator(branch, compact);
+		const ctx = context([old, next]);
+		await coordinator.selectModel({ previousModel: old, model: next }, ctx);
+		await expect(coordinator.prepareRequest(next, ctx, [userInput("changed history"), userInput("custom suffix")])).rejects.toThrow();
+		expect(compact).not.toHaveBeenCalled();
+		expect(branch).toHaveLength(1);
+	});
+	test("supports first manual compaction with an explicit hidden and forced policy", async () => {
+		const m = model("old");
+		const tools = ["visible", "hidden"].map(name => ({ name, description: name, parameters: { type: "object", properties: {} } }));
+		const branch = [userEntry("pending")];
+		const policy = vi.spyOn(config, "loadConfig").mockReturnValue({ autoCompactScope: "total", manualProjection: { hiddenTools: ["hidden"], forcedPrompt: "Forced prompt" } });
+		try {
+			const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch, getAllTools: () => tools as never,
+				createCheckpoint: vi.fn(), appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn() });
+			const plan = await coordinator.prepareCompactionPlan(m, context([m], "Forced prompt"));
+			expect(plan.input).toEqual([]);
+			expect(plan.preservedInput).toEqual([userInput("pending")]);
+			expect(plan.basePayload.instructions).toBe("Forced prompt");
+			expect((plan.basePayload.tools as any[]).map(tool => tool.name)).toEqual(["visible"]);
+			tools[0]!.description = "changed";
+			expect(plan.assertCurrent).toThrow(/changed/);
+		} finally { policy.mockRestore(); }
+	});
+	test("does not discard custom suffix content missing from the persisted checkpoint", async () => {
+		const m = model("old");
+		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendMessage({ role: "user", content: "old", timestamp: 0 });
+		sm.appendMessage(assistantEntry(m, "answer").message as never);
+		sm.appendMessage({ role: "user", content: "pending", timestamp: 1 });
+		sm.appendCustomMessageEntry("context", "custom suffix", false);
+		const raw = effectiveInputForBranch({ branch: sm.getBranch(), model: m, tools: [] });
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => sm.getBranch(), getAllTools: () => [],
+			createCheckpoint: async () => ({ details: details(modelKey(m)) }),
+			appendCheckpoint: value => sm.appendCustomEntry(NATIVE_COMPACTION_KIND, { ...value, preservedInput: value.preservedInput?.slice(0, 1), preservedInputSources: value.preservedInputSources?.slice(0, 1) }),
+			appendCheckpointBypass: vi.fn(), shouldAutoCompact: () => true });
+		const actual = await coordinator.prepareRequest(m, { ...context([m], ""), sessionManager: sm } as never, raw);
+		expect(actual?.filter(item => JSON.stringify(item).includes("custom suffix"))).toHaveLength(1);
+	});
+	test("protects the persisted source-owned user and custom suffix after coordinator reload", async () => {
+		const m = model("old", "openai-codex", 1000);
+		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendMessage({ role: "user", content: "old history", timestamp: 0 });
+		sm.appendMessage(assistantEntry(m, "answer").message as never);
+		const userId = sm.appendMessage({ role: "user", content: "pending".repeat(500), timestamp: 1 });
+		const customId = sm.appendCustomMessageEntry("context", "custom suffix", false);
+		const raw = effectiveInputForBranch({ branch: sm.getBranch(), model: m, tools: [] });
+		const suffix = raw.slice(-2);
+		sm.appendCustomEntry(NATIVE_COMPACTION_KIND, { ...details(modelKey(m)), replacementHistory: [userInput("old".repeat(2000)), ...details(modelKey(m)).replacementHistory],
+			preservedInput: suffix, preservedInputSources: [userId, customId] });
+		const inputs: ResponseItem[][] = [];
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => sm.getBranch(), getAllTools: () => [],
+			createCheckpoint: async ({ input }) => { inputs.push(input); return { details: details(modelKey(m), "next") }; },
+			appendCheckpoint: value => sm.appendCustomEntry(NATIVE_COMPACTION_KIND, value), appendCheckpointBypass: vi.fn(), shouldAutoCompact: () => true });
+		const actual = await coordinator.prepareRequest(m, { ...context([m], ""), sessionManager: sm } as never, raw);
+		expect(inputs).toHaveLength(1);
+		expect(inputs[0]).not.toContainEqual(suffix[0]);
+		expect(inputs[0]).not.toContainEqual(suffix[1]);
+		expect(actual?.slice(-2)).toEqual(suffix);
+		expect(actual?.filter(item => item.role === "user")).toHaveLength(2);
+	});
+	test("does not reset the automatic repair allowance when a checkpoint changes", async () => {
+		const m = model("old", "openai-codex", 1000);
+		const old = userInput("old".repeat(2000));
+		const current = userInput("current");
+		const branch = [userEntry("old".repeat(2000), "old"), assistantEntry(m), userEntry("current", "new")];
+		const input = effectiveInputForBranch({ branch, model: m, tools: [] });
+		const compact = vi.fn(async () => ({ details: { ...details(modelKey(m)), replacementHistory: [old, ...details(modelKey(m)).replacementHistory] } }));
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch, getAllTools: () => [],
+			createCheckpoint: compact, appendCheckpoint: value => branch.push(customEntry(value, `checkpoint-${branch.length}`)), appendCheckpointBypass: vi.fn(), shouldAutoCompact: () => true });
+		const ctx = context([m], "");
+		await coordinator.prepareRequest(m, ctx, input, { instructions: "", tools: [] });
+		await coordinator.prepareRequest(m, ctx, input, { instructions: "", tools: [] });
+		expect(compact).toHaveBeenCalledTimes(1);
+		expect(findNativeCheckpoint(branch, modelKey(m)).status).toBe("valid");
+		expect(effectiveInputForBranch({ branch, model: m, tools: [] })).toContainEqual(current);
+		await coordinator.prepareRequest(m, ctx, [...input, userInput("another unpersisted request")], { instructions: "", tools: [] });
+		expect(compact).toHaveBeenCalledTimes(2);
+	});
+	test("requires an explicit declaration policy for first manual compaction with tools", async () => {
+		const m = model("old");
+		const branch = [userEntry("history")];
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch,
+			getAllTools: () => [{ name: "hider", description: "May use a private loadout", parameters: { type: "object" } }] as never,
+			createCheckpoint: vi.fn(), appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn() });
+		await expect(coordinator.prepareCompactionPlan(m, context([m]))).rejects.toThrow(/manualProjection/);
+	});
+	test.each(["metadata", "remote"])("rejects changed declarations during %s await before committing", async (phase) => {
+		const m = model("old");
+		const branch = [userEntry("history", "old"), assistantEntry(m), userEntry("current", "current")];
+		const tool = { name: "read", description: "original", parameters: { type: "object", properties: {} } };
+		const append = vi.fn();
+		const coordinator = createSessionCoordinator({
+			getBranch: () => branch, getAllTools: () => [tool], appendCheckpoint: append, appendCheckpointBypass: vi.fn(), shouldAutoCompact: () => true,
+			resolveCompactionHashes: async (...args) => { if (phase === "metadata") tool.description = "changed"; return resolveFixtureHashes(...args); },
+			createCheckpoint: async () => { if (phase === "remote") tool.description = "changed"; return { details: details(modelKey(m)) }; },
+		});
+		const input = effectiveInputForBranch({ branch, model: m, tools: [tool] as never });
+		await expect(coordinator.prepareRequest(m, context([m]), input)).rejects.toThrow(/changed/);
+		expect(append).not.toHaveBeenCalled();
+	});
+	test("repairs over-window retained history even when only the current user follows the checkpoint", async () => {
+		const m = model("old", "openai-codex", 128_000);
+		const old = userInput("a".repeat(255_900));
+		const current = userInput("b".repeat(280_000));
+		const branch = [userEntry("a".repeat(255_900), "old"), customEntry({ ...details(modelKey(m)), replacementHistory: [old, ...details(modelKey(m)).replacementHistory] }), userEntry("b".repeat(280_000), "new")];
+		const decide = vi.fn(() => true);
+		const compact = vi.fn(async ({ input, protectedInput }: any) => {
+			expect(input).not.toContainEqual(current);
+			expect(protectedInput).toEqual([current]);
+			return { details: details(modelKey(m), "new-opaque") };
+		});
+		const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch, getAllTools: () => [],
+			createCheckpoint: compact, appendCheckpoint: value => branch.push(customEntry(value, "new-checkpoint")), appendCheckpointBypass: () => {}, shouldAutoCompact: decide });
+		const result = await coordinator.prepareRequest(m, context([m], ""), [old, current], { instructions: "", tools: [] });
+		expect(compact).toHaveBeenCalledTimes(1);
+		expect(decide).toHaveBeenCalledWith(expect.objectContaining({ input: [old, ...details(modelKey(m)).replacementHistory, current] }));
+		expect(result).toEqual([{ type: "compaction", encrypted_content: "new-opaque" }, current]);
+	});
 	test.each([true, false])("recovers an older transition behind an equal-hash selection, selected: %s", async (selected) => {
 		const old = model("old");
 		const middle = model("new");
@@ -343,6 +503,7 @@ describe("Codex session coordinator", () => {
 	test("preserves the exact image and text item for an edited current user", async () => {
 		const currentModel = getBuiltinModel("openai-codex", "gpt-5.6-sol")!;
 		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendMessage({ role: "user", content: "earlier history", timestamp: 0 });
 		const current = sm.appendMessage({ role: "user", content: "draft", timestamp: 1 });
 		sm.appendContextEdit(current, { content: [
 			{ type: "text", text: "inspect this image" },
@@ -355,13 +516,14 @@ describe("Codex session coordinator", () => {
 		const checkpoint = findNativeCheckpoint(branch, modelKey(currentModel));
 		expect(checkpoint.status).toBe("valid");
 		if (checkpoint.status !== "valid") return;
-		expect(checkpoint.checkpoint.details.preservedInput).toEqual([requestInput[0]]);
-		expect(final?.filter((item) => item.role === "user")).toEqual([requestInput[0]]);
+		expect(checkpoint.checkpoint.details.preservedInput).toEqual([requestInput.at(-1)]);
+		expect(final?.filter((item) => item.role === "user")).toEqual([requestInput.at(-1)]);
 		expect(JSON.stringify(final)).toContain("input_image");
 	});
 	test("does not append a checkpoint after a new edit arrives during automatic compaction", async () => {
 		const currentModel = model("new", "openai-codex", 1_000_000);
 		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendMessage({ role: "user", content: "earlier history", timestamp: 0 });
 		const current = sm.appendMessage({ role: "user", content: "original", timestamp: 1 });
 		sm.appendContextEdit(current, { content: "first revision" });
 		const requestInput = effectiveInputForBranch({ branch: sm.getBranch(), model: currentModel, tools: [] });
@@ -386,9 +548,10 @@ describe("Codex session coordinator", () => {
 		expect(appended).toBe(0);
 		expect(findNativeCheckpoint(sm.getBranch(), modelKey(currentModel)).status).toBe("none");
 	});
-	test("does not treat a later custom message as an unanswered branch user", async () => {
+	test("protects an unconsumed user together with its later custom context", async () => {
 		const currentModel = model("new");
 		const sm = SessionManager.inMemory(process.cwd());
+		sm.appendMessage({ role: "user", content: "older history", timestamp: 0 });
 		sm.appendMessage({ role: "user", content: "earlier user", timestamp: 1 });
 		sm.appendCustomMessageEntry("note", "later custom", false);
 		const branch = sm.getBranch();
@@ -398,12 +561,13 @@ describe("Codex session coordinator", () => {
 			seen.push(input);
 			return details(modelKey(currentModel));
 		}, () => true);
-		await coordinator.prepareRequest(currentModel, context([currentModel]), requestInput);
-		expect(seen[0]).toEqual(requestInput);
+		const final = await coordinator.prepareRequest(currentModel, context([currentModel]), requestInput);
+		expect(seen[0]).toEqual(requestInput.slice(0, 1));
 		const checkpoint = findNativeCheckpoint(branch, modelKey(currentModel));
 		expect(checkpoint.status).toBe("valid");
 		if (checkpoint.status !== "valid") return;
-		expect(checkpoint.checkpoint.details.preservedInput).toBeUndefined();
+		expect(checkpoint.checkpoint.details.preservedInput).toEqual(requestInput.slice(1));
+		expect(final).toEqual([...details(modelKey(currentModel)).replacementHistory, ...requestInput.slice(1)]);
 	});
 	test("invalidates an old transition before retrying or committing after model selection", async () => {
 		const old = model("old"), target = model("new"), next = model("other");
@@ -823,7 +987,7 @@ describe("Codex session coordinator", () => {
 			return details(modelKey(selectedModel), "resumed");
 		});
 
-		const input = await coordinator.prepareRequest(currentModel, context([oldModel, currentModel]), [userInput("hello")]);
+		const input = await coordinator.prepareRequest(currentModel, context([oldModel, currentModel]), [...effectiveInputForBranch({ branch, model: currentModel, tools: [] }), userInput("hello")]);
 
 		expect(compactedWith).toEqual([modelKey(oldModel)]);
 		expect(input).toEqual([{ type: "compaction", encrypted_content: "resumed" }, userInput("hello")]);
@@ -834,10 +998,11 @@ describe("Codex session coordinator", () => {
 		const currentModel = model("other", "openai-codex", 100_000);
 		let calls = 0;
 		let thresholdChecks = 0;
+		const budgetInputs: ResponseItem[][] = [];
 		const coordinator = createCoordinator([], async (selectedModel) => {
 			calls++;
 			return details(modelKey(selectedModel), "downshift");
-		}, () => thresholdChecks++ === 0);
+		}, input => { budgetInputs.push(input); return thresholdChecks++ === 0; });
 
 		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, context([oldModel, currentModel]));
 		await expect(coordinator.prepareRequest(currentModel, context([oldModel, currentModel]), [userInput("hello")])).resolves.toEqual([
@@ -845,6 +1010,7 @@ describe("Codex session coordinator", () => {
 			userInput("hello"),
 		]);
 		expect(calls).toBe(1);
+		expect(budgetInputs[0]).toContainEqual(userInput("hello"));
 	});
 
 	test("uses the current model only for an eligible transition failure", async () => {
@@ -1277,14 +1443,16 @@ describe("Codex session coordinator", () => {
 		const branch = sm.getBranch();
 		const requestInput = effectiveInputForBranch({ branch, model: currentModel, tools: [] });
 		let calls = 0;
+		const compactedInputs: ResponseItem[][] = [];
 		const coordinator = createCoordinator(branch, async (selectedModel, input) => {
 			calls++;
+			compactedInputs.push(input);
 			if (calls === 1) {
 				expect(selectedModel).toBe(oldModel);
 				expect(input).toEqual([]);
 			} else {
-				expect(selectedModel).toBe(currentModel);
-				expect(input.filter((item) => item.role === "user")).toEqual([requestInput[0]]);
+				expect(selectedModel).toEqual(currentModel);
+				expect(input.filter((item) => item.role === "user")).toEqual([]);
 			}
 			return {
 				...details(modelKey(selectedModel)),
@@ -1295,11 +1463,14 @@ describe("Codex session coordinator", () => {
 		await coordinator.selectModel({ model: currentModel, previousModel: oldModel }, ctx);
 		const final = await coordinator.prepareRequest(currentModel, ctx, requestInput);
 		expect(calls).toBe(2);
+		expect(compactedInputs[1]?.filter(item => item.role === "user")).toEqual([]);
 		const checkpoint = findNativeCheckpoint(branch, modelKey(currentModel));
 		expect(checkpoint.status).toBe("valid");
 		if (checkpoint.status !== "valid") return;
 		expect(checkpoint.checkpoint.details.preservedInput).toEqual([requestInput[0]]);
+		expect(checkpoint.checkpoint.details.replacementHistory.at(-1)?.encrypted_content).toBe("opaque-2");
 		expect(final?.filter((item) => item.role === "user" && JSON.stringify(item.content).includes("MIDDLE_CONSTRAINT_MUST_SURVIVE"))).toEqual([requestInput[0]]);
+		expect(final?.filter((item) => item.role === "user")).toHaveLength(1);
 	});
 
 	test.each([0, 100, 100_000])("persists the edited request through two compactions with history size %i", async (historySize) => {
@@ -1436,7 +1607,7 @@ describe("Codex session coordinator", () => {
 			getBranch: () => sm.getBranch(), getAllTools: () => [],
 			createCheckpoint: async ({ model: selectedModel, input }) => {
 				calls++;
-				expect(selectedModel).toBe(currentModel);
+				expect(selectedModel).toEqual(currentModel);
 				expect(input).not.toContainEqual(currentUser);
 				return { details: details(modelKey(selectedModel), "recovered") };
 			},
@@ -1668,7 +1839,7 @@ describe("Codex session coordinator", () => {
 				} };
 			},
 			appendCheckpoint: value => {
-				const written = saved.length === 0 ? { ...value, preservedInput: [] } : value;
+				const written = saved.length === 0 ? { ...value, preservedInput: [], preservedInputSources: [] } : value;
 				saved.push(written);
 				sm.appendCustomEntry(NATIVE_COMPACTION_KIND, written);
 			},
@@ -1797,8 +1968,8 @@ describe("Codex session coordinator", () => {
 		expect(input).toEqual([{ type: "compaction", encrypted_content: "automatic" }, userInput("new")]);
 	});
 
-	test("continues an in-window request after automatic compaction fails", async () => {
-		const currentModel = model("old");
+	test.each([100_000, 1])("allows a provider attempt after automatic compaction fails with estimated window %i", async (window) => {
+		const currentModel = model("old", "openai-codex", window);
 		const branch = [userEntry("history")];
 		let failures = 0;
 		const coordinator = createCoordinator(
@@ -1851,7 +2022,7 @@ describe("Codex session coordinator", () => {
 					expect(input).toEqual([]);
 					return details(modelKey(oldModel), "transition");
 				}
-				expect(selectedModel).toBe(currentModel);
+				expect(selectedModel).toEqual(currentModel);
 				expect(input).toEqual([{ type: "compaction", encrypted_content: "transition" }, userInput("current")]);
 				return {
 					...details(modelKey(currentModel), "automatic"),

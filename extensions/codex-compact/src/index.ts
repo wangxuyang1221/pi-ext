@@ -12,6 +12,8 @@ import { createNativeCheckpoint, type NativeCheckpointRequest } from "./remote-c
 import { createSessionCoordinator, type RemoteCompactionReason } from "./session-coordinator.js";
 import {
 	HistoryPrefixMismatchError,
+	appendPreservedInput,
+	type CompactionInputPlan,
 	estimateCompactionWindowPrefillTokens,
 	FAILED_REQUEST_KIND,
 	findNativeCheckpoint,
@@ -236,7 +238,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 			if (presentation) clearRemoteCompactionPresentation(sessionId, presentation);
 		}
 	};
-	const createCheckpoint = (params: Pick<NativeCheckpointRequest, "ctx" | "model" | "input" | "basePayload" | "signal"> & { compactionHashes: CompactionHashSnapshot }) => {
+	const createCheckpoint = (params: Pick<NativeCheckpointRequest, "ctx" | "model" | "input" | "basePayload" | "signal" | "protectedInput" | "replayContextWindow"> & { compactionHashes: CompactionHashSnapshot }) => {
 		const lifecycleGenerationAtStart = lifecycleGeneration;
 		const sessionId = params.ctx.sessionManager.getSessionId();
 		let basePayload = params.basePayload ?? basePayloadBySession.get(sessionId);
@@ -492,18 +494,22 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 				const excludeLastAssistantError = event.reason === "overflow" && event.willRetry;
 				let native: Awaited<ReturnType<typeof createNativeCheckpoint>>;
 				let input: ResponseItem[];
+				let plan: CompactionInputPlan;
 				try {
-					input = await coordinator.prepareCompaction(
+					plan = await coordinator.prepareCompactionPlan(
 						model,
 						ctx,
 						excludeLastAssistantError,
 						operationSignal,
 						basePayloadBySession.get(sessionId),
 					);
+					input = plan.input;
 					if (lifecycleGeneration !== lifecycleGenerationAtStart) return { cancel: true };
 					const compactionHashes = await resolveCompactionHashes(ctx, model, operationSignal);
 					if (lifecycleGeneration !== lifecycleGenerationAtStart || operationSignal.aborted) return { cancel: true };
-					native = await createCheckpoint({ ctx, model, input, signal: operationSignal, compactionHashes });
+					plan.assertCurrent?.();
+					native = await createCheckpoint({ ctx, model, input, protectedInput: plan.preservedInput, basePayload: plan.basePayload, signal: operationSignal, compactionHashes });
+					plan.assertCurrent?.();
 				} catch (error) {
 					if (lifecycleGeneration !== lifecycleGenerationAtStart || operationSignal.aborted) return { cancel: true };
 					reportCompactionFailure(ctx, model, error, "session_before_compact", "compaction_cancelled");
@@ -512,16 +518,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 				if (lifecycleGeneration !== lifecycleGenerationAtStart || operationSignal.aborted) {
 					return { cancel: true };
 				}
-				const requestUser = input.findLast((item) => item.role === "user");
-				const knownUsers = [
-					...native.details.replacementHistory,
-					...(native.details.preservedInput ?? []),
-				];
-				const details = requestUser && !knownUsers.some((item) =>
-					item.role === "user" && JSON.stringify(item.content) === JSON.stringify(requestUser.content)
-				)
-					? { ...native.details, preservedInput: [...(native.details.preservedInput ?? []), structuredClone(requestUser)] }
-					: native.details;
+				const details = appendPreservedInput(native.details, plan.preservedInput, plan.preservedInputSources);
 				pendingPiCompactionBySession.set(sessionId, {
 					baselineCompactionIds,
 					expectedDetails: structuredClone(details),

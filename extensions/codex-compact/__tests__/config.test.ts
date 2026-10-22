@@ -30,6 +30,13 @@ vi.mock("node:fs", async (importOriginal) => {
 });
 
 describe("Codex compaction config", () => {
+	test("accepts explicit manual projection contracts and rejects malformed visibility declarations", () => {
+		expect(parseConfig({ manualProjection: { hiddenTools: ["read", "read"], forcedPrompt: "Forced prompt" } })).toEqual({ manualProjection: { hiddenTools: ["read"], forcedPrompt: "Forced prompt" } });
+		expect(parseConfig({ manualProjection: { hiddenTools: [] } })).toEqual({ manualProjection: { hiddenTools: [] } });
+		for (const manualProjection of [null, [], {}, { hiddenTools: "read" }, { hiddenTools: [""] }, { hiddenTools: [1] }, { hiddenTools: [], forcedPrompt: true }]) {
+			expect(parseConfig({ manualProjection })).not.toHaveProperty("manualProjection");
+		}
+	});
 	test("reports version provenance and preserves unrelated fields during atomic updates", () => {
 		mkdirSync(join(process.cwd(), ".tmp"), { recursive: true });
 		const root = mkdtempSync(join(process.cwd(), ".tmp", "metadata-update-"));

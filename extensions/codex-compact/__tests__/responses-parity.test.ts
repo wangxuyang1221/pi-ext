@@ -6,6 +6,7 @@ import { convertResponsesMessages } from "@earendil-works/pi-ai/api/openai-respo
 import { streamSimple } from "@earendil-works/pi-ai/api/openai-codex-responses";
 import { convertToLlm, SessionManager } from "@earendil-works/pi-coding-agent";
 import { createSessionCoordinator } from "../src/session-coordinator.js";
+import { resolveRequestProjection } from "../src/request-projection.js";
 import { createBranchInputSnapshot, fullInputForBranch, HistoryPrefixMismatchError, modelKey, NATIVE_COMPACTION_KIND, FAILED_REQUEST_KIND } from "../src/native-compaction.js";
 
 const providerNames = new Set(["openai", "openai-codex", "opencode"]);
@@ -14,6 +15,56 @@ const model = (id = "gpt-5.6-sol") => getBuiltinModel("openai-codex", id)!;
 const assistant = (m: any, content: any[]) => ({ role: "assistant", provider: m.provider, api: m.api, model: m.id, content, stopReason: "toolUse", timestamp: 0,
   usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } } });
 const messageEntries = (messages: any[]) => messages.map((message, i) => ({ id: `message-${i}`, type: "message", message })) as any[];
+
+test("uses the observed hidden projection for automatic compaction before the first checkpoint", async () => {
+  const m = { ...model(), compat: { supportsAdditionalTools: true, supportsMidConvoSystemMessages: true } };
+  const tools = ["visible", "hidden"].map(name => ({ name, description: name, parameters: { type: "object", properties: {} } }));
+  const messages: any[] = [{ role: "system", content: "head", toolsAdded: tools.slice(0, 1), timestamp: 0 },
+    { role: "user", content: "old", timestamp: 1 }, assistant(m, [{ type: "text", text: "answer" }]),
+    { role: "system", content: "later", toolsAdded: tools.slice(1), timestamp: 2 }, { role: "user", content: "pending", timestamp: 3 }];
+  const payload = await providerPayload(m, messages.map(message => message.role === "system" ? { ...message, toolsAdded: message.toolsAdded?.filter((tool: any) => tool.name === "visible") } : message));
+  const branch = messageEntries(messages);
+  const inputs: any[] = [];
+  const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch, getAllTools: () => tools as any,
+    shouldAutoCompact: () => true, createCheckpoint: async ({ input }) => { inputs.push(input); return { details: { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(m), replacementHistory: [{ type: "compaction", encrypted_content: "new" }] } }; },
+    appendCheckpoint: data => branch.push({ id: "checkpoint", type: "custom", customType: NATIVE_COMPACTION_KIND, data }), appendCheckpointBypass: vi.fn() });
+  const output = await coordinator.prepareRequest(m, { model: m, getSystemPrompt: () => "head", sessionManager: { getSessionId: () => "test" }, modelRegistry: { find: () => m } } as any, payload.input, payload);
+  expect(inputs).toHaveLength(1);
+  expect(JSON.stringify(inputs[0])).not.toContain("pending");
+  expect(output?.filter(item => item.role === "user")).toEqual([payload.input.at(-1)]);
+});
+
+test("rejects unobservable hidden redeclaration policies even when forced collapse matches the wire", async () => {
+  const m = { ...model(), compat: { supportsAdditionalTools: true, supportsMidConvoSystemMessages: true } };
+  const tool = { name: "hidden", description: "hidden", parameters: { type: "object", properties: {} } };
+  const messages: any[] = [{ role: "system", content: "head", toolsAdded: [tool], timestamp: 0 },
+    { role: "user", content: "old", timestamp: 0 },
+    { role: "system", content: "", toolsAdded: [{ ...tool, description: "changed" }], timestamp: 0 },
+    { role: "user", content: "new", timestamp: 0 }];
+  const payload = await providerPayload(m, messages.filter(message => message.role !== "system").toSpliced(0, 0, { role: "system", content: "head", timestamp: 0 }));
+  expect(() => resolveRequestProjection(messageEntries(messages), m, [tool] as any, payload.input, payload)).toThrow();
+});
+
+test("retains a complete crossing tool group without resurrecting held pre-checkpoint systems", () => {
+  const m = model();
+  const messages: any[] = [
+    { role: "system", content: "head", timestamp: 0 },
+    { role: "user", content: "old task", timestamp: 0 },
+    assistant(m, ["a", "b"].map(id => ({ type: "toolCall", id: `${id}|fc_${id}`, name: "read", arguments: {} }))),
+    { role: "toolResult", toolCallId: "a|fc_a", toolName: "read", content: [{ type: "text", text: "A" }], timestamp: 0 },
+    { role: "system", content: "already covered", timestamp: 0 },
+    { role: "toolResult", toolCallId: "b|fc_b", toolName: "read", content: [{ type: "text", text: "B" }], timestamp: 0 },
+    { role: "user", content: "continue", timestamp: 0 },
+  ];
+  const branch = messageEntries(messages);
+  const opaque = { type: "compaction", encrypted_content: "opaque" };
+  branch.splice(5, 0, { id: "checkpoint", type: "custom", customType: NATIVE_COMPACTION_KIND,
+    data: { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(m), replacementHistory: [opaque] } });
+  const view = createBranchInputSnapshot({ branch, tools: [] }).view(m, "effective");
+  const full = createBranchInputSnapshot({ branch, tools: [] }).view(m, "full-history");
+  expect(view.items).toEqual([opaque, ...full.items.filter(item => item.type === "function_call" || item.type === "function_call_output" || (item.role === "user" && JSON.stringify(item).includes("continue")))]);
+  expect([...view.userSources.values()]).toEqual(["message-6"]);
+});
 
 test("matches provider wire input after overlapping Pi compactions", async () => {
   const m = model();
@@ -50,6 +101,84 @@ async function providerPayload(m: any, messages: any[], tools: any[] = []) {
     fetch.mockRestore();
   }
 }
+
+test.each(["native", "ordinary-then-custom", "overlap"])("preserves Pi system projection and sources after %s checkpoint", async (shape) => {
+  const m = model();
+  const sm = SessionManager.inMemory(process.cwd());
+  sm.appendMessage({ role: "system", content: "", sections: { rules: "Old rules" }, timestamp: 0 });
+  sm.appendMessage({ role: "user", content: "earlier", timestamp: 1 });
+  const kept = sm.appendMessage({ role: "user", content: "retained", timestamp: 2 });
+  sm.appendMessage({ role: "system", content: "", sections: { rules: "New rules" }, timestamp: 3 });
+  sm.appendMessage({ role: "user", content: "also retained", timestamp: 4 });
+  const details = { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(m), replacementHistory: [{ type: "compaction", encrypted_content: "opaque" }] };
+  sm.appendCompaction("summary", kept, 100, shape === "native" ? details : undefined);
+  if (shape === "overlap") sm.appendCompaction("new summary", kept, 100);
+  if (shape !== "native") sm.appendCustomEntry(NATIVE_COMPACTION_KIND, details);
+  sm.appendMessage({ role: "user", content: "continue", timestamp: 5 });
+  const projection = sm.buildSessionProjection();
+  const expected = await providerPayload(m, convertToLlm(projection.messages.filter(message => message.role !== "compactionSummary")));
+  const view = createBranchInputSnapshot({ branch: sm.getBranch(), tools: [] }).view(m, "pi-context");
+  expect(view.items).toEqual(expected.input);
+  expect([...view.userSources.values()]).toEqual(projection.entries.filter(entry => entry.messages.some(message => message.role === "user")).map(entry => entry.sourceEntry.id));
+});
+
+test.each(["orphan", "real", "partial", "two-systems"])("orders pending calls before held systems: %s", async (shape) => {
+  for (const search of [false, true]) {
+    const m = { ...model(), compat: { ...model().compat, supportsAdditionalTools: !search, supportsToolSearch: search } };
+    const tool = (name: string) => ({ name, description: name, parameters: { type: "object", properties: {} } });
+    const call = (id: string) => ({ type: "toolCall", id, name: "read", arguments: {} });
+    const messages: any[] = [
+      { role: "system", content: "head", toolsAdded: [tool("read")] },
+      { role: "user", content: "task", timestamp: 0 },
+      assistant(m, [call("call|fc_1"), ...(shape === "partial" ? [call("other|fc_2")] : [])]),
+      { role: "system", content: "update", toolsAdded: [tool("late")] },
+    ];
+    if (shape !== "orphan") messages.push({ role: "toolResult", toolCallId: "call|fc_1", toolName: "read", content: [{ type: "text", text: "ok" }], timestamp: 1 });
+    if (shape === "two-systems") messages.push({ role: "system", content: "second update", toolsAdded: [tool("later")] });
+    messages.push({ role: "user", content: "continue", timestamp: 2 }, assistant(m, [{ type: "text", text: "answer" }]));
+    const payload = await providerPayload(m, messages);
+    const view = createBranchInputSnapshot({ branch: messageEntries(messages), tools: [] }).view(m, "full-history");
+    expect(view.items).toEqual(payload.input);
+    expect([...view.userSources.values()]).toEqual(["message-1", `message-${messages.length - 2}`]);
+  }
+});
+
+test.each(["hidden", "forced", "both"])("replays a strictly matched %s projection without replacing the checkpoint", async (mode) => {
+  const m = { ...model(), compat: { ...model().compat, supportsAdditionalTools: true, supportsMidConvoSystemMessages: true } };
+  const tool = (name: string) => ({ name, description: name, parameters: { type: "object", properties: {} } });
+  const tools = [tool("visible"), tool("hidden"), tool("late")];
+  const sm = SessionManager.inMemory(process.cwd());
+  sm.appendMessage({ role: "system", content: "Initial", toolsAdded: tools.slice(0, 2), timestamp: 0 } as any);
+  const kept = sm.appendMessage({ role: "user", content: "old", timestamp: 1 });
+  sm.appendMessage(assistant(m, [{ type: "text", text: "old answer" }]) as any);
+  const checkpoint = { type: "compaction", encrypted_content: "opaque" };
+  sm.appendCompaction("summary", kept, 100, { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(m), replacementHistory: [checkpoint] });
+  sm.appendMessage({ role: "system", content: "Late instruction", toolsAdded: [tools[2]], timestamp: 3 } as any);
+  sm.appendMessage({ role: "user", content: "continue", timestamp: 4 });
+  let messages: any[] = sm.buildSessionProjection().messages.filter(message => message.role !== "compactionSummary");
+  if (mode !== "forced") messages = messages.map(message => message.role === "system" ? { ...message, toolsAdded: message.toolsAdded?.filter((tool: any) => tool.name === "visible") } : message);
+  if (mode !== "hidden") messages = [{ role: "system", content: "Forced", toolsAdded: mode === "both" ? [tools[0]] : tools, timestamp: 0 }, ...messages.filter(message => message.role !== "system")];
+  const payload = await providerPayload(m, messages);
+  const compact = vi.fn();
+  const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => sm.getBranch(), getAllTools: () => tools as any,
+    createCheckpoint: compact, appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn() });
+  const ctx = { model: m, getSystemPrompt: () => mode === "hidden" ? "Initial" : "Forced", sessionManager: sm, modelRegistry: { find: () => m } } as any;
+  const actual = await coordinator.prepareRequest(m, ctx, payload.input, payload);
+  const suffix = payload.input.slice(payload.input.findIndex((item: any) => item.role === "assistant") + 1);
+  expect(actual).toEqual([checkpoint, ...suffix]);
+  expect(compact).not.toHaveBeenCalled();
+  const manual = await coordinator.prepareCompactionPlan(m, ctx);
+  expect(manual.basePayload.tools).toEqual(payload.tools ?? []);
+  expect(manual.basePayload.instructions).toBe(payload.instructions);
+  for (const mutate of [
+    (p: any) => { p.input.find((item: any) => item.role === "user").content[0].text = "tampered"; },
+    (p: any) => { p.tools[0].description = "tampered"; },
+    (p: any) => { p.input.splice(p.input.findIndex((item: any) => item.role === "user"), 1); },
+  ]) {
+    const bad = structuredClone(payload); mutate(bad);
+    await expect(coordinator.prepareRequest(m, ctx, bad.input, bad)).rejects.toThrow();
+  }
+});
 
 async function replay(m: any, messages: any[], tools: any[] = []) {
   const current = { role: "user", content: [{ type: "text", text: "continue" }], timestamp: 1 };
@@ -301,6 +430,17 @@ test("replays grammar calls and outputs from Pi payload metadata omitted by getA
   const tool = { name: "grammar", description: "Synthetic grammar", parameters: { type: "object", properties: { input: { type: "string" } }, required: ["input"] }, constrainedSampling: { type: "grammar", variants: { openai_regex: ".*" } } };
   await replay(m, [assistant(m, [{ type: "toolCall", id: "call|ctc_1", namespace: "functions", name: "grammar", arguments: { input: "hello" } }]),
     { role: "toolResult", toolCallId: "call|ctc_1", toolName: "grammar", content: [{ type: "text", text: "ok" }], timestamp: 0 }], [tool]);
+});
+
+test.each(["same", "model", "provider", "api"])("validates grammar item IDs from %s identity", async (identity) => {
+  const m = model();
+  const source = identity === "same" ? m : { ...m, [identity === "model" ? "id" : identity]: `other-${identity}` };
+  const tool = { name: "grammar", description: "Grammar", parameters: { type: "object", properties: { input: { type: "string" } }, required: ["input"] }, constrainedSampling: { type: "grammar", variants: { openai_regex: ".*" } } };
+  for (const suffix of ["fc_wrong", "ctc_valid", "wrong", ""]) {
+    const id = suffix ? `call|${suffix}` : "call";
+    await replay(m, [assistant(source, [{ type: "toolCall", id, name: "grammar", arguments: { input: "hello" } }]),
+      { role: "toolResult", toolCallId: id, toolName: "grammar", content: [{ type: "text", text: "ok" }], timestamp: 0 }], [tool]);
+  }
 });
 
 test("does not infer current grammar configuration from an old custom-tool id", async () => {

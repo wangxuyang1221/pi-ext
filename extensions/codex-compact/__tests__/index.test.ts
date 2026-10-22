@@ -416,6 +416,60 @@ function piCompactionEvent(
 	};
 }
 
+test.each(["manual", "threshold", "overflow"] as const)("does not append the full historical user after retention truncates it during %s compaction", async (reason) => {
+	const branch = [
+		{ id: "user", type: "message", message: { role: "user", content: "x".repeat(280_000), timestamp: 1 } },
+		{ id: "answer", type: "message", message: { role: "assistant", provider: "openai-codex", api: "openai-codex-responses", model: "gpt", content: [{ type: "text", text: "Worked on it" }], stopReason: "stop", timestamp: 2 } },
+	] as SessionEntry[];
+	const { handlers, ctx } = installExtension(branch);
+	stubSuccessfulCompaction();
+	try {
+		const result: any = await handlers.get("session_before_compact")!(piCompactionEvent(branch, reason), ctx);
+		expect(result.compaction).toBeDefined();
+		const details = result.compaction.details;
+		const users = [...details.replacementHistory, ...(details.preservedInput ?? [])].filter(item => item.role === "user");
+		expect(users).toHaveLength(1);
+		expect(JSON.stringify(users[0]).length).toBeLessThan(280_000);
+	} finally { vi.unstubAllGlobals(); }
+});
+
+test("keeps an unconsumed user and its continuation once outside remote compaction", async () => {
+	const branch = [
+		{ id: "old", type: "message", message: { role: "user", content: "old history", timestamp: 0 } },
+		{ id: "answer", type: "message", message: { role: "assistant", provider: "openai-codex", api: "openai-codex-responses", model: "gpt", content: [{ type: "text", text: "done" }], stopReason: "stop", timestamp: 1 } },
+		{ id: "new", type: "message", message: { role: "user", content: "x".repeat(280_000), timestamp: 2 } },
+		{ id: "continuation", type: "custom_message", customType: "extra", content: "Extra context", display: false },
+	] as SessionEntry[];
+	const { handlers, ctx } = installExtension(branch);
+	let request: any;
+	vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+		request = JSON.parse(String(init.body));
+		return new Response('data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"opaque"}}\n\ndata: {"type":"response.completed","response":{"id":"r"}}\n\n');
+	});
+	try {
+		const result: any = await handlers.get("session_before_compact")!(piCompactionEvent(branch), ctx);
+		expect(result.compaction).toBeDefined();
+		expect(JSON.stringify(request.input)).not.toContain("x".repeat(100));
+		expect(JSON.stringify(request.input)).not.toContain("Extra context");
+		const details = result.compaction.details;
+		expect(details.preservedInputSources).toEqual(["new", "continuation"]);
+		expect(details.preservedInput).toHaveLength(2);
+		expect(details.preservedInput[0].content[0].text).toHaveLength(280_000);
+		expect(JSON.stringify(details.preservedInput[1])).toContain("Extra context");
+	} finally { vi.unstubAllGlobals(); }
+});
+
+test("cancels manual compaction when an existing entry changes during credential lookup", async () => {
+	const branch = [{ id: "user", type: "message", message: { role: "user", content: "original", timestamp: 1 } }] as SessionEntry[];
+	const { handlers, ctx } = installExtension(branch);
+	const auth = ctx.modelRegistry.getApiKeyAndHeaders;
+	ctx.modelRegistry.getApiKeyAndHeaders = async () => { (branch[0] as any).message.content = "edited during await"; return auth(); };
+	stubSuccessfulCompaction();
+	try {
+		await expect(handlers.get("session_before_compact")!(piCompactionEvent(branch), ctx)).resolves.toEqual({ cancel: true });
+	} finally { vi.unstubAllGlobals(); }
+});
+
 async function flushPostCompactionNotices(): Promise<void> {
 	await new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
@@ -1307,9 +1361,12 @@ test("preserves earlier replies when Pi compacts after an ordinary request overf
 		return new Response('data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"opaque"}}\n\ndata: {"type":"response.completed","response":{"id":"r"}}\n\n');
 	});
 	try {
-		expect(await handlers.get("session_before_compact")!(piCompactionEvent(branch, "overflow", true), ctx)).toHaveProperty("compaction");
+		const result: any = await handlers.get("session_before_compact")!(piCompactionEvent(branch, "overflow", true), ctx);
+		expect(result).toHaveProperty("compaction");
 		expect(JSON.stringify(input)).toContain("completed work");
-		expect(JSON.stringify(input)).toContain("continue");
+		expect(JSON.stringify(input)).not.toContain("continue");
+		expect(result.compaction.details.preservedInputSources).toEqual(["next"]);
+		expect(JSON.stringify(result.compaction.details.preservedInput)).toContain("continue");
 		expect(JSON.stringify(input)).not.toContain("failed response");
 		expect(branch).toEqual(before);
 	} finally {
@@ -1329,9 +1386,10 @@ test.each(["provider", "pi"])("allows a fresh %s attempt after repeated terminal
 		? new Response(JSON.stringify({ error: { code: "context_window_exceeded", message: "too large" } }), { status: 400 })
 		: new Response('data: {"type":"response.output_item.done","item":{"type":"compaction","encrypted_content":"fresh"}}\n\ndata: {"type":"response.completed","response":{"id":"r"}}\n\n'));
 	vi.stubGlobal("fetch", fetchMock);
+	let requestNumber = 0;
 	const attempt = () => entrypoint === "pi"
 		? handlers.get("session_before_compact")!(piCompactionEvent(branch), ctx)
-		: handlers.get("before_provider_request")!({ payload: { input: [...effectiveInputForBranch({ branch, model: model as never, tools: [] }), { role: "user", content: [{ type: "input_text", text: "continue" }] }] } }, ctx);
+		: handlers.get("before_provider_request")!({ payload: { input: [...effectiveInputForBranch({ branch, model: model as never, tools: [] }), { role: "user", content: [{ type: "input_text", text: `continue ${++requestNumber}` }] }] } }, ctx);
 	try {
 		for (let index = 0; index < 2; index++) {
 			expect(await attempt()).toEqual(entrypoint === "pi" ? { cancel: true } : undefined);

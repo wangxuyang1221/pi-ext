@@ -3,12 +3,17 @@ import type { ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-a
 import type { Model } from "@earendil-works/pi-ai";
 import { emptyCompactionHashSnapshot, type CompactionHashSnapshot } from "./capabilities.js";
 import { effectiveContextWindow, loadConfig } from "./config.js";
+import { resolveRequestProjection } from "./request-projection.js";
+import { accountingFingerprint } from "./usage-accounting.js";
+import { createBranchProjectionSnapshot } from "./session-projection.js";
 import {
 	HistoryPrefixMismatchError,
 	FAILED_REQUEST_KIND,
 	NATIVE_COMPACTION_BYPASS_KIND,
 	NATIVE_COMPACTION_BYPASS_VERSION,
 	createBranchInputSnapshot,
+	compactionInputPlan,
+	appendPreservedInput,
 	effectiveInputForBranch,
 	findNativeCheckpoint,
 	toolsWithRequestFormats,
@@ -25,6 +30,8 @@ import {
 	type NativeCompactionDetails,
 	type CheckpointLookup,
 	type ResponseItem,
+	type RequestProjectionPolicy,
+	type InputViewOptions,
 } from "./native-compaction.js";
 
 export type ModelSelectLike = {
@@ -38,6 +45,8 @@ export type CheckpointFactory = (params: {
 	ctx: ExtensionContext;
 	model: Model<any>;
 	input: ReturnType<typeof effectiveInputForBranch>;
+	protectedInput?: ResponseItem[];
+	replayContextWindow?: number;
 	basePayload?: JsonObject;
 	signal?: AbortSignal;
 	compactionHashes: CompactionHashSnapshot;
@@ -124,7 +133,7 @@ function fitsContextWindow(
 	return approximateCompactionRequestTokens({
 		input,
 		instructions: typeof basePayload?.instructions === "string" ? basePayload.instructions : ctx.getSystemPrompt(),
-		tools: Array.isArray(basePayload?.tools) ? basePayload.tools : tools,
+		tools: basePayload !== undefined ? (Array.isArray(basePayload.tools) ? basePayload.tools : []) : tools,
 	}) <= effectiveContextWindow(loadConfig(ctx.cwd ?? "", ctx.isProjectTrusted?.() ?? false), model.contextWindow);
 }
 
@@ -243,12 +252,16 @@ function isContextEntry(entry: SessionEntry): boolean {
 	return entry.type === "message" || entry.type === "custom_message";
 }
 
-type CurrentRequest =
-	| { kind: "branch"; entryId: string; requestIndex: number; item: ResponseItem }
-	| { kind: "checkpoint"; requestIndex: number; item: ResponseItem }
-	| undefined;
+class StaleCompactionError extends Error {}
+
+type CurrentRequest = (({ kind: "branch"; entryId: string } | { kind: "checkpoint" }) & {
+	requestIndex: number; item: ResponseItem; excludeEntryIds?: string[];
+	suffix?: ResponseItem[]; suffixSources?: (string | null)[];
+}) | undefined;
 
 type RequestReceipt = {
+	suffix?: ResponseItem[];
+	suffixSources?: (string | null)[];
 	requestIndex: number;
 	item: ResponseItem;
 	sourceEntryId?: string;
@@ -264,6 +277,13 @@ type RequestContinuity = {
 	compactionHashes: CompactionHashSnapshot;
 	signal?: AbortSignal;
 	receipt?: RequestReceipt;
+	automaticCompactionAttempted?: boolean;
+	assertEvidence?: () => void;
+	tools?: ReturnType<SessionCoordinatorDeps["getAllTools"]>;
+	projectionPolicy?: RequestProjectionPolicy;
+	projectionAttempted?: boolean;
+	automaticAttemptKey?: string;
+	requestSuffix?: ResponseItem[];
 };
 
 function resolveCurrentRequest(
@@ -274,43 +294,55 @@ function resolveCurrentRequest(
 	systemPromptInput: ResponseItem[],
 ): CurrentRequest {
 	if (!requestInput) return undefined;
-	const requestIndex = requestInput.findLastIndex((item) => item.role === "user");
+	let requestIndex = requestInput.findLastIndex((item) => item.role === "user");
 	if (requestIndex < 0) return undefined;
 	const branch = snapshot.projection.branch as SessionEntry[];
 	const candidateIndex = branch.findLastIndex((entry) => entry.type === "message" && entry.message.role === "user");
 	const candidate = candidateIndex < 0 ? undefined : branch[candidateIndex];
-	const eligible = candidate && candidate.type === "message" && !branch.slice(candidateIndex + 1).some(isContextEntry);
+	const eligible = candidate && candidate.type === "message" && !branch.slice(candidateIndex + 1).some(entry =>
+		entry.type === "message" && (entry.message.role === "toolResult" || (entry.message.role === "assistant" && entry.message.stopReason !== "error" && entry.message.stopReason !== "aborted")));
 	const models = isDeepStrictEqual(historyModel, currentModel) ? [historyModel] : [historyModel, currentModel];
 	const matches = new Set<string>();
+	const indices = new Set<number>();
+	let selectedSources: (string | null)[] | undefined;
 	if (eligible) {
 		for (const selectedModel of models) {
 			for (const kind of ["effective", "pi-context", "full-history"] as const) {
 				const view = snapshot.view(selectedModel, kind, { allowCheckpointModelMismatch: true });
 				for (const offset of systemPromptInput.length > 0 ? [0, systemPromptInput.length] : [0]) {
 					const prefix = offset === 0 ? view.items : [...systemPromptInput, ...view.items];
-					if (prefix.length > requestInput.length || !prefix.every((item, index) => isDeepStrictEqual(item, requestInput[index]))) continue;
-					const sourceIndex = requestIndex - offset;
-					const source = view.userSources.get(sourceIndex);
-					if (source) matches.add(source);
+					if (prefix.length !== requestInput.length || !prefix.every((item, index) => isDeepStrictEqual(item, requestInput[index]))) continue;
+					for (const [sourceIndex, source] of view.userSources) {
+						if (source !== candidate!.id) continue;
+						matches.add(source);
+						requestIndex = sourceIndex + offset;
+						indices.add(requestIndex);
+						selectedSources = requestInput.slice(requestIndex).map((_, index) => view.userSources.get(sourceIndex + index) ?? null);
+					}
 				}
 			}
 		}
 	}
-	if (eligible && matches.size === 1 && matches.has(candidate!.id)) {
+	if (eligible && matches.size === 1 && indices.size === 1 && matches.has(candidate!.id)) {
 		const lookup = snapshot.checkpoint(currentModel);
 		if (lookup.status !== "valid" || candidateIndex > lookup.checkpoint.entryIndex) {
-			return { kind: "branch", entryId: candidate!.id, requestIndex, item: requestInput[requestIndex]! };
+			return { kind: "branch", entryId: candidate!.id, requestIndex, item: requestInput[requestIndex]!,
+				excludeEntryIds: branch.slice(candidateIndex).map(entry => entry.id), suffix: requestInput.slice(requestIndex), suffixSources: selectedSources };
+		}
+		if (lookup.checkpoint.details.preservedInputSources?.includes(candidate!.id)) {
+			return { kind: "checkpoint", requestIndex, item: requestInput[requestIndex]!,
+				suffix: requestInput.slice(requestIndex), suffixSources: selectedSources };
 		}
 	}
-	if (matches.size > 1) return undefined;
+	if (matches.size > 1 || indices.size > 1) return undefined;
 	if (checkpointPreservedCurrentUser(branch, requestInput, modelKey(currentModel), snapshot.checkpoint(currentModel))) {
 		return { kind: "checkpoint", requestIndex, item: requestInput[requestIndex]! };
 	}
 	return undefined;
 }
 
-function inputViews(snapshot: ReturnType<typeof createBranchInputSnapshot>, model: Model<any>, excludeEntryId?: string) {
-	const options = { excludeEntryId, allowCheckpointModelMismatch: true };
+function inputViews(snapshot: ReturnType<typeof createBranchInputSnapshot>, model: Model<any>, excludeEntryId?: string, excludeEntryIds?: string[]) {
+	const options = { excludeEntryId, excludeEntryIds, allowCheckpointModelMismatch: true };
 	return {
 		effective: snapshot.view(model, "effective", options),
 		piContext: snapshot.view(model, "pi-context", options),
@@ -343,13 +375,28 @@ function preserveCurrentUser(
 	currentRequest: CurrentRequest,
 ): NativeCompactionDetails {
 	if (!currentRequest) return details;
-	if (currentRequest.kind === "branch") return appendPreservedInput(details, [currentRequest.item]);
-	const existing = [...details.replacementHistory, ...(details.preservedInput ?? [])];
-	return existing.some((item) => item.role === "user"
-		&& sameUserOccurrence(item, currentRequest.item)
-		&& isDeepStrictEqual(item.content, currentRequest.item.content))
-		? details
-		: appendPreservedInput(details, [currentRequest.item]);
+	if (currentRequest.kind === "branch") return appendPreservedInput(details, currentRequest.suffix ?? [currentRequest.item], currentRequest.suffixSources ?? [currentRequest.entryId]);
+	return appendPreservedInput(details, currentRequest.suffix ?? [currentRequest.item], currentRequest.suffixSources);
+}
+
+function checkpointContainsSuffix(details: NativeCompactionDetails, suffix: ResponseItem[]): boolean {
+	return suffix.length > 0 && isDeepStrictEqual(details.preservedInput?.slice(-suffix.length), suffix);
+}
+
+function historyForRequest(snapshot: ReturnType<typeof createBranchInputSnapshot>, model: Model<any>, request: CurrentRequest, options: InputViewOptions = {}): ResponseItem[] {
+	const view = snapshot.view(model, "effective", { ...options, allowCheckpointModelMismatch: true,
+		excludeEntryId: request?.kind === "branch" ? request.entryId : undefined, excludeEntryIds: request?.excludeEntryIds });
+	if (request?.kind !== "checkpoint") return view.items;
+	const suffix = request.suffix ?? [request.item];
+	const source = request.suffixSources?.[0];
+	const matches: number[] = [];
+	for (let index = 0; index < view.items.length; index++) {
+		if (source && view.userSources.get(index) !== source) continue;
+		if (isDeepStrictEqual(view.items[index], suffix[0]) && isDeepStrictEqual(view.items.slice(index, index + suffix.length), suffix)) matches.push(index);
+	}
+	if (matches.length !== 1) throw new Error("The preserved request occurrence cannot be identified for repeated Codex compaction.");
+	const start = matches[0]!;
+	return view.items.filter((_, index) => index < start || index >= start + suffix.length);
 }
 
 function rebindCheckpoint(details: NativeCompactionDetails, modelKeyValue: string, compHash: string | undefined): NativeCompactionDetails {
@@ -358,23 +405,6 @@ function rebindCheckpoint(details: NativeCompactionDetails, modelKeyValue: strin
 		...withoutHash,
 		modelKey: modelKeyValue,
 		...(compHash ? { compHash } : {}),
-	};
-}
-
-function withoutLastUser(items: ResponseItem[]): ResponseItem[] {
-	const lastUserIndex = items.findLastIndex((item) => item.role === "user");
-	return lastUserIndex < 0 ? items : items.filter((_item, index) => index !== lastUserIndex);
-}
-
-function preserveRequestUser(details: NativeCompactionDetails, requestInput: ResponseItem[]): NativeCompactionDetails {
-	const requestUser = requestInput.findLast((item) => item.role === "user");
-	return requestUser ? appendPreservedInput(details, [requestUser]) : details;
-}
-
-function appendPreservedInput(details: NativeCompactionDetails, input: ResponseItem[]): NativeCompactionDetails {
-	return {
-		...details,
-		preservedInput: [...(details.preservedInput ?? []), ...input.map((item) => structuredClone(item))],
 	};
 }
 
@@ -463,11 +493,15 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 	const pendingBySession = new Map<string, PendingSelection>();
 	const transitionBySession = new Map<string, Promise<void>>();
 	const automaticCompactionBySession = new Map<string, Promise<void>>();
+	const observedRequests = new Map<string, { branch: string; tools: string; prompt: string; model: string; payload: JsonObject; policy?: RequestProjectionPolicy }>();
+	const automaticAttempts = new Map<string, string>();
 	let generation = 0;
+	const requestSnapshot = (branch: SessionEntry[], tools: ReturnType<SessionCoordinatorDeps["getAllTools"]>, continuity?: RequestContinuity) =>
+		createBranchInputSnapshot({ branch, tools, projectionPolicy: continuity?.projectionPolicy });
 	const ensureCurrent = (ctx: ExtensionContext, targetModelKey: string, startGeneration: number, signal?: AbortSignal): void => {
 		ensureNotAborted(signal);
 		if (generation !== startGeneration || (ctx.model && modelKey(ctx.model) !== targetModelKey)) {
-			throw new Error("The session changed while Codex model-transition compaction was running.");
+			throw new StaleCompactionError("The session changed while Codex model-transition compaction was running.");
 		}
 	};
 	const validReceipt = (
@@ -500,11 +534,9 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			|| (sourceIndex !== undefined && (sourceIndex < 0 || sourceIndex >= checkpoint.checkpoint.entryIndex))
 			|| !requestItem
 			|| requestItem.role !== "user"
-			|| requestInput?.findLastIndex((item) => item.role === "user") !== receipt.requestIndex
+			|| !isDeepStrictEqual(requestInput?.slice(receipt.requestIndex, receipt.requestIndex + (receipt.suffix?.length ?? 1)), receipt.suffix ?? [receipt.item])
 			|| !isDeepStrictEqual(requestItem, receipt.item)
-			|| ![...checkpoint.checkpoint.details.replacementHistory, ...(checkpoint.checkpoint.details.preservedInput ?? [])]
-				.some((item) => item.role === "user" && sameUserOccurrence(item, receipt.item)
-					&& isDeepStrictEqual(item.content, receipt.item.content))) {
+			|| !checkpointContainsSuffix(checkpoint.checkpoint.details, receipt.suffix ?? [receipt.item])) {
 			continuity.receipt = undefined;
 			return undefined;
 		}
@@ -522,7 +554,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 	): CurrentRequest => {
 		const receipt = validReceipt(ctx, currentModel, snapshot, requestInput, continuity, signal);
 		return receipt
-			? { kind: "checkpoint", requestIndex: receipt.requestIndex, item: receipt.item }
+			? { kind: "checkpoint", requestIndex: receipt.requestIndex, item: receipt.item, suffix: receipt.suffix, suffixSources: receipt.suffixSources }
 			: resolveCurrentRequest(snapshot, requestInput, historyModel, currentModel, systemPromptInput);
 	};
 	const saveCheckpoint = (
@@ -534,6 +566,10 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		continuity?: RequestContinuity,
 		signal?: AbortSignal,
 	): void => {
+		continuity?.assertEvidence?.();
+		if (!isDeepStrictEqual(deps.getBranch(ctx), before)) {
+			throw new StaleCompactionError("The session changed before committing Codex compaction.");
+		}
 		const priorReceipt = continuity?.receipt;
 		if (continuity) continuity.receipt = undefined;
 		if (!continuity || !currentRequest) {
@@ -562,12 +598,12 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 				|| conversationLeafId(after) !== leafId
 				|| !requestItem
 				|| requestItem.role !== "user"
-				|| continuity.requestInput?.findLastIndex((item) => item.role === "user") !== currentRequest.requestIndex
+				|| !isDeepStrictEqual(continuity.requestInput?.slice(currentRequest.requestIndex, currentRequest.requestIndex + (currentRequest.suffix?.length ?? 1)), currentRequest.suffix ?? [currentRequest.item])
 				|| !isDeepStrictEqual(requestItem, currentRequest.item)
-				|| ![...checkpoint.checkpoint.details.replacementHistory, ...(checkpoint.checkpoint.details.preservedInput ?? [])]
-					.some((item) => item.role === "user" && sameUserOccurrence(item, currentRequest.item)
-						&& isDeepStrictEqual(item.content, currentRequest.item.content))) return;
+				|| !checkpointContainsSuffix(checkpoint.checkpoint.details, currentRequest.suffix ?? [currentRequest.item])) return;
 			continuity.receipt = {
+				suffix: currentRequest.suffix,
+				suffixSources: currentRequest.suffixSources,
 				requestIndex: currentRequest.requestIndex,
 				item: priorReceipt && isDeepStrictEqual(priorReceipt.item, currentRequest.item)
 					? priorReceipt.item : structuredClone(currentRequest.item),
@@ -586,6 +622,8 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		pendingBySession.clear();
 		transitionBySession.clear();
 		automaticCompactionBySession.clear();
+		observedRequests.clear();
+		automaticAttempts.clear();
 	};
 
 	const recordFailedRequest = (
@@ -647,18 +685,20 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		for (let attempt = 0; attempt < 3; attempt++) {
 			ensureCurrent(ctx, targetModelKey, startGeneration, operationSignal);
 			const branch = deps.getBranch(ctx);
-			const branchBefore = branch.slice();
+			const branchBefore = structuredClone(branch);
 			const leafId = conversationLeafId(branch);
-			const snapshot = createBranchInputSnapshot({ branch, tools: toolsWithRequestFormats(deps.getAllTools(), basePayload, requestInput) });
+			const snapshot = requestSnapshot(branch, toolsWithRequestFormats(continuity?.tools ?? deps.getAllTools(), basePayload, requestInput), continuity);
 			const currentRequest = resolveRequest(ctx, snapshot, requestInput, previousModel, currentModel, systemPromptItems(ctx, currentModel), continuity, operationSignal);
-			const options = { excludeEntryId: currentRequest?.kind === "branch" ? currentRequest.entryId : undefined, allowCheckpointModelMismatch: true, excludeLastAssistantError };
-			const input = snapshot.view(previousModel, "effective", options).items;
+			const options = { excludeEntryId: currentRequest?.kind === "branch" ? currentRequest.entryId : undefined, excludeEntryIds: currentRequest?.excludeEntryIds, allowCheckpointModelMismatch: true, excludeLastAssistantError };
+			const input = historyForRequest(snapshot, previousModel, currentRequest, options);
 			let native: Awaited<ReturnType<CheckpointFactory>>;
 			try {
 				native = await deps.createCheckpoint({
 					ctx,
 					model: previousModel,
 					input,
+					protectedInput: currentRequest ? currentRequest.suffix ?? [currentRequest.item] : continuity?.requestSuffix ?? [],
+					replayContextWindow: currentModel.contextWindow,
 					basePayload,
 					signal: operationSignal,
 					compactionHashes: hashes,
@@ -673,7 +713,9 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 					native = await deps.createCheckpoint({
 						ctx,
 						model: currentModel,
-						input: snapshot.view(currentModel, "effective", options).items,
+						input: historyForRequest(snapshot, currentModel, currentRequest, options),
+						protectedInput: currentRequest ? currentRequest.suffix ?? [currentRequest.item] : continuity?.requestSuffix ?? [],
+						replayContextWindow: currentModel.contextWindow,
 						basePayload,
 						signal: operationSignal,
 						compactionHashes: hashes,
@@ -692,7 +734,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			pendingBySession.delete(sessionId);
 			return;
 		}
-		throw new Error("The session changed while Codex model-transition compaction was running.");
+		throw new StaleCompactionError("The session changed while Codex model-transition compaction was running.");
 	};
 
 	const recoverCurrentModelInternal = async (
@@ -723,12 +765,10 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		if (!hashTransition && !downshift) return;
 		if (!hashTransition) {
 			const branch = deps.getBranch(ctx);
-			const snapshot = createBranchInputSnapshot({ branch, tools: toolsWithRequestFormats(deps.getAllTools(), basePayload, requestInput) });
+			const snapshot = requestSnapshot(branch, toolsWithRequestFormats(continuity?.tools ?? deps.getAllTools(), basePayload, requestInput), continuity);
 			const currentRequest = resolveRequest(ctx, snapshot, requestInput, previousModel ?? model, model, systemPromptItems(ctx, model), continuity, operationSignal);
-			const input = snapshot.view(model, "effective", {
-				excludeEntryId: currentRequest?.kind === "branch" ? currentRequest.entryId : undefined,
-				allowCheckpointModelMismatch: true, excludeLastAssistantError,
-			}).items;
+			const input = [...historyForRequest(snapshot, model, currentRequest, { excludeLastAssistantError }),
+				...(currentRequest ? currentRequest.suffix ?? [currentRequest.item] : [])];
 			if (deps.shouldAutoCompact?.({ ctx, model, input, reason: "downshift" }) !== true) return;
 		}
 		const startGeneration = generation;
@@ -739,24 +779,22 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 				return;
 			}
 			const branch = deps.getBranch(ctx);
-			const branchBefore = branch.slice();
+			const branchBefore = structuredClone(branch);
 			const leafId = conversationLeafId(branch);
-			const snapshot = createBranchInputSnapshot({ branch, tools: toolsWithRequestFormats(deps.getAllTools(), basePayload, requestInput) });
+			const snapshot = requestSnapshot(branch, toolsWithRequestFormats(continuity?.tools ?? deps.getAllTools(), basePayload, requestInput), continuity);
 			const currentRequest = resolveRequest(ctx, snapshot, requestInput, model, model, systemPromptItems(ctx, model), continuity, operationSignal);
 			const native = await deps.createCheckpoint({
 				ctx,
 				model,
-				input: snapshot.view(model, "effective", {
-					excludeEntryId: currentRequest?.kind === "branch" ? currentRequest.entryId : undefined,
-					allowCheckpointModelMismatch: true, excludeLastAssistantError,
-				}).items,
+				input: historyForRequest(snapshot, model, currentRequest, { excludeLastAssistantError }),
+				protectedInput: currentRequest ? currentRequest.suffix ?? [currentRequest.item] : continuity?.requestSuffix ?? [],
 				basePayload,
 				signal: operationSignal,
 				compactionHashes: hashes,
 			});
 			ensureCurrent(ctx, modelKey(model), startGeneration, operationSignal);
 			if (conversationLeafId(deps.getBranch(ctx)) !== leafId) {
-				throw new Error("The session changed while Codex model-transition compaction was running.");
+				throw new StaleCompactionError("The session changed while Codex model-transition compaction was running.");
 			}
 			saveCheckpoint(ctx, model, rebindCheckpoint(
 				preserveCurrentUser(native.details, currentRequest),
@@ -768,7 +806,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		try {
 			await transition;
 		} catch (transitionError) {
-			if (!isContextWindowCompactionError(transitionError)) {
+			if (!(transitionError instanceof StaleCompactionError) && !isContextWindowCompactionError(transitionError)) {
 				bypassFailedGate(ctx, model, checkpoint.checkpoint.entryId, startGeneration, gateLeafId);
 			}
 			throw transitionError;
@@ -787,19 +825,41 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		const startSessionId = ctx.sessionManager.getSessionId();
 		const startGeneration = generation;
 		const operationSignal = signal ?? ctx.signal;
+		const branch = structuredClone(deps.getBranch(ctx));
+		const tools = structuredClone(deps.getAllTools());
+		const prompt = ctx.getSystemPrompt();
+		const originalModel = model;
+		model = structuredClone(model);
+		basePayload = basePayload && structuredClone(basePayload);
+		requestInput = requestInput && structuredClone(requestInput);
+		const assertEvidence = () => {
+			if (!isDeepStrictEqual(tools, deps.getAllTools()) || prompt !== ctx.getSystemPrompt()
+				|| !isDeepStrictEqual(model, originalModel) || (ctx.model && !isDeepStrictEqual(model, ctx.model))) {
+				throw new StaleCompactionError("The request declarations, prompt or model changed while recovering Codex compaction.");
+			}
+		};
+		const projectionPolicy = requestInput && basePayload && branch.some(entry => entry.type === "message" && entry.message.role === "system")
+			? resolveRequestProjection(branch, model, tools, requestInput, basePayload) : undefined;
 		const hashes = isOpenAICodexModel(model)
 			? await deps.resolveCompactionHashes(ctx, model, operationSignal)
 			: emptyCompactionHashSnapshot("unsupported");
 		ensureCurrent(ctx, modelKey(model), startGeneration, operationSignal);
+		assertEvidence();
+		if (!isDeepStrictEqual(branch, deps.getBranch(ctx))) throw new StaleCompactionError("The session changed while resolving Codex metadata.");
 		if (ctx.sessionManager.getSessionId() !== startSessionId || (signal === undefined && ctx.signal !== operationSignal)) {
-			throw new Error("The session changed while resolving Codex metadata.");
+			throw new StaleCompactionError("The session changed while resolving Codex metadata.");
 		}
-		return recoverCurrentModelInternal(model, ctx, hashes, basePayload, requestInput, excludeLastAssistantError, operationSignal);
+		return recoverCurrentModelInternal(model, ctx, hashes, basePayload, requestInput, excludeLastAssistantError, operationSignal, {
+			sessionId: startSessionId, generation: startGeneration, targetModelKey: modelKey(model), requestInput,
+			compactionHashes: hashes, signal: operationSignal, assertEvidence, tools, projectionPolicy,
+		});
 	};
 
 	const selectModel = async (event: ModelSelectLike, ctx: ExtensionContext): Promise<void> => {
 		generation++;
 		const sessionId = ctx.sessionManager.getSessionId();
+		automaticAttempts.delete(sessionId);
+		observedRequests.delete(sessionId);
 		transitionBySession.delete(sessionId);
 		automaticCompactionBySession.delete(sessionId);
 		const previousModel = event.previousModel;
@@ -836,9 +896,10 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		const requestSignal = continuity.signal;
 		const hashes = continuity.compactionHashes;
 		const ensureRequestCurrent = () => {
+			continuity.assertEvidence?.();
 			ensureCurrent(ctx, modelKey(model), requestGeneration, requestSignal);
 			if (ctx.sessionManager.getSessionId() !== continuity.sessionId || ctx.signal !== requestSignal) {
-				throw new Error("The session changed while preparing the Codex request.");
+				throw new StaleCompactionError("The session changed while preparing the Codex request.");
 			}
 		};
 		ensureRequestCurrent();
@@ -855,8 +916,8 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			return prepareRequestInternal(model, ctx, requestInput, basePayload, false, continuity);
 		}
 		const branchBefore = deps.getBranch(ctx);
-		const tools = toolsWithRequestFormats(deps.getAllTools(), basePayload, requestInput);
-		const snapshot = createBranchInputSnapshot({ branch: branchBefore, tools });
+		const tools = toolsWithRequestFormats(continuity.tools ?? deps.getAllTools(), basePayload, requestInput);
+		const snapshot = requestSnapshot(branchBefore, tools, continuity);
 		let selection = pendingBySession.get(sessionId);
 		const checkpoint = snapshot.checkpoint(model);
 		if (
@@ -888,14 +949,14 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		const systemPromptInput = systemPromptItems(ctx, model);
 		const initialCurrentRequest = resolveRequest(ctx, snapshot, requestInput, historyModel, model, systemPromptInput, continuity, requestSignal);
 		const excludedEntryId = initialCurrentRequest?.kind === "branch" ? initialCurrentRequest.entryId : undefined;
-		const historyViews = inputViews(snapshot, historyModel, excludedEntryId);
+		const historyViews = inputViews(snapshot, historyModel, excludedEntryId, initialCurrentRequest?.excludeEntryIds);
 		const historyInput = historyViews.effective.items;
 		const rawHistoryInput = historyViews.fullHistory.items;
 		const piContextInput = historyViews.piContext.items;
 		// Reuse views only within this synchronous snapshot. Later awaits may change
 		// the branch or checkpoint, so subsequent phases rebuild from current facts.
 		const sameHistoryModel = isDeepStrictEqual(historyModel, model);
-		const currentViews = sameHistoryModel ? historyViews : inputViews(snapshot, model, excludedEntryId);
+		const currentViews = sameHistoryModel ? historyViews : inputViews(snapshot, model, excludedEntryId, initialCurrentRequest?.excludeEntryIds);
 		const currentHistoryInput = currentViews.effective.items;
 		const currentRawHistoryInput = currentViews.fullHistory.items;
 		const currentPiContextInput = currentViews.piContext.items;
@@ -907,6 +968,11 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 				systemPromptInput,
 			);
 		} catch (error) {
+			if (checkpoint.status === "valid" && requestInput && basePayload && !continuity.projectionAttempted) {
+				continuity.projectionAttempted = true;
+				continuity.projectionPolicy = resolveRequestProjection(branchBefore, model, continuity.tools ?? deps.getAllTools(), requestInput, basePayload);
+				return prepareRequestInternal(model, ctx, requestInput, basePayload, skipAutomaticCompaction, continuity);
+			}
 			// An unmatched Pi payload may contain only its retained tail, not the
 			// encrypted checkpoint. Recompacting it would silently erase history.
 			if (checkpoint.status === "valid") throw error;
@@ -921,56 +987,10 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 				return requestInput;
 			}
 			if (!pending) return requestInputWasSanitized ? requestInput : undefined;
-			const gateEntryId = conversationLeafId(branchBefore);
-			const gateGeneration = generation;
-			const gateLeafId = conversationLeafId(branchBefore);
-			try {
-				return await runRemoteCompaction(ctx, "context-recovery", async () => {
-					const compactionInput = withoutLastUser(requestInput!);
-					const createCheckpointFor = (selectedModel: Model<any>) => deps.createCheckpoint({
-						ctx,
-						model: selectedModel,
-						input: compactionInput,
-						basePayload,
-						signal: requestSignal,
-						compactionHashes: hashes,
-					});
-					let native: Awaited<ReturnType<CheckpointFactory>>;
-					try {
-						native = await createCheckpointFor(historyModel);
-					} catch (firstError) {
-						ensureRequestCurrent();
-						if (
-							(modelKey(model) === modelKey(historyModel) && hashes.hashFor(model) === hashes.hashFor(historyModel))
-							|| !shouldRetryWithCurrentModel(firstError)
-						) throw firstError;
-						try {
-							native = await createCheckpointFor(model);
-						} catch (fallbackError) {
-							throw fallbackError;
-						}
-					}
-					ensureRequestCurrent();
-					if (conversationLeafId(deps.getBranch(ctx)) !== gateLeafId) {
-						throw new Error("The session changed while Codex model-transition compaction was running.");
-					}
-					const details = rebindCheckpoint(
-						preserveRequestUser(native.details, requestInput!),
-						modelKey(model),
-						hashes.hashFor(model),
-					);
-					deps.appendCheckpoint(details);
-					pendingBySession.delete(sessionId);
-					return [...details.replacementHistory, ...(details.preservedInput ?? [])];
-				});
-			} catch (recoveryError) {
-				if (!isContextWindowCompactionError(recoveryError)) {
-					bypassFailedGate(ctx, model, gateEntryId, gateGeneration, gateLeafId);
-				}
-				throw recoveryError;
-			}
+			throw error;
 		}
 		const initialTailStart = (requestInput?.length ?? 0) - tail.length;
+		continuity.requestSuffix = initialCurrentRequest ? initialCurrentRequest.suffix ?? [initialCurrentRequest.item] : tail;
 
 
 		const activeAutomaticCompaction = automaticCompactionBySession.get(sessionId);
@@ -981,7 +1001,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		}
 		if (pending && pending.targetModelKey === modelKey(model)) {
 			const shouldRun = pending.reason === "hash"
-				|| deps.shouldAutoCompact?.({ ctx, model, input: currentHistoryInput, reason: pending.reason }) === true;
+				|| deps.shouldAutoCompact?.({ ctx, model, input: [...currentHistoryInput, ...tail], reason: pending.reason }) === true;
 			if (!shouldRun) {
 				pendingBySession.delete(sessionId);
 			} else {
@@ -997,7 +1017,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 					ensureRequestCurrent();
 					transitionCompactionCompleted = true;
 				} catch (transitionError) {
-					if (!isContextWindowCompactionError(transitionError)) {
+					if (!(transitionError instanceof StaleCompactionError) && !isContextWindowCompactionError(transitionError)) {
 						bypassFailedGate(ctx, model, gateEntryId, startGeneration, gateLeafId);
 					}
 					throw transitionError;
@@ -1029,32 +1049,39 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			if (activeAutomaticCompaction) {
 				await activeAutomaticCompaction;
 				ensureRequestCurrent();
-			} else if (!skipAutomaticCompaction) {
-				const automaticSnapshot = createBranchInputSnapshot({ branch, tools });
+			} else if (!skipAutomaticCompaction && !continuity.automaticCompactionAttempted) {
+				const automaticSnapshot = requestSnapshot(branch, tools, continuity);
 				const currentRequest = resolveRequest(ctx, automaticSnapshot, requestInput, model, model, systemPromptInput, continuity, requestSignal);
 				const automaticExcludeId = currentRequest?.kind === "branch" ? currentRequest.entryId : undefined;
-				const currentHistory = automaticSnapshot.view(model, "effective", {
-					excludeEntryId: automaticExcludeId, allowCheckpointModelMismatch: true,
-				}).items;
+				const currentHistory = historyForRequest(automaticSnapshot, model, currentRequest);
+				const protectedInput = currentRequest?.kind === "checkpoint" ? currentRequest.suffix ?? [currentRequest.item] : tail;
+				const completeInput = [...currentHistory, ...protectedInput];
+				const capacityRepair = currentHistory.some(item => item.type !== "compaction" && item.type !== "context_compaction")
+					&& !fitsContextWindow(ctx, model, completeInput, basePayload, tools);
 				if (
-					(transitionCompactionCompleted || hasBranchTailAfterCheckpoint(branch, automaticSnapshot.checkpoint(model), automaticExcludeId))
-					&& deps.shouldAutoCompact?.({ ctx, model, input: currentHistory })
+					currentHistory.length > 0
+					&&
+					(transitionCompactionCompleted || capacityRepair || hasBranchTailAfterCheckpoint(branch, automaticSnapshot.checkpoint(model), automaticExcludeId))
+					&& deps.shouldAutoCompact?.({ ctx, model, input: completeInput })
 				) {
+					continuity.automaticCompactionAttempted = true;
+					if (continuity.automaticAttemptKey) automaticAttempts.set(sessionId, continuity.automaticAttemptKey);
 					const startGeneration = generation;
 					const leafId = conversationLeafId(branch);
-					const branchBefore = branch.slice();
+					const branchBefore = structuredClone(branch);
 					const automaticCompaction = runRemoteCompaction(ctx, "automatic", async () => {
 						const native = await deps.createCheckpoint({
 							ctx,
 							model,
 							input: currentHistory,
+							protectedInput,
 							basePayload,
 							signal: requestSignal,
 							compactionHashes: hashes,
 						});
 						ensureCurrent(ctx, modelKey(model), startGeneration, requestSignal);
 						if (conversationLeafId(deps.getBranch(ctx)) !== leafId) {
-							throw new Error("The session changed while Codex automatic compaction was running.");
+							throw new StaleCompactionError("The session changed while Codex automatic compaction was running.");
 						}
 						saveCheckpoint(ctx, model, preserveCurrentUser(native.details, currentRequest), currentRequest, branchBefore, continuity, requestSignal);
 					});
@@ -1063,11 +1090,10 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 						await automaticCompaction;
 					} catch (automaticError) {
 						ensureRequestCurrent();
-						const unchangedInput = [...currentHistory, ...tail];
 						if (
 							ctx.signal?.aborted
 							|| isContextWindowCompactionError(automaticError)
-							|| !fitsContextWindow(ctx, model, unchangedInput, basePayload, tools)
+							|| isFailClosedCompactionError(automaticError instanceof Error ? automaticError.message : String(automaticError))
 						) throw automaticError;
 						try {
 							deps.onAutomaticCompactionFailure?.(ctx, automaticError);
@@ -1079,13 +1105,13 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			}
 			branch = deps.getBranch(ctx);
 		}
-		const finalSnapshot = createBranchInputSnapshot({ branch, tools });
+		const finalSnapshot = requestSnapshot(branch, tools, continuity);
 		const currentCheckpoint = finalSnapshot.checkpoint(model);
 		if (currentCheckpoint.status === "bypassed") {
 			const currentRequest = resolveRequest(ctx, finalSnapshot, requestInput, model, model, systemPromptInput, continuity, requestSignal);
 			const rawReplay = [
 				...finalSnapshot.view(model, "effective", {
-					excludeEntryId: currentRequest?.kind === "branch" ? currentRequest.entryId : undefined,
+					excludeEntryId: currentRequest?.kind === "branch" ? currentRequest.entryId : undefined, excludeEntryIds: currentRequest?.excludeEntryIds,
 					allowCheckpointModelMismatch: true,
 				}).items,
 				...tail,
@@ -1100,21 +1126,26 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		if (finalReceipt) {
 			const tailIndex = finalReceipt.requestIndex - initialTailStart;
 			if (tailIndex >= 0 && tailIndex < tail.length && isDeepStrictEqual(tail[tailIndex], finalReceipt.item)) {
-				tail = tail.filter((_item, index) => index !== tailIndex);
+				tail = tail.filter((_item, index) => index < tailIndex || index >= tailIndex + (finalReceipt.suffix?.length ?? 1));
 			}
 		} else {
 			const initialBranchRequest = initialCurrentRequest?.kind === "branch" ? initialCurrentRequest : undefined;
 			const checkpointContainsInitialRequest = initialBranchRequest
 				&& currentCheckpoint.checkpoint.entryIndex > (snapshot.projection.sourceIndexById.get(initialBranchRequest.entryId) ?? Number.MAX_SAFE_INTEGER)
-				&& [...currentCheckpoint.checkpoint.details.replacementHistory, ...(currentCheckpoint.checkpoint.details.preservedInput ?? [])]
-					.some((item) => item.role === "user"
-						&& sameUserOccurrence(item, initialBranchRequest.item)
-						&& isDeepStrictEqual(item.content, initialBranchRequest.item.content));
+				&& checkpointContainsSuffix(currentCheckpoint.checkpoint.details, initialBranchRequest.suffix ?? [initialBranchRequest.item]);
 			if (checkpointContainsInitialRequest) {
 				const tailIndex = initialBranchRequest.requestIndex - initialTailStart;
 				if (tailIndex >= 0 && tailIndex < tail.length && sameUserOccurrence(tail[tailIndex]!, initialBranchRequest.item)) {
-					tail = tail.filter((_item, index) => index !== tailIndex);
+					tail = tail.filter((_item, index) => index < tailIndex || index >= tailIndex + (initialBranchRequest.suffix?.length ?? 1));
 				}
+			} else if (initialBranchRequest?.suffixSources && currentCheckpoint.checkpoint.details.preservedInputSources) {
+				const saved = currentCheckpoint.checkpoint.details;
+				const savedBySource = new Map(saved.preservedInputSources!.map((source, index) => [source, saved.preservedInput?.[index]]));
+				const start = initialBranchRequest.requestIndex - initialTailStart;
+				tail = tail.filter((item, index) => {
+					const source = initialBranchRequest.suffixSources?.[index - start];
+					return !source || !isDeepStrictEqual(item, savedBySource.get(source));
+				});
 			} else {
 				const preservedUser = checkpointPreservedCurrentUser(branch, requestInput, modelKey(model), currentCheckpoint);
 				if (preservedUser) {
@@ -1128,7 +1159,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		const finalRequest = resolveRequest(ctx, finalSnapshot, requestInput, model, model, systemPromptInput, continuity, requestSignal);
 		return [
 			...finalSnapshot.view(model, "effective", {
-				excludeEntryId: finalRequest?.kind === "branch" ? finalRequest.entryId : undefined,
+				excludeEntryId: finalRequest?.kind === "branch" ? finalRequest.entryId : undefined, excludeEntryIds: finalRequest?.excludeEntryIds,
 				allowCheckpointModelMismatch: true,
 			}).items,
 			...tail,
@@ -1144,21 +1175,51 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		const sessionId = ctx.sessionManager.getSessionId();
 		const startGeneration = generation;
 		const operationSignal = ctx.signal;
+		const initialBranch = structuredClone(deps.getBranch(ctx));
+		const initialTools = structuredClone(deps.getAllTools());
+		const initialPrompt = ctx.getSystemPrompt();
+		const originalModel = model;
+		model = structuredClone(model);
+		requestInput = requestInput && structuredClone(requestInput);
+		basePayload = basePayload && structuredClone(basePayload);
+		const assertEvidence = () => {
+			if (!isDeepStrictEqual(initialTools, deps.getAllTools()) || ctx.getSystemPrompt() !== initialPrompt
+				|| !isDeepStrictEqual(originalModel, model) || (ctx.model && !isDeepStrictEqual(ctx.model, model))) throw new StaleCompactionError("The request declarations, prompt or model changed while preparing Codex compaction.");
+		};
+		const projectionPolicy = requestInput && basePayload && typeof basePayload.instructions === "string"
+			&& initialBranch.some(entry => entry.type === "message" && entry.message.role === "system")
+			? resolveRequestProjection(initialBranch, model, initialTools, requestInput, basePayload) : undefined;
 		const hashes = isOpenAICodexModel(model)
 			? await deps.resolveCompactionHashes(ctx, model, operationSignal)
 			: emptyCompactionHashSnapshot("unsupported");
 		ensureCurrent(ctx, modelKey(model), startGeneration, operationSignal);
+		assertEvidence();
+		if (!isDeepStrictEqual(initialBranch, deps.getBranch(ctx))) throw new StaleCompactionError("The session changed while resolving Codex metadata.");
 		if (ctx.sessionManager.getSessionId() !== sessionId || ctx.signal !== operationSignal) {
-			throw new Error("The session changed while resolving Codex metadata.");
+			throw new StaleCompactionError("The session changed while resolving Codex metadata.");
 		}
-		return prepareRequestInternal(model, ctx, requestInput, basePayload, skipAutomaticCompaction, {
+		const automaticAttemptKey = accountingFingerprint({ model, hash: hashes.hashFor(model), prompt: initialPrompt, tools: initialTools,
+			current: requestInput?.findLast(item => item.role === "user"),
+			history: createBranchProjectionSnapshot(initialBranch).fullHistory().flatMap(entry => entry.messages
+				.filter(message => message.role !== "assistant" || (message.stopReason !== "error" && message.stopReason !== "aborted"))
+				.map(message => [entry.sourceEntry.id, message])) });
+		const result = await prepareRequestInternal(model, ctx, requestInput, basePayload, skipAutomaticCompaction, {
 			sessionId,
 			generation: startGeneration,
 			targetModelKey: modelKey(model),
 			requestInput,
 			compactionHashes: hashes,
 			signal: operationSignal,
+			assertEvidence,
+			tools: initialTools,
+			projectionPolicy,
+			projectionAttempted: projectionPolicy !== undefined,
+			automaticAttemptKey,
+			automaticCompactionAttempted: automaticAttempts.get(sessionId) === automaticAttemptKey,
 		});
+		if (basePayload) observedRequests.set(sessionId, { branch: accountingFingerprint(deps.getBranch(ctx)), tools: accountingFingerprint(initialTools),
+			prompt: initialPrompt, model: modelKey(model), payload: basePayload, policy: projectionPolicy });
+		return result;
 	};
 
 	const prepareCompaction = async (
@@ -1188,5 +1249,33 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		recoverCurrentModel,
 		prepareRequest,
 		prepareCompaction,
+		prepareCompactionPlan: async (model: Model<any>, ctx: ExtensionContext, excludeLastAssistantError = false, signal?: AbortSignal, basePayload?: JsonObject) => {
+			const sessionId = ctx.sessionManager.getSessionId();
+			const branch = structuredClone(deps.getBranch(ctx));
+			const tools = structuredClone(deps.getAllTools());
+			const prompt = ctx.getSystemPrompt();
+			const startGeneration = generation;
+			const modelSnapshot = structuredClone(model);
+			const assertCurrent = () => {
+				ensureCurrent(ctx, modelKey(modelSnapshot), startGeneration, signal ?? ctx.signal);
+				if (ctx.sessionManager.getSessionId() !== sessionId || !isDeepStrictEqual(branch, deps.getBranch(ctx))
+					|| !isDeepStrictEqual(tools, deps.getAllTools()) || ctx.getSystemPrompt() !== prompt
+					|| !isDeepStrictEqual(modelSnapshot, ctx.model ?? model)) throw new Error("The session or declarations changed while preparing manual Codex compaction.");
+			};
+			const policy = loadConfig(ctx.cwd ?? "", ctx.isProjectTrusted?.() ?? false).manualProjection;
+			const known = observedRequests.get(sessionId);
+			const observed = !policy && known?.branch === accountingFingerprint(branch) && known.tools === accountingFingerprint(tools)
+				&& known.prompt === prompt && known.model === modelKey(model) ? known : undefined;
+			if (!policy && !observed?.policy && tools.length > 0) throw new Error("Codex compaction outside a verified provider request needs a declared manualProjection policy to verify tool visibility.");
+			const pending = transitionBySession.get(sessionId);
+			if (pending) await pending;
+			assertCurrent();
+			const snapshot = createBranchInputSnapshot({ branch, tools,
+				projectionPolicy: policy ? { hiddenNames: new Set(policy.hiddenTools), ...(policy.forcedPrompt !== undefined ? { forcedPrompt: policy.forcedPrompt } : {}) } : observed?.policy });
+			const plan = compactionInputPlan(snapshot, model, { excludeLastAssistantError });
+			const wire = snapshot.view(model, "effective", { allowCheckpointModelMismatch: true, excludeLastAssistantError });
+			return { ...plan, assertCurrent, basePayload: { ...basePayload, instructions: typeof observed?.payload.instructions === "string" ? observed.payload.instructions : wire.instructions || prompt,
+				tools: observed ? (Array.isArray(observed.payload.tools) ? observed.payload.tools : []) : wire.tools ?? [] } };
+		},
 	};
 }

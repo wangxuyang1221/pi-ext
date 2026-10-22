@@ -4,7 +4,8 @@ import { effectiveContextWindow, loadConfig } from "./config.js";
 import {
 	buildCodexHeaders,
 	buildCompactionRequestBody,
-	buildReplacementHistory,
+	retainRecentMessages,
+	approximateResponseItemTokens,
 	buildToolPayload,
 	callRemoteCompaction,
 	loadedToolNamesFromItems,
@@ -32,6 +33,9 @@ export type NativeCheckpointRequest = {
 	ctx: ExtensionContext;
 	model: Model<any>;
 	input: ResponseItem[];
+	/** Request-owned suffix excluded from remote history, but included in the final capacity budget. */
+	protectedInput?: ResponseItem[];
+	replayContextWindow?: number;
 	basePayload?: JsonObject;
 	turnState?: string;
 	onTurnState?: (turnState: string) => void;
@@ -77,6 +81,12 @@ export async function createNativeCheckpoint(params: NativeCheckpointRequest): P
 	details: NativeCompactionDetails;
 	usage?: Awaited<ReturnType<typeof callRemoteCompaction>>["usage"];
 }> {
+	params = { ...params, ...structuredClone({ model: params.model, input: params.input, protectedInput: params.protectedInput,
+		basePayload: params.basePayload, allTools: params.allTools, activeToolNames: params.activeToolNames }) };
+	const sessionId = params.ctx.sessionManager.getSessionId();
+	const basePayload = compactionBasePayload(params);
+	const fallbackPrompt = params.ctx.getSystemPrompt();
+	const config = loadConfig(params.ctx.cwd ?? "", params.ctx.isProjectTrusted?.() ?? false);
 	const auth = await params.ctx.modelRegistry.getApiKeyAndHeaders(params.model);
 	if (!auth.ok || !auth.apiKey) {
 		const error = markFallbackEligibility(
@@ -85,9 +95,7 @@ export async function createNativeCheckpoint(params: NativeCheckpointRequest): P
 		);
 		throw error;
 	}
-	const sessionId = params.ctx.sessionManager.getSessionId();
 	const baseUrl = auth.baseUrl ?? params.model.baseUrl;
-	const basePayload = compactionBasePayload(params);
 	const supportsStrictMode = (params.model.compat as { supportsStrictMode?: boolean } | undefined)?.supportsStrictMode !== false;
 	const generatedTools = buildToolPayload(
 		params.allTools,
@@ -95,17 +103,16 @@ export async function createNativeCheckpoint(params: NativeCheckpointRequest): P
 		supportsStrictMode,
 		loadedToolNamesFromItems(params.input),
 	);
-	const tools = Array.isArray(basePayload.tools) ? basePayload.tools : generatedTools;
+	const tools = params.basePayload !== undefined ? (Array.isArray(basePayload.tools) ? basePayload.tools : []) : generatedTools;
 	const instructions = typeof basePayload.instructions === "string"
 		? basePayload.instructions
-		: params.ctx.getSystemPrompt();
+		: fallbackPrompt;
 	// Leave room for the stable request prefix and the V2 trigger item.
 	const reservedTokens = approximateCompactionRequestTokens({
 		input: [],
 		instructions,
 		tools,
 	});
-	const config = loadConfig(params.ctx.cwd ?? "", params.ctx.isProjectTrusted?.() ?? false);
 	const contextWindow = effectiveContextWindow(config, params.model.contextWindow);
 	const input = trimFunctionCallHistoryToFitContextWindow(
 		params.input,
@@ -136,13 +143,30 @@ export async function createNativeCheckpoint(params: NativeCheckpointRequest): P
 		signal: params.signal,
 		onTurnState: params.onTurnState,
 	});
+	const fixedTokens = approximateCompactionRequestTokens({ input: [remote.compactionItem, ...(params.protectedInput ?? [])], instructions, tools });
+	const replayWindow = effectiveContextWindow(config, params.replayContextWindow ?? params.model.contextWindow);
+	let budget = Math.max(0, Math.min(64_000, replayWindow - fixedTokens));
+	let retained = retainRecentMessages(input, budget);
+	if (fixedTokens + approximateResponseItemTokens(retained) > replayWindow) {
+		// Truncation markers and wire structure are not part of the retention text budget.
+		// Search at most log2(64001) steps, retaining only candidates that fit the final estimator.
+		let low = 0;
+		let high = budget;
+		retained = [];
+		while (low < high) {
+			budget = Math.ceil((low + high) / 2);
+			const candidate = retainRecentMessages(input, budget);
+			if (fixedTokens + approximateResponseItemTokens(candidate) <= replayWindow) { low = budget; retained = candidate; }
+			else high = budget - 1;
+		}
+	}
 	return {
 		details: {
 			kind: NATIVE_COMPACTION_KIND,
 			version: NATIVE_COMPACTION_VERSION,
 			modelKey: modelKey(params.model),
 			...(typeof params.compHash === "string" && params.compHash.trim() ? { compHash: params.compHash } : {}),
-			replacementHistory: buildReplacementHistory(input, remote.compactionItem),
+			replacementHistory: [...retained, structuredClone(remote.compactionItem)],
 		},
 		usage: remote.usage,
 	};

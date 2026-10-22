@@ -11,6 +11,8 @@ export type CodexCompactionConfig = {
 	effectiveContextWindowPercent?: number;
 	/** Version sent to the official Codex model catalog. */
 	metadataClientVersion?: string;
+	/** Explicit contract for compaction outside an observed provider request. */
+	manualProjection?: { hiddenTools: string[]; forcedPrompt?: string };
 };
 
 export const DEFAULT_METADATA_CLIENT_VERSION = "0.156.0";
@@ -120,7 +122,12 @@ const DEFAULT_CONFIG: CodexCompactionConfig = {
 export function parseConfig(input: unknown): Partial<CodexCompactionConfig> {
 	if (typeof input !== "object" || input === null || Array.isArray(input)) return {};
 	const value = input as Record<string, unknown>;
+	const manual = value.manualProjection as Record<string, unknown> | undefined;
 	return {
+		...(manual && typeof manual === "object" && !Array.isArray(manual) && Array.isArray(manual.hiddenTools)
+			&& manual.hiddenTools.every(name => typeof name === "string" && name.length > 0)
+			&& (manual.forcedPrompt === undefined || (typeof manual.forcedPrompt === "string" && manual.forcedPrompt.length > 0))
+			? { manualProjection: { hiddenTools: [...new Set(manual.hiddenTools)] as string[], ...(manual.forcedPrompt === undefined ? {} : { forcedPrompt: manual.forcedPrompt as string }) } } : {}),
 		...(isMetadataClientVersion(value.metadataClientVersion)
 			? { metadataClientVersion: value.metadataClientVersion } : {}),
 		...(typeof value.effectiveContextWindowPercent === "number" && Number.isFinite(value.effectiveContextWindowPercent)

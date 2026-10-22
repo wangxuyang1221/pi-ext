@@ -49,6 +49,39 @@ async function captureFailure(operation: Promise<unknown>): Promise<unknown> {
 }
 
 describe("Codex compaction history", () => {
+	test("round trips optional source coverage and rejects malformed mappings", () => {
+		const details = { kind: NATIVE_COMPACTION_KIND, version: NATIVE_COMPACTION_VERSION, modelKey: modelKey(remoteModel),
+			replacementHistory: [{ type: "compaction", encrypted_content: "opaque" }],
+			preservedInput: [{ role: "user", content: [{ type: "input_text", text: "same" }] }, { role: "user", content: [{ type: "input_text", text: "same" }] }] };
+		expect(parseNativeCompactionDetails(details)?.preservedInputSources).toBeUndefined();
+		const covered = { ...details, preservedInputSources: ["first", "second"] };
+		expect(parseNativeCompactionDetails(JSON.parse(JSON.stringify(covered)))).toEqual(covered);
+		for (const sources of [null, [], ["first"], ["first", 2], ["first", ""], {}]) {
+			expect(parseNativeCompactionDetails({ ...details, preservedInputSources: sources })).toBeUndefined();
+		}
+		expect(parseNativeCompactionDetails({ ...details, preservedInputSources: ["first", null] })?.preservedInputSources).toEqual(["first", null]);
+	});
+	test.each(["oversized", "broken"])("keeps an incomplete %s error body non-fallback and releases its reader", async kind => {
+		vi.useFakeTimers();
+		const cancel = vi.fn();
+		const body = new ReadableStream<Uint8Array>({
+			start(controller) {
+				if (kind === "broken") controller.error(new Error("socket lost"));
+				else controller.enqueue(new TextEncoder().encode('{"error":{"code":"model_not_found","padding":"' + "x".repeat(1024 * 1024)));
+			}, cancel,
+		});
+		const fetchMock = vi.fn(async () => new Response(body, { status: 403 }));
+		vi.stubGlobal("fetch", fetchMock);
+		try {
+			const error = await captureFailure(callRemoteCompaction(remoteRequest()));
+			expect(error).toMatchObject({ retryWithCurrentModel: false });
+			expect(String(error)).toContain("403");
+			expect(fetchMock).toHaveBeenCalledTimes(1);
+			expect(body.locked).toBe(false);
+			if (kind === "oversized") expect(cancel).toHaveBeenCalledTimes(1);
+			expect(vi.getTimerCount()).toBe(0);
+		} finally { vi.unstubAllGlobals(); }
+	});
 	test("matches Pi context and attributes only the newest overlapping summary", () => {
 		const sm = SessionManager.inMemory(process.cwd());
 		const first = sm.appendMessage({ role: "user", content: "U1", timestamp: 1 });
@@ -159,6 +192,8 @@ describe("Codex compaction history", () => {
 	test("marks authentication failures fail-closed", async () => {
 		await expect(createNativeCheckpoint({
 			ctx: {
+				getSystemPrompt: () => "",
+				sessionManager: { getSessionId: () => "auth-failure" },
 				modelRegistry: { getApiKeyAndHeaders: async () => ({ ok: false, error: "403" }) },
 			} as never,
 			model: { id: "gpt", provider: "openai-codex", api: "openai-codex-responses" } as never,
@@ -980,6 +1015,69 @@ describe("Codex compaction history", () => {
 		expect(await outcome).toMatchObject({ retryWithCurrentModel: false });
 		expect(attempts).toBe(2);
 		expect(firstActive).toBe(false);
+	});
+
+	test("bounds a stalled authentication error body without retrying or losing its status", async () => {
+		vi.useFakeTimers();
+		const cancel = vi.fn();
+		const body = new ReadableStream<Uint8Array>({ cancel });
+		let signal: AbortSignal | undefined;
+		const fetchImpl = vi.fn(async (_url: unknown, init?: RequestInit) => {
+			signal = init?.signal ?? undefined;
+			return new Response(body, { status: 401 });
+		});
+		let error: any;
+		const pending = callRemoteCompaction(remoteRequest({ fetchImpl })).catch(value => { error = value; });
+		await vi.advanceTimersByTimeAsync(300_001);
+		expect(error).toMatchObject({ retryWithCurrentModel: false });
+		expect(error.message).toContain("(401)");
+		expect(fetchImpl).toHaveBeenCalledTimes(1);
+		expect(signal?.aborted).toBe(true);
+		expect(cancel).toHaveBeenCalledTimes(1);
+		expect(body.locked).toBe(false);
+		expect(vi.getTimerCount()).toBe(0);
+		await pending;
+	});
+
+	test.each([403, 429, 503])("bounds incomplete HTTP %i bodies and keeps retry classification", async (status) => {
+		vi.useFakeTimers();
+		const bodies: ReadableStream<Uint8Array>[] = [];
+		const fetchImpl = vi.fn(async () => {
+			const body = new ReadableStream<Uint8Array>();
+			bodies.push(body);
+			return new Response(body, { status, headers: { "retry-after": "0" } });
+		});
+		let error: any;
+		const pending = callRemoteCompaction(remoteRequest({ fetchImpl })).catch(value => { error = value; });
+		await vi.advanceTimersByTimeAsync(900_001);
+		expect(error).toMatchObject({ retryWithCurrentModel: false });
+		expect(error.message).toContain(`(${status})`);
+		expect(fetchImpl).toHaveBeenCalledTimes(status === 503 ? 3 : 1);
+		expect(bodies.every(body => !body.locked)).toBe(true);
+		expect(vi.getTimerCount()).toBe(0);
+		await pending;
+	});
+
+	test.each(["deadline", "cancel"])("ends a continuously streaming error body on %s", async (mode) => {
+		vi.useFakeTimers();
+		const controller = new AbortController();
+		let enqueue!: (chunk: Uint8Array) => void;
+		const body = new ReadableStream<Uint8Array>({ start(stream) { enqueue = chunk => stream.enqueue(chunk); } });
+		const fetchImpl = vi.fn(async () => new Response(body, { status: 401 }));
+		let error: any;
+		const pending = callRemoteCompaction(remoteRequest({ signal: controller.signal, fetchImpl })).catch(value => { error = value; });
+		for (let index = 0; index < 3; index++) {
+			enqueue(new TextEncoder().encode("still receiving "));
+			await vi.advanceTimersByTimeAsync(90_000);
+		}
+		if (mode === "cancel") controller.abort(new Error("User cancelled"));
+		await vi.advanceTimersByTimeAsync(30_001);
+		expect(error).toMatchObject({ retryWithCurrentModel: false });
+		expect(error.message).toContain(mode === "cancel" ? "User cancelled" : "(401)");
+		expect(fetchImpl).toHaveBeenCalledTimes(1);
+		expect(body.locked).toBe(false);
+		expect(vi.getTimerCount()).toBe(0);
+		await pending;
 	});
 
 	test("counts opaque reasoning and compaction payloads", () => {
