@@ -1,32 +1,41 @@
 // Exercise production registration with the real editor, assistant and tool rows.
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import { ToolExecutionComponent } from "@earendil-works/pi-coding-agent";
-import { Container, stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
-import inlineCodexUi from "../src/index.js";
-import { reasoningPipeline } from "./fixtures/reasoning-pipeline.js";
+import { AssistantMessageComponent, ToolExecutionComponent, type MarkdownTransformer } from "@earendil-works/pi-coding-agent";
+import { Container, stripTerminalSequences } from "@earendil-works/pi-tui";
+import codexUi from "../src/index.js";
+import { reasoningMessage, reasoningPipeline } from "./fixtures/reasoning-pipeline.js";
 
-test("inline summaries replace in place and keep the write row stationary through finalization", async () => {
-  const pipeline = await reasoningPipeline(inlineCodexUi, process.cwd(), 0, false, 0);
-  const summary = () => pipeline.assistant.render(120).map(stripTerminalSequences).filter(line => line.trim());
+// Native blockquote reference, independent of production registration and its source formatting.
+const quoteReference: MarkdownTransformer = (text, context) =>
+  context.messageType === "assistant-thinking" && text.trim()
+    ? "> **Thinking**\n>\n> " + text.replace(/\r?\n/gu, "\n> ") : text;
+
+test("thinking grows inline and retains its contents through tool finalization", async () => {
+  const pipeline = await reasoningPipeline(codexUi, process.cwd(), 0, false, 0);
+  const visible = () => pipeline.assistant.render(120).map(stripTerminalSequences).join("\n");
   try {
     const initial = await pipeline.begin();
-    let text = "**Rewriting lifecycle tests**";
+    let text = "**Rewriting lifecycle tests**\n\nFirst body.";
     await pipeline.update(text, text);
-    assert.deepEqual(summary().map(line => line.trim()), ["• Rewriting lifecycle tests"],
-      "Thinking must be visible before tool arguments are generated");
+    assert.match(visible(), /Rewriting lifecycle tests/u);
+    assert.match(visible(), /First body\./u);
     const rowsBefore = pipeline.screen.render(120).length;
-    const delta = "\n\n**Checking frame stability**";
+    const delta = "\n\n**Checking frame stability**\n\nSecond body.";
     text += delta;
     await pipeline.update(text, delta);
-    assert.deepEqual(summary().map(line => line.trim()), ["• Checking frame stability"]);
-    assert.equal(pipeline.screen.render(120).length, rowsBefore, "Replacing a title must not add a row");
-    assert.equal(pipeline.widgets.size, 0, "Inline preview must not reserve an editor status row");
+    assert.match(visible(), /Rewriting lifecycle tests/u);
+    assert.match(visible(), /First body\./u);
+    assert.match(visible(), /Checking frame stability/u);
+    assert.match(visible(), /Second body\./u);
+    assert.ok(pipeline.screen.render(120).length > rowsBefore, "New thinking must grow instead of replacing earlier content");
+    assert.equal(pipeline.widgets.size, 0, "Thinking must not reserve an editor status row");
 
     const message = { ...initial, content: [
       { type: "thinking" as const, thinking: text },
       { type: "toolCall" as const, id: "inline-write", name: "write", arguments: { path: "test.ts", content: "fixture\n" } },
     ] };
+    const original = structuredClone(message);
     const call = message.content[1]!;
     const tool = new ToolExecutionComponent("write", "inline-write", call.arguments!, { showImages: false },
       pipeline.tools.get("write"), pipeline.screen, process.cwd());
@@ -39,76 +48,120 @@ test("inline summaries replace in place and keep the write row stationary throug
     };
     pipeline.assistant.updateContent(message, true);
     const before = positions();
+    const thinkingBefore = visible();
     assert.ok(before.title >= 0 && before.tool > before.title && before.editor > before.tool);
     for (const type of ["thinking_end", "toolcall_start", "toolcall_delta", "toolcall_delta", "toolcall_end"]) {
       await pipeline.emit("message_update", { message, assistantMessageEvent: { type,
         contentIndex: type === "thinking_end" ? 0 : 1 } });
       pipeline.assistant.updateContent(message, true);
       assert.deepEqual(positions(), before);
+      assert.equal(visible(), thinkingBefore);
     }
     await pipeline.emit("message_end", { message });
     pipeline.assistant.updateContent(message, false);
     tool.setArgsComplete(); tool.markExecutionStarted();
-    assert.deepEqual(positions(), before, "message_end must not insert thinking above the tool");
+    assert.deepEqual(positions(), before, "Finalization must not insert previously hidden thinking");
     tool.updateResult({ content: [{ type: "text", text: "fixture" }], isError: false });
     await pipeline.emit("agent_settled");
-    assert.deepEqual(positions(), before, "Tool completion and settlement must retain the same layout");
-    assert.deepEqual(summary().map(line => line.trim()), ["• Checking frame stability"]);
-    assert.equal(message.content[0]!.thinking, text, "Original thinking must not be changed");
+    assert.deepEqual(positions(), before);
+    assert.equal(visible(), thinkingBefore);
+    assert.deepEqual(message, original, "Rendering must not modify the original message");
   } finally { await pipeline.dispose(); }
 });
 
-test("inline summaries preserve literal titles and stay on one line at narrow widths", async () => {
-  const pipeline = await reasoningPipeline(inlineCodexUi, process.cwd(), 0, false, 0);
-  try {
-    await pipeline.begin();
-    const title = "检查 [a](url) `code` _name_ &amp; <tag> 👩🏽‍💻 é";
-    const text = `**${title}**`;
-    await pipeline.update(text, text);
-    const visible = (width: number) => pipeline.assistant.render(width).map(stripTerminalSequences).filter(row => row.trim());
-    assert.deepEqual(visible(120).map(row => row.trim()), [`• ${title}`], "Provider titles must remain literal text");
-    for (const width of [1, 2, 3, 10, 30, 60, 120, 30]) {
-      const rows = visible(width);
-      assert.equal(rows.length, 1, "Long titles must truncate rather than wrap");
-      for (const row of rows) assert.ok(visibleWidth(row) <= width);
-    }
-    const before = visible(60);
-    await pipeline.finish();
-    assert.deepEqual(visible(60), before, "Final rendering must use the same truncation rule");
-    for (const literal of ["A &amp; B", "<tag> _name_ `code`", "Checking \\ paths"]) {
+test("thinking uses native blockquote wrapping, padding and visibility for all providers", async () => {
+  for (const outputPad of [0, 1] as const) {
+    const pipeline = await reasoningPipeline(codexUi, process.cwd(), 0, false, outputPad);
+    try {
       await pipeline.begin();
-      await pipeline.update(`**${literal}**`, "");
-      assert.deepEqual(visible(120).map(row => row.trim()), [`• ${literal}`]);
-    }
-  } finally { await pipeline.dispose(); }
+      for (const provider of ["openai-codex", "deepseek"]) {
+        for (const text of [
+          "**First title**\n\nFirst body.\n\n**Last title**\n\nLast body.",
+          "Untitled reasoning body with enough words to wrap across several narrow terminal lines.",
+          "检查 [link](https://example.com) `code` _name_ &amp; <tag> 👩🏽‍💻 é\n\n- item\n\n```ts\nconst n = 1;\n```",
+          "> Nested quote\n\n| Key | Value |\n| --- | --- |\n| a | b |",
+          "First\r\n\r\nLast", "", " \n\t ",
+        ]) {
+          const message = { ...reasoningMessage(text), provider };
+          const original = structuredClone(message);
+          const native = new AssistantMessageComponent(message, false, undefined, "Thinking...", outputPad, [quoteReference]);
+          for (const isStreaming of [true, false]) {
+            pipeline.assistant.updateContent(message, isStreaming);
+            native.updateContent(message, isStreaming);
+            for (const hidden of [false, true, false]) {
+              pipeline.assistant.setHideThinkingBlock(hidden);
+              native.setHideThinkingBlock(hidden);
+              for (const width of [1, 2, 4, 10, 30, 60, 120, 30]) {
+                assert.deepEqual(pipeline.assistant.render(width), native.render(width),
+                  `Native blockquote layout must match for ${provider}, padding ${outputPad}, width ${width}`);
+              }
+              if (text.startsWith("Untitled")) {
+                const lines = pipeline.assistant.render(30).map(stripTerminalSequences).filter(line => line.trim());
+                if (hidden) {
+                  assert.equal(lines.length, 1);
+                  assert.match(lines[0]!, /Thinking\.\.\./u);
+                  assert.ok(!lines.join("").includes("Untitled"));
+                } else {
+                  assert.ok(lines.length > 1, "Long reasoning must wrap instead of truncating to one line");
+                  assert.match(lines[0]!, /│ Thinking/u);
+                  assert.equal(lines.slice(1).map(line => line.trim().replace(/^│\s?/u, "")).filter(Boolean).join(" "), text);
+                }
+              }
+            }
+          }
+          assert.deepEqual(message, original);
+        }
+      }
+    } finally { await pipeline.dispose(); }
+  }
 });
 
-test("incomplete titles and later message lifecycles cannot change a settled inline summary", async () => {
-  const pipeline = await reasoningPipeline(inlineCodexUi, process.cwd(), 0, false, 0);
-  const visible = () => pipeline.assistant.render(120).map(stripTerminalSequences).filter(row => row.trim()).map(row => row.trim());
+test("partial Markdown, completion and history replay preserve every thinking block", async () => {
+  const pipeline = await reasoningPipeline(codexUi, process.cwd(), 0, false, 0);
   try {
     await pipeline.begin();
-    await pipeline.update("Untitled reasoning body", "Untitled reasoning body");
-    assert.deepEqual(visible(), [], "Do not present arbitrary body text as a summary");
-    await pipeline.update("**First title**\n\n**Part", "");
-    assert.deepEqual(visible(), ["• First title"]);
-    await pipeline.update("**First title**\n\n**Partial title**\n\nBody grows", "");
-    assert.deepEqual(visible(), ["• Partial title"]);
+    const text = "Untitled body\n\n**First title**\n\nFirst body\n\n**Next title**\n\nLast body";
+    const native = new AssistantMessageComponent(undefined, false, undefined, "Thinking...", 0, [quoteReference]);
+    for (const source of [text, "- Item\n\n```ts\nconst n = 1;\n```\n\n> Nested quote\n\n| Key | Value |\n| --- | --- |\n| a | b |"]) {
+      await pipeline.begin();
+      for (let length = 1; length <= source.length; length++) {
+        const partial = source.slice(0, length);
+        await pipeline.update(partial, source[length - 1]!);
+        native.updateContent(reasoningMessage(partial), true);
+        assert.deepEqual(pipeline.assistant.render(60), native.render(60));
+      }
+    }
+    const streamed = pipeline.assistant.render(60);
+    await pipeline.finish();
+    assert.deepEqual(pipeline.assistant.render(60), streamed);
+
     for (const stopReason of ["stop", "aborted", "error"] as const) {
-      const message = { role: "assistant" as const, content: [
-        { type: "thinking" as const, thinking: "**First title**" },
-        { type: "thinking" as const, thinking: "**Partial title**\n\nBody grows" },
-        { type: "toolCall" as const, id: "write-1", name: "write", arguments: {} },
-      ], timestamp: 1, provider: "fixture", model: "fixture", api: "openai-responses" as const,
-      stopReason, usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
-        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } } };
+      const message = { ...reasoningMessage(), content: [
+        { type: "thinking" as const, thinking: "**First title**\n\nFirst body" },
+        { type: "thinking" as const, thinking: "**Next title**\n\nLast body" },
+      ], stopReason };
+      const original = structuredClone(message);
+      native.updateContent(message, false);
       pipeline.assistant.updateContent(message, false);
-      assert.deepEqual(visible(), ["• Partial title"], "Consecutive thinking blocks must share one summary");
-      await pipeline.emit("agent_settled");
-      await pipeline.emit("agent_start");
-      await pipeline.emit("session_tree");
-      pipeline.assistant.invalidate();
-      assert.deepEqual(visible(), ["• Partial title"], "History rendering must not depend on mutable live status");
+      const expected = native.render(60);
+      assert.deepEqual(pipeline.assistant.render(60), expected);
+      const visible = expected.map(stripTerminalSequences).join("\n");
+      assert.match(visible, /First body/u);
+      assert.match(visible, /Last body/u);
+      assert.equal(visible.match(/│ Thinking/gu)?.length, 1, "Consecutive thinking blocks share one quote title");
+      if (stopReason === "aborted") assert.match(visible, /Operation aborted/u);
+      if (stopReason === "error") assert.match(visible, /Error:/u);
+      for (const event of ["agent_settled", "agent_start", "session_tree"]) {
+        await pipeline.emit(event);
+        pipeline.assistant.invalidate();
+        assert.deepEqual(pipeline.assistant.render(60), expected);
+      }
+      const replay = await reasoningPipeline(codexUi, process.cwd(), 0, false, 0);
+      try {
+        replay.assistant.updateContent(message, false);
+        assert.deepEqual(replay.assistant.render(60), expected, "A fresh extension must not require live summary state");
+      } finally { await replay.dispose(); }
+      assert.deepEqual(message, original);
     }
   } finally { await pipeline.dispose(); }
 });

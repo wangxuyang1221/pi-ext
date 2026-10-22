@@ -22,7 +22,7 @@ function createTheme(name = CODEX_THEME_NAME): Theme {
   } as unknown as Theme;
 }
 
-test("markdown transformer uses the same latest summary during streaming and replay", () => {
+test("markdown transformer quotes all thinking during streaming and replay", () => {
   const transformers: Array<(markdown: string, context: Record<string, unknown>) => string> = [];
   const pi = {
     registerTool() {},
@@ -42,63 +42,36 @@ test("markdown transformer uses the same latest summary during streaming and rep
   assert.equal(transform("› hello", { messageType: "user" }), "› hello");
   assert.equal(transform("hello", { messageType: "assistant" }), "- hello");
 
-  const thinking = [
-    "**Reviewing test improvements and reload considerations**",
-    "",
-    "**Identifying title spinner and tmux title issues",
-    "continued on the next source line**",
-    "",
-    "**Summarizing code changes and test results**",
-  ].join("\n");
-  assert.equal(transform(thinking, {
-    messageType: "assistant-thinking",
-    isStreaming: true,
-    availableWidth: 80,
-  }), "• Summarizing code changes and test results");
-  const completed = "• Summarizing code changes and test results";
-  assert.equal(transform(thinking, {
-    messageType: "assistant-thinking",
-    isStreaming: false,
-    availableWidth: 80,
-  }), completed);
-  assert.equal(transform("Earlier\n\n1234567890ABCDE", {
-    messageType: "assistant-thinking",
-    isStreaming: true,
-    availableWidth: 10,
-  }), "");
-  assert.equal(transform("Earlier\n\n**1234567890ABCDE**", {
-    messageType: "assistant-thinking",
-    isStreaming: false,
-    availableWidth: 10,
-  }), "• 1234567…");
-  assert.equal(transform("visible", {
-    messageType: "assistant-thinking",
-    isStreaming: true,
-    availableWidth: 1,
-  }), "");
-  assert.equal(transform("visible", {
-    messageType: "assistant-thinking",
-    isStreaming: true,
-    availableWidth: 0,
-  }), "");
+  const thinking = "**First title**\n\nFirst body.\n\n**Last title**\n\nLast body.";
+  assert.equal(transform(thinking, { messageType: "assistant-thinking", isStreaming: true, availableWidth: 80 }),
+    "> **Thinking**\n>\n> **First title**\n>\n> First body.\n>\n> **Last title**\n>\n> Last body.");
+  for (const text of [thinking, "Plain reasoning without a title", "**Incomplete title", "", " \n\t ",
+    "检查 [link](https://example.com) `code`\n\n- item\n\n```ts\nconst n = 1;\n```", "Body. ".repeat(2000),
+    "First\r\n\r\nLast", "> Nested quote\n\n| Key | Value |\n| --- | --- |\n| a | b |", "  indented\n\nend\n"]) {
+    for (const isStreaming of [true, false]) {
+      for (const availableWidth of [0, 1, 10, 80, 120]) {
+        const result = transform(text, { messageType: "assistant-thinking", isStreaming, availableWidth });
+        if (!text.trim()) {
+          assert.equal(result, text);
+        } else {
+          const lines = result.split("\n");
+          assert.deepEqual(lines.slice(0, 2), ["> **Thinking**", ">"]);
+          assert.ok(lines.slice(2).every(line => line === ">" || line.startsWith("> ")));
+          assert.equal(lines.slice(2).map(line => line === ">" ? "" : line.slice(2)).join("\n"), text.replace(/\r\n/gu, "\n"));
+        }
+      }
+    }
+  }
 
   initTheme("dark");
-  const component = new AssistantMessageComponent(
-    {
-      role: "assistant",
-      content: [{ type: "thinking", thinking: "**Inspecting renderer output**" }],
-      stopReason: "stop",
-      timestamp: Date.now(),
-    } as never,
-    false,
-    undefined,
-    "Thinking...",
-    1,
-    [transform as never],
-  );
+  const message = {
+    role: "assistant", content: [{ type: "thinking", thinking }], stopReason: "stop", timestamp: 1,
+  } as never;
+  const component = new AssistantMessageComponent(message, false, undefined, "Thinking...", 1, [transform as never]);
   const rendered = stripTerminalSequences(component.render(80).join("\n"));
-  assert.match(rendered, /• Inspecting renderer output/u);
-  assert.ok(!rendered.includes("`"));
+  assert.match(rendered, /│ Thinking/u);
+  assert.match(rendered, /First body\./u);
+  assert.match(rendered, /Last body\./u);
 });
 
 function createLowPowerCommandHarness() {

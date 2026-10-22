@@ -8,7 +8,6 @@ import {
 import { CodexEditor, CodexFooter, CodexHeader } from "./components.js";
 import { registerCodexTools, type CodexToolFactories, type CodexToolRenderServices } from "./tools.js";
 import { registerCodemodeUi } from "./codemode.js";
-import { ReasoningSummary } from "./reasoning-summary.js";
 import { registerTerminalTitleSpinner } from "./terminal-title.js";
 import { readGoalDisplay, type GoalFooterDisplay } from "./goal-display.js";
 
@@ -30,7 +29,6 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
   let goalDisplay: GoalFooterDisplay | undefined;
   let unsubscribeGoal: (() => void) | undefined;
   let currentKeybindings: KeybindingsManager | undefined;
-  const reasoningSummary = new ReasoningSummary();
   const installTitleSpinner = registerTerminalTitleSpinner(pi);
 
   const nativeRenderers = registerCodexTools(pi, options.toolFactories, {
@@ -86,7 +84,10 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
 
   pi.registerMarkdownTransformer((markdown, context) => {
     if (context.messageType === "assistant-thinking") {
-      return reasoningSummary.render(markdown, context.availableWidth);
+      // Keep the entire thinking run in one native blockquote, including blank lines.
+      return markdown.trim()
+        ? "> **Thinking**\n>\n" + markdown.split(/\r?\n/u).map(line => line ? `> ${line}` : ">").join("\n")
+        : markdown;
     }
     if (context.messageType === "assistant") {
       // Display-only outer list: let native Markdown align wrapped lines and blocks.
@@ -95,14 +96,11 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
     return markdown;
   });
 
-  pi.on("session_tree", () => reasoningSummary.clear());
   pi.on("session_shutdown", () => {
-    reasoningSummary.clear();
     unsubscribeGoal?.(); unsubscribeGoal = undefined;
     goalDisplay = undefined;
   });
   pi.on("session_start", (_event, ctx) => {
-    reasoningSummary.clear();
     if (ctx.mode !== "tui") return;
     goalDisplay = undefined;
     unsubscribeGoal?.();

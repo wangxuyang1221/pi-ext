@@ -88,16 +88,18 @@ test("streamed partial Markdown and restored messages produce the same list layo
   }
 });
 
-test("multiple text blocks get their own markers while thinking and failure labels remain native", () => {
+test("reply markers, thinking quotes and native failure labels stay separate", () => {
   initTheme("dark", false);
   for (const stopReason of ["stop", "aborted", "error", "length"] as const) {
     const snapshot = { ...message("First block"), stopReason, errorMessage: "Fixture error" };
-    snapshot.content.unshift({ type: "thinking", thinking: "**Reviewing layout**" });
+    snapshot.content.unshift({ type: "thinking", thinking: "**Reviewing layout**\n\nKeep the reasoning body." });
     snapshot.content.push({ type: "text", text: "Second block" });
     const before = structuredClone(snapshot);
     const row = new AssistantMessageComponent(snapshot, false, undefined, "Thinking...", 0, transformers());
     const lines = plain(row).filter(line => line.trim());
-    assert.equal(lines[0]!.trimEnd(), "• Reviewing layout");
+    assert.equal(lines[0]!.trimEnd(), "│ Thinking");
+    assert.ok(lines.some(line => line.trimEnd() === "│ Reviewing layout"));
+    assert.ok(lines.some(line => line.trimEnd() === "│ Keep the reasoning body."));
     assert.equal(lines.filter(line => line.startsWith("- ")).length, 2);
     assert(lines.some(line => line.trimEnd() === "- First block"));
     assert(lines.some(line => line.trimEnd() === "- Second block"));
@@ -115,6 +117,7 @@ test("multiple text blocks get their own markers while thinking and failure labe
 test("rendering leaves session and model text untouched and raw copy excludes the display marker", () => {
   initTheme("dark", false);
   const snapshot = message(fixture);
+  snapshot.content.unshift({ type: "thinking", thinking: "**First title**\n\nFirst body.\n\n**Last title**\n\nLast body." });
   const manager = SessionManager.inMemory(process.cwd());
   manager.appendMessage(snapshot);
   const before = JSON.stringify(manager.getEntries());

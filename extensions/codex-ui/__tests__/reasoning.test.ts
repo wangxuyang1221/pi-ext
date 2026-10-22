@@ -4,9 +4,8 @@ import { stripTerminalSequences } from "@earendil-works/pi-tui";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import codexUi from "../src/index.js";
 import { reasoningPipeline } from "./fixtures/reasoning-pipeline.js";
-import { ReasoningSummary } from "../src/reasoning-summary.js";
 
-test("inline summary changes never replay static offscreen tool history", async () => {
+test("equal-height thinking changes never replay static offscreen tool history", async () => {
   for (const outputPad of [0, 1] as const) {
     const writes: string[] = [];
     for (const history of [0, 20]) {
@@ -44,22 +43,33 @@ test("print and RPC lifecycle events never install or call the reasoning UI", as
 });
 
 
-test("stable input reuses native Markdown without invoking the summary converter", async () => {
-  const render = vi.spyOn(ReasoningSummary.prototype, "render");
-  const pipeline = await reasoningPipeline(codexUi, process.cwd());
-  try {
-    await pipeline.begin();
-    const text = "**Title**\n\n" + "Body. ".repeat(20000);
-    await pipeline.update(text, text);
-    await pipeline.finish();
-    pipeline.screen.renderNow(); pipeline.terminal.take();
-    const before = render.mock.calls.length;
-    for (let index = 0; index < 64; index++) {
-      pipeline.editor.handleInput(index % 2 ? "\x7f" : "x");
+test("stable input reuses native Markdown without transforming thinking again", async () => {
+  for (const repeats of [20, 20000]) {
+    let transforms = 0;
+    const pipeline = await reasoningPipeline(pi => codexUi({
+      ...pi,
+      registerMarkdownTransformer(transform) {
+        pi.registerMarkdownTransformer((text, context) => {
+          if (context.messageType === "assistant-thinking") transforms++;
+          return transform(text, context);
+        });
+      },
+    }), process.cwd());
+    try {
+      await pipeline.begin();
+      const text = "**Title**\n\n" + "Body. ".repeat(repeats);
+      await pipeline.update(text, text);
+      await pipeline.finish();
       pipeline.screen.renderNow(); pipeline.terminal.take();
-    }
-    assert.equal(render.mock.calls.length, before);
-  } finally { render.mockRestore(); await pipeline.dispose(); }
+      const before = transforms;
+      assert.ok(before > 0, "The counter must observe the initial thinking render");
+      for (let index = 0; index < 64; index++) {
+        pipeline.editor.handleInput(index % 2 ? "\x7f" : "x");
+        pipeline.screen.renderNow(); pipeline.terminal.take();
+      }
+      assert.equal(transforms, before);
+    } finally { await pipeline.dispose(); }
+  }
 });
 
 test("inline thinking remains static while the independent terminal title animates", async () => {
@@ -70,6 +80,7 @@ test("inline thinking remains static while the independent terminal title animat
     await pipeline.update("**Reading the fixture**\n\nBody", "**Reading the fixture**\n\nBody");
     assert.equal(pipeline.widgets.size, 0);
     const stable = pipeline.assistant.render(120);
+    assert.match(stable.map(stripTerminalSequences).join("\n"), /Body/u);
     const requests = pipeline.stats().requests;
     for (let index = 0; index < 100; index++) assert.deepEqual(pipeline.assistant.render(120), stable);
     vi.advanceTimersByTime(2000);
@@ -77,6 +88,7 @@ test("inline thinking remains static while the independent terminal title animat
     assert.equal(vi.getTimerCount(), 1);
     const windowTitles = [...pipeline.titles];
     await pipeline.commands.get("lowpower").handler("on", pipeline.context);
+    assert.deepEqual(pipeline.assistant.render(120), stable);
     await pipeline.commands.get("lowpower").handler("off", pipeline.context);
     vi.advanceTimersByTime(2000);
     assert.deepEqual(pipeline.assistant.render(120), stable);

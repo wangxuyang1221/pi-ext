@@ -176,17 +176,26 @@ managed child 的 Fast 开关保存在自己的 Pi session 中，不写上述共
 - 实色背景 composer
 - model、thinking、Fast Mode、cwd、git branch、context-left 和 permissions 主状态行，另显示可选 goal 状态行
 - 普通 assistant 回复使用外层列表缩进，自动换行和后续段落保持对齐
-- 原生消息位置的单行思考摘要，流式与完成后保持同一规则
+- 原生消息位置用 `Thinking` 标题和引用竖线显示完整思考文本，流式与完成后保持同一规则
 - 隐藏 streaming working row；运行时窗口标题使用 80ms 单色转圈，正文思考状态仍保持静态
 - Read 连续文件分组与每文件三行短预览，以及 `edit`、`write` 的紧凑 renderer
 - Bash 逐条显示 `$ Bash(command)` 与前三行输出，按 `Ctrl+O` 原位展开完整命令和已捕获输出
 - Codemode 调用树与 `/inspect` 面板，分别显示父脚本输出和子调用结果
 
-每段连续 Thinking 从第一个完整、独占源文本行的 `**标题**` 出现时，就在原生消息位置显示 `• 标题`。后续完整标题原地替换，尚未闭合的标题不覆盖上一条；超长标题截断为一行，无标题正文不充当摘要。输入框上方不再安装思考 widget，也不预留它的空白区。
+每段连续的非空 Thinking 通过公开 Markdown transformer 添加 `Thinking` 标题，并把所有源文本行放进同一个原生引用块。多个标题及正文全部保留，无标题文本正常显示，空思考不生成标题。对所有 provider 使用同一规则，不提取最后标题、不按行宽截断，也不设置固定阅读宽度。标题、列表、链接、代码和表格由原生 Markdown 排版，已有引用会形成嵌套引用。输入框上方不安装思考 widget，也不预留它的空白区。
 
-生成工具参数、执行工具和 `message_end` 后继续显示同一摘要，不再补入多段思考正文。取消、失败和恢复会话使用相同规则；完整 Thinking 仍保留在 session 与模型上下文中。摘要沿用原生思考样式，括号、方括号和反斜杠标题使用代码样式保留字面量。原生 `Ctrl+T` 及隐藏占位不变，Pi 父容器的 Spacer 不由扩展重建，无标题思考仍可能留下宿主空行。
+流式输出逐步显示已收到的内容，生成工具参数、执行工具和 `message_end` 不切换为另一套思考显示规则。取消、失败和恢复会话仍显示已收到的内容。引用块的斜体、颜色和换行沿用 Pi 原生样式，不添加自定义 ANSI 样式。`Ctrl+T`、隐藏占位及消息 padding 保持原生行为，隐藏时仍显示 `Thinking...`，结束时不自动改变用户的隐藏选择。转换只影响显示，不修改 session 原文、模型上下文或请求参数，也无法增加服务端没有返回的思考内容。
 
-这消除了思考延迟补入导致的工具行位移，不代表整个 Pi 零重绘。新增工具、回复、输入和 resize 仍会正常改变布局。实现、缓存边界和性能差异见 [Inline reasoning](docs/plans/codex-ui-inline-reasoning.md#results)。更新后请重启 Pi 并恢复会话，不要只依赖 `/reload` 更新模块。
+完整思考会占用更多终端行，流式增长和 resize 可能推动下方工具内容，不保证单行高度。普通回复仍使用原有外层列表，工具及其他 UI 不变。实现不依赖原型、宿主 hook 或 Pi 私有组件。更新后请重启 Pi 并恢复会话，不要只依赖 `/reload` 更新模块。
+
+离线终端验收加载构建后的生产扩展，使用固定消息验证原生折叠、流式更新及 resize，不调用真实模型：
+
+```bash
+pnpm run build:codex-ui
+node extensions/codex-ui/__tests__/fixtures/thinking-cli.mjs --smoke
+PYTHONDONTWRITEBYTECODE=1 conda run -n codex-py312 python extensions/codex-ui/__tests__/thinking-pty.py
+PYTHONDONTWRITEBYTECODE=1 conda run -n codex-py312 python extensions/codex-ui/__tests__/thinking-pty.py --fullscreen
+```
 
 Write / Edit 从参数生成到执行结束前，都显示黄色静态 `~ Writing / Editing` 与路径，目录弱化、文件名突出，不计行或展示中间内容，Ctrl+O 不增加进行中内容。成功前缀灰色，失败前缀红色，可靠识别的中断为黄色；错误正文不重复加叉。
 
@@ -230,7 +239,7 @@ SDK 内存覆盖、自定义 settings 存储和宿主自定义执行器不在自
 
 ### Output alignment
 
-单行思考摘要使用原生消息 padding。若要让圆点在第 1 列、文字在第 3 列，与工具图标和标题对齐，需使用 Pi 的公共设置 `outputPad: 0`。请在 `/settings` 中将 `Output padding` 设为 `0`，或在 `~/.pi/agent/settings.json` 的现有内容中合入：
+思考引用块使用原生消息 padding，引用竖线位于消息内容区域内，不再有摘要专用圆点。若希望去掉消息两侧的默认留白，可使用 Pi 的公共设置 `outputPad: 0`。在 `/settings` 中将 `Output padding` 设为 `0`，或在 `~/.pi/agent/settings.json` 的现有内容中合入：
 
 ```json
 {
@@ -242,7 +251,7 @@ SDK 内存覆盖、自定义 settings 存储和宿主自定义执行器不在自
 
 ### Low-power rendering
 
-`/lowpower on` 只负责简化 `write`、`edit`、`bash` 和 codemode 子项的渲染；`/lowpower off` 恢复完整工具输出，`/lowpower status` 仅查询当前状态。两种模式都会隐藏 Pi 内置的 streaming working row，并使用同一套原位单行思考摘要。窗口标题独立使用 `80ms` 单色转圈，与自动 compact 相同帧序列；项目名和会话名保持固定，不再播放动态省略号。按单调时钟选择帧，延迟后跳过错过的帧，不补播；仅写入 OSC 标题，不请求正文重绘。动画跨重试和自动 compact 保持运行，任务 settled、取消完成或会话退出时停止，恢复静态标题；手动 compact 也有标题反馈。默认 package manifest 将 `codex-ui` 放在 `codex-compact` 前加载，使标题在耗时压缩 handler 开始前启动；手动分别加载扩展时也需保持这个相对顺序。两种 low-power 模式行为一致，工具计时器不受影响。
+`/lowpower on` 只负责简化 `write`、`edit`、`bash` 和 codemode 子项的渲染；`/lowpower off` 恢复完整工具输出，`/lowpower status` 仅查询当前状态。两种模式都会隐藏 Pi 内置的 streaming working row，思考文本均使用原生 Markdown 完整显示，不因 low-power 模式而过滤或截断。窗口标题独立使用 `80ms` 单色转圈，与自动 compact 相同帧序列；项目名和会话名保持固定，不再播放动态省略号。按单调时钟选择帧，延迟后跳过错过的帧，不补播；仅写入 OSC 标题，不请求正文重绘。动画跨重试和自动 compact 保持运行，任务 settled、取消完成或会话退出时停止，恢复静态标题；手动 compact 也有标题反馈。默认 package manifest 将 `codex-ui` 放在 `codex-compact` 前加载，使标题在耗时压缩 handler 开始前启动；手动分别加载扩展时也需保持这个相对顺序。两种 low-power 模式行为一致，工具计时器不受影响。
 
 启用 Pi 的 `terminal.showTerminalProgress` 后，终端原生 edge progress 仍由 Pi 管理，不进入 TUI 行渲染管线。Low-power 状态仅保存在当前 extension instance 中；`/new`、`/resume`、`/fork`、`/reload` 或进程重启会重新加载扩展，并恢复为默认关闭。
 
