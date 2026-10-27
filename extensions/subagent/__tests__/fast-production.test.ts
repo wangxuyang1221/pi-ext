@@ -137,8 +137,17 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
       await send(child, "/quit");
       // With remain-on-exit, Linux may retain the exited PID until tmux reaps it.
       // tmux records the exit status; final cleanup still verifies all PIDs disappear.
-      await until(() => executeCommand(wrapper, ["display-message", "-p", "-t", child.tmux.paneId, "#{pane_dead}\t#{pane_dead_status}"]),
-        result => result.code === 0 && result.stdout.trim() === "1\t0", "child graceful shutdown");
+      try {
+        await until(() => executeCommand(wrapper, ["display-message", "-p", "-t", child.tmux.paneId, "#{pane_dead}\t#{pane_dead_status}"]),
+          result => result.code === 0 && result.stdout.trim() === "1\t0", "child graceful shutdown");
+      } catch (error) {
+        report.shutdownFailure = {
+          pid: child.tmux.panePid,
+          pane: await executeCommand(wrapper, ["display-message", "-p", "-t", child.tmux.paneId, "#{pane_pid}\t#{pane_dead}\t#{pane_dead_status}\t#{pane_dead_signal}\t#{pane_current_command}"]),
+          processes: await executeCommand("/bin/ps", ["-e", "-o", "pid=,ppid=,pgid=,stat=,comm="]),
+        };
+        throw error;
+      }
       exited.add(child);
     };
     const state = async (child: any) => (await lines(child.sessionFile)).filter(entry => entry.type === "custom" && entry.customType === entryType).at(-1)?.data.enabled;
