@@ -27,8 +27,8 @@ console.log(JSON.stringify({ check: group, reports }));
 const files = ["integration", "isolated-integration", "production-integration", "fast-production"].map(name => `extensions/subagent/__tests__/${name}.test.ts`);
 const commands = {
   tmux: [
-    { command: pnpm("test", "--suite", "host", ...files), env: { PI_SUBAGENT_ISOLATED_INTEGRATION: "1" } },
-    { command: pnpm("test", "--suite", "host", ...files), env: { PI_SUBAGENT_ISOLATED_INTEGRATION: "1", PI_SUBAGENT_FIXTURE_DIST: "1" } },
+    { command: pnpm("test", "--suite", "host", ...files), env: { PI_SUBAGENT_ISOLATED_INTEGRATION: "1", PI_FAST_EVIDENCE: join(reports, "fast-source.json") } },
+    { command: pnpm("test", "--suite", "host", ...files), env: { PI_SUBAGENT_ISOLATED_INTEGRATION: "1", PI_SUBAGENT_FIXTURE_DIST: "1", PI_FAST_EVIDENCE: join(reports, "fast-dist.json") } },
   ],
   accounting: ["accounting-runtime", "accounting-child-runtime", "provider-runtime", "terminal-runtime"].map(name =>
     ({ command: node(`extensions/goal/__tests__/${name}.mjs`) })),

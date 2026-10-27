@@ -89,7 +89,7 @@ Unix 宿主入口在 `.tmp/test-results/host-<group>-<id>/` 保存：
 
 PTY 子会话和私有 tmux server 仍由夹具负责清理。操作系统强杀、CI 强制终止或脱离进程组的进程不在 wrapper 的完整回收保证内。排查失败时查看夹具记录的 PID、socket 和端口，只清理该次运行明确拥有的资源，不使用全局 `killall` 或默认 tmux server。
 
-单独的 skill 安装验收把合成证据保存在 `adventure/evidence/skill-install-*`；CI 使用 `ci-skill-install-*` 前缀。日志、临时目录和测试夹具不进入发布包。缺少前置条件、跳过、部分续跑、取消或未验证清理都不能记录为完整通过。
+单独的 skill 安装验收把合成证据保存在 `.tmp/test-results/skill-install-*`，入口会自动创建目录；CI 使用 `ci-skill-install-*` 前缀。日志、临时目录和测试夹具不进入发布包。缺少前置条件、跳过、部分续跑、取消或未验证清理都不能记录为完整通过。
 
 ## CI
 

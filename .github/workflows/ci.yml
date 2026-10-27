@@ -131,15 +131,12 @@ jobs:
           mkdir -p .tmp/test-results
           set -o pipefail
           pnpm run codex-compact:quality:check 2>&1 | tee .tmp/test-results/python.log
-          mkdir -p adventure/evidence
           pnpm run skill-mentions:acceptance --evidence-prefix=ci-skill-install 2>&1 | tee .tmp/test-results/skills.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: python-and-skills
-          path: |
-            .tmp/test-results/
-            adventure/evidence/ci-skill-install-*
+          path: .tmp/test-results/
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 7

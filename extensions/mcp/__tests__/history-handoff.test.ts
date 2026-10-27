@@ -77,9 +77,16 @@ describe("history handoff", () => {
     writeFileSync(stale, "partial", { mode: 0o600 });
     utimesSync(stale, new Date(0), new Date(0));
     writeFileSync(fresh, "other process", { mode: 0o600 });
-    handoff.consume();
-    expect(existsSync(stale)).toBe(false);
-    expect(readFileSync(fresh, "utf8")).toBe("other process");
+    const kill = process.kill;
+    const probe = vi.spyOn(process, "kill").mockImplementation((pid, signal) => {
+      if (pid === 456 && signal === 0) throw Object.assign(new Error("Fixture process exited"), { code: "ESRCH" });
+      return kill(pid, signal);
+    });
+    try {
+      handoff.consume();
+      expect(existsSync(stale)).toBe(false);
+      expect(readFileSync(fresh, "utf8")).toBe("other process");
+    } finally { probe.mockRestore(); }
   });
 
   it("passes display-only identities once between instances of the same process boot", () => {

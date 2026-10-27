@@ -685,4 +685,6 @@ finally:
               "editorObservations": events("editor"), "inputs": events("input"),
               "providerUsers": [[message for message in request if message["role"] == "user"][-1:] for request in events("request")],
               "cleanup": "PTY child reaped; no listener created; parent removes isolated installation"}
-    (repo / f"adventure/evidence/{evidence_prefix}-pty-{mode}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    evidence_dir = repo / ".tmp/test-results"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    (evidence_dir / f"{evidence_prefix}-pty-{mode}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")

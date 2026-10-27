@@ -20,6 +20,8 @@ export function createTestEnvironment(prefix) {
     TMPDIR: join(directory, "tmp"), TMP: join(directory, "tmp"), TEMP: join(directory, "tmp"),
     XDG_CACHE_HOME: join(directory, "cache"), XDG_CONFIG_HOME: join(directory, "config"),
     XDG_DATA_HOME: join(directory, "data"), XDG_STATE_HOME: join(directory, "state"),
+    // Dependencies are installed before testing. A different HOME must not trigger pnpm to reinstall them.
+    pnpm_config_verify_deps_before_run: "false",
     PI_OFFLINE: "1", PI_TELEMETRY: "0", PYTHONDONTWRITEBYTECODE: "1", PI_TEST_ISOLATED: "1",
   } };
 }
