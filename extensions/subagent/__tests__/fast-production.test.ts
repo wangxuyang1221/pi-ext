@@ -135,7 +135,10 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
     const quit = async (child: any) => {
       await until(() => new SessionStateStore(stateRoot).load(child.agentId), state => state?.runtime.status === "settled", "settled before quit");
       await send(child, "/quit");
-      await until(async () => { try { process.kill(child.tmux.panePid, 0); return false; } catch { return true; } }, value => value, "child graceful shutdown");
+      // With remain-on-exit, Linux may retain the exited PID until tmux reaps it.
+      // tmux records the exit status; final cleanup still verifies all PIDs disappear.
+      await until(() => executeCommand(wrapper, ["display-message", "-p", "-t", child.tmux.paneId, "#{pane_dead}\t#{pane_dead_status}"]),
+        result => result.code === 0 && result.stdout.trim() === "1\t0", "child graceful shutdown");
       exited.add(child);
     };
     const state = async (child: any) => (await lines(child.sessionFile)).filter(entry => entry.type === "custom" && entry.customType === entryType).at(-1)?.data.enabled;

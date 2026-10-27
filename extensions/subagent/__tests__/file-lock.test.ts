@@ -15,6 +15,8 @@ const hooks = vi.hoisted(() => ({
   afterRead: undefined as ((path: unknown) => Promise<void>) | undefined,
   beforeUnlink: undefined as ((path: unknown) => Promise<void>) | undefined,
   beforeWrite: undefined as ((path: unknown) => Promise<void>) | undefined,
+  beforeRename: undefined as ((source: unknown, target: unknown) => Promise<void>) | undefined,
+  beforeRmdir: undefined as ((path: unknown) => Promise<void>) | undefined,
 }));
 vi.mock("node:fs/promises", async (importOriginal) => {
   const fs = await importOriginal<typeof import("node:fs/promises")>();
@@ -32,6 +34,14 @@ vi.mock("node:fs/promises", async (importOriginal) => {
     async writeFile(...args: Parameters<typeof fs.writeFile>) {
       await hooks.beforeWrite?.(args[0]);
       return fs.writeFile(...args);
+    },
+    async rename(...args: Parameters<typeof fs.rename>) {
+      await hooks.beforeRename?.(args[0], args[1]);
+      return fs.rename(...args);
+    },
+    async rmdir(...args: Parameters<typeof fs.rmdir>) {
+      await hooks.beforeRmdir?.(args[0]);
+      return fs.rmdir(...args);
     },
   };
 });
@@ -61,12 +71,12 @@ import {syncBuiltinESMExports} from 'node:module';
 import {setTimeout as delay} from 'node:timers/promises';
 import {acquireFileLock} from ${JSON.stringify(pathToFileURL(resolve("extensions/subagent", entry)).href)};
 const [root,role]=process.argv.slice(2);
-const original={readFile:fs.readFile,writeFile:fs.writeFile,unlink:fs.unlink};
+const original={readFile:fs.readFile,writeFile:fs.writeFile,unlink:fs.unlink,rename:fs.rename};
 const until=async name=>{const end=performance.now()+5000;while(!existsSync(root+'/'+name)){if(performance.now()>end)throw Error('Missing barrier '+name);await delay(5);}};
 const stale=root+'/lock/stale.json';
 fs.readFile=async(...args)=>{const value=await original.readFile(...args);if(args[0]===stale){await original.writeFile(root+'/read-'+role,'');await until('read-'+(role==='A'?'B':'A'));}return value;};
 fs.unlink=async(...args)=>{if(role==='B'&&args[0]===stale)await until('new-directory');return original.unlink(...args);};
-fs.writeFile=async(...args)=>{if(role==='A'&&String(args[0]).startsWith(root+'/lock/')){await original.writeFile(root+'/new-directory','');await until('b-finished');}return original.writeFile(...args);};
+fs.rename=async(...args)=>{if(role==='A'&&args[1]===root+'/lock'&&!existsSync(stale)){await original.writeFile(root+'/new-directory','');await until('b-finished');}return original.rename(...args);};
 syncBuiltinESMExports();
 let lock;
 try{lock=await acquireFileLock(root+'/lock',undefined,role==='B'?0:5000);}catch(error){if(role==='A'||!String(error).includes('Subagent control lock unavailable:'))throw error;}
@@ -98,6 +108,49 @@ function deferred() {
   return { promise, resolve };
 }
 
+test("an interrupted owner publication cannot leave an unowned active lock", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-lock-publication-"));
+  const path = join(root, "lock");
+  try {
+    hooks.beforeWrite = async () => { throw new Error("Owner publication interrupted"); };
+    await assert.rejects(acquireFileLock(path), /Owner publication interrupted/);
+    hooks.beforeWrite = undefined;
+    const next = await acquireFileLock(path, undefined, 0);
+    await next.assertOwned();
+    await next.release();
+  } finally {
+    hooks.beforeWrite = undefined;
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("release cannot remove a successor published into the emptied lock directory", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-lock-release-"));
+  const path = join(root, "lock");
+  const empty = deferred(), resume = deferred();
+  let paused = false;
+  let releasing: Promise<void> | undefined;
+  try {
+    const first = await acquireFileLock(path);
+    hooks.beforeRmdir = async candidate => {
+      if (candidate === path && !paused) { paused = true; empty.resolve(); await resume.promise; }
+    };
+    releasing = first.release();
+    await empty.promise;
+    const next = await acquireFileLock(path, undefined, 0);
+    resume.resolve();
+    await releasing;
+    await next.assertOwned();
+    hooks.beforeRmdir = undefined;
+    await next.release();
+  } finally {
+    resume.resolve();
+    await releasing;
+    hooks.beforeRmdir = undefined;
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("a losing stale-lock reclaimer cannot delete a new owner's initializing directory", async () => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-lock-race-"));
   const path = join(root, "controller");
@@ -121,8 +174,8 @@ test("a losing stale-lock reclaimer cannot delete a new owner's initializing dir
     hooks.beforeUnlink = async candidate => {
       if (scope.getStore() === "B" && candidate === stalePath) await newDirectory.promise;
     };
-    hooks.beforeWrite = async candidate => {
-      if (scope.getStore() === "A" && String(candidate).startsWith(`${path}/`)) {
+    hooks.beforeRename = async (_source, target) => {
+      if (scope.getStore() === "A" && target === path && !existsSync(stalePath)) {
         newDirectory.resolve();
         await secondFinished.promise;
       }
@@ -144,7 +197,7 @@ test("a losing stale-lock reclaimer cannot delete a new owner's initializing dir
     await next.release();
   } finally {
     bothRead.resolve(); newDirectory.resolve(); secondFinished.resolve();
-    hooks.afterRead = undefined; hooks.beforeUnlink = undefined; hooks.beforeWrite = undefined;
+    hooks.afterRead = undefined; hooks.beforeUnlink = undefined; hooks.beforeWrite = undefined; hooks.beforeRename = undefined;
     await rm(root, { recursive: true, force: true });
   }
 });

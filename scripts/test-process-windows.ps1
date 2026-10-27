@@ -87,6 +87,8 @@ $gate = $null
 $owner = $null
 $assigned = $false
 $stopped = $false
+$stdoutRead = $null
+$stderrRead = $null
 $code = 1
 try {
     $job = New-Object TestJob
@@ -101,8 +103,14 @@ try {
         $info.Arguments = [TestJob]::Quote($config.bootstrap) + ' ' + [TestJob]::Quote($Configuration)
         $info.UseShellExecute = $false
         $info.RedirectStandardInput = $true
+        $info.RedirectStandardOutput = $true
+        $info.RedirectStandardError = $true
         $info.CreateNoWindow = $true
         $gate = [System.Diagnostics.Process]::Start($info)
+        # A windowless .NET child does not reliably inherit the runner's output handles.
+        # Drain both pipes asynchronously so verbose tests cannot block the job.
+        $stdoutRead = $gate.StandardOutput.ReadToEndAsync()
+        $stderrRead = $gate.StandardError.ReadToEndAsync()
         $job.Assign($gate.Handle)
         $assigned = $true
         $gate.StandardInput.WriteLine('start')
@@ -137,6 +145,8 @@ try {
             if (-not $gate.WaitForExit(3000)) { throw 'Unassigned test bootstrap did not stop' }
         }
         $stopped = $true
+        if ($null -ne $stdoutRead) { [Console]::Out.Write($stdoutRead.GetAwaiter().GetResult()) }
+        if ($null -ne $stderrRead) { [Console]::Error.Write($stderrRead.GetAwaiter().GetResult()) }
     } finally {
         if ($null -ne $job) { $job.Dispose() }
         if ($null -ne $gate) { $gate.Dispose() }

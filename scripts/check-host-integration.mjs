@@ -21,6 +21,7 @@ const env = { ...isolatedEnv, TERM: "xterm-256color", COLORTERM: "truecolor", SH
   PI_SUBAGENT_TEST_CLI: host.cli, PI_MCP_TEST_PI_ROOT: host.root, PI_MCP_TEST_PI_VERSION: host.versions["pi-coding-agent"] };
 mkdirSync(resolve(".tmp/test-results"), { recursive: true });
 const reports = mkdtempSync(resolve(`.tmp/test-results/host-${group}-`));
+if (group === "tmux") env.PI_SUBAGENT_TRACE_DIR = join(reports, "trace");
 const summary = { group, host, partial: process.argv.includes("--from"), status: "running", prerequisites: {}, commands: [], cleanup: "pending" };
 const save = () => writeFileSync(join(reports, "summary.json"), JSON.stringify(summary, null, 2) + "\n");
 console.log(JSON.stringify({ check: group, reports }));
