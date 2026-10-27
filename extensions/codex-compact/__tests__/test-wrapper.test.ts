@@ -20,7 +20,7 @@ function fixture(body: string) {
   const root = mkdtempSync(resolve(".tmp/test-wrapper-"));
   const result = join(root, "result.json");
   const file = join(root, "probe.test.ts");
-  writeFileSync(file, `import {test} from 'vitest';\nimport {writeFileSync} from 'node:fs';\n${body.replaceAll("RESULT_FILE", JSON.stringify(result))}\n`);
+  writeFileSync(file, `import {test} from 'vitest';\nimport {writeFileSync,renameSync} from 'node:fs';\n${body.replaceAll("RESULT_FILE", JSON.stringify(result))}\n`);
   const config = join(root, "vitest.config.mjs");
   writeFileSync(config, `export default {test:{include:[${JSON.stringify(file)}],testTimeout:60000}};`);
   return { root, result, config };
@@ -90,13 +90,14 @@ test.each([
     process.on('SIGINT',()=>{});process.on('SIGTERM',()=>{});
     const server=createServer(socket=>socket.end());
     server.listen(0,'127.0.0.1',()=>process.send({pid:process.pid,port:server.address().port}));`);
-  writeFileSync(runner, `import {spawn} from 'node:child_process';import {writeFileSync} from 'node:fs';
+  writeFileSync(runner, `import {spawn} from 'node:child_process';import {writeFileSync,renameSync} from 'node:fs';
     process.on('SIGINT',()=>{});process.on('SIGTERM',()=>{});
     const ready=[];
     for(let i=0;i<${workers};i++) {
       const child=spawn(process.execPath,[${JSON.stringify(worker)}],{stdio:['ignore','ignore','ignore','ipc']});
       child.once('message',data=>{ready.push(data);if(ready.length===${workers}) {
-        writeFileSync(${JSON.stringify(f.result)},JSON.stringify({pid:process.pid,home:process.env.HOME,workers:ready}));
+        writeFileSync(${JSON.stringify(f.result + ".tmp")},JSON.stringify({pid:process.pid,home:process.env.HOME,workers:ready}));
+        renameSync(${JSON.stringify(f.result + ".tmp")},${JSON.stringify(f.result)});
         ${mode === "early-exit" ? "process.exit(0);" : ""}
       }});
     }`);
@@ -223,7 +224,8 @@ test("stops real Vitest workers and listeners before removing their home on canc
     test('holds a task-owned listener',async()=>{
       const server=createServer(socket=>socket.end());
       await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-      writeFileSync(RESULT_FILE,JSON.stringify({pid:process.pid,port:server.address().port,home:process.env.HOME}));
+      writeFileSync(RESULT_FILE+'.tmp',JSON.stringify({pid:process.pid,port:server.address().port,home:process.env.HOME}));
+      renameSync(RESULT_FILE+'.tmp',RESULT_FILE);
       try {await new Promise(resolve=>setTimeout(resolve,55000));}
       finally {await new Promise(resolve=>server.close(resolve));}
     });`);

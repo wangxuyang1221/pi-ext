@@ -75,7 +75,7 @@
     "build:codex-ui": "tsc -p ./extensions/codex-ui/tsconfig.json",
     "typecheck": "tsc -p ./extensions/codex-compact/tsconfig.json --noEmit && tsc -p ./extensions/openai-fast-mode/tsconfig.json --noEmit && pnpm run build:codex-ui && tsc -p ./extensions/mcp/tsconfig.json --noEmit && tsc -p ./extensions/permissions/tsconfig.json --noEmit && tsc -p ./extensions/subagent/tsconfig.json --noEmit && tsc -p ./extensions/goal/tsconfig.json --noEmit && tsc -p ./extensions/skill-mentions/tsconfig.json --noEmit",
     "test": "pnpm run build:codex-ui && node ./scripts/test.mjs",
-    "check": "pnpm run repository:check && pnpm run typecheck && pnpm run web-search:typecheck && pnpm run typecheck:tests && pnpm test && pnpm run build && pnpm run package:check && pnpm run host:check",
+    "check": "pnpm run repository:check && pnpm run build && pnpm run typecheck && pnpm run web-search:typecheck && pnpm run typecheck:tests && pnpm test && pnpm run package:check && pnpm run host:check",
     "package:check": "node ./scripts/check-package.mjs",
     "host:check": "node ./scripts/check-pi-host.mjs",
     "host:tmux:check": "pnpm run build && node ./scripts/check-host-integration.mjs tmux",

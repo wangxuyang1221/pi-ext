@@ -1,6 +1,7 @@
 import { createTestEnvironment } from "../test-support/environment.mjs";
 import { inspectPiHost } from "./pi-host.mjs";
 import { runTestProcess } from "./test-process.mjs";
+import { pnpmCommand } from "./pnpm-command.mjs";
 
 const args = process.argv.slice(2);
 const suiteIndex = args.indexOf("--suite");
@@ -13,8 +14,8 @@ if (suite === "host") args.unshift("--no-file-parallelism");
 console.log(JSON.stringify({ check: "vitest", ...inspectPiHost() }));
 if (!process.env.npm_execpath) throw new Error("Run tests through pnpm run test");
 const { directory: root, env } = createTestEnvironment("pi-tests");
-process.exitCode = await runTestProcess(process.execPath,
-  [process.env.npm_execpath, "exec", "vitest", "run", ...args], {
+const [command, ...commandArgs] = pnpmCommand(["exec", "vitest", "run", ...args]);
+process.exitCode = await runTestProcess(command, commandArgs, {
     directory: root,
     env: { ...env, ...(suite === "host" ? { PI_SUBAGENT_ISOLATED_INTEGRATION: "1" } : {}) }
   });

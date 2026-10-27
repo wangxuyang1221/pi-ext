@@ -6,13 +6,14 @@ import { spawn, execFileSync } from "node:child_process";
 import { once } from "node:events";
 import { inspectPiHost } from "./pi-host.mjs";
 import { stopProcessGroup } from "./codex-compact-quality-process.mjs";
+import { pnpmCommand } from "./pnpm-command.mjs";
 
 const group = process.argv[2];
 assert.ok(["tmux", "accounting", "pty", "benchmark"].includes(group), "Choose tmux, accounting, pty or benchmark");
 assert.notEqual(process.platform, "win32", "Run Unix host acceptance on macOS or Linux; Windows uses pnpm run check");
 assert.ok(process.env.npm_execpath, "Run host acceptance through pnpm");
 const host = inspectPiHost();
-const pnpm = (...args) => [process.execPath, process.env.npm_execpath, ...args];
+const pnpm = (...args) => pnpmCommand(args);
 const node = file => [process.execPath, file, host.root];
 const python = (file, ...args) => ["conda", "run", "--no-capture-output", "-n", "codex-py312", "python", file, ...args];
 const { directory: root, env: isolatedEnv } = createTestEnvironment(`host-${group}`);

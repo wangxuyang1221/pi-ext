@@ -13,7 +13,7 @@ pnpm install --frozen-lockfile --ignore-scripts
 pnpm run check
 ```
 
-`check` 依次校验脚本入口与本地文档链接，再执行扩展类型检查、搜索扩展类型检查、所有 TS 测试及夹具类型检查、离线测试、构建、发布包检查和八个扩展的源码及 dist 加载检查。`dist/` 由构建生成，不要手动修改。
+`check` 依次校验脚本入口与本地文档链接，再执行构建、扩展类型检查、搜索扩展类型检查、所有 TS 测试及夹具类型检查、离线测试、发布包检查和八个扩展的源码及 dist 加载检查。测试夹具引用了 `dist/` 中的模块，因此必须先构建，确保全新检出也能通过检查。`dist/` 由构建生成，不要手动修改。
 
 `tsconfig.tests.json` 检查 `extensions/**/__tests__/**/*.ts` 和 `test-support/**/*.ts`，包含独立运行的宿主夹具。它同时读取被测试引用的 JavaScript 类型，但不对整个 JavaScript 脚本库启用 `checkJs`。Vitest 执行通过不能替代这一类型检查。
 
@@ -22,7 +22,7 @@ pnpm run check
 | Command | Coverage | Prerequisites |
 | --- | --- | --- |
 | `pnpm test` 或 `pnpm run test:offline` | 单元测试、离线协议测试、合成 provider、部分真实 Pi SDK 会话；不运行四个 tmux 测试文件 | Node、pnpm |
-| `pnpm run typecheck:tests` | 所有 TS 测试、TS 夹具和共享 helper 的静态类型 | 已安装依赖 |
+| `pnpm run typecheck:tests` | 所有 TS 测试、TS 夹具和共享 helper 的静态类型 | 先运行 `pnpm run build` |
 | `pnpm run host:check` | 八个扩展的源码与 dist 加载、固定宿主版本 | 先运行 `pnpm run build` |
 | `pnpm run host:tmux:check` 或 `pnpm run test:host` | 生命周期、私有 tmux socket、生产启动配置、fish、认证来源、Fast Mode 继承和恢复；两轮各 13 个用例 | macOS 或 Linux、tmux、fish |
 | `pnpm run host:accounting:check` | 根会话与子会话用量、provider receipts、终止状态及恢复 | macOS 或 Linux |

@@ -30,7 +30,7 @@ try {
   const consumer = join(root, "consumer");
   writeFileSync(join(consumer, "package.json"), JSON.stringify({ private: true, type: "module", dependencies: { "pi-ext": `file:${tarball}`, ...manifest.peerDependencies, typebox: manifest.devDependencies.typebox } }, null, 2));
   // A nested workspace prevents pnpm from treating this fixture as the repository root.
-  writeFileSync(join(consumer, "pnpm-workspace.yaml"), `packages:\n  - '.'\n${readFileSync(join(repo, "pnpm-workspace.yaml"), "utf8")}`);
+  writeFileSync(join(consumer, "pnpm-workspace.yaml"), "packages:\n  - '.'\n");
   run("pnpm", ["install", "--ignore-scripts", "--prefer-offline", "--no-frozen-lockfile"], { cwd: consumer, env });
   const installed = realpathSync(join(consumer, "node_modules/pi-ext"));
   const packaged = JSON.parse(readFileSync(join(installed, "package.json"), "utf8"));
