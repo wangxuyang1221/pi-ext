@@ -7,8 +7,8 @@ import { registerDirectChild } from "../src/ownership.js";
 import { encodeSettledCursor } from "../src/cursor.js";
 import { SubagentManager as SourceManager, type ManagedTmuxRuntime } from "../src/manager.js";
 
-const SessionStateStore = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/state-store.js")).SessionStateStore : SourceStore;
-const SubagentManager = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/manager.js")).SubagentManager : SourceManager;
+const SessionStateStore: typeof SourceStore = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? ((await import("../dist/state-store.js")).SessionStateStore as unknown as typeof SourceStore) : SourceStore;
+const SubagentManager: typeof SourceManager = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? ((await import("../dist/manager.js")).SubagentManager as unknown as typeof SourceManager) : SourceManager;
 
 async function fixture(closeTimeoutMs = 1000) {
   const root = await mkdtemp(join(process.cwd(), ".subagent-reliability-"));

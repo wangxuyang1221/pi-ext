@@ -6,7 +6,7 @@ import { InMemoryCredentialStore, InMemoryModelsStore, fauxProvider, fauxAssista
 import { afterEach, test, vi } from "vitest";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SettingsManager,
   createBashToolDefinition, createReadToolDefinition, createEditToolDefinition, createWriteToolDefinition,
-  SessionManager, type ExtensionAPI, type ExtensionContext, type ToolDefinition } from "@earendil-works/pi-coding-agent";
+  SessionManager, type ExtensionAPI, type ExtensionContext, type ExtensionToolContext, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { registerCodexTools, type CodexToolFactories, type CodexToolRenderServices } from "../src/tools.js";
 import codexUi from "../src/index.js";
 
@@ -53,13 +53,13 @@ function harness(cwd: string, mode: ExtensionContext["mode"] = "print", trusted 
   services?: CodexToolRenderServices, factories?: CodexToolFactories) {
   const tools = new Map<string, ToolDefinition>();
   const handlers = new Map<string, Array<(event: any, ctx: ExtensionContext) => void>>();
-  const ctx = { cwd, mode, sessionManager: SessionManager.inMemory(cwd), isProjectTrusted: () => trusted } as ExtensionContext;
+  const ctx = { tools: [], executeTool: async () => { throw new Error("Unexpected nested tool call"); }, cwd, mode, sessionManager: SessionManager.inMemory(cwd), isProjectTrusted: () => trusted } as unknown as ExtensionToolContext;
   registerCodexTools({
     registerTool: (tool: ToolDefinition) => tools.set(tool.name, tool),
     on(name: string, fn: (event: any, ctx: ExtensionContext) => void) {
       const list = handlers.get(name) ?? []; list.push(fn); handlers.set(name, list);
     },
-  } as ExtensionAPI, factories, services);
+  } as unknown as ExtensionAPI, factories, services);
   const emit = (type: string) => { for (const fn of handlers.get(type) ?? []) fn({ type }, ctx); };
   emit("session_start");
   return { tools, ctx, emit, async bash(command: string) {
@@ -255,21 +255,21 @@ test("real SDK reload rejects broken file settings before execution and recovers
     const settingsManager = SettingsManager.create(f.cwd, f.agentDir, { projectTrusted: true });
     const loader = new DefaultResourceLoader({ cwd: f.cwd, agentDir: f.agentDir, settingsManager,
       noExtensions: true, noSkills: true, noThemes: true, noContextFiles: true, noPromptTemplates: true,
-      extensionFactories: enabled ? [pi => registerCodexTools(pi)] : [] });
+      extensionFactories: enabled ? [pi => { registerCodexTools(pi); }] : [] });
     await loader.reload();
     const { session } = await createAgentSession({ cwd: f.cwd, agentDir: f.agentDir, settingsManager,
       modelRuntime: models, model: faux.getModel(), resourceLoader: loader, sessionManager: SessionManager.inMemory(f.cwd) });
     const execute = async (name: string, args: unknown) => session.agent.state.tools.find(tool => tool.name === name)!.execute("probe", args);
     try {
       await session.bindExtensions({ mode: "print" });
-      assert.equal((await execute("bash", { command })).content[0]?.text, scope);
+      assert.equal((await execute("bash", { command })).content.filter(item => item.type === "text")[0]?.text, scope);
       const path = scope === "global" ? join(f.agentDir, "settings.json") : join(f.cwd, ".pi/settings.json");
       writeFileSync(path, '{"shellCommandPrefix":"sensitive-value",broken');
       // Existing snapshots are unchanged until reload.
-      assert.equal((await execute("bash", { command })).content[0]?.text, scope);
+      assert.equal((await execute("bash", { command })).content.filter(item => item.type === "text")[0]?.text, scope);
       await session.reload();
       if (!enabled) {
-        assert.equal((await execute("bash", { command })).content[0]?.text, scope);
+        assert.equal((await execute("bash", { command })).content.filter(item => item.type === "text")[0]?.text, scope);
         continue;
       }
       executions.mockClear(); definitions.mockClear(); settingsReads.mockClear();
@@ -293,7 +293,7 @@ test("real SDK reload rejects broken file settings before execution and recovers
       writeFileSync(path, JSON.stringify({ shellCommandPrefix: "export CODEX_SETTINGS_PROBE=repaired", compaction: { enabled: false } }));
       await assert.rejects(() => execute("bash", { command }), /Cannot load/);
       await session.reload();
-      assert.equal((await execute("bash", { command })).content[0]?.text, "repaired");
+      assert.equal((await execute("bash", { command })).content.filter(item => item.type === "text")[0]?.text, "repaired");
       const read = await execute("read", { path: "secret.txt" });
       assert(JSON.stringify(read.content).includes("private file contents"));
     } finally { await session.abort(); session.dispose(); }
@@ -316,7 +316,7 @@ test("real SDK execution matches file-configured builtins, reloads and preserves
       noExtensions: true, noSkills: true, noThemes: true, noContextFiles: true, noPromptTemplates: true,
       extensionFactories: [pi => {
         if (enabled) registerCodexTools(pi);
-        pi.on("tool_call", event => { calls++; if (event.input.command === "forbidden") return { block: true, reason: "Denied by fixture" }; });
+        pi.on("tool_call", event => { calls++; if ("command" in event.input && event.input.command === "forbidden") return { block: true, reason: "Denied by fixture" }; });
       }],
     });
     await loader.reload();

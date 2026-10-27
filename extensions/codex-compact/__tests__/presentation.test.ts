@@ -12,7 +12,7 @@ test("compaction widget animates above a balanced trailing spacer and disposes i
 		const theme = {
 			fg: (_color: string, text: string) => text,
 		} as unknown as Theme;
-		const component = createCompactionWidget()(tui, theme) as {
+		const component = createCompactionWidget()(tui, theme) as unknown as {
 			render(width: number): string[];
 			dispose(): void;
 		};
@@ -37,7 +37,7 @@ test("compaction widget truncates its message without removing the trailing spac
 	const component = createCompactionWidget()(
 		{ requestRender() {} } as unknown as TUI,
 		{ fg: (_color: string, text: string) => text } as unknown as Theme,
-	) as { render(width: number): string[]; dispose(): void };
+	) as unknown as { render(width: number): string[]; dispose(): void };
 	try {
 		const lines = component.render(12);
 		expect(lines).toHaveLength(2);

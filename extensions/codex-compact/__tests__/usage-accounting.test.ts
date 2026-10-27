@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import windowReference from "./fixtures/codex-window-accounting.json";
+import windowReference from "./fixtures/codex-window-accounting.json" with { type: "json" };
 import { approximateResponseItemTokens } from "../src/native-compaction.js";
 import { WindowUsageAccounting } from "../src/usage-accounting.js";
 

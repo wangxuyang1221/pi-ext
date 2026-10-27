@@ -1,3 +1,4 @@
+import { createTestUi } from "../../../test-support/pi-ui.js";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import * as ai from "@earendil-works/pi-ai";
@@ -40,11 +41,12 @@ test.each(["gpt-5.4", "gpt-unlisted"])("applies the OpenAI allowlist to the real
     await resourceLoader.reload();
     ({ session } = await createAgentSession({ cwd, agentDir, settingsManager, sessionManager: SessionManager.inMemory(cwd),
       resourceLoader, modelRuntime, model, noTools: "all" }));
-    await session.bindExtensions({ mode: "json", onError: error => errors.push(error.message) });
+    await session.bindExtensions({ mode: "json", onError: error => errors.push(error.error) });
     await session.prompt("Check the OpenAI request");
     await session.waitForIdle();
     expect(errors).toEqual([]);
-    expect(session.messages.at(-1)?.stopReason).toBe("stop");
+    const last = session.messages.at(-1);
+    expect(last?.role === "assistant" && last.stopReason).toBe("stop");
     expect(payloads).toHaveLength(1);
     expect(payloads[0].service_tier).toBe(id === "gpt-5.4" ? "priority" : undefined);
     expect(payloads[0].model).toBe(id);
@@ -74,7 +76,7 @@ test("sets service tier on the real host's normalized Codex request", async () =
     });
     await resourceLoader.reload();
     ({ session } = await createAgentSession({ cwd, agentDir, settingsManager, sessionManager: SessionManager.inMemory(cwd), resourceLoader, modelRuntime, model: fixture.model, noTools: "builtin" }));
-    await session.bindExtensions({ mode: "tui", uiContext: { setStatus() {}, setWidget() {} }, onError: error => { errors.push(error.message); } });
+    await session.bindExtensions({ mode: "tui", uiContext: { ...createTestUi(), setStatus() {}, setWidget() {} }, onError: error => { errors.push(error.error); } });
     await session.prompt("Check the request");
     await session.waitForIdle();
     expect(errors).toEqual([]);
@@ -113,10 +115,10 @@ test("stops requesting Fast after a Codex SSE rejection in the real host", async
     });
     await resourceLoader.reload();
     ({ session } = await createAgentSession({ cwd, agentDir, settingsManager, sessionManager: SessionManager.inMemory(cwd), resourceLoader, modelRuntime, model: fixture.model, noTools: "builtin" }));
-    await session.bindExtensions({ mode: "tui", uiContext: {
+    await session.bindExtensions({ mode: "tui", uiContext: { ...createTestUi(),
       setStatus(_key, text) { statuses.push(text); }, setWidget() {},
       notify(message, type) { notifications.push([message, type]); },
-    }, onError: error => { errors.push(error.message); } });
+    }, onError: error => { errors.push(error.error); } });
     await session.prompt("Try fast");
     await session.waitForIdle();
     expect(fixture.calls()).toBe(1);

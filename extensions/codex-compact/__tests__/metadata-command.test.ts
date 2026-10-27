@@ -16,7 +16,7 @@ test("registers a read-only status and saves or resets the global version", asyn
 	const notify = vi.fn();
 	const ctx = { cwd: project, isProjectTrusted: () => true, hasUI: true, ui: { notify } };
 	try {
-		registerMetadataCommand({ registerCommand: (name, options) => commands.set(name, options) } as never);
+		registerMetadataCommand({ registerCommand: (name: string, options: { handler: (args: string, ctx: any) => Promise<void> }) => commands.set(name, options) } as never);
 		const handler = commands.get("codex-metadata")?.handler;
 		expect(handler).toBeDefined();
 		await handler!("", ctx);
@@ -62,7 +62,7 @@ test("reports safe errors and keeps successful writes when feedback channels fai
 	process.env.PI_CODING_AGENT_DIR = root;
 	const path = join(root, "pi-codex-compact.json");
 	const commands = new Map<string, { handler: (args: string, ctx: any) => Promise<void> }>();
-	registerMetadataCommand({ registerCommand: (name, options) => commands.set(name, options) } as never);
+	registerMetadataCommand({ registerCommand: (name: string, options: { handler: (args: string, ctx: any) => Promise<void> }) => commands.set(name, options) } as never);
 	const handler = commands.get("codex-metadata")!.handler;
 	const stderr = vi.spyOn(console, "error").mockImplementation(() => {});
 	try {

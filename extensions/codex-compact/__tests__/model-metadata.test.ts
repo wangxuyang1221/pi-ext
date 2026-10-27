@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { ModelRegistry, ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { ModelRegistry, ModelRuntime, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { createModelMetadataStore } from "../src/model-metadata.js";
 
 const token = (account = "account-a") => `head.${Buffer.from(JSON.stringify({
@@ -13,7 +13,7 @@ const catalog = (hash = "hash-a") => new Response(JSON.stringify({ models: [
 ] }), { headers: { "content-type": "application/json" } });
 const context = (key = token(), baseUrl?: string) => ({ modelRegistry: {
 	getApiKeyAndHeaders: vi.fn(async () => ({ ok: true, apiKey: key, headers: {}, baseUrl })),
-} }) as never;
+} }) as unknown as ExtensionContext;
 const deferred = <T>() => {
 	let resolve!: (value: T) => void;
 	let reject!: (error: Error) => void;
@@ -23,7 +23,7 @@ const deferred = <T>() => {
 
 describe("Codex model metadata", () => {
 	test("requests the official catalog with host credentials and caches exact IDs", async () => {
-		const fetch = vi.fn(async () => catalog());
+		const fetch = vi.fn<typeof globalThis.fetch>(async () => catalog());
 		const store = createModelMetadataStore({ fetch });
 		const ctx = context();
 		const params = { ctx, model: model(), clientVersion: "0.156.0" };
@@ -91,7 +91,7 @@ describe("Codex model metadata", () => {
 
 	test("shares a pending GET while caller cancellation stays independent", async () => {
 		const pending = deferred<Response>();
-		const fetch = vi.fn(async () => pending.promise);
+		const fetch = vi.fn<typeof globalThis.fetch>(async () => pending.promise);
 		const store = createModelMetadataStore({ fetch });
 		const ctx = context();
 		const first = new AbortController();
@@ -109,7 +109,7 @@ describe("Codex model metadata", () => {
 
 	test("combines one hundred concurrent readers and reuses the decoded catalog", async () => {
 		const pending = deferred<Response>();
-		const fetch = vi.fn(async () => pending.promise);
+		const fetch = vi.fn<typeof globalThis.fetch>(async () => pending.promise);
 		const store = createModelMetadataStore({ fetch });
 		const params = { ctx: context(), model: model(), clientVersion: "0.156.0" };
 		const readers = Array.from({ length: 100 }, () => store.resolve(params));
@@ -125,7 +125,7 @@ describe("Codex model metadata", () => {
 	test("cancels late authentication and lets a new lifecycle resolve", async () => {
 		const auth = deferred<any>();
 		const ctx = { modelRegistry: { getApiKeyAndHeaders: vi.fn(() => auth.promise) } } as never;
-		const fetch = vi.fn(async () => catalog());
+		const fetch = vi.fn<typeof globalThis.fetch>(async () => catalog());
 		const store = createModelMetadataStore({ fetch });
 		const params = { ctx, model: model(), clientVersion: "0.156.0" };
 		const old = store.resolve(params);
@@ -158,7 +158,7 @@ describe("Codex model metadata", () => {
 	});
 
 	test("never sends metadata credentials to an unsupported address", async () => {
-		const fetch = vi.fn(async () => catalog());
+		const fetch = vi.fn<typeof globalThis.fetch>(async () => catalog());
 		const ctx = context(token(), "https://example.test/backend-api");
 		const store = createModelMetadataStore({ fetch });
 		expect((await store.resolve({ ctx, model: model(), clientVersion: "0.156.0" })).status).toBe("unsupported");
@@ -259,7 +259,7 @@ describe("Codex model metadata", () => {
 	});
 
 	test("retains completed snapshots on cancelPending and removes them on clear", async () => {
-		const fetch = vi.fn(async () => catalog());
+		const fetch = vi.fn<typeof globalThis.fetch>(async () => catalog());
 		const store = createModelMetadataStore({ fetch });
 		const params = { ctx: context(), model: model(), clientVersion: "0.156.0" };
 		await store.resolve(params);
@@ -273,7 +273,7 @@ describe("Codex model metadata", () => {
 
 	test("evicts the least recently used completed scope", async () => {
 		let now = 0;
-		const fetch = vi.fn(async () => catalog());
+		const fetch = vi.fn<typeof globalThis.fetch>(async () => catalog());
 		const store = createModelMetadataStore({ fetch, now: () => now });
 		const resolve = (account: string) => store.resolve({
 			ctx: context(token(account)), model: model(), clientVersion: "0.156.0",
@@ -290,7 +290,7 @@ describe("Codex model metadata", () => {
 	});
 
 	test("handles authentication failures without fetching or exposing errors", async () => {
-		const fetch = vi.fn(async () => catalog());
+		const fetch = vi.fn<typeof globalThis.fetch>(async () => catalog());
 		const store = createModelMetadataStore({ fetch });
 		for (const auth of [
 			{ ok: false, error: "synthetic-secret" },
@@ -308,7 +308,7 @@ describe("Codex model metadata", () => {
 	});
 
 	test("normalizes official URL forms and skips authentication for other providers", async () => {
-		const fetch = vi.fn(async () => catalog());
+		const fetch = vi.fn<typeof globalThis.fetch>(async () => catalog());
 		const store = createModelMetadataStore({ fetch });
 		const ctx = context();
 		for (const baseUrl of [
@@ -327,7 +327,7 @@ describe("Codex model metadata", () => {
 	});
 
 	test("stops before authentication on a pre-aborted call and handles a late auth rejection", async () => {
-		const fetch = vi.fn(async () => catalog());
+		const fetch = vi.fn<typeof globalThis.fetch>(async () => catalog());
 		const pending = deferred<any>();
 		const auth = vi.fn(() => pending.promise);
 		const ctx = { modelRegistry: { getApiKeyAndHeaders: auth } } as never;

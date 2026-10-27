@@ -30,7 +30,7 @@ test("times out a hanging query and propagates cancellation to it", async () => 
     isAlive: async (_state, signal?: AbortSignal) => { querySignal = signal; return new Promise<boolean>(() => {}); },
   });
   let timer: ReturnType<typeof setTimeout>;
-  const result = await Promise.race([waiting, new Promise<undefined>(resolve => { timer = setTimeout(resolve, 100); })]);
+  const result = await Promise.race([waiting, new Promise<undefined>(resolve => { timer = setTimeout(() => resolve(undefined), 100); })]);
   clearTimeout(timer!);
   assert.equal(result?.outcome, "timeout");
   assert.equal(querySignal?.aborted, true);
@@ -79,6 +79,7 @@ test("waits for a newer settled generation", async () => {
   assert.equal(result.outcome, "settled");
   assert.equal(result.generation, 2);
   assert.equal(result.durationMs, 20);
+  assert.ok(result.settledCursor);
   assert.match(result.settledCursor, /^sa1\./u);
 });
 

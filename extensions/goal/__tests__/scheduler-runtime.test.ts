@@ -1,3 +1,4 @@
+import { createTestUi } from "../../../test-support/pi-ui.js";
 import { afterEach, expect, it } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
@@ -40,15 +41,15 @@ it.each(["external-first", "external-last", "user", "goal-only", "old-external"]
       other = pi;
       pi.registerTool({ name: "hold_goal_batch", label: "Hold batch", description: "Hold one batch", parameters: { type: "object", properties: {} }, execute: async (_id, _args, signal) => {
         enter();
-        await Promise.race([held, new Promise<void>(resolve => signal.addEventListener("abort", () => resolve(), { once: true }))]);
-        return { content: [{ type: "text", text: "Released" }] };
+        await Promise.race([held, new Promise<void>(resolve => signal?.addEventListener("abort", () => resolve(), { once: true }))]);
+        return { content: [{ type: "text", text: "Released" }], details: {} };
       } });
       pi.on("context", (event, ctx) => { contexts.push({ messages: event.messages, signal: ctx.signal }); });
     }],
   });
   await loader.reload();
   const { session } = await createAgentSession({ cwd: root, agentDir: join(root, "agent"), modelRuntime, model: faux.getModel(), resourceLoader: loader, sessionManager: manager, settingsManager, tools: ["hold_goal_batch", "get_goal", "create_goal", "update_goal"] });
-  await session.bindExtensions({ mode: "tui", uiContext: { notify: text => notices.push(text), setStatus() {}, confirm: async () => true, editor: async () => "Edited goal" }, onError: error => errors.push(error.message) });
+  await session.bindExtensions({ mode: "tui", uiContext: { ...createTestUi(), notify: text => notices.push(text), setStatus() {}, confirm: async () => true, editor: async () => "Edited goal" }, onError: error => errors.push(error.error) });
   session.setSteeringMode("all");
   const timer = setTimeout(() => { release(); void session.abort(); }, 12000);
   let running: Promise<unknown> | undefined;

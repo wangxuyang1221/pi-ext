@@ -73,7 +73,7 @@ export function loadMcpConfigResult(
     const readFile = dependencies.readFile ?? ((filePath: string) => readFileSync(filePath, "utf8"));
     const raw = readFile(path);
     const parseErrors: ParseError[] = [];
-    const parsed = parse(raw, parseErrors, { allowTrailingComma: true }) as unknown;
+    const parsed = parse(raw.startsWith("\uFEFF") ? raw.slice(1) : raw, parseErrors, { allowTrailingComma: true }) as unknown;
     if (parseErrors.length > 0) {
       const message = parseErrors
         .map((error) => `${printParseErrorCode(error.error)} at offset ${error.offset}`)

@@ -9,9 +9,9 @@ import { SubagentManager as SourceManager } from "../src/manager.js";
 import { createSessionState, SessionStateStore } from "../src/state-store.js";
 import { registerDirectChild } from "../src/ownership.js";
 
-const TmuxRuntime = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/tmux-runtime.js")).TmuxRuntime : SourceTmuxRuntime;
+const TmuxRuntime: typeof SourceTmuxRuntime = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? ((await import("../dist/tmux-runtime.js")).TmuxRuntime as unknown as typeof SourceTmuxRuntime) : SourceTmuxRuntime;
 
-const Manager = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/manager.js")).SubagentManager : SourceManager;
+const Manager: typeof SourceManager = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? ((await import("../dist/manager.js")).SubagentManager as unknown as typeof SourceManager) : SourceManager;
 const tmux = ["/opt/homebrew/bin/tmux", "/usr/bin/tmux"].find(existsSync);
 const fish = [process.env.PI_SUBAGENT_TEST_FISH, "/opt/homebrew/bin/fish", "/usr/bin/fish"].find((path): path is string => !!path && existsSync(path));
 const quote = (value: string) => `'${value.replaceAll("'", `'"'"'`)}'`;

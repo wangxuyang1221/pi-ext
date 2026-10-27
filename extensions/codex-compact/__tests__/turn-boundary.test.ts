@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { turnBoundaryCases } from "../../../scripts/codex-compact-boundary-cases.mjs";
 import { isUserTurnBoundary } from "../src/turn-boundary.js";
 import { WindowUsageAccounting } from "../src/usage-accounting.js";
-import { approximateResponseItemTokens } from "../src/native-compaction.js";
+import { approximateResponseItemTokens, type ResponseItem } from "../src/native-compaction.js";
 
 const reference = JSON.parse(readFileSync(new URL("./fixtures/codex-full-reference-darwin.json", import.meta.url), "utf8"));
 
@@ -17,7 +17,8 @@ describe("original Codex turn boundaries", () => {
 		expect(performance.now() - start).toBeLessThan(500);
 	}, 10000);
 
-	it.each(turnBoundaryCases())("matches $name including old reasoning accounting", (entry) => {
+	// Exercise malformed wire values through the same runtime normalizer as the oracle.
+	it.each(turnBoundaryCases() as unknown as Array<{name: string; items: ResponseItem[]}>)("matches $name including old reasoning accounting", (entry) => {
 		const expected = reference.vectors.find((vector: { name: string }) => vector.name === entry.name);
 		expect(expected.error).toBeUndefined();
 		expect(entry.items.map(isUserTurnBoundary)).toEqual(expected.turnBoundaries);

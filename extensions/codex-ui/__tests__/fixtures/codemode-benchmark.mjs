@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { VERSION } from "@earendil-works/pi-coding-agent";
 import { performance } from "node:perf_hooks";
 import { CodemodeStore } from "../../dist/codemode-model.js";
 import { CodemodePresentation } from "../../dist/codemode-presentation.js";
@@ -44,4 +45,4 @@ for (const count of [24, 256, 1024]) for (const outputBytes of [1024, 1024 * 102
   assert.equal(store.size, 0);
   assert.equal(presentation.stats().layouts.chargedBytes, 0);
 }
-console.log(JSON.stringify({ node: process.version, pi: "1.3.0", rows }, null, 2));
+console.log(JSON.stringify({ node: process.version, pi: VERSION, rows }, null, 2));

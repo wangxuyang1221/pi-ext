@@ -17,7 +17,7 @@ const isWorkspacePath = value => typeof value === "string" && !path.isAbsolute(v
   && !/[\\\\:\u0000-\u001f\u007f]/.test(value) && !value.split("/").some(part => !part || part === "." || part === "..");
 
 /** Validates the opt-in creation scope without changing existing default tool definitions. */
-export function validateCreatePaths(allowedPaths, createPaths = []) {
+export function validateCreatePaths(allowedPaths, createPaths = /** @type {string[]} */ ([])) {
   if (!Array.isArray(allowedPaths) || !Array.isArray(createPaths)
     || new Set(createPaths).size !== createPaths.length
     || createPaths.some(name => !isWorkspacePath(name) || !allowedPaths.includes(name))) throw new Error("Invalid creation permissions");
@@ -66,7 +66,7 @@ function createScopedFile(root, relativePath, content) {
 
 /** Controlled file operations only; no model-supplied code or shell is executed. */
 export class WorkspaceTools {
-  constructor(root, allowedPaths, { createPaths = [] } = {}) {
+  constructor(root, allowedPaths, { createPaths = /** @type {string[]} */ ([]) } = {}) {
     validateCreatePaths(allowedPaths, createPaths);
     this.root = fs.realpathSync(root);
     this.allowed = new Set(allowedPaths);

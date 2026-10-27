@@ -3,8 +3,14 @@ import { appendFile, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { test } from "vitest";
 
-import { readSessionView } from "../src/session-reader.js";
+import { readSessionView as readRawSessionView, type ReadSessionViewOptions, type SessionViewResult } from "../src/session-reader.js";
 import { encodeTurnsPageCursor } from "../src/cursor.js";
+
+async function readSessionView<V extends ReadSessionViewOptions["view"]>(options: ReadSessionViewOptions & { view: V }): Promise<Extract<SessionViewResult, { view: V }>> {
+  const result = await readRawSessionView(options);
+  assert.equal(result.view, options.view);
+  return result as Extract<SessionViewResult, { view: V }>;
+}
 
 test.each(["recent_activity", "turns"] as const)("keeps the %s incremental watermark monotonic across tree navigation", async (view) => {
   const root = await mkdtemp(join(process.cwd(), ".subagent-reader-test-"));
@@ -143,9 +149,9 @@ test("keeps turns pages on one snapshot while incremental reads observe later ap
       role: "assistant", content: [{ type: "text", text: "New result" }], stopReason: "stop",
     })) + "\n");
     const ids = first.turns.flatMap((turn) => turn.activity.map((item) => item.id));
-    let pageCursor = first.nextPageCursor;
+    let pageCursor: string | undefined = first.nextPageCursor;
     while (pageCursor) {
-      const page = await readSessionView({ ...base, pageCursor });
+      const page: Extract<SessionViewResult, {view: "turns"}> = await readSessionView({ ...base, pageCursor });
       assert.equal(page.view, "turns");
       assert.equal(page.cursor, first.cursor);
       ids.push(...page.turns.flatMap((turn) => turn.activity.map((item) => item.id)));
@@ -246,7 +252,8 @@ test("preserves empty assistant failures without exposing thinking-only messages
       const activity = result.view === "turns" ? result.turns.flatMap((turn) => turn.activity) : result.activity;
       assert.equal(activity.length, 1);
       assert.equal(activity[0]?.id, "failure");
-      assert.equal(activity[0]?.errorMessage, errorMessage);
+      assert.ok(activity[0]?.kind === "assistant");
+      assert.equal(activity[0].errorMessage, errorMessage);
     }
   } finally { await rm(root, { recursive: true, force: true }); }
 });

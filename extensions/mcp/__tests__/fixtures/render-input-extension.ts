@@ -65,6 +65,6 @@ export default function fixture(pi: ExtensionAPI): void {
       writeFileSync(process.env.MCP_RENDER_PROFILE!, JSON.stringify(profile));
     } finally { session.disconnect(); }
   });
-  pi.on("session_start", (_event, ctx) => ctx.ui.notify("RENDER-HOST-READY", "info"));
+  pi.registerCommand("render-ready", { handler: async (_args, ctx) => ctx.ui.notify("RENDER-HOST-READY", "info") });
   pi.registerCommand("render-quit", { handler: async (_args, ctx) => ctx.shutdown() });
 }

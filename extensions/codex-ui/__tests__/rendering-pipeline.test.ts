@@ -34,7 +34,7 @@ function createPipeline(history: number, output = Array.from({ length: 1800 }, (
   mkdirSync(join(process.cwd(), ".tmp"), { recursive: true });
   const directory = mkdtempSync(join(process.cwd(), ".tmp/codex-ui-pipeline-"));
   const terminal = new CaptureTerminal();
-  const screen = new TuiMainScreen(terminal as Terminal, false, directory);
+  const screen = new TuiMainScreen(terminal as unknown as Terminal, false, directory);
   // Use explicit frames so timer callbacks are deterministic, without changing their cadence.
   screen.requestRender = () => {};
   screen.start();

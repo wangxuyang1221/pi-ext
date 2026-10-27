@@ -36,7 +36,7 @@ it("executes and renders repository MCP tools through direct calls and codemode"
         streamSimple(selected, context) {
           const stream = createAssistantMessageEventStream();
           const done = context.messages.at(-1)?.role === "toolResult";
-          const toolCall = { type: "toolCall" as const, id: scripted ? "script-call" : "direct-call",
+          const toolCall: import("@earendil-works/pi-ai").ToolCall = { type: "toolCall" as const, id: scripted ? "script-call" : "direct-call",
             name: scripted ? "codemode" : "mcp__remote__echo",
             arguments: scripted ? { code: 'const r = await tools.mcp__remote__echo({text: "Script MCP result"}); text(r);' }
               : { text: "Real MCP result 中文" } };
@@ -111,7 +111,7 @@ it("executes and renders repository MCP tools through direct calls and codemode"
     expect(session.getToolDefinition("codemode")!.execute).toBe(executeCodemode);
   } finally {
     if (session) {
-      await session.extensionRunner?.emit({ type: "session_shutdown", reason: "exit" });
+      await session.extensionRunner?.emit({ type: "session_shutdown", reason: "quit" });
       session.dispose();
     }
     await fixture.close();

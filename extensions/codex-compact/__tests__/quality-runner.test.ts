@@ -224,6 +224,7 @@ test("reconciles a dead owner only after its registered worker stopped and recor
     await stopProcessGroup({ pid: workerPid, exitCode: null, signalCode: null }, { graceMs: 0 });
     const reconciled = runner.reconcileInterruptedSchedule({ directory, reason: "Owned worker group confirmed stopped" });
     expect(reconciled.status).toBe("reconciled");
+    if (!("interruptedJobIds" in reconciled)) throw new Error("Expected reconciled result");
     expect(reconciled.interruptedJobIds).toEqual([failed.id]);
     expect(fs.existsSync(path.join(directory, "active.json"))).toBe(false);
     expect(fs.existsSync(path.join(directory, failed.id, "plugin/pi-home/auth.json"))).toBe(false);

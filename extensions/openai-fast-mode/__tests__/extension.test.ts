@@ -475,7 +475,7 @@ describe("piFastModeExtension runtime behavior", () => {
     const model = { provider: "openai-codex", id: "gpt-7-unlisted" };
     const ctx = makeCtx(cwd, model);
     const request = (context = ctx) => runHandler(handlers, "before_provider_request", {
-      type: "before_provider_request", payload: { model: context.model.id, input: [] },
+      type: "before_provider_request", payload: { model: context.model!.id, input: [] },
     }, context);
     await runHandler(handlers, "session_start", { type: "session_start", reason: "startup" }, ctx);
     expect(await request()).toMatchObject({ service_tier: "priority" });

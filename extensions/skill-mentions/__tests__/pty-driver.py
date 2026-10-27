@@ -60,6 +60,8 @@ else:
     selected = entries
 if scope == "full" and not mode.startswith("combined"):
     settings["packages"] = [{"source": installed, "extensions": [entry.removeprefix("./") for entry in selected]}]
+if mode.startswith("combined"):
+    settings["extensions"] = ["-builtin:mcp"]
 settings_file.write_text(json.dumps(settings))
 keys = {"tui.editor.undo": "f8", "tui.editor.historyPrevious": "ctrl+p", "tui.editor.historyNext": "ctrl+n",
         "tui.editor.cursorLineStart": ["home", "ctrl+a", "f2"], "app.tools.expand": "f3"}

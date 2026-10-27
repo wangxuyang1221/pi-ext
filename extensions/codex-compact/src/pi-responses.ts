@@ -8,5 +8,5 @@ import { dirname, resolve } from "node:path";
 const manifestPath = findPackageJSON("@earendil-works/pi-ai", import.meta.url)!;
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
 const apiPath = manifest.exports["./api/*"].import.replace("*", "openai-responses-shared");
-export const { convertResponsesTools } = createRequire(import.meta.url)(resolve(dirname(manifestPath), apiPath)) as
+export const { convertResponsesTools, getResponsesToolSupport } = createRequire(import.meta.url)(resolve(dirname(manifestPath), apiPath)) as
   typeof import("@earendil-works/pi-ai/api/openai-responses-shared");

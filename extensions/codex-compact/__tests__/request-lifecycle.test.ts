@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from "vitest";
 import type { Model } from "@earendil-works/pi-ai";
-import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
+import { getTestModel } from "./fixtures/models.js";
 import codexCompactionExtension from "../src/index.js";
 import { fixtureSnapshot } from "./fixtures/compaction-metadata.js";
 import { modelKey, NATIVE_COMPACTION_KIND } from "../src/native-compaction.js";
@@ -13,9 +13,9 @@ const metadataResponse = () => new Response(JSON.stringify({ models: [
 const user = (id: string, text: string) => ({ id, type: "message", message: { role: "user", content: [{ type: "text", text }], timestamp: 0 } });
 
 function setup(automatic = false) {
-  const old = { ...getBuiltinModel("openai-codex", "gpt-5.5")!, contextWindow: 100_000 };
-  const target = automatic ? { ...old, contextWindow: 1000 } : { ...getBuiltinModel("openai-codex", "gpt-5.6-sol")! };
-  const next = getBuiltinModel("openai-codex", "gpt-6-astra")!;
+  const old = { ...getTestModel("openai-codex", "gpt-5.5")!, contextWindow: 100_000 };
+  const target = automatic ? { ...old, contextWindow: 1000 } : { ...getTestModel("openai-codex", "gpt-5.6-sol")! };
+  const next = getTestModel("openai-codex", "gpt-6-astra")!;
   let selected: Model<any> = target;
   const branch: any[] = [user("retained", "retained task"), {
     id: "checkpoint", type: "compaction", summary: "Codex encrypted compaction item.", firstKeptEntryId: "retained", tokensBefore: 1000,
@@ -32,7 +32,7 @@ function setup(automatic = false) {
     abort: vi.fn(() => controller.abort()),
     sessionManager: { getSessionId: () => "session", getBranch: () => branch, getEntries: () => branch },
     modelRegistry: {
-      find: (provider: string, id: string) => getBuiltinModel(provider, id),
+      find: (provider: string, id: string) => getTestModel(provider, id),
       getApiKeyAndHeaders: async () => ({ ok: true, apiKey, baseUrl: "https://chatgpt.com/backend-api" }),
     },
   };

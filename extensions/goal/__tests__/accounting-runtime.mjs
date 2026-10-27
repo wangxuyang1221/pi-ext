@@ -115,18 +115,21 @@ try {
     await h.prompt("/goal Combine attributable summary sources");
     assert.equal((await h.goal()).tokensUsed, 10);
     await h.session.setModel(h.fixture.models.anthropic);
-    h.fixture.setSteps([text(usage(12, 8), { family: "anthropic", text: "Summary of previous work" })]);
+    // Pi 1.4 retains a partial turn here and summarizes its prefix separately.
+    // Both real provider responses must be attributed exactly once.
+    h.fixture.setSteps([text(usage(12, 8), { family: "anthropic", text: "Summary of previous work" }),
+      text(usage(3, 4), { family: "anthropic", text: "Summary of the retained turn prefix" })]);
     await h.session.compact();
-    assert.equal((await h.goal()).tokensUsed, 30);
+    assert.equal((await h.goal()).tokensUsed, 37);
     await h.session.setModel(h.fixture.models.google);
     h.fixture.setSteps([text(usage(6, 4), { family: "google", text: "Branch summary" })]);
     const first = h.session.sessionManager.getEntries().find(e => e.type === "custom_message");
     assert.ok(first, "Goal kickoff entry must exist before branch navigation");
     await h.session.navigateTree(first.id, { summarize: true });
-    assert.equal((await h.goal()).tokensUsed, 40);
+    assert.equal((await h.goal()).tokensUsed, 47);
     assert.ok(h.lifecycle.some(e => e.type === "session_compact" && e.usage));
     assert.ok(h.lifecycle.some(e => e.type === "session_tree" && e.usage));
-    await h.session.reload(); assert.equal((await h.goal()).tokensUsed, 40);
+    await h.session.reload(); assert.equal((await h.goal()).tokensUsed, 47);
   });
 } finally { await rm(root, { recursive: true, force: true }); }
 const report = { versions, product, pid: process.pid, offline: true, results, cleanup: { temporaryRootRemoved: true, listeningPorts: [] } };

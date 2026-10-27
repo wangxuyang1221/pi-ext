@@ -1,3 +1,4 @@
+import { createTestUi } from "../../../test-support/pi-ui.js";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { InMemoryCredentialStore, InMemoryModelsStore, fauxProvider, fauxAssistantMessage, fauxToolCall, Type } from "@earendil-works/pi-ai";
@@ -29,10 +30,10 @@ test.each([APPROVAL_CHOICES.ALLOW_ONCE, APPROVAL_CHOICES.DENY])("honors a real h
     });
     await resourceLoader.reload();
     ({ session } = await createAgentSession({ cwd, agentDir: join(cwd, "agent"), settingsManager, sessionManager: SessionManager.inMemory(cwd), resourceLoader, modelRuntime, model: fixture.getModel(), noTools: "builtin" }));
-    await session.bindExtensions({ mode: "tui", uiContext: {
+    await session.bindExtensions({ mode: "tui", uiContext: { ...createTestUi(),
       setStatus() {}, select: async () => { prompted++; return choice; },
       theme: { fg: (_color: unknown, text: string) => text } as never,
-    }, onError: error => { errors.push(error.message); } });
+    }, onError: error => { errors.push(error.error); } });
     await session.prompt("Run the fixture write");
     await session.waitForIdle();
     expect(errors).toEqual([]);

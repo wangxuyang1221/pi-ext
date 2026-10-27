@@ -44,7 +44,7 @@ export default function resumeFixture(pi: ExtensionAPI): void {
     ctx.ui.notify("MCP UI host ready", "info");
   };
   pi.on("session_start", (_event, ctx) => ready(ctx));
-  const withSession = (ctx: ExtensionContext) => ready(ctx);
+  const withSession = async (ctx: ExtensionContext) => ready(ctx);
   pi.on("input", () => ({ action: process.env.MCP_HISTORY_LIVE === "1" ? "continue" : "handled" }));
   pi.on("tool_result", (event) => {
     if (process.env.MCP_HISTORY_TRACE) appendFileSync(process.env.MCP_HISTORY_TRACE, JSON.stringify(event) + "\n");

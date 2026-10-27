@@ -1,5 +1,6 @@
 import { zstdDecompressSync } from "node:zlib";
-import { appendFile, writeFile } from "node:fs/promises";
+import { appendFile } from "node:fs/promises";
+import { writeJsonAtomic } from "../../../../test-support/files.js";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -43,8 +44,9 @@ export default async function install(pi: ExtensionAPI): Promise<void> {
   const directory = process.env.HOME!;
   pi.registerProvider((await fastProvider(join(directory, `payload-${process.pid}.jsonl`), directory)).provider);
   pi.on("session_start", async (_event, ctx) => {
-    await writeFile(join(directory, `start-${process.pid}.json`), JSON.stringify({ hostVersion: VERSION, versions: inspectPiHost().versions, sessionId: ctx.sessionManager.getSessionId(),
+    const path = join(directory, `start-${process.pid}.json`);
+    await writeJsonAtomic(path, { hostVersion: VERSION, versions: inspectPiHost().versions, sessionId: ctx.sessionManager.getSessionId(),
       entries: ctx.sessionManager.getEntries(), tools: pi.getAllTools(), launch: process.env.PI_SUBAGENT_LAUNCH,
-      parent: process.env.PI_SUBAGENT_PARENT }));
+      parent: process.env.PI_SUBAGENT_PARENT });
   });
 }

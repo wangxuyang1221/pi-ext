@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2024"],
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": ["extensions/**/__tests__/**/*.ts", "test-support/**/*.ts"],
+  "exclude": ["node_modules", "extensions/**/dist"]
+}

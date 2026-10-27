@@ -68,7 +68,7 @@ describe("MCP tool renderers", () => {
   });
   it("does not replace symbols or recolor successful result text when the prefix changes", () => {
     const color = vi.fn((_name: string, text: string) => text);
-    const theme = { ...createTheme(), fg: color } as Theme;
+    const theme = Object.assign(Object.create(createTheme()), { fg: color }) as Theme;
     const body = "Literal symbols: ⏺ ⌕ ⌁";
     const result = renderMcpToolResult({ content: [{ type: "text", text: body }] },
       { expanded: false, isPartial: false }, theme,
@@ -82,7 +82,7 @@ describe("MCP tool renderers", () => {
     const segment = vi.spyOn(Intl.Segmenter.prototype, "segment");
     try {
       const color = vi.fn((_name: string, text: string) => text);
-      const theme = { ...createTheme(), fg: color } as Theme;
+      const theme = Object.assign(Object.create(createTheme()), { fg: color }) as Theme;
       const context = { state: {}, isError: false, isPartial: false, lastComponent: undefined };
       const call = renderMcpToolCall({ query: "中文🙂" }, TOOL_NAMES, theme, context);
       const result = renderMcpToolResult({ content: [{ type: "text", text: "中🙂e\u0301".repeat(2000) }] },
@@ -136,7 +136,7 @@ describe("MCP tool renderers", () => {
     const parse = vi.spyOn(JSON, "parse");
     const color = vi.fn((_name: string, text: string) => text);
     try {
-      const theme = { ...createTheme(), fg: color } as Theme;
+      const theme = Object.assign(Object.create(createTheme()), { fg: color }) as Theme;
       const result = { content: [{ type: "text", text: '{"message":"中文🙂 long text"}' }] };
       const context = { isError: false, isPartial: false, lastComponent: undefined };
       const component = renderMcpToolResult(result, { expanded: true, isPartial: false }, theme, context);
@@ -259,7 +259,7 @@ describe("MCP tool renderers", () => {
 
   it("keeps success detail bright and preserves image hints without exposing data", () => {
     const color = vi.fn((_name: string, text: string) => text);
-    const theme = { ...createTheme(), fg: color } as Theme;
+    const theme = Object.assign(Object.create(createTheme()), { fg: color }) as Theme;
     for (const expanded of [false, true]) for (const mixed of [false, true]) {
       const component = renderMcpToolResult({ content: [
         { type: "image", data: "private-base64", mimeType: "image/png" },

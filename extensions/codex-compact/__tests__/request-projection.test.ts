@@ -2,9 +2,11 @@ import { isDeepStrictEqual } from "node:util";
 import { performance } from "node:perf_hooks";
 import { expect, test, vi } from "vitest";
 import { SessionManager } from "@earendil-works/pi-coding-agent";
-import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
+import { getTestModel } from "./fixtures/models.js";
 import { createBranchInputSnapshot, modelKey, NATIVE_COMPACTION_KIND } from "../src/native-compaction.js";
 import { resolveRequestProjection } from "../src/request-projection.js";
+import { readFileSync } from "node:fs";
+const piVersion = JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8")).devDependencies["@earendil-works/pi-ai"];
 
 const work = vi.hoisted(() => ({ snapshots: 0, messages: 0, conversions: 0 }));
 vi.mock("../src/native-compaction.js", async importOriginal => {
@@ -17,14 +19,16 @@ vi.mock("../src/native-compaction.js", async importOriginal => {
     } });
   } };
 });
-const model = { ...getBuiltinModel("openai-codex", "gpt-5.5")!, compat: { supportsAdditionalTools: true, supportsMidConvoSystemMessages: true } };
+const model = { ...getTestModel("openai-codex", "gpt-5.5")!, compat: { supportsAdditionalTools: true, supportsMidConvoSystemMessages: true } };
 const tool = (name: string) => ({ name, description: name, parameters: { type: "object", properties: { value: { type: "string", description: "schema".repeat(100) } } } });
 function fixture(count: number, tools: number) {
   const sm = SessionManager.inMemory(process.cwd());
   const declarations = Array.from({ length: tools }, (_, index) => tool(`tool_${index}`));
-  sm.appendMessage({ role: "system", content: "head", toolsAdded: declarations.slice(0, -1), timestamp: 0 } as never);
+  const incremental = tools === count;
+  sm.appendMessage({ role: "system", content: "head", toolsAdded: incremental ? declarations.slice(0, 1) : declarations.slice(0, -1), timestamp: 0 } as never);
   for (let index = 0; index < count; index++) {
     sm.appendMessage({ role: "user", content: index % 2 ? "same text" : `message ${index}`, timestamp: index });
+    if (incremental && index > 0 && index < tools - 1) sm.appendMessage({ role: "system", content: "", toolsAdded: [declarations[index]], timestamp: index } as never);
     if (index === Math.floor(count / 2)) sm.appendCustomEntry(NATIVE_COMPACTION_KIND, { kind: NATIVE_COMPACTION_KIND, version: 2,
       modelKey: modelKey(model), replacementHistory: [{ type: "compaction", encrypted_content: "opaque" }] });
   }
@@ -53,7 +57,7 @@ test.each(["hidden", "forced", "both"])("agrees with a bounded exhaustive policy
   for (const candidate of possible) expect(replay).toEqual(candidate);
 });
 
-test.each([[1000, 10], [2000, 10], [4000, 10], [1000, 100], [1000, 1000]])("bounds policy conversion work for N=%i T=%i", (count, toolCount) => {
+test.each([[1000, 10], [2000, 10], [4000, 10], [1000, 100], [1000, 1000], [2000, 2000], [4000, 4000]])("bounds policy conversion work for N=%i T=%i", (count, toolCount) => {
   const params = fixture(count, toolCount);
   const actual = createBranchInputSnapshot(params).view(model, "full-history");
   const durations: number[] = [];
@@ -65,10 +69,10 @@ test.each([[1000, 10], [2000, 10], [4000, 10], [1000, 100], [1000, 1000]])("boun
     expect(policy.hiddenNames.size).toBe(0);
     expect(work.snapshots).toBeLessThanOrEqual(5);
     // One baseline view plus at most three views for each of four policies.
-    expect(work.messages).toBeLessThanOrEqual(13 * (count + 3));
+    expect(work.messages).toBeLessThanOrEqual(13 * params.branch.length);
     // Forced collapse adds one synthetic leading entry to each of its three views.
     expect(work.conversions).toBeLessThanOrEqual(13 * params.branch.length + 3);
   }
-  console.info(JSON.stringify({ check: "projection-cost", node: process.version, pi: "1.3.0", count, toolCount, ...work,
+  console.info(JSON.stringify({ check: "projection-cost", node: process.version, pi: piVersion, count, toolCount, ...work,
     samplesMs: durations.map(ms => Math.round(ms)), processPeakRssKiB: process.resourceUsage().maxRSS }));
 });

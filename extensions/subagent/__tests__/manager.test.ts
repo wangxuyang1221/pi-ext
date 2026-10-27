@@ -50,6 +50,7 @@ test("rejects spawn from a managed session before launching a runtime", async ()
       },
     }));
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() {
         launched = true;
         return locator;
@@ -179,6 +180,7 @@ test("removes a child that registers while timed-out spawn cleanup is closing it
       now: "2026-08-27T02:00:00.000Z",
     }));
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch(spec) {
         capturedParent = JSON.parse(spec.environment[PI_SUBAGENT_PARENT]) as ParentOwnership;
         capturedLaunch = JSON.parse(spec.environment[PI_SUBAGENT_LAUNCH]) as LaunchMetadata;

@@ -1,3 +1,4 @@
+import { hasWriteChange, writeChange, writePatch } from "./fixtures/write-result.js";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -30,7 +31,7 @@ test("real Write CRLF diffs retain source, line numbers and signs after terminal
       await writeFile(join(cwd, path), "old\r\n");
       const args = { path, content: "new\r\n" };
       const result = await write.execute(path, args, undefined, undefined, { cwd } as never);
-      const patch = result.details.codexWrite.patch;
+      const patch = writePatch(result);
       assert.match(patch, /-old\r\n\+new\r\n/u);
       const row = new ToolExecutionComponent("write", path, args, { showImages: false }, write, { requestRender() {} } as never, cwd);
       row.updateResult({ ...result, isError: false });
@@ -42,7 +43,7 @@ test("real Write CRLF diffs retain source, line numbers and signs after terminal
         assert.match(painted, /1 \+ new/u);
         assert(lines.every(line => visibleWidth(line) <= 40));
       }
-      assert.equal(result.details.codexWrite.patch, patch);
+      assert.equal(writeChange(result).patch, patch);
       assert.equal(await readFile(join(cwd, path), "utf8"), "new\r\n");
     }
   } finally { await rm(cwd, { recursive: true, force: true }); }
@@ -59,7 +60,7 @@ test("real Write sanitizes source controls without changing the file or saved pa
       const content = 'const x = "before\x1b[2J\x1b[H\x1b]0;bad-title\x07after";\r\n';
       const args = { path, content };
       const result = await write.execute(path, args, undefined, undefined, { cwd } as never);
-      assert(result.details.codexWrite.patch.includes(content));
+      assert(writePatch(result).includes(content));
       const row = new ToolExecutionComponent("write", path, args, { showImages: false }, write, { requestRender() {} } as never, cwd);
       row.updateResult({ ...result, isError: false });
       const rendered = row.render(100).join("\n").replace(/\x1b\[[0-9;]*m/gu, "");
@@ -82,7 +83,7 @@ test("real Write keeps ordinary source immediately after every CSI cursor termin
       const source = path.endsWith(".ts") ? `const x = "before\x1b[1${terminator}middle";` : `left\x1b[1${terminator}right marker`;
       const expected = path.endsWith(".ts") ? 'const x = "beforemiddle";' : "leftright marker";
       const result = await write.execute(path, { path, content: source + "\r\n" }, undefined, undefined, { cwd } as never);
-      const patch = result.details.codexWrite.patch;
+      const patch = writePatch(result);
       assert.equal(parseUnifiedPatch(patch).at(-1)?.text, expected);
       const row = new ToolExecutionComponent("write", path, { path, content: source + "\r\n" }, { showImages: false },
         write, { requestRender() {} } as never, cwd);

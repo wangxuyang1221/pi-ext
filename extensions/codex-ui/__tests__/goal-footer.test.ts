@@ -31,7 +31,7 @@ it("renders structured goal rows without recomputing the unchanged model line", 
   expect(vi.mocked(theme.fg).mock.calls.every(([, text]) => !text.includes("main"))).toBe(true);
   for (const width of [1, 16, 40, 120]) expect(footer.render(width).every(line => visibleWidth(line) <= width)).toBe(true);
   const beforeTheme = footer.render(80);
-  theme = { ...theme, bold: text => `[${text}]` };
+  theme = Object.assign(Object.create(theme), { bold: (text: string) => `[${text}]` });
   expect(footer.render(80)).not.toBe(beforeTheme);
   expect(footer.render(80)[1]).toContain("[Goal]");
   footer.invalidate();

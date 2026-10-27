@@ -465,7 +465,7 @@ it("does not cancel user input delivered beside an obsolete edit ticket", async 
       replacementHistory: [{ type: "compaction", encrypted_content: "stable-checkpoint" }],
     } }] as unknown as SessionEntry[];
   const createCheckpoint = vi.fn(async () => { throw new Error("Unexpected remote compaction"); });
-  const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch, getAllTools: () => [], createCheckpoint, appendCheckpoint: vi.fn(), shouldAutoCompact: () => false });
+  const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch, getAllTools: () => [], createCheckpoint, appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn(), shouldAutoCompact: () => false });
   Object.assign(h.ctx, { model, getSystemPrompt: () => "", modelRegistry: { find: () => model } });
   const inputs = [result, replay].map(projected => fullInputForBranch({ model, tools: [], branch: projected.messages.map((message: any, index: number) => message.role === "custom"
     ? { type: "custom_message", id: String(index), ...message } : { type: "message", id: String(index), message }) as SessionEntry[] }));
@@ -567,7 +567,7 @@ it("reuses a native checkpoint across goal history, tool follow-ups, and clear w
     replacementHistory: [{ type: "compaction", encrypted_content: "offline-checkpoint" }],
   } });
   const createCheckpoint = vi.fn(async () => { throw new Error("Unexpected remote compaction"); });
-  const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch, getAllTools: () => [], createCheckpoint, appendCheckpoint: vi.fn(), shouldAutoCompact: () => false });
+  const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => branch, getAllTools: () => [], createCheckpoint, appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn(), shouldAutoCompact: () => false });
   Object.assign(h.ctx, { model, getSystemPrompt: () => "", modelRegistry: { find: () => model } });
   for (let step = 0; step < 4; step++) {
     if (step === 0 || step === 2) {

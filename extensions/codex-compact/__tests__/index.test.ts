@@ -1,8 +1,10 @@
+import type { Model } from "@earendil-works/pi-ai";
+import { normalizeContext } from "@earendil-works/pi-ai/utils/transcript";
 import { expect, test, vi } from "vitest";
 import { convertToLlm, ExtensionRunner, SessionManager, type SessionEntry } from "@earendil-works/pi-coding-agent";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
+import { getTestModel } from "./fixtures/models.js";
 import { streamSimple } from "@earendil-works/pi-ai/api/openai-codex-responses";
 import codexCompactionExtension from "../src/index.js";
 import { loadConfig } from "../src/config.js";
@@ -18,7 +20,7 @@ type Handler = (event: any, ctx: any) => unknown;
 
 const apiKey = `a.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "account" } })).toString("base64url")}.c`;
 
-function checkpointEntry(): SessionEntry {
+function checkpointEntry(): Extract<SessionEntry, {type: "custom"}> {
 	return {
 		id: "checkpoint",
 		parentId: null,
@@ -31,7 +33,7 @@ function checkpointEntry(): SessionEntry {
 			modelKey: "openai-codex:openai-codex-responses:gpt",
 			replacementHistory: [{ type: "compaction", encrypted_content: "opaque" }],
 		},
-	} as unknown as SessionEntry;
+	} as unknown as Extract<SessionEntry, {type: "custom"}>;
 }
 
 function installExtension(branch: SessionEntry[] = [], hasUI = false, contextWindow = 100_000) {
@@ -40,7 +42,8 @@ function installExtension(branch: SessionEntry[] = [], hasUI = false, contextWin
 	const notify = vi.fn();
 	const setStatus = vi.fn();
 	const setWidget = vi.fn();
-	const model = {
+	const model: Model<any> = {
+		...getTestModel("openai-codex", "gpt-5.5"),
 		provider: "openai-codex",
 		api: "openai-codex-responses",
 		id: "gpt",
@@ -121,7 +124,7 @@ test("preserves mid-conversation system updates through the real context runner 
 	runner.onError(error => errors.push(error));
 	const transformed = await runner.emitContext(sm.buildSessionProjection().messages);
 	let input: ResponseItem[] | undefined;
-	const response = await streamSimple({ ...getBuiltinModel("openai-codex", "gpt-5.5")!, ...model } as never, { messages: convertToLlm(transformed) }, {
+	const response = await streamSimple({ ...getTestModel("openai-codex", "gpt-5.5")!, ...model } as never, normalizeContext({ messages: convertToLlm(transformed) }), {
 		apiKey, onPayload: payload => { input = (payload as { input: ResponseItem[] }).input; throw new Error("Stop before network"); },
 	}).result();
 	expect(response.errorMessage).toBe("Stop before network");
@@ -164,8 +167,8 @@ test("keeps an in-flight catalog snapshot when the registered command changes it
 	const previousDir = process.env.PI_CODING_AGENT_DIR;
 	process.env.PI_CODING_AGENT_DIR = agent;
 	configOverride.value = undefined;
-	const old = getBuiltinModel("openai-codex", "gpt-5.5")!;
-	const middle = getBuiltinModel("openai-codex", "gpt-5.6-sol")!;
+	const old = getTestModel("openai-codex", "gpt-5.5")!;
+	const middle = getTestModel("openai-codex", "gpt-5.6-sol")!;
 	const next = { ...middle, id: "gpt-5.6-terra" };
 	const sm = SessionManager.inMemory(root);
 	sm.appendMessage({ role: "user", content: "old task", timestamp: 1 });
@@ -200,8 +203,8 @@ test("keeps an in-flight catalog snapshot when the registered command changes it
 	}));
 	const payloadFor = async (selected: typeof middle) => {
 		let payload: Record<string, unknown> | undefined;
-		await streamSimple(selected, { messages: convertToLlm(sm.buildSessionProjection().messages) }, {
-			apiKey, onPayload: value => { payload = value; throw new Error("Stop before network"); },
+		await streamSimple(selected, normalizeContext({ messages: convertToLlm(sm.buildSessionProjection().messages) }), {
+			apiKey, onPayload: value => { payload = value as Record<string, unknown>; throw new Error("Stop before network"); },
 		}).result();
 		return payload;
 	};
@@ -277,15 +280,15 @@ test.each([
 	{ targetHash: "3000", transition: true },
 	{ targetHash: "2911", transition: false },
 ])("discovers a future model through the registered provider hook: %j", async ({ targetHash, transition }) => {
-	const previous = { ...getBuiltinModel("openai-codex", "gpt-5.5")!, contextWindow: 1_000_000 };
+	const previous = { ...getTestModel("openai-codex", "gpt-5.5")!, contextWindow: 1_000_000 };
 	const selected = { ...previous, id: "future-model" };
 	const sm = SessionManager.inMemory(process.cwd());
 	sm.appendMessage({ role: "user", content: "previous history", timestamp: 1 });
 	sm.appendModelChange(selected.provider, selected.id);
 	sm.appendMessage({ role: "user", content: "current task", timestamp: 2 });
 	let providerPayload: Record<string, unknown> | undefined;
-	await streamSimple(selected, { messages: convertToLlm(sm.buildSessionProjection().messages) }, {
-		apiKey, onPayload: value => { providerPayload = value; throw new Error("Stop before network"); },
+	await streamSimple(selected, normalizeContext({ messages: convertToLlm(sm.buildSessionProjection().messages) }), {
+		apiKey, onPayload: value => { providerPayload = value as Record<string, unknown>; throw new Error("Stop before network"); },
 	}).result();
 	const { handlers, ctx, appendEntry } = installExtension();
 	(ctx as any).sessionManager = sm;
@@ -337,10 +340,10 @@ test.each([false, true])("compacts a provider request and preserves its current 
 	const currentId = sm.appendMessage({ role: "user", content: edited ? "original task" : task, timestamp: 2 });
 	if (edited) sm.appendContextEdit(currentId, { content: task });
 	const prompt = "i".repeat(1_000);
-	const selectedModel = { ...getBuiltinModel("openai-codex", "gpt-5.6-sol")!, contextWindow: 1_000_000 };
+	const selectedModel = { ...getTestModel("openai-codex", "gpt-5.6-sol")!, contextWindow: 1_000_000 };
 	let providerPayload: Record<string, unknown> | undefined;
-	await streamSimple(selectedModel, { messages: [{ role: "system", content: prompt, timestamp: 0 }, ...convertToLlm(sm.buildSessionProjection().messages)] }, {
-		apiKey, onPayload: value => { providerPayload = value; throw new Error("Stop before network"); },
+	await streamSimple(selectedModel, normalizeContext({ messages: [{ role: "system", content: prompt, timestamp: 0 }, ...convertToLlm(sm.buildSessionProjection().messages)] }), {
+		apiKey, onPayload: value => { providerPayload = value as Record<string, unknown>; throw new Error("Stop before network"); },
 	}).result();
 	expect(providerPayload).toBeDefined();
 	expect(typeof providerPayload!.instructions).toBe("string");
@@ -383,13 +386,13 @@ test("automatically compacts a real provider payload after overlapping Pi summar
 	sm.appendCompaction("C1", first, 0);
 	sm.appendMessage({ role: "user", content: "U2", timestamp: 2 });
 	sm.appendCompaction("C2", first, 0);
-	const selectedModel = { ...getBuiltinModel("openai-codex", "gpt-5.6-sol")!, contextWindow: 1_000_000 };
+	const selectedModel = { ...getTestModel("openai-codex", "gpt-5.6-sol")!, contextWindow: 1_000_000 };
 	sm.appendModelChange(selectedModel.provider, selectedModel.id);
 	sm.appendMessage({ role: "user", content: "U3", timestamp: 3 });
 	const prompt = "i".repeat(1_000);
 	let providerPayload: Record<string, unknown> | undefined;
-	await streamSimple(selectedModel, { messages: [{ role: "system", content: prompt, timestamp: 0 }, ...convertToLlm(sm.buildSessionProjection().messages)] }, {
-		apiKey, onPayload: value => { providerPayload = value; throw new Error("Stop before network"); },
+	await streamSimple(selectedModel, normalizeContext({ messages: [{ role: "system", content: prompt, timestamp: 0 }, ...convertToLlm(sm.buildSessionProjection().messages)] }), {
+		apiKey, onPayload: value => { providerPayload = value as Record<string, unknown>; throw new Error("Stop before network"); },
 	}).result();
 	const { handlers, ctx, appendEntry } = installExtension();
 	(ctx as any).sessionManager = sm;
@@ -1292,7 +1295,7 @@ test.each([
 	expect(notice).toContain(`next=${nextStep}.`);
 });
 
-test.each(["manual", "threshold", "overflow"])("cancels %s compaction overflow without replacing the previous checkpoint", async (reason) => {
+test.each(["manual", "threshold", "overflow"] as const)("cancels %s compaction overflow without replacing the previous checkpoint", async (reason) => {
 	const branch = [
 		{
 			id: "old",

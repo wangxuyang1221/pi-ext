@@ -58,6 +58,14 @@ describe("MCP config loading", () => {
     expect(config?.mcpServers.remote).toMatchObject({ type: "http", url: "https://example.com/mcp" });
   });
 
+  it("accepts one leading BOM with JSONC but rejects an embedded BOM outside strings", () => {
+    writeConfig('\uFEFF{ // settings\n "mcpServers": { "local": { "command": "node" }, }, }');
+    expect(loadResult().status).toBe("loaded");
+    expect(loadResult().config?.mcpServers.local).toMatchObject({ command: "node" });
+    writeConfig('{\uFEFF"mcpServers":{}}');
+    expect(loadResult().status).toBe("invalid");
+  });
+
   it("loads typed timeout, retry, replay, logging, and file diagnostic settings", () => {
     writeConfig(JSON.stringify({
       diagnostics: { file: { enabled: true, path: join(cwd, "mcp.log"), maxBytes: 4096 } },

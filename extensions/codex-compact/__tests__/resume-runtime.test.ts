@@ -1,3 +1,4 @@
+import { createTestUi } from "../../../test-support/pi-ui.js";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -7,7 +8,7 @@ const host: typeof defaultHost = process.env.PI_CODEX_TEST_PI_ROOT
   ? await import(pathToFileURL(resolve(process.env.PI_CODEX_TEST_PI_ROOT, "dist/index.js")).href) : defaultHost;
 const { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } = host;
 import { InMemoryCredentialStore, InMemoryModelsStore } from "@earendil-works/pi-ai";
-import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
+import { getTestModel } from "./fixtures/models.js";
 import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
 import { streamSimple } from "@earendil-works/pi-ai/api/openai-codex-responses";
 import compact from "../src/index.js";
@@ -40,7 +41,7 @@ function response(index: number): Response {
 test.each(["goal", "user-after-abort", "goal-after-abort"])("continues %s through tool-triggered system updates without losing the checkpoint prefix", async kind => {
   const root = await mkdtemp(join(process.cwd(), ".goal-prefix-runtime-"));
   const manager = SessionManager.create(root, join(root, "sessions"));
-  const model = { ...getBuiltinModel("openai-codex", "gpt-5.5")!, compat: { supportsMidConvoSystemMessages: true, supportsAdditionalTools: true } };
+  const model = { ...getTestModel("openai-codex", "gpt-5.5")!, compat: { supportsMidConvoSystemMessages: true, supportsAdditionalTools: true } };
   manager.appendModelChange(model.provider, model.id);
   manager.appendMessage({ role: "system", content: "Initial prompt", toolsAdded: [{ name: "fixture_read", description: "Read offline data", parameters: { type: "object", properties: {} } }], timestamp: 1 });
   const kept = manager.appendMessage({ role: "user", content: "Earlier task", timestamp: 2 });
@@ -96,7 +97,7 @@ test.each(["goal", "user-after-abort", "goal-after-abort"])("continues %s throug
   });
   const timer = setTimeout(() => void session.abort(), 15000);
   try {
-    await session.bindExtensions({ mode: "tui", uiContext: { notify: text => notices.push(text), setStatus() {}, setWidget() {}, confirm: async () => false }, onError: error => errors.push(error) });
+    await session.bindExtensions({ mode: "tui", uiContext: { ...createTestUi(), notify: text => notices.push(text), setStatus() {}, setWidget() {}, confirm: async () => false }, onError: error => errors.push(error) });
     await session.prompt(kind === "user-after-abort" ? "Continue after interruption" : "/goal resume");
     await session.waitForIdle();
     expect(errors).toEqual([]);
@@ -114,7 +115,7 @@ test.each(["goal", "user-after-abort", "goal-after-abort"])("continues %s throug
     clearTimeout(timer);
     await session.abort();
     await session.waitForIdle();
-    await session.extensionRunner.emit({ type: "session_shutdown", reason: "exit" });
+    await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" });
     session.dispose();
     await rm(root, { recursive: true, force: true });
   }

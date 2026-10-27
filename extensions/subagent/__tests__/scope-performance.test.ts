@@ -19,7 +19,7 @@ test("ordinary listing reads the same owned records with 0, 100, and 10000 unrel
     await store.save(child);
     let probes = 0;
     const manager = new SubagentManager({ store, stateRoot: root, nativeSessionRoot: root, piPath: "pi", extensionPath: "/extension.js", environment: {},
-      runtime: { async launch() { throw new Error("unused"); }, async close() {}, async sendPrompt() {}, async capturePane() { return ""; }, async isAlive() { probes++; return true; } } });
+      runtime: { async capturePane() { throw new Error("Unexpected pane capture"); }, async launch() { throw new Error("unused"); }, async close() {}, async sendPrompt() {}, async isAlive() { probes++; return true; } } });
     await manager.list("root");
     const load = store.loadRuntime.bind(store);
     const reads: string[] = [];
@@ -60,7 +60,7 @@ test.each([true, false])("listing shared aliases probes once and reuses the pare
     await store.save(parent);
     let probes = 0;
     const manager = new SubagentManager({ store, stateRoot: root, nativeSessionRoot: root, piPath: "pi", extensionPath: "/extension.js", environment: {},
-      runtime: { async launch() { throw new Error("unused"); }, async close() {}, async sendPrompt() {}, async isAlive() { probes++; return alive; } } });
+      runtime: { async capturePane() { throw new Error("Unexpected pane capture"); }, async launch() { throw new Error("unused"); }, async close() {}, async sendPrompt() {}, async isAlive() { probes++; return alive; } } });
     await manager.claimNamespace("root");
     const load = store.loadRuntime.bind(store);
     let parentReads = 0;

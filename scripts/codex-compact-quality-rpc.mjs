@@ -2,7 +2,7 @@ import { createInterface } from "node:readline";
 
 /** Stdio client used only by the pinned CLI comparison, never by the extension. */
 export class LineRpc {
-  constructor(child, { record = () => {}, maxBytes = 64 * 1024 * 1024, serverHandlers = {}, serverRequestTimeoutMs = 60_000 } = {}) {
+  constructor(child, { record = (_row) => {}, maxBytes = 64 * 1024 * 1024, serverHandlers = {}, serverRequestTimeoutMs = 60_000 } = {}) {
     if (!Number.isFinite(serverRequestTimeoutMs) || serverRequestTimeoutMs <= 0) throw new Error("A finite positive server request timeout is required");
     if (Object.values(serverHandlers).some((handler) => typeof handler !== "function")) throw new Error("Invalid server request handler");
     this.serverRequestTimeoutMs = serverRequestTimeoutMs;

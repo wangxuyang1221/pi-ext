@@ -1,10 +1,12 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
-import type { ExtensionAPI, Theme, ToolDefinition, ToolRenderContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, Theme, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, type Component } from "@earendil-works/pi-tui";
 import { registerCodexTools } from "../src/tools.js";
 import { renderMcpToolCall, renderMcpToolResult } from "../../mcp/src/renderers.js";
+
+type ToolRenderContext = Parameters<NonNullable<ToolDefinition["renderCall"]>>[2];
 
 const glyph = (name: string) => ({ bash: "$", read: "@", edit: "~", write: "~", mcp: "⌁" })[name]!;
 const colors = { muted: 245, dim: 240, warning: 220, success: 82, error: 196, text: 252, toolOutput: 244, accent: 81 };
@@ -15,7 +17,7 @@ function theme(offset = 0): Theme {
     underline: (text: string) => `\x1b[4m${text}\x1b[24m`,
     getBgAnsi: () => "",
     getFgAnsi: () => "",
-  } as Theme;
+  } as unknown as Theme;
 }
 function tools(lowPower = false) {
   const registered: ToolDefinition[] = [];
@@ -25,7 +27,8 @@ function tools(lowPower = false) {
     on: (event: string, handler: Function) => handlers.set(event, [...(handlers.get(event) ?? []), handler]),
   } as unknown as ExtensionAPI, undefined, { isLowPowerEnabled: () => lowPower, getKeybindings: () => ({ getKeys: () => ["ctrl+o"] }) });
   registered.push({
-    name: "mcp",
+    name: "mcp", label: "MCP", description: "Fixture renderer", parameters: {type: "object", properties: {}},
+    execute: async () => { throw new Error("Unexpected execution"); },
     renderCall: (args, theme, ctx) => renderMcpToolCall(args, { serverName: "test", toolName: "query" }, theme, ctx),
     renderResult: renderMcpToolResult,
   } as ToolDefinition);
@@ -39,13 +42,13 @@ function tools(lowPower = false) {
 function row(tool: ToolDefinition, id = tool.name, initialTheme = theme()) {
   const args = { command: "printf hello", path: "src/目标.ts", content: "hello", edits: [] };
   const ctx = { args, state: {}, toolCallId: id, cwd: "/repo", executionStarted: false,
-    argsComplete: true, isPartial: true, isError: false, expanded: false, showImages: false,
+    durationMs: undefined, outputPad: 0, argsComplete: true, isPartial: true, isError: false, expanded: false, showImages: false,
     lastComponent: undefined, invalidate: vi.fn(),
   } as ToolRenderContext;
   let currentTheme = initialTheme;
   let call: Component | undefined;
   let result: Component | undefined;
-  let payload: { content: Array<{ type: "text"; text: string }>; details?: any } | undefined;
+  let payload: { content: Array<{ type: "text"; text: string }>; details: unknown } | undefined;
   const paint = () => {
     call = tool.renderCall!(args, currentTheme, { ...ctx, lastComponent: call });
     if (payload) result = tool.renderResult!(payload, { expanded: ctx.expanded, isPartial: ctx.isPartial }, currentTheme, { ...ctx, lastComponent: result });
@@ -55,7 +58,7 @@ function row(tool: ToolDefinition, id = tool.name, initialTheme = theme()) {
     ctx, paint,
     setTheme: (next: Theme) => { currentTheme = next; call?.invalidate(); result?.invalidate(); },
     resultContent: (content: Array<{ type: "text"; text: string }>, isError = false) => {
-      ctx.isPartial = false; ctx.isError = isError; payload = { content };
+      ctx.isPartial = false; ctx.isError = isError; payload = { content, details: undefined };
       return paint();
     },
     result: (text: string, isError = false, details?: any) => {

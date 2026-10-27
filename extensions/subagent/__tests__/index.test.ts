@@ -8,8 +8,8 @@ import * as roleLoader from "../src/roles.js";
 import type { ManagedTmuxRuntime } from "../src/manager.js";
 import { createSessionState, SessionStateStore as SourceStore } from "../src/state-store.js";
 
-const SessionStateStore = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/state-store.js")).SessionStateStore : SourceStore;
-const subagentExtension = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? (await import("../dist/index.js")).default : sourceExtension;
+const SessionStateStore: typeof SourceStore = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? ((await import("../dist/state-store.js")).SessionStateStore as unknown as typeof SourceStore) : SourceStore;
+const subagentExtension: typeof sourceExtension = process.env.PI_SUBAGENT_FIXTURE_DIST === "1" ? ((await import("../dist/index.js")).default as unknown as typeof sourceExtension) : sourceExtension;
 
 const eventNames = [
   "resources_discover",
@@ -93,6 +93,7 @@ test("wires the public tools to Pi session lifecycle events", async () => {
   const handlers = new Map<string, (...args: any[]) => unknown>();
   const tools: Array<{ name: string }> = [];
   const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
     async launch() { throw new Error("not used"); },
     async sendPrompt() {},
     async isAlive() { return true; },
@@ -264,6 +265,7 @@ test("fails fast when PI_SUBAGENT_MAX_ACTIVE is not a positive integer", () => {
     exec: vi.fn(),
   };
   const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
     async launch() { throw new Error("not used"); },
     async sendPrompt() {},
     async isAlive() { return true; },
@@ -293,6 +295,7 @@ test("keeps managed-child lifecycle hooks without registering orchestration tool
     async sendPrompt() {},
     async isAlive() { return true; },
     async close() {},
+    async capturePane() { throw new Error("Unexpected pane capture"); },
     async locatePane(paneId: string) {
       assert.equal(paneId, "%9");
       return {

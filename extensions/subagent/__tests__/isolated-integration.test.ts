@@ -1,3 +1,4 @@
+import { waitFor } from "../../../test-support/wait.js";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -15,11 +16,7 @@ const enabled = process.env.PI_SUBAGENT_ISOLATED_INTEGRATION === "1";
 const quote = (text: string) => `'${text.replaceAll("'", `'"'"'`)}'`;
 
 async function until(check: () => boolean | Promise<boolean>, timeout = 10_000): Promise<void> {
-  const deadline = Date.now() + timeout;
-  while (!await check()) {
-    if (Date.now() >= deadline) throw new Error("Timed out waiting for isolated fixture");
-    await delay(20);
-  }
+  await waitFor(check, Boolean, { label: "isolated fixture", timeoutMs: timeout });
 }
 
 test.skipIf(!enabled)("uses real Pi and an offline provider on an isolated tmux socket", async () => {
@@ -30,9 +27,9 @@ test.skipIf(!enabled)("uses real Pi and an offline provider on an isolated tmux 
   const tmuxWrapper = join(root, "tmux");
   const piWrapper = join(root, "pi");
   const compiled = process.env.PI_SUBAGENT_FIXTURE_DIST === "1";
-  const Store = compiled ? (await import("../dist/state-store.js")).SessionStateStore : SessionStateStore;
-  const Manager = compiled ? (await import("../dist/manager.js")).SubagentManager : SubagentManager;
-  const Runtime = compiled ? (await import("../dist/tmux-runtime.js")).TmuxRuntime : TmuxRuntime;
+  const Store: typeof SessionStateStore = compiled ? ((await import("../dist/state-store.js")).SessionStateStore as unknown as typeof SessionStateStore) : SessionStateStore;
+  const Manager: typeof SubagentManager = compiled ? ((await import("../dist/manager.js")).SubagentManager as unknown as typeof SubagentManager) : SubagentManager;
+  const Runtime: typeof TmuxRuntime = compiled ? ((await import("../dist/tmux-runtime.js")).TmuxRuntime as unknown as typeof TmuxRuntime) : TmuxRuntime;
   const store = new Store(join(root, "state"));
   const childPids = new Set<number>();
   const env = { PATH: process.env.PATH!, HOME: home, SHELL: "/bin/sh", TERM: "xterm-256color", LANG: "en_US.UTF-8",

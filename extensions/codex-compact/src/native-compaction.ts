@@ -1,6 +1,6 @@
 import { responseItemEstimationView } from "./response-item-estimation.js";
 import { createBranchProjectionSnapshot, type ProjectedBranchEntry } from "./session-projection.js";
-import { convertResponsesTools } from "./pi-responses.js";
+import { convertResponsesTools, getResponsesToolSupport } from "./pi-responses.js";
 import { setTimeout as sleep } from "node:timers/promises";
 import { isDeepStrictEqual } from "node:util";
 import { audioTokenCount, contentTokens, imageBytes, inlineAudioPayload, inlineImagePayload, textTokens, truncateImageMessage, truncateText } from "./token-estimation.js";
@@ -486,11 +486,12 @@ function toolResultOutput(message: JsonObject, model: Model<any>): unknown {
 		.flatMap((part) => isJsonObject(part) && part.type === "text" && typeof part.text === "string" ? [sanitizeUnicode(part.text)] : [])
 		.join("\n");
 	const images = content.filter((part) => isJsonObject(part) && part.type === "image");
+	const hasText = text.trim().length > 0;
 	if (images.length === 0 || !model.input.includes("image")) {
-		return text || (images.length > 0 ? "(see attached image)" : "(no tool output)");
+		return hasText ? text : (images.length > 0 ? "(see attached image)" : "(no tool output)");
 	}
 	return [
-		...(text ? [{ type: "input_text", text }] : []),
+		...(hasText ? [{ type: "input_text", text }] : []),
 		...images.flatMap((part) =>
 			typeof part.data === "string" && typeof part.mimeType === "string"
 				? [{ type: "input_image", detail: "auto", image_url: `data:${part.mimeType};base64,${part.data}` }]
@@ -579,6 +580,7 @@ function messagesToResponseItems(
 	tools: ToolInfo[],
 	skipMessages = 0,
 	sourceByMessage?: WeakMap<Message, string>,
+	restoreToolsKey?: string,
 ): ResponseInputView {
 	const retainedMessages = new Set(messages.slice(skipMessages));
 	const compat = model.compat as OpenAIResponsesCompat | undefined;
@@ -591,7 +593,8 @@ function messagesToResponseItems(
 	const supportsAdditionalTools = compat?.supportsAdditionalTools === true;
 	const supportsToolSearch = compat?.supportsToolSearch === true;
 	const supportsStrictMode = compat?.supportsStrictMode !== false;
-	const transcriptTools = resolveTranscriptTools(messages, supportsAdditionalTools || supportsToolSearch);
+	const toolSupport = getResponsesToolSupport({ ...compat, supportsAdditionalTools, supportsToolSearch });
+	const transcriptTools = resolveTranscriptTools(messages, toolSupport);
 	const pendingToolCalls = new Map<string, { callId: string; custom: boolean }>();
 	const normalizedToolCallIds = new Map<string, string>();
 	const grammarToolNames = new Set<string>();
@@ -609,24 +612,46 @@ function messagesToResponseItems(
 	let messageIndex = 0;
 
 	let sourceIndex = 0;
+	let systemIndex = 0;
+	let declaredAdditionalTools = false;
+	const unavailableTools = new Set<string>();
+	const instructionRole = model.reasoning && compat?.supportsDeveloperRole !== false ? "developer" : "system";
 	const retainedItems = new Set<number>();
 	for (const message of messages as unknown as JsonObject[]) {
 		const isLeadingSystemMessage = sourceIndex++ === 0 && message.role === "system";
 		const itemCountBefore = items.length;
 		if (message.role === "system") {
 			const system = message as unknown as SystemMessage;
-			if (!isLeadingSystemMessage) {
-				const additions = transcriptTools.anchorsAdditions ? (system.toolsAdded ?? []).map(tool => ({ ...tool, responseFormat: (toolsByName.get(tool.name) as ResponseToolInfo | undefined)?.responseFormat })) : [];
-				if (additions.length > 0 && supportsAdditionalTools) {
+			const anchorsToolChanges = systemIndex++ >= transcriptTools.foldedSystemMessages;
+			{
+				// Recorded declarations own their schema at this point in history. A later
+				// observed format must not overwrite an earlier same-name declaration.
+				const additions = anchorsToolChanges ? system.toolsAdded ?? [] : [];
+				for (const tool of additions) unavailableTools.delete(tool.name);
+				if (additions.length > 0 && toolSupport === "changes") {
+					if (declaredAdditionalTools) {
+						const notice = "This is an incremental tools update. Previously declared tools remain available unless explicitly marked unavailable. A tool declared again here is available again, and its latest definition replaces the earlier one.";
+						items.push({ role: instructionRole, content: unavailableTools.size > 0 ? `${notice}\nStill unavailable: ${[...unavailableTools].join(", ")}.` : notice });
+					}
+					declaredAdditionalTools = true;
 					items.push({ type: "additional_tools", role: "developer", tools: additions.map(tool => responseTool(tool, false, supportsStrictMode, supportsGrammar)) });
-				} else if (additions.length > 0 && supportsToolSearch) {
+				} else if (additions.length > 0 && toolSupport === "additions") {
 					const names = additions.map(tool => tool.name);
 					const callId = `pi_tool_load_${piShortHash(`system:${messageIndex}:${names.join(",")}`)}`;
 					items.push({ type: "tool_search_call", call_id: callId, execution: "client", status: "completed", arguments: { query: names.join(" "), limit: names.length } });
 					items.push({ type: "tool_search_output", call_id: callId, execution: "client", status: "completed", tools: additions.map(tool => responseTool(tool, true, supportsStrictMode, supportsGrammar)) });
 				}
-				const text = renderSystemMessageUpdate(system);
-				if (text) items.push({ role: model.reasoning && compat?.supportsDeveloperRole !== false ? "developer" : "system", content: sanitizeUnicode(text) });
+				if (!isLeadingSystemMessage) {
+					const parts = [renderSystemMessageUpdate(system)];
+					if (anchorsToolChanges) {
+						const added = new Set(additions.map(tool => tool.name));
+						const removed = (system.toolsRemoved ?? []).map(tool => tool.name).filter(name => !added.has(name));
+						if (removed.length) parts.push(`The following tools are no longer available. Do not call them:\n${removed.map(name => `- ${name}`).join("\n")}`);
+						for (const name of removed) unavailableTools.add(name);
+					}
+					const text = parts.filter(Boolean).join("\n\n");
+					if (text) items.push({ role: instructionRole, content: sanitizeUnicode(text) });
+				}
 			}
 		} else if (message.role === "user") {
 			flushOrphanedToolCalls();
@@ -716,6 +741,32 @@ function messagesToResponseItems(
 	flushOrphanedToolCalls();
 
 	const selectedItems: ResponseItem[] = [];
+	if (restoreToolsKey && skipMessages > 0 && toolSupport === "changes") {
+		// Encrypted compaction items retain conversation state, not executable tool
+		// declarations. Reintroduce the projected state at the checkpoint boundary.
+		const priorSystems = messages.filter(message => message.role === "system" && !retainedMessages.has(message));
+		const active = resolveTranscriptTools(priorSystems, "none").requestTools;
+		if (active.length > 0) selectedItems.push({ type: "additional_tools", role: "developer",
+			tools: active.map(tool => responseTool(tool, false, supportsStrictMode, supportsGrammar)) });
+		const activeNames = new Set(active.map(tool => tool.name));
+		const removed = [...new Set(priorSystems.flatMap(message => message.role === "system"
+			? (message.toolsRemoved ?? []).map(tool => tool.name) : []))].filter(name => !activeNames.has(name));
+		if (removed.length > 0) selectedItems.push({ role: instructionRole,
+			content: `The following tools are no longer available. Do not call them:\n${removed.map(name => `- ${name}`).join("\n")}` });
+	} else if (restoreToolsKey && skipMessages > 0 && toolSupport === "additions") {
+		// Folded definitions are already request-level tools. Only later pure loads
+		// lost to compaction need a new client-side search result.
+		let index = 0;
+		const additions = messages.flatMap(message => message.role === "system"
+			&& index++ >= transcriptTools.foldedSystemMessages && !retainedMessages.has(message) ? message.toolsAdded ?? [] : []);
+		if (additions.length > 0) {
+			const names = additions.map(tool => tool.name);
+			const callId = `pi_tool_restore_${piShortHash(`${restoreToolsKey}:${names.join(",")}`)}`;
+			selectedItems.push({ type: "tool_search_call", call_id: callId, execution: "client", status: "completed", arguments: { query: names.join(" "), limit: names.length } });
+			selectedItems.push({ type: "tool_search_output", call_id: callId, execution: "client", status: "completed",
+				tools: additions.map(tool => responseTool(tool, true, supportsStrictMode, supportsGrammar)) });
+		}
+	}
 	const selectedSources = new Map<number, string>();
 	for (let index = 0; index < items.length; index++) {
 		if (skipMessages > 0 && !retainedItems.has(index)) continue;
@@ -745,6 +796,7 @@ export function loadedToolNamesFromItems(items: ResponseItem[]): Set<string> {
 function projectedToResponseView(
 	model: Model<any>, projected: readonly ProjectedBranchEntry[], tools: ToolInfo[],
 	excludeIds: ReadonlySet<string>, beforeSourceIndex = 0, convertMessages: typeof convertToLlm = convertToLlm,
+	restoreToolsKey?: string,
 ): ResponseInputView {
 	const sourceByMessage = new WeakMap<Message, string>();
 	const messages: Message[] = [];
@@ -752,14 +804,14 @@ function projectedToResponseView(
 	for (const entry of projected) {
 		if (excludeIds.has(entry.sourceEntry.id)) continue;
 		const converted = convertMessages(entry.messages);
-		if (entry.sourceIndex < beforeSourceIndex) skipMessages += converted.length;
+		if (beforeSourceIndex > 0 && entry.sourceIndex < beforeSourceIndex) skipMessages += converted.length;
 		for (const message of converted) {
 			const owned = message.role === "user" ? { ...message } : message;
 			if (owned.role === "user") sourceByMessage.set(owned, entry.sourceEntry.id);
 			messages.push(owned);
 		}
 	}
-	return messagesToResponseItems(model, messages, tools, skipMessages, sourceByMessage);
+	return messagesToResponseItems(model, messages, tools, skipMessages, sourceByMessage, restoreToolsKey);
 }
 
 export function createBranchInputSnapshot(params: {
@@ -820,7 +872,7 @@ export function createBranchInputSnapshot(params: {
 				...lookup.checkpoint.details.replacementHistory.map((item) => structuredClone(item)),
 				...(lookup.checkpoint.details.preservedInput ?? []).map((item) => structuredClone(item)),
 			];
-			const tail = projectedToResponseView(model, transform(projection.fullHistory()), tools, excluded, lookup.checkpoint.entryIndex + 1, params.convertMessages);
+			const tail = projectedToResponseView(model, transform(projection.fullHistory()), tools, excluded, lookup.checkpoint.entryIndex + 1, params.convertMessages, lookup.checkpoint.entryId);
 			const sources = new Map([...tail.userSources].map(([index, id]) => [index + prefix.length, id]));
 			lookup.checkpoint.details.preservedInputSources?.forEach((source, index) => {
 				if (source && lookup.checkpoint.details.preservedInput?.[index]?.role === "user") sources.set(lookup.checkpoint.details.replacementHistory.length + index, source);

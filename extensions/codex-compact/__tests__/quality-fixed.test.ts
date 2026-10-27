@@ -11,7 +11,7 @@ const sha = (value: string) => createHash("sha256").update(value).digest("hex");
 function creationFixture(root: string) {
   const sourceWorkspace = path.join(root, "source"); fs.mkdirSync(sourceWorkspace);
   fs.writeFileSync(path.join(sourceWorkspace, "asset.bin"), Buffer.from([0, 255, 31]));
-  const plugins = Object.fromEntries(["old", "new"].map(arm => {
+  const plugins: Record<string, {directory: string; fingerprint: ReturnType<typeof fingerprintWorkspace>; piVersion?: string}> = Object.fromEntries(["old", "new"].map(arm => {
     const directory = path.join(root, arm); fs.mkdirSync(directory);
     fs.writeFileSync(path.join(directory, "remote-compaction.js"), `// ${arm}`);
     return [arm, { directory, fingerprint: fingerprintWorkspace(directory) }];
@@ -112,7 +112,7 @@ test("chains successive compactions through the preceding checkpoint, complete t
   const root = fs.mkdtempSync(path.join(process.cwd(), ".tmp/quality-chain-"));
   try {
     const sourceWorkspace = path.join(root, "source"); fs.mkdirSync(sourceWorkspace); fs.writeFileSync(path.join(sourceWorkspace, "source.txt"), "0");
-    const plugins = Object.fromEntries(["old", "new"].map(arm => { const directory = path.join(root, arm); fs.mkdirSync(directory); fs.writeFileSync(path.join(directory, "remote-compaction.js"), `// ${arm}`); return [arm, { directory, fingerprint: fingerprintWorkspace(directory) }]; }));
+    const plugins: Record<string, {directory: string; fingerprint: ReturnType<typeof fingerprintWorkspace>; piVersion?: string}> = Object.fromEntries(["old", "new"].map(arm => { const directory = path.join(root, arm); fs.mkdirSync(directory); fs.writeFileSync(path.join(directory, "remote-compaction.js"), `// ${arm}`); return [arm, { directory, fingerprint: fingerprintWorkspace(directory) }]; }));
     const executable = path.join(root, "codex"); fs.writeFileSync(executable, "test binary");
     const history = [{ type: "message", role: "user", content: [{ type: "input_text", text: "Initial task" }] }];
     const task = { id: "chain", independenceId: "one-repository", history, inputSha256: sha(JSON.stringify(history)), sourceWorkspace,

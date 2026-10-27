@@ -1,3 +1,4 @@
+import { fixtureToolInfo } from "../../../test-support/tool-info.js";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("node:timers/promises", () => ({
@@ -25,7 +26,7 @@ import { approximateResponseItemTokens, isContextWindowCompactionError, compacti
 afterEach(() => vi.useRealTimers());
 
 type RemoteRequest = Parameters<typeof callRemoteCompaction>[0];
-const remoteModel = { id: "gpt", provider: "openai-codex", api: "openai-codex-responses" } as never;
+const remoteModel = { id: "gpt", provider: "openai-codex", api: "openai-codex-responses" } as import("@earendil-works/pi-ai").Model<"openai-codex-responses">;
 const remoteRequest = (overrides: Partial<RemoteRequest> = {}): RemoteRequest => ({
 	url: "https://example.test/compact",
 	headers: new Headers(),
@@ -1349,7 +1350,7 @@ describe("Codex compaction history", () => {
 	});
 
 	test("matches Pi's deferred-tool capability and strict-mode shapes", () => {
-		const tool = { name: "lazy", description: "lazy tool", parameters: { type: "object", properties: {} } } as never;
+		const tool = { ...fixtureToolInfo, name: "lazy", description: "lazy tool", parameters: { type: "object", properties: {} } };
 		const branch = [
 			{
 				id: "tool-call",
@@ -1422,8 +1423,8 @@ describe("Codex compaction history", () => {
 	});
 
 	test("preserves checkpoint declarations without replaying obsolete addedToolNames", () => {
-		const lazyTool = { name: "lazy", description: "lazy tool", parameters: { type: "object", properties: {} } } as never;
-		const newTool = { name: "new", description: "new tool", parameters: { type: "object", properties: {} } } as never;
+		const lazyTool = { ...fixtureToolInfo, name: "lazy", description: "lazy tool", parameters: { type: "object", properties: {} } };
+		const newTool = { ...fixtureToolInfo, name: "new", description: "new tool", parameters: { type: "object", properties: {} } };
 		const prefix = {
 			type: "additional_tools",
 			role: "developer",
@@ -1473,6 +1474,7 @@ describe("Codex compaction history", () => {
 		});
 		expect(result.filter((item) => item.type === "additional_tools")).toEqual([
 			prefix,
+			{ type: "additional_tools", role: "developer", tools: [lazyTool, newTool].map(({ exposure, sourceInfo, ...tool }) => ({ ...tool, type: "function", strict: null })) },
 		]);
 	});
 

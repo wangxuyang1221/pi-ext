@@ -1,3 +1,5 @@
+import { waitFor } from "../../../test-support/wait.js";
+import { createTestUi } from "../../../test-support/pi-ui.js";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -16,9 +18,7 @@ const quote = (value: string) => `'${value.replaceAll("'", `'"'"'`)}'`;
 const enabled = process.env.PI_SUBAGENT_ISOLATED_INTEGRATION === "1";
 const entryType = "pi-fast-mode-session";
 async function until<T>(read: () => Promise<T>, accept: (value: T) => boolean, label: string): Promise<T> {
-  const deadline = Date.now() + 12000;
-  do { const value = await read(); if (accept(value)) return value; await new Promise(resolve => setTimeout(resolve, 30)); } while (Date.now() < deadline);
-  throw new Error(`Timed out: ${label}`);
+  return waitFor(read, accept, { label, timeoutMs: 12000, intervalMs: 30 });
 }
 const lines = async (path: string): Promise<any[]> => (await readFile(path, "utf8").catch(() => "")).trim().split("\n").filter(Boolean).map(line => JSON.parse(line));
 
@@ -75,7 +75,7 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
     ({ session } = await createAgentSession({ cwd: root, agentDir, settingsManager, sessionManager: SessionManager.open(rootFile, root), resourceLoader, modelRuntime, model: fixture.model as any, noTools: "builtin" }));
     const errors: string[] = [];
     const notifications: string[] = [];
-    await session.bindExtensions({ mode: "json", uiContext: { setStatus() {}, setWidget() {}, notify(message: string) { notifications.push(message); } }, onError: error => errors.push(JSON.stringify(error)) });
+    await session.bindExtensions({ mode: "json", uiContext: { ...createTestUi(), setStatus() {}, setWidget() {}, notify(message: string) { notifications.push(message); } }, onError: error => errors.push(JSON.stringify(error)) });
     session.setThinkingLevel("medium");
     assert.ok(notifications.some(message => /broken\.jsonc: fast must be a boolean/u.test(message)));
     const checkpoint = async (label: string, expected: string) => {
@@ -285,7 +285,7 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
     report.rootCatalog = (report.requests.root = await lines(join(home, "root-payload.jsonl")))[0].payload.tools.find((tool: any) => tool.name === "subagent_spawn");
     assert.match(report.rootCatalog.description, /ROOT_ONLY_ROLE_DESCRIPTION/u);
     assert.doesNotMatch(report.rootCatalog.description, /broken|project-only/u);
-    assert.deepEqual(errors, []);
+    assert.equal(errors.length, 0);
     for (const child of children.filter(child => !exited.has(child))) await quit(child);
     await checkpoint("all child shutdown hooks preserve shared config", nextRootOff);
     // Resume the saved child file without its original launch environment in a real host.
@@ -295,10 +295,10 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
         extensionFactories: [createPiFastModeExtension({ agentDir, extensionDir: root, env: {} })] });
       await resumedLoader.reload();
       ({ session: resumed } = await createAgentSession({ cwd: root, agentDir, settingsManager, sessionManager: SessionManager.open(child.sessionFile, root), resourceLoader: resumedLoader, modelRuntime, model: fixture.model as any, noTools: "builtin" }));
-      await resumed.bindExtensions({ mode: "json", uiContext: { setStatus() {}, setWidget() {} }, onError: error => errors.push(JSON.stringify(error)) });
+      await resumed.bindExtensions({ mode: "json", uiContext: { ...createTestUi(), setStatus() {}, setWidget() {} }, onError: error => errors.push(JSON.stringify(error)) });
       await resumed.prompt(`resumed-without-launch-${expected}`); await resumed.waitForIdle();
       assert.equal((await lines(join(home, "root-payload.jsonl"))).at(-1).payload.service_tier, expected ? "priority" : undefined);
-      await resumed.extensionRunner.emit({ type: "session_shutdown", reason: "exit" } as any);
+      await resumed.extensionRunner.emit({ type: "session_shutdown", reason: "quit" } as any);
       await checkpoint(`resume ${expected} without launch and shutdown preserve shared config`, nextRootOff);
       resumed.dispose(); resumed = undefined;
     }
@@ -307,8 +307,8 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
     assert.equal(rootRows[0].payload.service_tier, undefined);
     assert.equal(rootRows.find((row: any) => row.text.includes("child-explicit-off")).payload.service_tier, "priority");
     assert.equal(rootRows.find((row: any) => row.text.includes("child-inherited-off")).payload.service_tier, undefined);
-    assert.deepEqual(errors, []);
-    await session.extensionRunner.emit({ type: "session_shutdown", reason: "exit" } as any);
+    assert.equal(errors.length, 0);
+    await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" } as any);
     await checkpoint("root shutdown preserves its last switch", nextRootOff);
   } finally {
     await resumed?.abort(); resumed?.dispose(); await session?.abort(); session?.dispose();

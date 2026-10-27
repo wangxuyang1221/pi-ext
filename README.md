@@ -14,11 +14,11 @@
 ## Requirements
 
 - Node.js 22.19 或更高版本
-- 开发、测试和发布支持版本均为 Pi AI、Coding Agent、TUI `1.3.0`，三个 Pi peer 依赖精确固定为 `1.3.0`。只声明支持此版本，不承诺旧版或其他版本兼容。MCP 接入选择、共享 UI 和验证范围见 [MCP integration status](docs/native-mcp-migration.md)；旧版记录保留在 [infrastructure validation](docs/pi-0.99.1-infrastructure-validation.md)。
+- 开发、测试和发布只支持 Pi AI、Coding Agent、TUI `1.4.0`，三个 peer 依赖精确固定为该版本。
 - `subagent` 运行时需要 tmux 3.6 或兼容版本
 - 支持 24-bit color 的终端可获得最接近设计稿的颜色效果
 
-仓库在 Linux、macOS 和 Windows 上运行通用测试；`subagent` 的真实 child runtime 仅适用于可运行 tmux 的环境。运行入口是各扩展 `dist/` 目录中的 ESM 文件，Pi 启动时不需要转译 TypeScript 源码。
+CI 配置覆盖 Linux、macOS 和 Windows 的通用测试；`subagent` 的真实 child runtime 仅适用于可运行 tmux 的环境。运行入口是各扩展 `dist/` 目录中的 ESM 文件，Pi 启动时不需要转译 TypeScript 源码。
 
 ## Install
 
@@ -56,7 +56,7 @@ Pi package 以当前用户的完整系统权限运行。安装第三方 package 
 
 启用 codex-ui 时，footer 用两行显示目标和统计：目标预览，以及状态、分钟耗时、token 用量与可选预算。耗时显示 `<1m`、`12m`、`1h 05m`，只在累计耗时跨分钟时主动刷新，不运行秒级动画；状态和用量变化仍立即显示。未启用 codex-ui 时，通过 Pi 原生 footer 的单行状态显示同一份摘要，不接管 footer。
 
-`/goal` 详情显示打开时的精确秒数和用量快照，等待不会改变面板内容，关闭再打开才刷新。方向键和 PgUp/PgDn 滚动，`p` 暂停、`r` 恢复，仅在适用时显示；Esc 或 Enter 关闭，关闭本身不暂停。目标或会话已变时拒绝旧面板操作，需重新打开。存储异常、用量缺失和内容读取失败仍提供诊断；存储或工具恢复后使用 `/goal resume`。分钟显示不改变持久化频率、预算判定或 active 状态下的实际累计时间，不能把它理解为仅统计模型生成时间。实现与性能验收见 [Goal footer acceptance](docs/goal-footer-acceptance.md)。
+`/goal` 详情显示打开时的精确秒数和用量快照，等待不会改变面板内容，关闭再打开才刷新。方向键和 PgUp/PgDn 滚动，`p` 暂停、`r` 恢复，仅在适用时显示；Esc 或 Enter 关闭，关闭本身不暂停。目标或会话已变时拒绝旧面板操作，需重新打开。存储异常、用量缺失和内容读取失败仍提供诊断；存储或工具恢复后使用 `/goal resume`。分钟显示不改变持久化频率、预算判定或 active 状态下的实际累计时间，不能把它理解为仅统计模型生成时间。
 
 在持久化交互 TUI 中使用 `/goal <objective>` 创建目标、`/goal` 打开详情面板、`/goal clear` 清除。替换未完成目标需要确认，新目标重新计数。只有整个 trimmed 参数等于控制词时才按控制词处理，因此 `/goal pause now` 是目标文本。`/goal edit` 编辑目标且保留统计，`/goal pause` 暂停，`/goal resume` 显式恢复并解除继承门禁。执行范围为持久化交互 TUI 中的 root 会话。goal 复用 Pi 当前已选模型，不按 provider 名称限制。内置 provider、`models.json` 私有模型和扩展注册的 provider 均须支持普通 function tools，并履行 Pi 消息与终止事件契约。URL、API key 与鉴权仍由 Pi 管理，goal 不增加凭据配置或任意私有协议适配。无工具模型、不合规 adapter、非 TUI、临时会话和子会话不能保证 goal 执行。模型切换不会自行启动新请求。
 
@@ -78,7 +78,7 @@ Pi 原生粘贴图片会在编辑器中插入 `pi-clipboard-<UUID>.<ext>` 临时
 
 每次编辑生成独立不可变内容包，继承的旧快照不被修改。失败只清理本次且确认未提交的包，不确定提交保留文件供修复。成功保存的旧包不会随 edit、replace 或 clear 自动删除，以免损坏继承和历史引用；备份目标时需包含整个 `goals/`。状态通过 Pi `setStatus` 展示，未加载 codex-ui 时使用默认 footer；加载后在原 codex-ui footer 下增加目标行，不替换原 editor/footer。
 
-三个模型工具为 `get_goal`、`create_goal`、`update_goal`，工具描述与三个模板固定于 Codex main `b348fc26674189f758d5941cdab3f78f258b2aa7`。`update_goal` 允许用户明确要求的 paused，不允许模型自行决定暂停；返回实际持久状态，预算耗尽不被 pause/blocked 覆盖。完成、blocked、usage_limited 和 paused 都不会自动续跑。模型运行中 Esc 会暂停；原生重试等待中 Esc 取消后按 C12 记为 blocked，保留目标与统计，可用 `/goal resume` 恢复。关闭编辑或确认弹窗不会暂停。先等待 Pi 完成适用的重试与压缩恢复；最终 settled 仍为 length、deferred 或普通不可恢复错误时，仍 active 的目标转 blocked，保留目标供 `/goal resume`。中途失败后成功不会被旧异常停止。普通错误不覆盖 budget_limited，明确账户余额、订阅或用量额度耗尽可转 usage_limited。裸 429、含糊 billing、认证与网络错误不视为账户额度耗尽。goal 不自行网络重试、提高输出上限或取回 deferred 结果。写入或权威检查失败后停止自动推进，修复存储后显式 resume。
+三个模型工具为 `get_goal`、`create_goal`、`update_goal`，工具描述与三个模板固定于 Codex main `b348fc26674189f758d5941cdab3f78f258b2aa7`。`update_goal` 允许用户明确要求的 paused，不允许模型自行决定暂停；返回实际持久状态，预算耗尽不被 pause/blocked 覆盖。完成、blocked、usage_limited 和 paused 都不会自动续跑。模型运行中 Esc 会暂停；原生重试等待中 Esc 取消后记为 blocked，保留目标与统计，可用 `/goal resume` 恢复。关闭编辑或确认弹窗不会暂停。先等待 Pi 完成适用的重试与压缩恢复；最终 settled 仍为 length、deferred 或普通不可恢复错误时，仍 active 的目标转 blocked，保留目标供 `/goal resume`。中途失败后成功不会被旧异常停止。普通错误不覆盖 budget_limited，明确账户余额、订阅或用量额度耗尽可转 usage_limited。裸 429、含糊 billing、认证与网络错误不视为账户额度耗尽。goal 不自行网络重试、提高输出上限或取回 deferred 结果。写入或权威检查失败后停止自动推进，修复存储后显式 resume。
 
 Goal 提示采用 Codex CLI 的历史保留方式：新工作回合记录一次提示，后续工具调用和重试不重新生成。已投递的续跑、预算与循环警告消息保留原文和位置，由统一压缩处理；目标编辑、暂停、清除或 `/reload` 不过滤旧提示，压缩后也不动态补插。只有当前运行实例仍在排队的失效请求会被取消，历史提示本身不会触发取消。运行中编辑通过 steer 在当前工具批次后送达新目标；空闲编辑启动一次。连续三个已接纳的自动续跑若 final 空白且整轮没有文本、reasoning、工具或外部活动，目标变为 blocked；显式用户工作不计入，该保护独立于重复工具检测。
 
@@ -90,13 +90,9 @@ Goal 提示采用 Codex CLI 的历史保留方式：新工作回合记录一次�
 
 可选配置为 `getAgentDir()` 目录下的 `goal.json`，例如 `{"maxGoalTokenBudget": 100000}`。扩展只读取，不创建或修改此配置。最大预算必须是正安全整数；配置上限同时作为创建时未指定预算的默认值，模型显式预算不能超限。未配置且未显式指定则无上限。非法配置阻止新建，修正后 `/reload`；`/goal --budget 100` 仍是目标文本，不是预算参数。
 
-加载本仓库 subagent 时，为根目标投递的直接子代理任务也计入同一预算。归属在投递前登记，子代理按请求捕获归属并上报累计值；根检查点去重，重复读取活动不重复收费。子代理关闭后报告保留供检查点和恢复使用，替换目标后旧报告不计入新目标。paused、blocked、usage_limited、complete 后冻结目标统计；预算收尾继续计费至结束。停止期 child 报告只推进 baseline，恢复前先 checkpoint，不补收冻结期间已观察到的增量。例如该来源已计 10，停止后报告 50，目标仍计 10；恢复前基线为 50，恢复后报告 60，只追加 10。边界按报告观察时点结算，无法按真实发生时间拆分尚未报告的用量，也无法还原 provider 未暴露的失败请求或服务端消耗。主代理使用 activation fence，暂停前发起的响应不因恢复而重新收费。暂停目标不会杀子代理。显式继承复制累计统计，但不订阅源会话的子代理。C13 保留 root → direct child，不支持孙代理或第三方代理计费；managed child 不安装独立 goal 工具或循环。
+加载本仓库 subagent 时，为根目标投递的直接子代理任务也计入同一预算。归属在投递前登记，子代理按请求捕获归属并上报累计值；根检查点去重，重复读取活动不重复收费。子代理关闭后报告保留供检查点和恢复使用，替换目标后旧报告不计入新目标。paused、blocked、usage_limited、complete 后冻结目标统计；预算收尾继续计费至结束。停止期 child 报告只推进 baseline，恢复前先 checkpoint，不补收冻结期间已观察到的增量。例如该来源已计 10，停止后报告 50，目标仍计 10；恢复前基线为 50，恢复后报告 60，只追加 10。边界按报告观察时点结算，无法按真实发生时间拆分尚未报告的用量，也无法还原 provider 未暴露的失败请求或服务端消耗。主代理使用 activation fence，暂停前发起的响应不因恢复而重新收费。暂停目标不会杀子代理。显式继承复制累计统计，但不订阅源会话的子代理。计费范围为 root → direct child，不支持孙代理或第三方代理计费；managed child 不安装独立 goal 工具或循环。
 
-当前支持范围、预算限制与复现入口见 [Goal provider support](docs/goal-provider-support.md)。多 provider 的完整交付证据见 [Spec audit](https://github.com/wangxuyang1221/pi-ext/blob/adventure/goal-all-providers/adventure/evidence/slice-3-spec-audit.md)。离线协议代表样本不等同于全部远端 provider 或模型的端到端实测。非空纯文本续跑不新增次数上限，既有空响应、重复工具与连续执行失败保护保留。
-
-以下为此前基线验收记录。研究排名 1–7、9 的历史实现及验收见 [Goal parity acceptance](docs/goal-parity-acceptance.md)，其中旧 provider 白名单不再作为当前限制。
-
-#4 至 #9 的基础存储、生命周期、执行、预算、直接子代理和附件/UI 已由协调者验收。Pi 0.84.3/0.85.1 的实际 SDK、受管 OS 子进程和 InteractiveMode PTY 使用离线原生 adapter 或 faux provider 夹具，不包含付费在线调用，不宣称断电零丢失。受管子进程使用真实 tmux transport 与子端 CLI，IPC 夹具仅作补充；根端使用 SDK，原生根 TUI 输入另有 PTY 矩阵。最终工作区集成结果、准确基准和未执行项见 [Goal integration acceptance](docs/goal-integration-acceptance.md)，是否通关以协调者独立验收为准。分项证据见 [Goal attachments and UI acceptance](docs/goal-ui-acceptance.md)、[Goal direct child accounting](docs/goal-descendant-acceptance.md)、[Goal budget acceptance](docs/goal-budget-acceptance.md)、[Goal execution report](docs/goal-execution-report.md)、[Goal storage acceptance](docs/goal-storage-acceptance.md) 与 [Goal lifecycle acceptance](docs/goal-lifecycle-acceptance.md)。
+根目标与直接子代理的离线记账验收使用 `pnpm run host:accounting:check`。预算只包含宿主实际暴露的用量，不代表所有远端 provider 的端到端实测结果。
 
 ## Codex Compact extension
 
@@ -137,7 +133,7 @@ Codex encrypted compaction item.
 
 有效窗口默认为原始窗口的 95%，用于调度判断和压缩请求的工具输出裁剪预算。`effectiveContextWindowPercent` 接受大于 0 且不超过 100 的有限数值；若模型配置里的窗口已经扣除了余量，可设为 100，避免重复扣除。这个配置不会改变默认 90% 自动压缩阈值，也不会修改 Pi 自身的压缩调度。本地估算超窗不再直接阻止远端压缩，最终由服务端判断。
 
-插件观察到成功普通回复且历史覆盖边界仍有效时，自动压缩使用服务端 total usage 加未覆盖增量；模型、分支、前缀或检查点变化时回退本地估算。多媒体估算、特殊轮次边界及完整 Rust 差分尚未全部对齐；加载在本扩展之后的 payload 转换也无法完整观测。默认测试不依赖历史在线实验材料，也不以本地估算证明服务端 90% 阈值；报告重建入口见 [质量报告脚本](scripts/codex-compact-quality-development-report.mjs)。
+插件观察到成功普通回复且历史覆盖边界仍有效时，自动压缩使用服务端 total usage 加未覆盖增量；模型、分支、前缀或检查点变化时回退本地估算。多媒体与特殊轮次估算使用固定版本 Rust 参考向量作差分校验。加载在本扩展之后的 payload 转换无法完整观测；本地估算不代表服务端精确 tokenization，也不证明线上压缩质量。
 
 压缩请求超过有效窗口时，扩展仍可裁剪工具输出，但不再丢弃旧 user turn 后只压缩最新一段；服务端明确拒绝完整历史时会直接失败，不提交新 checkpoint，也不进入额外的超窗恢复循环。诊断保留原始错误分类，`recoveryAttempted` 为 `false`；网络重试及 Pi 普通请求超窗后发起压缩的流程不变。保留历史的 64k 预算计入图片，并原子保留或删除图片及相邻标签。文本边界采用 UTF-8 首尾保留截断。Pi 发起压缩时，如系统提示已改变，扩展会刷新缓存指令。
 
@@ -145,11 +141,13 @@ Codex encrypted compaction item.
 
 当前 V2 路径不消费 `/compact focus text` 的 focus text，也不执行分段压缩。
 
-Pi 1.3.0 的 active projection、pending tool calls 期间的 system 顺序，以及 function/grammar item ID 规则已对齐。待发送的真实 user entry 与随后 custom context 按来源一起保留；已经执行过的历史仍受 retention 预算约束。新 checkpoint 保存可选的 `preservedInputSources`，不以文本相同合并两次提交。请求开始时固定历史、工具、提示词和模型；远程等待期间这些信息变化会取消提交，并保留旧 checkpoint。
+Pi 1.4.0 的初始和增量 `additional_tools`、工具移除与重声明提示、纯空白工具输出、active projection、pending tool calls 期间的 system 顺序，以及 function/grammar item ID 规则已对齐。待发送的真实 user entry 与随后 custom context 按来源一起保留；已经执行过的历史仍受 retention 预算约束。新 checkpoint 保存可选的 `preservedInputSources`，不以文本相同合并两次提交。请求开始时固定历史、工具、提示词和模型；远程等待期间这些信息变化会取消提交，并保留旧 checkpoint。
+
+恢复 encrypted checkpoint 后会重新声明边界处仍可用的工具，随后应用后续工具更新。服务端压缩不保留可执行工具声明；该恢复避免压缩后模型失去工具，同时继续遵守隐藏与移除规则。
 
 旧 V2 checkpoint 缺少来源字段时，只有完整 preserved 后缀及 retained user 都能唯一映射到原始 entry，才允许继续压缩。旧保留区含无法映射的截断副本、重复来源或缺失后缀时，取消本次压缩，保留旧 checkpoint，并报告 `preserved_input_source_unproven`。请求失败后提交新输入时，失败输入与请求 payload 使用同一冻结标记清理，完整投影校验继续生效。
 
-历史明文的 64k tokens 现在是上限。实际预算还要扣除新 opaque、待发送输入、instructions 和 tools，并在截断后复查；最多 16 次本地调整，不会为满足本地估算截断本次输入。同一请求最多执行一次本地估算触发的远程修复，写入 checkpoint 不重置次数；Pi 对真实 overflow 另保留一次 compact-and-retry。仅因本地估算偏高且自动压缩失败，不禁止正常 provider 尝试。认证、策略和明确的 context-window 错误仍按原分类结束。
+历史明文上限为 64k tokens。实际预算还要扣除新 opaque、待发送输入、instructions 和 tools，并在截断后复查；最多 16 次本地调整，不会为满足本地估算截断本次输入。同一请求最多执行一次本地估算触发的远程修复，写入 checkpoint 不重置次数；Pi 对真实 overflow 另保留一次 compact-and-retry。仅因本地估算偏高且自动压缩失败，不禁止正常 provider 尝试。认证、策略和明确的 context-window 错误仍按原分类结束。
 
 同 hash 的模型窗口下切与 automatic 压缩共用这一次本地容量修复，修复失败或写入 checkpoint 都不重置额度；不同 hash 所需的协议迁移独立处理。自动压缩的真实 HTTP 401/403 会终止当前请求，空正文、读取超时、超限或读取失败都不会让原请求继续发送。
 
@@ -165,7 +163,7 @@ Pi 1.3.0 的 active projection、pending tool calls 期间的 system 顺序，�
 
 使用隐藏声明时列出实际隐藏的工具名；使用强制提示词时再提供非空字符串 `forcedPrompt`，例如 `{"manualProjection":{"hiddenTools":["internal_tool"],"forcedPrompt":"Your exact forced prompt"}}`。这是受控投影契约，配置必须与扩展实际规则保持一致。Pi 在回合结束后会恢复基础 system prompt，因此不能用布尔开关让插件从 `getSystemPrompt()` 猜出之前的 forced prompt。无工具配置可以直接压缩；信息不足时只取消本次压缩并报告原因。会话、历史、工具或提示词变化会使观察快照失效。
 
-非成功 HTTP 响应的 body 使用固定 300 秒总时限和 1 MiB 诊断上限，持续收到 chunk 不会延长时限。读取不完整时不允许模型 fallback；401/403 和无法区分 quota 的 429 不重试，503 保持最多两次额外 HTTP retry。成功 SSE 仍使用原有 idle timeout。离线验收和边界见 [repair todo](docs/codex-compact-plugin-repair-todo.md)。
+非成功 HTTP 响应的 body 使用固定 300 秒总时限和 1 MiB 诊断上限，持续收到 chunk 不会延长时限。读取不完整时不允许模型 fallback；401/403 和无法区分 quota 的 429 不重试，503 保持最多两次额外 HTTP retry。成功 SSE 仍使用原有 idle timeout。
 
 不要同时加载本扩展和独立的 `npm:@yeungkc/pi-codex-compact@0.0.6`，否则同一组 hooks 会执行两次。迁移现有安装时，应先验证本 package，再从 Pi settings 停用独立 npm entry 并重启或 reload。
 
@@ -208,7 +206,7 @@ managed child 的 Fast 开关保存在自己的 Pi session 中，不写上述共
 
 流式输出逐步显示已收到的内容，生成工具参数、执行工具和 `message_end` 不切换为另一套思考显示规则。取消、失败和恢复会话仍显示已收到的内容。引用块的斜体、颜色和换行沿用 Pi 原生样式，不添加自定义 ANSI 样式。`Ctrl+T`、隐藏占位及消息 padding 保持原生行为，隐藏时仍显示 `Thinking...`，结束时不自动改变用户的隐藏选择。转换只影响显示，不修改 session 原文、模型上下文或请求参数，也无法增加服务端没有返回的思考内容。
 
-完整思考会占用更多终端行，流式增长和 resize 可能推动下方工具内容，不保证单行高度。普通回复仍使用原有外层列表，工具及其他 UI 不变。实现不依赖原型、宿主 hook 或 Pi 私有组件。更新后请重启 Pi 并恢复会话，不要只依赖 `/reload` 更新模块。
+完整思考会占用更多终端行，流式增长和 resize 可能推动下方工具内容，不保证单行高度。普通回复仍使用原有外层列表，工具及其他 UI 不变。更新后请重启 Pi 并恢复会话，不要只依赖 `/reload` 更新模块。
 
 离线终端验收加载构建后的生产扩展，使用固定消息验证原生折叠、流式更新及 resize，不调用真实模型：
 
@@ -225,17 +223,17 @@ Write / Edit 从参数生成到执行结束前，都显示黄色静态 `~ Writin
 
 Write / Edit 的 diff 显示层在高亮和背景填充之前移除回车及原始终端控制序列，避免 CRLF 行被补齐空格擦空。CSI 按完整终结字符范围识别，光标序列后紧接的源码保持完整；OSC 等字符串控制序列若到行尾仍未闭合，则隐藏该行剩余 payload，不延伸到下一源码行。磁盘内容和持久化 patch 保持原样。
 
-Write diff 采集限制为旧、新文本各 1 MiB，合计 4000 行，保存的 patch 不超过 2 MiB。不可读或超限时保留真实成功标题，普通模式显示 `Diff unavailable`，不编造增删数。Write / Edit 每行只高亮前 4096 个 UTF-16 单元，其余内容保留。已通过 Pi 0.84.3 与 0.85.1 的普通、全屏 CLI 验收；测试及性能边界见 [Write / Edit validation](docs/codex-ui-write-edit-validation.md)。
+Write diff 采集限制为旧、新文本各 1 MiB，合计 4000 行，保存的 patch 不超过 2 MiB。不可读或超限时保留真实成功标题，普通模式显示 `Diff unavailable`，不编造增删数。Write / Edit 每行只高亮前 4096 个 UTF-16 单元，其余内容保留。
 
 ### Codemode call tree
 
-Pi 1.3.0 的 codemode 使用调用树显示。收起时预览前 5 项并标出剩余数量，按 `app.tools.expand` 的实际绑定展开，默认 `Ctrl+O`。兄弟调用按开始顺序排列，多层调用保留父子归属。Read/Bash 沿用现有正文布局，Edit/Write 在捕获数据足够时显示原有 diff；未知工具和模型辅助调用使用通用摘要。
+Pi 1.4.0 的 codemode 使用调用树显示。收起时预览前 5 项并标出剩余数量，按 `app.tools.expand` 的实际绑定展开，默认 `Ctrl+O`。兄弟调用按开始顺序排列，多层调用保留父子归属。Read/Bash 沿用现有正文布局，Edit/Write 在捕获数据足够时显示原有 diff；未知工具和模型辅助调用使用通用摘要。
 
 父脚本完成不表示所有子调用成功。被脚本捕获的失败仍显示警告，第 5 项以后的失败也不会被隐藏。中断、超时和缺失状态分别说明；状态未知不推断为成功，也不暗示此前文件修改已经回滚。`Output to model` 显示脚本返回给模型的内容，子工具原始结果另行展示。
 
 `/inspect` 打开当前分支最近一次 codemode。`Tab` / `Shift+Tab` 切换 Calls、Script、Output，上下键选择调用，翻页键滚动，取消键关闭；面板提示使用当前快捷键绑定。宽屏分栏，窄屏只显示所选详情。原始结果仅在本进程有界缓存中保留，不新增持久化；重启、切换分支、reload 或 compaction 后只重建宿主保留的元数据，缺失正文、参数或 diff 会明确提示。图片只提供占位，不缓存二进制预览。
 
-显示层最多保留 32 个父记录、每父 1024 项、合计 4096 个子项；原始子结果和派生布局各按 4 MiB 预算淘汰。超过预算只影响 UI 详情，不改变执行结果。`/lowpower on` 将子项正文改为短预览。生产入口只提供调用树，不提供原型的布局切换和测试命令。契约、预算及验收见 [Codemode validation](docs/codex-ui-codemode-validation.md)，复验命令为 `pnpm run codemode:check`。
+显示层最多保留 32 个父记录、每父 1024 项、合计 4096 个子项；原始子结果和派生布局各按 4 MiB 预算淘汰。超过预算只影响 UI 详情，不改变执行结果。`/lowpower on` 将子项正文改为短预览。
 
 ### Tool execution settings
 
@@ -257,7 +255,7 @@ SDK 内存覆盖、自定义 settings 存储和宿主自定义执行器不在自
 
 转换只改变 TUI 显示，不修改会话原文或模型上下文，不修改上游 Pi、私有组件或全局 `outputPad`。`/copy` 使用原始回复文本；终端选择复制会包含显示出的列表标记、缩进和换行。thinking、工具卡片、编辑器以及原生取消和错误提示保持现状。
 
-流式更新与历史恢复使用同一规则，不增加刷新计时器或历史扫描。列表排版仍有额外成本，实测和边界见 [Reply list implementation](docs/plans/codex-ui-reply-list.md)。更新后请重启 Pi 并恢复会话，不要只依赖 `/reload` 加载新版代码。
+流式更新与历史恢复使用同一规则，不增加刷新计时器或历史扫描。更新后请重启 Pi 并恢复会话，不要只依赖 `/reload` 加载新版代码。
 
 ### Output alignment
 
@@ -279,7 +277,7 @@ SDK 内存覆盖、自定义 settings 存储和宿主自定义执行器不在自
 
 ### Theme persistence
 
-Pi 0.84.3 会在 session replacement 和 reload 完成后重新应用 theme setting。`codex-ui` 的裸 `pi` 兼容兜底使用非持久的 `ThemeObject`，它只改变当前内存主题，不会替换保存的 setting。因此，当全局 theme 仍为 `dark` 时，首次启动可以显示 Codex 配色，但 `/new`、`/resume`、`/fork` 或 `/reload` 后会重新变为 `dark`。这不是终端配色漂移。
+Pi 会在 session replacement 和 reload 完成后重新应用 theme setting。`codex-ui` 的裸 `pi` 兼容兜底使用非持久的 `ThemeObject`，它只改变当前内存主题，不会替换保存的 setting。因此，当全局 theme 仍为 `dark` 时，首次启动可以显示 Codex 配色，但 `/new`、`/resume`、`/fork` 或 `/reload` 后会重新变为 `dark`。这不是终端配色漂移。
 
 如果希望所有普通 `pi` 会话默认使用 Codex 配色，请在 `/settings` 中选择 `codex-pi`，或将 `~/.pi/agent/settings.json` 设置为：
 
@@ -311,25 +309,25 @@ pi-codex() {
 
 工具前缀按用途区分：Bash 使用 `$`、Read 使用 `@`、Edit/Write 使用 `~`，codex-search 的普通搜索使用 `⌕`，所有 MCP 调用统一使用 `⌁`。标记后一个空格，工具标题加粗且起始列对齐。参数生成、可见等待态和执行中统一黄色，成功使用主题 muted 灰色，失败红色；可靠识别的中断或超时用黄色并保留诊断。subagent 的六类调用使用 `󱙺`，即 Nerd Font 的 `nf-md-robot_outline`，成功灰色、等待及运行黄色、失败红色，wait 超时或中断黄色；agent 自身状态配色不变。该图标需要包含 U+F167A 的 Nerd Font，缺字可能显示方框，不提供自动字体检测或回退。goal 及非 MCP 的独立浏览器操作 UI 保持原样。标记只随执行事件变化，不增加计时器、旋转或闪烁。Read、Bash 保留原生分组，Edit、Write、MCP 仍是独立调用，不新增 batch 卡片。
 
-Bash、Read、MCP 的正常正文统一使用 `text`，在 codex-pi 主题中为原 Bash 的亮灰 `#d6d6d6`。目录、行号、连接线与截断提示仍弱化，文件名强调色及 diff 增删色不变。未全局修改 `toolOutput`，因此 subagent、默认工具卡片和 MCP 连接状态不受影响。完整与低功耗模式均支持，低功耗 Bash 仍需展开查看正文。实现及验收见 [Tool status acceptance](docs/tool-status-acceptance.md)，正式代码的隔离 PTY 验收命令为 `pnpm run tool-status:check`。
+Bash、Read、MCP 的正常正文统一使用 `text`，在 codex-pi 主题中为原 Bash 的亮灰 `#d6d6d6`。目录、行号、连接线与截断提示仍弱化，文件名强调色及 diff 增删色不变。未全局修改 `toolOutput`，因此 subagent、默认工具卡片和 MCP 连接状态不受影响。完整与低功耗模式均支持，低功耗 Bash 仍需展开查看正文。
 
-`read`、`edit`、`write`、`bash` 使用 Pi 1.3.0 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。full 模式下，每个已执行调用显示一条 `$ Bash(command)`，`Bash` 文字仍与 `Read`、`Edited` 对齐。尚未执行的 pending 调用暂不显示，错误或完成结果不会被隐藏。内部仍按同一 assistant 消息中的连续 Bash 维护归属，不跨 text、thinking、其他工具、缺失组件或消息合并；重复 ID 的额外组件独立显示。发现重复时，已绑定的旧成员保持原位，尚未绑定该 ID 的组件不再接管 candidate，因而旧 low-power 或缺失组件不能成为后来 full 行搬移旧命令的入口。取消旧统计标题、命令树和耗时列。长命令默认按当前宽度单行省略，展开保留完整命令及逻辑换行。
+`read`、`edit`、`write`、`bash` 使用 Pi 1.4.0 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。full 模式下，每个已执行调用显示一条 `$ Bash(command)`，`Bash` 文字仍与 `Read`、`Edited` 对齐。尚未执行的 pending 调用暂不显示，错误或完成结果不会被隐藏。内部仍按同一 assistant 消息中的连续 Bash 维护归属，不跨 text、thinking、其他工具、缺失组件或消息合并；重复 ID 的额外组件独立显示。发现重复时，已绑定的旧成员保持原位，尚未绑定该 ID 的组件不再接管 candidate，因而旧 low-power 或缺失组件不能成为后来 full 行搬移旧命令的入口。取消旧统计标题、命令树和耗时列。长命令默认按当前宽度单行省略，展开保留完整命令及逻辑换行。
 
 默认预览前三个终端显示行，超出时显示精确的 `… +N lines` 和实际展开绑定。正常正文使用 `text` 色，输出前缀灰色，失败正文红色；已核验的取消与超时使用警告色。无输出时分别显示 `Running…`、`(No content)` 或 `Command failed`。只在宿主明确标记失败且尾部诊断匹配时，才把退出码、取消或超时诊断提到预览首行，不根据日志中的 `Error` 判断失败。
 
 全局 `app.tools.expand` 默认绑定 `Ctrl+O`，原位展开全部已捕获输出，保留原有空行和宿主错误原文；执行完成不覆盖展开选择。截断提示保持可见，包括宿主失败结果丢失 details 后保留在文本中的截断 footer；不读取 `fullOutputPath` 补齐输出，也不把捕获内容称为完整日志。缓存按调用内容版本、宽度和样式失效，未变化调用不重复清理、计数或着色。full-mode Bash 不再创建耗时刷新计时器；low-power 保留原有有界轻量展示。
 
-更新后请重启 Pi 并恢复会话，确保加载新版代码；不要仅凭 `/reload` 成功判断旧进程已完成代码升级。分组只改变显示，不重新执行 Bash，也不修改持久化结果或用户 `!` Bash。当前契约、真实 CLI 和性能验证记录见 [Claude-style Bash implementation checklist](docs/plans/codex-ui-claude-bash.md#results)。
+更新后请重启 Pi 并恢复会话，确保加载新版代码；不要仅凭 `/reload` 成功判断旧进程已完成代码升级。分组只改变显示，不重新执行 Bash，也不修改持久化结果或用户 `!` Bash。
 
-Read 在同一 assistant 消息内按调用顺序合并相邻读取，不跨 text、thinking、其他工具或消息边界。每个文件显示不加粗的主题 `accent` 文件名、暗灰目录和实际返回范围，默认附最多三屏幕行预览及余量提示。预览每行最多提取 512 个 UTF-16 代码单元，长行裁剪而不换行。全局 `app.tools.expand` 快捷键展开完整输入路径和最多 40 行源码，再次按键恢复短预览。错误、取消和续读提示保留；图片及归属不明的调用独立显示，避免宿主附件与文件名错位。分组不改执行、权限或持久化结果，不提供原型的配色与布局切换命令。双版本验证及预览开销见 [Read UI validation](docs/research/codex-ui-read-validation.md)。
+Read 在同一 assistant 消息内按调用顺序合并相邻读取，不跨 text、thinking、其他工具或消息边界。每个文件显示不加粗的主题 `accent` 文件名、暗灰目录和实际返回范围，默认附最多三屏幕行预览及余量提示。预览每行最多提取 512 个 UTF-16 代码单元，长行裁剪而不换行。全局 `app.tools.expand` 快捷键展开完整输入路径和最多 40 行源码，再次按键恢复短预览。错误、取消和续读提示保留；图片及归属不明的调用独立显示，避免宿主附件与文件名错位。分组不改变执行、权限或持久化结果。
 
-Read 分组按会话来源维护，显示组件重建不会被算成重复调用。唯一 ID 的历史及本轮已完成 Read 在真实历史重建、`/reload` 后仍保持分组；旧组件回调不能覆盖逻辑结果。结果按流式更新、执行结束、最终消息的优先级递进，采用 codex-ui 已收到的 `message_end` 修订，不被迟到的执行事件覆盖。Pi 0.86.0 的 `Ctrl+T` 本身已不重建工具行，本次另行验证了实际重建路径。tree 和压缩后只使用当前可见历史，普通工具事件直接更新受影响记录，不重新扫描全部历史。
+Read 分组按会话来源维护，显示组件重建不会被算成重复调用。唯一 ID 的历史及本轮已完成 Read 在真实历史重建、`/reload` 后仍保持分组；旧组件回调不能覆盖逻辑结果。结果按流式更新、执行结束、最终消息的优先级递进，采用 codex-ui 已收到的 `message_end` 修订，不被迟到的执行事件覆盖。tree 和压缩后只使用当前可见历史，普通工具事件直接更新受影响记录，不重新扫描全部历史。
 
 真实重复 ID 使用各行本地参数和结果，不共享歧义数据，也不修正宿主自身按 ID 复用行的限制。图片、缺失来源/结果、从未绑定的视图仍断开分组。已接受的边界是：公开接口没有行卸载通知，插件不检测宿主无通知移除曾绑定视图的情况；不为此读取私有组件列表或增加轮询。
 
 Footer 使用 ` ⋅ ` 分隔，并按 `model thinking ⋅ fast ⋅ cwd ⋅ git:branch ⋅ Context N% left ⋅ permissions` 排列。model 与 thinking 使用 Codex CLI 的 `#f6e2b7`，context 使用 `#f2b590`，Fast Mode 使用 `#c8a9ee`。终端变窄时会先缩短或移除 cwd 和 branch，再将 context 缩成 `N% left`；降级允许跳过等宽或更宽的中间变体，单字符目录也能显示可容纳的截断分支。model、context 和 permissions 保留到最后。
 
-Footer 首行消费 `pi-openai-fast-mode` 和 `permissions` 两个稳定 status。有 `goal` status 时在第二行显示目标状态，内容变化使缓存失效，清除后移除第二行，首行布局不变。MCP、压缩进度、low-power 和其他临时 status 不显示。内置的 `openai-fast-mode` 不再创建 below-editor widget。由于 Pi 0.84.3 没有公开 weekly quota 数据源，本 profile 不显示 weekly quota。
+Footer 首行消费 `pi-openai-fast-mode` 和 `permissions` 两个稳定 status。有 `goal` status 时在第二行显示目标状态，内容变化使缓存失效，清除后移除第二行，首行布局不变。MCP、压缩进度、low-power 和其他临时 status 不显示。内置的 `openai-fast-mode` 不再创建 below-editor widget。本 profile 不显示 weekly quota。
 
 Ghostty 的窗口透明度、blur、字体和 titlebar 仍由 Ghostty 配置负责。Pi cell 只使用不透明 ANSI 颜色。
 
@@ -344,88 +342,17 @@ pi \
 
 ## MCP extension
 
-本 package 默认加载仓库 MCP 插件，由它管理连接、工具执行和 `/mcp`。MCP 渲染与文本清理模块维护在 codex-ui 中，仓库插件通过薄适配层复用；无需启用 codex-ui 扩展本身。当前不安装内置 MCP 的专用 UI 适配器。
+本 package 默认加载仓库 MCP 插件，负责连接、工具执行和 `/mcp`。它与 codex-ui 共用渲染模块，但无需启用 codex-ui 扩展本身。
 
-Pi 1.3.0 中可在 `~/.pi/agent/settings.json` 顶层 `extensions` 数组追加以下禁用项，避免每次启动提示 `/mcp` 替代内置实现：
+在 Pi 的 `settings.json` 顶层 `extensions` 数组中合入 `"-builtin:mcp"`，可避免内置 MCP 与本插件重复加载的提示。不要覆盖已有扩展配置；修改后重启 Pi。
 
-```json
-{
-  "extensions": ["-builtin:mcp"]
-}
-```
+服务器配置支持 stdio、Streamable HTTP 和 legacy SSE。使用 `PI_MCP_CONFIG`、受信任项目的 `.pi/mcp.json` 或全局 `~/.pi/agent/mcp.json`，按此顺序选择第一个存在的文件。配置错误不会回退到较低优先级文件。
 
-这是需要合并的配置片段，不要覆盖其他扩展设置。确保 package 设置未排除 `extensions/mcp/dist/index.js`，修改后重启 Pi。此项仅禁用内置 MCP，不关闭 Codemode。以下服务器配置使用仓库插件的格式，超时单位为毫秒，不是内置 MCP 的秒值。
+常用命令为 `/mcp status`、`/mcp reload`、`/mcp reconnect <server>`、`/mcp logs [server]` 和 `/mcp-init`。连接可以自动恢复，工具调用默认不自动重放。超时单位为毫秒，与 Pi 内置 MCP 配置不同。
 
-在项目中创建 `.pi/mcp.json`，或在全局创建 `~/.pi/agent/mcp.json`。配置支持 JSON comments、trailing commas，以及 `stdio`、`streamable-http`、`http` 兼容别名和 legacy `sse` transport。
+历史工具可在离线时恢复显示，但历史占位不能执行；实时执行始终使用当前服务器的工具定义。工具 text 输出最多 50 KiB、2000 行，超限内容不另存为完整日志。
 
-```jsonc
-{
-  "mcpServers": {
-    "filesystem": {
-      "type": "stdio",
-      "command": "pnpm",
-      "args": ["dlx", "@modelcontextprotocol/server-filesystem", "."],
-      "connectTimeout": 30000,
-      "requestTimeout": 60000,
-      "maxRequestTimeout": 120000,
-      "retry": {
-        "maxAttempts": 3,
-        "baseDelayMs": 500,
-        "factor": 2,
-        "maxDelayMs": 5000,
-        "background": true
-      },
-      "toolReplay": "never"
-    },
-    "remote": {
-      "type": "streamable-http",
-      "url": "https://example.com/mcp",
-      "headers": {
-        "Authorization": "Bearer YOUR_API_KEY"
-      }
-    }
-  },
-  "diagnostics": {
-    "file": {
-      "enabled": false,
-      "path": ".pi/logs/mcp.jsonl",
-      "maxBytes": 1048576
-    }
-  }
-}
-```
-
-`connectTimeout` 是初始化、首次工具发现、前台重试和等待共用的总 deadline。`requestTimeout` 控制单次请求；当 `maxRequestTimeout` 更大时，progress notification 可以重置 request timer，但仍受该外层硬总上限约束。Timeout 或取消会关闭当前 transport，以终止仍在进行的 HTTP fetch，且不会重放原调用。旧 `timeout` 仍兼容，并在新字段缺省时分别作为 connect/request fallback。
-
-连接默认最多尝试 3 次，采用 500 ms 起步、因子 2、单次上限 5 s 的 full jitter。HTTP `Retry-After` 优先，但最多等待 5 min。临时网络错误、408、429、部分 5xx 与 520–527 可重试；认证、配置和确定性协议错误不会重试。前台 deadline 耗尽后可在后台有界恢复；可用 `/mcp reconnect <server>` 取消该 server 的后台等待并立即发起单 server 重连。
-
-工具调用自动重放默认关闭。`toolReplay: "read-only"` 只允许初始 catalog 与重连后的最新 catalog 都明确带有 `annotations.readOnlyHint === true`、且 route 所有者未变化的工具最多重放一次；该 annotation 来自服务器，不能替代对服务器和工具副作用的审查。
-
-传给模型的 MCP text 与序列化非 text 内容合计限制为 50 KiB、2000 行，最多序列化 24 个非 text block；`details` 中的 structured output 也限制为 50 KiB。超限 raw 输出不会自动落盘。工具提示会要求 agent 缩小结果或使用 server pagination；需要完整数据时应按服务端 cursor/page/limit 分段获取。
-
-MCP 成功结果默认显示最多五个视觉行的明亮正文，连接线与末尾截断标记 `...` 弱化；所有工具使用灰色成功前缀 `⌁`，不显示 Completed、类型或字节摘要。Ctrl+O 展开详情，正文亮度一致，仍受展示上限约束。失败保留红色错误正文；能匹配本扩展宿主诊断的取消、超时显示黄色及 `Interrupted`、`Timed out` 提示。服务器返回的普通错误文字不据此改判状态。仓库 MCP 无需启用 codex-ui 扩展，但通过薄适配层复用其构建出的渲染和文本清理模块；样式只在 `extensions/codex-ui/src/mcp-renderers.ts` 维护。图标不按工具名或服务名分类，新调用与恢复的历史记录统一使用 `⌁`；无法明确拆分的历史工具名仍按完整名称显示，不改变身份判定。
-
-MCP 历史独立于连接恢复显示。冷恢复扫描全部分支；进程内 resume/import/fork/clone/reload 通过短寿命、仅含显示 identity 的交接文件提前注册 renderer。`/resume` 按 64 KiB 块异步扫描目标 JSONL，不再限制整个会话为 64 MiB；单条记录仍限制为 64 MiB，最多保留 4096 个不同工具身份，单个名称最多 1024 字节。扫描期间文件变化、JSONL 损坏、非普通文件及符号链接会使恢复失败，且不发布不完整交接数据。
-
-历史占位始终拒绝执行，实时 discovery 仍使用当前 schema；离线时停用实时工具，但已排队的实时调用保留原有安全重连路径。首次从没有交接 hook 的旧版本部署时，请重启 Pi 后恢复会话。用户级安装可跨 cwd 恢复；项目级插件在目标 cwd 不再加载、host 明确过滤工具定义或历史读取失败时，可能显示默认样式。大会话及 Codex 前缀修复的验收见 [Session resume fixes](docs/session-resume-fixes-todo.md)。
-
-内存 diagnostics 使用每服务器有界 ring buffer，并对控制字符、常见凭据和过长字段进行清理。文件日志默认关闭；启用后写入有界 JSONL，并保留一个 `.1` 轮转备份。Stdio stderr 使用 pipe 捕获到 diagnostics，不直接写入 Pi 终端。脱敏是降低风险的措施，不是保存或分享日志的安全保证。
-
-可用命令：
-
-```text
-/mcp status
-/mcp reload
-/mcp reconnect <server>
-/mcp logs [server]
-/mcp-init
-```
-
-`/mcp-init` 创建项目配置；修改配置或删除已注册工具后使用 `/mcp reload`。MCP 配置可以启动进程、携带 headers 并暴露有副作用的工具，应把 `.pi/mcp.json` 视为可执行配置，只信任已审查的项目，并且不要提交凭据。
-
-Exa hosted MCP 推荐直接使用 `https://mcp.exa.ai/mcp` 的 Streamable HTTP transport。Free plan 面向 casual use，匿名请求受当前 rate limit 政策约束；production 可通过 `x-api-key` header 配置 API key。不要在文档或配置中假定固定额度，也不要把 `mcp-remote` 作为原生远程连接故障的首选修复。
-
-完整配置、Exa tool selection、诊断边界和排错流程见 [`extensions/mcp/README.md`](extensions/mcp/README.md)。
+完整配置示例、超时与重试规则、历史恢复、展示上限和排错方法见 [MCP 使用说明](extensions/mcp/README.md)。
 
 ## Subagent extension
 
@@ -472,7 +399,7 @@ managed child 仍加载 lifecycle hooks 并写入 runtime state，但不注册 s
 
 Child 启动会等待交互初始化完成的 readiness 握手，并按 `provider/model` 中的 provider 传递 Pi 已知的 API key 环境变量，例如 DeepSeek 的 `DEEPSEEK_API_KEY`。其他 provider 的 key 不会一并传入。凭证通过独立的 `0700` 临时目录及 `0600` 文件交接，child 读取后删除文件，父进程在完成或失败时清理目录；凭证不写入 tmux 命令参数、launch metadata 或 session。`auth.json` 仍由 Pi 读取，落盘凭证优先级不变。此环境映射不包含自定义 provider 的任意变量、AWS/ADC 等 ambient authentication 配置；这些配置不能视为已自动继承。
 
-对于有有效投递标识的空闲 child，认证预检查明确拒绝时返回 `delivery_rejected`，区分无模型、认证不可用和认证解析失败。回执绑定 delivery、process 和 session 身份，不记录 provider 原始异常，以免泄漏凭证。配置正常的认证不会因此重复解析。Pi 0.86 扩展接口没有通用提交失败事件；其他提交前拦截、超时或未得到可靠结果的情况仍返回 `delivery_unconfirmed`。这两类失败均不会自动重发任务。
+对于有有效投递标识的空闲 child，认证预检查明确拒绝时返回 `delivery_rejected`，区分无模型、认证不可用和认证解析失败。回执绑定 delivery、process 和 session 身份，不记录 provider 原始异常，以免泄漏凭证。配置正常的认证不会因此重复解析。其他提交前拦截、超时或未得到可靠结果的情况仍返回 `delivery_unconfirmed`。这两类失败均不会自动重发任务。
 
 当前投递协议只支持 Pi 默认的 `Ctrl+C` 清空、`Enter` 提交和 `Alt+Enter` follow-up 键位。自定义 keybindings、替换 editor 的 extension，以及同一 window 内增加 pane 不在兼容范围内。
 
@@ -501,7 +428,7 @@ root TUI 提交 `/quit` 时，扩展先查询当前 session namespace。没有�
 
 该选择只接入 root TUI 的 `/quit` submit。Ctrl+D、SIGHUP、SIGTERM、SIGKILL、进程崩溃和其他没有经过选择的退出路径不会调用 close-all；child 和原生 session 数据保持原状，之后仍须通过 namespace owner 与 runtime identity 核验才能恢复控制。managed child、RPC、JSON 和 print 模式不安装退出选择。session replacement 或 reload 会作废旧 context 中尚未完成的退出流程。
 
-扩展要求当前 parent 使用持久化 Pi session；`--no-session` 模式下工具会明确拒绝。默认管理快照位于 Pi agent directory 的 `subagents/sessions/<sessionId>/state.json`。parent 控制事实与 child 生命周期分开写入，跨进程锁保护更新；同一 namespace 只允许一个管理控制者。状态协议已升级到 v3，升级前必须关闭旧 child、停止旧写入者。离线转换、回退、环境契约和超时边界见 [runtime reliability](docs/subagent-runtime-reliability.md)。可使用以下环境变量：
+扩展要求当前 parent 使用持久化 Pi session；`--no-session` 模式下工具会明确拒绝。默认管理快照位于 Pi agent directory 的 `subagents/sessions/<sessionId>/state.json`。parent 控制事实与 child 生命周期分开写入，跨进程锁保护更新；同一 namespace 只允许一个管理控制者。状态协议已升级到 v3，升级前必须关闭旧 child、停止旧写入者。可使用以下环境变量：
 
 ```text
 PI_SUBAGENT_MAX_ACTIVE
@@ -530,51 +457,20 @@ PI_SUBAGENT_TMUX_PATH
 
 ## Development
 
+使用 `packageManager` 指定的 pnpm 版本安装依赖。修改 `src/` 和对应测试，构建生成 `dist/`。
+
 ```bash
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm run check
 ```
 
-`pnpm run check` 包含八个发布扩展及独立 codex-search 的类型检查、离线测试、构建、包校验，以及源码和构建入口的真实宿主加载检查。测试使用仓库内的临时 HOME、agentDir 和缓存目录，不读取用户的 Pi 配置。加载检查还确认本仓库 `/mcp` 替换 builtin MCP 的警告与实际加载结果。
+`check` 包含八个发布扩展及 codex-search 的类型检查、测试类型检查、离线测试、构建、包校验和源码/dist 宿主加载。codex-search 在仓库内维护，但不在当前发布和自动加载清单中。
 
-`pnpm test` 只继承必要系统变量和明确列出的离线验收开关，不透传 AWS/OpenAI/Google 认证环境或外部 Pi 会话路径。Unix 普通 worker 使用独占进程组，正常退出或可处理的取消会先确认组内进程停止，再删除隔离目录；无法确认时保留目录并失败。此路径已在 macOS 验证。Windows 使用 Job Object，但 Linux/Windows 尚无本轮实跑证据；PTY 新会话和私有 tmux server 仍由各自夹具清理，不在普通进程组取消保证内。
+测试命令、Unix 宿主验收、环境隔离和 CI 覆盖统一见 [Testing](docs/testing.md)。`pnpm run pi14:live` 是单独的联网入口，会产生真实服务端用量，不属于默认检查。
 
-0.99.1 历史主检查曾连续三次完整通过，`2644 passed / 13 skipped`；此记录不代表 1.3.0 的验收结果。Write 测试按宿主转换契约验收；wrapper 对退出探测中的暂时 EPERM 继续有界等待，只有确认进程组不存在后才删除目录。Fast 和 Goal 测试已修正，accounting 整组此前通过；SDK 取消后不自动执行排队输入的兼容性差异仍保留，tmux 空锁暂未处理。当前结果与平台限制见 [main check validation](docs/pi-0.99.1-main-check-validation.md)。
-
-常用命令：
-
-```bash
-pnpm run typecheck
-pnpm run web-search:typecheck
-pnpm test
-pnpm run build
-pnpm run package:check
-pnpm run host:check
-pnpm pack --dry-run
-pnpm run prototype:tui
-pnpm run prototype:subagent-ui
-```
-
-真实宿主验收在 macOS 或 Linux 上单独运行，需要 tmux、`conda` 的 `codex-py312` 环境和 `pyte`。先构建，随后串行执行，避免另一项构建清理正在使用的 `dist/`：
-
-```bash
-pnpm run build
-pnpm run host:tmux:check
-pnpm run host:accounting:check
-pnpm run host:pty:check
-pnpm run host:benchmark:check
-```
-
-这些入口记录仓库宿主及相关 Pi 包的实际版本，隔离配置和凭据，并调用各驱动的清理逻辑；不保证强杀驱动后仍能回收脱离进程组的资源。tmux 入口覆盖源码与构建实现。CI 保留 Linux、macOS、Windows 的通用检查矩阵；上述 Unix 专用验收不加入 Windows 的默认检查。跳过的测试不能算作通过，也不要同时运行多个会清理构建产物的验收入口。已有失败和未运行项见 [infrastructure validation](docs/pi-0.99.1-infrastructure-validation.md)。
-
-新的 fixed-boundary 质量评估必须在 `specification.plugins.old.piVersion` 和 `specification.plugins.new.piVersion` 中明确指定宿主版本。历史基线使用 `0.99.1`；1.3.0 需要单独指定版本并重新生成证据。直接调用 `runPluginCompaction()` 时传入 `expectedPiVersion`。未指定版本的历史冻结入口仍要求 `0.87.0`；worker 会拒绝不匹配的宿主，结果记录实际版本。旧质量分数不作为新版基线，历史报告不重写。默认验收不运行付费请求。
-
-仓库不提交 `dist/`、编译缓存或本地运行日志。CI 从源码构建，并检查是否有被忽略的文件仍受 Git 跟踪。`extensions/codex-compact/src/media/` 中的预编译 WASM、manifest、许可证和第三方源码包是普通构建的输入，继续纳入版本控制；普通构建只校验并复制这些资源，不调用 Rust。`prepack` 会重建八个扩展，发布包只包含编译产物、theme、README、goal 验收报告、license 和上游 attribution。包同时包含 MIT 本地实现与 Apache-2.0 的 Codex goal 复制内容，metadata 使用 `MIT AND Apache-2.0`；具体文件归属见 `extensions/goal/UPSTREAM.md`、`LICENSE` 和 `NOTICE`，不把上游内容改授 MIT。
-
-验证本地工作区后，可安装解包目录，不必先发布到注册表：
+本地验证后可打包安装：
 
 ```sh
-pnpm run check
 pnpm pack --pack-destination .scratch/release
 mkdir -p .scratch/release/unpacked
 tar -xzf .scratch/release/pi-ext-0.1.0.tgz -C .scratch/release/unpacked
@@ -583,48 +479,20 @@ pnpm --dir .scratch/release/unpacked/package install --frozen-lockfile --prod --
 pi install "$(pwd)/.scratch/release/unpacked/package"
 ```
 
-`pi install` 本地目录只记录路径，不复制目录或安装依赖。保持解包目录不动，重启 Pi 后从包 manifest 加载七个入口；正常安装会写当前用户的 Pi settings。已有安装不要重复加载同一插件。验收脚本另使用仓库内隔离 HOME/agent，不改真实配置。
-
-`pnpm run prototype:tui` 启动 Codex、Claude、Hybrid 三套一次性 HTML 原型。生产 extension 只实现 Codex 方向，另外两套原型保留供后续使用。
+`prepack` 重建八个扩展。发布包包含编译产物、主题、README、许可证和来源说明，不包含测试、历史验收报告或日志。`pi install` 引用本地目录并写入用户设置，不复制目录；安装后须保留该目录，重启 Pi 加载八个入口。
 
 ## Layout
 
-```text
-extensions/
-  codex-compact/
-    src/
-    __tests__/
-    dist/
-    LICENSE
-    UPSTREAM.md
-  openai-fast-mode/
-    src/
-    __tests__/
-    dist/
-    LICENSE
-    UPSTREAM.md
-  codex-ui/
-    src/
-    __tests__/
-    dist/
-  mcp/
-    src/
-    __tests__/
-    dist/
-  permissions/
-    src/
-    __tests__/
-    dist/
-  subagent/
-    src/
-    __tests__/
-    dist/
-themes/
-  codex-pi.json
-scripts/
-prototypes/
-```
+- `extensions/<name>/src/`：扩展实现。
+- `extensions/<name>/__tests__/`：单元测试及真实宿主的离线夹具。
+- `extensions/<name>/dist/`：构建产物，不提交。
+- `test-support/`：测试环境、UI 和文件操作等共享 helper。
+- `scripts/`：构建、验收、参考向量生成与质量评估工具。
+- `themes/`：主题。
+- `docs/`：测试说明与仓库语言规则。
 
 ## License
 
-MIT
+本地代码采用根目录 [MIT 许可证](LICENSE)。随包内容还包含适用 Apache-2.0、MPL-2.0 和 Unicode-3.0 等许可证的组件，package metadata 为 `(MIT AND Apache-2.0 AND MPL-2.0 AND Unicode-3.0)`。
+
+具体来源与适用范围见 [Codex Compact](extensions/codex-compact/UPSTREAM.md)、[Goal](extensions/goal/UPSTREAM.md) 和各扩展的 LICENSE、NOTICE。媒体模块的第三方许可证及对应源码随 `dist/media/` 发布；其维护规则见 [媒体模块说明](extensions/codex-compact/src/media/README.md)。

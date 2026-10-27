@@ -9,10 +9,26 @@ import { runCliCompaction } from "./codex-compact-quality-cli.mjs";
 import { runContinuation } from "./codex-compact-quality-continuation.mjs";
 
 const sha = value => createHash("sha256").update(value).digest("hex");
+/**
+ * Only replacement history is consumed by the scheduler. Adapter-specific evidence
+ * stays in its output and may differ between the CLI, plugin, and test fixtures.
+ * @typedef {{replacementHistory: unknown[], usage: unknown}} CompactionOutput
+ * @type {{
+ *   plugin: (options: Parameters<typeof runPluginCompaction>[0]) => Promise<CompactionOutput>,
+ *   cli: (options: Parameters<typeof runCliCompaction>[0]) => Promise<CompactionOutput>,
+ *   continuation: (options: Parameters<typeof runContinuation>[0]) => Promise<Partial<Awaited<ReturnType<typeof runContinuation>>>>
+ * }}
+ */
 const defaults = { plugin: runPluginCompaction, cli: runCliCompaction, continuation: runContinuation };
 
+/**
+ * @param {{directory: string, specification: object, credentials: object, send: Function,
+ * adapters?: typeof defaults, shouldStop?: () => boolean, onProcess?: (resource: object) => Promise<void>,
+ * requestTimeoutMs?: number, retry?: {sourceDirectory: string, retryJobIds: string[], reason: string, executorFingerprints?: Record<string,string>}}} options
+ */
 export async function runFixedBoundary({ directory, specification, credentials, send, adapters = defaults,
-  shouldStop, onProcess, requestTimeoutMs = 300_000, retry }) {
+  shouldStop = () => false, onProcess = async (_resource) => {}, requestTimeoutMs = 300_000,
+  retry = /** @type {{sourceDirectory: string, retryJobIds: string[], reason: string, executorFingerprints?: Record<string,string>} | undefined} */ (undefined) }) {
   directory = assertRunDirectory(directory);
   const config = structuredClone(specification);
   assert.equal(config.model, "gpt-5.6-sol", "Unsupported fixed-boundary model");

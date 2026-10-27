@@ -8,8 +8,8 @@ import { WorkspaceTools, continuationTools, creationContinuationTools, validateC
 import { parseContinuationResponse } from "./codex-compact-quality-response.mjs";
 
 export async function runContinuation({ directory, sourceWorkspace, expectedWorkspaceFingerprint,
-  initialHistory, instructions, request, allowedPaths, send, signal, requestTimeoutMs = 300_000,
-  model = "gpt-5.6-sol", effort = "medium", toolDefinitions, createPaths = [], captureFinalState = false }) {
+  initialHistory, instructions, request, allowedPaths, send, signal = /** @type {AbortSignal | undefined} */ (undefined), requestTimeoutMs = 300_000,
+  model = "gpt-5.6-sol", effort = "medium", toolDefinitions = /** @type {typeof continuationTools | undefined} */ (undefined), createPaths = /** @type {string[]} */ ([]), captureFinalState = false }) {
   validateCreatePaths(allowedPaths, createPaths);
   allowedPaths = [...allowedPaths]; createPaths = [...createPaths];
   const supportedTools = createPaths.length ? creationContinuationTools : continuationTools;
@@ -50,6 +50,10 @@ export async function runContinuation({ directory, sourceWorkspace, expectedWork
     if (!parsed.calls.length) {
       const after = fingerprintWorkspace(workspacePath);
       const changedPaths = Object.keys({ ...expectedWorkspaceFingerprint, ...after }).filter(name => expectedWorkspaceFingerprint[name] !== after[name]);
+      /** @type {{status: string, answer: string, requests: number, usageRecords: unknown[], tools: unknown[],
+       * changedPaths: string[], scopePassed: boolean, elapsedMs: number, inputHistorySha256: string,
+       * workspacePath: string, humanReview: string,
+       * finalState?: {historyPath: string, historySha256: string, workspacePath: string, workspaceFingerprint: Record<string,string>}}} */
       const result = { status: "completed", answer: parsed.answer, requests: usageRecords.length, usageRecords,
         tools: toolRuntime.events, changedPaths, scopePassed: changedPaths.every(name => allowedPaths.includes(name)),
         elapsedMs: performance.now() - started, inputHistorySha256, workspacePath, humanReview: "pending" };

@@ -1,3 +1,4 @@
+import { waitFor } from "../../../test-support/wait.js";
 import assert from "node:assert/strict";
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { once } from "node:events";
@@ -214,8 +215,7 @@ const portOpen = (port: number) => new Promise<boolean>(resolve => {
   socket.once("error", () => resolve(false));
 });
 async function until(check: () => boolean | Promise<boolean>, message: string, milliseconds = 10000) {
-  const deadline = performance.now() + milliseconds;
-  while (!(await check())) { assert.ok(performance.now() < deadline, message); await delay(20); }
+  await waitFor(check, Boolean, { label: message, timeoutMs: milliseconds });
 }
 
 test("stops real Vitest workers and listeners before removing their home on cancellation", async () => {

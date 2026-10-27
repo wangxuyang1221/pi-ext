@@ -1,5 +1,5 @@
 # Permissions extension
 
-The TypeScript source lives in `src/`; Pi loads `dist/index.js` through the repository-level package manifest.
+源码维护在 `src/`，Pi 通过根 package manifest 加载 `dist/index.js`。
 
-See the root [`README.md`](../../README.md) for installation, modes, approval behavior, and build details.
+安装、权限模式和审批行为见[根 README](../../README.md#permissions-extension)。

@@ -17,7 +17,8 @@ const enabled = process.env.PI_SUBAGENT_ISOLATED_INTEGRATION === "1";
 const fish = [process.env.PI_SUBAGENT_TEST_FISH, "/opt/homebrew/bin/fish", "/usr/bin/fish"].find((path): path is string => !!path && existsSync(path));
 
 for (const mode of ["immediate", "delayed", "fish", "full-package-fast", "full-package-delayed", "auth-env", "auth-inherited", "auth-stored", "auth-both", "auth-missing"] as const) {
-test.skipIf(!enabled || (mode === "fish" && !fish))(`production parent entry overrides a stale server with ${mode} startup`, async () => {
+test.skipIf(!enabled)(`production parent entry overrides a stale server with ${mode} startup`, async () => {
+  if (mode === "fish") assert.ok(fish, "Install fish before running required host tests");
   const delayIdentity = mode === "delayed";
   const nativeAuth = mode.startsWith("auth-");
   const fullPackage = mode.startsWith("full-package") || nativeAuth;

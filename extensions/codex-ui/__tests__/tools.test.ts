@@ -217,7 +217,7 @@ test("write and edit show one red failure marker and never render a failed diff"
       const context = createRenderContext({ args });
       const call = tool.renderCall!(args, theme, context as never);
       const result = tool.renderResult!({
-        content: [{ type: "text", text: "Permission denied" }],
+        content: [{ type: "text" as const, text: "Permission denied" }],
         details: { get patch() { throw new Error("Failed diff must not be read"); } },
       }, { expanded: true, isPartial: false }, theme, { ...context, isError: true } as never);
       const title = call.render(92)[0]!;
@@ -277,12 +277,12 @@ test("write streams without counts and restores final counts before argsComplete
     registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => lowPower });
     const write = registered.find(tool => tool.name === "write")!;
     const row = new ToolExecutionComponent("write", `stream-${lowPower}`, { path: "src/new.ts", content: "" },
-      { showImages: false }, write, { requestRender() {} }, "/repo");
+      { showImages: false }, write, { requestRender() {} } as never, "/repo");
     for (const count of [0, 3, 10, 20]) {
       row.updateArgs({ path: "src/new.ts", content: Array.from({ length: count }, () => "text").join("\n") });
       assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["~ Writing src/new.ts"]);
     }
-    row.updateResult({ content: [{ type: "text", text: "Successfully wrote file." }], isError: false });
+    row.updateResult({ content: [{ type: "text" as const, text: "Successfully wrote file." }], isError: false });
     assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["~ Write src/new.ts (20 lines)"]);
     row.setExpanded(true);
     assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["~ Write src/new.ts (20 lines)"]);
@@ -296,7 +296,7 @@ test("write keeps completed malformed arguments inside the host fallback boundar
   const write = registered.find(tool => tool.name === "write")!;
   for (const content of [undefined, null, 123, {}, []]) {
     const row = new ToolExecutionComponent("write", "invalid", { path: "src/new.ts", content },
-      { showImages: false }, write, { requestRender() {} }, "/repo");
+      { showImages: false }, write, { requestRender() {} } as never, "/repo");
     row.setArgsComplete();
     assert.deepEqual(row.render(80).map(line => stripTerminalSequences(line).trimEnd()).filter(Boolean),
       [`write path="src/new.ts" content=${JSON.stringify(content) ?? String(content)}`]);
@@ -304,7 +304,7 @@ test("write keeps completed malformed arguments inside the host fallback boundar
     const expanded = row.render(80).map(stripTerminalSequences).join("\n");
     assert.match(expanded, /path: src\/new\.ts/u);
     assert.match(expanded, new RegExp(`content: ${JSON.stringify(content) ?? String(content)}`.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-    row.updateResult({ content: [{ type: "text", text: "Invalid arguments" }], isError: true });
+    row.updateResult({ content: [{ type: "text" as const, text: "Invalid arguments" }], isError: true });
     assert.match(row.render(80).map(stripTerminalSequences).join("\n"), /Invalid arguments/u);
     assert.doesNotMatch(row.render(80).map(stripTerminalSequences).join("\n"), /0 lines/u);
   }
@@ -338,7 +338,7 @@ test("write scans final content once and colors pending, success and failure mar
       assert.equal(scanned(), 4);
       assert.equal(bytes.mock.calls.filter(([value]) => value === args.content).length, 0);
       assert.ok(call.render(120)[0]!.includes(theme.fg("muted", "~")));
-      const failed = write.renderResult!({ content: [{ type: "text", text: "Cancelled" }], details: undefined },
+      const failed = write.renderResult!({ content: [{ type: "text" as const, text: "Cancelled" }], details: undefined },
         { expanded: false, isPartial: false }, theme, { ...context, isError: true, isPartial: false } as never);
       assert.ok(call.render(120)[0]!.includes(theme.fg("error", "~")));
       assert.doesNotMatch(stripTerminalSequences(call.render(120)[0]!), /lines/u);
@@ -476,7 +476,7 @@ test("tool overrides retain metadata and delegate execution using context cwd", 
       ) {
         executed.push({ name, cwd });
         delegated.push({ toolCallId, params, signal, onUpdate, context });
-        return { content: [{ type: "text", text: "ok" }], details: undefined };
+        return { content: [{ type: "text" as const, text: "ok" }], details: undefined };
       },
     };
   };
@@ -557,7 +557,7 @@ test("read renderer combines the success marker, filename, range and preview in 
   );
 
   const result = read.renderResult(
-    { content: [{ type: "text", text: "alpha\nbeta" }], details: undefined },
+    { content: [{ type: "text" as const, text: "alpha\nbeta" }], details: undefined },
     { expanded: false, isPartial: false },
     theme,
     createRenderContext({ args, state }) as never,
@@ -594,7 +594,7 @@ test("read renderer preserves summary variants", () => {
   assert.ok(read?.renderResult);
 
   const renderSummary = (
-    content: Array<{ type: string; text?: string; data?: string; mimeType?: string }>,
+    content: Array<import("@earendil-works/pi-ai").TextContent | import("@earendil-works/pi-ai").ImageContent>,
     details: unknown = undefined,
   ) => {
     const context = createRenderContext({ args: { path: "fixture.txt" }, state: {}, expanded: false });
@@ -604,18 +604,18 @@ test("read renderer preserves summary variants", () => {
   };
 
   assert.equal(stripTerminalSequences(renderSummary([
-    { type: "text", text: "only" },
+    { type: "text" as const, text: "only" },
   ])), "@ Read fixture.txt  ./ · 1 line");
 
   const truncated = renderSummary(
-    [{ type: "text", text: "one\ntwo" }],
+    [{ type: "text" as const, text: "one\ntwo" }],
     { truncation: { truncated: true } },
   );
   assert.equal(stripTerminalSequences(truncated), "@ Read fixture.txt  ./ · 2 lines · truncated");
   assert.ok(truncated.includes(theme.fg("dim", " · 2 lines · truncated")));
 
   const image = renderSummary([
-    { type: "text", text: "Read image file [image/png]" },
+    { type: "text" as const, text: "Read image file [image/png]" },
     { type: "image", data: "base64", mimeType: "image/png" },
   ]);
   assert.equal(stripTerminalSequences(image), "@ Read fixture.txt  ./ · Image loaded");
@@ -639,7 +639,7 @@ test("read renderer shows pending and failed states without false success or pre
   call.render(80);
 
   const partial = read.renderResult(
-    { content: [{ type: "text", text: "alpha" }], details: undefined },
+    { content: [{ type: "text" as const, text: "alpha" }], details: undefined },
     { expanded: false, isPartial: true },
     theme,
     createRenderContext({ args, state, isPartial: true }) as never,
@@ -648,7 +648,7 @@ test("read renderer shows pending and failed states without false success or pre
   assert.deepEqual(partial.render(80), []);
 
   const error = read.renderResult(
-    { content: [{ type: "text", text: "Permission denied\nstack" }], details: undefined },
+    { content: [{ type: "text" as const, text: "Permission denied\nstack" }], details: undefined },
     { expanded: false, isPartial: false },
     theme,
     createRenderContext({ args, state, isError: true }) as never,
@@ -673,7 +673,7 @@ test("read renderer preserves expanded output and fits narrow widths", () => {
   );
   const content = Array.from({ length: 42 }, (_, index) => `line ${index + 1}`).join("\n");
   const result = read.renderResult(
-    { content: [{ type: "text", text: content }], details: undefined },
+    { content: [{ type: "text" as const, text: content }], details: undefined },
     { expanded: true, isPartial: false },
     theme,
     createRenderContext({ args, state }) as never,
@@ -717,7 +717,7 @@ test("low-power edit renderer skips edit arguments and bounds the raw patch prev
   );
   const partial = edit.renderResult(
     {
-      content: [{ type: "text", get text() { throw new Error("partial edit output must stay hidden"); } }],
+      content: [{ type: "text" as const, get text(): string { throw new Error("partial edit output must stay hidden"); } }],
       details: {
         get patch() { throw new Error("partial edit must not read patch"); },
         get diff() { throw new Error("partial edit must not read diff"); },
@@ -749,7 +749,7 @@ test("low-power edit renderer skips edit arguments and bounds the raw patch prev
     },
   };
   const result = {
-    content: [{ type: "text", get text() { throw new Error("successful edit output must stay hidden"); } }],
+    content: [{ type: "text" as const, get text(): string { throw new Error("successful edit output must stay hidden"); } }],
     details,
   };
   const expanded = edit.renderResult(
@@ -802,8 +802,8 @@ test("low-power edit errors stay bounded without reading patch details", () => {
   const result = edit.renderResult(
     {
       content: [{
-        type: "text",
-        get text() {
+        type: "text" as const,
+        get text(): string {
           textReads += 1;
           return `\x1b[31mfailed\x1b[0m\u0000 ${"x".repeat(5_000)}\nsecond line`;
         },
@@ -848,7 +848,7 @@ test("edit renderer refreshes its title and renders the patch with Codex styling
   const resultContext = createRenderContext({ args, state });
   const result = edit.renderResult(
     {
-      content: [{ type: "text", text: "Successfully replaced 1 block." }],
+      content: [{ type: "text" as const, text: "Successfully replaced 1 block." }],
       details: {
         diff: " 1 before\n-2 old\n+2 new\n+3 extra",
         patch: `--- a/src/app.ts
@@ -916,7 +916,7 @@ test("edit underlines only nonempty settled diff titles and fits narrow widths",
     [false, false, undefined],
     [false, false, { diff: "", patch: "--- a/app.ts\n+++ b/app.ts" }],
   ] as const) {
-    edit.renderResult({ content: [{ type: "text", text: "result" }], details },
+    edit.renderResult({ content: [{ type: "text" as const, text: "result" }], details },
       { expanded: false, isPartial }, theme, { ...context, isError } as never);
     assert.ok(!call.render(120).join("\n").includes("\x1b[4m"));
   }
@@ -935,7 +935,7 @@ test("collapsed edit diff shows a compact footer immediately after twelve rows",
     const patchLines = Array.from({ length: totalLines }, (_, index) => ` line ${index + 1}`);
     const component = edit.renderResult(
       {
-        content: [{ type: "text", text: "Successfully replaced 1 block." }],
+        content: [{ type: "text" as const, text: "Successfully replaced 1 block." }],
         details: {
           patch: [
             "--- a/src/app.ts",
@@ -978,7 +978,7 @@ test("collapsed edit highlights only the visible diff rows", () => {
   const args = { path: "src/large.ts", edits: [] };
   const component = edit.renderResult(
     {
-      content: [{ type: "text", text: "Successfully replaced 1 block." }],
+      content: [{ type: "text" as const, text: "Successfully replaced 1 block." }],
       details: { diff, patch: "" },
     },
     { expanded: false, isPartial: false },
@@ -1007,7 +1007,7 @@ test("settled edit history reuses prepared syntax highlighting", () => {
 `,
   };
   const result = {
-    content: [{ type: "text", text: "Successfully replaced 1 block." }],
+    content: [{ type: "text" as const, text: "Successfully replaced 1 block." }],
     details,
   };
   const state = {};
@@ -1051,7 +1051,7 @@ test("settled edit reuses full diff statistics on hot renderer calls", () => {
     patch: "",
   };
   const result = {
-    content: [{ type: "text", text: "Successfully replaced 1 block." }],
+    content: [{ type: "text" as const, text: "Successfully replaced 1 block." }],
     details,
   };
   const state: Record<string | symbol, unknown> = {};
@@ -1102,7 +1102,7 @@ test("expanded edit reuses its current painted layout after host invalidation", 
   } as Theme;
   const args = { path: "src/large.ts", edits: [] };
   const result = {
-    content: [{ type: "text", text: "Successfully replaced 1 block." }],
+    content: [{ type: "text" as const, text: "Successfully replaced 1 block." }],
     details: {
       diff: Array.from({ length: 100 }, (_, index) => `+${index + 1} const value${index} = ${index};`).join("\n"),
       patch: "",
@@ -1142,7 +1142,7 @@ test("edit final layout cache follows a mutable theme proxy", () => {
     const mutableTheme = createMutableThemeProxy(createTheme());
     const args = { path: "src/fixture.txt", edits: [] };
     const result = {
-      content: [{ type: "text", text: "Successfully replaced 1 block." }],
+      content: [{ type: "text" as const, text: "Successfully replaced 1 block." }],
       details: {
         diff: "-1 old value\n+1 new value",
         patch: "",
@@ -1220,7 +1220,7 @@ test("edit retains expanded layouts and syntax only in the shared budget", () =>
 
   const args = { path: "src/large.ts", edits: [] };
   const result = {
-    content: [{ type: "text", text: "Successfully replaced 1 block." }],
+    content: [{ type: "text" as const, text: "Successfully replaced 1 block." }],
     details: {
       diff: Array.from({ length: 30 }, (_, index) => `+${index + 1} const value${index} = ${index};`).join("\n"),
       patch: "",
@@ -1288,7 +1288,7 @@ test("low-power write skips pending metrics and counts only the final content", 
     createRenderContext({ args, state, argsComplete: false, isPartial: true }) as never,
   );
   const partial = write.renderResult(
-    { content: [{ type: "text", get text() { throw new Error("partial result must stay hidden"); } }], details: undefined },
+    { content: [{ type: "text" as const, get text(): string { throw new Error("partial result must stay hidden"); } }], details: undefined },
     { expanded: true, isPartial: true },
     theme,
     createRenderContext({ args, state, argsComplete: false, isPartial: true }) as never,
@@ -1296,7 +1296,7 @@ test("low-power write skips pending metrics and counts only the final content", 
   assert.equal(contentReads, 0);
   assert.equal(stripTerminalSequences(call.render(80).join("\n")), "~ Writing src/new.ts");
   const completed = write.renderResult(
-    { content: [{ type: "text", get text() { throw new Error("success result must stay hidden"); } }], details: undefined },
+    { content: [{ type: "text" as const, get text(): string { throw new Error("success result must stay hidden"); } }], details: undefined },
     { expanded: true, isPartial: false },
     theme,
     createRenderContext({ args, state, argsComplete: true }) as never,
@@ -1359,8 +1359,8 @@ test("low-power write errors keep one sanitized bounded line", () => {
   const component = write.renderResult(
     {
       content: [{
-        type: "text",
-        get text() {
+        type: "text" as const,
+        get text(): string {
           textReads += 1;
           return errorText;
         },
@@ -1399,7 +1399,7 @@ test("write renderer locks its mode on the first render", () => {
   );
   lowPowerEnabled = false;
   const lowPowerResult = write.renderResult(
-    { content: [{ type: "text", text: "Successfully wrote file" }], details: undefined },
+    { content: [{ type: "text" as const, text: "Successfully wrote file" }], details: undefined },
     { expanded: false, isPartial: false },
     theme,
     createRenderContext({ args: lowPowerArgs, state: lowPowerState }) as never,
@@ -1415,7 +1415,7 @@ test("write renderer locks its mode on the first render", () => {
   );
   lowPowerEnabled = true;
   const fullResult = write.renderResult(
-    { content: [{ type: "text", text: "Successfully wrote file" }], details: undefined },
+    { content: [{ type: "text" as const, text: "Successfully wrote file" }], details: undefined },
     { expanded: false, isPartial: false },
     theme,
     createRenderContext({ args: fullArgs, state: fullState }) as never,
@@ -1434,7 +1434,7 @@ test("write renderer reports a compact summary without inventing a diff", () => 
 
   const args = { path: "src/new.ts", content: "one\ntwo" };
   const component = write.renderResult(
-    { content: [{ type: "text", text: "Successfully wrote 7 bytes" }], details: undefined },
+    { content: [{ type: "text" as const, text: "Successfully wrote 7 bytes" }], details: undefined },
     { expanded: true, isPartial: false },
     theme,
     createRenderContext({ args }) as never,
@@ -1535,7 +1535,7 @@ test("write streaming metrics avoid split arrays and final result recounting", (
 
     assert.equal(byteLengthSpy.mock.calls.filter(([value]) => value === finalArgs.content).length, 0);
     const result = write.renderResult(
-      { content: [{ type: "text", text: "Successfully wrote 8 bytes" }], details: undefined },
+      { content: [{ type: "text" as const, text: "Successfully wrote 8 bytes" }], details: undefined },
       { expanded: false, isPartial: false },
       theme,
       createRenderContext({ args: finalArgs, state, argsComplete: true }) as never,
@@ -1544,7 +1544,7 @@ test("write streaming metrics avoid split arrays and final result recounting", (
     assert.match(stripTerminalSequences(call.render(80).join("\n")), /3 lines/u);
     result.invalidate();
     assert.deepEqual(result.render(80), []);
-    const newlineSplits = splitSpy.mock.calls.filter(([separator]) => separator === "\n").length;
+    const newlineSplits = splitSpy.mock.calls.filter(([separator]) => (separator as unknown) === "\n").length;
     assert.equal(newlineSplits, 0);
     assert.equal(byteLengthSpy.mock.calls.filter(([value]) => value === finalArgs.content).length, 0);
   } finally {
@@ -1562,8 +1562,8 @@ test("low-power bash hides partial output without reading result text", () => {
   let textReads = 0;
   const result = {
     content: [{
-      type: "text",
-      get text() {
+      type: "text" as const,
+      get text(): string {
         textReads += 1;
         throw new Error("low-power partial bash output must stay unread");
       },
@@ -1619,8 +1619,8 @@ test("low-power bash keeps a bounded tail hidden until expanded", () => {
   ].join("\n");
   const fullOutputPath = "/tmp/pi-bash-output.log";
   const content = [{
-    type: "text",
-    get text() {
+    type: "text" as const,
+    get text(): string {
       textReads += 1;
       return output;
     },
@@ -1931,7 +1931,7 @@ test("edit result appears once when composed by the host tool component", () => 
   );
   component.markExecutionStarted();
   component.updateResult({
-    content: [{ type: "text", text: "Successfully replaced 1 block." }],
+    content: [{ type: "text" as const, text: "Successfully replaced 1 block." }],
     details: { diff: "-1 old value\n+1 new value", patch: "" },
     isError: false,
   });

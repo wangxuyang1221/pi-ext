@@ -161,6 +161,7 @@ test("replaces a reservation with a discovered registered child", async () => {
       tmux: baseLocator,
     }));
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return true; },
@@ -204,6 +205,7 @@ test("reclaims reservations proven not launched and retains the subsequent unkno
     }));
     await store.save(parent);
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() {
         launches += 1;
         throw new Error("new launch attempted");
@@ -248,6 +250,7 @@ test("uses persistent reservations to reject a fourth parallel spawn", async () 
       now: "2026-08-27T02:00:00.000Z",
     }));
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       launch: () => new Promise((_resolve, reject) => {
         rejectLaunches.push(reject);
         if (rejectLaunches.length === 3) markReady();
@@ -339,6 +342,7 @@ test("counts an owned child that registers between reconciliation and reservatio
         : states;
     };
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() {
         launches += 1;
         throw new Error("capacity check was bypassed");
@@ -403,6 +407,7 @@ test("rejects a fourth active spawn at the default capacity", async () => {
     await store.save(parent);
 
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() {
         launches += 1;
         return baseLocator;
@@ -448,6 +453,7 @@ test("closes and removes persisted pending reservations during close-all", async
     }];
     await store.save(parent);
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return alive; },
@@ -526,6 +532,7 @@ test("deduplicates a child that registers while close-all is reconciling reserva
         : states;
     };
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return alive; },
@@ -569,6 +576,7 @@ test("retains pending reservation and slot when close-all cannot stop its runtim
     }];
     await store.save(parent);
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return true; },
@@ -632,6 +640,7 @@ test("counts live settled processes and persists confirmed interruptions", async
     }
     await store.save(parent);
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive(candidate) { return candidate.windowId === "@1"; },

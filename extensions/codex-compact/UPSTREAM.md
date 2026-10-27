@@ -1,80 +1,51 @@
 # Upstream provenance
 
-本扩展基于 [`@yeungkc/pi-codex-compact`](https://github.com/YeungKC/pi-codex-compact) 修改并整合到 `pi-ext`。
+## Plugin baseline
 
-## Plugin repair on Pi 1.3.0
+本扩展由 [`@yeungkc/pi-codex-compact`](https://github.com/YeungKC/pi-codex-compact) `0.0.6` 导入，固定提交为 `53630cd9b937a8a4873271e20188c3f18819ca6a`。上游采用 MIT，Copyright (c) 2025 YeungKC，许可证保存在本目录 `LICENSE`。
 
-本轮在固定 Pi `1.3.0` 上修复七项插件问题，未升级 Pi。修复范围包括真实 active projection、pending tool group 的 system 顺序与来源截取、grammar item ID、当前输入的 occurrence 保留、受支持 hidden/forced 投影、最终请求预算与有限修复，以及错误 HTTP body 的总 deadline。实现和证据索引见 [repair todo](../../docs/codex-compact-plugin-repair-todo.md)。
+源码维护在 `src/`，测试维护在 `__tests__/`。相对导入采用 NodeNext 的 `.js` 后缀。同步上游时以该提交为共同基线，只移植所需改动，保留本地 UI ownership、checkpoint 来源验证和失败时保留历史的行为。
 
-请求证据在首次异步等待前固定，结果提交前核验 branch 内容、模型、提示词、工具和 generation。来源保存在 V2 checkpoint 的可选 `preservedInputSources` 中；旧记录继续读取，但不伪造来源。派生 wire ID 使用 Pi 归一化后的消息顺序；跨 checkpoint 工具组保留完整 call/results，已覆盖的 system update 不随组复活。
+## Pi compatibility
 
-第二轮修复补齐旧 checkpoint 的 pending input 证明。缺少来源时，只接受完整 preserved 后缀与原投影相等、user occurrence 唯一、replacement user 可映射到更早未复用 entry 的结构；无法映射的截断副本直接取消，旧 checkpoint 不变。取消通过 `preserved_input_source_unproven` 诊断，属于本插件的兼容保护，不归因于 Codex 上游。失败请求在冻结入口成对清理 branch/input，后续阶段复用固定失败 entry ID，并对原始证据变化拒绝提交。
+当前依赖固定为 Pi `1.4.0`。`src/pi-responses.ts` 通过公开 exports 加载 Responses 工具转换函数；声明转换复用 `getResponsesToolSupport()`、`resolveTranscriptTools()` 和 `convertResponsesTools()`。保留逐消息转换，用于记录输出 item 对应的原始消息及 checkpoint 边界。
 
-投影匹配最多检查四个候选策略，比较完整 input、instructions 和 tools，并要求所有匹配候选具有相同有效回放。工具移除/重声明后无法证明的 hidden 策略及任意 context hook 不在隐式支持范围。强制提示词以本 handler 看到的 instructions 为权威，后续 provider handlers 的变换不可观测。provider 请求之外的压缩需仍有效的已观察快照，或 README 中的 `manualProjection` 契约；`forcedPrompt` 是完整字符串，不能从 Pi 回合结束后的基础 prompt 推断。
+请求投影校验比较完整 input、instructions 和 tools。支持普通投影，以及能由实际 payload 唯一证明的 hidden/forced 投影；工具移除或重声明后无法证明的隐藏策略、任意 context hook 和后续 handler 改写不属于隐式支持范围。provider 请求之外发起压缩时，使用仍有效的观察快照或 README 中的 `manualProjection` 配置。
 
-64k 历史明文上限受实际剩余窗口约束；新 opaque、受保护输入和请求前缀先占预算，截断后至多 16 次本地调整。一次 logical request 的本地自动修复最多一次，Pi overflow compact-and-retry 独立最多一次。错误 body 最多读取 300 秒和 1 MiB，保留 status 分类，不完整诊断不触发模型 fallback。
+checkpoint 后重建边界处仍可用的工具声明，再应用后续更新。该处理不修改 opaque、持久化 checkpoint 或用户来源，不恢复隐藏或已移除的工具。跨模型 thinking 按当前 provider、API 和 model 身份处理。
 
-同 hash 容量下切和 automatic 共用本地额度，hash 不兼容迁移独立。HTTP 401/403 在 transport 保留结构化 status 与终止原因，automatic coordinator 据此终止当前请求，不依赖错误正文。第二轮设计、逐项 Red/Green 和最终检查入口见 [round 2 todo](../../docs/codex-compact-plugin-repair-round-2-todo.md)；仍只覆盖固定 Pi `1.3.0` 与已声明的投影契约。
+`responses-parity.test.ts` 对照当前 Pi converter 与网络发送前的 payload；`repair-runtime.test.ts` 通过真实 AgentSession 和 ExtensionRunner 验证压缩、恢复及 hidden/forced hooks。Pi 1.3 合成模型和 session fixture 用于旧会话回归，不作为当前宿主版本或线上质量的证明。
 
-`repair-runtime.test.ts` 使用真实 AgentSession、ExtensionRunner、converter、持久化和恢复，仅替换目录发现与网络响应，覆盖 manual/threshold/overflow、重复 overflow 和 hidden/forced hooks。`full-reference.test.ts` 的 decoder mock 改为逐用例安装并恢复。Darwin 离线验证不能代替 Linux 实机或真实服务端 encrypted checkpoint 验证；完整检查结果见 TODO 的执行记录。
+## Local behavior
 
-## Import baseline
+- Pi 发起的压缩复用原生进行中 UI；provider 请求前的自主压缩使用独立 widget，并按操作身份清理。
+- V2 checkpoint 保存可选的 `preservedInputSources`。无法证明旧保留区来源时取消本次压缩，保留旧 checkpoint，不通过放宽前缀校验继续。
+- 请求开始时冻结历史、工具、提示词与模型；等待期间证据变化时拒绝提交。失败输入与 payload 成对清理。
+- 非 Codex 模型遇到 V2 checkpoint 时回放原始分支，不把加密 marker 当成文本摘要。
+- 历史明文的 64k token 上限受剩余窗口约束，不截断本次受保护输入。远端明确超窗时直接失败，不只保留最新 user turn 重试压缩。
+- 同一请求的本地容量修复最多一次；不同 hash 的协议迁移及 Pi 自身 overflow retry 分别处理。错误正文有 300 秒总期限和 1 MiB 上限，不完整诊断不能触发模型 fallback。
 
-- npm version: `0.0.6`
-- upstream commit: `53630cd9b937a8a4873271e20188c3f18819ca6a`
-- upstream license: MIT, Copyright (c) 2025 YeungKC
-
-## Local changes
-
-- 将上游根目录源码迁入 `extensions/codex-compact/src/`，测试迁入 `extensions/codex-compact/__tests__/`。
-- 将内部相对导入调整为本仓库 NodeNext 构建使用的 `.js` 后缀。
-- Pi 发起压缩时复用 Pi 原生进行中 UI，不再显示第二套扩展 footer 状态。
-- provider request 自主压缩时在编辑器上方显示动画 widget；每次操作结束时只清理自身展示，session、分支或模型切换后，旧操作不得清理或中止新请求。
-- 在 Pi 提交 compaction entry 后验证 Codex Compact V2 来源；将结果通知延迟到原生 compaction 卡片重建后显示，并保持远程失败 fail closed。
-- 非 Codex 模型遇到既有 V2 checkpoint 时回放原始分支，避免把 V2 marker 当作可用文本摘要。
-- 远端压缩自身超窗时直接失败，保留历史与原 encrypted checkpoint，不进入尾部恢复或额外压缩；诊断沿用原始错误分类，`recoveryAttempted` 为 `false`。这不移除网络重试、模型切换或 Pi 普通请求超窗后发起压缩的流程。session 或模型切换会中止仍在进行的 Pi-triggered 远程请求；旧操作结束不得释放新操作的占用状态。
-
-同步上游时应以该 commit 为共同基线，只移植明确需要的后续改动，避免覆盖本仓库的 UI ownership、provenance、上下文完整性和 fail-closed 行为。
-
-## Pi request compatibility
-
-请求转换原始核验基线为 Pi `0.87.0`。`src/native-compaction.ts` 复用公开的 transcript 归一化、提示更新渲染和工具状态解析，保留局部消息转换以处理 checkpoint 边界。先重建完整历史中的工具状态与消息位置，再取 checkpoint 后的输出，避免把紧邻 checkpoint 的 system 更新误当作开头提示。旧 `addedToolNames` 按目标版本宿主语义处理，不额外生成宿主已不再发送的工具加载项。
-
-跨模型 thinking 回放已单独对齐 Pi `1.3.0` 的 [#10995](https://github.com/earendil-works/pi/issues/10995)：provider、API 或 model 任一不同即丢弃 thinking，不生成普通回答，也不推进文本编号；同模型有效签名中的 reasoning 原样保留，包括空可读文本和 encrypted content。判断在现有 content 遍历内完成，不增加全历史转换或跨请求缓存。
-
-`responses-parity.test.ts` 新增 22 项离线回归，使用 Pi `1.3.0` 实际网络前 payload 对照完整 input、顺序和 ID，覆盖三种身份差异、thinking 边界、checkpoint 前后、模型切换后连续请求、手动压缩、历史不变性和普通内容不匹配的拒绝路径；访问计数检查 N/2N 混合 blocks 线性增长。本次插件 1051 项测试通过，全仓库 2686 项通过、13 项既有测试跳过，类型检查、构建、发布包及 source/dist 加载检查通过。复跑曾出现既有 test-wrapper fixture JSON 读写竞争和 subagent reliability 目录清理失败；已保留失败记录，两项单独复测通过，未修改这些无关用例。测试禁止真实网络，不代表线上 V2 质量已验证。
-
-这只是 thinking 行为适配，不是整个插件的 Pi `1.3.0` 兼容声明。隐藏工具声明投影差异仍未修复，见[兼容性审查 F2](../../docs/pi-0.87.1-to-1.3.0-codex-compact-review.md#f2-hidden-tool-declarations)。
-
-`src/pi-responses.ts` 通过包 `exports` 解析公开的 Responses 工具转换函数，复用 grammar 和 strict schema 处理。Node 的解析用于避开 Pi 文件扩展加载器对 `pi-ai/*` 的前缀别名，不修改宿主或挂接其内部方法。该适配绑定当前依赖版本，真实 `DefaultResourceLoader` 测试覆盖全部八个扩展的源码加载，集成生命周期检查覆盖构建产物加载。
-
-`responses-parity.test.ts` 使用目标版本原生 converter 和 `streamSimple` 的实际网络前 payload 对照，覆盖 system sections、工具新增/移除、tool search、constrained sampling、checkpoint 后连续请求及失败重试。失败继续保留严格前缀校验，诊断只新增错误类别与首个不一致位置，不保存私有内容。
-
-Pi 的 `getAllTools()` 可能缺少 wire grammar 格式；扩展结合 transcript 工具声明与观察到的请求恢复格式。thinking 通过公开的 `clampThinkingLevel` 按实际压缩模型归一化；`off` 按 0.87.0 发送对应 effort，默认 `none`，不支持的模型则省略。
-
-turn-state 保留到下一条实际投递的 user message，工具循环和无新用户消息的重试不重置。queued follow-up 排队时不重置，交付时重置；steering 实际交付也作为用户边界。Pi 公共 message 事件不区分这两种直接交付来源，这里明确采用 Pi 的消息边界，不宣称与 Codex 内部 TurnContext 的 steering 生命周期完全相同。会话切换、关闭和空闲 `agent_settled` 释放当前状态；远端压缩的迟到响应不能写入新轮次。
+具体配置、命令和兼容限制见根目录 README。
 
 ## Codex algorithm provenance
 
-本次将部分算法移植自 [OpenAI Codex 0.154.0](https://github.com/openai/codex/tree/6b9826e3aa83b1a5947db50f4332cb9c65f1b340)，commit `6b9826e3aa83b1a5947db50f4332cb9c65f1b340`，Apache-2.0，Copyright 2025 OpenAI。许可证与归属见 `CODEX-LICENSE`、`NOTICE`，原插件的 MIT 许可证保持不变。
+部分算法来自 [OpenAI Codex 0.154.0](https://github.com/openai/codex/tree/6b9826e3aa83b1a5947db50f4332cb9c65f1b340)，固定提交 `6b9826e3aa83b1a5947db50f4332cb9c65f1b340`，Apache-2.0，Copyright 2025 OpenAI。许可证和归属保存在 `CODEX-LICENSE`、`NOTICE`；原插件的 MIT 许可证保持不变。
 
-- `codex-rs/utils/string/src/truncate.rs`：UTF-8 字节预算和首尾保留截断，TypeScript 实现在 `src/token-estimation.ts`。
-- `codex-rs/core/src/context_manager/history.rs`：加密项与图片的近似 token 计算，以及服务端 usage 加未覆盖项目的计数方式，适配到 `src/native-compaction.ts`、`src/token-estimation.ts`、`src/usage-accounting.ts`。多媒体已接入同版本 Rust 解码器并通过完整 estimator 差分，contextual user 边界适配在 `src/turn-boundary.ts`。
-- `codex-rs/core/src/compact_remote_v2_attempt.rs`：裁剪后仍发送远端请求，不把本地估算当作精确的超窗拒绝依据。
-- `codex-rs/core/src/compact_remote_v2.rs` 与 `compact_remote_v2_images.rs`：保留消息时计入图片成本、原子保留或删除图片及相邻标签。
+| Upstream source | Local implementation |
+| --- | --- |
+| `utils/string/src/truncate.rs` | `token-estimation.ts` 的 UTF-8 字节预算与首尾截断 |
+| `core/src/context_manager/history.rs` | `token-estimation.ts`、`native-compaction.ts`、`usage-accounting.ts` 的近似计数及 usage 增量 |
+| `core/src/compact_remote_v2_attempt.rs` | 本地裁剪后仍由远端判断是否超窗 |
+| `core/src/compact_remote_v2.rs`、`compact_remote_v2_images.rs` | 保留图片成本及图片与标签的原子处理 |
+| `protocol/src/models.rs` | `response-item-estimation.ts` 的估算视图，不改写实际请求 |
+| `core/src/context/contextual_user_message.rs`、`context-fragments/` | `turn-boundary.ts` 和媒体模块的特殊轮次解析 |
 
-`src/media/` 将 Codex 所用的 image 0.25.9 与 Symphonia 0.6.0 编译成无 host import 的 WebAssembly，执行完整图片解码和音频时长探测，不读取远程 URL。Node 运行无需 Rust。macOS TIFF 和 Windows BMP 的额外支持与 CLI 依赖特性统一结果保持一致。模块及第三方源代码、许可证、版本和校验和随包发布；Symphonia 的 MPL-2.0 不能被本扩展的 MIT/Apache-2.0 归属替代，详见 `src/media/README.md`。
+`src/media/` 将固定版本图片、音频和特殊上下文解析编译为无 host import 的 WebAssembly。普通构建校验并复制源码、产物、manifest、许可证和对应第三方源码；不调用 Rust。维护要求见 `src/media/README.md`，分发后的对应路径为 `dist/media/README.md`。
 
-`codex-rs/core/src/context/contextual_user_message.rs`、`codex-rs/context-fragments/src/fragment.rs` 及对应 fragment 实现提供特殊轮次规则。`src/media/src/context.rs` 用 quick-xml 0.41.0 保留 hook 解析语义，用 serde_json 1.0.149 校验 inter-agent JSON 和 AgentPath；只判断能否反序列化，不执行这些内容。
-
-`codex-rs/protocol/src/models.rs` 的有效 ResponseItem 字段、默认值、序列化省略规则被适配为 `src/response-item-estimation.ts`，只影响估算视图，不改写实际请求。移除了超窗时只压缩最新 user turn 的恢复方式，改为明确失败且不提交新 checkpoint。请求适配层刷新当前系统指令，默认有效窗口为原始窗口的 95%，可通过 `effectiveContextWindowPercent` 覆盖。没有修改 Pi 上游，也没有增加分段压缩。当前请求指纹保护只覆盖可见 payload；Pi 未暴露完整服务端 reasoning 能力标记及后续扩展的最终 payload。默认质量测试及显式历史报告重建见 [质量报告脚本](../../scripts/codex-compact-quality-development-report.mjs)；合成 fixture 不代表在线质量结论。
-
-基础参考向量由 `scripts/codex-compact-reference.mjs` 生成。完整参考程序由 `scripts/codex-compact-full-reference.mjs` 构建，编译原版 protocol/utility crates 和未修改的 estimator 函数；`scripts/codex-compact-full-vectors.mjs` 生成逐项与历史聚合向量。来源、输入及产物 SHA-256 保存在测试 fixture 中。当前 276 项参考向量覆盖字段默认值、数字、媒体、饱和计数、请求包装和特殊轮次边界；真实 183 项历史的逐项、总量和 usage 增量也一致。Pi 的无 type 简写消息保留实际包装计数，完整 tools/system HTTP 包装与 Codex 的 canonical history 另行区分，不宣称未公开的服务端 tokenization 已被本地精确复现。
+`scripts/codex-compact-reference.mjs`、`codex-compact-full-reference.mjs` 和 `codex-compact-full-vectors.mjs` 生成固定 Codex 版本的参考程序与向量。媒体 fixture 的输入及来源指纹也纳入验证。差分覆盖本地估算语义，不证明服务端未公开的 tokenization 或真实压缩质量。
 
 ## Model catalog metadata
 
-压缩算法仍以上述 Codex `0.154.0` 为来源基线；模型目录请求的默认 `client_version` 单独采用已通过真实只读查询验证的 `0.156.0`，可通过 `metadataClientVersion` 覆盖。这不表示压缩算法或 Pi 依赖已升级到 Codex `0.156.0`。
+模型目录请求的默认 `client_version` 为 `0.156.0`，可通过 `metadataClientVersion` 覆盖；它与压缩算法来源版本分别维护。`/codex-metadata` 是本地配置命令，不查询在线最新版本。
 
-`/codex-metadata` 是本扩展新增的本地配置命令，可查看有效目录版本及来源，并通过 `version <major.minor.patch>` 或 `reset` 只修改全局配置的 `metadataClientVersion`。受信任项目覆盖仍优先；命令不查询在线最新版本，不发起模型目录请求。此命令不归因于上游 Codex。
-
-`src/capabilities.ts` 不再维护逐模型 `comp_hash` 表。`src/model-metadata.ts` 经 Pi `ModelRegistry.getApiKeyAndHeaders` 读取认证，只向官方 [models endpoint](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/codex-api/src/endpoint/models.rs) 发 GET。`comp_hash` 依照上游 [ModelInfo 定义](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/protocol/src/openai_models.rs) 是标识压缩兼容模型配置的不透明字符串。进程内目录缓存 TTL 为 300 秒，与上游 [models manager](https://github.com/openai/codex/blob/6b9826e3aa83b1a5947db50f4332cb9c65f1b340/codex-rs/models-manager/src/manager.rs) 的默认值一致；30 秒失败和未知模型限流、4 个认证 scope 上限、8 MiB 响应上限及 3 秒 HTTP 上限是本扩展的本地边界。目录缺失或请求失败时不猜 hash，旧 checkpoint 自带的 hash 保留。
+`src/model-metadata.ts` 使用 Pi 解析的认证，只向官方 Codex models endpoint 发 GET。`comp_hash` 是不透明的压缩兼容标识，不根据模型名称猜测。缓存 TTL 为 300 秒，失败和未知模型限流 30 秒，最多保留 4 个认证 scope，响应上限 8 MiB，HTTP 阶段上限 3 秒。目录不可用时 hash 为未知，旧 checkpoint 已有的 hash 保留。

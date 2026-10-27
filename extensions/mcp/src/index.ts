@@ -247,6 +247,10 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
     }
   };
 
+  // The host restores recorded tools before this event, even for offline history
+  // definitions. Reconcile the restored loadout without rescanning the session.
+  pi.on("session_tree", () => reconcileActive());
+
   pi.on("session_start", async (_event, ctx) => {
     lifecycleGeneration += 1;
     const generation = lifecycleGeneration;

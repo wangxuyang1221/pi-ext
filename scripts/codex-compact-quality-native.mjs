@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { continuationTools } from "./codex-compact-quality-tools.mjs";
 
-export function createCliToolHandler({ tools, currentTurn, record = () => {} }) {
+export function createCliToolHandler({ tools, currentTurn, record = (_row) => {} }) {
   const seen = new Set();
   return (params, signal) => {
     signal.throwIfAborted();

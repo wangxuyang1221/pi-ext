@@ -126,6 +126,14 @@ Pi 从 `dist/index.js` 加载扩展。开发时只修改 `src/` 和测试，由�
 
 所有 MCP 调用统一使用 `⌁`，包括搜索、非搜索工具及恢复的历史记录，不按工具名或服务名分类。前缀等待及运行中为 warning 黄色，成功为 muted 灰色，普通失败为 error 红色；可靠识别的中断和超时仍使用 warning 黄色。图标后保留一个空格，与其他工具的标题起始列对齐，不改变正文、参数、结果缩进或 `/mcp` 服务状态图标。
 
+## History restoration
+
+历史显示独立于实时连接。冷恢复扫描全部分支；进程内 resume/import/fork/clone/reload 通过短寿命、仅含显示 identity 的交接文件提前注册 renderer。历史占位不能执行，实时 discovery 仍使用当前 schema。
+
+`/resume` 按 64 KiB 块异步扫描 JSONL，单条记录上限为 64 MiB，最多保留 4096 个工具身份，名称最多 1024 字节。扫描期间文件变化、JSONL 损坏、非普通文件或符号链接会使恢复失败，不发布不完整交接数据。
+
+首次升级到带有交接 hook 的版本时应重启 Pi。用户级安装可跨 cwd 恢复；目标 cwd 未加载项目级插件、host 过滤工具定义或历史读取失败时，可能显示默认样式。恢复不重新执行历史调用。
+
 ## Tool output limits
 
 扩展传给模型的 MCP text（包括序列化后的 resource 等非 text block）使用 Pi 的默认边界：合计最多 50 KiB、2000 行，并且最多序列化 24 个非 text block。原生 image block 会继续按 image 传递。`structuredContent` 连同 `details` 的 JSON 序列化结果也限制在 50 KiB；超限时只保留有界 preview 与原始字节数。
@@ -222,7 +230,7 @@ TUI 启动时，在输入框上方显示动态状态行：
 ### UI verification
 
 ```bash
-pnpm exec vitest run extensions/mcp/__tests__
+pnpm test extensions/mcp/__tests__
 conda run --no-capture-output -n codex-py312 python extensions/mcp/__tests__/ui-host-smoke.py
 pnpm run check
 ```

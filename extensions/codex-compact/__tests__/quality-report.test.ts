@@ -3,6 +3,13 @@ import * as report from "../../../scripts/codex-compact-quality-development-repo
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+
+test("requires explicit report inputs instead of historical workspace defaults", () => {
+  const result = spawnSync(process.execPath, ["scripts/codex-compact-quality-development-report.mjs"], { encoding: "utf8" });
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain("Usage:");
+  expect(result.stderr).not.toContain("ENOENT");
+});
 import { assertSafePublishedPath } from "../../../scripts/package-paths.mjs";
 import { chainEvidence, chainReport, developmentEvidence, developmentReport, pilotAudit } from "./fixtures/quality-report.js";
 
@@ -50,6 +57,8 @@ test("reports first request occupancy separately from cumulative usage and keeps
     grade: { human_review: "pending", executable: { passed: true, tests: { a: "passed" } } },
     counterexamples: { baseline: { probe: { value: "" } }, candidate: { probe: { error: "ValueError" } } }
   });
+  expect(result).toHaveProperty("status", "completed");
+  if (!("cumulativeUsage" in result.continuation)) throw new Error("Expected completed report");
   expect(result.continuation.firstRequestInput).toBe(100);
   expect(result.continuation.cumulativeUsage.input).toBe(200);
   expect(result.continuation.estimatedMetadataCost).toBeCloseTo(0.00115, 12);
@@ -62,7 +71,9 @@ test("reports first request occupancy separately from cumulative usage and keeps
 
 test("keeps failed attempts and partial usage without treating missing evaluation as a passing or zero-cost run", () => {
   const original = developmentEvidence();
-  const input = structuredClone(original.armInputs[0]);
+  const input = { ...structuredClone(original.armInputs[0]), result: { ...original.armInputs[0].result, requestsAttempted: 0, failure: { name: "", message: "" } },
+    grade: { human_review: "pending", executable: null as {passed: boolean; tests: Record<string,string>} | null },
+    counterexamples: null };
   input.result.status = "failed";
   input.result.requestsAttempted = input.responses.length + 1;
   input.result.failure = { name: "TypeError", message: "fetch failed" };
@@ -70,6 +81,7 @@ test("keeps failed attempts and partial usage without treating missing evaluatio
   input.counterexamples = null;
   const failed = report.summarizeDevelopmentArm(input);
   expect(failed.status).toBe("failed");
+  if (!("failure" in failed) || !("usageComplete" in failed.continuation)) throw new Error("Expected failed report");
   expect(failed.continuation.usageComplete).toBe(false);
   expect(failed.continuation.completedResponses).toBe(input.responses.length);
   expect(failed.continuation.requestsAttempted).toBe(input.responses.length + 1);

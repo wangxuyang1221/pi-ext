@@ -12,8 +12,8 @@ import {
   sessionAllowKey,
 } from "../src/permission-policy.js";
 
-function createCtx({ cwd = "/repo", choices = [], env = {} } = {}) {
-  const seenPrompts = [];
+function createCtx({ cwd = "/repo", choices = [], env = {} }: { cwd?: string; choices?: string[]; env?: Record<string, string> } = {}) {
+  const seenPrompts: string[] = [];
   const queue = [...choices];
 
   return {
@@ -21,7 +21,7 @@ function createCtx({ cwd = "/repo", choices = [], env = {} } = {}) {
     cwd,
     env,
     ui: {
-      async select(title) {
+      async select(title: string) {
         seenPrompts.push(title);
         return queue.shift();
       },
@@ -152,7 +152,7 @@ test("PI_PERMISSIONS_MODE 可覆盖默认模式", () => {
 
 test("Full access 状态以 dim 分隔符融入 footer", () => {
   const theme = {
-    fg(color, text) {
+    fg(color: string, text: string) {
       return `<${color}>${text}</${color}>`;
     },
   };

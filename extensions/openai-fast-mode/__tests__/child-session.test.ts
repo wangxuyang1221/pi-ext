@@ -37,7 +37,7 @@ test("persists child initial true and false before any assistant without shared 
       const manager = SessionManager.open(file, root);
       const child = fixture(manager, agentDir, { PI_SUBAGENT_PARENT: "{}", PI_SUBAGENT_LAUNCH: JSON.stringify({ fast: enabled }) });
       await child.start();
-      expect(manager.getEntries().filter(e => e.type === "custom" && e.customType === entryType).at(-1)?.data)
+      expect(manager.getEntries().filter(e => e.type === "custom").filter(e => e.customType === entryType).at(-1)?.data)
         .toEqual({ sessionId: manager.getSessionId(), enabled });
       expect(await readFile(file, "utf8")).toContain(`"enabled":${enabled}`);
       expect(manager.buildSessionContext().messages).toEqual([]);

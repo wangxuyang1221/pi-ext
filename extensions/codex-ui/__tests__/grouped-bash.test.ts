@@ -39,7 +39,7 @@ function harness(services: Parameters<typeof registerCodexTools>[2] = {}) {
 afterEach(() => vi.useRealTimers());
 
 test("Bash preview hints follow injected bindings and disappear on expansion", () => {
-  let keys = ["ctrl+shift+o"];
+  let keys: import("@earendil-works/pi-tui").KeyId[] = ["ctrl+shift+o"];
   const h = harness({ getKeybindings: () => ({ getKeys: () => keys }) });
   try {
     const a = h.row("a"); a.updateResult(result("body\nsecond\nthird\nfourth"));

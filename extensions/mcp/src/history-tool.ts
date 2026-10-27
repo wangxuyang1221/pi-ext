@@ -9,6 +9,7 @@ export function historyTool(identity: HistoryIdentity): ToolDefinition {
     name: identity.fullName,
     label: "MCP",
     description: "",
+    defaultActive: false,
     parameters: Type.Object({}),
     renderShell: "self",
     renderCall(args, theme, context) {

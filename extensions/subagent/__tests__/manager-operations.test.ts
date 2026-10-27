@@ -79,6 +79,7 @@ test("lists switched sessions as direct children without including descendants",
     }));
 
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() {
         throw new Error("not used");
       },
@@ -156,6 +157,7 @@ test("rejects a managed child with nested ownership during list", async () => {
     await store.save(parent);
     await store.save(child);
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return true; },
@@ -241,6 +243,7 @@ test("reads finalized in-flight activity beyond a stale lifecycle leaf", async (
     await store.save(parent);
     await store.save(child);
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return true; },
@@ -366,6 +369,7 @@ test("returns bounded activity only after a newer settled generation", async () 
     await store.save(parent);
     await store.save(child);
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return true; },
@@ -447,6 +451,7 @@ test("persists an interruption observed while waiting", async () => {
     await store.save(parent);
     await store.save(child);
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return false; },
@@ -513,6 +518,7 @@ test("returns closed when terminal close deletes state during wait", async () =>
     await store.save(parent);
     await store.save(child);
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return alive; },
@@ -840,6 +846,7 @@ function createManager(
   options: {
     sleep?: (milliseconds: number) => Promise<void>;
     nowMs?: () => number;
+    beforePrompt?: NonNullable<ConstructorParameters<typeof SubagentManager>[0]["beforePrompt"]>;
   } = {},
 ): SubagentManager {
   return new SubagentManager({

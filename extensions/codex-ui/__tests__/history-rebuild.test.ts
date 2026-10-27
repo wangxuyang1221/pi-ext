@@ -49,7 +49,7 @@ test.each(["unchanged", "replacement", "in-place"])("Read groups survive rebuild
   const { session } = await createAgentSession({ cwd, agentDir: join(cwd, "agent"), settingsManager, sessionManager,
     resourceLoader: loader, modelRuntime: models, model: faux.getModel() });
   try {
-    await session.bindExtensions({ mode: "tui", onError: error => assert.fail(error.message) });
+    await session.bindExtensions({ mode: "tui", onError: error => assert.fail(error.error) });
     // Use native rebuild methods and tool components; omit unrelated editor/footer UI.
     const mode = Object.create(InteractiveMode.prototype);
     Object.defineProperties(mode, Object.getOwnPropertyDescriptors({

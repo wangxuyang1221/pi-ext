@@ -1,3 +1,4 @@
+import { hasWriteChange, writeChange, writePatch } from "./fixtures/write-result.js";
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -56,8 +57,8 @@ test("write bounds each UTF-8 snapshot and skips diffs above the approved byte o
       await writeFile(join(cwd, "file.ts"), sample.old);
       readFileMock.mockClear(); snapshotReadMock.mockClear(); patchMock.mockClear();
       const result = await write.execute("over-limit", { path: "file.ts", content: sample.next }, undefined, undefined, { cwd } as never);
-      assert.equal(result.details.codexWrite.action, "Edited");
-      assert.equal("patch" in result.details.codexWrite, false);
+      assert.equal(writeChange(result).action, "Edited");
+      assert.equal("patch" in writeChange(result), false);
       assert.equal(patchMock.mock.calls.length, 0);
       assert.equal(readFileMock.mock.calls.length, 0, "Snapshots must use bounded handle reads");
       assert.equal(snapshotReadMock.mock.calls.length > 0, sample.reads);
@@ -66,8 +67,8 @@ test("write bounds each UTF-8 snapshot and skips diffs above the approved byte o
     for (const content of ["x".repeat(max), "x\n".repeat(2000)]) {
       await writeFile(join(cwd, "file.ts"), content);
       const result = await write.execute("at-limit", { path: "file.ts", content }, undefined, undefined, { cwd } as never);
-      assert.equal(typeof result.details.codexWrite.patch, "string");
-      assert.deepEqual(parseUnifiedPatch(result.details.codexWrite.patch), []);
+      assert.equal(typeof writeChange(result).patch, "string");
+      assert.deepEqual(parseUnifiedPatch(writePatch(result)), []);
     }
     for (const [buffer] of snapshotReadMock.mock.calls) assert.ok(buffer.length <= max + 1);
   } finally { await rm(cwd, { recursive: true, force: true }); }
@@ -81,13 +82,13 @@ test("write caps persisted patches at two MiB without changing the write result"
     const content = "b".repeat(1024 * 1024);
     await writeFile(join(cwd, "file.ts"), old);
     const result = await write.execute("over", { path: "file.ts", content }, undefined, undefined, { cwd } as never);
-    assert.equal("patch" in result.details.codexWrite, false);
-    assert.equal(result.details.codexWrite.action, "Edited");
+    assert.equal("patch" in writeChange(result), false);
+    assert.equal(writeChange(result).action, "Edited");
     assert.equal(await readFile(join(cwd, "file.ts"), "utf8"), content);
     const exact = "p".repeat(2 * 1024 * 1024);
     patchMock.mockReturnValueOnce(exact);
     const atLimit = await write.execute("at", { path: "file.ts", content: "short" }, undefined, undefined, { cwd } as never);
-    assert.equal(atLimit.details.codexWrite.patch, exact);
+    assert.equal(writeChange(atLimit).patch, exact);
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });
 
@@ -105,8 +106,8 @@ test("same-file writes and edits capture the previous queued mutation including 
       edit.execute("second", { path: "alias.ts", edits: [{ oldText: "one", newText: "two" }] }, undefined, undefined, ctx),
       write.execute("third", { path: "alias.ts", content: "three\n" }, undefined, undefined, ctx),
     ]);
-    const changes = results.filter(result => result.details.codexWrite).map(result =>
-      parseUnifiedPatch(result.details.codexWrite.patch).map(line => [line.kind, line.text]));
+    const changes = results.filter(hasWriteChange).map(result =>
+      parseUnifiedPatch(writePatch(result)).map(line => [line.kind, line.text]));
     assert.deepEqual(changes, [
       [["removed", "zero"], ["added", "one"]],
       [["removed", "two"], ["added", "three"]],
@@ -145,8 +146,8 @@ test("write retains empty, newline-only, BOM and no-op changes without coercing 
     ] as const) {
       await writeFile(join(cwd, "file.ts"), oldContent);
       const result = await write.execute("edge", { path: "file.ts", content }, undefined, undefined, { cwd } as never);
-      assert.equal(result.details.codexWrite.action, "Edited");
-      assert.deepEqual(parseUnifiedPatch(result.details.codexWrite.patch).map(line => line.kind), expectedKinds);
+      assert.equal(writeChange(result).action, "Edited");
+      assert.deepEqual(parseUnifiedPatch(writePatch(result)).map(line => line.kind), expectedKinds);
       assert.equal(await readFile(join(cwd, "file.ts"), "utf8"), content);
     }
   } finally { await rm(cwd, { recursive: true, force: true }); }
@@ -160,7 +161,7 @@ test("write metadata describes encoded bytes even if the argument object changes
     const args = { path: "file.ts", content: "\ud800" };
     snapshotReadMock.mockImplementationOnce(() => { args.content = "not actually written"; });
     const result = await write.execute("encoded", args, undefined, undefined, { cwd } as never);
-    assert.deepEqual(parseUnifiedPatch(result.details.codexWrite.patch), []);
+    assert.deepEqual(parseUnifiedPatch(writePatch(result)), []);
     assert.equal(await readFile(join(cwd, "file.ts"), "utf8"), "\ufffd");
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });
@@ -187,7 +188,7 @@ test("an abort after the filesystem operation can leave bytes without a success 
     assert.equal(await readFile(join(cwd, "file.ts"), "utf8"), "new\n");
     assert.equal(patchMock.mock.calls.length, 0);
     const next = await write.execute("next", { path: "file.ts", content: "next\n" }, undefined, undefined, { cwd } as never);
-    assert.deepEqual(parseUnifiedPatch(next.details.codexWrite.patch).map(line => line.text), ["new", "next"]);
+    assert.deepEqual(parseUnifiedPatch(writePatch(next)).map(line => line.text), ["new", "next"]);
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });
 
@@ -203,14 +204,14 @@ test("real write results survive disk session recovery without reading or recomp
       api: "openai-responses", provider: "fixture", model: "fixture", stopReason: "toolUse", timestamp: 1,
       usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } } });
-    sm.appendMessage({ role: "toolResult", toolName: "write", toolCallId: "saved", ...result, isError: false, timestamp: 2 });
+    sm.appendMessage({ role: "toolResult", toolName: "write", toolCallId: "saved", content: result.content, details: JSON.parse(JSON.stringify(result.details)), isError: false, timestamp: 2 });
     const restored = SessionManager.open(sm.getSessionFile()!).getEntries().find(entry =>
       entry.type === "message" && entry.message.role === "toolResult");
     assert.ok(restored?.type === "message" && restored.message.role === "toolResult");
     assert.deepEqual(restored.message.details, result.details);
     await rm(join(cwd, args.path));
     readFileMock.mockClear(); patchMock.mockClear();
-    const row = new ToolExecutionComponent("write", "saved", args, { showImages: false }, write, { requestRender() {} }, cwd);
+    const row = new ToolExecutionComponent("write", "saved", args, { showImages: false }, write, { requestRender() {} } as never, cwd);
     row.updateResult(restored.message);
     row.setExpanded(false);
     const collapsed = row.render(92).map(stripTerminalSequences).filter(Boolean);
@@ -250,19 +251,19 @@ test("write persists actual creation and overwrite patches without changing mode
     const args = { path: "nested/file.ts", content: "const value = 1;\n" };
     const added = await write.execute("add", args, undefined, undefined, { cwd } as never);
     assert.deepEqual(added.content, [{ type: "text", text: `Successfully wrote to ${args.path}` }]);
-    assert.equal(added.details.codexWrite.version, 1);
-    assert.equal(added.details.codexWrite.action, "Added");
-    assert.deepEqual(parseUnifiedPatch(added.details.codexWrite.patch).map(line => [line.kind, line.text]), [
+    assert.equal(writeChange(added).version, 1);
+    assert.equal(writeChange(added).action, "Added");
+    assert.deepEqual(parseUnifiedPatch(writePatch(added)).map(line => [line.kind, line.text]), [
       ["added", "const value = 1;"],
     ]);
     const edited = await write.execute("edit", { ...args, content: "const value = 2;\n" }, undefined, undefined, { cwd } as never);
-    assert.equal(edited.details.codexWrite.action, "Edited");
-    assert.deepEqual(parseUnifiedPatch(edited.details.codexWrite.patch).map(line => [line.kind, line.text]), [
+    assert.equal(writeChange(edited).action, "Edited");
+    assert.deepEqual(parseUnifiedPatch(writePatch(edited)).map(line => [line.kind, line.text]), [
       ["removed", "const value = 1;"], ["added", "const value = 2;"],
     ]);
     assert.equal(await readFile(join(cwd, args.path), "utf8"), "const value = 2;\n");
     assert.deepEqual(JSON.parse(JSON.stringify(edited.details)), edited.details);
-    assert.ok(!("oldContent" in edited.details.codexWrite));
+    assert.ok(!("oldContent" in writeChange(edited)));
   } finally {
     await rm(cwd, { recursive: true, force: true });
   }

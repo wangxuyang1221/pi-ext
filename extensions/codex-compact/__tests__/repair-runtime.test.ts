@@ -4,7 +4,7 @@ import { zstdDecompressSync } from "node:zlib";
 import { expect, test, vi } from "vitest";
 import { createAgentSession, createCodemodeExtension, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { InMemoryCredentialStore, InMemoryModelsStore } from "@earendil-works/pi-ai";
-import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
+import { getTestModel } from "./fixtures/models.js";
 import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
 import { streamSimple } from "@earendil-works/pi-ai/api/openai-codex-responses";
 import compact from "../src/index.js";
@@ -32,7 +32,7 @@ function answer(index: number, tokens = 10) {
 
 test("sends the first SDK request with the real codemode reachability callback", async () => {
   const root = await mkdtemp(join(process.cwd(), ".tmp/codemode-request-"));
-  const model = getBuiltinModel("openai-codex", "gpt-6-astra")!;
+  const model = getTestModel("openai-codex", "gpt-6-astra")!;
   const credentials = new InMemoryCredentialStore();
   await credentials.modify(model.provider, async () => ({ type: "oauth", access: apiKey, refresh: "offline", expires: Date.now() + 600_000 }));
   const runtime = await ModelRuntime.create({ credentials, modelsStore: new InMemoryModelsStore(), modelsPath: null, allowModelNetwork: false, refreshOnCreate: false });
@@ -61,7 +61,7 @@ test("sends the first SDK request with the real codemode reachability callback",
     expect(session.agent.state.messages.at(-1)).toMatchObject({ role: "assistant", stopReason: "stop" });
   } finally {
     await session.abort(); await session.waitForIdle();
-    await session.extensionRunner.emit({ type: "session_shutdown", reason: "exit" }); session.dispose();
+    await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" }); session.dispose();
     notice.mockRestore(); vi.unstubAllGlobals(); await rm(root, { recursive: true, force: true });
   }
 });
@@ -69,7 +69,7 @@ test("sends the first SDK request with the real codemode reachability callback",
 test.each([401, 403])("aborts the real SDK provider request after empty automatic HTTP %i", async status => {
   const root = await mkdtemp(join(process.cwd(), ".tmp/auth-runtime-"));
   const manager = SessionManager.create(root, join(root, "sessions"));
-  const model = { ...getBuiltinModel("openai-codex", "gpt-5.5")!, contextWindow: 1000,
+  const model = { ...getTestModel("openai-codex", "gpt-5.5")!, contextWindow: 1000,
     compat: { supportsMidConvoSystemMessages: true, supportsAdditionalTools: true } };
   manager.appendModelChange(model.provider, model.id);
   manager.appendMessage({ role: "system", content: "Fixed prompt", timestamp: 0 } as never);
@@ -117,7 +117,7 @@ test.each([401, 403])("aborts the real SDK provider request after empty automati
     expect(providerPayloads[0].input).toContainEqual({ type: "compaction", encrypted_content: "after-failure" });
   } finally {
     await session.abort(); await session.waitForIdle();
-    await session.extensionRunner.emit({ type: "session_shutdown", reason: "exit" }); session.dispose();
+    await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" }); session.dispose();
     notice.mockRestore(); vi.unstubAllGlobals(); await rm(root, { recursive: true, force: true });
   }
 }, 25_000);
@@ -125,7 +125,7 @@ test.each([401, 403])("aborts the real SDK provider request after empty automati
 test.each(["provable", "truncated"])("handles %s legacy pending input through persisted SDK manual compaction", async kind => {
   const root = await mkdtemp(join(process.cwd(), ".tmp/legacy-runtime-"));
   const manager = SessionManager.create(root, join(root, "sessions"));
-  const model = { ...getBuiltinModel("openai-codex", "gpt-5.5")!, contextWindow: 800_000,
+  const model = { ...getTestModel("openai-codex", "gpt-5.5")!, contextWindow: 800_000,
     compat: { supportsMidConvoSystemMessages: true, supportsAdditionalTools: true } };
   manager.appendModelChange(model.provider, model.id);
   manager.appendMessage({ role: "system", content: "Fixed prompt", timestamp: 0 } as never);
@@ -183,7 +183,7 @@ test.each(["provable", "truncated"])("handles %s legacy pending input through pe
       .toEqual(kind === "truncated" ? [...details.replacementHistory.filter(item => item.role === "user"), item] : [item]);
   } finally {
     await session.abort(); await session.waitForIdle();
-    await session.extensionRunner.emit({ type: "session_shutdown", reason: "exit" }); session.dispose();
+    await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" }); session.dispose();
     notice.mockRestore(); vi.unstubAllGlobals(); await rm(root, { recursive: true, force: true });
   }
 }, 25_000);
@@ -191,7 +191,7 @@ test.each(["provable", "truncated"])("handles %s legacy pending input through pe
 test.each(["manual", "threshold", "overflow", "repeated-overflow"])("repairs long input through the real SDK %s lifecycle", async kind => {
   const root = await mkdtemp(join(process.cwd(), ".tmp/repair-runtime-"));
   const manager = SessionManager.create(root, join(root, "sessions"));
-  const model = { ...getBuiltinModel("openai-codex", "gpt-5.5")!, contextWindow: 800_000,
+  const model = { ...getTestModel("openai-codex", "gpt-5.5")!, contextWindow: 800_000,
     compat: { supportsMidConvoSystemMessages: true, supportsAdditionalTools: true } };
   const credentials = new InMemoryCredentialStore();
   await credentials.modify(model.provider, async () => ({ type: "oauth", access: apiKey, refresh: "offline", expires: Date.now() + 600_000 }));
@@ -265,7 +265,7 @@ test.each(["manual", "threshold", "overflow", "repeated-overflow"])("repairs lon
     clearTimeout(timer);
     await session.abort();
     await session.waitForIdle();
-    await session.extensionRunner.emit({ type: "session_shutdown", reason: "exit" });
+    await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" });
     session.dispose();
     vi.unstubAllGlobals();
     await rm(root, { recursive: true, force: true });
@@ -275,7 +275,7 @@ test.each(["manual", "threshold", "overflow", "repeated-overflow"])("repairs lon
 test.each(["hidden", "forced", "both"])("replays %s loadout through real ExtensionRunner hooks", async mode => {
   const root = await mkdtemp(join(process.cwd(), ".tmp/projection-runtime-"));
   const manager = SessionManager.inMemory(root);
-  const model = { ...getBuiltinModel("openai-codex", "gpt-5.5")!, compat: { supportsMidConvoSystemMessages: true, supportsAdditionalTools: true } };
+  const model = { ...getTestModel("openai-codex", "gpt-5.5")!, compat: { supportsMidConvoSystemMessages: true, supportsAdditionalTools: true } };
   const tool = (name: string) => ({ name, description: name, parameters: { type: "object", properties: {} } });
   manager.appendModelChange(model.provider, model.id);
   manager.appendMessage({ role: "system", content: "Fixed prompt", toolsAdded: [tool("hider"), tool("victim")], timestamp: 0 } as never);
@@ -316,7 +316,7 @@ test.each(["hidden", "forced", "both"])("replays %s loadout through real Extensi
     expect(payloads[0].input).toContainEqual({ type: "compaction", encrypted_content: "offline-opaque" });
     expect(payloads[0].input.filter((item: any) => item.role === "user")).toEqual([{ role: "user", content: [{ type: "input_text", text: "continue" }] }]);
     if (mode !== "hidden") expect(payloads[0].instructions).toBe("Forced prompt");
-    if (mode !== "forced") expect(JSON.stringify(payloads[0].tools)).not.toMatch(/victim|late/);
+    if (mode !== "forced") expect(JSON.stringify({ tools: payloads[0].tools ?? [], input: payloads[0].input })).not.toMatch(/victim|late/);
     expect(network).not.toHaveBeenCalled();
     configuration.manualProjection = { hiddenTools: mode === "forced" ? [] : ["victim", "late"], forcedPrompt: mode !== "hidden" ? "Forced prompt" : undefined };
     const compactionBodies: any[] = [];
@@ -327,14 +327,14 @@ test.each(["hidden", "forced", "both"])("replays %s loadout through real Extensi
     });
     await session.compact();
     expect(compactionBodies).toHaveLength(1);
-    if (mode !== "forced") expect(JSON.stringify(compactionBodies[0].tools)).not.toMatch(/victim|late/);
+    if (mode !== "forced") expect(JSON.stringify({ tools: compactionBodies[0].tools ?? [], input: compactionBodies[0].input })).not.toMatch(/victim|late/);
     if (mode !== "hidden") expect(compactionBodies[0].instructions).toBe("Forced prompt");
     await session.prompt("after manual");
     await session.waitForIdle();
     expect(payloads.at(-1).input).toContainEqual({ type: "compaction", encrypted_content: "manual-opaque" });
   } finally {
     await session.abort(); await session.waitForIdle();
-    await session.extensionRunner.emit({ type: "session_shutdown", reason: "exit" });
+    await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" });
     session.dispose(); vi.unstubAllGlobals(); configuration.manualProjection = { hiddenTools: [], forcedPrompt: undefined as string | undefined };
     await rm(root, { recursive: true, force: true });
   }

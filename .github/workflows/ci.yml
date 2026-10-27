@@ -8,10 +8,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Node 22 on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -30,7 +35,11 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Check source, tests, build, and pinned Pi host
-        run: pnpm run check
+        shell: bash
+        run: |
+          mkdir -p .tmp/test-results
+          set -o pipefail
+          pnpm run check 2>&1 | tee .tmp/test-results/check.log
 
       - name: Verify ignored files are not tracked
         shell: bash
@@ -43,3 +52,94 @@ jobs:
 
       - name: Inspect package contents
         run: pnpm pack --dry-run
+
+      - name: Upload check evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: check-${{ matrix.os }}
+          path: .tmp/test-results/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
+
+  unix-host:
+    name: Unix host / ${{ matrix.suite }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [tmux, accounting, pty]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/setup@v1
+        with:
+          runtime: node@22.19.0
+          cache: true
+          install: false
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install Unix host prerequisites
+        run: sudo apt-get update && sudo apt-get install -y tmux fish
+      - uses: conda-incubator/setup-miniconda@v4
+        if: matrix.suite == 'pty'
+        with:
+          miniforge-version: latest
+          activate-environment: codex-py312
+          python-version: '3.12'
+      - name: Install terminal emulator
+        if: matrix.suite == 'pty'
+        run: conda run -n codex-py312 python -m pip install pyte==0.8.2
+      - name: Run offline host acceptance
+        shell: bash
+        run: |
+          mkdir -p .tmp/test-results
+          set -o pipefail
+          pnpm run host:${{ matrix.suite }}:check 2>&1 | tee .tmp/test-results/host.log
+      - name: Upload host evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unix-host-${{ matrix.suite }}
+          path: .tmp/test-results/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
+
+  python-and-skills:
+    name: Python grading and skill installation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/setup@v1
+        with:
+          runtime: node@22.19.0
+          cache: true
+          install: false
+      - uses: conda-incubator/setup-miniconda@v4
+        with:
+          miniforge-version: latest
+          activate-environment: codex-py312
+          python-version: '3.12'
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: conda run -n codex-py312 python -m pip install pyte==0.8.2 -r scripts/codex-compact-quality-requirements.txt
+      - name: Verify offline grading and installed skills
+        shell: bash
+        run: |
+          mkdir -p .tmp/test-results
+          set -o pipefail
+          pnpm run codex-compact:quality:check 2>&1 | tee .tmp/test-results/python.log
+          mkdir -p adventure/evidence
+          pnpm run skill-mentions:acceptance --evidence-prefix=ci-skill-install 2>&1 | tee .tmp/test-results/skills.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-and-skills
+          path: |
+            .tmp/test-results/
+            adventure/evidence/ci-skill-install-*
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7

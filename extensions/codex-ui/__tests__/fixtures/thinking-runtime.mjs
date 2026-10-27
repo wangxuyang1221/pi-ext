@@ -81,7 +81,7 @@ try {
     await runtime.session.prompt("Replay",{source:"extension"});
     off();
     assert.ok(deltas > 0);
-    console.log(JSON.stringify({passed:true,host:"Pi 1.3.0",production:true,thinkingDeltas:deltas,networkAttempts}));
+    console.log(JSON.stringify({passed:true,host:`Pi ${sdk.VERSION}`,production:true,thinkingDeltas:deltas,networkAttempts}));
   } else {
     const interactive = new sdk.InteractiveMode(runtime,{migratedProviders:[],tuiMode:process.argv.includes("--fullscreen") ? "fullscreen" : "regular"});
     await interactive.run();

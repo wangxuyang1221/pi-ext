@@ -131,16 +131,18 @@ if (childMode) {
         const session = handle.runtime.session;
         assert.equal((await goal()).tokensUsed, 40);
         await session.setModel(fixture.models.anthropic);
-        fixture.setSteps([text(usage(12, 8), { family: "anthropic", text: "Compaction summary" })]);
-        await session.compact(); assert.equal((await goal()).tokensUsed, 60);
+        fixture.setSteps([text(usage(12, 8), { family: "anthropic", text: "Compaction summary" }),
+          text(usage(3, 4), { family: "anthropic", text: "Retained turn prefix summary" })]);
+        await session.compact(); assert.equal((await goal()).tokensUsed, 67);
         await session.setModel(fixture.models.google);
         fixture.setSteps([text(usage(6, 4), { family: "google", text: "Branch summary" })]);
         await session.navigateTree(session.sessionManager.getEntries().find(e => e.type === "custom_message").id, { summarize: true });
-        assert.equal((await goal()).tokensUsed, 70);
+        assert.equal((await goal()).tokensUsed, 77);
         observations.push({ combinedBeforeBudget: await goal() });
         session.setActiveToolsByName(["create_goal", "get_goal", "update_goal"]);
         await session.setModel(fixture.models.completions);
-        fixture.setSteps([text(usage(26, 4)), text(usage(6, 4))]);
+        // Reach the same 100-token boundary after both Pi 1.4 summary responses.
+        fixture.setSteps([text(usage(19, 4)), text(usage(6, 4))]);
         await session.prompt("/goal resume"); await session.waitForIdle();
         assert.equal((await goal()).tokensUsed, 110); assert.equal((await goal()).status, "budget_limited");
         assert.equal(session.messages.filter(m => m.customType === "pi-ext-goal-budget").length, 1);

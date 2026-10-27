@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fullEstimatorCases } from "../../../scripts/codex-compact-full-cases.mjs";
-import { approximateCompactionRequestTokens, approximateResponseItemTokens } from "../src/native-compaction.js";
+import { approximateCompactionRequestTokens, approximateResponseItemTokens, type ResponseItem } from "../src/native-compaction.js";
 import * as decoder from "../src/media-decoder.js";
 import { textTokens } from "../src/token-estimation.js";
 
@@ -14,18 +14,19 @@ beforeEach(() => { vi.spyOn(decoder, "decodeOriginalImageBytes").mockImplementat
 afterEach(() => vi.restoreAllMocks());
 
 describe("original Rust full ResponseItem estimator", () => {
-	it.each(fullEstimatorCases())("normalizes and estimates $name like pinned serde and history.rs", (entry) => {
+	// The Rust parity corpus deliberately includes malformed wire values.
+	it.each(fullEstimatorCases() as unknown as Array<{name: string; items: ResponseItem[]; instructions?: string; tools?: ResponseItem[]}>)("normalizes and estimates $name like pinned serde and history.rs", (entry) => {
 		const expected = reference.vectors.find((vector: { name: string }) => vector.name === entry.name);
 		expect(expected).toBeDefined();
 		expect(expected.error).toBeUndefined();
 		const before = JSON.stringify(entry);
 		expect(createHash("sha256").update(before).digest("hex")).toBe(expected.inputSha256);
-		expect(entry.items.map((item: object) => approximateResponseItemTokens([item]))).toEqual(expected.counts);
+		expect(entry.items.map((item: ResponseItem) => approximateResponseItemTokens([item]))).toEqual(expected.counts);
 		expect(approximateResponseItemTokens(entry.items) + textTokens(entry.instructions ?? "")).toBe(expected.total);
 		expect(approximateResponseItemTokens(expected.normalized)).toBe(expected.roundTripTotal);
 		if (entry.name.startsWith("prefix/")) {
 			const canonicalItems = expected.counts.reduce((a: number, b: number) => a + b, 0);
-			expect(approximateCompactionRequestTokens({ input: entry.items, instructions: entry.instructions, tools: entry.tools })).toBe(canonicalItems + Math.ceil(expected.wirePrefixBytes / 4));
+			expect(approximateCompactionRequestTokens({ input: entry.items, instructions: entry.instructions ?? "", tools: entry.tools })).toBe(canonicalItems + Math.ceil(expected.wirePrefixBytes / 4));
 		}
 		expect(JSON.stringify(entry)).toBe(before);
 	});

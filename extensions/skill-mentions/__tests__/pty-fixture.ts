@@ -45,7 +45,7 @@ export default function (pi: ExtensionAPI): void {
     handler: async () => {
       pi.sendUserMessage([
         { type: "text", text: "插件 $alpha，继续 $beta. $alpha!" },
-        { type: "image", mimeType: "image/png", data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==" },
+        { type: "image", mimeType: "image/png", data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==" },
       ]);
     },
   });

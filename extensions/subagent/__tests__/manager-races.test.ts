@@ -216,7 +216,7 @@ test("follows newly appended descendants of a pinned leaf without restoring aban
   const f = await fixture();
   try {
     await append(f.sessionFile, message("u1", null, "user", "Work"), message("a1", "u1", "assistant", "Abandoned"));
-    const host = new SessionRuntimeHost({ store: f.store, parent: f.child.parent, launch: f.child.launch });
+    const host = new SessionRuntimeHost({ store: f.store, parent: f.child.parent, launch: f.child.launch, createEpoch: () => "child-epoch" });
     await host.startSession({ sessionId: "child", cwd: f.root, sessionFile: f.sessionFile, leafId: "u1", leafPosition: 2, tmux: locator });
     const first = await f.manager.read("parent", "child", { view: "recent_activity" });
     assert.equal(first.view, "recent_activity");

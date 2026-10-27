@@ -26,12 +26,12 @@ async function fixture(name = "Iron Man", parentId = "parent") {
   await store.save(child);
   await writeFile(child.runtime.sessionFile, `${JSON.stringify({ type: "session", version: 3,
     id: child.sessionId, timestamp: new Date().toISOString(), cwd: root })}\n`);
-  const runtime = { launch: vi.fn(), sendPrompt: vi.fn(), close: vi.fn(), isAlive: vi.fn(async () => true) };
+  const runtime = { capturePane: vi.fn(async () => ""), launch: vi.fn(), sendPrompt: vi.fn(), close: vi.fn(), isAlive: vi.fn(async () => true) };
   const manager = new SubagentManager({ store, runtime, stateRoot: root, nativeSessionRoot: root,
     extensionPath: "/fixture.js", piPath: "/fixture", environment: {} });
   const tools = new Map<string, ToolDefinition>();
   const handlers = new Map<string, (...args: any[]) => any>();
-  registerSubagentTools({ registerTool: tool => tools.set(tool.name, tool),
+  registerSubagentTools({ registerTool: (tool: ToolDefinition) => tools.set(tool.name, tool),
     on: (event: string, handler: any) => handlers.set(event, handler) } as any, manager);
   const tool = tools.get("subagent_wait")!;
   const args = { agentId: child.sessionId, timeoutMs: 1000,
@@ -39,7 +39,7 @@ async function fixture(name = "Iron Man", parentId = "parent") {
   const ctx = { sessionManager: { getSessionId: () => parent.sessionId, getSessionFile: () => parent.runtime.sessionFile } };
   initTheme("dark", false);
   const row = (input = args) => new ToolExecutionComponent(tool.name, "wait-call", input, { showImages: false }, tool,
-    { requestRender() {} }, root);
+    { requestRender() {} } as never, root);
   return { root, store, child, parent, runtime, manager, tool, handlers, args, ctx, row,
     cleanup: async () => { await manager.releaseAllNamespaces(); await rm(root, { recursive: true, force: true }); } };
 }

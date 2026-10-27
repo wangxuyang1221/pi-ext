@@ -1,6 +1,7 @@
+import { waitFor } from "../../../test-support/wait.js";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { test } from "vitest";
@@ -12,7 +13,7 @@ import {
   type CommandExecution,
 } from "../src/tmux-runtime.js";
 
-const runIntegration = process.env.PI_SUBAGENT_INTEGRATION === "1";
+const runIntegration = process.env.PI_SUBAGENT_ISOLATED_INTEGRATION === "1";
 
 test.skipIf(!runIntegration)(
   "runs the full managed lifecycle against real Pi and tmux",
@@ -20,15 +21,22 @@ test.skipIf(!runIntegration)(
     const root = await mkdtemp(join(process.cwd(), ".subagent-integration-test-"));
     const store = new SessionStateStore(root);
     const tmuxSessionName = `pi-subagent-test-${process.pid}-${Date.now()}`;
-    const piPath = process.env.PI_SUBAGENT_PI_PATH
-      ?? "/Users/wangxuyang/Library/pnpm/bin/pi";
-    const tmuxPath = process.env.PI_SUBAGENT_TMUX_PATH
-      ?? "/opt/homebrew/bin/tmux";
+    const home = join(root, "home");
+    await mkdir(join(home, ".pi", "agent"), { recursive: true });
+    const piPath = join(root, "pi");
+    const tmuxPath = join(root, "tmux");
+    const socket = join(root, "tmux.sock");
+    const quote = (value: string) => `'${value.replaceAll("'", `'"'"'`)}'`;
+    const cli = resolve("node_modules/@earendil-works/pi-coding-agent/dist/cli.js");
+    await writeFile(piPath, `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(cli)} --no-extensions --no-skills --no-context-files --no-themes --no-prompt-templates --no-builtin-tools --no-approve "$@"\n`);
+    await writeFile(tmuxPath, `#!/bin/sh\nexec tmux -S ${quote(socket)} -f /dev/null "$@"\n`);
+    await chmod(piPath, 0o700);
+    await chmod(tmuxPath, 0o700);
     const execute: CommandExecution = (command, args, options) => new Promise((resolveResult) => {
       execFile(command, args, {
         cwd: options?.cwd,
         signal: options?.signal,
-        timeout: options?.timeout,
+        timeout: options?.timeout === undefined ? undefined : Math.ceil(options.timeout),
         maxBuffer: 1024 * 1024,
       }, (error, stdout, stderr) => {
         const code = typeof (error as NodeJS.ErrnoException | null)?.code === "number"
@@ -45,6 +53,15 @@ test.skipIf(!runIntegration)(
       sessionName: tmuxSessionName,
       transferDirectory: join(root, "prompt-transfer"),
     });
+    const pids = new Set<number>();
+    const launch = runtime.launch.bind(runtime);
+    runtime.launch = async options => {
+      const locator = await launch(options);
+      if (locator.panePid) pids.add(locator.panePid);
+      const server = await execute(tmuxPath, ["display-message", "-p", "#{pid}"]);
+      if (server.code === 0) pids.add(Number(server.stdout.trim()));
+      return locator;
+    };
     const blockingMarkerFile = join(root, "integration-block-ready");
     const extensionFile = join(root, "integration-extension.mjs");
     const subagentExtensionUrl = pathToFileURL(
@@ -55,10 +72,12 @@ import { writeFile } from "node:fs/promises";
 
 import subagentExtension from ${JSON.stringify(subagentExtensionUrl)};
 import { Type } from "typebox";
+import lifecycleProvider from ${JSON.stringify(pathToFileURL(resolve("extensions/subagent/__tests__/fixtures/lifecycle-provider.ts")).href)};
 
 const blockingMarkerFile = ${JSON.stringify(blockingMarkerFile)};
 
 export default function integrationExtension(pi) {
+  lifecycleProvider(pi);
   subagentExtension(pi);
   pi.registerTool({
     name: "integration_block",
@@ -100,7 +119,11 @@ export default function integrationExtension(pi) {
       piPath,
       environment: Object.fromEntries(Object.entries({
         PATH: process.env.PATH,
-        HOME: process.env.HOME,
+        HOME: home,
+        PI_CODING_AGENT_DIR: join(home, ".pi", "agent"),
+        PI_SUBAGENT_TMUX_PATH: tmuxPath,
+        TMPDIR: root,
+        PI_OFFLINE: "1",
         SHELL: process.env.SHELL,
         TERM: process.env.TERM ?? "xterm-256color",
         LANG: process.env.LANG,
@@ -117,9 +140,7 @@ export default function integrationExtension(pi) {
     const markerFour = `SUBAGENT_E2E_FOUR_${Date.now()}`;
     const largeResultMarker = `SUBAGENT_E2E_LARGE_RESULT_${Date.now()}`;
     const markerFive = `SUBAGENT_E2E_FIVE_${Date.now()}`;
-    const model = process.env.PI_PROVIDER && process.env.PI_MODEL
-      ? { provider: process.env.PI_PROVIDER, id: process.env.PI_MODEL }
-      : undefined;
+    const model = { provider: "lifecycle-fixture", id: "deterministic" };
 
     try {
       await writeFile(parentSessionFile, `${JSON.stringify({
@@ -287,12 +308,14 @@ export default function integrationExtension(pi) {
       assert.ok(Buffer.byteLength(serializedLargeRead, "utf8") <= 72 * 1024);
       assert.equal(
         largeRead.returnedBytes,
-        Buffer.byteLength(serializedLargeRead, "utf8"),
+        Buffer.byteLength(JSON.stringify((({ agent: _agent, ...view }) => view)(largeRead)), "utf8"),
       );
       const largeTool = largeRead.activity.find((activity) => (
         activity.kind === "tool" && activity.toolName === "integration_large_output"
       ));
       assert.ok(largeTool);
+      assert.equal(largeTool.kind, "tool");
+      if (largeTool.kind !== "tool") throw new Error("Expected tool activity");
       assert.equal(largeTool.outcome, "succeeded");
       assert.ok(largeRead.activity.some(
         (activity) => activity.kind === "assistant" && activity.text.includes(markerFive),
@@ -322,8 +345,22 @@ export default function integrationExtension(pi) {
         available: 3,
       });
       await access(nativeSessionFile);
+    } catch (error) {
+      console.error(error);
+      console.error(await execute(tmuxPath, ["capture-pane", "-p", "-S", "-100"]));
+      throw error;
     } finally {
-      await execute(tmuxPath, ["kill-session", "-t", `=${tmuxSessionName}`]);
+      await manager.close(parentId, "all").catch(() => undefined);
+      await execute(tmuxPath, ["kill-server"]);
+      for (const pid of pids) {
+        await waitFor(() => {
+          try { process.kill(pid, 0); return false; }
+          catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+            return true;
+          }
+        }, Boolean, { label: `fixture process ${pid} to stop`, timeoutMs: 5000 });
+      }
       await rm(root, { recursive: true, force: true });
     }
   },
@@ -331,16 +368,11 @@ export default function integrationExtension(pi) {
 );
 
 async function waitForPath(path: string, timeoutMs: number): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (true) {
-    try {
-      await access(path);
-      return;
-    } catch {
-      if (Date.now() >= deadline) {
-        throw new Error(`Timed out waiting for integration path: ${path}`);
-      }
-      await new Promise<void>((resolveDelay) => setTimeout(resolveDelay, 50));
+  await waitFor(async () => {
+    try { await access(path); return true; }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      return false;
     }
-  }
+  }, Boolean, { label: `integration path: ${path}`, timeoutMs, intervalMs: 50 });
 }

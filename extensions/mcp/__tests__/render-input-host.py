@@ -104,7 +104,7 @@ def run(options):
         def until(marker, start, timeout=45):
             deadline = time.monotonic() + timeout
             while marker not in ANSI.sub("", transcript[start:]):
-                assert time.monotonic() < deadline, f"Missing marker: {marker}"
+                assert time.monotonic() < deadline, f"Missing marker: {marker}\n{ANSI.sub('', transcript[-8000:])}"
                 receive(0.01)
 
         def settle(seconds=0.2):
@@ -127,6 +127,8 @@ def run(options):
             return {"p50ms": round(samples[15], 3), "p95ms": round(samples[28], 3)}
 
         try:
+            until("Ask Pi to do anything", 0)
+            os.write(fd, b"/render-ready\r")
             until("RENDER-HOST-READY", 0)
             settle()
             rows = subprocess.check_output(["ps", "-axo", "pid=,ppid="], text=True)

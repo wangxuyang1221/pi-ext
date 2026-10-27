@@ -1,3 +1,4 @@
+import { wasm, type WasmModule, type WasmInstance } from "../../../test-support/wasm.js";
 import { appendFileSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { copyMedia, verifyMedia } from "../../../scripts/codex-compact-media.mjs";
@@ -19,7 +20,7 @@ describe("media runtime packaging", () => {
 			const mpl = dependencies.packages.filter((dep: { license: string }) => dep.license.includes("MPL-2.0"));
 			expect(mpl.length).toBeGreaterThan(0);
 			for (const dep of mpl) expect(readFileSync(join(directory, dep.bundledSource)).subarray(0, 2)).toEqual(Buffer.from([0x1f, 0x8b]));
-			const instance = new WebAssembly.Instance(new WebAssembly.Module(readFileSync(join(directory, "decoder.wasm"))));
+			const instance = new wasm.Instance(new wasm.Module(readFileSync(join(directory, "decoder.wasm"))));
 			const exports = instance.exports as { allocate: (size: number) => number; release: (ptr: number, size: number) => void; image_bytes: (ptr: number, size: number, features: number) => number };
 			const ptr = exports.allocate(0);
 			expect(exports.image_bytes(ptr, 0, 0)).toBe(-1);

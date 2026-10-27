@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import reference from "./fixtures/codex-reference.json";
+import reference from "./fixtures/codex-reference.json" with { type: "json" };
 import { approximateResponseItemTokens, retainRecentMessages } from "../src/native-compaction.js";
 import { imageBytes, textTokens, truncateText } from "../src/token-estimation.js";
 import { autoCompactTokenLimit, effectiveContextWindow } from "../src/config.js";

@@ -618,7 +618,7 @@ test("encodes reuse, delivery, observation, wait, and close boundaries", () => {
 });
 
 async function executeRead(tool: Record<string, unknown>, input: unknown) {
-  const prepare = tool.prepareArguments as (args: unknown) => Record<string, unknown>;
+  const prepare = tool.prepareArguments as (args: unknown) => import("@earendil-works/pi-ai").JsonObject;
   const params = validateToolArguments(tool as never, {
     type: "toolCall", id: "call-a", name: "subagent_read", arguments: prepare(input),
   });
@@ -753,7 +753,7 @@ test("resolves role defaults and explicit overrides without forwarding selection
   const spawn = vi.fn().mockResolvedValue({ agentId: "child", name: "Storm", status: "idle", generation: 0 });
   const readFast = vi.fn(async () => false);
   const roles = new Map([
-    ["worker", { description: "Only the root should see this", model: "role/model", thinkingLevel: "high", fast: true }],
+    ["worker", { description: "Only the root should see this", model: "role/model", thinkingLevel: "high" as const, fast: true }],
     ["empty", {}],
   ]);
   registerSubagentTools({ on() {}, registerTool(tool: any) { registered.push(tool); } } as never, { spawn } as never, readFast, roles);
@@ -765,7 +765,7 @@ test("resolves role defaults and explicit overrides without forwarding selection
     modelRegistry: { find: (provider: string, id: string) => ({ provider, id }) },
     sessionManager: { getSessionId: () => "parent", getSessionFile: () => "/repo/parent.jsonl" } };
   for (const [params, expected] of [
-    [{ agent_type: "worker" }, { model: { provider: "role", id: "model" }, thinkingLevel: "high", fast: true }],
+    [{ agent_type: "worker" }, { model: { provider: "role", id: "model" }, thinkingLevel: "high" as const, fast: true }],
     [{ agent_type: "worker", model: "explicit/model", thinkingLevel: "off", fast: false }, { model: { provider: "explicit", id: "model" }, thinkingLevel: "off", fast: false }],
     [{ agent_type: "empty" }, { model: ctx.model, fast: false }],
     [{}, { model: ctx.model, fast: false }],

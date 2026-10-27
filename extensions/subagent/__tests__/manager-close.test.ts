@@ -80,6 +80,7 @@ test("terminally removes a historical alias without killing its active sibling",
     await store.save(historical);
     await store.save(current);
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return true; },
@@ -162,6 +163,7 @@ test("does not kill a newer active alias when historical status is stale", async
     await store.save(historical);
     await store.save(current);
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return alive; },
@@ -225,6 +227,7 @@ test("stops a live switched process during close-all even when its linked alias 
     await store.save(parent);
     await store.save(historical);
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return alive; },
@@ -292,6 +295,7 @@ test("closes shared-process aliases once and removes every direct alias", async 
     }
     await store.save(parent);
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return alive; },
@@ -403,6 +407,7 @@ test("reports topology corruption instead of traversing descendants", async () =
     await store.save(current);
 
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return false; },
@@ -467,6 +472,7 @@ test("retains relationship, state, and slot when process close fails", async () 
     await store.save(parent);
     await store.save(child);
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return true; },
@@ -558,6 +564,7 @@ test("terminal close removes only direct Extension state and preserves native se
     await store.save(grandchild);
 
     const runtime: ManagedTmuxRuntime = {
+    async capturePane() { throw new Error("Unexpected pane capture in fixture"); },
       async launch() { throw new Error("not used"); },
       async sendPrompt() {},
       async isAlive() { return false; },

@@ -67,6 +67,7 @@ test("rejects invalid creation scopes and tool profiles without copying the work
       { createPaths: ["code.txt", "code.txt"] }, { toolDefinitions: creationContinuationTools },
       { createPaths: ["code.txt"], toolDefinitions: continuationTools },
     ]) {
+      // @ts-expect-error Deliberately malformed permissions exercise runtime validation.
       await expect(continuation.runContinuation({ ...options, ...override, send: async () => { calls++; throw new Error("Unexpected transport"); } })).rejects.toThrow(/creation permissions|tool definitions/);
       expect(calls).toBe(0);
       expect(fs.readdirSync(options.directory)).toEqual([]);
@@ -99,7 +100,7 @@ test("opts into scoped file creation and asset copies without changing the share
     expect(result.humanReview).toBe("pending");
     expect(fs.existsSync(path.join(options.sourceWorkspace, "new-skin"))).toBe(false);
     expect(fs.readFileSync(path.join(result.workspacePath, createPaths[1]))).toEqual(bytes);
-    expect(result.finalState.workspaceFingerprint).toEqual(fingerprintWorkspace(result.workspacePath));
+    expect(result.finalState!.workspaceFingerprint).toEqual(fingerprintWorkspace(result.workspacePath));
     const config = JSON.parse(fs.readFileSync(path.join(options.directory, "continuation/configuration.json"), "utf8"));
     expect(config.createPaths).toEqual(createPaths);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
@@ -114,15 +115,15 @@ test("captures the complete verified continuation state for a later compaction w
         { type: "function_call", call_id: "chain-edit", name: "replace_text", arguments: JSON.stringify({ path: "code.txt", old_text: "before", new_text: "after" }) }
       ]) }) });
     expect(result.finalState).toBeDefined();
-    const history = JSON.parse(fs.readFileSync(result.finalState.historyPath, "utf8"));
+    const history = JSON.parse(fs.readFileSync(result.finalState!.historyPath, "utf8"));
     expect(history).toHaveLength(5);
     expect(history[0]).toEqual(checkpoint);
     expect(history[2].call_id).toBe("chain-edit");
     expect(history[3]).toEqual({ type: "function_call_output", call_id: "chain-edit", output: "Replacement applied." });
     expect(history[4]).toEqual(message);
-    expect(result.finalState.workspaceFingerprint).toEqual(fingerprintWorkspace(result.workspacePath));
-    expect(result.finalState.workspacePath).toBe(result.workspacePath);
-    expect(result.finalState.historySha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(result.finalState!.workspaceFingerprint).toEqual(fingerprintWorkspace(result.workspacePath));
+    expect(result.finalState!.workspacePath).toBe(result.workspacePath);
+    expect(result.finalState!.historySha256).toMatch(/^[a-f0-9]{64}$/);
     expect(fs.readFileSync(path.join(options.sourceWorkspace, "code.txt"), "utf8")).toBe("before");
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

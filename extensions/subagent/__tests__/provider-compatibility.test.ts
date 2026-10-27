@@ -11,7 +11,7 @@ import { registerSubagentTools } from "../src/tools.js";
 for (const provider of [deepseekProvider(), openaiCodexProvider()]) {
   test(`preserves strict read variants in ${provider.id} request payloads`, async () => {
     const tools: Tool[] = [];
-    registerSubagentTools({ on() {}, registerTool: (tool) => { tools.push(tool); } }, {} as never);
+    registerSubagentTools({ on() { return () => {}; }, registerTool: (tool) => { tools.push(tool); } }, {} as never);
     const read = tools.find((tool) => tool.name === "subagent_read");
     assert.ok(read);
     assert.ok(Type.IsUnion(read.parameters));
@@ -44,7 +44,7 @@ async function capturePayload(provider: Provider, tools: Tool[]) {
     "https://api.openai.com/auth": { chatgpt_account_id: "schema-test" },
   })).toString("base64url");
   const fetch = vi.fn(async () => { throw new Error("Network access is forbidden in schema tests"); });
-  let captured: { tools: Array<Record<string, any>> } | undefined;
+  let captured: { tools?: Array<Record<string, any>>; input?: Array<Record<string, any>> } | undefined;
   const result = await provider.stream(model, normalizeContext({
     messages: [{ role: "user", content: "Schema test", timestamp: 0 }],
     tools,
@@ -62,5 +62,6 @@ async function capturePayload(provider: Provider, tools: Tool[]) {
   assert.ok(captured, result.errorMessage);
   assert.match(result.errorMessage ?? "", /Payload captured before transport/u);
   assert.equal(fetch.mock.calls.length, 0);
-  return captured;
+  return { ...captured, tools: [...(captured.tools ?? []),
+    ...(captured.input ?? []).flatMap(item => item.type === "additional_tools" || item.type === "tool_search_output" ? item.tools : [])] };
 }

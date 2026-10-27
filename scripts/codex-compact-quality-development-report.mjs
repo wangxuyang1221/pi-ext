@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { usageCounts, estimateCost } from "./codex-compact-quality-metrics.mjs";
 
@@ -134,78 +133,15 @@ function verifyOutput(output, value) {
 }
 
 function main() {
-  if (process.argv[2] === "--chain-evidence") {
-    const evidence = JSON.parse(fs.readFileSync(process.argv[3] ?? "docs/fixtures/codex-quality-chain-evidence.json", "utf8"));
-    verifyOutput(path.resolve(process.argv[4] ?? "docs/fixtures/codex-quality-chain-results.json"), rebuildChainReport(evidence));
+  const [mode, input, output, ...extra] = process.argv.slice(2);
+  if (!["--evidence", "--chain-evidence"].includes(mode) || !input || !output || extra.length) {
+    console.error("Usage: pnpm run codex-compact:quality:report <--evidence|--chain-evidence> <evidence.json> <output.json>");
+    process.exitCode = 1;
     return;
   }
-  if (process.argv[2] === "--evidence") {
-    const evidence = JSON.parse(fs.readFileSync(process.argv[3] ?? "docs/fixtures/codex-quality-development-evidence.json", "utf8"));
-    verifyOutput(path.resolve(process.argv[4] ?? "docs/fixtures/codex-quality-development-results.json"), rebuildDevelopmentReport(evidence));
-    return;
-  }
-  const root = path.resolve(process.argv[2] ?? ".tmp/codex-quality/development-four-arm-v1");
-  const gradesRoot = path.resolve(process.argv[3] ?? ".tmp/codex-quality/development-four-arm-grades-v1");
-  const output = path.resolve(process.argv[4] ?? "docs/fixtures/codex-quality-development-results.json");
-  const cwd = fs.realpathSync(process.cwd());
-  const relativeOutput = path.relative(cwd, fs.realpathSync(path.dirname(output)));
-  assert.ok(relativeOutput !== ".." && !relativeOutput.startsWith(`..${path.sep}`) && !path.isAbsolute(relativeOutput), "Output must stay in the repository");
-  const fingerprints = {};
-  function read(file, label) {
-    const bytes = fs.readFileSync(file);
-    fingerprints[label] = createHash("sha256").update(bytes).digest("hex");
-    return JSON.parse(bytes);
-  }
-  const config = read(path.join(root, "configuration.json"), "configuration");
-  assert.equal(config.track, "development-fixed-boundary");
-  assert.equal(config.formalQualityEvidence, false);
-  const model = read(path.join(root, "model.json"), "model");
-  const grades = read(path.join(gradesRoot, "report.json"), "grades");
-  const eventsBytes = fs.readFileSync(path.join(root, "events.jsonl"));
-  fingerprints.events = createHash("sha256").update(eventsBytes).digest("hex");
-  const events = eventsBytes.toString("utf8").trim().split("\n").map(line => JSON.parse(line));
-  const cli = read(path.join(root, "cli-checkpoint.json"), "cliCheckpoint");
-  read(path.join(root, "frozen-module-fingerprints.json"), "frozenModules");
-  const armInputs = [];
-  const arms = ["old", "new", "cli", "reference"].map(arm => {
-    const result = read(path.join(root, arm, "result.json"), `${arm}Result`);
-    const compactEvents = events.filter(event => event.arm === arm && event.phase === "compact");
-    let compaction = null;
-    if (arm === "cli") compaction = { usage: usageCounts(cli.usage.usage, "codex-record"), elapsedMs: null };
-    else if (arm !== "reference") {
-      assert.equal(compactEvents.length, 1, "Missing or duplicate compaction event");
-      compaction = { usage: usageCounts(compactEvents[0].usage, "pi"), elapsedMs: compactEvents[0].elapsedMs };
-    }
-    const matchingGrades = grades.results.filter(grade => grade.arm === arm);
-    assert.equal(matchingGrades.length, 1, "Missing or duplicate grade");
-    const publicInput = { arm,
-      result: { status: result.status, requests: result.requests, elapsedMs: result.elapsedMs, changedPaths: result.changedPaths, tools: result.tools.map(tool => ({ status: tool.status })) },
-      responses: events.filter(event => event.arm === arm && event.phase === "response").map(event => {
-        const usage = usageCounts(event.usage, "responses");
-        return { request: event.request, usage: { input_tokens: usage.input, output_tokens: usage.output, total_tokens: usage.total, input_tokens_details: { cached_tokens: usage.cachedInput, cache_write_tokens: usage.cacheWriteInput } } };
-      }),
-      compaction, rates: model.cost,
-      grade: { human_review: matchingGrades[0].human_review, executable: { passed: matchingGrades[0].executable.passed, tests: matchingGrades[0].executable.tests } },
-      counterexamples: { baseline: grades.exploratory_counterexamples.results.base, candidate: grades.exploratory_counterexamples.results[arm] }
-    };
-    armInputs.push(publicInput);
-    return summarizeDevelopmentArm(publicInput);
-  });
-  const report = {
-    schemaVersion: 1, status: "development_only", instanceId: grades.instance_id,
-    independentTasks: config.independentTasks, formalQualityEvidence: false,
-    natural90PercentEvidence: false, baseline: config.baseline, model: model.id, effort: config.effort,
-    continuationOrder: config.continuationOrder, inputHistorySha256: config.inputHistorySha256,
-    cliRolloutSha256: config.cliRolloutSha256, sourceFingerprints: fingerprints,
-    costBasis: "client_model_metadata_not_verified_billing", metadataRates: model.cost,
-    cliCompactionLatency: "not_recorded", arms,
-    limitations: config.limitations,
-    interpretation: "单个开发任务。原有隐藏测试均通过，但事后反例发现新插件、CLI、未压缩组存在原有行为回归。不能据此宣称质量提升，也不能把回归单独归因于压缩。人工盲评尚未完成。"
-  };
-  const evidence = { schemaVersion: 1, header: { ...report, arms: null }, armInputs };
-  assert.deepEqual(rebuildDevelopmentReport(evidence), report);
-  verifyOutput(path.join(path.dirname(output), "codex-quality-development-evidence.json"), evidence);
-  verifyOutput(output, report);
+  const evidence = JSON.parse(fs.readFileSync(input, "utf8"));
+  const rebuild = mode === "--chain-evidence" ? rebuildChainReport : rebuildDevelopmentReport;
+  verifyOutput(path.resolve(output), rebuild(evidence));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) main();

@@ -1,6 +1,9 @@
+import { fixtureToolInfo } from "../../../test-support/tool-info.js";
 import { fixtureSnapshot, resolveFixtureHashes } from "./fixtures/compaction-metadata.js";
+import { mkdtemp, copyFile, rm, readFile } from "node:fs/promises";
+import { resolve, join } from "node:path";
 import { expect, test, vi } from "vitest";
-import { getBuiltinModel } from "@earendil-works/pi-ai/providers/all";
+import { getTestModel } from "./fixtures/models.js";
 import { normalizeContext } from "@earendil-works/pi-ai";
 import { convertResponsesMessages } from "@earendil-works/pi-ai/api/openai-responses-shared";
 import { streamSimple } from "@earendil-works/pi-ai/api/openai-codex-responses";
@@ -8,14 +11,174 @@ import { convertToLlm, SessionManager } from "@earendil-works/pi-coding-agent";
 import { createSessionCoordinator } from "../src/session-coordinator.js";
 import { resolveRequestProjection } from "../src/request-projection.js";
 import { createNativeCheckpoint } from "../src/remote-compaction.js";
-import { createBranchInputSnapshot, fullInputForBranch, HistoryPrefixMismatchError, modelKey, NATIVE_COMPACTION_KIND, FAILED_REQUEST_KIND } from "../src/native-compaction.js";
+import { createBranchInputSnapshot, fullInputForBranch, HistoryPrefixMismatchError, modelKey, NATIVE_COMPACTION_KIND, FAILED_REQUEST_KIND, toolsWithRequestFormats } from "../src/native-compaction.js";
 
 const providerNames = new Set(["openai", "openai-codex", "opencode"]);
 const image = { type: "image", data: "AA==", mimeType: "image/png" };
-const model = (id = "gpt-5.6-sol") => getBuiltinModel("openai-codex", id)!;
+const model = (id = "gpt-5.6-sol") => getTestModel("openai-codex", id) as import("@earendil-works/pi-ai").Model<"openai-codex-responses">;
 const assistant = (m: any, content: any[]) => ({ role: "assistant", provider: m.provider, api: m.api, model: m.id, content, stopReason: "toolUse", timestamp: 0,
   usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } } });
 const messageEntries = (messages: any[]) => messages.map((message, i) => ({ id: `message-${i}`, type: "message", message })) as any[];
+
+test("restores a session written by Pi 1.3 without merging identical user submissions", async () => {
+  const root = await mkdtemp(resolve(".tmp/pi13-restore-"));
+  const file = join(root, "legacy.jsonl");
+  const fixture = new URL("./fixtures/pi-1.3-session.jsonl", import.meta.url);
+  await copyFile(fixture, file);
+  const before = await readFile(file, "utf8");
+  try {
+    const sm = SessionManager.open(file, root), m = model();
+    const branch = sm.getBranch();
+    const identical = branch.filter(entry => entry.type === "message" && entry.message.role === "user" && entry.message.content === "identical");
+    expect(identical).toHaveLength(2);
+    const snapshot = createBranchInputSnapshot({ branch, tools: [] });
+    const effective = snapshot.view(m, "effective");
+    expect([...effective.userSources].sort(([a], [b]) => a - b).map(([, id]) => id).filter(id => identical.some(entry => entry.id === id))).toEqual(identical.map(entry => entry.id));
+    const payload = await providerPayload(m, convertToLlm(sm.buildSessionProjection().messages.filter(message => message.role !== "compactionSummary")));
+    const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => sm.getBranch(),
+      getAllTools: () => [], createCheckpoint: vi.fn(), appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn() });
+    const output = await coordinator.prepareRequest(m, { model: m, getSystemPrompt: () => "head", sessionManager: sm,
+      modelRegistry: { find: () => m } } as any, payload.input, payload);
+    expect(output).toEqual(effective.items);
+    expect(output?.filter(item => item.role === "user" && JSON.stringify(item.content).includes("identical"))).toHaveLength(2);
+    expect(await readFile(file, "utf8")).toBe(before);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("accepts the built-in Codex initial tool declaration through the coordinator", async () => {
+  const m = model();
+  const tools = [{ ...fixtureToolInfo, name: "read", description: "Read", parameters: { type: "object" as const, properties: {} } }];
+  const sm = SessionManager.inMemory(process.cwd());
+  sm.appendMessage({ role: "system", content: "head", toolsAdded: tools, timestamp: 0 } as any);
+  const user = sm.appendMessage({ role: "user", content: "Read the fixture", timestamp: 1 });
+  const payload = await providerPayload(m, convertToLlm(sm.buildSessionProjection().messages));
+  expect(payload.tools ?? []).toEqual([]);
+  expect(payload.input[0].type).toBe("additional_tools");
+  const view = createBranchInputSnapshot({ branch: sm.getBranch(), tools }).view(m, "full-history");
+  expect(view.items).toEqual(payload.input);
+  expect(view.tools).toEqual(payload.tools ?? []);
+  expect([...view.userSources.values()]).toEqual([user]);
+  const compact = vi.fn();
+  const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
+    getBranch: () => sm.getBranch(), getAllTools: () => tools, createCheckpoint: compact,
+    appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn() });
+  await expect(coordinator.prepareRequest(m, { model: m, getSystemPrompt: () => "head", sessionManager: sm,
+    modelRegistry: { find: () => m } } as any, payload.input, payload)).resolves.toBeUndefined();
+  expect(compact).not.toHaveBeenCalled();
+});
+
+test("restores executable tool declarations after a server checkpoint drops them", async () => {
+  const m = model(), sm = SessionManager.inMemory(process.cwd());
+  const tools = [{ ...fixtureToolInfo, name: "acceptance_empty", description: "Return whitespace", parameters: { type: "object" as const, properties: {} } }];
+  sm.appendMessage({ role: "system", content: "head", toolsAdded: tools, timestamp: 0 } as any);
+  const old = sm.appendMessage({ role: "user", content: "remember ORCHID-731", timestamp: 1 });
+  sm.appendMessage({ ...assistant(m, [{ type: "text", text: "Remembered" }]), stopReason: "stop" } as any);
+  const checkpoint = { type: "compaction", encrypted_content: "opaque" };
+  sm.appendCompaction("summary", old, 100, { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(m), replacementHistory: [checkpoint] });
+  const current = sm.appendMessage({ role: "user", content: "Call acceptance_empty", timestamp: 2 });
+  const payload = await providerPayload(m, convertToLlm(sm.buildSessionProjection().messages.filter(message => message.role !== "compactionSummary")));
+  const declarations = payload.input.filter((item: any) => item.type === "additional_tools");
+  expect(declarations).toHaveLength(1);
+  const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => sm.getBranch(),
+    getAllTools: () => tools, createCheckpoint: vi.fn(), appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn() });
+  const output = await coordinator.prepareRequest(m, { model: m, getSystemPrompt: () => "head", sessionManager: sm,
+    modelRegistry: { find: () => m } } as any, payload.input, payload);
+  expect(output).toEqual([checkpoint, ...declarations, { role: "user", content: [{ type: "input_text", text: "Call acceptance_empty" }] }]);
+  const effective = createBranchInputSnapshot({ branch: sm.getBranch(), tools }).view(m, "effective");
+  expect([...effective.userSources]).toEqual([[2, current]]);
+});
+
+test.each(["changes", "additions", "none"])("restores pre-checkpoint deferred tools with %s support", async support => {
+  const m = { ...model(), compat: { ...model().compat, supportsMidConvoSystemMessages: true,
+    supportsAdditionalTools: support === "changes", supportsToolSearch: support === "additions" } };
+  const tool = (name: string) => ({ ...fixtureToolInfo, name, description: name, parameters: { type: "object" as const, properties: {} } });
+  const sm = SessionManager.inMemory(process.cwd());
+  sm.appendMessage({ role: "system", content: "head", toolsAdded: [tool("initial")], timestamp: 0 } as any);
+  sm.appendMessage({ role: "user", content: "old", timestamp: 1 });
+  sm.appendMessage({ role: "system", content: "", toolsAdded: [tool("late")], timestamp: 2 } as any);
+  const checkpoint = { type: "compaction", encrypted_content: "opaque" };
+  sm.appendCustomEntry(NATIVE_COMPACTION_KIND, { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(m), replacementHistory: [checkpoint] });
+  const current = sm.appendMessage({ role: "user", content: "continue", timestamp: 3 });
+  const snapshot = createBranchInputSnapshot({ branch: sm.getBranch(), tools: [] });
+  const payload = await providerPayload(m, convertToLlm(sm.buildSessionProjection().messages));
+  expect(snapshot.view(m, "full-history").items).toEqual(payload.input);
+  const effective = snapshot.view(m, "effective");
+  const declarations = effective.items.filter(item => item.type === "additional_tools" || item.type === "tool_search_output");
+  expect([...(effective.tools ?? []), ...declarations.flatMap(item => item.tools as any[])].map(tool => tool.name)).toEqual(["initial", "late"]);
+  expect(effective.items[0]).toEqual(checkpoint);
+  expect(effective.userSources.get(effective.items.length - 1)).toBe(current);
+  if (support === "additions") {
+    const call = effective.items.find(item => item.type === "tool_search_call")!;
+    const output = declarations[0]!;
+    expect(call.call_id).toBe(output.call_id);
+    expect(payload.input.some((item: any) => item.call_id === call.call_id)).toBe(false);
+    expect(output.tools).toEqual(payload.input.find((item: any) => item.type === "tool_search_output").tools);
+  }
+});
+
+test.each(["changes", "additions"])("keeps removals and schema chronology when restoring %s tools", async support => {
+  const m = { ...model(), compat: { ...model().compat, supportsMidConvoSystemMessages: true,
+    supportsAdditionalTools: support === "changes", supportsToolSearch: support === "additions" } };
+  const tool = (name: string, description = name) => ({ ...fixtureToolInfo, name, description, parameters: { type: "object" as const, properties: {} } });
+  const sm = SessionManager.inMemory(process.cwd());
+  sm.appendMessage({ role: "system", content: "head", toolsAdded: [tool("read"), tool("removed"), tool("hidden")], timestamp: 0 } as any);
+  sm.appendMessage({ role: "user", content: "old", timestamp: 1 });
+  sm.appendMessage({ role: "system", content: "", toolsRemoved: [{ name: "removed" }], toolsAdded: [tool("read", "Boundary schema")], timestamp: 2 } as any);
+  sm.appendCustomEntry(NATIVE_COMPACTION_KIND, { kind: NATIVE_COMPACTION_KIND, version: 2, modelKey: modelKey(m), replacementHistory: [{ type: "compaction", encrypted_content: "opaque" }] });
+  sm.appendMessage({ role: "system", content: "", toolsAdded: [tool("read", "New schema"), tool("later")], timestamp: 3 } as any);
+  sm.appendMessage({ role: "user", content: "continue", timestamp: 4 });
+  const view = createBranchInputSnapshot({ branch: sm.getBranch(), tools: [], projectionPolicy: { hiddenNames: new Set(["hidden"]) } }).view(m, "effective");
+  const declarations = view.items.filter(item => item.type === "additional_tools" || item.type === "tool_search_output");
+  const schemas = [...(view.tools ?? []), ...declarations.flatMap(item => item.tools as any[])];
+  expect(schemas.some(tool => tool.name === "hidden" || tool.name === "removed")).toBe(false);
+  expect(schemas.filter(tool => tool.name === "read").map(tool => tool.description)).toEqual(support === "changes" ? ["Boundary schema", "New schema"] : ["New schema"]);
+  expect(schemas.filter(tool => tool.name === "later")).toHaveLength(1);
+  if (support === "changes") expect(view.items[2].content).toContain("- removed");
+});
+
+test.each(["changes", "additions", "none"])("matches tool removal, redeclaration and later loads with %s support", async support => {
+  const m = { ...model(), compat: { ...model().compat, supportsMidConvoSystemMessages: true,
+    supportsAdditionalTools: support === "changes", supportsToolSearch: support === "additions" } };
+  const tool = (name: string, description = name) => ({ ...fixtureToolInfo, name, description, parameters: { type: "object" as const, properties: {} } });
+  const sm = SessionManager.inMemory(process.cwd());
+  const messages: any[] = [
+    { role: "system", content: "head", toolsAdded: [tool("read"), tool("write")], timestamp: 0 },
+    { role: "user", content: "first", timestamp: 1 },
+    { role: "system", content: "", toolsRemoved: [{ name: "read" }], timestamp: 2 },
+    { role: "system", content: "", toolsAdded: [tool("late")], timestamp: 3 },
+    { role: "system", content: "", toolsRemoved: [{ name: "write" }], toolsAdded: [tool("write", "New schema")], timestamp: 4 },
+    { role: "system", content: "", toolsAdded: [tool("read", "Restored")], timestamp: 5 },
+    { role: "user", content: "continue", timestamp: 6 },
+  ];
+  for (const message of messages) sm.appendMessage(message);
+  const payload = await providerPayload(m, convertToLlm(sm.buildSessionProjection().messages));
+  const view = createBranchInputSnapshot({ branch: sm.getBranch(), tools: [] }).view(m, "full-history");
+  expect(view.items).toEqual(payload.input);
+  expect(view.tools).toEqual(payload.tools ?? []);
+  expect(view.instructions).toEqual(payload.instructions);
+  expect(() => resolveRequestProjection(sm.getBranch(), m, [], payload.input, payload)).not.toThrow();
+  const observedTools = toolsWithRequestFormats([tool("read", "Restored"), tool("write", "New schema"), tool("late")], payload, payload.input);
+  expect(createBranchInputSnapshot({ branch: sm.getBranch(), tools: observedTools }).view(m, "full-history").items).toEqual(payload.input);
+  const compact = vi.fn();
+  const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes,
+    getBranch: () => sm.getBranch(), getAllTools: () => [tool("read", "Restored"), tool("write", "New schema"), tool("late")],
+    createCheckpoint: compact, appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn() });
+  await expect(coordinator.prepareRequest(m, { model: m, getSystemPrompt: () => "head", sessionManager: sm,
+    modelRegistry: { find: () => m } } as any, payload.input, payload)).resolves.toBeUndefined();
+  expect(compact).not.toHaveBeenCalled();
+});
+
+test.each(["", " ", "\r\n", "result"])("matches tool result text %j with and without an image", async text => {
+  for (const withImage of [false, true]) {
+    const m = model();
+    const messages: any[] = [{ role: "system", content: "head", timestamp: 0 },
+      { role: "user", content: "run", timestamp: 1 },
+      assistant(m, [{ type: "toolCall", id: "call|fc_one", name: "read", arguments: {} }]),
+      { role: "toolResult", toolCallId: "call|fc_one", toolName: "read", content: [{ type: "text", text }, ...(withImage ? [image] : [])], isError: false, timestamp: 2 }];
+    const payload = await providerPayload(m, messages);
+    expect(createBranchInputSnapshot({ branch: messageEntries(messages), tools: [] }).view(m, "full-history").items).toEqual(payload.input);
+  }
+});
 
 test.each([401, 403, 503])("classifies empty HTTP %i through automatic remote compaction", async status => {
   const m = model();
@@ -42,7 +205,7 @@ test.each([401, 403, 503])("classifies empty HTTP %i through automatic remote co
 
 test.each([[false, "normal"], [true, "normal"], [true, "hidden"], [true, "forced"], [true, "both"]] as const)("sanitizes a complete provider payload before projection with checkpoint=%s and %s", async (checkpoint, mode) => {
   const m = { ...model(), compat: { supportsAdditionalTools: true, supportsMidConvoSystemMessages: true } };
-  const tools = ["visible", "hidden"].map(name => ({ name, description: name, parameters: { type: "object", properties: {} } }));
+  const tools = ["visible", "hidden"].map(name => ({ ...fixtureToolInfo, name, description: name, parameters: { type: "object" as const, properties: {} } }));
   const sm = SessionManager.inMemory(process.cwd());
   sm.appendMessage({ role: "system", content: "head", toolsAdded: tools, timestamp: 0 } as any);
   if (checkpoint) {
@@ -63,7 +226,7 @@ test.each([[false, "normal"], [true, "normal"], [true, "hidden"], [true, "forced
   const coordinator = createSessionCoordinator({ resolveCompactionHashes: resolveFixtureHashes, getBranch: () => sm.getBranch(), getAllTools: () => tools as any,
     createCheckpoint: compact, appendCheckpoint: vi.fn(), appendCheckpointBypass: vi.fn() });
   const output = await coordinator.prepareRequest(m, { model: m, getSystemPrompt: () => "head", sessionManager: sm, modelRegistry: { find: () => m } } as any, payload.input, payload);
-  expect(output).toEqual([...(checkpoint ? [{ type: "compaction", encrypted_content: "opaque" }] : []),
+  expect(output).toEqual([...(checkpoint ? [{ type: "compaction", encrypted_content: "opaque" }] : []), ...payload.input.filter((item: any) => item.type === "additional_tools"),
     { role: "user", content: [{ type: "input_text", text: "same" }] }]);
   expect(compact).not.toHaveBeenCalled();
   expect(payload.input.filter((item: any) => item.role === "user" && item.content[0].text === "same")).toHaveLength(3);
@@ -109,7 +272,7 @@ test.each(["prepare", "recover"])("rejects changed raw failed-request evidence d
 
 test("uses the observed hidden projection for automatic compaction before the first checkpoint", async () => {
   const m = { ...model(), compat: { supportsAdditionalTools: true, supportsMidConvoSystemMessages: true } };
-  const tools = ["visible", "hidden"].map(name => ({ name, description: name, parameters: { type: "object", properties: {} } }));
+  const tools = ["visible", "hidden"].map(name => ({ ...fixtureToolInfo, name, description: name, parameters: { type: "object" as const, properties: {} } }));
   const messages: any[] = [{ role: "system", content: "head", toolsAdded: tools.slice(0, 1), timestamp: 0 },
     { role: "user", content: "old", timestamp: 1 }, assistant(m, [{ type: "text", text: "answer" }]),
     { role: "system", content: "later", toolsAdded: tools.slice(1), timestamp: 2 }, { role: "user", content: "pending", timestamp: 3 }];
@@ -127,7 +290,7 @@ test("uses the observed hidden projection for automatic compaction before the fi
 
 test("rejects unobservable hidden redeclaration policies even when forced collapse matches the wire", async () => {
   const m = { ...model(), compat: { supportsAdditionalTools: true, supportsMidConvoSystemMessages: true } };
-  const tool = { name: "hidden", description: "hidden", parameters: { type: "object", properties: {} } };
+  const tool = { ...fixtureToolInfo, name: "hidden", description: "hidden", parameters: { type: "object" as const, properties: {} } };
   const messages: any[] = [{ role: "system", content: "head", toolsAdded: [tool], timestamp: 0 },
     { role: "user", content: "old", timestamp: 0 },
     { role: "system", content: "", toolsAdded: [{ ...tool, description: "changed" }], timestamp: 0 },
@@ -167,7 +330,7 @@ test("matches provider wire input after overlapping Pi compactions", async () =>
   sm.appendMessage({ role: "user", content: "U3", timestamp: 3 });
   let payload: any;
   const apiKey = `a.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "test" } })).toString("base64url")}.c`;
-  await streamSimple(m, { messages: convertToLlm(sm.buildSessionProjection().messages) }, {
+  await streamSimple(m, normalizeContext({ messages: convertToLlm(sm.buildSessionProjection().messages) }), {
     apiKey, onPayload: value => { payload = value; throw new Error("Stop before network"); },
   }).result();
   expect(payload).toBeDefined();
@@ -216,7 +379,7 @@ test.each(["native", "ordinary-then-custom", "overlap"])("preserves Pi system pr
 test.each(["orphan", "real", "partial", "two-systems"])("orders pending calls before held systems: %s", async (shape) => {
   for (const search of [false, true]) {
     const m = { ...model(), compat: { ...model().compat, supportsAdditionalTools: !search, supportsToolSearch: search } };
-    const tool = (name: string) => ({ name, description: name, parameters: { type: "object", properties: {} } });
+    const tool = (name: string) => ({ ...fixtureToolInfo, name, description: name, parameters: { type: "object" as const, properties: {} } });
     const call = (id: string) => ({ type: "toolCall", id, name: "read", arguments: {} });
     const messages: any[] = [
       { role: "system", content: "head", toolsAdded: [tool("read")] },
@@ -236,7 +399,7 @@ test.each(["orphan", "real", "partial", "two-systems"])("orders pending calls be
 
 test.each(["hidden", "forced", "both"])("replays a strictly matched %s projection without replacing the checkpoint", async (mode) => {
   const m = { ...model(), compat: { ...model().compat, supportsAdditionalTools: true, supportsMidConvoSystemMessages: true } };
-  const tool = (name: string) => ({ name, description: name, parameters: { type: "object", properties: {} } });
+  const tool = (name: string) => ({ ...fixtureToolInfo, name, description: name, parameters: { type: "object" as const, properties: {} } });
   const tools = [tool("visible"), tool("hidden"), tool("late")];
   const sm = SessionManager.inMemory(process.cwd());
   sm.appendMessage({ role: "system", content: "Initial", toolsAdded: tools.slice(0, 2), timestamp: 0 } as any);
@@ -256,14 +419,14 @@ test.each(["hidden", "forced", "both"])("replays a strictly matched %s projectio
   const ctx = { model: m, getSystemPrompt: () => mode === "hidden" ? "Initial" : "Forced", sessionManager: sm, modelRegistry: { find: () => m } } as any;
   const actual = await coordinator.prepareRequest(m, ctx, payload.input, payload);
   const suffix = payload.input.slice(payload.input.findIndex((item: any) => item.role === "assistant") + 1);
-  expect(actual).toEqual([checkpoint, ...suffix]);
+  expect(actual).toEqual([checkpoint, payload.input.find((item: any) => item.type === "additional_tools"), ...suffix]);
   expect(compact).not.toHaveBeenCalled();
   const manual = await coordinator.prepareCompactionPlan(m, ctx);
   expect(manual.basePayload.tools).toEqual(payload.tools ?? []);
   expect(manual.basePayload.instructions).toBe(payload.instructions);
   for (const mutate of [
     (p: any) => { p.input.find((item: any) => item.role === "user").content[0].text = "tampered"; },
-    (p: any) => { p.tools[0].description = "tampered"; },
+    (p: any) => { (p.tools ?? p.input.find((item: any) => item.type === "additional_tools").tools)[0].description = "tampered"; },
     (p: any) => { p.input.splice(p.input.findIndex((item: any) => item.role === "user"), 1); },
   ]) {
     const bad = structuredClone(payload); mutate(bad);
@@ -423,7 +586,7 @@ test("visits mixed thinking and text blocks linearly without reconverting cached
 
 test("replays system prompt and tool updates after a legacy checkpoint and tool completion", async () => {
   const m = model();
-  const tool = { name: "read", description: "Read", parameters: { type: "object", properties: {} } };
+  const tool = { ...fixtureToolInfo, name: "read", description: "Read", parameters: { type: "object" as const, properties: {} } };
   await replay(m, [
     { role: "user", content: "old history", timestamp: 0 },
     { role: "system", content: "", sections: { policy: "Keep the new instructions." }, toolsAdded: [tool], timestamp: 1 },
@@ -435,7 +598,7 @@ test("replays system prompt and tool updates after a legacy checkpoint and tool 
 
 test("keeps a system update immediately after a checkpoint across successive requests", async () => {
   const m = model();
-  const tool = { name: "read", description: "Read", parameters: { type: "object", properties: {} } };
+  const tool = { ...fixtureToolInfo, name: "read", description: "Read", parameters: { type: "object" as const, properties: {} } };
   const messages: any[] = [{ role: "user", content: "old history", timestamp: 0 }];
   const checkpoint = { type: "compaction", encrypted_content: "opaque" };
   const branch: any[] = [...messageEntries(messages), { id: "checkpoint", type: "custom", customType: NATIVE_COMPACTION_KIND,
@@ -467,7 +630,7 @@ test("keeps a system update immediately after a checkpoint across successive req
 
 test.each([true, false])("matches system sections and tool state changes, additional tools: %s", async (additional) => {
   const m = { ...model(), compat: { ...model().compat, supportsAdditionalTools: additional, supportsToolSearch: true } };
-  const tool = { name: "read", description: "Read", parameters: { type: "object", properties: {} } };
+  const tool = { ...fixtureToolInfo, name: "read", description: "Read", parameters: { type: "object" as const, properties: {} } };
   for (const update of [
     { sections: { policy: "new", removed: null } },
     { toolsAdded: [tool] },
@@ -486,7 +649,7 @@ test.each([true, false])("matches system sections and tool state changes, additi
 
 test.each(["grammar", "json-schema"])("replays constrained tools declared only in system history: %s", async (kind) => {
   const m = model();
-  const tool = { name: "run", description: "Run", parameters: { type: "object", properties: { input: { type: "string" } }, required: ["input"] },
+  const tool = { ...fixtureToolInfo, name: "run", description: "Run", parameters: { type: "object" as const, properties: { input: { type: "string" } }, required: ["input"] },
     constrainedSampling: kind === "grammar" ? { type: "grammar", variants: { openai_regex: ".*" } } : { type: "json-schema", strict: "prefer" } };
   await replay(m, [
     { role: "user", content: "start", timestamp: 0 },
@@ -518,7 +681,7 @@ test.each([10, 100])("reuses each input view for %i messages", (count) => {
 
 test("replays grammar calls and outputs from Pi payload metadata omitted by getAllTools", async () => {
   const m = model();
-  const tool = { name: "grammar", description: "Synthetic grammar", parameters: { type: "object", properties: { input: { type: "string" } }, required: ["input"] }, constrainedSampling: { type: "grammar", variants: { openai_regex: ".*" } } };
+  const tool = { ...fixtureToolInfo, name: "grammar", description: "Synthetic grammar", parameters: { type: "object" as const, properties: { input: { type: "string" } }, required: ["input"] }, constrainedSampling: { type: "grammar", variants: { openai_regex: ".*" } } };
   await replay(m, [assistant(m, [{ type: "toolCall", id: "call|ctc_1", namespace: "functions", name: "grammar", arguments: { input: "hello" } }]),
     { role: "toolResult", toolCallId: "call|ctc_1", toolName: "grammar", content: [{ type: "text", text: "ok" }], timestamp: 0 }], [tool]);
 });
@@ -526,7 +689,7 @@ test("replays grammar calls and outputs from Pi payload metadata omitted by getA
 test.each(["same", "model", "provider", "api"])("validates grammar item IDs from %s identity", async (identity) => {
   const m = model();
   const source = identity === "same" ? m : { ...m, [identity === "model" ? "id" : identity]: `other-${identity}` };
-  const tool = { name: "grammar", description: "Grammar", parameters: { type: "object", properties: { input: { type: "string" } }, required: ["input"] }, constrainedSampling: { type: "grammar", variants: { openai_regex: ".*" } } };
+  const tool = { ...fixtureToolInfo, name: "grammar", description: "Grammar", parameters: { type: "object" as const, properties: { input: { type: "string" } }, required: ["input"] }, constrainedSampling: { type: "grammar", variants: { openai_regex: ".*" } } };
   for (const suffix of ["fc_wrong", "ctc_valid", "wrong", ""]) {
     const id = suffix ? `call|${suffix}` : "call";
     await replay(m, [assistant(source, [{ type: "toolCall", id, name: "grammar", arguments: { input: "hello" } }]),
@@ -542,7 +705,7 @@ test("does not infer current grammar configuration from an old custom-tool id", 
 
 test.each(["gpt-5.6-sol", "gpt-5.5"])("pairs orphaned grammar calls for source model %s", async (source) => {
   const m = model();
-  const tool = { name: "grammar", description: "Synthetic grammar", parameters: { type: "object", properties: { input: { type: "string" } }, required: ["input"] }, constrainedSampling: { type: "grammar", variants: { openai_regex: ".*" } } };
+  const tool = { ...fixtureToolInfo, name: "grammar", description: "Synthetic grammar", parameters: { type: "object" as const, properties: { input: { type: "string" } }, required: ["input"] }, constrainedSampling: { type: "grammar", variants: { openai_regex: ".*" } } };
   await replay(m, [assistant(model(source), [{ type: "toolCall", id: "call:1|ctc_1", name: "grammar", arguments: { input: "hello" } }])], [tool]);
 });
 
@@ -555,7 +718,7 @@ test.each(["gpt-5.6-sol", "gpt-5.5"])("pairs function calls and results for sour
 test.each([true, false])("replays cross-model deferred namespaces and tool definitions, additional tools: %s", async (additional) => {
   const m = { ...model(), compat: { ...model().compat, supportsAdditionalTools: additional, supportsToolSearch: true } };
   const source = model("gpt-5.5");
-  const tools = ["load", "read"].map(name => ({ name, description: name, parameters: { type: "object", properties: {} } }));
+  const tools = ["load", "read"].map(name => ({ ...fixtureToolInfo, name, description: name, parameters: { type: "object" as const, properties: {} } }));
   await replay(m, [
     assistant(source, [{ type: "toolCall", id: "load|fc_1", name: "load", arguments: {} }]),
     { role: "toolResult", toolCallId: "load|fc_1", toolName: "load", content: [{ type: "text", text: "loaded" }], addedToolNames: ["read"], timestamp: 0 },
@@ -570,8 +733,8 @@ test.each([
   ["openai-codex", "gpt-5.6-sol", "call:load|item:1"],
 ])("replays normalized deferred tool search behind a valid checkpoint: %s %s %s", async (provider, sourceId, id) => {
   const target = model("gpt-5.5");
-  const source = getBuiltinModel(provider, sourceId)!;
-  const tools = ["load", "read"].map(name => ({ name, description: name, parameters: { type: "object", properties: {} } }));
+  const source = getTestModel(provider, sourceId)!;
+  const tools = ["load", "read"].map(name => ({ ...fixtureToolInfo, name, description: name, parameters: { type: "object" as const, properties: {} } }));
   expect(target.compat?.supportsToolSearch).toBe(true);
   expect(target.compat?.supportsAdditionalTools).not.toBe(true);
   await replay(target, [

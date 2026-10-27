@@ -8,7 +8,7 @@ const record: GoalRecord = { schemaVersion: 1, recordId: "r", ownerSessionId: "s
 it("accepts a user-requested pause and returns the persisted status", async () => {
   const tools = new Map<string, any>();
   const update = vi.fn(async () => ({ ...record, goal: { ...record.goal!, status: "budget_limited" as const } }));
-  registerGoalTools({ registerTool: (tool: any) => tools.set(tool.name, tool) } as ExtensionAPI, { get: async () => record, create: async () => record, update });
+  registerGoalTools({ registerTool: (tool: any) => tools.set(tool.name, tool) } as unknown as ExtensionAPI, { get: async () => record, create: async () => record, update });
   const tool = tools.get("update_goal");
   expect(Check(tool.parameters, { status: "paused" })).toBe(true);
   const result = await tool.execute("pause", { status: "paused" }, undefined, undefined, {});
@@ -19,7 +19,7 @@ it("accepts a user-requested pause and returns the persisted status", async () =
 it("validates Unicode objectives and safe positive budgets before calling the store", async () => {
   const tools = new Map<string, any>();
   const create = vi.fn(async () => record);
-  registerGoalTools({ registerTool: (tool: any) => tools.set(tool.name, tool) } as ExtensionAPI, { get: async () => record, create, update: async () => record });
+  registerGoalTools({ registerTool: (tool: any) => tools.set(tool.name, tool) } as unknown as ExtensionAPI, { get: async () => record, create, update: async () => record });
   const run = (args: unknown) => tools.get("create_goal").execute("id", args, undefined, undefined, {});
   for (const args of [{ objective: " " }, { objective: "😀".repeat(4001) }, { objective: "x", token_budget: 0 }, { objective: "x", token_budget: 1.5 }, { objective: "x", token_budget: Number.MAX_SAFE_INTEGER + 1 }, { objective: "x", extra: true }]) await expect(run(args)).rejects.toThrow();
   expect(create).not.toHaveBeenCalled();
@@ -29,12 +29,12 @@ it("validates Unicode objectives and safe positive budgets before calling the st
 it("rejects extra get/update arguments and cancelled invocations before storage access", async () => {
   const tools = new Map<string, any>();
   const access = { get: vi.fn(async () => record), create: vi.fn(async () => record), update: vi.fn(async () => record) };
-  registerGoalTools({ registerTool: (tool: any) => tools.set(tool.name, tool) } as ExtensionAPI, access);
-  for (const [name, args] of [["get_goal", { extra: 1 }], ["get_goal", null], ["get_goal", []], ["update_goal", { status: "active" }], ["update_goal", { status: "complete", extra: 1 }], ["update_goal", null]]) {
+  registerGoalTools({ registerTool: (tool: any) => tools.set(tool.name, tool) } as unknown as ExtensionAPI, access);
+  for (const [name, args] of [["get_goal", { extra: 1 }], ["get_goal", null], ["get_goal", []], ["update_goal", { status: "active" }], ["update_goal", { status: "complete", extra: 1 }], ["update_goal", null]] as const) {
     await expect(tools.get(name).execute("id", args, undefined, undefined, {})).rejects.toThrow();
   }
   const signal = AbortSignal.abort();
-  for (const [name, args] of [["get_goal", {}], ["create_goal", { objective: "x" }], ["update_goal", { status: "complete" }]]) await expect(tools.get(name).execute("id", args, signal, undefined, {})).rejects.toThrow();
+  for (const [name, args] of [["get_goal", {}], ["create_goal", { objective: "x" }], ["update_goal", { status: "complete" }]] as const) await expect(tools.get(name).execute("id", args, signal, undefined, {})).rejects.toThrow();
   for (const fn of Object.values(access)) expect(fn).not.toHaveBeenCalled();
 });
 it("exposes only the three upstream goal schemas and reports persisted usage with escaped prompts", async () => {
@@ -42,7 +42,7 @@ it("exposes only the three upstream goal schemas and reports persisted usage wit
   const get = vi.fn(async () => record);
   const create = vi.fn(async () => record);
   const update = vi.fn(async () => record);
-  registerGoalTools({ registerTool: (tool: any) => tools.set(tool.name, tool) } as ExtensionAPI, { get, create, update });
+  registerGoalTools({ registerTool: (tool: any) => tools.set(tool.name, tool) } as unknown as ExtensionAPI, { get, create, update });
   expect([...tools.keys()]).toEqual(["get_goal", "create_goal", "update_goal"]);
   for (const [name, args] of [["get_goal", {}], ["create_goal", { objective: "x", token_budget: 1 }], ["update_goal", { status: "complete" }]] as const) {
     expect(Check(tools.get(name).parameters, args)).toBe(true);

@@ -8,13 +8,14 @@ const { setTheme } = themeModule;
 const theme = themeModule.theme;
 
 const tool = {
-  name: "mcp_fixture", label: "MCP", description: "", parameters: {}, renderShell: "self",
+  name: "mcp_fixture", label: "MCP", description: "", parameters: { type: "object", properties: {} },
+  execute: async () => { throw new Error("Unexpected renderer fixture execution"); }, renderShell: "self",
   renderCall: (args, theme, context) => renderMcpToolCall(args, { serverName: "fixture", toolName: "preview" }, theme, context),
   renderResult: renderMcpToolResult,
 } as ToolDefinition;
 function createRow(id = "fixture") {
   return new ToolExecutionComponent("mcp_fixture", id, { query: "中文🙂" }, { showImages: false }, tool,
-    { requestRender() {} }, "/repo");
+    { requestRender() {} } as never, "/repo");
 }
 const plain = (row: ToolExecutionComponent, width = 120) => row.render(width).map(stripTerminalSequences).filter(Boolean);
 afterEach(() => setTheme("dark", false));

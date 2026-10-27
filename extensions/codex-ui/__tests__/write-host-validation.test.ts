@@ -8,7 +8,7 @@ import { stripTerminalSequences } from "@earendil-works/pi-tui";
 import { test } from "vitest";
 import { registerCodexTools } from "../src/tools.js";
 
-const cases = [
+const cases: Array<{name: string; args: import("@earendil-works/pi-ai").JsonObject; expected?: string}> = [
   { name: "missing", args: {}, expected: undefined },
   { name: "null coerced to string", args: { content: null }, expected: "null" },
   { name: "number coerced to string", args: { content: 123 }, expected: "123" },
@@ -32,16 +32,16 @@ test.each(cases)("validates Write content $name through the real host without mu
     // Substitute only model responses, not host validation, tool execution, or results.
     faux.setResponses([fauxAssistantMessage(calls, { stopReason: "toolUse" }), fauxAssistantMessage("Done")]);
     const settingsManager = SettingsManager.inMemory({ retry: { enabled: false }, compaction: { enabled: false } });
-    let write: ToolDefinition | undefined;
+    let write: ToolDefinition<any, any> | undefined;
     const executedContent: unknown[] = [];
     const errors: unknown[] = [];
     const loader = new DefaultResourceLoader({ cwd, agentDir: join(cwd, "agent"), settingsManager,
       noExtensions: true, noSkills: true, noThemes: true, noContextFiles: true, noPromptTemplates: true,
-      extensionFactories: [pi => registerCodexTools({ ...pi, registerTool: tool => {
+      extensionFactories: [pi => { registerCodexTools({ ...pi, registerTool: tool => {
         if (tool.name !== "write") { pi.registerTool(tool); return; }
         write = tool;
         pi.registerTool({ ...tool, execute: (...input) => { executedContent.push(input[1].content); return tool.execute(...input); } });
-      } })] });
+      } }); }] });
     await loader.reload();
     ({ session } = await createAgentSession({ cwd, agentDir: join(cwd, "agent"), resourceLoader: loader, settingsManager,
       modelRuntime: runtime, model: faux.getModel(), sessionManager: SessionManager.inMemory(cwd), noTools: "builtin" }));

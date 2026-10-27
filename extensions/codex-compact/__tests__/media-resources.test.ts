@@ -1,3 +1,4 @@
+import { wasm, type WasmModule, type WasmInstance } from "../../../test-support/wasm.js";
 import { readFileSync } from "node:fs";
 import { afterEach, expect, it, vi } from "vitest";
 
@@ -5,9 +6,9 @@ afterEach(() => { vi.restoreAllMocks(); vi.resetModules(); });
 
 it("reuses compiled code but releases oversized decoded image heaps", async () => {
 	vi.resetModules();
-	const NativeInstance = WebAssembly.Instance;
+	const NativeInstance = wasm.Instance;
 	let instances = 0;
-	vi.spyOn(WebAssembly, "Instance").mockImplementation(function(module: WebAssembly.Module) {
+	vi.spyOn(wasm, "Instance").mockImplementation(function(module: WasmModule) {
 		instances++;
 		return new NativeInstance(module);
 	});
@@ -23,16 +24,16 @@ it("reuses compiled code but releases oversized decoded image heaps", async () =
 
 it("discards a trapped instance and recovers on the next input", async () => {
 	vi.resetModules();
-	const NativeInstance = WebAssembly.Instance;
+	const NativeInstance = wasm.Instance;
 	let instances = 0;
-	vi.spyOn(WebAssembly, "Instance").mockImplementation(function(module: WebAssembly.Module) {
+	vi.spyOn(wasm, "Instance").mockImplementation(function(module: WasmModule) {
 		instances++;
 		if (instances > 1) return new NativeInstance(module);
 		return { exports: {
 			memory: { buffer: new ArrayBuffer(64) }, allocate: () => 0,
 			release: () => { throw new Error("A trapped instance must not be touched"); },
-			image_bytes: () => { throw new WebAssembly.RuntimeError("unreachable"); },
-		} } as unknown as WebAssembly.Instance;
+			image_bytes: () => { throw new wasm.RuntimeError("unreachable"); },
+		} } as unknown as WasmInstance;
 	});
 	const { decodeOriginalImageBytes } = await import("../src/media-decoder.js");
 	expect(decodeOriginalImageBytes("data:image/png;base64,AA==")).toBeUndefined();
