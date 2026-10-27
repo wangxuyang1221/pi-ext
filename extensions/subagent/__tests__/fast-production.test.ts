@@ -1,4 +1,5 @@
 import { waitFor } from "../../../test-support/wait.js";
+import { hasSuccessfulPaneExit } from "../../../test-support/tmux-exit.js";
 import { createTestUi } from "../../../test-support/pi-ui.js";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
@@ -136,10 +137,19 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
       await until(() => new SessionStateStore(stateRoot).load(child.agentId), state => state?.runtime.status === "settled", "settled before quit");
       await send(child, "/quit");
       // With remain-on-exit, Linux may retain the exited PID until tmux reaps it.
-      // tmux records the exit status; final cleanup still verifies all PIDs disappear.
+      // Older tmux versions omit the status until reaping; read the Linux wait
+      // status in that case. Final cleanup still verifies all PIDs disappear.
       try {
-        await until(() => executeCommand(wrapper, ["display-message", "-p", "-t", child.tmux.paneId, "#{pane_dead}\t#{pane_dead_status}"]),
-          result => result.code === 0 && result.stdout.trim() === "1\t0", "child graceful shutdown");
+        await until(async () => {
+          const pane = await executeCommand(wrapper, ["display-message", "-p", "-t", child.tmux.paneId, "#{pane_dead}\t#{pane_dead_status}"]);
+          if (pane.code !== 0) return false;
+          const stat = process.platform === "linux" && pane.stdout.trim() === "1"
+            ? await readFile(`/proc/${child.tmux.panePid}/stat`, "utf8").catch((error: NodeJS.ErrnoException) => {
+              if (error.code === "ENOENT") return undefined;
+              throw error;
+            }) : undefined;
+          return hasSuccessfulPaneExit(pane.stdout, stat);
+        }, Boolean, "child graceful shutdown");
       } catch (error) {
         report.shutdownFailure = {
           pid: child.tmux.panePid,
