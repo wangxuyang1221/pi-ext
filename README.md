@@ -13,12 +13,13 @@
 
 ## Requirements
 
+- 支持 Linux 和 macOS；原生 Windows 不在支持与 CI 验证范围内。
 - Node.js 22.19 或更高版本
 - 开发、测试和发布只支持 Pi AI、Coding Agent、TUI `1.4.0`，三个 peer 依赖精确固定为该版本。
 - `subagent` 运行时需要 tmux 3.6 或兼容版本
 - 支持 24-bit color 的终端可获得最接近设计稿的颜色效果
 
-CI 配置覆盖 Linux、macOS 和 Windows 的通用测试；`subagent` 的真实 child runtime 仅适用于可运行 tmux 的环境。运行入口是各扩展 `dist/` 目录中的 ESM 文件，Pi 启动时不需要转译 TypeScript 源码。
+CI 在 Linux 和 macOS 上执行完整检查，并在 Linux 上运行 tmux、PTY、用量记账和 skill 安装验收。运行入口是各扩展 `dist/` 目录中的 ESM 文件，Pi 启动时不需要转译 TypeScript 源码。
 
 ## Install
 

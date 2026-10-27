@@ -85,7 +85,7 @@ Unix 宿主入口在 `.tmp/test-results/host-<group>-<id>/` 保存：
 - `summary.json`：实际 Node/Pi 版本、前置工具版本、每条命令的退出码、完成状态和清理结果。
 - `<index>.log`：该命令完整的 stdout 与 stderr，包含夹具输出的版本、协议断言及清理证据。
 
-入口为每条命令设置 10 分钟上限，组内不自动重试。普通 Vitest wrapper 与 Unix 宿主入口拥有各自的进程组，正常退出或可处理的取消后检查进程停止，再删除隔离目录；无法确认清理时保留目录并失败。Windows 普通测试使用 Job Object。
+入口为每条命令设置 10 分钟上限，组内不自动重试。普通 Vitest wrapper 与 Unix 宿主入口拥有各自的进程组，正常退出或可处理的取消后检查进程停止，再删除隔离目录；无法确认清理时保留目录并失败。
 
 PTY 子会话和私有 tmux server 仍由夹具负责清理。操作系统强杀、CI 强制终止或脱离进程组的进程不在 wrapper 的完整回收保证内。排查失败时查看夹具记录的 PID、socket 和端口，只清理该次运行明确拥有的资源，不使用全局 `killall` 或默认 tmux server。
 
@@ -93,9 +93,11 @@ PTY 子会话和私有 tmux server 仍由夹具负责清理。操作系统强杀
 
 ## CI
 
-`.github/workflows/ci.yml` 保留 Linux、macOS、Windows 的 `check` 矩阵。Ubuntu 另跑 tmux、accounting、PTY 三个独立 job，以及 Python 评分与 skill 安装 job。每个 job 有超时，同一分支的新运行会取消旧运行；失败时仍上传日志，保留 7 天。性能基准与联网验收不进入默认 CI。
+支持范围为 Linux 和 macOS；原生 Windows 不受支持。部分运行与验收逻辑依赖 Unix 文件权限、进程组和 shell，不能用 Windows 测试启动成功来证明兼容性。仓库中保留的 Windows Job Object wrapper 也不构成平台支持承诺。
 
-CI 配置与本机验证是两类证据。本机通过不代表 Linux 或 Windows 已实跑；合并前查看远端对应 job 的结果。
+`.github/workflows/ci.yml` 在 Linux 和 macOS 上运行完整的 `check`。Ubuntu 另跑 tmux、accounting、PTY 三个独立 job，以及 Python 评分与 skill 安装 job，共六个 job。每个 job 有超时，同一分支的新运行会取消旧运行；失败时仍上传日志，保留 7 天。性能基准与联网验收不进入默认 CI。
+
+CI 配置与本机验证是两类证据。本机通过不代表另一平台已实跑；合并前查看远端对应 job 的结果。
 
 ## Maintained acceptance fixtures
 
