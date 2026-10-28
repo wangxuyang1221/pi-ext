@@ -6,11 +6,14 @@ const ACCOUNT_CODES = new Set(["insufficient_quota", "usage_limit_reached", "gou
 const ACCOUNT_MESSAGES = /^(?:you've hit your usage limit(?:\.| for )|your workspace is out of credits\.|quota exceeded\. check your plan and billing details\.)/i;
 /** Recognize only verified account exhaustion codes and explicit messages. */
 export function isAccountUsageLimit(message: string): boolean {
-  // Pi 0.84.3/0.85.1 agent-session.ts and compaction.ts add these wrappers.
-  const normalized = message.trim().replace(/’/g, "'")
-    .replace(/^(?:Context overflow recovery|Auto-compaction) failed:\s*/i, "")
-    .replace(/^(?:Turn prefix summarization|Summarization) failed:\s*/i, "")
-    .replace(/^(?:HTTP )?\d{3}(?:\s+|:\s*)/i, "");
+  // Pi compaction and the 1.4.0 Codex adapter can nest these wrappers.
+  let normalized = message.trim().replace(/’/g, "'");
+  const wrapper = /^(?:(?:Context overflow recovery|Auto-compaction|Turn prefix summarization|Summarization) failed:\s*|Codex error:\s*|(?:HTTP )?\d{3}(?:\s+|:\s*))/i;
+  for (let depth = 0; depth < 8; depth++) {
+    const next = normalized.replace(wrapper, "");
+    if (next === normalized) break;
+    normalized = next;
+  }
   if (ACCOUNT_CODES.has(normalized.toLowerCase()) || ACCOUNT_MESSAGES.test(normalized)) return true;
   try {
     const envelope = JSON.parse(normalized);

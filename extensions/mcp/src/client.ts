@@ -1134,6 +1134,8 @@ export class McpClientManager {
             timeout: requestTimeoutMs,
             maxTotalTimeout: maxRequestTimeoutMs,
             resetTimeoutOnProgress: maxRequestTimeoutMs > requestTimeoutMs,
+            // The SDK registers a progress token only when a callback is present.
+            ...(maxRequestTimeoutMs > requestTimeoutMs ? { onprogress: () => {} } : {}),
           },
         ),
         scope.expired,

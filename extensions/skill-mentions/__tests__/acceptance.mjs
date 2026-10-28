@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertSafePublishedPath } from "../../../scripts/package-paths.mjs";
@@ -12,6 +12,7 @@ mkdirSync(join(repo, ".tmp"), { recursive: true });
 const evidence = join(repo, ".tmp/test-results");
 mkdirSync(evidence, { recursive: true });
 const args = process.argv.slice(2);
+const summaryOnly = args.includes("--summary");
 const prefixArgument = args.find(arg => arg.startsWith("--evidence-prefix="));
 const evidencePrefix = prefixArgument?.split("=")[1] ?? "skill-install";
 assert(/^[a-z0-9-]+$/.test(evidencePrefix), "Evidence prefix must be a filename segment");
@@ -32,6 +33,10 @@ try {
   writeFileSync(join(consumer, "package.json"), JSON.stringify({ private: true, type: "module", dependencies: { "pi-ext": `file:${tarball}`, ...manifest.peerDependencies, typebox: manifest.devDependencies.typebox } }, null, 2));
   // A nested workspace prevents pnpm from treating this fixture as the repository root.
   writeFileSync(join(consumer, "pnpm-workspace.yaml"), "packages:\n  - '.'\n");
+  if (summaryOnly) {
+    copyFileSync(join(repo, "pnpm-workspace.yaml"), join(consumer, "pnpm-workspace.yaml"));
+    cpSync(join(repo, "patches"), join(consumer, "patches"), { recursive: true });
+  }
   run("pnpm", ["install", "--ignore-scripts", "--prefer-offline", "--no-frozen-lockfile"], { cwd: consumer, env });
   const installed = realpathSync(join(consumer, "node_modules/pi-ext"));
   const packaged = JSON.parse(readFileSync(join(installed, "package.json"), "utf8"));
@@ -42,22 +47,30 @@ try {
   // Imports run against the installed package, not source or a development symlink.
   run(process.execPath, ["--input-type=module", "-e", `for (const path of ${JSON.stringify(packaged.pi.extensions)}) { const m = await import(new URL(path, ${JSON.stringify(`file://${installed}/`)})); if (typeof m.default !== 'function') throw new Error(path); }`], { cwd: consumer, env });
   copyFileSync(join(here, "pty-fixture.ts"), join(consumer, "pty-fixture.ts"));
-  const cli = join(realpathSync(join(consumer, "node_modules/@earendil-works/pi-coding-agent")), "dist/cli.js");
-  const requestedModes = args.filter(arg => arg !== prefixArgument);
+  const hostRoot = realpathSync(join(consumer, "node_modules/@earendil-works/pi-coding-agent"));
+  const cli = summaryOnly ? join(consumer, "node_modules/.bin/pi") : join(hostRoot, "dist/cli.js");
+  const requestedModes = args.filter(arg => arg !== prefixArgument && arg !== "--summary");
   const modes = requestedModes.length ? requestedModes : ["native", "native-fullscreen", "codex", "combined", "combined-fullscreen"];
   assert(modes.every(mode => ["native", "native-fullscreen", "codex", "codex-fullscreen", "combined", "combined-fullscreen", "combined-search", "combined-search-fullscreen"].includes(mode)));
   for (const mode of modes) {
-    run("conda", ["run", "--no-capture-output", "-n", "codex-py312", "python", join(here, "pty-driver.py"), root, cli, installed, mode, evidencePrefix], { timeout: 180_000 });
+    if (summaryOnly) {
+      const summaryRoot = join(root, `summary-${mode}`);
+      try {
+        run("conda", ["run", "--no-capture-output", "-n", "codex-py312", "python", join(here, "resume-summary-driver.py"), summaryRoot, mode, cli, installed], { timeout: 180_000 });
+      } finally {
+        if (existsSync(summaryRoot)) cpSync(summaryRoot, join(evidence, `${evidencePrefix}-summary-${mode}`), { recursive: true });
+      }
+    } else run("conda", ["run", "--no-capture-output", "-n", "codex-py312", "python", join(here, "pty-driver.py"), root, cli, installed, mode, evidencePrefix], { timeout: 180_000 });
   }
   writeFileSync(join(evidence, `${evidencePrefix}-artifact.json`), JSON.stringify({
     passed: true,
     sourceCommit: execFileSync("git", ["rev-parse", "HEAD"], { cwd: repo, encoding: "utf8" }).trim(),
-    piVersion: JSON.parse(readFileSync(join(dirname(dirname(cli)), "package.json"), "utf8")).version,
-    fixtureSha256: Object.fromEntries(["acceptance.mjs", "pty-driver.py", "pty-fixture.ts", "pty-mcp-fixture.mjs"].map(path => [path, createHash("sha256").update(readFileSync(join(here, path))).digest("hex")])),
+    piVersion: JSON.parse(readFileSync(join(hostRoot, "package.json"), "utf8")).version,
+    fixtureSha256: Object.fromEntries(["acceptance.mjs", "pty-driver.py", "pty-fixture.ts", "pty-mcp-fixture.mjs", ...(summaryOnly ? ["resume-summary-driver.py"] : [])].map(path => [path, createHash("sha256").update(readFileSync(join(here, path))).digest("hex")])),
     node: process.version, pnpm: execFileSync("pnpm", ["--version"], { encoding: "utf8" }).trim(),
     sha256: createHash("sha256").update(readFileSync(tarball)).digest("hex"), files,
-    extensionEntries: packaged.pi.extensions, modes,
-    checks: ["prepack build", "tarball contents", "no test/log payload", "pnpm installation", "all extension compiled files byte equality", "all installed entry imports", "isolated pi install", "real CLI PTY"],
+    extensionEntries: packaged.pi.extensions, modes, patchedHost: summaryOnly,
+    checks: ["prepack build", "tarball contents", "no test/log payload", "pnpm installation", "all extension compiled files byte equality", "all installed entry imports", summaryOnly ? "patched host resume selectors" : "isolated pi install", "real CLI PTY"],
   }, null, 2) + "\n");
 } finally {
   rmSync(root, { recursive: true, force: true });

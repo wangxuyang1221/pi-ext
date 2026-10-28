@@ -1,0 +1,1336 @@
+[
+  {
+    "extension": "codex-compact",
+    "smoke": "metadata",
+    "features": [
+      {
+        "file": "metadata.md",
+        "behaviors": [
+          {
+            "id": "metadata-status",
+            "description": "查询有效版本和来源"
+          },
+          {
+            "id": "metadata-save",
+            "description": "保存全局目录版本"
+          },
+          {
+            "id": "metadata-reset",
+            "description": "重置时保留其他字段"
+          },
+          {
+            "id": "metadata-project-priority",
+            "description": "受信任项目版本优先"
+          },
+          {
+            "id": "metadata-invalid",
+            "description": "非法版本不写配置"
+          }
+        ]
+      },
+      {
+        "file": "compaction.md",
+        "behaviors": [
+          {
+            "id": "compact-manual",
+            "description": "手动 /compact 提交 checkpoint"
+          },
+          {
+            "id": "compact-threshold",
+            "description": "上下文达到阈值时压缩"
+          },
+          {
+            "id": "compact-overflow",
+            "description": "宿主 overflow 后压缩重试"
+          },
+          {
+            "id": "compact-pre-request",
+            "description": "请求前显示压缩动画"
+          },
+          {
+            "id": "compact-cancel",
+            "description": "Esc 取消不提交"
+          },
+          {
+            "id": "compact-failure",
+            "description": "失败保留原 checkpoint"
+          }
+        ]
+      },
+      {
+        "file": "resume.md",
+        "behaviors": [
+          {
+            "id": "compact-resume",
+            "description": "重开已有 checkpoint 继续对话"
+          },
+          {
+            "id": "compact-tools",
+            "description": "恢复仍可用的工具声明"
+          },
+          {
+            "id": "compact-system-updates",
+            "description": "保留中途系统提示更新"
+          },
+          {
+            "id": "compact-model-switch",
+            "description": "非 Codex 模型回放原历史"
+          },
+          {
+            "id": "compact-tree",
+            "description": "分支导航采用对应历史"
+          },
+          {
+            "id": "compact-stale",
+            "description": "远程等待期间状态变化取消提交"
+          }
+        ]
+      },
+      {
+        "file": "retention.md",
+        "behaviors": [
+          {
+            "id": "compact-retention",
+            "description": "保留历史遵守明文预算"
+          },
+          {
+            "id": "compact-media",
+            "description": "图片和标签原子保留"
+          },
+          {
+            "id": "compact-pending-input",
+            "description": "本次待发送输入完整保留"
+          },
+          {
+            "id": "compact-legacy",
+            "description": "旧来源无法证明时拒绝"
+          },
+          {
+            "id": "compact-usage",
+            "description": "只用宿主暴露 usage 记账"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "extension": "openai-fast-mode",
+    "smoke": "fast",
+    "features": [
+      {
+        "file": "toggle.md",
+        "behaviors": [
+          {
+            "id": "fast-bare",
+            "description": "无参数切换开关"
+          },
+          {
+            "id": "fast-on",
+            "description": "显式启用"
+          },
+          {
+            "id": "fast-off",
+            "description": "显式关闭"
+          },
+          {
+            "id": "fast-toggle",
+            "description": "toggle 切换"
+          },
+          {
+            "id": "fast-flag",
+            "description": "启动 --fast 启用并保存"
+          },
+          {
+            "id": "fast-persist",
+            "description": "重开读取持久开关"
+          },
+          {
+            "id": "fast-scope",
+            "description": "全局和项目安装分别定位配置"
+          }
+        ]
+      },
+      {
+        "file": "payload.md",
+        "behaviors": [
+          {
+            "id": "fast-openai",
+            "description": "OpenAI 模型精确匹配"
+          },
+          {
+            "id": "fast-codex",
+            "description": "Codex 任意模型注入 priority"
+          },
+          {
+            "id": "fast-unmatched",
+            "description": "非目标模型不注入"
+          },
+          {
+            "id": "fast-unsupported",
+            "description": "明确不支持后提示失败与标准重试"
+          },
+          {
+            "id": "fast-error-scope",
+            "description": "禁用只限当前会话和模型"
+          }
+        ]
+      },
+      {
+        "file": "child.md",
+        "behaviors": [
+          {
+            "id": "fast-child-inherit",
+            "description": "child 继承 root 默认值"
+          },
+          {
+            "id": "fast-child-override",
+            "description": "显式参数覆盖默认值"
+          },
+          {
+            "id": "fast-role",
+            "description": "角色 fast 默认参与选择"
+          },
+          {
+            "id": "fast-child-reload",
+            "description": "child reload 保留开关"
+          },
+          {
+            "id": "fast-child-resume",
+            "description": "恢复读取 session 保存值"
+          },
+          {
+            "id": "fast-shared-config",
+            "description": "child 不改 root 与角色配置"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "extension": "permissions",
+    "smoke": "permissions",
+    "features": [
+      {
+        "file": "modes.md",
+        "behaviors": [
+          {
+            "id": "permissions-env",
+            "description": "环境变量选择启动模式"
+          },
+          {
+            "id": "permissions-menu",
+            "description": "菜单选择权限模式"
+          },
+          {
+            "id": "permissions-default",
+            "description": "命令切回 default"
+          },
+          {
+            "id": "permissions-full",
+            "description": "进入 full 必须确认"
+          },
+          {
+            "id": "permissions-cancel",
+            "description": "取消升级保留原模式"
+          }
+        ]
+      },
+      {
+        "file": "approval.md",
+        "behaviors": [
+          {
+            "id": "permissions-allow-once",
+            "description": "一次批准后执行工具"
+          },
+          {
+            "id": "permissions-deny",
+            "description": "拒绝后无文件副作用"
+          },
+          {
+            "id": "permissions-deny-note",
+            "description": "拒绝说明交给模型"
+          },
+          {
+            "id": "permissions-cancel-call",
+            "description": "取消中止调用"
+          },
+          {
+            "id": "permissions-read-safe",
+            "description": "只读工具不弹确认"
+          }
+        ]
+      },
+      {
+        "file": "grants.md",
+        "behaviors": [
+          {
+            "id": "permissions-grant-exact",
+            "description": "同一进程同一命令复用 grant"
+          },
+          {
+            "id": "permissions-grant-path",
+            "description": "不同目标路径不能复用"
+          },
+          {
+            "id": "permissions-grant-mcp",
+            "description": "MCP grant 按 server/tool 隔离"
+          },
+          {
+            "id": "permissions-grant-limit",
+            "description": "grant 条数有上限"
+          },
+          {
+            "id": "permissions-restart",
+            "description": "重启清除 grant"
+          }
+        ]
+      },
+      {
+        "file": "headless.md",
+        "behaviors": [
+          {
+            "id": "permissions-print",
+            "description": "print 修改调用无 UI 时拒绝"
+          },
+          {
+            "id": "permissions-rpc",
+            "description": "RPC 通过客户端确认审批与升级"
+          },
+          {
+            "id": "permissions-headless-upgrade",
+            "description": "无 UI 的 print/json 拒绝升级 full"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "extension": "goal",
+    "smoke": "goal",
+    "features": [
+      {
+        "file": "lifecycle.md",
+        "behaviors": [
+          {
+            "id": "goal-create",
+            "description": "创建并保存新目标"
+          },
+          {
+            "id": "goal-replace",
+            "description": "替换未完成目标须确认"
+          },
+          {
+            "id": "goal-edit",
+            "description": "编辑保留统计"
+          },
+          {
+            "id": "goal-clear",
+            "description": "清除写 tombstone"
+          },
+          {
+            "id": "goal-details",
+            "description": "查看和滚动详情快照"
+          },
+          {
+            "id": "goal-pause",
+            "description": "暂停停止自动推进"
+          },
+          {
+            "id": "goal-resume",
+            "description": "显式恢复同一目标"
+          }
+        ]
+      },
+      {
+        "file": "tools.md",
+        "behaviors": [
+          {
+            "id": "goal-get",
+            "description": "读取当前目标或空状态"
+          },
+          {
+            "id": "goal-create-tool",
+            "description": "工具创建目标"
+          },
+          {
+            "id": "goal-update-tool",
+            "description": "工具更新受支持状态"
+          },
+          {
+            "id": "goal-budget-default",
+            "description": "默认预算和上限生效"
+          },
+          {
+            "id": "goal-tool-missing",
+            "description": "缺必要工具停止续跑并提示"
+          }
+        ]
+      },
+      {
+        "file": "continuation.md",
+        "behaviors": [
+          {
+            "id": "goal-auto",
+            "description": "active 目标自动续跑"
+          },
+          {
+            "id": "goal-steer",
+            "description": "运行中 steer 保留输入"
+          },
+          {
+            "id": "goal-followup",
+            "description": "follow-up 队列不丢消息"
+          },
+          {
+            "id": "goal-escape",
+            "description": "运行中 Esc 暂停"
+          },
+          {
+            "id": "goal-retry",
+            "description": "等待原生重试后判断终态"
+          },
+          {
+            "id": "goal-loop",
+            "description": "重复工具触发循环保护"
+          },
+          {
+            "id": "goal-empty",
+            "description": "连续空白自动轮次触发阻塞"
+          },
+          {
+            "id": "goal-settled-error",
+            "description": "最终不可恢复错误转 blocked"
+          },
+          {
+            "id": "goal-quota",
+            "description": "明确账号额度转 usage_limited"
+          }
+        ]
+      },
+      {
+        "file": "recovery.md",
+        "behaviors": [
+          {
+            "id": "goal-before-first-reply",
+            "description": "首次回复落盘前保存"
+          },
+          {
+            "id": "goal-recover-session",
+            "description": "恢复原持久会话"
+          },
+          {
+            "id": "goal-recover-orphan",
+            "description": "无原会话时接管目标记录"
+          },
+          {
+            "id": "goal-reopen-confirm",
+            "description": "重开停止状态须确认"
+          },
+          {
+            "id": "goal-lock",
+            "description": "活跃写入者不能被夺锁"
+          },
+          {
+            "id": "goal-storage-error",
+            "description": "存储失败停止推进并要求 resume"
+          },
+          {
+            "id": "goal-tombstone",
+            "description": "清除的目标不从镜像复活"
+          }
+        ]
+      },
+      {
+        "file": "inheritance.md",
+        "behaviors": [
+          {
+            "id": "goal-tree",
+            "description": "/tree 不回退累计统计"
+          },
+          {
+            "id": "goal-native-fork",
+            "description": "原生 fork 不继承目标"
+          },
+          {
+            "id": "goal-native-clone",
+            "description": "原生 clone 不继承目标"
+          },
+          {
+            "id": "goal-fork",
+            "description": "goal-fork 保留目标身份并复制到独立记录"
+          },
+          {
+            "id": "goal-clone",
+            "description": "当前位置 clone 复制独立快照"
+          },
+          {
+            "id": "goal-deferral",
+            "description": "继承门禁跨 reload 保留"
+          }
+        ]
+      },
+      {
+        "file": "content.md",
+        "behaviors": [
+          {
+            "id": "goal-long",
+            "description": "超长目标写内容包"
+          },
+          {
+            "id": "goal-content-edit",
+            "description": "编辑展开完整正文"
+          },
+          {
+            "id": "goal-attachment-copy",
+            "description": "确认复制图片附件"
+          },
+          {
+            "id": "goal-attachment-text",
+            "description": "选择仅保留路径文本"
+          },
+          {
+            "id": "goal-content-cancel",
+            "description": "取消不改变旧目标"
+          },
+          {
+            "id": "goal-content-validation",
+            "description": "限制和路径校验失败保留旧状态"
+          }
+        ]
+      },
+      {
+        "file": "accounting.md",
+        "behaviors": [
+          {
+            "id": "goal-root-usage",
+            "description": "根响应使用宿主 usage"
+          },
+          {
+            "id": "goal-child-usage",
+            "description": "直接 child 用量归属目标"
+          },
+          {
+            "id": "goal-dedupe",
+            "description": "重复 checkpoint 不重复计费"
+          },
+          {
+            "id": "goal-cache",
+            "description": "排除 cacheRead"
+          },
+          {
+            "id": "goal-missing-usage",
+            "description": "缺失 usage 保留警告"
+          },
+          {
+            "id": "goal-soft-budget",
+            "description": "软预算允许收尾但不再续跑"
+          },
+          {
+            "id": "goal-freeze",
+            "description": "停止期间冻结统计并推进基线"
+          },
+          {
+            "id": "goal-time",
+            "description": "active 时间不计离线时长"
+          }
+        ]
+      },
+      {
+        "file": "footer.md",
+        "behaviors": [
+          {
+            "id": "goal-footer-codex",
+            "description": "Codex footer 两行目标摘要"
+          },
+          {
+            "id": "goal-footer-native",
+            "description": "原生 footer 单行状态"
+          },
+          {
+            "id": "goal-footer-fullscreen",
+            "description": "两种终端模式保持布局"
+          },
+          {
+            "id": "goal-detail-snapshot",
+            "description": "详情秒数为打开时快照"
+          },
+          {
+            "id": "goal-minute-refresh",
+            "description": "分钟边界刷新而非秒级动画"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "extension": "mcp",
+    "smoke": "mcp",
+    "features": [
+      {
+        "file": "configuration.md",
+        "behaviors": [
+          {
+            "id": "mcp-init",
+            "description": "受信任项目生成配置模板"
+          },
+          {
+            "id": "mcp-priority",
+            "description": "按环境/项目/全局优先级读取"
+          },
+          {
+            "id": "mcp-invalid",
+            "description": "无效高优先级不静默降级"
+          },
+          {
+            "id": "mcp-disabled",
+            "description": "disabled server 不连接"
+          },
+          {
+            "id": "mcp-trust",
+            "description": "未信任项目不执行配置命令"
+          }
+        ]
+      },
+      {
+        "file": "tools.md",
+        "behaviors": [
+          {
+            "id": "mcp-stdio",
+            "description": "stdio 发现并调用工具"
+          },
+          {
+            "id": "mcp-http",
+            "description": "Streamable HTTP 实际连接"
+          },
+          {
+            "id": "mcp-sse",
+            "description": "legacy SSE 实际连接"
+          },
+          {
+            "id": "mcp-schema",
+            "description": "工具参数 schema 转换"
+          },
+          {
+            "id": "mcp-progress",
+            "description": "progress 延长软截止但不越硬上限"
+          },
+          {
+            "id": "mcp-cancel",
+            "description": "用户取消传播到底层"
+          },
+          {
+            "id": "mcp-error",
+            "description": "工具错误按失败展示"
+          }
+        ]
+      },
+      {
+        "file": "reconnect.md",
+        "behaviors": [
+          {
+            "id": "mcp-reconnect",
+            "description": "手动重连指定 server"
+          },
+          {
+            "id": "mcp-reload",
+            "description": "reload 清理旧连接与任务"
+          },
+          {
+            "id": "mcp-offline",
+            "description": "离线后后台恢复"
+          },
+          {
+            "id": "mcp-retry",
+            "description": "暂时错误有界退避"
+          },
+          {
+            "id": "mcp-deadline",
+            "description": "连接与调用遵守总截止"
+          },
+          {
+            "id": "mcp-replay",
+            "description": "默认不重放已发送调用"
+          }
+        ]
+      },
+      {
+        "file": "status.md",
+        "behaviors": [
+          {
+            "id": "mcp-inventory",
+            "description": "状态清单持久显示 server 状态"
+          },
+          {
+            "id": "mcp-verbose",
+            "description": "verbose 展示工具列表"
+          },
+          {
+            "id": "mcp-logs",
+            "description": "查看近期诊断"
+          },
+          {
+            "id": "mcp-redaction",
+            "description": "日志屏蔽敏感配置"
+          },
+          {
+            "id": "mcp-bounded-log",
+            "description": "诊断文件大小有界"
+          }
+        ]
+      },
+      {
+        "file": "history.md",
+        "behaviors": [
+          {
+            "id": "mcp-live-history",
+            "description": "真实调用写入可恢复历史"
+          },
+          {
+            "id": "mcp-offline-history",
+            "description": "server 离线仍能显示旧卡片"
+          },
+          {
+            "id": "mcp-cold-resume",
+            "description": "各冷启动恢复入口读取历史"
+          },
+          {
+            "id": "mcp-import",
+            "description": "导入历史后识别工具身份"
+          },
+          {
+            "id": "mcp-tree",
+            "description": "树导航只展示当前分支"
+          },
+          {
+            "id": "mcp-reload-history",
+            "description": "reload 不重执行旧工具"
+          },
+          {
+            "id": "mcp-history-only",
+            "description": "display-only 定义不能执行"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "extension": "subagent",
+    "smoke": "subagent",
+    "features": [
+      {
+        "file": "spawn.md",
+        "behaviors": [
+          {
+            "id": "subagent-spawn",
+            "description": "启动真实 TUI child"
+          },
+          {
+            "id": "subagent-role",
+            "description": "读取 root 角色配置"
+          },
+          {
+            "id": "subagent-overrides",
+            "description": "显式启动参数覆盖角色"
+          },
+          {
+            "id": "subagent-capacity",
+            "description": "并发 reservation 不超容量"
+          },
+          {
+            "id": "subagent-readiness",
+            "description": "握手后才投递任务"
+          },
+          {
+            "id": "subagent-auth",
+            "description": "凭据交接文件及时删除"
+          }
+        ]
+      },
+      {
+        "file": "delivery.md",
+        "behaviors": [
+          {
+            "id": "subagent-task",
+            "description": "初始 task 获得投递凭据"
+          },
+          {
+            "id": "subagent-prompt",
+            "description": "后续 prompt 到对应 child"
+          },
+          {
+            "id": "subagent-followup",
+            "description": "忙碌时 follow-up 可见"
+          },
+          {
+            "id": "subagent-delivery-rejected",
+            "description": "认证拒绝单独分类"
+          },
+          {
+            "id": "subagent-unconfirmed",
+            "description": "未确认投递不自动重发"
+          },
+          {
+            "id": "subagent-wait",
+            "description": "wait 等待对应代次结束"
+          }
+        ]
+      },
+      {
+        "file": "read.md",
+        "behaviors": [
+          {
+            "id": "subagent-list",
+            "description": "列表包含容量与诊断"
+          },
+          {
+            "id": "subagent-recent",
+            "description": "摘要读取已持久活动"
+          },
+          {
+            "id": "subagent-turns",
+            "description": "按 turn 读取固定快照"
+          },
+          {
+            "id": "subagent-detail",
+            "description": "按 section 分页详细内容"
+          },
+          {
+            "id": "subagent-cursors",
+            "description": "游标绑定身份且不倒退"
+          },
+          {
+            "id": "subagent-errors",
+            "description": "错误活动保留有界原因"
+          }
+        ]
+      },
+      {
+        "file": "ownership.md",
+        "behaviors": [
+          {
+            "id": "subagent-resume",
+            "description": "恢复原 root 接管 child"
+          },
+          {
+            "id": "subagent-owner",
+            "description": "同 namespace 单控制者"
+          },
+          {
+            "id": "subagent-identity",
+            "description": "验证 pane 与进程实例"
+          },
+          {
+            "id": "subagent-session-switch",
+            "description": "切换 session 保留正确归属"
+          },
+          {
+            "id": "subagent-upgrade",
+            "description": "升级协议拒绝旧写入者"
+          }
+        ]
+      },
+      {
+        "file": "close.md",
+        "behaviors": [
+          {
+            "id": "subagent-close",
+            "description": "单个关闭后确认进程退出"
+          },
+          {
+            "id": "subagent-close-all",
+            "description": "close-all 只关闭直接 child"
+          },
+          {
+            "id": "subagent-close-failure",
+            "description": "关闭失败保留关系与 slot"
+          },
+          {
+            "id": "subagent-quit-end",
+            "description": "结束会话先关闭 child"
+          },
+          {
+            "id": "subagent-quit-leave",
+            "description": "暂离保留 child 供恢复"
+          },
+          {
+            "id": "subagent-quit-cancel",
+            "description": "退出选择取消保留当前会话"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "extension": "codex-ui",
+    "smoke": "codex-ui",
+    "features": [
+      {
+        "file": "layout.md",
+        "behaviors": [
+          {
+            "id": "ui-header",
+            "description": "启动使用 Pi wordmark"
+          },
+          {
+            "id": "ui-composer",
+            "description": "输入框保持实色背景"
+          },
+          {
+            "id": "ui-status",
+            "description": "footer 展示模型与目录状态"
+          },
+          {
+            "id": "ui-theme",
+            "description": "保存主题跨会话替换保持"
+          },
+          {
+            "id": "ui-resize",
+            "description": "窄屏 resize 不破坏内容"
+          },
+          {
+            "id": "ui-user-markdown",
+            "description": "用户 Markdown 保留原语义"
+          },
+          {
+            "id": "ui-reply-markdown",
+            "description": "回复外层列表不改变模型原文"
+          }
+        ]
+      },
+      {
+        "file": "thinking.md",
+        "behaviors": [
+          {
+            "id": "ui-thinking-stream",
+            "description": "流式思考完整显示"
+          },
+          {
+            "id": "ui-thinking-collapse",
+            "description": "Ctrl+T 保留隐藏选择"
+          },
+          {
+            "id": "ui-thinking-resume",
+            "description": "恢复仍采用相同思考规则"
+          },
+          {
+            "id": "ui-title",
+            "description": "窗口标题展示运行动画"
+          },
+          {
+            "id": "ui-title-stop",
+            "description": "settled 或取消后标题静止"
+          }
+        ]
+      },
+      {
+        "file": "tools.md",
+        "behaviors": [
+          {
+            "id": "ui-read-group",
+            "description": "连续 Read 分组预览"
+          },
+          {
+            "id": "ui-bash-preview",
+            "description": "Bash 显示短命令和输出"
+          },
+          {
+            "id": "ui-expand",
+            "description": "Ctrl+O 展开已捕获内容"
+          },
+          {
+            "id": "ui-write-added",
+            "description": "新建 Write 显示 Added"
+          },
+          {
+            "id": "ui-write-edited",
+            "description": "覆盖 Write 显示 Edited"
+          },
+          {
+            "id": "ui-diff",
+            "description": "diff 展示行号与限制"
+          },
+          {
+            "id": "ui-error",
+            "description": "失败标题与正文正确"
+          },
+          {
+            "id": "ui-interrupted",
+            "description": "可靠中断用中断状态"
+          }
+        ]
+      },
+      {
+        "file": "codemode.md",
+        "behaviors": [
+          {
+            "id": "ui-codemode-order",
+            "description": "调用树按开始顺序保持父子"
+          },
+          {
+            "id": "ui-codemode-failure",
+            "description": "父完成仍显示子失败"
+          },
+          {
+            "id": "ui-inspect-tabs",
+            "description": "inspect 切换 Calls/Script/Output"
+          },
+          {
+            "id": "ui-inspect-scroll",
+            "description": "选择与滚动显示对应详情"
+          },
+          {
+            "id": "ui-codemode-cache",
+            "description": "缓存淘汰明确标识缺失"
+          },
+          {
+            "id": "ui-codemode-resume",
+            "description": "恢复只重建已保存元数据"
+          }
+        ]
+      },
+      {
+        "file": "lowpower.md",
+        "behaviors": [
+          {
+            "id": "ui-lowpower-on",
+            "description": "启用短工具预览"
+          },
+          {
+            "id": "ui-lowpower-off",
+            "description": "关闭恢复完整显示"
+          },
+          {
+            "id": "ui-lowpower-status",
+            "description": "status 只查询"
+          },
+          {
+            "id": "ui-lowpower-reset",
+            "description": "reload 或会话替换恢复默认"
+          }
+        ]
+      },
+      {
+        "file": "execution.md",
+        "behaviors": [
+          {
+            "id": "ui-shell-prefix",
+            "description": "继承 shellCommandPrefix"
+          },
+          {
+            "id": "ui-shell-path",
+            "description": "继承 shellPath"
+          },
+          {
+            "id": "ui-image-resize",
+            "description": "继承图片 autoResize"
+          },
+          {
+            "id": "ui-project-trust",
+            "description": "未信任项目配置不读取"
+          },
+          {
+            "id": "ui-settings-error",
+            "description": "配置损坏时 read/bash 拒绝执行"
+          },
+          {
+            "id": "ui-settings-reload",
+            "description": "修复后 reload 更新快照"
+          },
+          {
+            "id": "ui-headless",
+            "description": "print/RPC 也应用工具覆盖"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "extension": "skill-mentions",
+    "smoke": "skills",
+    "features": [
+      {
+        "file": "completion.md",
+        "behaviors": [
+          {
+            "id": "skill-dollar",
+            "description": "任意合法位置美元符号补全"
+          },
+          {
+            "id": "skill-multiline",
+            "description": "多行引用定位正确"
+          },
+          {
+            "id": "skill-tab",
+            "description": "Tab 选择候选"
+          },
+          {
+            "id": "skill-enter-select",
+            "description": "首次 Enter 只选择"
+          },
+          {
+            "id": "skill-enter-send",
+            "description": "菜单关闭后 Enter 发送"
+          },
+          {
+            "id": "skill-boundaries",
+            "description": "代码转义与邻接边界不误激活"
+          }
+        ]
+      },
+      {
+        "file": "loading.md",
+        "behaviors": [
+          {
+            "id": "skill-multi",
+            "description": "同请求多个 skill 生效"
+          },
+          {
+            "id": "skill-dedupe",
+            "description": "重复引用去重"
+          },
+          {
+            "id": "skill-punctuation",
+            "description": "右侧合法句读触发"
+          },
+          {
+            "id": "skill-unknown",
+            "description": "未知引用保留原文"
+          },
+          {
+            "id": "skill-unreadable",
+            "description": "不可读引用保留原文"
+          },
+          {
+            "id": "skill-native-card",
+            "description": "成功使用原生卡片"
+          },
+          {
+            "id": "skill-request-snapshot",
+            "description": "每个请求保留独立内容快照"
+          }
+        ]
+      },
+      {
+        "file": "labels.md",
+        "behaviors": [
+          {
+            "id": "skill-icon-cube",
+            "description": "cube 图标显示"
+          },
+          {
+            "id": "skill-icon-command",
+            "description": "command 图标持久偏好"
+          },
+          {
+            "id": "skill-cursor",
+            "description": "光标移动保持原文位置"
+          },
+          {
+            "id": "skill-selection",
+            "description": "分别验证标签整体删除与终端拖选复制"
+          },
+          {
+            "id": "skill-undo",
+            "description": "撤销恢复原始草稿"
+          },
+          {
+            "id": "skill-mouse",
+            "description": "鼠标命中对应文本"
+          },
+          {
+            "id": "skill-resize",
+            "description": "长标签和窄屏重新排版"
+          }
+        ]
+      },
+      {
+        "file": "history.md",
+        "behaviors": [
+          {
+            "id": "skill-history-source",
+            "description": "历史编辑取回原始引用"
+          },
+          {
+            "id": "skill-external-editor",
+            "description": "外部编辑器收到原文"
+          },
+          {
+            "id": "skill-steer",
+            "description": "steer 保留独立快照"
+          },
+          {
+            "id": "skill-followup",
+            "description": "follow-up 保留独立快照"
+          },
+          {
+            "id": "skill-reload",
+            "description": "reload 保留草稿与快照关系"
+          },
+          {
+            "id": "skill-resume",
+            "description": "恢复历史保持旧内容"
+          },
+          {
+            "id": "skill-equal-task",
+            "description": "同文本不同请求不混淆"
+          }
+        ]
+      },
+      {
+        "file": "integration.md",
+        "behaviors": [
+          {
+            "id": "skill-native",
+            "description": "原生编辑器路径"
+          },
+          {
+            "id": "skill-codex",
+            "description": "CodexEditor 路径"
+          },
+          {
+            "id": "skill-combined",
+            "description": "全包 MCP 组合"
+          },
+          {
+            "id": "skill-fullscreen",
+            "description": "fullscreen 路径"
+          },
+          {
+            "id": "skill-package",
+            "description": "真实 tarball 安装与 dist 比对"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "extension": "codex-search",
+    "smoke": "search",
+    "features": [
+      {
+        "file": "settings.md",
+        "behaviors": [
+          {
+            "id": "search-settings",
+            "description": "交互菜单修改配置"
+          },
+          {
+            "id": "search-status",
+            "description": "status 展示有效来源"
+          },
+          {
+            "id": "search-reset",
+            "description": "reset 确认与取消"
+          },
+          {
+            "id": "search-scope",
+            "description": "项目信任限制作用域"
+          },
+          {
+            "id": "search-env",
+            "description": "环境变量覆盖配置"
+          },
+          {
+            "id": "search-enabled",
+            "description": "按开关注册可执行工具"
+          }
+        ]
+      },
+      {
+        "file": "queries.md",
+        "behaviors": [
+          {
+            "id": "search-responses",
+            "description": "responses 查询批次"
+          },
+          {
+            "id": "search-standalone",
+            "description": "standalone 独立网页动作"
+          },
+          {
+            "id": "search-progress",
+            "description": "查询进度逐项更新"
+          },
+          {
+            "id": "search-sources",
+            "description": "汇总来源与引用"
+          },
+          {
+            "id": "search-expand",
+            "description": "展开查询详情"
+          },
+          {
+            "id": "search-error",
+            "description": "失败保留诊断"
+          },
+          {
+            "id": "search-timeout",
+            "description": "超时单独展示"
+          },
+          {
+            "id": "search-cancel",
+            "description": "取消停止请求"
+          }
+        ]
+      },
+      {
+        "file": "references.md",
+        "behaviors": [
+          {
+            "id": "search-open",
+            "description": "打开一个明确 URL"
+          },
+          {
+            "id": "search-click",
+            "description": "按页面 link id 点击"
+          },
+          {
+            "id": "search-find",
+            "description": "在已打开页面内查找"
+          },
+          {
+            "id": "search-reference",
+            "description": "同 URL 复用已保存引用"
+          },
+          {
+            "id": "search-screenshot",
+            "description": "截图指定页面"
+          },
+          {
+            "id": "search-lookups",
+            "description": "金融天气体育时区查询"
+          },
+          {
+            "id": "search-single-action",
+            "description": "每调用一个动作且禁止 low"
+          }
+        ]
+      },
+      {
+        "file": "history.md",
+        "behaviors": [
+          {
+            "id": "search-resume",
+            "description": "恢复显示搜索摘要"
+          },
+          {
+            "id": "search-reload",
+            "description": "reload 保留历史卡片"
+          },
+          {
+            "id": "search-disabled-history",
+            "description": "禁用新请求仍展示历史"
+          },
+          {
+            "id": "search-theme",
+            "description": "主题切换正确渲染"
+          },
+          {
+            "id": "search-fullscreen",
+            "description": "fullscreen 恢复路径"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -6,6 +6,8 @@
 
 使用 Node.js 22.19+ 和 `package.json` 中指定的 pnpm 版本。Pi 相关依赖固定为 1.4.0，真实宿主检查使用仓库安装的 CLI，不使用全局 `pi`。
 
+仓库通过 pnpm 自动应用 [Pi 会话摘要补丁](pi-session-summary-patch.md)。冻结安装必须包含根目录的 pnpm-workspace.yaml、patches 和锁文件；发布包的外部宿主不会自动继承这份补丁。
+
 ```bash
 node --version
 pnpm --version
@@ -100,6 +102,8 @@ PTY 子会话和私有 tmux server 仍由夹具负责清理。操作系统强杀
 CI 配置与本机验证是两类证据。本机通过不代表另一平台已实跑；合并前查看远端对应 job 的结果。
 
 ## Maintained acceptance fixtures
+
+各扩展的用户行为验证见 [Pi extension verification skill](../.cursor/skills/verify-pi-ext/SKILL.md)。该入口索引九个扩展的核心行为，提供隔离 CLI/PTY 驱动、证据保存和清理规则；包含未随包发布的 `codex-search`。每个行为单独记录实际覆盖状态，不能用一次 smoke 代替完整索引。
 
 工具状态 PTY 驱动维护在 `extensions/codex-ui/__tests__/fixtures/tool-status/`；搜索驱动维护在 `extensions/codex-search/__tests__/fixtures/search-ui/`。它们加载当前生产 renderer，模型响应和外部工具结果使用离线 fixture。`tool-status:check` 和 `web-search:check` 是对应入口，均由 Unix PTY 组调用。
 

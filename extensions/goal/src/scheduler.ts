@@ -62,6 +62,13 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
     const record = active(ctx, allowLimited);
     return !!ticket && !!record && ticket.instance === instance && ticket.ownerSessionId === record.ownerSessionId && ticket.goalId === record.goal!.goalId && ticket.generation === record.generation && ticket.runGeneration === runGeneration;
   };
+  const pauseCancelledRun = async (ctx: ExtensionContext) => {
+    const record = active(ctx);
+    if (!internalCancellation && !lastFailure && boundSignal?.aborted && record && valid(bound, ctx)) {
+      resetEmpty();
+      await access.stop("paused", record, ctx);
+    }
+  };
   // Tool availability gates new continuations, not bound responses or wrap-up.
   const runnable = (ctx: ExtensionContext) => {
     const record = active(ctx);
@@ -167,11 +174,16 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
   pi.on("agent_end", async (event, ctx) => {
     runEnded = true;
     if (internalCancellation) {
-      internalCancellation = false;
       if (restartRequested) start(ctx, restartAutomatic);
       return;
     }
     const last = [...event.messages].reverse().find(message => message.role === "assistant");
+    // Pi may replace an interrupted assistant with a new timestamp. The bound
+    // signal owns cancellation; timestamp checks still guard normal responses.
+    if (boundSignal?.aborted && !lastFailure && !(last?.stopReason === "error" && isAccountUsageLimit(last.errorMessage ?? ""))) {
+      await pauseCancelledRun(ctx);
+      return;
+    }
     if (last?.role !== "assistant" || !valid(bound, ctx, true)) return;
     if (responseOrigin && (responseOrigin.timestamp !== last.timestamp || responseOrigin.ticket?.scheduleId !== bound?.scheduleId)) return;
     lastFailure = last.stopReason === "error" ? { reason: "error", message: last.errorMessage ?? "Model request failed." }
@@ -179,7 +191,7 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
         : last.stopReason === "deferred" ? { reason: "deferred", message: "deferred responses are not supported. Pi settled without a normal result. Resolve the response mode, then use /goal resume." } : undefined;
     const record = active(ctx, true);
     if (!record) return;
-    if (last.stopReason === "aborted" || boundSignal?.aborted) { resetEmpty(); await access.stop("paused", record, ctx); return; }
+    if (last.stopReason === "aborted") { resetEmpty(); if (record.goal!.status === "active") await access.stop("paused", record, ctx); return; }
     if (last.stopReason !== "stop") { resetEmpty(); return; }
     emptyFinal = last.content?.every(part => part.type !== "toolCall" && (part.type !== "text" || !part.text.trim())) ?? false;
     if (last.content?.some(part => part.type === "thinking" && part.thinking.trim())) activity = true;
@@ -189,6 +201,7 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
   pi.on("agent_settled", async (_event, ctx) => {
     // A preceding handler may already have started another session-level run.
     if (!ctx.isIdle()) return;
+    await pauseCancelledRun(ctx);
     const origin = bound;
     const failure = lastFailure;
     const record = active(ctx, true);
@@ -213,6 +226,7 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
       lastFailure = undefined;
       bound = undefined;
       boundSignal = undefined;
+      internalCancellation = false;
     }
   });
   pi.on("session_before_compact", event => {
@@ -298,6 +312,7 @@ export function registerGoalScheduler(pi: ExtensionAPI, access: Access) {
       if (!compactionFailed) bound = undefined;
       ctx.abort();
     } else {
+      internalCancellation = false;
       runEnded = false;
       lastFailure = undefined;
       compactionFailed = false;

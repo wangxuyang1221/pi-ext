@@ -267,6 +267,8 @@ function buildTool(config: ResolvedConfig, animations: SearchAnimations, saveFai
     parameters: buildToolParameters(config),
 
     async execute(_toolCallId, params: ToolParameters, signal, onUpdate, ctx) {
+      const sessionDir = config.searchApi === "standalone" ? ctx.sessionManager.getSessionDir() : undefined;
+      const sessionId = ctx.sessionManager.getSessionId();
       const queries = params.queries?.map((q) => q.trim()).filter((q) => q.length > 0) ?? [];
       const imageQueries =
         params.image_queries?.map((q) => q.trim()).filter((q) => q.length > 0) ?? [];
@@ -348,13 +350,12 @@ function buildTool(config: ResolvedConfig, animations: SearchAnimations, saveFai
           );
         }
         const refStore = createRefStore();
-        const sessionDir = ctx.sessionManager.getSessionDir();
-        await refStore.load(sessionDir);
+        await refStore.load(sessionDir!, sessionId);
 
         const baseStandaloneOptions = {
           model,
           transport,
-          sessionId: ctx.sessionManager.getSessionId(),
+          sessionId,
           freshness,
           searchContextSize,
           maxOutputTokens: 8000,
@@ -551,7 +552,7 @@ function buildTool(config: ResolvedConfig, animations: SearchAnimations, saveFai
               externalWebAccess: freshness !== "cached",
               indexedWebAccess: freshness === "indexed" ? true : undefined,
               searchContextSize,
-              sessionId: ctx.sessionManager.getSessionId(),
+              sessionId,
               threadId: ctx.sessionManager.getSessionId(),
               signal,
               onTextDelta,

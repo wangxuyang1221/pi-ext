@@ -26,6 +26,32 @@ function harness(afterStop?: () => Promise<void>) {
   });
   return { scheduler, ctx, emit, sendMessage, setCheckpoint(value: (expected: GoalRecord) => Promise<unknown>) { checkpoint = value; }, get record() { return record; } };
 }
+it.each(["agent_end", "agent_settled"])("pauses the bound cancelled run despite a replacement assistant timestamp at %s", async end => {
+  let stops = 0;
+  const h = harness(async () => { stops++; });
+  const controller = new AbortController();
+  Object.assign(h.ctx, { signal: controller.signal });
+  await h.emit("session_start");
+  await h.emit("context", { messages: [{ role: "user", content: "Work" }] });
+  await h.emit("message_start", { message: { role: "assistant", timestamp: 1 } });
+  controller.abort();
+  if (end === "agent_end") await h.emit("agent_end", { messages: [{ role: "assistant", timestamp: 2, stopReason: "aborted" }] });
+  await h.emit("agent_settled");
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe("paused");
+  expect(stops).toBe(1);
+  expect(h.sendMessage).not.toHaveBeenCalled();
+});
+it.each(["budget_limited", "complete", "usage_limited"] as const)("preserves %s when cancellation settles", async status => {
+  const h = harness(), controller = new AbortController();
+  Object.assign(h.ctx, { signal: controller.signal });
+  await h.emit("session_start"); await h.emit("context", { messages: [] });
+  h.record.goal!.status = status;
+  controller.abort();
+  await h.emit("agent_end", { messages: [{ role: "assistant", stopReason: "aborted" }] });
+  await h.emit("agent_settled");
+  expect(h.record.goal!.status).toBe(status);
+});
 it("does not enqueue automatic work ahead of pending user messages", async () => {
   const h = harness(); await h.emit("session_start");
   await h.emit("context", { messages: [{ role: "user", content: "Work" }] });

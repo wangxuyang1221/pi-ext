@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "vitest";
@@ -124,11 +124,11 @@ describe("codex helpers", () => {
     const dir = await mkdtemp(join(tmpdir(), "pi-codex-refs-"));
     try {
       const first = createRefStore();
-      await first.load(dir);
+      await first.load(dir, "session-A");
       await first.remember("https://example.com/docs", "turn0fetch0");
 
       const second = createRefStore();
-      await second.load(dir);
+      await second.load(dir, "session-A");
       assert.equal(second.resolveRefId("https://example.com/docs"), "turn0fetch0");
     } finally {
       await rm(dir, { recursive: true, force: true });
@@ -140,14 +140,14 @@ describe("codex helpers", () => {
     try {
       const first = createRefStore();
       const second = createRefStore();
-      await Promise.all([first.load(dir), second.load(dir)]);
+      await Promise.all([first.load(dir, "session-A"), second.load(dir, "session-A")]);
       await Promise.all([
         first.remember("https://example.com/a", "turn0fetch0"),
         second.remember("https://example.com/b", "turn0fetch1"),
       ]);
 
       const reloaded = createRefStore();
-      await reloaded.load(dir);
+      await reloaded.load(dir, "session-A");
       assert.equal(reloaded.resolveRefId("https://example.com/a"), "turn0fetch0");
       assert.equal(reloaded.resolveRefId("https://example.com/b"), "turn0fetch1");
     } finally {
@@ -158,9 +158,12 @@ describe("codex helpers", () => {
   it("fails fast on corrupt persisted ref ids", async () => {
     const dir = await mkdtemp(join(tmpdir(), "pi-codex-refs-bad-"));
     try {
-      await writeFile(join(dir, "pi-codex-search-refs.json"), "{bad json", "utf-8");
       const store = createRefStore();
-      await assert.rejects(store.load(dir), SyntaxError);
+      await store.load(dir, "session-A");
+      await store.remember("https://example.com", "turn0view0");
+      const [file] = await readdir(dir);
+      await writeFile(join(dir, file), "{bad json", "utf-8");
+      await assert.rejects(store.load(dir, "session-A"), SyntaxError);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

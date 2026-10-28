@@ -22,6 +22,8 @@ export function userText(message: UserMessage): string {
 
 /** Register inline skill completion, snapshots, and history rendering. */
 export default function skillMentions(pi: ExtensionAPI, configuration: { preferencePath?: string } = {}): void {
+  // Older unpatched hosts retain their original session-list behavior.
+  pi.registerSessionSummaryTransformer?.((text, { role }) => role === "user" ? decodeSnapshot(text)?.task : undefined);
   // Pi 0.86 awaits each user start/end pair before consuming the next user.
   let pending: { task: string; snapshot?: SkillSnapshot; reads: Map<string, Promise<string>> } | undefined;
   let context: ExtensionContext | undefined;

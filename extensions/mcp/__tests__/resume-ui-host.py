@@ -93,6 +93,12 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
         fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 50, 120, 0, 0))
         exited = False
         output = ""
+        raw_output = bytearray()
+        actions = []
+
+        def send(data):
+            actions.append({"at": time.monotonic(), "bytes": data.hex()})
+            os.write(fd, data)
         timings = {}
         owned_children = set()
 
@@ -120,7 +126,8 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
                     if not data:
                         break
                     if b"\x1b[6n" in data:
-                        os.write(fd, b"\x1b[1;1R")
+                        send(b"\x1b[1;1R")
+                    raw_output.extend(data)
                     chunks.append(data)
             text = ANSI.sub("", b"".join(chunks).decode("utf-8", "replace"))
             output += text
@@ -142,10 +149,10 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
         def replacement(name, command):
             start = time.monotonic()
             previous_ready = ready_count()
-            os.write(fd, ("\x15" + command + "\r").encode())
+            send(("\x15" + command + "\r").encode())
             if name == "import":
                 until("Replace current session")
-                os.write(fd, b"\r")
+                send(b"\r")
             # Session replacement can repaint away session_start notifications.
             text = ""
             deadline = time.monotonic() + 20
@@ -181,7 +188,7 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
             start = time.monotonic()
             if cold_mode == "resume":
                 until("Synthetic MCP history")
-                os.write(fd, b"\r")
+                send(b"\r")
             text = until("MCP UI host ready")
             timings["cold"] = round(time.monotonic() - start, 3)
             remember_children()
@@ -189,7 +196,7 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
                 assert not live, "Use the live case separately from blank startup"
                 text = replacement("blank-resume", f"/fixture-resume {history}")
             if live:
-                os.write(fd, b"Run the fixture call\r")
+                send(b"Run the fixture call\r")
                 live_text = until("MCP-LIVE-DONE")
                 assert "⌁ Called local / echo" in live_text, live_text
                 trace = [json.loads(line) for line in (run / "trace.jsonl").read_text().splitlines()]
@@ -198,10 +205,10 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
                 config.write_text('{"mcpServers":{}}')
                 if memory:
                     replacement("clone-memory", "/fixture-clone-last")
-                    os.write(fd, b"/fixture-empty-fork\r")
+                    send(b"/fixture-empty-fork\r")
                     until("Run the fixture call")
                 else:
-                    os.write(fd, b"/fixture-new\r")
+                    send(b"/fixture-new\r")
                     until("MCP 0/0 online")
                     replacement("resume-live-offline", f"/fixture-resume {history}")
                 assert len((run / "trace.jsonl").read_text().splitlines()) == 1
@@ -212,14 +219,14 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
                 replacement("reload", "/reload")
                 replacement("resume", f"/fixture-resume {history}")
                 replacement("import", f"/import {imported}")
-                os.write(fd, (f"/fixture-cancel {history}\r").encode())
+                send((f"/fixture-cancel {history}\r").encode())
                 until("MCP-SWITCH-CANCELLED")
                 assert not list((run / "agent").glob("mcp-history/*.json"))
-                os.write(fd, b"/fixture-tree branchres\r")
+                send(b"/fixture-tree branchres\r")
                 tree = until("branch-error")
                 if not baseline:
                     assert "⌁ Call failed for mcp__branch__old__tool" in tree, tree
-                os.write(fd, b"\x15/fixture-tree result01\r")
+                send(b"\x15/fixture-tree result01\r")
                 until("synthetic-result")
                 replacement("clone", "/fixture-clone user0002")
                 replacement("fork", "/fixture-fork user0002")
@@ -235,7 +242,7 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
                 resources.append({"rss_kib": rss, "fds": len([line for line in descriptors.splitlines() if re.match(r"f[0-9]+$", line)])})
             if resources:
                 assert len({item["fds"] for item in resources}) == 1, resources
-            os.write(fd, b"\x15/mcp-ui-quit\r")
+            send(b"\x15/mcp-ui-quit\r")
             deadline = time.monotonic() + 8
             while time.monotonic() < deadline:
                 receive(0.1)
@@ -271,6 +278,16 @@ def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0,
                 except ProcessLookupError:
                     pass
             os.close(fd)
+            if os.environ.get("PI_VERIFY_EVIDENCE"):
+                evidence = Path(os.environ["PI_VERIFY_EVIDENCE"]).resolve()
+                assert evidence.is_relative_to(ROOT / ".tmp"), "Evidence must stay in repository scratch storage"
+                evidence.mkdir(parents=True, exist_ok=True)
+                (evidence / "terminal.ansi").write_bytes(raw_output)
+                (evidence / "journey.json").write_text(json.dumps({"command": args, "actions": actions,
+                    "output": output, "exited": exited, "pid": pid, "childPids": sorted(owned_children)}, indent=2))
+                for filename in ["trace.jsonl", "ready.jsonl"]:
+                    if (run / filename).exists():
+                        shutil.copyfile(run / filename, evidence / filename)
 
 
 if __name__ == "__main__":
