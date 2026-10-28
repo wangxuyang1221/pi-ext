@@ -24,6 +24,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/setup@v1
         with:
@@ -33,6 +35,18 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Check committed files and secrets
+        env:
+          GATE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        shell: bash
+        run: |
+          if [[ -n "$GATE_BASE" && ! "$GATE_BASE" =~ ^0+$ ]]; then
+            pnpm run check:staged --base "$GATE_BASE"
+          else
+            base=$(git rev-parse --verify HEAD^ 2>/dev/null || git hash-object -t tree --stdin </dev/null)
+            pnpm run check:staged --base "$base"
+          fi
 
       - name: Check source, tests, build, and pinned Pi host
         shell: bash
@@ -62,6 +76,24 @@ jobs:
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 7
+
+  check:
+    name: Check
+    if: ${{ always() }}
+    needs: [test, unix-host, python-and-skills]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/setup@v1
+        with:
+          runtime: node@22.19.0
+          install: false
+      - name: Require every CI job to pass
+        env:
+          CI_JOB_RESULTS: ${{ toJSON(needs) }}
+          pnpm_config_verify_deps_before_run: "false"
+        run: pnpm exec node scripts/check-ci.mjs
 
   unix-host:
     name: Unix host / ${{ matrix.suite }}

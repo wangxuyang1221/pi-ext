@@ -1,39 +1,47 @@
-import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, resolve, relative, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { posix, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { readSnapshot, repositoryRoot } from "./repository-snapshot.mjs";
 
-const root = fileURLToPath(new URL("../", import.meta.url));
-const files = [...new Set(execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
-  { cwd: root, encoding: "utf8" }).split("\0").filter(Boolean))];
-const available = new Set(files.filter(file => existsSync(resolve(root, file))));
-const failures = [];
-function check(target, owner, from = root) {
-  const absolute = resolve(from, target);
-  const local = relative(root, absolute).split(sep).join("/");
-  if (!available.has(local)) failures.push(`${owner}: missing or untracked ignored target ${target}`);
-}
-
-const pkg = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
-for (const [name, command] of Object.entries(pkg.scripts)) {
-  for (const match of command.matchAll(/(?:\.\/)?(?:scripts|extensions|prototypes)\/[\w./-]+\.(?:mjs|py|json)\b/g)) {
-    check(match[0], `script ${name}`);
+export function checkRepository(files) {
+  const failures = [];
+  function check(target, owner, from = ".") {
+    const local = posix.normalize(posix.join(from, target));
+    if (!files.has(local)) failures.push(`${owner}: missing repository target ${JSON.stringify(target)}`);
   }
+
+  let pkg;
+  try { pkg = JSON.parse(files.get("package.json")?.content.toString("utf8") ?? ""); }
+  catch { throw new Error("package.json is missing or invalid in the inspected snapshot."); }
+  for (const [name, command] of Object.entries(pkg.scripts ?? {})) {
+    for (const match of command.matchAll(/(?:\.\/)?(?:scripts|extensions|prototypes)\/[\w./-]+\.(?:mjs|py|json)\b/g)) {
+      check(match[0], `script ${name}`);
+    }
+  }
+
+  let documents = 0;
+  for (const [file, entry] of files) {
+    if (entry.mode === "120000") continue;
+    if (!file.endsWith(".md") || file.includes("/media/third-party/") || file.includes("/media/license-overrides/")) continue;
+    documents++;
+    const source = entry.content.toString("utf8");
+    for (const match of source.matchAll(/\]\(([^\s)]+)(?:\s+[^)]*)?\)/g)) {
+      const url = match[1];
+      if (/^(?:[a-z][a-z\d+.-]*:|#)/i.test(url)) continue;
+      const target = decodeURIComponent(url.split("#")[0]);
+      if (!target) continue;
+      check(target, `${JSON.stringify(file)}:${source.slice(0, match.index).split("\n").length}`, posix.dirname(file));
+    }
+  }
+  if (failures.length) throw new Error(failures.join("\n"));
+  return documents;
 }
 
-let documents = 0;
-for (const file of available) {
-  if (!file.endsWith(".md") || file.includes("/media/third-party/") || file.includes("/media/license-overrides/")) continue;
-  documents++;
-  const source = readFileSync(resolve(root, file), "utf8");
-  for (const match of source.matchAll(/\]\(([^\s)]+)(?:\s+[^)]*)?\)/g)) {
-    const url = match[1];
-    if (/^(?:[a-z][a-z\d+.-]*:|#)/i.test(url)) continue;
-    const target = decodeURIComponent(url.split("#")[0]);
-    if (!target) continue;
-    check(target, `${file}:${source.slice(0, match.index).split("\n").length}`, dirname(resolve(root, file)));
-  }
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  try {
+    if (process.argv.slice(2).some(arg => arg !== "--staged")) throw new Error("Usage: check-repository.mjs [--staged]");
+    const snapshot = readSnapshot(repositoryRoot(), process.argv.includes("--staged"));
+    const documents = checkRepository(snapshot.files);
+    snapshot.assertUnchanged();
+    console.log(`Verified script entry paths and local links in ${documents} repository documents.`);
+  } catch (error) { console.error(error.message); process.exitCode = 1; }
 }
-assert.equal(failures.length, 0, failures.join("\n"));
-console.log(`Verified script entry paths and local links in ${documents} repository documents.`);
