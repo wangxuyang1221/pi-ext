@@ -23,8 +23,9 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run metadata`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui codex-compact`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 读取状态不创建配置；设置后从 agent/pi-codex-compact.json 读回 metadataClientVersion；reset 保留驱动种入的其他字段。再运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run metadata-project`：它在新隔离 workspace/.pi 中种入版本 0.158.0，以 --approve 冷启动该进程，验证项目覆盖、全局保存/reset 不改项目字节及六种非法输入不写文件。每一步等到完整 Usage 尾行出现后才截屏，不以文件写入或 Saved 前缀作为绘制完成依据。
-4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
+3. 读取状态不创建配置；设置后从 agent/pi-codex-compact.json 读回 metadataClientVersion；reset 保留驱动种入的其他字段。再运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run metadata-project`：它在新隔离 workspace/.pi 中种入版本 0.158.0，以 --approve 冷启动该进程，验证项目覆盖、全局保存/reset 不改项目字节及六种非法输入不写文件。
+4. 对两个 evidence 目录分别运行 [skill Helpers](../SKILL.md#helpers) 的 `check-metadata.mjs`。核对普通场景的 default → global → default，以及项目场景始终为 project；每个状态必须在当前 Effective 通知后出现完整 Usage 尾行。共享驱动只检查屏幕上出现 Usage，不能独自证明当前通知绘制完整。检查器失败时保留原证据，运行 doctor 后重开隔离会话复查。
+5. 对照以下已有定向测试定位边界。它们是补充证据，不替代命令动作、画面和文件结果。
 
 ```bash
 pnpm test extensions/codex-compact/__tests__/metadata-command.test.ts extensions/codex-compact/__tests__/config.test.ts extensions/codex-compact/__tests__/model-metadata.test.ts

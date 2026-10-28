@@ -1,6 +1,6 @@
 # codex-compact verification map
 
-此目录维护 codex-compact 的用户行为。先执行 [skill](../SKILL.md) 的 Launch 与 Doctor。所有 case 使用隔离状态，恢复旅程需在同一次实例中保留其 session。
+此目录维护 codex-compact 的用户行为。先执行 [skill](../SKILL.md) 的 Launch 与 Doctor。所有 case 使用隔离状态；冷启动恢复必须在同一验证生命周期中保留 agentDir/sessionFile，退出旧进程后由新进程继续请求。
 
 ## Proof rules
 
