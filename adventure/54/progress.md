@@ -12,7 +12,7 @@
 
 为仓库内 Pi 提供可复用的文本区域刷新能力，降低动画和 footer 更新带来的额外 CPU，并给 codex-ui 实际加入 Working 动画及实时估算 token 速率。全局 Pi 的启动、安装及升级保持独立。
 
-[Planning #59](https://github.com/wangxuyang1221/pi-ext/issues/59) 已通关，样式、位置与生命周期已确认。[正式实施切片](slices.md) 已获认可，用户另追加验证系统创建、维护、独立验收和修复重验闭环。#61–#66 已建立；#61 普通模式和 #62 全屏局部刷新均已通过主代理验收，正式 Working/速率 #63 也已验收，新能力验证系统 #64 也已验收，旧skill维护 #65 也已验收，当前 #66 实机补验发现输入框对比度及复制尾部换行失败，主代理已修复并完成自动回归，下一步独立复验。用户另行明确要求立即移除 lowpower，独立 [Implementation #60](https://github.com/wangxuyang1221/pi-ext/issues/60) 已完成并通过验收；该清理已结束；当前继续已获授权的正式开发。
+[Planning #59](https://github.com/wangxuyang1221/pi-ext/issues/59) 已通关，样式、位置与生命周期已确认。[正式实施切片](slices.md) 已获认可，用户另追加验证系统创建、维护、独立验收和修复重验闭环。#61–#66 已建立；#61 普通模式和 #62 全屏局部刷新均已通过主代理验收，正式 Working/速率 #63 也已验收，新能力验证系统 #64 也已验收，旧skill维护 #65 也已验收，当前 #66 的输入框对比度及复制尾部换行修复已独立复验通过，累计54 passed、4 unverified，继续剩余实机边界。用户另行明确要求立即移除 lowpower，独立 [Implementation #60](https://github.com/wangxuyang1221/pi-ext/issues/60) 已完成并通过验收；该清理已结束；当前继续已获授权的正式开发。
 
 ## Evolution
 
@@ -122,28 +122,18 @@
 
 ## Current Assumptions
 
-Working/footer 机制与功能已完成独立自动验收。其八份 CPU 来源及原始批次哈希在本轮再次核对一致；新增编辑器颜色处理另做六组 CPU 补测，均在正常路径容差内。两项 Termius 失败的代码修复与自动回归通过，实际像素与系统粘贴效果仍待新的独立任务确认。
+Working/footer实现与CPU预算已通过独立自动验收。Termius两项产品失败现已独立复验消除，不能继续写为failed。动态选区复制尚无可归因的产品故障；下一轮以隔离copy-on-select和受限receiver区分宿主选区与终端菜单路径。
 
 ## Continuation Point
 
-#60–#65 已验收，不重复派发实施或维护。当前 #66 最近独立结果为53 passed、2 failed、3 unverified，失败证据为 `e88fce5788b935bc2f9d7f5a65d30fd5061810c6`。主代理已经修复两项问题，见 [修复记录](evidence/termius-repairs.md) 和 [精确入口/来源/清理索引](evidence/termius-repairs.json)。全量 check 205文件/2958测试、普通/全屏 CLI 各139项、40个变异点、Python11项及新发布安装通过。
+#60–#65已验收。#66最新独立提交3aa51a5，基准产品修复6bd1c3e，累计54 passed、0 failed、4 unverified。主代理已核验31份来源/396份artifact哈希、四份191字节真实粘贴及实机进程清理。见[独立复验](evidence/termius-repair-verification.md)和[主代理验收及新诊断入口](evidence/termius-repair-review.md)。保留历史失败，不重跑CPU、完整自动矩阵或已通过的四入口Working。
 
-下一步派发新的 gpt-6.1-sol/high 独立验证任务，完整读取本 worktree 的 `.cursor/skills/verify-pi-text-regions/SKILL.md`、`.cursor/skills/verify-pi-codex-ui/SKILL.md` 及相关 features/manual 说明。新安装 `.tmp/local-refresh-install-CzIw6h` 的两消费者各32个 codex-ui JS 与当前 dist 一致。先运行受影响的发布 Working 四入口，再用 Termius 补验四种宿主/renderer 的对比度和精确 `/copy`，继续未完成拖选、动态文字复制、图片能力、窄窗口及完整会话组合。不得使用旧消费目录证明本轮修复。新的验证任务由 Map #54 记录链接及 taskId，完成通知自动唤醒主线程。
+下一步新建gpt-6.1-sol/high独立定向验证任务，完整读取两个本地验证skill及相关features/manual。消费安装仍为 `.tmp/local-refresh-install-CzIw6h`，两个消费者各32个codex-ui JS与当前dist一致。继续剩余regions入口和composer组合，优先在隔离settings启用fullscreenCopyOnSelect，等待真实Copied反馈后使用 `adventure/54/experiments/selection-copy/receiver.py`。接收器只保存完全匹配样本，未知输入不回显、不落盘；仅有自测证据，不能预先算实机通过。新任务链接/taskId由Map #54记录。
 
-Termius 9.41.1 的输入、截图与实际 Pi 启动已恢复，不再以旧输入故障作为阻塞。仅操作本次专用 Local Terminal；用户授权以隔离样本覆盖系统剪贴板并实际粘贴至工作目录，授权持续有效，不再次申请。先确认复制成功再粘贴，避免保存原有私人剪贴板内容。中文输入使用 CUA app.paste，先前 typeText 曾丢失中文。保留原有远程/本地标签，不操作 Ghostty，不更改全局主题、字体或 Termius 版本。
+Termius9.41.1输入与Pi启动正常。前轮Ctrl+X无明确成功反馈，菜单Copy后出现非样本内容并已停止、删除，不读取或恢复那些内容。禁止再次混用宿主选区与Termius菜单复制。用户的隔离样本覆盖系统剪贴板及实际粘贴授权持续有效；不读原剪贴板、不向远程粘贴。复制成功后不得以app.paste输入命令，避免改写剪贴板。只操作本次Local Terminal，不动原有标签、用户原型或Ghostty，不改Termius全局字体/主题/版本。
 
-远程 provider 没有指定凭据/模型/费用范围，Write/Edit 精确 await 没有可观察控制阶段，两者仍保持未验证。物理32/40列此前因窗口最小宽度只到73列而未验，不能把 PTY resize 当真实窗口像素证明。发现产品/驱动故障由 Astra high 按 ub-mode 修复后再新建独立 review，不向已完成子线程发送新 review。
+物理32/40列可用本次专用tmux真实可见分栏尝试；服务socket/HOME均在工作区内，实际PTY列数和截图同时留证，结束清理自己的server。不能用stty cols代替真实窗口。搜索默认Ctrl+Shift+F此前无成功证据，可在隔离keybindings测试替代键并保留默认键限制，不修改全局配置。图片像素仍须终端实际支持，不伪装协议。
 
-主代理本轮20个记录PID均已退出，CLI运行目录及mutation workers已清理，消费安装与证据保留。当前提交、推送及运行中的独立任务状态以 git 和 Map 为准；不要复用旧任务状态。尚未有豁免或最终接受，不关闭 #66、Map、Spec，不删除 worktree 或用户原型，不创建PR/合并/部署。
+远程provider缺指定模型、凭据和费用范围，Write/Edit精确await缺可控制阶段，保持unverified；不读用户auth或请求付费模型。遇到产品/共享驱动问题由Astra high按ub-mode修复，最终由新Sol high任务独立验证，不向已完成子线程发新review。
 
-## Termius supplemental verification
-
-#66 本轮独立补验仅覆盖 Termius 实机/拖选/系统复制边界，没有重跑 CPU/完整自动矩阵。见[增量报告](evidence/termius-verification.md)与[索引](evidence/termius-verification.json)。Termius 9.41.1 可获取应用、AX及菜单，也可新建/关闭本地标签，没有安全拒绝；但 CUA typeText/paste/Return 未进入专用本地 shell，Pi 未启动，关闭标签后的 AX/截图亦不一致。此为实机驱动未建立，不是产品失败，没有新增通过 ID，仍53 passed、0 failed、5 unverified。
-
-用户已明确授权隔离样本覆盖系统剪贴板并粘贴至本工作目录，无需再次申请。本轮未运行生产 /copy，无实际粘贴文件，未读取用户原剪贴板或操作远程标签。图片协议能力未核实，不能由应用访问成功推断图片像素已验。远程 provider 与 Write/Edit 精确 await 仍保留原缺口。
-
-新 RUN `.tmp/termius-verification-66-20261029`。73份前轮来源哈希、两消费者各7个生产JS及tarball匹配，doctor通过，明确复用原安装。12组准备但未启动的runtime已清理，脚本/样本/agent副本/裁剪现场保留。AX确认自己的Local Terminal (1)移除，原本本地标签和远程标签未动；没有Pi PID或测试监听。恢复可确认的CUA键盘输入及新鲜截图后，按保留manual入口继续，不把现有授权缺失误写为阻塞，也不将未启动旅程算通过。
-
-## Termius recovery and repairs
-
-用户手动输入及主代理探针恢复后，独立任务实际跑通四个 Termius 消费 Working 入口，发现深灰输入区的草稿沿用终端默认深色文字；生产 `/copy` 的185字节原文实际粘贴184字节，尾部LF被宿主 trim 删除。详见 [独立失败报告](evidence/termius-recovery-verification.md)。两项均为可修复问题，已在 codex-ui 内补主题前景与原文复制，不修改宿主补丁或全局Pi。主代理的修复、自测及边界集中保存在上面的修复记录，物理复验仍由新独立任务完成。
+没有用户豁免或最终接受，不关闭#66、Map、Spec，不删除worktree或用户原型。进程、监听、提交和下一任务状态以git、当前证据和Map为准。新任务完成自动通知主线程，不轮询。

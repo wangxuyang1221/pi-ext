@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "reviewedRevision": "3aa51a585cbb14576ed4c913ad32cba6a1429a81",
+  "coverageCounts": {
+    "passed": 54,
+    "failed": 0,
+    "unverified": 4
+  },
+  "independentEvidence": {
+    "sourcesChecked": 31,
+    "artifactsChecked": 396,
+    "mismatches": 0,
+    "manualPidsChecked": 15,
+    "liveManualPids": [],
+    "actualSystemPastes": 4,
+    "bytesEach": 191
+  },
+  "receiver": {
+    "pythonTests": 6,
+    "sourceLineCoverage": 100,
+    "crap": {
+      "receive": 5,
+      "main": 3
+    },
+    "duplicateCandidates": 0,
+    "mutations": {
+      "killed": 9,
+      "survived": 0
+    },
+    "actualClipboardUsed": false
+  },
+  "check": {
+    "exitCode": 0,
+    "files": 205,
+    "tests": 2958,
+    "sourceLoadErrors": 0,
+    "distLoadErrors": 0
+  },
+  "cleanup": {
+    "sessionsCompleted": [
+      37764,
+      64730,
+      46893,
+      30557,
+      68787,
+      28077,
+      48617,
+      77692
+    ],
+    "currentMatchingProcesses": [],
+    "limitation": "Main wrapper PIDs were not persisted separately; PTY test children are waited in finally, execution sessions completed, and targeted process scan is retained."
+  },
+  "sources": [
+    {
+      "path": "adventure/54/experiments/selection-copy/receiver.py",
+      "sha256": "58b2940dd0f86a41b0f41924e378aa48e034e5b7b90ab41c4b9487f2fb6f5a5a"
+    },
+    {
+      "path": "adventure/54/experiments/selection-copy/test_receiver.py",
+      "sha256": "6aed28def78c84783a9c47d11fd7d07629dce34ee627f4b5a383f4d537a1d528"
+    },
+    {
+      "path": "adventure/54/evidence/termius-repair-verification.md",
+      "sha256": "abe8329a09652d5d12753cdbea36cf9a3b974945114e57f9d57a796bc655b7e7"
+    },
+    {
+      "path": "adventure/54/evidence/termius-repair-verification.json",
+      "sha256": "ab511a1d1ceab1906465d933463fe400def7b01a21426f5b3ef00c6f05e9fcef"
+    },
+    {
+      "path": "adventure/54/evidence/termius-repair-review.md",
+      "sha256": "12ff346b9ac3892fbaa96419f21d4fea283fb7f39affcf6a27fe14de0ac9a58c"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".tmp/selection-copy-66/red.log",
+      "sha256": "ff300025e032cfc8411ecd44e1590b7016a25f480b6a2727ee33d5cdf2f06039"
+    },
+    {
+      "path": ".tmp/selection-copy-66/green.log",
+      "sha256": "09eda546148453f305f0931a612727a6b16891aba52d88b5310a58d23c9649f1"
+    },
+    {
+      "path": ".tmp/selection-copy-66/green-2.log",
+      "sha256": "39db2d0b1459604a23927ab12ee8f75f13b342aa8cf61e51e480994605215590"
+    },
+    {
+      "path": ".tmp/selection-copy-66/green-3.log",
+      "sha256": "11a80646eb4f7e7ea0a9d429d7fa8f43409c059a1493a38cc23e4b1ab7cab3cd"
+    },
+    {
+      "path": ".tmp/selection-copy-66/green-final.log",
+      "sha256": "c27fa0615d1768c13debbff028040d3a428fff30d4caf2f1afce4ed6175cfa29"
+    },
+    {
+      "path": ".tmp/selection-copy-66/green-coverage.log",
+      "sha256": "37de5ea3f049aaceba6e31ce3db04bc87de5f96ea894861e00502ea9d885b989"
+    },
+    {
+      "path": ".tmp/selection-copy-66/coverage.xml",
+      "sha256": "ff0e15bb6ebe52ef96ec7939aa424137aaf4a075d0fe7a867a07107ef32a8f06"
+    },
+    {
+      "path": ".tmp/selection-copy-66/coverage/lcov.info",
+      "sha256": "fbf8d2bc968837c62eef0908d8cc39ea28280a0655c446b3d8e0332e5634975a"
+    },
+    {
+      "path": ".tmp/selection-copy-66/crapper.log",
+      "sha256": "cd5c5b68566c1cdcb46bab38cee1746500913e93f3b5ef1b86f9052fbed1f6e5"
+    },
+    {
+      "path": ".tmp/selection-copy-66/crapper-lcov.log",
+      "sha256": "cd5c5b68566c1cdcb46bab38cee1746500913e93f3b5ef1b86f9052fbed1f6e5"
+    },
+    {
+      "path": ".tmp/selection-copy-66/crapper-final.log",
+      "sha256": "ebbae9614a019175fe49cc0fe3af9577f859a8b55755292fd6762a366ed9a438"
+    },
+    {
+      "path": ".tmp/selection-copy-66/dryer.log",
+      "sha256": "39b8c86b7074854636f683efaf38ce5de3f13443ec364d0fbfc74e9452d3b565"
+    },
+    {
+      "path": ".tmp/selection-copy-66/mutator.log",
+      "sha256": "a59cc2bd8b5f18bbca2277d82328eca477a94c339a1244d6c8fe754ba042c6d5"
+    },
+    {
+      "path": ".tmp/selection-copy-66/mutator-final.log",
+      "sha256": "ed48ca60534e231bbcce52ea3d4f0b8848a6755011b1d56b6246374ddd67962f"
+    },
+    {
+      "path": ".tmp/selection-copy-66/check.log",
+      "sha256": "491cada96440cc4659fcf4a215981a7bf8db624e39eb08d124084b7b838337bd"
+    },
+    {
+      "path": ".tmp/selection-copy-66/.metrics/crap.edn",
+      "sha256": "f37d4d0b3544bfdb62865c4cab0419cb51b0ad955f0c37c5e81506a3655aa0ee"
+    },
+    {
+      "path": ".tmp/selection-copy-66/.metrics/dry.edn",
+      "sha256": "d4096cccbc2108ff3f8dca9d20dbc6ebf313423ad28abf5b50a196ce923a91d5"
+    },
+    {
+      "path": ".tmp/selection-copy-66/.metrics/mutate/receiver.edn",
+      "sha256": "2a4707ae63a3ec50ce63e5b9dc371208a1ed1b28f1acafeda1ebbed61e1958b7"
+    }
+  ]
+}
