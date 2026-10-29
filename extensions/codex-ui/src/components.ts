@@ -15,6 +15,7 @@ import {
   formatHomePath,
   normalizeWidth,
   paintBackground,
+  paintForeground,
 } from "./layout.js";
 
 export { CodexFooter, type CodexFooterOptions } from "./footer.js";
@@ -80,8 +81,22 @@ export class CodexEditor extends CustomEditor {
     editorTheme: EditorTheme,
     keybindings: KeybindingsManager,
     private readonly getTheme: () => Theme,
+    private readonly onCopy?: () => void,
   ) {
     super(tui, editorTheme, keybindings, { paddingX: 1 });
+  }
+
+  handleInput(data: string): void {
+    const submit = this.onSubmit;
+    this.onSubmit = text => {
+      if (text === "/copy" && this.onCopy) this.onCopy();
+      else submit?.(text);
+    };
+    try {
+      super.handleInput(data);
+    } finally {
+      this.onSubmit = submit;
+    }
   }
 
   /** Decorate a source-coordinate editor projection without parsing rendered frame text. */
@@ -92,8 +107,9 @@ export class CodexEditor extends CustomEditor {
     const body = [...content];
     if (body.length) body[0] = addPrompt(body[0], theme, this.getText().length === 0);
     const background = theme.getBgAnsi("selectedBg");
+    const foreground = theme.getFgAnsi("text");
     return [" ".repeat(safeWidth), ...body, " ".repeat(safeWidth), ...menu]
-      .map(line => paintBackground(line, safeWidth, background));
+      .map(line => paintBackground(paintForeground(line, foreground), safeWidth, background));
   }
 
   private sourceFrame(width: number): { lines: string[]; menuHeight: number } {
@@ -118,26 +134,17 @@ export class CodexEditor extends CustomEditor {
     if (safeWidth === 0) return [];
 
     const { lines, menuHeight } = this.sourceFrame(safeWidth);
-    if (lines.length === 0) return [];
-
     const theme = this.getTheme();
     const bottomBorderIndex = lines.length - menuHeight - 1;
     const output = [...lines];
+    // Native Editor always supplies two borders and at least one body row.
     output[0] = " ".repeat(safeWidth);
-    if (bottomBorderIndex !== undefined) {
-      output[bottomBorderIndex] = " ".repeat(safeWidth);
-    }
-
-    if (output.length > 1 && bottomBorderIndex !== 1) {
-      output[1] = addPrompt(
-        output[1] ?? "",
-        theme,
-        this.getText().length === 0,
-      );
-    }
+    output[bottomBorderIndex] = " ".repeat(safeWidth);
+    output[1] = addPrompt(output[1], theme, this.getText().length === 0);
 
     const background = theme.getBgAnsi("selectedBg");
-    return output.map((line) => paintBackground(line, safeWidth, background));
+    const foreground = theme.getFgAnsi("text");
+    return output.map((line) => paintBackground(paintForeground(line, foreground), safeWidth, background));
   }
 }
 

@@ -18,7 +18,7 @@ function editorFixture(kind: "native" | "codex") {
   const tui = { terminal: { rows: 40, columns: 100 }, requestRender() {} } as unknown as TUI;
   const keys = { matches: () => false } as unknown as KeybindingsManager;
   const theme = { borderColor: identity, selectList: { selectedPrefix: identity, selectedText: identity, description: identity, scrollInfo: identity, noMatch: identity } };
-  const editor = kind === "native" ? new CustomEditor(tui, theme, keys) : new CodexEditor(tui, theme, keys, () => ({ fg: (_key: string, text: string) => text, getBgAnsi: () => "" }) as unknown as Theme);
+  const editor = kind === "native" ? new CustomEditor(tui, theme, keys) : new CodexEditor(tui, theme, keys, () => ({ fg: (_key: string, text: string) => text, getBgAnsi: () => "", getFgAnsi: () => "" }) as unknown as Theme);
   editors.push(editor);
   return editor;
 }

@@ -14,7 +14,7 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 
 两条驱动在每次新 CLI 进程前调用 [health.py](health.py)，保存 `doctor-*.json/.stderr`，对应进程条目的 `doctor` 字段指向它。它复用共享只读 doctor，非零退出、无效输出或验证锁占用时拒绝继续。失败后重新 doctor 并检查该次证据/cleanup，UI 卡住则重启已知状态。所有 pnpm 命令使用 `pnpm_config_verify_deps_before_run=false`，不要并发构建与 PTY。
 
-单独执行 preflight 的命令见 [Helpers](../SKILL.md#helpers)。回归入口为 `conda run --no-capture-output -n codex-py312 python -m unittest discover -s .cursor/skills/verify-pi-codex-ui/scripts -p test_health.py -v`。
+单独执行 preflight 的命令见 [Helpers](../SKILL.md#helpers)。驱动回归入口为 `conda run --no-capture-output -n codex-py312 python -m unittest discover -s .cursor/skills/verify-pi-codex-ui/scripts -p 'test_*.py' -v`，覆盖 preflight 与 composer 颜色断言。后者只提取真实断言函数并输入 pyte 单元格，证明会拒绝默认、不可见、混合或错误的草稿前景；真实 CLI 旅程仍须单独执行。
 
 `headless.py` 分别启动原生 `--print --mode json` 和 `--mode rpc`。RPC 通过客户端消息发起 prompt；它不是给 SDK 设置一个 mode 字段。工具返回的 PNG 字节需解析为 4000×40 或 2000×20，实际 shell 输出必须写入并读回文件。
 
@@ -39,8 +39,8 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 
 以下部分不能凭 pyte 或文件断言标为通过。执行人必须保存动作、画面和结果；缺少该证据时，对应 ID 保留 `unverified`，同时记录自动通过部分。
 
-1. `ui-composer` 的终端像素和拖选。用真实终端启动共享 `tui codex-ui`，输入含中文、ASCII、长行的三行文本。分别在 light/codex-pi、窄屏/宽屏、`/new`/`/fork`/`/resume` 后拖选输入和空白区，检查背景无缺口、光标无残影、选择内容与输入一致。pyte 的逐列背景断言只证明 ANSI 单元格语义。
-2. `ui-reply-markdown` 的 `/copy`。在已允许写系统剪贴板的人工终端中，生成上述代表 Markdown，运行 `/copy`，粘贴到临时纯文本编辑器，与 session 中 assistant 原文逐字比较。代码围栏、缩进和表格分隔线必须一致，不含 renderer 添加的外层列表。自动驱动不会写系统剪贴板。
+1. `ui-composer` 的终端像素和拖选。用真实终端启动共享 `tui codex-ui`，输入含中文、ASCII、长行的三行文本。分别在 light/codex-pi、窄屏/宽屏、`/new`/`/fork`/`/resume` 后拖选输入和空白区，检查文字清晰、背景无缺口、光标无残影、选择内容与输入一致。保留当前终端配色以检验草稿是否依赖终端默认前景。pyte 的前景和背景断言只证明 ANSI 单元格语义。
+2. `ui-reply-markdown` 的 `/copy`。在已允许写系统剪贴板的人工终端中，生成上述代表 Markdown，包含首尾空白、尾部 LF 和多段正文；运行 `/copy`，确认成功提示后实际粘贴到本轮文件，与当前分支最近已完成 assistant 的各段正文连接结果逐字节比较。代码围栏、缩进和表格分隔线必须一致，不含 renderer 添加的外层列表；不得先 trim 或规范化换行。补丁/原版、普通/全屏分别留证。自动驱动不会写系统剪贴板。
 
 ## File mutation cancellation
 

@@ -30,6 +30,7 @@ import {
   formatHomePath,
   normalizeWidth,
   paintBackground,
+  paintForeground,
 } from "./layout.js";
 import { ResponsiveLinesComponent } from "./responsive-lines.js";
 import { ToolRenderCache, type RenderCacheScope } from "./render-cache.js";
@@ -44,8 +45,6 @@ const ANSI_DIM = "\x1b[2m";
 const ANSI_INTENSITY_RESET = "\x1b[22m";
 const ANSI_NAMED_GREEN = "\x1b[32m";
 const ANSI_NAMED_RED = "\x1b[31m";
-const ANSI_FOREGROUND_RESET = /\x1b\[39m/gu;
-const ANSI_FULL_SGR_RESET = /\x1b\[(?:0)?m/gu;
 
 export interface CodexToolFactories {
   read: typeof createReadToolDefinition;
@@ -427,7 +426,7 @@ export function renderDisplayDiff(
     const highlighted = highlightedLines?.[index] ?? line.highlightedText ?? (language
       ? highlightDiffLine(line.text, language)
       : line.text);
-    const codeWithDefault = applyCodeForeground(highlighted, codeForeground);
+    const codeWithDefault = paintForeground(highlighted, codeForeground);
     const code = line.kind === "removed"
       ? `${ANSI_DIM}${codeWithDefault}${ANSI_INTENSITY_RESET}`
       : codeWithDefault;
@@ -712,13 +711,6 @@ function namedGreen(text: string): string {
 
 function namedRed(text: string): string {
   return `${ANSI_NAMED_RED}${text}${ANSI_DEFAULT_FOREGROUND}`;
-}
-
-function applyCodeForeground(text: string, foregroundAnsi: string): string {
-  const restored = text
-    .replace(ANSI_FULL_SGR_RESET, (reset) => `${reset}${foregroundAnsi}`)
-    .replace(ANSI_FOREGROUND_RESET, (reset) => `${reset}${foregroundAnsi}`);
-  return `${foregroundAnsi}${restored}${ANSI_DEFAULT_FOREGROUND}`;
 }
 
 function countDiffStats(lines: readonly DisplayDiffLine[]): { added: number; removed: number } {

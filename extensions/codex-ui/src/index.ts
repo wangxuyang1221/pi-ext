@@ -12,6 +12,7 @@ import { registerTerminalTitleSpinner } from "./terminal-title.js";
 import { registerWorking } from "./working-session.js";
 import { createContextUsageReader } from "./context-usage.js";
 import { readGoalDisplay, type GoalFooterDisplay } from "./goal-display.js";
+import { copyLastReply } from "./reply-copy.js";
 
 export const CODEX_THEME_NAME = "codex-pi";
 
@@ -106,7 +107,7 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
 
     ctx.ui.setEditorComponent((tui, editorTheme, keybindings) => {
       currentKeybindings = keybindings;
-      return new CodexEditor(tui, editorTheme, keybindings, getTheme);
+      return new CodexEditor(tui, editorTheme, keybindings, getTheme, () => { void copyLastReply(ctx); });
     });
 
     const working = installWorking(ctx);

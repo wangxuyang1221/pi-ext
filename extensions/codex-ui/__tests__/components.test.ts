@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { test, vi } from "vitest";
-import type { Theme } from "@earendil-works/pi-coding-agent";
+import { getSelectListTheme, initTheme, type Theme } from "@earendil-works/pi-coding-agent";
 import {
   CURSOR_MARKER,
+  CombinedAutocompleteProvider,
   stripTerminalSequences,
   visibleWidth,
   type EditorTheme,
@@ -22,6 +23,29 @@ vi.mock("@earendil-works/pi-tui", async (importOriginal) => {
       return actual.stripTerminalSequences(...args);
     },
   };
+});
+
+test("composer keeps its body and menu separate during native command completion", async () => {
+  initTheme("dark", false);
+  const editor = new CodexEditor(
+    { terminal: { rows: 40, columns: 80 }, requestRender() {} } as unknown as TUI,
+    { borderColor: text => text, selectList: getSelectListTheme() }, { matches: () => false } as never, () => theme,
+  );
+  const submit = vi.fn();
+  editor.onSubmit = submit;
+  editor.setAutocompleteProvider(new CombinedAutocompleteProvider([
+    { name: "copy", description: "Copy reply" }, { name: "compact", description: "Compact context" },
+  ], process.cwd()));
+  editor.setText("/co"); editor.handleInput("\t");
+  await vi.waitFor(() => assert.ok(editor.isShowingAutocomplete()));
+  const frame = editor.render(40).map(stripTerminalSequences);
+  assert.equal(frame[0], " ".repeat(40));
+  assert.equal(frame[2], " ".repeat(40));
+  assert.ok(frame[1].includes("›/co"));
+  assert.deepEqual(frame.slice(3).map(line => line.trim()), ["→ copy", "compact"]);
+  editor.setText("/copy"); editor.handleInput("\r");
+  assert.deepEqual(submit.mock.calls, [["/copy"]]);
+  assert.equal(editor.onSubmit, submit);
 });
 
 import { CodexEditor, CodexFooter, CodexHeader } from "../src/components.js";
@@ -270,4 +294,61 @@ test("editor paints a flat composer while preserving the cursor marker", () => {
   const filled = editor.render(40).map(stripTerminalSequences).join("\n");
   assert.ok(filled.includes("›ship it"));
   assert.ok(!filled.includes("Ask Pi to do anything"));
+});
+
+function foregroundAt(line: string, text: string): string {
+  let color = "default";
+  for (const match of line.slice(0, line.indexOf(text)).matchAll(/\x1b\[([\d;]*)m/gu)) {
+    const code = match[1];
+    if (code.startsWith("38;")) color = code;
+    else if (["", "0", "39", "22;39"].includes(code)) color = "default";
+  }
+  return color;
+}
+
+test("composer keeps theme text colors after prompt and cursor resets in both projections", () => {
+  let current = createTheme();
+  const editor = new CodexEditor(
+    { terminal: { rows: 40, columns: 80 }, requestRender() {} } as unknown as TUI,
+    { borderColor: (text: string) => text, selectList: {} } as EditorTheme,
+    { matches: () => false } as never,
+    () => current,
+  );
+  const emptyProjection = editor.renderProjectedLines(40, [" "], [], 0, 0).map(stripTerminalSequences);
+  assert.ok(emptyProjection[1].startsWith("›"));
+  assert.ok(emptyProjection[1].includes("Ask Pi to do anything"));
+  assert.deepEqual(editor.renderProjectedLines(40, [], [], 0, 0).map(stripTerminalSequences), [" ".repeat(40), " ".repeat(40)]);
+  editor.setText("Draft");
+  editor.focused = true;
+  assert.deepEqual(editor.render(0), []);
+  assert.deepEqual(editor.renderProjectedLines(0, [" Draft"], [], 0, 0), []);
+  for (const width of [1, 2, 4, 32]) {
+    const lines = editor.render(width);
+    assert.ok(lines.length >= 3);
+    assert.ok(lines.every(line => visibleWidth(line) === width));
+    assert.equal(stripTerminalSequences(lines[0]), " ".repeat(width));
+    assert.equal(stripTerminalSequences(lines.at(-1)!), " ".repeat(width));
+  }
+  for (const color of [81, 16]) {
+    current = createTheme();
+    current.getFgAnsi = () => `\x1b[38;5;${color}m`;
+    const frames = [
+      editor.render(40),
+      editor.renderProjectedLines(40, [" Draft", "\x1b[0mWrapped", "\x1b[mReset"],
+        ["\x1b[38;5;196mMenu\x1b[22;39m Detail"], 0, 0),
+    ];
+    for (const [index, frame] of frames.entries()) {
+      for (const word of index === 0 ? ["Draft"] : ["Draft", "Wrapped", "Reset", "Detail"]) {
+        const line = frame.find(value => value.includes(word));
+        assert.ok(line, word);
+        assert.equal(foregroundAt(line, word), `38;5;${color}`, word);
+      }
+      assert.ok(frame.every(line => visibleWidth(line) === 40));
+      assert.equal(foregroundAt(frame.join("") + "Outside", "Outside"), "default");
+    }
+    const menu = frames[1].find(line => line.includes("Menu"))!;
+    assert.equal(foregroundAt(menu, "Menu"), "38;5;196");
+    assert.ok(stripTerminalSequences(frames[1][1]).startsWith("›Draft"));
+    assert.ok(stripTerminalSequences(frames[1][2]).startsWith("Wrapped"));
+  }
 });

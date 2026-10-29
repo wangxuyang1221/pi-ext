@@ -115,6 +115,10 @@ def composer(label,expected_bg='484848'):
     check(all({screen.buffer[y][x].bg for x in range(screen.columns)}==colors for y in [row-1,row+1]),label+' paints the blank padding rows')
     if expected_bg:check(colors=={expected_bg},label+' uses the selected theme background')
     else:check(colors!={'484848'},label+' changes composer background from codex-pi')
+    start=screen.display[row].index('COMPOSER-INPUT')
+    foregrounds={screen.buffer[row][x].fg for x in range(start,start+len('COMPOSER-INPUT'))}
+    check(len(foregrounds)==1 and 'default' not in foregrounds and foregrounds!=colors,label+' paints readable draft text with the selected theme')
+    if expected_bg=='484848':check(foregrounds=={'d6d6d6'},label+' uses the codex-pi text color')
     snap(label); keys(b'\x15',label+' clear')
 def resize(width):
     fcntl.ioctl(fd,termios.TIOCSWINSZ,struct.pack('HHHH',60,width,0,0));screen.resize(60,width);os.kill(pid,signal.SIGWINCH);settle()
