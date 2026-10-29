@@ -1,6 +1,6 @@
 # Implementation slices
 
-Status：Draft，等待用户审核。审核通过前不创建 Implementation Issues 或派发 worker。
+Status：Superseded draft。用户新增 codex-ui 实际 Working 动画与 token 速率显示，旧草案中的“不采集真实 token、不改默认 UI”已失效。本文件仅保留此前切分供参考，暂停审核；完成 Planning #58/#59 后重写完整切片并重新审核，不创建 Implementation Issues 或派发 worker。
 
 规格与共同预算见 [Spec #55](https://github.com/wangxuyang1221/pi-ext/issues/55)，设计依据见 [CPU 调查](evidence/render-cpu.md)。列表按依赖排序，当前两关共享补丁与接口，依次实施，不并行。
 
