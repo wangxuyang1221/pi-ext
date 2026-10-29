@@ -74,25 +74,25 @@
       "mode": "regular",
       "cached": false,
       "frames": 120,
-      "elapsedMs": 4
+      "elapsedMs": 4.15
     },
     {
       "mode": "regular",
       "cached": true,
       "frames": 120,
-      "elapsedMs": 3.63
+      "elapsedMs": 3.8
     },
     {
       "mode": "fullscreen",
       "cached": false,
       "frames": 120,
-      "elapsedMs": 4.31
+      "elapsedMs": 4.65
     },
     {
       "mode": "fullscreen",
       "cached": true,
       "frames": 120,
-      "elapsedMs": 2.23
+      "elapsedMs": 2.52
     }
   ],
   "scheduled": [
@@ -100,6 +100,7 @@
       "mode": "regular",
       "checks": [
         "twenty local requests coalesce",
+        "footer-only token rate update",
         "multiple local targets",
         "normal request after local wins",
         "normal request before local wins"
@@ -109,6 +110,7 @@
       "mode": "fullscreen",
       "checks": [
         "twenty local requests coalesce",
+        "footer-only token rate update",
         "multiple local targets",
         "normal request after local wins",
         "normal request before local wins"

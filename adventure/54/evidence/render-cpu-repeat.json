@@ -1,0 +1,1517 @@
+{
+  "node": "v22.22.2",
+  "pi": "1.4.0",
+  "columns": 120,
+  "rows": 40,
+  "metric": "Process user+system CPU per controlled frame; median of rotating repeated batches",
+  "limitations": [
+    "Controlled cached text messages with real host components and CodexFooter",
+    "In-memory terminal, not terminal emulator CPU",
+    "Fixture caches and supplied region bounds, not production host API",
+    "Region path does not update layout metadata or handle selection/images/overlays",
+    "Streaming content is controlled, not a model request",
+    "Synchronous frames isolate render CPU; no idle or tick-rate claim"
+  ],
+  "results": [
+    {
+      "mode": "regular",
+      "historyPairs": 0,
+      "workload": "animation-and-rate",
+      "framesPerSample": 320,
+      "repetitions": 7,
+      "baselineCpuMsPerFrame": 0.050624999999999996,
+      "scopedCpuMsPerFrame": 0.05859375,
+      "regionCpuMsPerFrame": 0.062684375,
+      "scopedReductionPercent": -15.74074074074075,
+      "regionReductionPercent": -23.820987654320998,
+      "samples": {
+        "baseline": [
+          {
+            "cpuMsPerFrame": 0.070221875,
+            "wallMsPerFrame": 0.04312799687499993,
+            "bytes": 110031
+          },
+          {
+            "cpuMsPerFrame": 0.053434375,
+            "wallMsPerFrame": 0.03824427187499992,
+            "bytes": 110080
+          },
+          {
+            "cpuMsPerFrame": 0.050103125000000005,
+            "wallMsPerFrame": 0.03571158750000016,
+            "bytes": 110091
+          },
+          {
+            "cpuMsPerFrame": 0.04824375,
+            "wallMsPerFrame": 0.04243385312499974,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.070640625,
+            "wallMsPerFrame": 0.03770950312500006,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.05040625,
+            "wallMsPerFrame": 0.03191275937500002,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.050624999999999996,
+            "wallMsPerFrame": 0.03594088749999998,
+            "bytes": 110400
+          }
+        ],
+        "scoped": [
+          {
+            "cpuMsPerFrame": 0.045159375,
+            "wallMsPerFrame": 0.03721887812499993,
+            "bytes": 110031
+          },
+          {
+            "cpuMsPerFrame": 0.07330624999999999,
+            "wallMsPerFrame": 0.04470039062499982,
+            "bytes": 110080
+          },
+          {
+            "cpuMsPerFrame": 0.062321875000000006,
+            "wallMsPerFrame": 0.042325781250000104,
+            "bytes": 110091
+          },
+          {
+            "cpuMsPerFrame": 0.045609375,
+            "wallMsPerFrame": 0.03540377812499997,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.068078125,
+            "wallMsPerFrame": 0.041820312499999804,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.05859375,
+            "wallMsPerFrame": 0.034098178125000086,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.036790625,
+            "wallMsPerFrame": 0.03330976562500006,
+            "bytes": 110400
+          }
+        ],
+        "region": [
+          {
+            "cpuMsPerFrame": 0.04628125,
+            "wallMsPerFrame": 0.035967840624999955,
+            "bytes": 110031
+          },
+          {
+            "cpuMsPerFrame": 0.04566875,
+            "wallMsPerFrame": 0.04248919375,
+            "bytes": 110080
+          },
+          {
+            "cpuMsPerFrame": 0.07192499999999999,
+            "wallMsPerFrame": 0.04356679687499998,
+            "bytes": 110091
+          },
+          {
+            "cpuMsPerFrame": 0.078071875,
+            "wallMsPerFrame": 0.03887460937499974,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.062684375,
+            "wallMsPerFrame": 0.033315365624999774,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.07031875,
+            "wallMsPerFrame": 0.037980209374999775,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.04198125,
+            "wallMsPerFrame": 0.03343059687500016,
+            "bytes": 110400
+          }
+        ]
+      }
+    },
+    {
+      "mode": "regular",
+      "historyPairs": 0,
+      "workload": "streaming-and-animation",
+      "framesPerSample": 320,
+      "repetitions": 7,
+      "baselineCpuMsPerFrame": 0.07226875,
+      "scopedCpuMsPerFrame": 0.07573125,
+      "regionCpuMsPerFrame": 0.06620625,
+      "scopedReductionPercent": -4.791144166738726,
+      "regionReductionPercent": 8.388826429127406,
+      "samples": {
+        "baseline": [
+          {
+            "cpuMsPerFrame": 0.13602187500000001,
+            "wallMsPerFrame": 0.05857799374999999,
+            "bytes": 174965
+          },
+          {
+            "cpuMsPerFrame": 0.091659375,
+            "wallMsPerFrame": 0.04068099062500004,
+            "bytes": 175286
+          },
+          {
+            "cpuMsPerFrame": 0.057390624999999994,
+            "wallMsPerFrame": 0.03798567812500018,
+            "bytes": 174063
+          },
+          {
+            "cpuMsPerFrame": 0.082378125,
+            "wallMsPerFrame": 0.0483649750000005,
+            "bytes": 175334
+          },
+          {
+            "cpuMsPerFrame": 0.06464375,
+            "wallMsPerFrame": 0.03890924687500004,
+            "bytes": 175606
+          },
+          {
+            "cpuMsPerFrame": 0.0578,
+            "wallMsPerFrame": 0.03689622499999956,
+            "bytes": 174372
+          },
+          {
+            "cpuMsPerFrame": 0.07226875,
+            "wallMsPerFrame": 0.04723268125000004,
+            "bytes": 175334
+          }
+        ],
+        "scoped": [
+          {
+            "cpuMsPerFrame": 0.07573125,
+            "wallMsPerFrame": 0.04513502812499972,
+            "bytes": 174965
+          },
+          {
+            "cpuMsPerFrame": 0.11627812500000001,
+            "wallMsPerFrame": 0.050300521875000115,
+            "bytes": 175286
+          },
+          {
+            "cpuMsPerFrame": 0.057859375000000005,
+            "wallMsPerFrame": 0.03915013125000044,
+            "bytes": 174063
+          },
+          {
+            "cpuMsPerFrame": 0.037821875,
+            "wallMsPerFrame": 0.037348046875000304,
+            "bytes": 175334
+          },
+          {
+            "cpuMsPerFrame": 0.090865625,
+            "wallMsPerFrame": 0.04583554687499998,
+            "bytes": 175606
+          },
+          {
+            "cpuMsPerFrame": 0.045878125,
+            "wallMsPerFrame": 0.039951043749999825,
+            "bytes": 174372
+          },
+          {
+            "cpuMsPerFrame": 0.088815625,
+            "wallMsPerFrame": 0.06426966249999992,
+            "bytes": 175334
+          }
+        ],
+        "region": [
+          {
+            "cpuMsPerFrame": 0.066125,
+            "wallMsPerFrame": 0.043379168749999766,
+            "bytes": 174965
+          },
+          {
+            "cpuMsPerFrame": 0.11089062499999999,
+            "wallMsPerFrame": 0.043234375000000116,
+            "bytes": 175286
+          },
+          {
+            "cpuMsPerFrame": 0.092496875,
+            "wallMsPerFrame": 0.04436835937500021,
+            "bytes": 174063
+          },
+          {
+            "cpuMsPerFrame": 0.06620625,
+            "wallMsPerFrame": 0.03783867187500008,
+            "bytes": 175334
+          },
+          {
+            "cpuMsPerFrame": 0.04945625,
+            "wallMsPerFrame": 0.0372847656250002,
+            "bytes": 175606
+          },
+          {
+            "cpuMsPerFrame": 0.0646,
+            "wallMsPerFrame": 0.041542968750000145,
+            "bytes": 174372
+          },
+          {
+            "cpuMsPerFrame": 0.08557187499999999,
+            "wallMsPerFrame": 0.04722460937500017,
+            "bytes": 175334
+          }
+        ]
+      }
+    },
+    {
+      "mode": "regular",
+      "historyPairs": 200,
+      "workload": "animation-and-rate",
+      "framesPerSample": 320,
+      "repetitions": 7,
+      "baselineCpuMsPerFrame": 0.5425625000000001,
+      "scopedCpuMsPerFrame": 0.4988625,
+      "regionCpuMsPerFrame": 0.24085625,
+      "scopedReductionPercent": 8.054371616173265,
+      "regionReductionPercent": 55.60764888837693,
+      "samples": {
+        "baseline": [
+          {
+            "cpuMsPerFrame": 0.737996875,
+            "wallMsPerFrame": 0.6952644531250002,
+            "bytes": 110031
+          },
+          {
+            "cpuMsPerFrame": 0.61015625,
+            "wallMsPerFrame": 0.5900505218749998,
+            "bytes": 110080
+          },
+          {
+            "cpuMsPerFrame": 0.5358343750000001,
+            "wallMsPerFrame": 0.49162630000000007,
+            "bytes": 110091
+          },
+          {
+            "cpuMsPerFrame": 0.552084375,
+            "wallMsPerFrame": 0.5061938781250006,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.529984375,
+            "wallMsPerFrame": 0.498990103125,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.5303625000000001,
+            "wallMsPerFrame": 0.48690494687500063,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.5425625000000001,
+            "wallMsPerFrame": 0.49554791875000037,
+            "bytes": 110400
+          }
+        ],
+        "scoped": [
+          {
+            "cpuMsPerFrame": 0.6748031250000001,
+            "wallMsPerFrame": 0.680564584375,
+            "bytes": 110031
+          },
+          {
+            "cpuMsPerFrame": 0.5769562500000001,
+            "wallMsPerFrame": 0.5300804687499998,
+            "bytes": 110080
+          },
+          {
+            "cpuMsPerFrame": 0.535359375,
+            "wallMsPerFrame": 0.47928919375000023,
+            "bytes": 110091
+          },
+          {
+            "cpuMsPerFrame": 0.4988625,
+            "wallMsPerFrame": 0.4438726562499994,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.48310000000000003,
+            "wallMsPerFrame": 0.45533815000000005,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.485459375,
+            "wallMsPerFrame": 0.44536354375000115,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.49740312500000006,
+            "wallMsPerFrame": 0.44195533749999927,
+            "bytes": 110400
+          }
+        ],
+        "region": [
+          {
+            "cpuMsPerFrame": 0.28012187499999996,
+            "wallMsPerFrame": 0.23391328124999972,
+            "bytes": 110031
+          },
+          {
+            "cpuMsPerFrame": 0.267765625,
+            "wallMsPerFrame": 0.21594726562500027,
+            "bytes": 110080
+          },
+          {
+            "cpuMsPerFrame": 0.24085625,
+            "wallMsPerFrame": 0.20141471250000081,
+            "bytes": 110091
+          },
+          {
+            "cpuMsPerFrame": 0.233528125,
+            "wallMsPerFrame": 0.19395338437499987,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.24743750000000003,
+            "wallMsPerFrame": 0.1943792968750003,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.23418125,
+            "wallMsPerFrame": 0.19540572812500018,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.22885,
+            "wallMsPerFrame": 0.19024349062499937,
+            "bytes": 110400
+          }
+        ]
+      }
+    },
+    {
+      "mode": "regular",
+      "historyPairs": 200,
+      "workload": "streaming-and-animation",
+      "framesPerSample": 320,
+      "repetitions": 7,
+      "baselineCpuMsPerFrame": 0.560834375,
+      "scopedCpuMsPerFrame": 0.614446875,
+      "regionCpuMsPerFrame": 0.563521875,
+      "scopedReductionPercent": -9.559417608808296,
+      "regionReductionPercent": -0.4791967325469224,
+      "samples": {
+        "baseline": [
+          {
+            "cpuMsPerFrame": 0.565940625,
+            "wallMsPerFrame": 0.5174194,
+            "bytes": 174965
+          },
+          {
+            "cpuMsPerFrame": 0.555059375,
+            "wallMsPerFrame": 0.49889427187499963,
+            "bytes": 175286
+          },
+          {
+            "cpuMsPerFrame": 0.560834375,
+            "wallMsPerFrame": 0.49746900937500127,
+            "bytes": 174063
+          },
+          {
+            "cpuMsPerFrame": 0.557378125,
+            "wallMsPerFrame": 0.5064401062499997,
+            "bytes": 175334
+          },
+          {
+            "cpuMsPerFrame": 0.5586781249999999,
+            "wallMsPerFrame": 0.5009911437499994,
+            "bytes": 175606
+          },
+          {
+            "cpuMsPerFrame": 0.63663125,
+            "wallMsPerFrame": 0.5818358093750021,
+            "bytes": 174372
+          },
+          {
+            "cpuMsPerFrame": 0.601325,
+            "wallMsPerFrame": 0.5455345062499987,
+            "bytes": 175334
+          }
+        ],
+        "scoped": [
+          {
+            "cpuMsPerFrame": 0.6171031250000001,
+            "wallMsPerFrame": 0.5479338562499976,
+            "bytes": 174965
+          },
+          {
+            "cpuMsPerFrame": 0.603034375,
+            "wallMsPerFrame": 0.5481214843749995,
+            "bytes": 175286
+          },
+          {
+            "cpuMsPerFrame": 0.6000062500000001,
+            "wallMsPerFrame": 0.5443014343750008,
+            "bytes": 174063
+          },
+          {
+            "cpuMsPerFrame": 0.614446875,
+            "wallMsPerFrame": 0.5420343750000001,
+            "bytes": 175334
+          },
+          {
+            "cpuMsPerFrame": 0.606890625,
+            "wallMsPerFrame": 0.551324868750001,
+            "bytes": 175606
+          },
+          {
+            "cpuMsPerFrame": 0.7018875,
+            "wallMsPerFrame": 0.6348113281249994,
+            "bytes": 174372
+          },
+          {
+            "cpuMsPerFrame": 0.6245125,
+            "wallMsPerFrame": 0.5482752625000018,
+            "bytes": 175334
+          }
+        ],
+        "region": [
+          {
+            "cpuMsPerFrame": 0.5696875,
+            "wallMsPerFrame": 0.5023300781250015,
+            "bytes": 174965
+          },
+          {
+            "cpuMsPerFrame": 0.567571875,
+            "wallMsPerFrame": 0.5032498687499981,
+            "bytes": 175286
+          },
+          {
+            "cpuMsPerFrame": 0.543490625,
+            "wallMsPerFrame": 0.4947233062500004,
+            "bytes": 174063
+          },
+          {
+            "cpuMsPerFrame": 0.56928125,
+            "wallMsPerFrame": 0.4941975250000013,
+            "bytes": 175334
+          },
+          {
+            "cpuMsPerFrame": 0.5565875,
+            "wallMsPerFrame": 0.4932332031250013,
+            "bytes": 175606
+          },
+          {
+            "cpuMsPerFrame": 0.54451875,
+            "wallMsPerFrame": 0.49336653437499933,
+            "bytes": 174372
+          },
+          {
+            "cpuMsPerFrame": 0.563521875,
+            "wallMsPerFrame": 0.4989661437500018,
+            "bytes": 175334
+          }
+        ]
+      }
+    },
+    {
+      "mode": "regular",
+      "historyPairs": 1000,
+      "workload": "animation-and-rate",
+      "framesPerSample": 320,
+      "repetitions": 7,
+      "baselineCpuMsPerFrame": 2.8888937500000003,
+      "scopedCpuMsPerFrame": 2.2153625000000003,
+      "regionCpuMsPerFrame": 0.862746875,
+      "scopedReductionPercent": 23.31450403809416,
+      "regionReductionPercent": 70.13573534852226,
+      "samples": {
+        "baseline": [
+          {
+            "cpuMsPerFrame": 3.2232125000000003,
+            "wallMsPerFrame": 2.992903906250001,
+            "bytes": 110031
+          },
+          {
+            "cpuMsPerFrame": 2.714428125,
+            "wallMsPerFrame": 2.4479119781250005,
+            "bytes": 110080
+          },
+          {
+            "cpuMsPerFrame": 2.826825,
+            "wallMsPerFrame": 2.544639321875002,
+            "bytes": 110091
+          },
+          {
+            "cpuMsPerFrame": 2.824725,
+            "wallMsPerFrame": 2.5575009124999952,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 3.162625,
+            "wallMsPerFrame": 2.9191692718750004,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 3.229878125,
+            "wallMsPerFrame": 2.9452079437499945,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 2.8888937500000003,
+            "wallMsPerFrame": 2.6075174468749993,
+            "bytes": 110400
+          }
+        ],
+        "scoped": [
+          {
+            "cpuMsPerFrame": 2.3995718750000004,
+            "wallMsPerFrame": 2.357256771875001,
+            "bytes": 110031
+          },
+          {
+            "cpuMsPerFrame": 2.1926125,
+            "wallMsPerFrame": 2.124720574999998,
+            "bytes": 110080
+          },
+          {
+            "cpuMsPerFrame": 2.2153625000000003,
+            "wallMsPerFrame": 2.13286666875,
+            "bytes": 110091
+          },
+          {
+            "cpuMsPerFrame": 2.204975,
+            "wallMsPerFrame": 2.142256771875003,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 2.189871875,
+            "wallMsPerFrame": 2.122740493750001,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 2.40193125,
+            "wallMsPerFrame": 2.336774481249995,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 2.2695374999999998,
+            "wallMsPerFrame": 2.2146126312499974,
+            "bytes": 110400
+          }
+        ],
+        "region": [
+          {
+            "cpuMsPerFrame": 0.89309375,
+            "wallMsPerFrame": 0.8065858093750023,
+            "bytes": 110031
+          },
+          {
+            "cpuMsPerFrame": 0.8540156250000001,
+            "wallMsPerFrame": 0.8002662750000014,
+            "bytes": 110080
+          },
+          {
+            "cpuMsPerFrame": 0.8580249999999999,
+            "wallMsPerFrame": 0.8000401031249964,
+            "bytes": 110091
+          },
+          {
+            "cpuMsPerFrame": 0.872446875,
+            "wallMsPerFrame": 0.8027605468749982,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.853059375,
+            "wallMsPerFrame": 0.7966183593749975,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.862746875,
+            "wallMsPerFrame": 0.8034408843750043,
+            "bytes": 110400
+          },
+          {
+            "cpuMsPerFrame": 0.863503125,
+            "wallMsPerFrame": 0.793962890625005,
+            "bytes": 110400
+          }
+        ]
+      }
+    },
+    {
+      "mode": "regular",
+      "historyPairs": 1000,
+      "workload": "streaming-and-animation",
+      "framesPerSample": 320,
+      "repetitions": 7,
+      "baselineCpuMsPerFrame": 2.863796875,
+      "scopedCpuMsPerFrame": 3.6329749999999996,
+      "regionCpuMsPerFrame": 2.84401875,
+      "scopedReductionPercent": -26.85868302024737,
+      "regionReductionPercent": 0.6906259718577198,
+      "samples": {
+        "baseline": [
+          {
+            "cpuMsPerFrame": 2.843690625,
+            "wallMsPerFrame": 2.5487915374999943,
+            "bytes": 174965
+          },
+          {
+            "cpuMsPerFrame": 3.21779375,
+            "wallMsPerFrame": 2.8645985656249993,
+            "bytes": 175286
+          },
+          {
+            "cpuMsPerFrame": 3.6635125000000004,
+            "wallMsPerFrame": 3.3244385406249988,
+            "bytes": 174063
+          },
+          {
+            "cpuMsPerFrame": 2.822434375,
+            "wallMsPerFrame": 2.534866015625005,
+            "bytes": 175334
+          },
+          {
+            "cpuMsPerFrame": 2.850728125,
+            "wallMsPerFrame": 2.543581509375008,
+            "bytes": 175606
+          },
+          {
+            "cpuMsPerFrame": 2.863796875,
+            "wallMsPerFrame": 2.564352084374991,
+            "bytes": 174372
+          },
+          {
+            "cpuMsPerFrame": 3.30974375,
+            "wallMsPerFrame": 3.0533187500000167,
+            "bytes": 175334
+          }
+        ],
+        "scoped": [
+          {
+            "cpuMsPerFrame": 3.5255156249999997,
+            "wallMsPerFrame": 2.987439584375011,
+            "bytes": 174965
+          },
+          {
+            "cpuMsPerFrame": 4.2951375,
+            "wallMsPerFrame": 3.7078957031249957,
+            "bytes": 175286
+          },
+          {
+            "cpuMsPerFrame": 3.6329749999999996,
+            "wallMsPerFrame": 3.0458964843749983,
+            "bytes": 174063
+          },
+          {
+            "cpuMsPerFrame": 3.342221875,
+            "wallMsPerFrame": 2.8179330749999965,
+            "bytes": 175334
+          },
+          {
+            "cpuMsPerFrame": 3.3436,
+            "wallMsPerFrame": 2.8226634125000145,
+            "bytes": 175606
+          },
+          {
+            "cpuMsPerFrame": 3.9217500000000003,
+            "wallMsPerFrame": 3.3719143218750105,
+            "bytes": 174372
+          },
+          {
+            "cpuMsPerFrame": 3.786,
+            "wallMsPerFrame": 3.1742145843749996,
+            "bytes": 175334
+          }
+        ],
+        "region": [
+          {
+            "cpuMsPerFrame": 2.984928125,
+            "wallMsPerFrame": 2.6503305999999953,
+            "bytes": 174965
+          },
+          {
+            "cpuMsPerFrame": 3.674696875,
+            "wallMsPerFrame": 3.418359115625003,
+            "bytes": 175286
+          },
+          {
+            "cpuMsPerFrame": 2.840846875,
+            "wallMsPerFrame": 2.5404141937500073,
+            "bytes": 174063
+          },
+          {
+            "cpuMsPerFrame": 2.7404625,
+            "wallMsPerFrame": 2.431205990625017,
+            "bytes": 175334
+          },
+          {
+            "cpuMsPerFrame": 2.937203125,
+            "wallMsPerFrame": 2.7226736968749945,
+            "bytes": 175606
+          },
+          {
+            "cpuMsPerFrame": 2.801728125,
+            "wallMsPerFrame": 2.514601434375004,
+            "bytes": 174372
+          },
+          {
+            "cpuMsPerFrame": 2.84401875,
+            "wallMsPerFrame": 2.5386691406250064,
+            "bytes": 175334
+          }
+        ]
+      }
+    },
+    {
+      "mode": "fullscreen",
+      "historyPairs": 0,
+      "workload": "animation-and-rate",
+      "framesPerSample": 320,
+      "repetitions": 7,
+      "baselineCpuMsPerFrame": 0.09349062500000001,
+      "scopedCpuMsPerFrame": 0.068940625,
+      "regionCpuMsPerFrame": 0.05340625,
+      "scopedReductionPercent": 26.259317444930975,
+      "regionReductionPercent": 42.87528829762343,
+      "samples": {
+        "baseline": [
+          {
+            "cpuMsPerFrame": 0.09349062500000001,
+            "wallMsPerFrame": 0.0496709624999994,
+            "bytes": 106511
+          },
+          {
+            "cpuMsPerFrame": 0.08428125,
+            "wallMsPerFrame": 0.03929244999999355,
+            "bytes": 106560
+          },
+          {
+            "cpuMsPerFrame": 0.12445312500000001,
+            "wallMsPerFrame": 0.044793228124990495,
+            "bytes": 106571
+          },
+          {
+            "cpuMsPerFrame": 0.075609375,
+            "wallMsPerFrame": 0.04064674374999413,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.090253125,
+            "wallMsPerFrame": 0.04329544375000296,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.123009375,
+            "wallMsPerFrame": 0.047341275000007954,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.107203125,
+            "wallMsPerFrame": 0.043334503124992804,
+            "bytes": 106880
+          }
+        ],
+        "scoped": [
+          {
+            "cpuMsPerFrame": 0.053540624999999994,
+            "wallMsPerFrame": 0.03964570312498381,
+            "bytes": 106511
+          },
+          {
+            "cpuMsPerFrame": 0.123428125,
+            "wallMsPerFrame": 0.04573060000000169,
+            "bytes": 106560
+          },
+          {
+            "cpuMsPerFrame": 0.068940625,
+            "wallMsPerFrame": 0.03871145624998462,
+            "bytes": 106571
+          },
+          {
+            "cpuMsPerFrame": 0.06384375,
+            "wallMsPerFrame": 0.03772760312499486,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.108421875,
+            "wallMsPerFrame": 0.04413854062499922,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.06805,
+            "wallMsPerFrame": 0.04192434999999932,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.07379375,
+            "wallMsPerFrame": 0.03875065312499828,
+            "bytes": 106880
+          }
+        ],
+        "region": [
+          {
+            "cpuMsPerFrame": 0.049134375,
+            "wallMsPerFrame": 0.027457553125009325,
+            "bytes": 106511
+          },
+          {
+            "cpuMsPerFrame": 0.044687500000000005,
+            "wallMsPerFrame": 0.026841924999985167,
+            "bytes": 106560
+          },
+          {
+            "cpuMsPerFrame": 0.068278125,
+            "wallMsPerFrame": 0.029649090625002827,
+            "bytes": 106571
+          },
+          {
+            "cpuMsPerFrame": 0.05340625,
+            "wallMsPerFrame": 0.02735143125000832,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.070975,
+            "wallMsPerFrame": 0.027489325000010466,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.045240625,
+            "wallMsPerFrame": 0.028030078124993453,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.08647812499999999,
+            "wallMsPerFrame": 0.03216887812500317,
+            "bytes": 106880
+          }
+        ]
+      }
+    },
+    {
+      "mode": "fullscreen",
+      "historyPairs": 0,
+      "workload": "streaming-and-animation",
+      "framesPerSample": 320,
+      "repetitions": 7,
+      "baselineCpuMsPerFrame": 0.06813125,
+      "scopedCpuMsPerFrame": 0.057565624999999995,
+      "regionCpuMsPerFrame": 0.087878125,
+      "scopedReductionPercent": 15.507751582423642,
+      "regionReductionPercent": -28.98357948812035,
+      "samples": {
+        "baseline": [
+          {
+            "cpuMsPerFrame": 0.0969,
+            "wallMsPerFrame": 0.049668100000008056,
+            "bytes": 168191
+          },
+          {
+            "cpuMsPerFrame": 0.06813125,
+            "wallMsPerFrame": 0.04593580625000868,
+            "bytes": 168520
+          },
+          {
+            "cpuMsPerFrame": 0.04484375,
+            "wallMsPerFrame": 0.04344778750000842,
+            "bytes": 167251
+          },
+          {
+            "cpuMsPerFrame": 0.047528125,
+            "wallMsPerFrame": 0.04603984375000891,
+            "bytes": 168560
+          },
+          {
+            "cpuMsPerFrame": 0.07991875000000001,
+            "wallMsPerFrame": 0.0455511718750131,
+            "bytes": 168840
+          },
+          {
+            "cpuMsPerFrame": 0.046590625000000004,
+            "wallMsPerFrame": 0.04375025937499686,
+            "bytes": 167560
+          },
+          {
+            "cpuMsPerFrame": 0.075746875,
+            "wallMsPerFrame": 0.04969075624999277,
+            "bytes": 168560
+          }
+        ],
+        "scoped": [
+          {
+            "cpuMsPerFrame": 0.060678125000000006,
+            "wallMsPerFrame": 0.04583762812499117,
+            "bytes": 168191
+          },
+          {
+            "cpuMsPerFrame": 0.051356250000000006,
+            "wallMsPerFrame": 0.048780731249985367,
+            "bytes": 168520
+          },
+          {
+            "cpuMsPerFrame": 0.08971875,
+            "wallMsPerFrame": 0.04615351562499655,
+            "bytes": 167251
+          },
+          {
+            "cpuMsPerFrame": 0.057565624999999995,
+            "wallMsPerFrame": 0.04313398437500382,
+            "bytes": 168560
+          },
+          {
+            "cpuMsPerFrame": 0.056959375,
+            "wallMsPerFrame": 0.051181900000005956,
+            "bytes": 168840
+          },
+          {
+            "cpuMsPerFrame": 0.0728625,
+            "wallMsPerFrame": 0.04635611875000904,
+            "bytes": 167560
+          },
+          {
+            "cpuMsPerFrame": 0.053849999999999995,
+            "wallMsPerFrame": 0.04467382812499636,
+            "bytes": 168560
+          }
+        ],
+        "region": [
+          {
+            "cpuMsPerFrame": 0.10499375,
+            "wallMsPerFrame": 0.04830208437501824,
+            "bytes": 168191
+          },
+          {
+            "cpuMsPerFrame": 0.08925,
+            "wallMsPerFrame": 0.04530546875000709,
+            "bytes": 168520
+          },
+          {
+            "cpuMsPerFrame": 0.075428125,
+            "wallMsPerFrame": 0.04745104375001574,
+            "bytes": 167251
+          },
+          {
+            "cpuMsPerFrame": 0.087878125,
+            "wallMsPerFrame": 0.047915884374992855,
+            "bytes": 168560
+          },
+          {
+            "cpuMsPerFrame": 0.079853125,
+            "wallMsPerFrame": 0.0444239593750126,
+            "bytes": 168840
+          },
+          {
+            "cpuMsPerFrame": 0.07168125,
+            "wallMsPerFrame": 0.047841796874990905,
+            "bytes": 167560
+          },
+          {
+            "cpuMsPerFrame": 0.09780625,
+            "wallMsPerFrame": 0.04897708437501933,
+            "bytes": 168560
+          }
+        ]
+      }
+    },
+    {
+      "mode": "fullscreen",
+      "historyPairs": 200,
+      "workload": "animation-and-rate",
+      "framesPerSample": 320,
+      "repetitions": 7,
+      "baselineCpuMsPerFrame": 0.208865625,
+      "scopedCpuMsPerFrame": 0.106709375,
+      "regionCpuMsPerFrame": 0.056115625,
+      "scopedReductionPercent": 48.910034860930324,
+      "regionReductionPercent": 73.13314481499768,
+      "samples": {
+        "baseline": [
+          {
+            "cpuMsPerFrame": 0.21758125,
+            "wallMsPerFrame": 0.16540664062499671,
+            "bytes": 106511
+          },
+          {
+            "cpuMsPerFrame": 0.23236875,
+            "wallMsPerFrame": 0.16536914062498909,
+            "bytes": 106560
+          },
+          {
+            "cpuMsPerFrame": 0.220296875,
+            "wallMsPerFrame": 0.16640260624999428,
+            "bytes": 106571
+          },
+          {
+            "cpuMsPerFrame": 0.208865625,
+            "wallMsPerFrame": 0.1625601562500151,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.17476562499999998,
+            "wallMsPerFrame": 0.15405364687501333,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.202578125,
+            "wallMsPerFrame": 0.15869361874999868,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.172834375,
+            "wallMsPerFrame": 0.1557871093750009,
+            "bytes": 106880
+          }
+        ],
+        "scoped": [
+          {
+            "cpuMsPerFrame": 0.110534375,
+            "wallMsPerFrame": 0.07220286249998935,
+            "bytes": 106511
+          },
+          {
+            "cpuMsPerFrame": 0.104803125,
+            "wallMsPerFrame": 0.07334830624999995,
+            "bytes": 106560
+          },
+          {
+            "cpuMsPerFrame": 0.1088625,
+            "wallMsPerFrame": 0.07380625000000691,
+            "bytes": 106571
+          },
+          {
+            "cpuMsPerFrame": 0.106709375,
+            "wallMsPerFrame": 0.07203815000000305,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.10571875,
+            "wallMsPerFrame": 0.07319322812500104,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.10190312500000001,
+            "wallMsPerFrame": 0.0661230468750091,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.130678125,
+            "wallMsPerFrame": 0.07353085937500055,
+            "bytes": 106880
+          }
+        ],
+        "region": [
+          {
+            "cpuMsPerFrame": 0.056115625,
+            "wallMsPerFrame": 0.02920012812501227,
+            "bytes": 106511
+          },
+          {
+            "cpuMsPerFrame": 0.072453125,
+            "wallMsPerFrame": 0.027757421874980537,
+            "bytes": 106560
+          },
+          {
+            "cpuMsPerFrame": 0.082459375,
+            "wallMsPerFrame": 0.031172915624983942,
+            "bytes": 106571
+          },
+          {
+            "cpuMsPerFrame": 0.048309375,
+            "wallMsPerFrame": 0.026309375000005276,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.043934375,
+            "wallMsPerFrame": 0.02670689999999922,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.083365625,
+            "wallMsPerFrame": 0.033632553124994045,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.0468375,
+            "wallMsPerFrame": 0.02648775937498158,
+            "bytes": 106880
+          }
+        ]
+      }
+    },
+    {
+      "mode": "fullscreen",
+      "historyPairs": 200,
+      "workload": "streaming-and-animation",
+      "framesPerSample": 320,
+      "repetitions": 7,
+      "baselineCpuMsPerFrame": 0.22206874999999998,
+      "scopedCpuMsPerFrame": 0.30110312499999997,
+      "regionCpuMsPerFrame": 0.215365625,
+      "scopedReductionPercent": -35.5900481269877,
+      "regionReductionPercent": 3.0184908952745384,
+      "samples": {
+        "baseline": [
+          {
+            "cpuMsPerFrame": 0.21381875,
+            "wallMsPerFrame": 0.16794310000000223,
+            "bytes": 272742
+          },
+          {
+            "cpuMsPerFrame": 0.21587499999999998,
+            "wallMsPerFrame": 0.16393971249999595,
+            "bytes": 277949
+          },
+          {
+            "cpuMsPerFrame": 0.26809375,
+            "wallMsPerFrame": 0.20967773437498635,
+            "bytes": 271639
+          },
+          {
+            "cpuMsPerFrame": 0.252040625,
+            "wallMsPerFrame": 0.2019317718750017,
+            "bytes": 273111
+          },
+          {
+            "cpuMsPerFrame": 0.22206874999999998,
+            "wallMsPerFrame": 0.16735325624999858,
+            "bytes": 278269
+          },
+          {
+            "cpuMsPerFrame": 0.23114374999999998,
+            "wallMsPerFrame": 0.17383593750000728,
+            "bytes": 271948
+          },
+          {
+            "cpuMsPerFrame": 0.21731875,
+            "wallMsPerFrame": 0.17430846249999377,
+            "bytes": 273111
+          }
+        ],
+        "scoped": [
+          {
+            "cpuMsPerFrame": 0.30110312499999997,
+            "wallMsPerFrame": 0.2305934875000048,
+            "bytes": 272742
+          },
+          {
+            "cpuMsPerFrame": 0.28875625,
+            "wallMsPerFrame": 0.23415989687498495,
+            "bytes": 277949
+          },
+          {
+            "cpuMsPerFrame": 0.36116875,
+            "wallMsPerFrame": 0.3001358062500003,
+            "bytes": 271639
+          },
+          {
+            "cpuMsPerFrame": 0.315503125,
+            "wallMsPerFrame": 0.2371433593749998,
+            "bytes": 273111
+          },
+          {
+            "cpuMsPerFrame": 0.286140625,
+            "wallMsPerFrame": 0.23424075624998295,
+            "bytes": 278269
+          },
+          {
+            "cpuMsPerFrame": 0.28574062499999997,
+            "wallMsPerFrame": 0.22709739687500133,
+            "bytes": 271948
+          },
+          {
+            "cpuMsPerFrame": 0.30136250000000003,
+            "wallMsPerFrame": 0.2286230468750091,
+            "bytes": 273111
+          }
+        ],
+        "region": [
+          {
+            "cpuMsPerFrame": 0.2066125,
+            "wallMsPerFrame": 0.15715312499999073,
+            "bytes": 272742
+          },
+          {
+            "cpuMsPerFrame": 0.227534375,
+            "wallMsPerFrame": 0.1571542968750009,
+            "bytes": 277949
+          },
+          {
+            "cpuMsPerFrame": 0.215365625,
+            "wallMsPerFrame": 0.1630789062500071,
+            "bytes": 271639
+          },
+          {
+            "cpuMsPerFrame": 0.206978125,
+            "wallMsPerFrame": 0.15960833125000135,
+            "bytes": 273111
+          },
+          {
+            "cpuMsPerFrame": 0.22893750000000002,
+            "wallMsPerFrame": 0.15905182187500486,
+            "bytes": 278269
+          },
+          {
+            "cpuMsPerFrame": 0.220965625,
+            "wallMsPerFrame": 0.1665502593750034,
+            "bytes": 271948
+          },
+          {
+            "cpuMsPerFrame": 0.20932187500000002,
+            "wallMsPerFrame": 0.16015846249999868,
+            "bytes": 273111
+          }
+        ]
+      }
+    },
+    {
+      "mode": "fullscreen",
+      "historyPairs": 1000,
+      "workload": "animation-and-rate",
+      "framesPerSample": 320,
+      "repetitions": 7,
+      "baselineCpuMsPerFrame": 0.7593687499999999,
+      "scopedCpuMsPerFrame": 0.12270937500000001,
+      "regionCpuMsPerFrame": 0.0785125,
+      "scopedReductionPercent": 83.84060774162751,
+      "regionReductionPercent": 89.66082025366464,
+      "samples": {
+        "baseline": [
+          {
+            "cpuMsPerFrame": 0.7593687499999999,
+            "wallMsPerFrame": 0.549723696875003,
+            "bytes": 106511
+          },
+          {
+            "cpuMsPerFrame": 0.92246875,
+            "wallMsPerFrame": 0.6628623718750077,
+            "bytes": 106560
+          },
+          {
+            "cpuMsPerFrame": 0.82785,
+            "wallMsPerFrame": 0.6036556000000018,
+            "bytes": 106571
+          },
+          {
+            "cpuMsPerFrame": 0.794240625,
+            "wallMsPerFrame": 0.666571225000007,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.725984375,
+            "wallMsPerFrame": 0.5372511718750047,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.7263531249999999,
+            "wallMsPerFrame": 0.5443893218749963,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.72945,
+            "wallMsPerFrame": 0.5383760437500087,
+            "bytes": 106880
+          }
+        ],
+        "scoped": [
+          {
+            "cpuMsPerFrame": 0.12270937500000001,
+            "wallMsPerFrame": 0.07145833437500641,
+            "bytes": 106511
+          },
+          {
+            "cpuMsPerFrame": 0.1728625,
+            "wallMsPerFrame": 0.10884752500001013,
+            "bytes": 106560
+          },
+          {
+            "cpuMsPerFrame": 0.15277812500000001,
+            "wallMsPerFrame": 0.0815526031249874,
+            "bytes": 106571
+          },
+          {
+            "cpuMsPerFrame": 0.122209375,
+            "wallMsPerFrame": 0.07050950625000496,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.106146875,
+            "wallMsPerFrame": 0.07494504999999663,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.140175,
+            "wallMsPerFrame": 0.07393320312498872,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.11908749999999999,
+            "wallMsPerFrame": 0.06582604375000756,
+            "bytes": 106880
+          }
+        ],
+        "region": [
+          {
+            "cpuMsPerFrame": 0.090025,
+            "wallMsPerFrame": 0.03025390625000455,
+            "bytes": 106511
+          },
+          {
+            "cpuMsPerFrame": 0.06770625,
+            "wallMsPerFrame": 0.03206210937498781,
+            "bytes": 106560
+          },
+          {
+            "cpuMsPerFrame": 0.08373749999999999,
+            "wallMsPerFrame": 0.030023437499994542,
+            "bytes": 106571
+          },
+          {
+            "cpuMsPerFrame": 0.0785125,
+            "wallMsPerFrame": 0.02934687499998745,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.060646875,
+            "wallMsPerFrame": 0.029949868750009045,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.077415625,
+            "wallMsPerFrame": 0.026608725000005506,
+            "bytes": 106880
+          },
+          {
+            "cpuMsPerFrame": 0.078696875,
+            "wallMsPerFrame": 0.03187630312500005,
+            "bytes": 106880
+          }
+        ]
+      }
+    },
+    {
+      "mode": "fullscreen",
+      "historyPairs": 1000,
+      "workload": "streaming-and-animation",
+      "framesPerSample": 320,
+      "repetitions": 7,
+      "baselineCpuMsPerFrame": 0.8680999999999999,
+      "scopedCpuMsPerFrame": 1.57945625,
+      "regionCpuMsPerFrame": 0.909371875,
+      "scopedReductionPercent": -81.94404446492342,
+      "regionReductionPercent": -4.754276581039072,
+      "samples": {
+        "baseline": [
+          {
+            "cpuMsPerFrame": 0.8184437499999999,
+            "wallMsPerFrame": 0.6093809906250044,
+            "bytes": 272742
+          },
+          {
+            "cpuMsPerFrame": 1.601303125,
+            "wallMsPerFrame": 1.6102938812500043,
+            "bytes": 277949
+          },
+          {
+            "cpuMsPerFrame": 1.0364375000000001,
+            "wallMsPerFrame": 0.77916406249999,
+            "bytes": 271639
+          },
+          {
+            "cpuMsPerFrame": 1.351534375,
+            "wallMsPerFrame": 1.0666227875000005,
+            "bytes": 273111
+          },
+          {
+            "cpuMsPerFrame": 0.8680999999999999,
+            "wallMsPerFrame": 0.6264759125000182,
+            "bytes": 278269
+          },
+          {
+            "cpuMsPerFrame": 0.8131187499999999,
+            "wallMsPerFrame": 0.6045244812499959,
+            "bytes": 271948
+          },
+          {
+            "cpuMsPerFrame": 0.831528125,
+            "wallMsPerFrame": 0.6173368499999924,
+            "bytes": 273111
+          }
+        ],
+        "scoped": [
+          {
+            "cpuMsPerFrame": 1.269765625,
+            "wallMsPerFrame": 0.9002653624999993,
+            "bytes": 272742
+          },
+          {
+            "cpuMsPerFrame": 1.57945625,
+            "wallMsPerFrame": 1.1332087218750075,
+            "bytes": 277949
+          },
+          {
+            "cpuMsPerFrame": 1.9227750000000001,
+            "wallMsPerFrame": 1.3552402343750145,
+            "bytes": 271639
+          },
+          {
+            "cpuMsPerFrame": 1.66951875,
+            "wallMsPerFrame": 1.1717765624999856,
+            "bytes": 273111
+          },
+          {
+            "cpuMsPerFrame": 1.7556812499999999,
+            "wallMsPerFrame": 1.226722528124992,
+            "bytes": 278269
+          },
+          {
+            "cpuMsPerFrame": 1.345415625,
+            "wallMsPerFrame": 0.9276678375000074,
+            "bytes": 271948
+          },
+          {
+            "cpuMsPerFrame": 1.353890625,
+            "wallMsPerFrame": 0.9431772124999952,
+            "bytes": 273111
+          }
+        ],
+        "region": [
+          {
+            "cpuMsPerFrame": 0.9417312499999999,
+            "wallMsPerFrame": 0.6730240874999935,
+            "bytes": 272742
+          },
+          {
+            "cpuMsPerFrame": 0.909371875,
+            "wallMsPerFrame": 0.6462335937500029,
+            "bytes": 277949
+          },
+          {
+            "cpuMsPerFrame": 0.941715625,
+            "wallMsPerFrame": 0.6882148437500064,
+            "bytes": 271639
+          },
+          {
+            "cpuMsPerFrame": 0.9214,
+            "wallMsPerFrame": 0.6403441406250068,
+            "bytes": 273111
+          },
+          {
+            "cpuMsPerFrame": 0.845959375,
+            "wallMsPerFrame": 0.5951290343750089,
+            "bytes": 278269
+          },
+          {
+            "cpuMsPerFrame": 0.739215625,
+            "wallMsPerFrame": 0.5257316406250083,
+            "bytes": 271948
+          },
+          {
+            "cpuMsPerFrame": 0.77895625,
+            "wallMsPerFrame": 0.5474377593749977,
+            "bytes": 273111
+          }
+        ]
+      }
+    }
+  ]
+}

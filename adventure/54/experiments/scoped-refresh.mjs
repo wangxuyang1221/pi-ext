@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { performance } from "node:perf_hooks";
+import { fileURLToPath } from "node:url";
 import { Container, CURSOR_MARKER, Markdown, ScrollView, TuiAltScreen, TuiMainScreen, VStack } from "@earendil-works/pi-tui";
 
 // Technical probe only: wrap known fixture components in memory. No installed
 // package is modified, and no production API or scheduler is implemented here.
-class ScopedCache {
+export class ScopedCache {
   cache = new WeakMap();
   parents = new WeakMap();
   stack = [];
@@ -94,7 +95,7 @@ const theme = {
 function fixture(mode, cached, historySize = 200) {
   const cache = cached ? new ScopedCache() : undefined;
   const counts = { history: 0, animation: 0, editor: 0, footer: 0 };
-  let frame = 0, statusLines = 1, draft = "draft", footer = "footer", historyRevision = 0;
+  let frame = 0, statusLines = 1, draft = "draft", footer = "101 t/s", historyRevision = 0;
   const chunks = [];
   const terminal = { columns: 90, rows: 30, write: text => chunks.push(text), hideCursor() {}, showCursor() {} };
   const wrap = component => cache?.wrap(component) ?? component;
@@ -139,13 +140,14 @@ function fixture(mode, cached, historySize = 200) {
     grow: () => { statusLines = 2; },
     shrink: () => { statusLines = 1; },
     edit: () => { draft = "changed draft"; },
-    changeFooter: () => { footer = "changed footer"; },
+    changeFooter: () => { footer = "102 t/s"; },
     changeHistory: () => { historyRevision++; },
     remove: () => { widget.removeChild(animation); },
     dispose: () => { tui.stopped = true; tui.cancelRenderTimer(); cache?.dispose(); },
   };
 }
 
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
 const results = [];
 for (const mode of ["regular", "fullscreen"]) {
   const baseline = fixture(mode, false);
@@ -247,21 +249,32 @@ for (const mode of ["regular", "fullscreen"]) {
   const checks = [];
   for (const [name, action] of [
     ["twenty local requests coalesce", f => { for (let i = 0; i < 20; i++) { f.advance(); f.local(f.animation); } }],
+    ["footer-only token rate update", f => { f.changeFooter(); f.local(f.bottom); }],
     ["multiple local targets", f => { f.advance(); f.changeFooter(); f.local(f.animation); f.local(f.bottom); }],
     ["normal request after local wins", f => { f.advance(); f.local(f.animation); f.edit(); f.ordinary(); }],
     ["normal request before local wins", f => { f.changeHistory(); f.ordinary(); f.advance(); f.local(f.animation); }],
   ]) {
     reference.clearOutput(); candidate.clearOutput();
     const before = [reference.count(), candidate.count()];
+    const countsBefore = { ...candidate.counts };
     const waits = [reference.wait(), candidate.wait()];
     action(reference); action(candidate);
     await Promise.all(waits);
     assert.deepEqual(candidate.snapshot(), reference.snapshot(), `${mode}: ${name}`);
     assert.equal(reference.count() - before[0], 1, `${name}: baseline frame count`);
     assert.equal(candidate.count() - before[1], 1, `${name}: candidate frame count`);
+    if (name === "footer-only token rate update") {
+      for (const kind of ["history", "animation", "editor"]) {
+        assert.equal(candidate.counts[kind] - countsBefore[kind], 0, `${mode}: footer update must not render ${kind}`);
+      }
+      assert.equal(candidate.counts.footer - countsBefore.footer, 1, `${mode}: footer renders once`);
+      assert.ok(candidate.snapshot().lines.some(line => line.includes("102 t/s")), `${mode}: new rate is visible`);
+      assert.ok(candidate.snapshot().output.includes("102 t/s"), `${mode}: new rate reaches terminal`);
+    }
     checks.push(name);
   }
   reference.dispose(); candidate.dispose();
   scheduled.push({ mode, checks });
 }
 console.log(JSON.stringify({ node: process.version, piTui: "1.4.0", results, timings, scheduled, scope: "Real host renderers and scheduler with an in-memory fixture cache; no public API, real PTY, overlays, selection, images, arbitrary custom containers, or production extension integration is validated." }, null, 2));
+}
