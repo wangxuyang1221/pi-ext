@@ -12,7 +12,7 @@
 
 为仓库内 Pi 提供可复用的文本区域刷新能力，降低动画和 footer 更新带来的额外 CPU，并给 codex-ui 实际加入 Working 动画及实时估算 token 速率。全局 Pi 的启动、安装及升级保持独立。
 
-[Planning #59](https://github.com/wangxuyang1221/pi-ext/issues/59) 已通关，样式、位置与生命周期已确认。[正式实施切片](slices.md) 已获认可，用户另追加验证系统创建、维护、独立验收和修复重验闭环。#61–#66 已建立；#61 普通模式和 #62 全屏局部刷新均已通过主代理验收，正式 Working/速率 #63 也已验收，新能力验证系统 #64 也已验收，旧skill维护 #65 也已验收，当前 #66 的输入框对比度及复制尾部换行修复已独立复验通过，累计54 passed、4 unverified；剩余实机补验被原生控制连接启动失败阻塞。用户另行明确要求立即移除 lowpower，独立 [Implementation #60](https://github.com/wangxuyang1221/pi-ext/issues/60) 已完成并通过验收；该清理已结束；当前继续已获授权的正式开发。
+[Planning #59](https://github.com/wangxuyang1221/pi-ext/issues/59) 已通关，样式、位置与生命周期已确认。[正式实施切片](slices.md) 已获认可，用户另追加验证系统创建、维护、独立验收和修复重验闭环。#61–#66 已建立；#61 普通模式和 #62 全屏局部刷新均已通过主代理验收，正式 Working/速率 #63 也已验收，新能力验证系统 #64 也已验收，旧skill维护 #65 也已验收，当前 #66 的输入框对比度及复制尾部换行修复已独立复验通过，累计54 passed、4 unverified；剩余实机补验被自动输入尚无可见响应阻塞。用户另行明确要求立即移除 lowpower，独立 [Implementation #60](https://github.com/wangxuyang1221/pi-ext/issues/60) 已完成并通过验收；该清理已结束；当前继续已获授权的正式开发。
 
 ## Evolution
 
@@ -122,13 +122,13 @@
 
 ## Current Assumptions
 
-Working/footer实现与CPU预算已通过独立自动验收。Termius两项产品失败已独立复验消除。动态选区复制尚无可归因的产品故障；接收器自测不能替代真实复制。当前主线程getApp在重置前后均失败，不能假设重新派发worker就能恢复原生控制能力。
+Working/footer实现与CPU预算已通过独立自动验收。Termius两项产品失败已独立复验消除。动态选区复制尚无可归因的产品故障；接收器自测不能替代真实复制。用户要求重试后getApp和AX/截图已可用，但文字、粘贴和单键探针都没有显示；不能由读取界面成功推断输入或截图更新可靠。
 
 ## Continuation Point
 
 #60–#65已验收。#66最新独立提交2bc5fd37b85bcb5505c61a964d0dd1002b9076dc，累计54 passed、0 failed、4 unverified。主代理核验37份来源、19份artifact哈希和五个记录PID均正常。该任务仅完成receiver六项自测、四个doctor和64份消费JS核对，没有操作Termius或启动Pi/tmux。详见[独立补验](evidence/termius-selection-verification.md)和[主代理控制阻塞核对](evidence/termius-control-blocker.md)。
 
-当前停点是native CUA不可用：子线程没有接口；主线程直接cua.getApp返回 `Sky Computer Use native pipe startup failed`，js_reset后重试仍同样失败。没有运行中的验证worker。恢复Computer Use连接后，先确认主线程getApp返回新鲜Termius状态，再派新的gpt-6.1-sol/high独立任务，并先核对其native CUA能力；不要在条件未变时重派、重复跑完整自动矩阵，或通过其他UI技术绕过通道。
+当前停点已更新：用户要求重试后，主线程getApp成功且AX/截图显示Local Terminal空闲提示符；点击输入框、Raise窗口后typeText、app.paste和单键t均未显示探针。最后发送Ctrl+U，截图仍为空闲提示符，没有按Return或执行命令。等待用户手动点选本地提示符并保持Termius前台，再做无回车输入探针。输入及截图响应确认恢复后才派新的gpt-6.1-sol/high独立任务，并先核对其native CUA能力。当前无运行中的验证worker，不在条件未变时重派或重复自动矩阵。
 
 恢复后从copy-on-select加受限receiver继续，完整读取两个验证skill及相关features/manual。消费安装仍为 `.tmp/local-refresh-install-CzIw6h`，两个消费者各32个codex-ui JS与当前dist一致。`adventure/54/experiments/selection-copy/receiver.py`仅保存完全匹配样本，未知输入不回显不落盘；已独立自测，尚未物理使用。后续再补tmux可见32/40列、搜索和其余regions/composer组合，路径依据见[前轮主代理验收](evidence/termius-repair-review.md)。
 

@@ -21,3 +21,11 @@
 恢复原生Computer Use连接后，先确认getApp能返回Termius的新鲜状态，再派新的gpt-6.1-sol/high独立任务验证该上下文也具备native CUA。随后从隔离copy-on-select与受限receiver继续，具体入口保留在[前次主代理验收](termius-repair-review.md)和progress。没有新控制能力证据时，不重复派发同样任务。
 
 其余未验证边界保持：物理选区/窄列/图片等、远程provider授权条件、Write/Edit精确await阶段。既有系统剪贴板样本写入授权仍有效；恢复控制连接不需要再次申请该授权。代码、安装和用户原型保留。
+
+## Retry after user request
+
+用户要求再次尝试后，主代理重置CUA并重新getApp，本次成功返回Termius窗口和AX；getAXStateAndScreenshot显示本机Local Terminal的空闲提示符。因此前轮native pipe启动失败在本次未再出现。
+
+随后点击AX输入框，依次检查不含回车的 `T66_RECONNECT` typeText、窗口Raise后的typeText、授权样本文字paste，以及单键t。每次重新读取界面，提示符后均未出现探针文字。最后发送Ctrl+U，截图仍为空闲提示符。只证明接口可读取界面，尚不能确认输入链路或截图更新可靠；没有宣称探针已成功输入或已被shell清空。
+
+没有按Return、执行shell命令、创建标签或启动Pi/tmux；没有访问原剪贴板内容。app.paste使用工具文档规定的临时粘贴及恢复机制，未通过getter读取原内容。当前仍无新增物理验收证据，不派发新的验证代理。下一步请用户手动点选Local Terminal提示符并保持Termius前台，再做一次无回车探针，区分真实焦点与自动控制响应。
