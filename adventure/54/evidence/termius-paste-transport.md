@@ -8,7 +8,7 @@ Termius 9.41.1 的本次原生粘贴将受控剪贴板样本中的 LF 转为 CR�
 
 ## Controlled experiment
 
-原始根 `.tmp/termius-paste-diagnosis-66/`。预先创建两份22字节样本：`T66_PASTE_A\nT66_PASTE_B\n` 和对应 CR 版本，仅以 pbcopy 写入 LF 版本，不读取原剪贴板。
+原始根 `.tmp/termius-paste-diagnosis-66/`。预先创建两份24字节样本：`T66_PASTE_A\nT66_PASTE_B\n` 和对应 CR 版本，仅以 pbcopy 写入 LF 版本，不读取原剪贴板。
 
 在自己的 Termius Local Terminal (1) 中，通过未修改的 `adventure/54/experiments/selection-copy/receiver.py` 接收实际 `super+v`、Ctrl+D：
 

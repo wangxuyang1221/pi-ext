@@ -148,3 +148,11 @@ Termius9.41.1真实生产Pi的普通/全屏均使用openai-codex/gpt-6-luna、th
 - 图片像素仍需实际支持协议的获准终端，不伪造TERM_PROGRAM，不访问被拒绝Ghostty。Write/Edit精确await需要可观察、可控制阶段，不用抢时序或Bash取消代替。
 
 本轮仅提交报告、JSON和progress，不push、不PR/merge/deploy；Issue66只更新Execution/Delivery/Verification，Acceptance、Map54、Spec55及关闭由主代理处理。当前无本轮验证进程、监听、runtime、临时认证或shared锁，消费安装与所有旧证据保留。
+
+## Manual acceptance and PR delivery
+
+用户在获知四项未验证边界后明确表示其不阻塞当前交付，随后使用仓库补丁版及全部八个插件进行手动验收，反馈“没什么问题”，并授权创建 PR。该反馈作为本次交付的人工接受结论，不转换独立验证的统计：仍为54 passed、0 failed、4 unverified。上节剩余补验暂停，后续按具体问题另行安排。
+
+PR 前主代理核对7065d9f的最新联网证据，57份来源与404份artifact全部SHA-256匹配。随后更正termius-paste-transport.md中的样本长度笔误22→24字节；不改原始采样数据及历史索引。最近完整check为205文件、2958测试通过，后续仅文档和证据变更，本次执行文档及凭据检查。
+
+保留边界为默认搜索键/图片物理像素、普通模式三行复制、/copy原始LF/CR字节及Write/Edit精确await取消。两个验证skill的自动入口使用PTY和脚本；CUA不是固定步骤或依赖。用户要求后续不采用CUA作为固定验证手段，物理显示和复制保留人工验收。创建PR不代表已合并，也不将这些边界记作通过。
