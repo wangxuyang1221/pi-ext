@@ -122,22 +122,28 @@
 
 ## Current Assumptions
 
-Working/footer实现与CPU预算已通过独立自动验收。Termius输入框及生产/copy问题已独立复验消除。最新动态选区实际复制通过，但只覆盖补丁全屏、40列、light主题；不得据此推断所有复制路径。共享验证驱动启动回显已在外层PTY复现并修复，实机修复效果待新独立任务验证。
+Working/footer实现与CPU预算已通过独立自动验收；产品和宿主补丁本轮未变。Termius输入框前景及生产/copy修复已有独立证据。共享验证驱动的启动回显修复现已在真实Termius普通/全屏独立复验通过。完整#66仍为54 passed、0 failed、4 unverified；多行composer选区、滚动/默认搜索输入、图片像素、远程provider及Write/Edit精确await不能由已有局部通过推断。
+
+## Execution and Verification
+
+本轮独立gpt-6.1-sol/high仅在worktree验证HEAD `6fe6ce47ab87755bcb539a4b122c00ae967f01fb`，未子委派、未修改产品/共享驱动/测试/skill/预算。见[共享启动独立实机复验](evidence/termius-shared-startup-verification.md)及[逐ID索引](evidence/termius-shared-startup-verification.json)。来源47条、继承artifact345份和两消费者各32个JS已核对。Python新增8测试通过，含6个真实Pi启动场景；父代理完整check205文件/2958测试继承，未重跑CPU、Working完整入口、旧CLI或build/pack/check。
+
+正式共享tui两模式首header前无字面CSI/OSC回复；真实终端DA和颜色回复进入输入日志，正常输入、quit、termios恢复通过。另补可见普通40列和全屏32列，120列codex-pi两模式new/fork/resume后的三行草稿及文字/空白拖选，light宽屏/全屏窄屏。采用自己的UTF8 tmux可见分栏，recipe与实际pane一致，没有以stty伪造窄屏。
+
+新增真实系统粘贴：补丁普通最新动态行19/19字节、原版普通20/20、原版全屏18/18，中文composer单行22/22。补丁全屏40列light的18/18和生产/copy四入口首尾空白/LF沿用上一轮已核对证据。本轮完整三行固定85字节草稿两次native选择复制均被受限receiver拒绝；actual未创建，未知内容未读取/保存，未修改expected或降低断言。该失败尝试尚不能定位为产品、终端或控制通道问题，交主代理继续定位。
+
+普通滚轮和全屏鼠标滚动未显示可证明的历史视口变化；全屏Ctrl+Home/End可见旧/新正文。默认Ctrl+Shift+F未打开搜索，上一轮隔离Ctrl+F的1/1只保留替代键范围。原版普通overlay曾因焦点输入没有进入Pi，doctor后点击本轮标签恢复；原失败动作保留。没有发送远程模型请求。
+
+58个已记录PID最终ps/lsof均无存活或监听；四个直接runtime归档后删除，六个共享scratch归档后删除，tmux server/panes/client及socket清理，共享锁不存在。专用Local Terminal (1)关闭，原标签保留；Window Zoom恢复2764×1724。原始资料在`.tmp/termius-shared-startup-66-0cpCwK`。未修改全局Termius设置/版本、全局Pi或用户原型。短命子进程未记录的PID不虚构，最终RUN命令扫描及receiver/shared退出证据另存。
 
 ## Continuation Point
 
-#60–#65已验收。#66最新独立提交`c0b4b6c0cc3684a721029e141f975631bed87fd1`，累计54 passed、0 failed、4 unverified。主代理核对45份来源、322份artifact哈希、18字节实际粘贴与37个已退出PID。见[独立补验](evidence/termius-selection-recovery-verification.md)。新增通过子证据为补丁全屏动态选区、可见32/40列、替代键搜索及部分composer/session组合；完整ID尚未新增。
+#60–#65已验收。#66共享启动修复已获本轮独立验证；累计仍54 passed、0 failed、4 unverified，未关闭#66/Map/Spec。58个ID逐条结果和skill手工条款映射见最新报告；没有新增完整通过ID。当前报告与progress仅待主代理验收，未push、未建PR/merge/deploy。
 
-主代理Astra high修复`.cursor/skills/verify-pi-ext/scripts/commands.py`启动顺序：外层raw mode在Pi启动前设置，ready等待期间转发输入，交互模式只用真实终端回复，所有退出路径恢复原终端设置。八项Python测试含六个真实Pi启动场景、非交互metadata旅程、完整205文件/2958测试均通过；修改函数CRAP最高7，九个变异全部killed。19个本轮记录PID已退出、无监听，全局Pi入口未变。见[修复与主代理核对](evidence/shared-terminal-startup-repair.md)及其JSON索引。产品和宿主补丁未变，不重跑CPU矩阵。
+下一步主代理先核对本轮hash、六份共享summary/原始ANSI、四份直接事件、四份实际粘贴文件、两次多行REJECTED及清理记录。需要定位三行composer真实选区复制不一致、普通/全屏滚动和默认搜索键无可见效果；不得补夹具或降低断言。若需产品或驱动修复，由主代理按ub-mode实施，再派新的独立Sol high复验；本轮验证者未做编码修复。
 
-下一步新的gpt-6.1-sol/high独立任务先确认native CUA，再用共享tui真实复验普通/全屏启动无字面终端回复、输入与退出正常，继续两个验证skill剩余可执行的物理分支。原生控制当前可用；AX隐藏Value可能滞后，必须用新鲜截图核对实际输入。不要因旧native pipe错误直接判当前阻塞。
+图片像素需获准且实际支持相应协议的终端，不伪造TERM_PROGRAM，不以文本fallback/协议字节冒充。远程provider仍缺指定模型、凭据与费用范围，不读用户auth、不发付费请求；Write/Edit精确await仍缺可观察可控阶段。真实前置条件满足后才继续对应独立会话，不反复跑离线证据。
 
-完整读取`.cursor/skills/verify-pi-text-regions/SKILL.md`、`.cursor/skills/verify-pi-codex-ui/SKILL.md`及features/manual引用，逐条对照已有覆盖，避免继续泛化缺口或反复运行已过入口。消费安装仍为`.tmp/local-refresh-install-CzIw6h`；重新核对当前dist与各32个已安装JS字节。`.tmp/termius-selection-recovery-66-p74Bil`保留成功布局、命令与截图。
+Termius 9.41.1当前原生CUA可用，10.2.1只是更新提示，不更新；AX隐藏Value可能滞后，用新鲜截图。只创建并操作新的Local Terminal，保留原标签/原型/旧证据，不访问已安全拒绝的Ghostty，不绕过CUA。剪贴板隔离样本及真实系统粘贴授权持续有效；使用受限receiver，REJECTED即停止，不读未知内容，copy至接收结束不用app.paste。消费安装仍`.tmp/local-refresh-install-CzIw6h`，不需要重新build/pack或完整CPU矩阵。
 
-实际窄屏使用自己的tmux可见分栏、工作区内相对socket，客户端显式`-u LANG=en_US.UTF-8`；内层recipe尺寸与外层实际pane匹配。Termius较小窗口曾缺底部画面，原生Window Zoom后可见，结束恢复；不要改全局字体。默认Ctrl+Shift+F没有输入字节证据，隔离绑定Ctrl+F已能搜索transcript；两者分别记录。图片文本降级已通过，图片像素仍缺实际支持。
-
-用户已同意隔离样本覆盖剪贴板并真实粘贴到本次工作区，不重复请求。使用`adventure/54/experiments/selection-copy/receiver.py`，只接受完全匹配已知样本，未知内容不回显不落盘。补丁全屏copy-on-select的Copied反馈及实际super+v已成功；普通模式使用明确的终端选择路径，不能混用宿主选区与Termius菜单。复制后用ASCII typeText启动receiver，不调用app.paste覆盖待验剪贴板。不读原剪贴板、不向远程粘贴、不恢复此前已删除的未知数据。
-
-只操作自己新建的Local Terminal及tmux实例，保留原有标签和用户原型，不访问Ghostty，不改全局Termius字体/主题/版本。远程provider缺指定模型、凭据及费用范围，Write/Edit精确await缺可控制阶段，仍unverified；不读取用户auth或发付费请求。缺口不自行豁免。发现产品/共享驱动问题由Astra high修复，随后派新Sol high复验，不能向已完成子线程发新review。
-
-没有用户最终接受，不关闭#66、Map、Spec或删除worktree。运行任务和最新提交以Map及当前git为准；新任务完成自动通知，不轮询。没有主代理build、PTY或质量进程占用，实机任务可独占运行。
+没有用户最终接受，不关闭#66、Map、Spec或删除worktree。没有本轮遗留build/PTY/质量进程。
