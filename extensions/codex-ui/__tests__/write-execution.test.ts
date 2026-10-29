@@ -35,10 +35,10 @@ vi.mock("@earendil-works/pi-coding-agent", async (original) => {
 });
 afterEach(() => { readFileMock.mockReset(); snapshotReadMock.mockReset(); patchMock.mockReset(); });
 
-function tools(lowPower = false) {
+function tools() {
   const registered: ToolDefinition[] = [];
   registerCodexTools({ registerTool(tool: ToolDefinition) { registered.push(tool); }, on() {} } as unknown as ExtensionAPI,
-    undefined, { isLowPowerEnabled: () => lowPower });
+    undefined);
   return registered;
 }
 
@@ -225,20 +225,6 @@ test("real write results survive disk session recovery without reading or recomp
     }
     row.setExpanded(false);
     assert.deepEqual(row.render(92).map(stripTerminalSequences).filter(Boolean), collapsed);
-    assert.equal(readFileMock.mock.calls.length, 0);
-    assert.equal(patchMock.mock.calls.length, 0);
-  } finally { await rm(cwd, { recursive: true, force: true }); }
-});
-
-test("low-power writes identify the operation without reading old content or computing a diff", async () => {
-  const cwd = await mkdtemp(join(process.cwd(), ".write-test-"));
-  try {
-    await writeFile(join(cwd, "file.ts"), "old\n".repeat(20_000));
-    const write = tools(true).find(tool => tool.name === "write")!;
-    for (const [path, action] of [["file.ts", "Edited"], ["new.ts", "Added"]]) {
-      const result = await write.execute(path!, { path, content: "new\n" }, undefined, undefined, { cwd } as never);
-      assert.deepEqual(result.details, { codexWrite: { version: 1, action } });
-    }
     assert.equal(readFileMock.mock.calls.length, 0);
     assert.equal(patchMock.mock.calls.length, 0);
   } finally { await rm(cwd, { recursive: true, force: true }); }

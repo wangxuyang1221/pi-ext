@@ -22,9 +22,9 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 | --- | --- |
 | `ui-header`, `ui-composer`, `ui-resize` | 启动 Pi header；输入时逐列检查整行背景；40/80/140 列；真实设置菜单选择 light 与 codex-pi；fork/resume 后再检查背景。保存 pyte 文本与颜色区间、原始 ANSI。 |
 | `ui-status` | 加载生产 fast 与 permissions 扩展，离线支持模型显示目录、模型、fast、full access 组合，关闭 fast 并切回 Default permissions 后对应状态消失。窄屏另存画面。 |
-| `ui-theme`, `ui-lowpower-reset` | 原生 `/settings` 落盘主题；`/reload`、`/new`、原生 `/fork` 与 `/resume` 选择器替换后检查 codex-pi 背景和 lowpower=off。fork 的多行预填须 Ctrl+C 清除。 |
+| `ui-theme` | 原生 `/settings` 落盘主题；`/reload`、`/new`、原生 `/fork` 与 `/resume` 选择器替换后检查 codex-pi 背景。fork 的多行预填须 Ctrl+C 清除。 |
 | `ui-user-markdown`, `ui-reply-markdown` | bracketed paste 输入标题、嵌套列表、表格、代码围栏、引用、链接；核对真正模型请求和持久 session 原文，另检查 TUI 内容。`/copy` 的系统剪贴板部分须按下节人工补验。 |
-| `ui-lowpower-on`, `ui-lowpower-off`, `ui-lowpower-status` | 同一会话切换前后执行实际 write/edit/bash/codemode；保存折叠与 Ctrl+O 展开结果；核对 Write 预览恢复、完整 Thinking、文件字节及工具成功结果。status 后执行工具，验证查询不改变值。 |
+| `ui-tool-rendering` | 普通/fullscreen 的真实命令清单保留 `/inspect` 且排除 `/lowpower`；Tab 补全 `/inspec` 成功、`/lowp` 保持原输入。reload/new/fork/resume 后重复检查。始终执行真实 write/edit/bash/codemode，保存完整折叠预览与 Ctrl+O 展开结果，核对文件字节及工具成功结果。 |
 | `ui-write-added`, `ui-write-edited`, `ui-diff`, `ui-bash-preview`, `ui-expand`, `ui-error`, `ui-interrupted` | 真实新建、覆盖、Edit、大结果 Diff unavailable、控制字符原始字节、长/多行/截断 Bash；真实 Esc 取消独立 Bash，确认延后文件未生成。Write/Edit 使用短时异步文件操作，无可观察的分阶段进度，取消证据见下方文件修改边界。 |
 | `ui-shell-prefix`, `ui-shell-path`, `ui-project-trust`, `ui-settings-error`, `ui-settings-reload` | shell wrapper 真实输出；未信任项目前缀不生效；可信项目语法错误和不可读文件均阻止 read/bash；修复而未 reload 仍拒绝；reload 后恢复；重启为不信任后再次排除项目前缀。 |
 | `ui-codemode-cache`, `ui-inspect-tabs`, `ui-inspect-scroll`, `ui-codemode-resume` | 真实读取累计超过 4MiB；首项缺失、末项可读；方向键/PgDn/PgUp/Shift+Tab；原生 `/resume`、`/tree` 后发后续模型请求核对已保存结果，并确认 raw cache 不从历史恢复。调用顺序、预览外失败和本地 MCP 仍运行 skill 的 codemode case。 |

@@ -1,6 +1,6 @@
 ---
 name: verify-pi-codex-ui
-description: "Verify pi-ext codex-ui through Pi TUI composer, transcript, tool cards, /inspect, /lowpower and theme; tool execution in print/RPC. Use after changing its core behavior or investigating a regression."
+description: "Verify pi-ext codex-ui through Pi TUI composer, transcript, tool cards, /inspect and theme; tool execution in print/RPC. Use after changing its core behavior or investigating a regression."
 ---
 
 # Verify Pi codex-ui
@@ -26,13 +26,12 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run codex-ui
 
 ## Drive
 
-先执行受影响 feature 对应的已有 case，再运行 [正式 CLI/headless 旅程](scripts/README.md#run)。其中包含原生设置、fork/resume/tree、Markdown、配置拒绝与修复、工具副作用、lowpower 切换、持久 Thinking 和缓存压力。新增组合无需复制临时审计脚本；驱动及离线模型边界已随 skill 维护。
+先执行受影响 feature 对应的已有 case，再运行 [正式 CLI/headless 旅程](scripts/README.md#run)。其中包含原生设置、fork/resume/tree、Markdown、配置拒绝与修复、工具副作用、工具完整显示与命令可用性、持久 Thinking 和缓存压力。新增组合无需复制临时审计脚本；驱动及离线模型边界已随 skill 维护。
 
 - [Composer, footer and theme](features/layout.md)
 - [Thinking and terminal activity](features/thinking.md)
 - [Read, Bash, Edit and Write display](features/tools.md)
 - [Codemode tree and inspector](features/codemode.md)
-- [Low-power rendering](features/lowpower.md)
 - [Execution settings and fail-closed configuration](features/execution.md)
 
 每个 feature 的自动入口只证明文件注明的范围。补充步骤必须逐项执行并记录，不得把全部单元测试通过写成全部用户旅程通过。

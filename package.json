@@ -101,7 +101,7 @@
     "goal:footer:play": "node ./extensions/goal/__tests__/footer-tui.mjs",
     "goal:footer:check": "conda run -n codex-py312 python ./extensions/goal/__tests__/footer-tui-driver.py && conda run -n codex-py312 python ./extensions/goal/__tests__/footer-tui-driver.py --fullscreen && conda run -n codex-py312 python ./extensions/goal/__tests__/footer-tui-driver.py --native && conda run -n codex-py312 python ./extensions/goal/__tests__/footer-tui-driver.py --native --fullscreen",
     "goal:footer:benchmark": "pnpm run build && node ./extensions/goal/__tests__/footer-benchmark.mjs",
-    "tool-status:check": "pnpm run build && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --play --restart && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --play --fullscreen --restart && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --lowpower --restart && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --lowpower --fullscreen --restart && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --mcp-only --restart",
+    "tool-status:check": "pnpm run build && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --play --restart && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --play --fullscreen --restart && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --mcp-only --restart",
     "prepack": "pnpm run build",
     "test:host": "pnpm run host:tmux:check",
     "test:offline": "pnpm test",

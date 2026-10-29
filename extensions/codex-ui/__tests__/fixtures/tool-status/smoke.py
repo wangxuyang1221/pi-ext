@@ -29,7 +29,6 @@ status = None
 output = bytearray()
 screens = {}
 success_color = '85858a'
-low_power = '--lowpower' in sys.argv
 mcp_only = '--mcp-only' in sys.argv
 target = 'mcp' if mcp_only else 'all'
 call_count = 1 if mcp_only else 5
@@ -101,7 +100,7 @@ try:
     colors = marker_colors()
     assert len(colors) >= call_count, colors
     assert colors[-call_count:] == [success_color] * call_count, colors
-    for content in ['Found 2 results'] if mcp_only else ['export const status', 'Found 2 results'] if low_power else ['Test Files', 'export const status', 'Found 2 results']:
+    for content in ['Found 2 results'] if mcp_only else ['Test Files', 'export const status', 'Found 2 results']:
         assert color_at(content) == 'd6d6d6', (content, color_at(content))
     if not mcp_only:
         assert color_at('1 more lines') == '77777d'

@@ -59,7 +59,7 @@ export interface CodexWriteDetails {
 }
 
 /** Capture local write metadata inside the built-in mutation queue, isolated per call. */
-export function createObservedWriteDefinition(cwd: string, isLowPowerEnabled: () => boolean = () => false): ToolDefinition<WriteDefinition["parameters"], CodexWriteDetails | undefined> {
+export function createObservedWriteDefinition(cwd: string): ToolDefinition<WriteDefinition["parameters"], CodexWriteDetails | undefined> {
   const base = createWriteToolDefinition(cwd);
   return {
     ...base,
@@ -67,7 +67,6 @@ export function createObservedWriteDefinition(cwd: string, isLowPowerEnabled: ()
       return base.renderResult!({ ...result, details: undefined }, options, theme, context);
     },
     async execute(id, params, signal, onUpdate, context) {
-      const lowPower = isLowPowerEnabled();
       const change: CodexWriteChange = { version: 1 };
       let oldContent: string | undefined;
       let writtenContent: string | undefined;
@@ -79,7 +78,7 @@ export function createObservedWriteDefinition(cwd: string, isLowPowerEnabled: ()
             // These operations run after permission checks and inside Pi's existing queue.
             // Display capture must never turn an otherwise writable file into a failure.
             try {
-              const capture = !lowPower && content.length <= MAX_TEXT_BYTES
+              const capture = content.length <= MAX_TEXT_BYTES
                 && Buffer.byteLength(content, "utf8") <= MAX_TEXT_BYTES
                 && countLines(content) <= MAX_INPUT_LINES && !content.includes("\0");
               const info = await stat(path);
@@ -88,7 +87,7 @@ export function createObservedWriteDefinition(cwd: string, isLowPowerEnabled: ()
             } catch (error) {
               if (change.action === undefined && (error as NodeJS.ErrnoException).code === "ENOENT") {
                 change.action = "Added";
-                if (!lowPower && content.length <= MAX_TEXT_BYTES
+                if (content.length <= MAX_TEXT_BYTES
                   && Buffer.byteLength(content, "utf8") <= MAX_TEXT_BYTES
                   && countLines(content) <= MAX_INPUT_LINES) oldContent = "";
               }

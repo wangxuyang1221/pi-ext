@@ -130,19 +130,15 @@ test("IDs reused by a later assistant message cannot take ownership of earlier r
   } finally { h.dispose(); }
 });
 
-test("duplicate full rows cannot claim historical low-power or unbound candidate slots", () => {
-  for (const previous of ["low-power", "unbound"]) for (const barrier of [
+test("duplicate rows cannot claim historical unbound candidate slots", () => {
+  for (const barrier of [
     undefined, { type: "text", text: "between" }, { type: "thinking", thinking: "between" }, call("other", "read"),
   ]) {
-    let lowPower = previous === "low-power";
-    const h = harness({ isLowPowerEnabled: () => lowPower });
+    const h = harness();
     try {
       h.declare([call("a"), call("b")]);
-      const oldA = previous === "low-power" ? h.row("a") : undefined;
-      oldA?.updateResult(result("old a"));
-      lowPower = false;
       const oldB = h.row("b"); oldB.updateResult(result("old b"));
-      const beforeA = oldA ? plain(oldA) : undefined, beforeB = plain(oldB);
+      const beforeB = plain(oldB);
       assert(beforeB.join("\n").includes("old b"));
       const prefix = barrier ? [call("a"), call("b"), barrier] : [];
       if (barrier) h.emit("message_update", { message: message([...prefix, call("a"), call("c")]) });
@@ -152,14 +148,13 @@ test("duplicate full rows cannot claim historical low-power or unbound candidate
       for (const expanded of [false, true, false]) {
         newA.setExpanded(expanded); c.setExpanded(expanded);
         assert.deepEqual(plain(oldB), beforeB);
-        if (oldA) assert.deepEqual(plain(oldA), beforeA);
         assert.doesNotMatch(plain(newA).join("\n"), /old b|printf b/u);
         assert.match(plain(newA).join("\n"), /new a/u);
       }
       h.emit("message_update", { message: message([...prefix, call("a"), call("c"), call("d")]) });
       const d = h.row("d"); d.updateResult(result("new d"));
       assert.deepEqual(plain(oldB), beforeB);
-      assert.deepEqual([...(oldA ? [oldA] : []), oldB, newA, c, d].flatMap(row => plain(row)).join("\n").match(/old b|new [acd]/gu),
+      assert.deepEqual([oldB, newA, c, d].flatMap(row => plain(row)).join("\n").match(/old b|new [acd]/gu),
         ["old b", "new a", "new c", "new d"]);
       h.emit("session_start"); h.declare([call("a"), call("b")]);
       const freshA = h.row("a"), freshB = h.row("b");
@@ -311,7 +306,7 @@ test("collapsed command limits use available display columns including the ellip
   } finally { h.dispose(); }
 });
 
-test("running full-mode Bash creates no clock timers or time-driven output changes", () => {
+test("running Bash creates no clock timers or time-driven output changes", () => {
   vi.useFakeTimers(); vi.setSystemTime(0); const h = harness();
   try {
     h.declare([call("a"), call("b")]); const a = h.row("a", "bash", true); const b = h.row("b", "bash", true);
@@ -368,16 +363,6 @@ test("host errors preserve timeout and cancellation reasons without fabricating 
       for (const output of ["this is successful output", "Command timed out", "Command cancelled"]) assert(rendered.includes(output));
       assert.doesNotMatch(rendered, /Exit code|\d+\.\d+s/u);
     }
-  } finally { h.dispose(); }
-});
-
-test("low-power rows keep their own bounded renderer and break full-mode grouping", () => {
-  let lowPower = false; const h = harness({ isLowPowerEnabled: () => lowPower });
-  try {
-    h.declare([call("a"), call("b"), call("c")]);
-    const a = h.row("a"); lowPower = true; const b = h.row("b"); lowPower = false; const c = h.row("c");
-    a.updateResult(result("a")); b.updateResult(result("b")); c.updateResult(result("c"));
-    assert.match(plain(a).join("\n"), /Bash\(printf a\)/u); assert.match(plain(b).join("\n"), /Bash completed/u); assert.match(plain(c).join("\n"), /Bash\(printf c\)/u);
   } finally { h.dispose(); }
 });
 

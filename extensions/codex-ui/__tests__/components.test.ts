@@ -82,7 +82,7 @@ test("footer renders the accepted stable status flow and ignores transient statu
       ["mcp", "\x1b[38;5;196mMCP 2/2 · 14 tools\x1b[39m"],
       ["permissions", "· full access"],
       ["codex-compact", "Compacting context with Codex…"],
-      ["codex-ui-lowpower", "Low power"],
+      ["other-extension", "Other status"],
     ]),
     getTheme: () => theme,
   });
@@ -96,7 +96,7 @@ test("footer renders the accepted stable status flow and ignores transient statu
   );
   assert.ok(!plain.includes("MCP"));
   assert.ok(!plain.includes("Compacting"));
-  assert.ok(!plain.includes("Low power"));
+  assert.ok(!plain.includes("Other status"));
   assert.ok(!plain.includes("·"));
   assert.ok(visibleWidth(rendered) <= 160);
 });

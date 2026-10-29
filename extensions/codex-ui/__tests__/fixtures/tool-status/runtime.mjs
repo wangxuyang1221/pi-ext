@@ -8,7 +8,6 @@ import { playTimeline } from "./playback.mjs";
 const root = process.env.TOOL_STATUS_ROOT;
 const repo = process.env.TOOL_STATUS_REPO;
 if (!root || !repo) throw new Error("Use pnpm run tool-status:check.");
-const lowPower = process.env.TOOL_STATUS_LOW_POWER === "1";
 const mcpOnly = process.env.TOOL_STATUS_MCP_ONLY === "1";
 const resume = process.env.TOOL_STATUS_RESUME === "1";
 let networkAttempts = 0;
@@ -120,13 +119,8 @@ const extension = pi => {
     ctx.ui.notify(playback ? "Playback is active. Use /play stop first." : "Finish the current fixture first: /finish success", "info");
     return true;
   };
-  let lowPowerCommand;
   const proxy = new Proxy(pi, { get(target, key) {
     if (key === "registerTool") return tool => pi.registerTool(wrapTool(tool));
-    if (key === "registerCommand") return (name, definition) => {
-      if (name === "lowpower") lowPowerCommand = definition;
-      pi.registerCommand(name, definition);
-    };
     return Reflect.get(target, key);
   } });
   codexUi?.(proxy);
@@ -178,7 +172,6 @@ const extension = pi => {
   } });
   pi.registerCommand("guide", { description: "Show fixture controls", handler: async (_args, ctx) => ctx.ui.notify(instructions, "info") });
   pi.on("session_start", async (_event, ctx) => {
-    if (lowPower && lowPowerCommand) await lowPowerCommand.handler("on", ctx);
     ctx.ui.setToolsExpanded(false);
   });
   if (resume) pi.registerCommand("fixture-restored", { description: "Confirm the isolated session was reopened", handler: async (_args, ctx) => {

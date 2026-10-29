@@ -87,9 +87,7 @@ test("inline thinking remains static while the independent terminal title animat
     assert.equal(pipeline.stats().requests, requests);
     assert.equal(vi.getTimerCount(), 1);
     const windowTitles = [...pipeline.titles];
-    await pipeline.commands.get("lowpower").handler("on", pipeline.context);
     assert.deepEqual(pipeline.assistant.render(120), stable);
-    await pipeline.commands.get("lowpower").handler("off", pipeline.context);
     vi.advanceTimersByTime(2000);
     assert.deepEqual(pipeline.assistant.render(120), stable);
     assert(pipeline.titles.length > windowTitles.length);

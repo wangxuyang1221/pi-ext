@@ -175,30 +175,28 @@ function createRenderContext(overrides: Record<string, unknown> = {}) {
 test("write and edit keep partial output static and private even when expanded", () => {
   vi.useFakeTimers();
   const invalidate = vi.fn();
-  for (const lowPower of [false, true]) {
-    const registered: ToolDefinition[] = [];
-    registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => lowPower });
-    for (const name of ["write", "edit"]) {
-      const tool = registered.find(tool => tool.name === name)!;
-      const args = { path: "src/components/中文.ts" };
-      for (const key of ["content", "edits"]) Object.defineProperty(args, key, {
-        get() { throw new Error("Pending content must not be read"); },
-      });
-      const context = createRenderContext({ args, argsComplete: false, isPartial: true, invalidate });
-      const call = tool.renderCall!(args, theme, context as never);
-      const details = Object.defineProperty({}, "patch", {
-        get() { throw new Error("Pending diff must not be read"); },
-      });
-      const result = tool.renderResult!({ content: [], details }, { expanded: true, isPartial: true }, theme, context as never);
-      const verb = name === "write" ? "Writing" : "Editing";
-      assert.equal(stripTerminalSequences(call.render(92)[0]!), `~ ${verb} src/components/中文.ts`);
-      assert.ok(call.render(92)[0]!.includes(theme.fg("warning", "~")));
-      assert.ok(call.render(92)[0]!.includes(theme.fg("dim", "src/components/")));
-      assert.ok(call.render(92)[0]!.includes(theme.fg("text", theme.bold("中文.ts"))));
-      for (const width of [1, 8, 16, 24, 40, 60, 92, 160]) {
-        assert.ok(call.render(width).every(line => visibleWidth(line) <= width));
-        assert.deepEqual(result.render(width), []);
-      }
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  for (const name of ["write", "edit"]) {
+    const tool = registered.find(tool => tool.name === name)!;
+    const args = { path: "src/components/中文.ts" };
+    for (const key of ["content", "edits"]) Object.defineProperty(args, key, {
+      get() { throw new Error("Pending content must not be read"); },
+    });
+    const context = createRenderContext({ args, argsComplete: false, isPartial: true, invalidate });
+    const call = tool.renderCall!(args, theme, context as never);
+    const details = Object.defineProperty({}, "patch", {
+      get() { throw new Error("Pending diff must not be read"); },
+    });
+    const result = tool.renderResult!({ content: [], details }, { expanded: true, isPartial: true }, theme, context as never);
+    const verb = name === "write" ? "Writing" : "Editing";
+    assert.equal(stripTerminalSequences(call.render(92)[0]!), `~ ${verb} src/components/中文.ts`);
+    assert.ok(call.render(92)[0]!.includes(theme.fg("warning", "~")));
+    assert.ok(call.render(92)[0]!.includes(theme.fg("dim", "src/components/")));
+    assert.ok(call.render(92)[0]!.includes(theme.fg("text", theme.bold("中文.ts"))));
+    for (const width of [1, 8, 16, 24, 40, 60, 92, 160]) {
+      assert.ok(call.render(width).every(line => visibleWidth(line) <= width));
+      assert.deepEqual(result.render(width), []);
     }
   }
   vi.advanceTimersByTime(30_000);
@@ -208,23 +206,21 @@ test("write and edit keep partial output static and private even when expanded",
 });
 
 test("write and edit show one red failure marker and never render a failed diff", () => {
-  for (const lowPower of [false, true]) {
-    const registered: ToolDefinition[] = [];
-    registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => lowPower });
-    for (const name of ["write", "edit"]) {
-      const tool = registered.find(tool => tool.name === name)!;
-      const args = { path: "src/app.ts", content: "ignored", edits: [] };
-      const context = createRenderContext({ args });
-      const call = tool.renderCall!(args, theme, context as never);
-      const result = tool.renderResult!({
-        content: [{ type: "text" as const, text: "Permission denied" }],
-        details: { get patch() { throw new Error("Failed diff must not be read"); } },
-      }, { expanded: true, isPartial: false }, theme, { ...context, isError: true } as never);
-      const title = call.render(92)[0]!;
-      assert.equal(stripTerminalSequences(title), `~ ${name === "write" ? "Write" : "Edit"} failed src/app.ts`);
-      assert.ok(title.includes(theme.fg("error", "~")));
-      assert.deepEqual(result.render(92).map(stripTerminalSequences), ["  Permission denied"]);
-    }
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  for (const name of ["write", "edit"]) {
+    const tool = registered.find(tool => tool.name === name)!;
+    const args = { path: "src/app.ts", content: "ignored", edits: [] };
+    const context = createRenderContext({ args });
+    const call = tool.renderCall!(args, theme, context as never);
+    const result = tool.renderResult!({
+      content: [{ type: "text" as const, text: "Permission denied" }],
+      details: { get patch() { throw new Error("Failed diff must not be read"); } },
+    }, { expanded: true, isPartial: false }, theme, { ...context, isError: true } as never);
+    const title = call.render(92)[0]!;
+    assert.equal(stripTerminalSequences(title), `~ ${name === "write" ? "Write" : "Edit"} failed src/app.ts`);
+    assert.ok(title.includes(theme.fg("error", "~")));
+    assert.deepEqual(result.render(92).map(stripTerminalSequences), ["  Permission denied"]);
   }
   assert.equal(highlightCodeMock.mock.calls.length, 0);
 });
@@ -254,39 +250,35 @@ test("write restores persisted changes with the same settled ANSI layout as edit
 });
 
 test("write reports unavailable diffs without inventing a change count or operation", () => {
-  for (const lowPower of [false, true]) {
-    const registered: ToolDefinition[] = [];
-    registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => lowPower });
-    const write = registered.find(tool => tool.name === "write")!;
-    for (const action of [undefined, "Added", "Edited"]) {
-      const args = { path: "file.ts", content: "new" };
-      const context = createRenderContext({ args });
-      const call = write.renderCall!(args, theme, context as never);
-      const body = write.renderResult!({ content: [], details: { codexWrite: { version: 1, action } } },
-        { expanded: true, isPartial: false }, theme, context as never);
-      assert.equal(stripTerminalSequences(call.render(92)[0]!), `~ ${action ?? "Write"} file.ts`);
-      assert.deepEqual(body.render(92), lowPower ? [] : [theme.fg("dim", "  Diff unavailable")]);
-    }
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const write = registered.find(tool => tool.name === "write")!;
+  for (const action of [undefined, "Added", "Edited"]) {
+    const args = { path: "file.ts", content: "new" };
+    const context = createRenderContext({ args });
+    const call = write.renderCall!(args, theme, context as never);
+    const body = write.renderResult!({ content: [], details: { codexWrite: { version: 1, action } } },
+      { expanded: true, isPartial: false }, theme, context as never);
+    assert.equal(stripTerminalSequences(call.render(92)[0]!), `~ ${action ?? "Write"} file.ts`);
+    assert.deepEqual(body.render(92), [theme.fg("dim", "  Diff unavailable")]);
   }
 });
 
 test("write streams without counts and restores final counts before argsComplete", () => {
   initTheme("dark", false);
-  for (const lowPower of [false, true]) {
-    const registered: ToolDefinition[] = [];
-    registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => lowPower });
-    const write = registered.find(tool => tool.name === "write")!;
-    const row = new ToolExecutionComponent("write", `stream-${lowPower}`, { path: "src/new.ts", content: "" },
-      { showImages: false }, write, { requestRender() {} } as never, "/repo");
-    for (const count of [0, 3, 10, 20]) {
-      row.updateArgs({ path: "src/new.ts", content: Array.from({ length: count }, () => "text").join("\n") });
-      assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["~ Writing src/new.ts"]);
-    }
-    row.updateResult({ content: [{ type: "text" as const, text: "Successfully wrote file." }], isError: false });
-    assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["~ Write src/new.ts (20 lines)"]);
-    row.setExpanded(true);
-    assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["~ Write src/new.ts (20 lines)"]);
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const write = registered.find(tool => tool.name === "write")!;
+  const row = new ToolExecutionComponent("write", "stream-write", { path: "src/new.ts", content: "" },
+    { showImages: false }, write, { requestRender() {} } as never, "/repo");
+  for (const count of [0, 3, 10, 20]) {
+    row.updateArgs({ path: "src/new.ts", content: Array.from({ length: count }, () => "text").join("\n") });
+    assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["~ Writing src/new.ts"]);
   }
+  row.updateResult({ content: [{ type: "text" as const, text: "Successfully wrote file." }], isError: false });
+  assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["~ Write src/new.ts (20 lines)"]);
+  row.setExpanded(true);
+  assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["~ Write src/new.ts (20 lines)"]);
 });
 
 test("write keeps completed malformed arguments inside the host fallback boundary", () => {
@@ -311,41 +303,39 @@ test("write keeps completed malformed arguments inside the host fallback boundar
 });
 
 test("write scans final content once and colors pending, success and failure markers", () => {
-  for (const lowPower of [false, true]) {
-    const registered: ToolDefinition[] = [];
-    registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => lowPower });
-    const write = registered.find(tool => tool.name === "write")!;
-    const args = { path: "中文🙂.ts", content: "WRITE-BODY\none\ntwo\n" };
-    const state = {};
-    const context = createRenderContext({ args, state, argsComplete: false, isPartial: true });
-    const search = vi.spyOn(String.prototype, "indexOf");
-    const bytes = vi.spyOn(Buffer, "byteLength");
-    try {
-      let call = write.renderCall!(args, theme, context as never);
-      const scanned = () => search.mock.contexts.filter(value => String(value) === args.content).length;
-      for (const width of [0, 1, 2, 24, 60, 120]) call.render(width);
-      assert.equal(scanned(), 0);
-      assert.ok(call.render(120)[0]!.includes(theme.fg("warning", "~")));
-      for (let index = 0; index < 3; index++) {
-        call = write.renderCall!(args, theme, { ...context, lastComponent: call, isPartial: false } as never);
-        write.renderResult!({ content: [], details: undefined }, { expanded: index % 2 === 0, isPartial: false }, theme,
-          { ...context, isPartial: false } as never);
-        for (const width of [0, 1, 2, 24, 60, 120]) {
-          assert.ok(call.render(width).every(line => visibleWidth(line) <= width));
-        }
-        call.invalidate(); call.render(120);
+  const registered: ToolDefinition[] = [];
+  registerToolsForTest(registered);
+  const write = registered.find(tool => tool.name === "write")!;
+  const args = { path: "中文🙂.ts", content: "WRITE-BODY\none\ntwo\n" };
+  const state = {};
+  const context = createRenderContext({ args, state, argsComplete: false, isPartial: true });
+  const search = vi.spyOn(String.prototype, "indexOf");
+  const bytes = vi.spyOn(Buffer, "byteLength");
+  try {
+    let call = write.renderCall!(args, theme, context as never);
+    const scanned = () => search.mock.contexts.filter(value => String(value) === args.content).length;
+    for (const width of [0, 1, 2, 24, 60, 120]) call.render(width);
+    assert.equal(scanned(), 0);
+    assert.ok(call.render(120)[0]!.includes(theme.fg("warning", "~")));
+    for (let index = 0; index < 3; index++) {
+      call = write.renderCall!(args, theme, { ...context, lastComponent: call, isPartial: false } as never);
+      write.renderResult!({ content: [], details: undefined }, { expanded: index % 2 === 0, isPartial: false }, theme,
+        { ...context, isPartial: false } as never);
+      for (const width of [0, 1, 2, 24, 60, 120]) {
+        assert.ok(call.render(width).every(line => visibleWidth(line) <= width));
       }
-      assert.equal(scanned(), 4);
-      assert.equal(bytes.mock.calls.filter(([value]) => value === args.content).length, 0);
-      assert.ok(call.render(120)[0]!.includes(theme.fg("muted", "~")));
-      const failed = write.renderResult!({ content: [{ type: "text" as const, text: "Cancelled" }], details: undefined },
-        { expanded: false, isPartial: false }, theme, { ...context, isError: true, isPartial: false } as never);
-      assert.ok(call.render(120)[0]!.includes(theme.fg("error", "~")));
-      assert.doesNotMatch(stripTerminalSequences(call.render(120)[0]!), /lines/u);
-      assert.match(stripTerminalSequences(failed.render(120)[0]!), /Cancelled/u);
-      assert.equal(scanned(), 4);
-    } finally { search.mockRestore(); bytes.mockRestore(); }
-  }
+      call.invalidate(); call.render(120);
+    }
+    assert.equal(scanned(), 4);
+    assert.equal(bytes.mock.calls.filter(([value]) => value === args.content).length, 0);
+    assert.ok(call.render(120)[0]!.includes(theme.fg("muted", "~")));
+    const failed = write.renderResult!({ content: [{ type: "text" as const, text: "Cancelled" }], details: undefined },
+      { expanded: false, isPartial: false }, theme, { ...context, isError: true, isPartial: false } as never);
+    assert.ok(call.render(120)[0]!.includes(theme.fg("error", "~")));
+    assert.doesNotMatch(stripTerminalSequences(call.render(120)[0]!), /lines/u);
+    assert.match(stripTerminalSequences(failed.render(120)[0]!), /Cancelled/u);
+    assert.equal(scanned(), 4);
+  } finally { search.mockRestore(); bytes.mockRestore(); }
 });
 
 test("display diff parser preserves markers, source indentation, and fallback hunk gaps", () => {
@@ -696,97 +686,9 @@ test("read renderer preserves expanded output and fits narrow widths", () => {
   assert.deepEqual(result.render(0), []);
 });
 
-test("low-power edit renderer skips edit arguments and bounds the raw patch preview", () => {
+test("edit errors read the captured first line once without reading patch details", () => {
   const registered: ToolDefinition[] = [];
-  registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => true });
-  const edit = registered.find((tool) => tool.name === "edit");
-  assert.ok(edit?.renderCall);
-  assert.ok(edit.renderResult);
-
-  const args = {
-    path: "src/app.ts",
-    get edits() {
-      throw new Error("low-power edit must not read replacement text");
-    },
-  };
-  const state: Record<string, unknown> = {};
-  const call = edit.renderCall(
-    args,
-    theme,
-    createRenderContext({ args, state, argsComplete: false, isPartial: true }) as never,
-  );
-  const partial = edit.renderResult(
-    {
-      content: [{ type: "text" as const, get text(): string { throw new Error("partial edit output must stay hidden"); } }],
-      details: {
-        get patch() { throw new Error("partial edit must not read patch"); },
-        get diff() { throw new Error("partial edit must not read diff"); },
-      },
-    },
-    { expanded: true, isPartial: true },
-    theme,
-    createRenderContext({ args, state, isPartial: true }) as never,
-  );
-
-  let patchReads = 0;
-  const patch = [
-    "--- a/src/app.ts\r",
-    "+++ b/src/app.ts",
-    "@@ -1,7 +1,7 @@",
-    "-old 1",
-    "+new 1",
-    " context 2",
-    "+seventh line must stay hidden",
-    `+${"x".repeat(5_000)}`,
-  ].join("\n");
-  const details = {
-    get patch() {
-      patchReads += 1;
-      return patch;
-    },
-    get diff() {
-      throw new Error("low-power edit must not read display diff");
-    },
-  };
-  const result = {
-    content: [{ type: "text" as const, get text(): string { throw new Error("successful edit output must stay hidden"); } }],
-    details,
-  };
-  const expanded = edit.renderResult(
-    result,
-    { expanded: true, isPartial: false },
-    theme,
-    createRenderContext({ args, state, expanded: true }) as never,
-  );
-  const expandedLines = expanded.render(100).map((line) => stripTerminalSequences(line));
-  const collapsed = edit.renderResult(
-    result,
-    { expanded: false, isPartial: false },
-    theme,
-    createRenderContext({ args, state, expanded: false, lastComponent: expanded }) as never,
-  );
-
-  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "~ Edited src/app.ts");
-  assert.ok(!call.render(80).join("\n").includes("\x1b[4m"));
-  assert.deepEqual(partial.render(80), []);
-  assert.deepEqual(expandedLines, [
-    "    --- a/src/app.ts",
-    "    +++ b/src/app.ts",
-    "    @@ -1,7 +1,7 @@",
-    "    -old 1",
-    "    +new 1",
-    "     context 2",
-  ]);
-  assert.deepEqual(collapsed.render(100), expanded.render(100));
-  assert.equal(patchReads, 1);
-  assert.equal(highlightCodeMock.mock.calls.length, 0);
-  assert.equal(state.preparedDiff, undefined);
-  assert.equal(state.collapsedLayouts, undefined);
-});
-
-test("low-power edit errors stay bounded without reading patch details", () => {
-  const registered: ToolDefinition[] = [];
-  registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => true });
+  registerToolsForTest(registered);
   const edit = registered.find((tool) => tool.name === "edit");
   assert.ok(edit?.renderCall);
   assert.ok(edit.renderResult);
@@ -805,12 +707,12 @@ test("low-power edit errors stay bounded without reading patch details", () => {
         type: "text" as const,
         get text(): string {
           textReads += 1;
-          return `\x1b[31mfailed\x1b[0m\u0000 ${"x".repeat(5_000)}\nsecond line`;
+          return `failed ${"x".repeat(5_000)}\nsecond line`;
         },
       }],
       details: {
-        get patch() { throw new Error("failed low-power edit must not read patch"); },
-        get diff() { throw new Error("failed low-power edit must not read diff"); },
+        get patch() { throw new Error("failed edit must not read patch"); },
+        get diff() { throw new Error("failed edit must not read diff"); },
       },
     },
     { expanded: true, isPartial: false },
@@ -825,7 +727,6 @@ test("low-power edit errors stay bounded without reading patch details", () => {
   assert.ok(!output.includes("\u0000"));
   assert.ok(!output.includes("second line"));
   assert.equal(textReads, 1);
-  assert.equal(state.lowPowerPreview, undefined);
   assert.ok(lines.every((line) => visibleWidth(line) <= 24));
 });
 
@@ -1266,9 +1167,9 @@ test("edit retains expanded layouts and syntax only in the shared budget", () =>
   assert.ok(renderCache.stats().layouts.chargedBytes <= renderCache.stats().layouts.limitBytes);
 });
 
-test("low-power write skips pending metrics and counts only the final content", () => {
+test("legacy write results skip pending metrics and count only final content", () => {
   const registered: ToolDefinition[] = [];
-  registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => true });
+  registerToolsForTest(registered);
   const write = registered.find((tool) => tool.name === "write");
   assert.ok(write?.renderCall);
   assert.ok(write.renderResult);
@@ -1308,9 +1209,9 @@ test("low-power write skips pending metrics and counts only the final content", 
   assert.equal(contentReads, 1);
 });
 
-test("low-power stable render cache follows a mutable theme proxy", () => {
+test("pending write render follows a mutable theme proxy", () => {
   const registered: ToolDefinition[] = [];
-  registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => true });
+  registerToolsForTest(registered);
   const write = registered.find((tool) => tool.name === "write");
   assert.ok(write?.renderCall);
 
@@ -1318,7 +1219,7 @@ test("low-power stable render cache follows a mutable theme proxy", () => {
   const args = {
     path: "src/new.ts",
     get content() {
-      throw new Error("low-power write must not read content");
+      throw new Error("pending write must not read content");
     },
   };
   const state = {};
@@ -1342,14 +1243,14 @@ test("low-power stable render cache follows a mutable theme proxy", () => {
   assert.notEqual(repainted, initial);
 });
 
-test("low-power write errors keep one sanitized bounded line", () => {
+test("write errors read one captured first line without inspecting arguments", () => {
   const registered: ToolDefinition[] = [];
-  registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => true });
+  registerToolsForTest(registered);
   const write = registered.find((tool) => tool.name === "write");
   assert.ok(write?.renderResult);
 
   let textReads = 0;
-  const errorText = `\x1b[31mfailure\x1b[0m\u0000 ${"x".repeat(100)}\rsecond line\n${"y".repeat(5_000)}`;
+  const errorText = `failure ${"x".repeat(5_000)}\nsecond line`;
   const args = {
     path: "src/new.ts",
     get content() {
@@ -1371,59 +1272,14 @@ test("low-power write errors keep one sanitized bounded line", () => {
     theme,
     createRenderContext({ args, state: {}, isError: true }) as never,
   );
-  const output = stripTerminalSequences(component.render(10_000).join("\n"));
+  const output = stripTerminalSequences(component.render(24).join("\n"));
 
   assert.match(output, /^  failure /u);
   assert.ok(!output.includes("\u0000"));
   assert.ok(!output.includes("\r"));
   assert.ok(!output.includes("second line"));
-  assert.ok(output.length <= 4_100);
+  assert.ok(visibleWidth(output) <= 24);
   assert.equal(textReads, 1);
-});
-
-test("write renderer locks its mode on the first render", () => {
-  let lowPowerEnabled = true;
-  const isLowPowerEnabled = vi.fn(() => lowPowerEnabled);
-  const registered: ToolDefinition[] = [];
-  registerToolsForTest(registered, undefined, { isLowPowerEnabled });
-  const write = registered.find((tool) => tool.name === "write");
-  assert.ok(write?.renderCall);
-  assert.ok(write.renderResult);
-
-  const lowPowerArgs = { path: "src/low.ts", content: "one\ntwo" };
-  const lowPowerState = {};
-  write.renderCall(
-    lowPowerArgs,
-    theme,
-    createRenderContext({ args: lowPowerArgs, state: lowPowerState, argsComplete: false }) as never,
-  );
-  lowPowerEnabled = false;
-  const lowPowerResult = write.renderResult(
-    { content: [{ type: "text" as const, text: "Successfully wrote file" }], details: undefined },
-    { expanded: false, isPartial: false },
-    theme,
-    createRenderContext({ args: lowPowerArgs, state: lowPowerState }) as never,
-  );
-  assert.deepEqual(lowPowerResult.render(80), []);
-
-  const fullArgs = { path: "src/full.ts", content: "one\ntwo" };
-  const fullState = {};
-  const fullCall = write.renderCall(
-    fullArgs,
-    theme,
-    createRenderContext({ args: fullArgs, state: fullState }) as never,
-  );
-  lowPowerEnabled = true;
-  const fullResult = write.renderResult(
-    { content: [{ type: "text" as const, text: "Successfully wrote file" }], details: undefined },
-    { expanded: false, isPartial: false },
-    theme,
-    createRenderContext({ args: fullArgs, state: fullState }) as never,
-  );
-
-  assert.match(stripTerminalSequences(fullCall.render(80).join("\n")), /2 lines/u);
-  assert.deepEqual(fullResult.render(80), []);
-  assert.equal(isLowPowerEnabled.mock.calls.length, 2);
 });
 
 test("write renderer reports a compact summary without inventing a diff", () => {
@@ -1551,366 +1407,6 @@ test("write streaming metrics avoid split arrays and final result recounting", (
     splitSpy.mockRestore();
     byteLengthSpy.mockRestore();
   }
-});
-
-test("low-power bash hides partial output without reading result text", () => {
-  const registered: ToolDefinition[] = [];
-  registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => true });
-  const bash = registered.find((tool) => tool.name === "bash");
-  assert.ok(bash?.renderResult);
-
-  let textReads = 0;
-  const result = {
-    content: [{
-      type: "text" as const,
-      get text(): string {
-        textReads += 1;
-        throw new Error("low-power partial bash output must stay unread");
-      },
-    }],
-    details: undefined,
-  };
-  const state = {};
-  const collapsed = bash.renderResult(
-    result,
-    { expanded: false, isPartial: true },
-    theme,
-    createRenderContext({
-      args: { command: "printf fixture" },
-      state,
-      expanded: false,
-      isPartial: true,
-    }) as never,
-  );
-  const expanded = bash.renderResult(
-    result,
-    { expanded: true, isPartial: true },
-    theme,
-    createRenderContext({
-      args: { command: "printf fixture" },
-      state,
-      expanded: true,
-      isPartial: true,
-      lastComponent: collapsed,
-    }) as never,
-  );
-
-  assert.deepEqual(collapsed.render(80), []);
-  assert.deepEqual(expanded.render(20), []);
-  assert.equal(expanded, collapsed);
-  assert.equal(textReads, 0);
-});
-
-test("low-power bash keeps a bounded tail hidden until expanded", () => {
-  const registered: ToolDefinition[] = [];
-  registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => true });
-  const bash = registered.find((tool) => tool.name === "bash");
-  assert.ok(bash?.renderCall);
-  assert.ok(bash.renderResult);
-
-  let textReads = 0;
-  const output = [
-    "HEAD-MUST-STAY-HIDDEN",
-    "x".repeat(5_000),
-    "tail 1 must stay hidden",
-    "\x1b[31mtail 2\x1b[0m",
-    "tail\u0000 3",
-    "tail 4",
-  ].join("\n");
-  const fullOutputPath = "/tmp/pi-bash-output.log";
-  const content = [{
-    type: "text" as const,
-    get text(): string {
-      textReads += 1;
-      return output;
-    },
-  }];
-  const details = {
-    fullOutputPath,
-    truncation: {
-      truncated: true,
-      truncatedBy: "lines" as const,
-      outputLines: 5,
-      totalLines: 100,
-    },
-  };
-  const result = { content, details };
-  const args = { command: "seq 100" };
-  const state: Record<string, unknown> = {};
-  const call = bash.renderCall(
-    args,
-    theme,
-    createRenderContext({ args, state, expanded: false, isPartial: false }) as never,
-  );
-  const collapsed = bash.renderResult(
-    result,
-    { expanded: false, isPartial: false },
-    theme,
-    createRenderContext({ args, state, expanded: false, isPartial: false }) as never,
-  );
-  const collapsedText = stripTerminalSequences(call.render(100).join("\n"));
-
-  assert.deepEqual(collapsed.render(100), []);
-  assert.match(collapsedText, /3 lines shown/u);
-  assert.match(collapsedText, /details/u);
-  assert.ok(!collapsedText.includes("tail 2"));
-
-  bash.renderCall(
-    args,
-    theme,
-    createRenderContext({ args, state, expanded: true, isPartial: false, lastComponent: call }) as never,
-  );
-  const expanded = bash.renderResult(
-    result,
-    { expanded: true, isPartial: false },
-    theme,
-    createRenderContext({ args, state, expanded: true, isPartial: false, lastComponent: collapsed }) as never,
-  );
-  const expandedLines = expanded.render(100);
-  const expandedText = stripTerminalSequences(expandedLines.join("\n"));
-
-  assert.ok(!expandedText.includes("HEAD-MUST-STAY-HIDDEN"));
-  assert.ok(!expandedText.includes("tail 1 must stay hidden"));
-  assert.match(expandedText, /^ {6}tail 2\n {6}tail 3\n {6}tail 4/u);
-  assert.match(expandedText, /Full output: \/tmp\/pi-bash-output\.log/u);
-  assert.match(expandedText, /Truncated: showing 5 of 100 lines/u);
-  assert.equal(expanded, collapsed);
-  assert.equal(textReads, 1);
-  assert.equal(state.preparedResult, undefined);
-  assert.ok(expandedLines.every((line) => visibleWidth(line) <= 100));
-});
-
-test("low-power bash call bounds completed commands and runs without a refresh timer", () => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date(0));
-
-  const registered: ToolDefinition[] = [];
-  registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => true });
-  const bash = registered.find((tool) => tool.name === "bash");
-  assert.ok(bash?.renderCall);
-
-  let commandReads = 0;
-  const command = `${"x".repeat(255)}😀NEVER-SHOW-THIS`;
-  const args = {
-    timeout: 30,
-    get command() {
-      commandReads += 1;
-      return command;
-    },
-  };
-  const state = {};
-  const invalidate = vi.fn();
-  const call = bash.renderCall(
-    args,
-    theme,
-    createRenderContext({
-      args,
-      state,
-      invalidate,
-      expanded: false,
-      argsComplete: false,
-      executionStarted: true,
-      isPartial: true,
-    }) as never,
-  );
-  const initial = stripTerminalSequences(call.render(500).join("\n"));
-  const initialLines = initial.split("\n");
-
-  assert.equal(initialLines.length, 2);
-  assert.match(initialLines[0] ?? "", /^ ├─ \$ Bash running/u);
-  assert.doesNotMatch(initialLines[0] ?? "", /output …|0\.0s|30s limit|expand/u);
-  assert.equal(
-    initialLines[1],
-    "      output … · 0.0s · 30s limit · [app.tools.expand] expand",
-  );
-  assert.equal(commandReads, 0);
-  assert.equal(vi.getTimerCount(), 0);
-
-  vi.advanceTimersByTime(1_250);
-  call.invalidate();
-  assert.match(stripTerminalSequences(call.render(500).join("\n")), /0\.0s/u);
-  assert.equal(invalidate.mock.calls.length, 0);
-
-  const updated = bash.renderCall(
-    args,
-    theme,
-    createRenderContext({
-      args,
-      state,
-      invalidate,
-      expanded: false,
-      lastComponent: call,
-      argsComplete: true,
-      executionStarted: true,
-      isPartial: true,
-    }) as never,
-  );
-  const updatedText = stripTerminalSequences(updated.render(500).join("\n"));
-  assert.match(updatedText, /1\.3s/u);
-  assert.match(updatedText, /30s limit/u);
-  assert.ok(!updatedText.includes("😀"));
-  assert.ok(!updatedText.includes("NEVER-SHOW-THIS"));
-  assert.match(updatedText.split("\n")[0] ?? "", /\.\.\.$/u);
-  assert.equal(visibleWidth(updatedText.split("\n")[0] ?? ""), 110);
-  assert.equal(updatedText.split("\n").length, 2);
-  assert.equal(commandReads, 1);
-
-  vi.setSystemTime(new Date(2_000));
-  bash.renderCall(
-    args,
-    theme,
-    createRenderContext({
-      args,
-      state,
-      invalidate,
-      expanded: false,
-      lastComponent: call,
-      argsComplete: true,
-      executionStarted: true,
-      isPartial: false,
-    }) as never,
-  );
-  const completedText = stripTerminalSequences(call.render(500).join("\n"));
-  assert.match(completedText, /^ ├─ \$ Bash completed/u);
-  assert.match(completedText, /2\.0s/u);
-  assert.match(completedText, /30s limit/u);
-  assert.equal(completedText.split("\n").length, 2);
-  assert.equal(commandReads, 1);
-  assert.equal(vi.getTimerCount(), 0);
-});
-
-test("low-power bash preserves failed status and fits sanitized narrow rows", () => {
-  vi.useFakeTimers();
-
-  const registered: ToolDefinition[] = [];
-  registerToolsForTest(registered, undefined, { isLowPowerEnabled: () => true });
-  const bash = registered.find((tool) => tool.name === "bash");
-  assert.ok(bash?.renderCall);
-
-  const args = { command: "\x1b[31mecho\x1b[0m\u0000 failed" };
-  const component = bash.renderCall(
-    args,
-    theme,
-    createRenderContext({
-      args,
-      state: {},
-      argsComplete: true,
-      executionStarted: true,
-      isPartial: false,
-      isError: true,
-      toolCallId: "failed-call",
-    }) as never,
-  );
-  const output = stripTerminalSequences(component.render(80).join("\n"));
-
-  assert.match(output, /^ ├─ \$ Bash failed/u);
-  assert.match(output, /echo failed/u);
-  assert.ok(!output.includes("\u0000"));
-  assert.ok(!output.includes("0.0s"));
-  assert.equal(vi.getTimerCount(), 0);
-  for (const width of [1, 2, 8]) {
-    assert.ok(component.render(width).every((line) => visibleWidth(line) <= width));
-  }
-});
-
-test("bash calls lock their render mode without creating full-mode refresh timers", () => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date(0));
-
-  let lowPowerEnabled = false;
-  const isLowPowerEnabled = vi.fn(() => lowPowerEnabled);
-  const registered: ToolDefinition[] = [];
-  registerToolsForTest(registered, undefined, { isLowPowerEnabled });
-  const bash = registered.find((tool) => tool.name === "bash");
-  assert.ok(bash?.renderCall);
-
-  const fullArgs = { command: "printf full" };
-  const fullState = {};
-  const fullInvalidate = vi.fn();
-  const fullCall = bash.renderCall(
-    fullArgs,
-    theme,
-    createRenderContext({
-      args: fullArgs,
-      state: fullState,
-      invalidate: fullInvalidate,
-      toolCallId: "full-call",
-      executionStarted: true,
-      isPartial: true,
-    }) as never,
-  );
-  assert.equal(vi.getTimerCount(), 0);
-
-  lowPowerEnabled = true;
-  const lowPowerArgs = { command: "printf low" };
-  const lowPowerState = {};
-  const lowPowerInvalidate = vi.fn();
-  const lowPowerCall = bash.renderCall(
-    lowPowerArgs,
-    theme,
-    createRenderContext({
-      args: lowPowerArgs,
-      state: lowPowerState,
-      invalidate: lowPowerInvalidate,
-      toolCallId: "low-power-call",
-      executionStarted: true,
-      isPartial: true,
-    }) as never,
-  );
-  assert.equal(vi.getTimerCount(), 0);
-
-  lowPowerEnabled = false;
-  bash.renderCall(
-    lowPowerArgs,
-    theme,
-    createRenderContext({
-      args: lowPowerArgs,
-      state: lowPowerState,
-      invalidate: lowPowerInvalidate,
-      lastComponent: lowPowerCall,
-      toolCallId: "low-power-call",
-      executionStarted: true,
-      isPartial: true,
-    }) as never,
-  );
-  assert.match(stripTerminalSequences(lowPowerCall.render(80).join("\n")), /Bash running/u);
-  assert.equal(vi.getTimerCount(), 0);
-
-  vi.advanceTimersByTime(1_000);
-  assert.equal(fullInvalidate.mock.calls.length, 0);
-  assert.equal(lowPowerInvalidate.mock.calls.length, 0);
-
-  bash.renderCall(
-    lowPowerArgs,
-    theme,
-    createRenderContext({
-      args: lowPowerArgs,
-      state: lowPowerState,
-      invalidate: lowPowerInvalidate,
-      lastComponent: lowPowerCall,
-      toolCallId: "low-power-call",
-      executionStarted: true,
-      isPartial: false,
-    }) as never,
-  );
-  assert.equal(vi.getTimerCount(), 0);
-
-  lowPowerEnabled = true;
-  bash.renderCall(
-    fullArgs,
-    theme,
-    createRenderContext({
-      args: fullArgs,
-      state: fullState,
-      invalidate: fullInvalidate,
-      lastComponent: fullCall,
-      toolCallId: "full-call",
-      executionStarted: true,
-      isPartial: false,
-    }) as never,
-  );
-  assert.equal(vi.getTimerCount(), 0);
-  assert.equal(isLowPowerEnabled.mock.calls.length, 2);
 });
 
 test("edit result appears once when composed by the host tool component", () => {

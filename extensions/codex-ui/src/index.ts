@@ -13,7 +13,6 @@ import { readGoalDisplay, type GoalFooterDisplay } from "./goal-display.js";
 
 export const CODEX_THEME_NAME = "codex-pi";
 
-const LOW_POWER_ARGUMENTS = ["on", "off", "status"] as const;
 function hideInlineWorkingRow(ui: ExtensionUIContext): void {
   ui.setWorkingVisible(false);
 }
@@ -25,7 +24,6 @@ export interface CodexUiOptions {
 }
 
 export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptions = {}): void {
-  let lowPowerEnabled = false;
   let goalDisplay: GoalFooterDisplay | undefined;
   let unsubscribeGoal: (() => void) | undefined;
   let currentKeybindings: KeybindingsManager | undefined;
@@ -34,47 +32,11 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
   const nativeRenderers = registerCodexTools(pi, options.toolFactories, {
     getExecutionOptions: options.getExecutionOptions,
     getKeybindings: () => currentKeybindings,
-    isLowPowerEnabled: () => lowPowerEnabled,
   });
 
-  const codemode = registerCodemodeUi(pi, {
+  registerCodemodeUi(pi, {
     nativeRenderers,
     getKeybindings: () => currentKeybindings,
-    isLowPowerEnabled: () => lowPowerEnabled,
-  });
-
-  pi.registerCommand("lowpower", {
-    description: "Toggle low-power rendering for write, edit, bash, and codemode",
-    getArgumentCompletions(prefix) {
-      const normalizedPrefix = prefix.trim().toLowerCase();
-      const matches = LOW_POWER_ARGUMENTS
-        .filter((argument) => argument.startsWith(normalizedPrefix))
-        .map((argument) => ({ value: argument, label: argument }));
-      return matches.length > 0 ? matches : null;
-    },
-    async handler(args, ctx) {
-      const action = args.trim().toLowerCase();
-      if (action && action !== "on" && action !== "off" && action !== "status") {
-        ctx.ui.notify("Usage: /lowpower [on|off|status]", "error");
-        return;
-      }
-      if (action === "status") {
-        ctx.ui.notify(`Low power: ${lowPowerEnabled ? "on" : "off"}`, "info");
-        return;
-      }
-
-      if (action === "on") {
-        lowPowerEnabled = true;
-      } else if (action === "off") {
-        lowPowerEnabled = false;
-      } else {
-        lowPowerEnabled = !lowPowerEnabled;
-      }
-      codemode.refresh();
-      hideInlineWorkingRow(ctx.ui);
-      ctx.ui.setStatus("codex-ui-lowpower", lowPowerEnabled ? "Low power" : undefined);
-      ctx.ui.notify(`Low power: ${lowPowerEnabled ? "on" : "off"}`, "info");
-    },
   });
 
   let currentModelId: string | undefined;
@@ -113,7 +75,6 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
     });
     pi.events?.emit("pi-ext:goal-display:request", undefined);
 
-    ctx.ui.setStatus("codex-ui-lowpower", lowPowerEnabled ? "Low power" : undefined);
     currentModelId = ctx.model?.id;
     if (ctx.ui.theme.name !== CODEX_THEME_NAME) {
       const profileTheme = ctx.ui.getTheme(CODEX_THEME_NAME);

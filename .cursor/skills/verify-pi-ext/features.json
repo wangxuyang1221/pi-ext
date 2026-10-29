@@ -926,6 +926,10 @@
         "file": "tools.md",
         "behaviors": [
           {
+            "id": "ui-tool-rendering",
+            "description": "工具完整显示，命令清单和补全排除已删除命令"
+          },
+          {
             "id": "ui-read-group",
             "description": "连续 Read 分组预览"
           },
@@ -985,27 +989,6 @@
           {
             "id": "ui-codemode-resume",
             "description": "恢复只重建已保存元数据"
-          }
-        ]
-      },
-      {
-        "file": "lowpower.md",
-        "behaviors": [
-          {
-            "id": "ui-lowpower-on",
-            "description": "启用短工具预览"
-          },
-          {
-            "id": "ui-lowpower-off",
-            "description": "关闭恢复完整显示"
-          },
-          {
-            "id": "ui-lowpower-status",
-            "description": "status 只查询"
-          },
-          {
-            "id": "ui-lowpower-reset",
-            "description": "reload 或会话替换恢复默认"
           }
         ]
       },

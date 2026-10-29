@@ -5,7 +5,7 @@ import { renderBashGroup } from "./bash-group-layout.js";
 import type { ReadMember } from "./read-groups.js";
 import type { BashMember } from "./bash-groups.js";
 import { ToolRenderCache } from "./render-cache.js";
-import { clean, inline, record } from "./codemode-data.js";
+import { clean, inline } from "./codemode-data.js";
 import { type CodemodeCall, type CodemodeRow, CodemodeStore } from "./codemode-model.js";
 import { callLabel, duration, type InspectorState, renderCodemodeTree, statusColor, wrapDetail } from "./codemode-view.js";
 
@@ -17,7 +17,7 @@ export const themeKey = (theme: Theme): string => (["text", "dim", "accent", "mu
 export class CodemodePresentation {
   private cache = new ToolRenderCache({ layoutBytes: 4 * 1024 * 1024, countBytes: 128 * 1024 });
   private scope = this.cache.scope();
-  constructor(readonly store: CodemodeStore, private readonly natives: ReadonlyMap<string, ToolRenderers>, private readonly lowPower: () => boolean = () => false) {}
+  constructor(readonly store: CodemodeStore, private readonly natives: ReadonlyMap<string, ToolRenderers>) {}
   clear(): void { this.cache.clear(); this.scope = this.cache.scope(); }
   stats() { return this.cache.stats(); }
   tree(row: CodemodeRow, theme: Theme, width: number, expanded: boolean, cwd: string, expandHint: string): string[] {
@@ -25,8 +25,8 @@ export class CodemodePresentation {
     return renderCodemodeTree(row, { theme, width, expanded, expandHint, child: (call, available, colors) => this.child(call, available, colors, cwd) });
   }
   child(call: CodemodeCall, width: number, theme: Theme, cwd: string): string[] {
-    const captured = this.store.results.get(call.id), low = this.lowPower();
-    const key = ["child", this.scope.identity(call), call.revision, captured?.revision ?? "missing", width, themeKey(theme), low].join("\0");
+    const captured = this.store.results.get(call.id);
+    const key = ["child", this.scope.identity(call), call.revision, captured?.revision ?? "missing", width, themeKey(theme)].join("\0");
     return this.scope.lines(key, () => {
       const heading = theme.fg(statusColor(call.status), `${callLabel(call)} · ${call.status}${call.durationMs === undefined ? "" : ` · ${duration(call.durationMs)}`}`);
       const fallback = () => {
@@ -34,13 +34,13 @@ export class CodemodePresentation {
         if (!call.argsComplete) lines.push(theme.fg("dim", "Arguments incomplete or omitted"));
         if (!captured) lines.push(theme.fg("dim", call.status === "running" ? "Running…" : "Raw result unavailable; history or cache limit"));
         else {
-          const prefix = captured.result.content.map(block => clean(block.text, low ? 512 : 8192)).join("\n");
-          for (const line of prefix.split("\n").slice(0, low ? 3 : 16)) lines.push(line);
-          if (!captured.complete || prefix.split("\n").length > (low ? 3 : 16)) lines.push(theme.fg("dim", "Preview limited; inspect captured output"));
+          const prefix = captured.result.content.map(block => clean(block.text, 8192)).join("\n");
+          for (const line of prefix.split("\n").slice(0, 16)) lines.push(line);
+          if (!captured.complete || prefix.split("\n").length > 16) lines.push(theme.fg("dim", "Preview limited; inspect captured output"));
         }
         return lines;
       };
-      if (!captured?.complete || !call.argsComplete || low || call.model) return wrapDetail(fallback(), width);
+      if (!captured?.complete || !call.argsComplete || call.model) return wrapDetail(fallback(), width);
       const status = call.status === "running" ? "running" : call.status === "ok" ? "completed" : "failed";
       const result = captured.result;
       if (call.name === "read" && typeof call.args.path === "string") {
@@ -72,7 +72,7 @@ export class CodemodePresentation {
   detail(row: CodemodeRow, state: InspectorState, theme: Theme, width: number, cwd: string): string[] {
     const call = row.calls[state.selected];
     const captured = call && this.store.results.get(call.id);
-    const key = ["inspect", this.scope.identity(row), state.tab, state.tab === "Calls" ? `${call?.id}:${call?.revision}:${captured?.revision}` : row.revision, width, themeKey(theme), this.lowPower()].join("\0");
+    const key = ["inspect", this.scope.identity(row), state.tab, state.tab === "Calls" ? `${call?.id}:${call?.revision}:${captured?.revision}` : row.revision, width, themeKey(theme)].join("\0");
     return this.scope.lines(key, () => {
       if (state.tab === "Script") return wrapDetail([...(row.code || "Script unavailable").split("\n"), ...(row.code.length >= 65536 ? ["Script preview limited to 64 Ki characters"] : [])], width);
       if (state.tab === "Output") return wrapDetail((row.output || "(No output)").split("\n").concat(row.output.length >= 65536 ? ["Output preview limited to 64 Ki characters"] : [], row.outputPath ? [`Full output: ${row.outputPath}`] : []), width);

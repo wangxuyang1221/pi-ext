@@ -13,7 +13,7 @@ try {
   for (const path of ["workspace", "home", "tmp", "agent", "sessions", "runtime"]) await mkdir(join(root, path));
   await prepare(repo, join(root, "runtime"));
   const env = Object.fromEntries(["PATH", "TERM", "COLORTERM", "LANG", "LC_ALL"].flatMap(key => process.env[key] ? [[key, process.env[key]]] : []));
-  Object.assign(env, { HOME: join(root, "home"), TMPDIR: join(root, "tmp"), PI_CODING_AGENT_DIR: join(root, "agent"), PI_CODING_AGENT_SESSION_DIR: join(root, "sessions"), PI_OFFLINE: "1", PI_SKIP_VERSION_CHECK: "1", PI_TELEMETRY: "0", TOOL_STATUS_ROOT: root, TOOL_STATUS_REPO: repo, TOOL_STATUS_LOW_POWER: process.argv.includes("--lowpower") ? "1" : "0", TOOL_STATUS_MCP_ONLY: process.argv.includes("--mcp-only") ? "1" : "0", TOOL_STATUS_FULLSCREEN: process.argv.includes("--fullscreen") ? "1" : "0" });
+  Object.assign(env, { HOME: join(root, "home"), TMPDIR: join(root, "tmp"), PI_CODING_AGENT_DIR: join(root, "agent"), PI_CODING_AGENT_SESSION_DIR: join(root, "sessions"), PI_OFFLINE: "1", PI_SKIP_VERSION_CHECK: "1", PI_TELEMETRY: "0", TOOL_STATUS_ROOT: root, TOOL_STATUS_REPO: repo, TOOL_STATUS_MCP_ONLY: process.argv.includes("--mcp-only") ? "1" : "0", TOOL_STATUS_FULLSCREEN: process.argv.includes("--fullscreen") ? "1" : "0" });
   let child;
   let stopping = false;
   for (const signal of ["SIGTERM", "SIGHUP", "SIGINT"]) {
