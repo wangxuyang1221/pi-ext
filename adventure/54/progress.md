@@ -35,6 +35,7 @@
 - 首次自动保存提交为 `c35d3c6aa156fc85824a13c07e97974c649d6cb8`，已推送。随后独立完成 [技术实验](experiments/scoped-refresh.mjs)，结论与边界见 [实验报告](evidence/scoped-refresh.md) 和 [原始结果](evidence/scoped-refresh.json)。没有修改产品源码或安装包。
 - 实验在真实普通和全屏渲染器上通过。60 帧中，无关历史组件 render 从普通 12000 次、全屏 24000 次降为 0；画面和终端字节与基线一致。正常更新、尺寸变化、多个局部目标、真实调度请求合并及普通请求优先均有证据。当前是内存终端和已知夹具组件，未覆盖真实 PTY、任意容器或正式扩展接入。
 - pnpm 安装会自动写入未批准构建脚本的占位配置，该改动已移除。本次使用 `--frozen-lockfile --ignore-scripts --config.strict-dep-builds=false` 安装，仍未执行依赖构建脚本，配置和锁文件保持原样。
+- 移除占位项后，pnpm 11 的脚本前自动安装检查会再次触发安装并写回占位项。后续运行或提交时使用命令级 `pnpm_config_verify_deps_before_run=false`，避免重复自动安装；这不跳过仓库检查或提交 hook。`npm_config_` 前缀对此设置无效。最终提交 hook 已正常通过。
 - 2026-10-29 `pnpm run check` 退出码 0，196 个测试文件、2913 个测试全部通过；构建、类型、仓库门禁、发布包和宿主 source/dist 加载通过。检查进程已退出，未留下本任务后台进程。这不替代正式补丁集成验收。
 
 ## Current Assumptions
