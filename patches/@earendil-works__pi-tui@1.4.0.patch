@@ -1,0 +1,308 @@
+diff --git a/dist/index.d.ts b/dist/index.d.ts
+index b241af500fe2cb38678856bebb7bad7ede092df1..ec038f8ed9e2ccc0b04688dd06fac9a7f8389387 100644
+--- a/dist/index.d.ts
++++ b/dist/index.d.ts
+@@ -29,7 +29,7 @@ export { StdinBuffer, type StdinBufferEventMap, type StdinBufferOptions } from "
+ export { isAppleTerminalSession, ProcessTerminal, type Terminal } from "./terminal.ts";
+ export { parseTerminalColorSchemeReport, type RgbColor, type TerminalColorScheme, type TerminalColors, } from "./terminal-colors.ts";
+ export { allocateImageId, type CellDimensions, calculateImageRows, deleteAllKittyImages, deleteKittyImage, detectCapabilities, encodeITerm2, encodeKitty, getCapabilities, getCellDimensions, getGifDimensions, getImageDimensions, getJpegDimensions, getPngDimensions, getTerminalColorMode, getWebpDimensions, hyperlink, type ImageDimensions, type ImageProtocol, type ImageRenderOptions, imageFallback, renderImage, resetCapabilitiesCache, setCapabilities, setCapabilityOverrides, setCellDimensions, type TerminalCapabilities, } from "./terminal-image.ts";
+-export { type Component, Container, CURSOR_MARKER, compositeTuiLine, type Focusable, isFocusable, isViewportTUI, type OverlayAnchor, type OverlayBounds, type OverlayHandle, type OverlayMargin, type OverlayOptions, type OverlayUnfocusOptions, renderFakeCursor, type SizeValue, type TUI, type TuiInputListener, type TuiInputListenerResult, type TuiMode, type TuiMouseButton, type TuiMouseEvent, type TuiMouseEventResult, type TuiMouseEventType, type TuiStopOptions, type ViewportTUI, } from "./tui.ts";
++export { type Component, Container, CURSOR_MARKER, compositeTuiLine, type Focusable, isFocusable, isViewportTUI, type OverlayAnchor, type OverlayBounds, type OverlayHandle, type OverlayMargin, type OverlayOptions, type OverlayUnfocusOptions, renderFakeCursor, type SizeValue, type TextRegionHandle, type TUI, type TuiInputListener, type TuiInputListenerResult, type TuiMode, type TuiMouseButton, type TuiMouseEvent, type TuiMouseEventResult, type TuiMouseEventType, type TuiStopOptions, type ViewportTUI, } from "./tui.ts";
+ export { TuiAltScreen, type TuiAltScreenOptions } from "./tui-alt-screen.ts";
+ export { TuiMainScreen, type TuiMainScreenRenderState } from "./tui-main-screen.ts";
+ export { getOsc8LinkAtColumn, sliceByColumn, stripTerminalSequences, truncateToWidth, visibleWidth, wrapTextWithAnsi, } from "./utils.ts";
+diff --git a/dist/tui-alt-screen.js b/dist/tui-alt-screen.js
+index 043d2c7952af7908b7cbb576f47d2bc18adada22..0de1c32b9c2b0b31a3c322955a6d44fc69e8d865 100644
+--- a/dist/tui-alt-screen.js
++++ b/dist/tui-alt-screen.js
+@@ -1447,6 +1447,8 @@ export class TuiAltScreen extends TuiBase {
+         return result;
+     }
+     doRender() {
++        this.pendingTextRegions.clear();
++        this.normalTextRegionRender = false;
+         if (this.stopped || !this.altScreenActive)
+             return;
+         const width = Math.max(1, this.terminal.columns);
+diff --git a/dist/tui-main-screen.js b/dist/tui-main-screen.js
+index 88eca823778ee1d70143bd94588437021f856333..0ce11db69d345df0f5b06b07ee4cf3a0d6118b5f 100644
+--- a/dist/tui-main-screen.js
++++ b/dist/tui-main-screen.js
+@@ -2,8 +2,11 @@ import * as fs from "node:fs";
+ import * as os from "node:os";
+ import * as path from "node:path";
+ import { deleteKittyImage, isImageLine } from "./terminal-image.js";
+-import { TuiBase } from "./tui.js";
++import { Container, getContainerRevision, TuiBase } from "./tui.js";
+ import { visibleWidth } from "./utils.js";
++function isTextRegionLine(line, width) {
++    return !/[\x00-\x1f\x7f]/.test(line.replace(/\x1b\[[0-9;:]*m/g, "").replace(/\x1b\]8;[^\x07\x1b]*(?:\x07|\x1b\\)/g, "")) && visibleWidth(line) <= width;
++}
+ const KITTY_SEQUENCE_PREFIX = "\x1b_G";
+ const MAX_RENDER_WRITE_CHARS = 1024 * 1024;
+ /**
+@@ -99,6 +102,82 @@ function isTermuxSession() {
+ /** TUI implementation that renders into the terminal's main screen and scrollback. */
+ export class TuiMainScreen extends TuiBase {
+     mode = "regular";
++    textRegionFrame;
++    // Only untransformed native Containers have composable full-width row bounds.
++    findTextRegionPath(component, parent = this, path = [], visited = new Set()) {
++        if (parent.render !== Container.prototype.render || visited.has(parent)) return undefined;
++        visited.add(parent);
++        for (let index = parent.children.length - 1; index >= 0; index--) {
++            const child = parent.children[index];
++            const next = [...path, { parent, index, child, count: parent.children.length }];
++            if (child === component) return next;
++            if (child instanceof Container) {
++                const found = this.findTextRegionPath(component, child, next, visited);
++                if (found) return found;
++            }
++        }
++        return undefined;
++    }
++    textRegionGeometry(path, width) {
++        if (!path) return undefined;
++        let row = 0, height = 0;
++        for (const entry of path) {
++            const { parent, index, child, count } = entry;
++            const layout = parent.mouseLayout;
++            if (parent.render !== Container.prototype.render || parent.children.length !== count ||
++                parent.children[index] !== child || layout?.width !== width ||
++                layout.children[index]?.component !== child) return undefined;
++            for (let i = 0; i < index; i++) row += layout.children[i].height;
++            height = layout.children[index].height;
++        }
++        return { row, height };
++    }
++    captureTextRegionGeometry(width, height, lines, cursorPos) {
++        if (!this.textRegions.size) { this.textRegionFrame = undefined; return; }
++        const revision = getContainerRevision();
++        for (const region of this.textRegions) {
++            let geometry = this.textRegionGeometry(region.path, width);
++            if (!geometry) {
++                region.path = this.findTextRegionPath(region.component);
++                geometry = this.textRegionGeometry(region.path, width);
++            }
++            region.geometry = geometry;
++            region.textOnly = !!geometry && lines.slice(geometry.row, geometry.row + geometry.height).every(line => isTextRegionLine(line, width));
++        }
++        this.textRegionFrame = this.hasOverlayEntries ? undefined : { width, height, revision, cursorPos };
++    }
++    renderTextRegions(width, height) {
++        const pending = [...this.pendingTextRegions];
++        this.pendingTextRegions.clear();
++        const normal = this.normalTextRegionRender;
++        this.normalTextRegionRender = false;
++        const frame = this.textRegionFrame;
++        this.textRegionFrame = undefined;
++        if (normal || !pending.length || !frame || this.hasOverlayEntries ||
++            frame.width !== width || frame.height !== height || frame.revision !== getContainerRevision() ||
++            this.previousWidth !== width || this.previousHeight !== height || !this.previousLines.length) return undefined;
++        frame.hasImages ??= this.previousLines.some(isImageLine);
++        if (frame.hasImages) return undefined;
++        const replacements = [];
++        for (const region of pending) {
++            const geometry = this.textRegionGeometry(region.path, width);
++            if (region.disposed || !region.textOnly || !geometry || !region.geometry || geometry.row !== region.geometry.row ||
++                geometry.height !== region.geometry.height) return undefined;
++            const lines = region.component.render(width);
++            // Cursor, image and terminal-control components retain the full render contract.
++            if (lines.length !== geometry.height || !lines.every(line => isTextRegionLine(line, width))) return undefined;
++            if (replacements.some(other => geometry.row < other.row + other.lines.length && other.row < geometry.row + lines.length)) return undefined;
++            replacements.push({ row: geometry.row, lines: this.applyLineResets(lines) });
++        }
++        // A renderer may synchronously invalidate the tree while producing a target.
++        if (this.normalTextRegionRender || frame.revision !== getContainerRevision()) return undefined;
++        const lines = this.previousLines.slice();
++        for (const replacement of replacements) {
++            for (let i = 0; i < replacement.lines.length; i++) lines[replacement.row + i] = replacement.lines[i];
++        }
++        this.textRegionFrame = frame;
++        return { lines, cursorPos: frame.cursorPos };
++    }
+     previousLines = [];
+     previousKittyImageIds = new Set();
+     previousWidth = 0;
+@@ -129,6 +208,7 @@ export class TuiMainScreen extends TuiBase {
+         this.previousViewportTop = state.previousViewportTop;
+     }
+     resetRenderState() {
++        this.textRegionFrame = undefined;
+         this.previousLines = [];
+         this.previousWidth = -1;
+         this.previousHeight = -1;
+@@ -227,14 +307,24 @@ export class TuiMainScreen extends TuiBase {
+         };
+         // Render all components to get new lines
+         // Resolve fake cursors before compositing so overlays and line slicing see plain SGR codes
+-        let newLines = this.resolveFakeCursors(this.render(width));
++        const partial = this.textRegions.size ? this.renderTextRegions(width, height) : undefined;
++        let newLines;
++        if (partial) newLines = partial.lines;
++        else {
++            const rendered = this.render(width);
++            if (this.textRegions.size) this.captureTextRegionGeometry(width, height, rendered, null);
++            newLines = this.resolveFakeCursors(rendered);
++        }
+         // Composite overlays into the rendered lines (before differential compare)
+         if (this.hasOverlayEntries) {
+             newLines = this.compositeOverlays(newLines, width, height);
+         }
+         // Extract cursor position before applying line resets (marker must be found first)
+-        const cursorPos = this.extractCursorPosition(newLines, height);
+-        newLines = this.applyLineResets(newLines);
++        const cursorPos = partial ? partial.cursorPos : this.extractCursorPosition(newLines, height);
++        if (!partial) {
++            if (this.textRegionFrame) this.textRegionFrame.cursorPos = cursorPos;
++            newLines = this.applyLineResets(newLines);
++        }
+         // Helper to clear scrollback and viewport and render all new lines
+         const fullRender = (clear) => {
+             this.fullRedrawCount += 1;
+diff --git a/dist/tui.d.ts b/dist/tui.d.ts
+index d9a81e5abe1e680890732db6435fa550a88da3e5..6a0909771cb251b909aad16ff0f37a78910762fc 100644
+--- a/dist/tui.d.ts
++++ b/dist/tui.d.ts
+@@ -215,7 +215,16 @@ export interface TuiStopOptions {
+     /** Leave renderer output in place for another TUI taking over the same terminal. */
+     preserveScreen?: boolean;
+ }
++/** A registration is owned by its caller; dispose it when the component is replaced or removed. */
++export interface TextRegionHandle {
++    /** Coalesces with other regions; any normal request takes priority. Unsupported layouts render normally. */
++    requestRender(): void;
++    /** Idempotent. Late requests do nothing. Does not remove the component. */
++    dispose(): void;
++}
+ export interface TUI extends Component {
++    /** Optional host capability. Register a text component mounted through native Containers; no coordinates are needed. */
++    registerTextRegion?(component: Component): TextRegionHandle;
+     readonly mode: TuiMode;
+     children: Component[];
+     terminal: Terminal;
+@@ -252,6 +261,7 @@ export interface ViewportTUI extends TUI {
+ }
+ export declare function isViewportTUI(tui: TUI): tui is ViewportTUI;
+ export declare abstract class TuiBase extends Container implements TUI {
++    registerTextRegion(component: Component): TextRegionHandle;
+     abstract readonly mode: TuiMode;
+     terminal: Terminal;
+     private focusedComponent;
+diff --git a/dist/tui.js b/dist/tui.js
+index 3fcdcf98381b1494daa786b3e283a33b4b5bacb0..4ca740902418cb9d4172a75db27fad45eff7d555 100644
+--- a/dist/tui.js
++++ b/dist/tui.js
+@@ -93,20 +93,25 @@ function parseSizeValue(value, referenceSize) {
+ /**
+  * Container - a component that contains other components
+  */
++let containerRevision = 0;
++export function getContainerRevision() { return containerRevision; }
+ export class Container {
+     children = [];
+     mouseLayout;
+     addChild(component) {
+         this.children.push(component);
++        containerRevision++;
+     }
+     removeChild(component) {
+         const index = this.children.indexOf(component);
+         if (index !== -1) {
+             this.children.splice(index, 1);
++            containerRevision++;
+         }
+     }
+     clear() {
+         this.children = [];
++        containerRevision++;
+     }
+     invalidate() {
+         for (const child of this.children) {
+@@ -181,6 +186,43 @@ export function isViewportTUI(tui) {
+     return tui[VIEWPORT_TUI] === true;
+ }
+ export class TuiBase extends Container {
++    textRegions = new Set();
++    pendingTextRegions = new Set();
++    normalTextRegionRender = true;
++    /** Register a mounted text component. The caller owns and disposes the handle. */
++    registerTextRegion(component) {
++        const region = { owner: this.stopped ? undefined : this, component, path: undefined, geometry: undefined, disposed: this.stopped };
++        if (!region.disposed) this.textRegions.add(region);
++        return {
++            requestRender: () => {
++                const owner = region.owner;
++                if (!owner || region.disposed || owner.stopped) return;
++                owner.pendingTextRegions.add(region);
++                owner.queueRender();
++            },
++            dispose: () => {
++                region.disposed = true;
++                region.component = undefined;
++                region.path = undefined;
++                region.geometry = undefined;
++                region.owner?.textRegions.delete(region);
++                region.owner?.pendingTextRegions.delete(region);
++                region.owner = undefined;
++            },
++        };
++    }
++    clearTextRegions() {
++        for (const region of this.textRegions) {
++            region.owner = undefined;
++            region.disposed = true;
++            region.component = undefined;
++            region.path = undefined;
++            region.geometry = undefined;
++        }
++        this.textRegions.clear();
++        this.pendingTextRegions.clear();
++        this.normalTextRegionRender = true;
++    }
+     terminal;
+     focusedComponent = null;
+     inputListeners = new Set();
+@@ -583,6 +625,7 @@ export class TuiBase extends Container {
+         return topmost;
+     }
+     invalidate() {
++        this.normalTextRegionRender = true;
+         for (const root of this.getMountedRoots())
+             root.invalidate();
+         for (const overlay of this.overlayStack)
+@@ -637,6 +680,7 @@ export class TuiBase extends Container {
+     }
+     stop(options = {}) {
+         this.stopped = true;
++        this.clearTextRegions();
+         process.off("exit", this.exitRestoreHandler);
+         this.cancelRenderTimer();
+         if (this.terminalColorSchemeNotificationsEnabled) {
+@@ -648,6 +692,7 @@ export class TuiBase extends Container {
+         this.afterTerminalStop(options);
+     }
+     renderNow(force = false) {
++        this.normalTextRegionRender = true;
+         if (force)
+             this.resetRenderState();
+         this.renderRequested = false;
+@@ -656,6 +701,10 @@ export class TuiBase extends Container {
+         this.doRender();
+     }
+     requestRender(force = false) {
++        this.normalTextRegionRender = true;
++        this.queueRender(force);
++    }
++    queueRender(force = false) {
+         if (force) {
+             this.resetRenderState();
+             this.requestImmediateRender();
+@@ -667,6 +716,7 @@ export class TuiBase extends Container {
+         process.nextTick(() => this.scheduleRender());
+     }
+     requestImmediateRender() {
++        this.normalTextRegionRender = true;
+         this.cancelRenderTimer();
+         this.renderRequested = true;
+         if (this.immediateRenderScheduled)

@@ -284,3 +284,43 @@ index 5303aad495d52c05f87dd469ce6f2ca0584a825c..b3d518a144a8dde31143a9d40f0e2984
                  done();
                  await this.handleResumeSession(sessionPath);
              }, () => {
+diff --git a/dist/modes/interactive/tui-renderer.js b/dist/modes/interactive/tui-renderer.js
+index fbdea33717617f6aa1df83fdf5e99ffe55a0cb40..1787c0b1130bb338ecfe556cbd0d817428e8b397 100644
+--- a/dist/modes/interactive/tui-renderer.js
++++ b/dist/modes/interactive/tui-renderer.js
+@@ -37,6 +37,35 @@ export function createInteractiveTui(options) {
+ export function createInteractiveTuiReference(getTui) {
+     return new Proxy({}, {
+         get: (_target, property) => {
++            if (property === "registerTextRegion") {
++                if (typeof getTui().registerTextRegion !== "function") return undefined;
++                return (component) => {
++                    let owner = getTui();
++                    let handle = owner.registerTextRegion(component);
++                    let disposed = false;
++                    return {
++                        requestRender() {
++                            if (disposed) return;
++                            const current = getTui();
++                            if (current !== owner) {
++                                handle?.dispose();
++                                owner = current;
++                                handle = current.registerTextRegion?.(component);
++                            }
++                            if (handle) handle.requestRender();
++                            else if (!current.stopped) current.requestRender();
++                        },
++                        dispose() {
++                            if (disposed) return;
++                            disposed = true;
++                            handle?.dispose();
++                            component = undefined;
++                            owner = undefined;
++                            handle = undefined;
++                        },
++                    };
++                };
++            }
+             const tui = getTui();
+             const value = Reflect.get(tui, property, tui);
+             if (typeof value !== "function")

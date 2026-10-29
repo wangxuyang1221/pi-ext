@@ -8,6 +8,6 @@
     "allowJs": true,
     "checkJs": false
   },
-  "include": ["extensions/**/__tests__/**/*.ts", "test-support/**/*.ts"],
+  "include": ["extensions/**/__tests__/**/*.ts", "test-support/**/*.ts", "examples/**/*.ts"],
   "exclude": ["node_modules", "extensions/**/dist"]
 }

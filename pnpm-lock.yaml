@@ -5,7 +5,8 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@earendil-works/pi-coding-agent@1.4.0': 6a0be1f137f67a61cce799299d2fdc4d25d48cc887ae33569b73678886a151cc
+  '@earendil-works/pi-coding-agent@1.4.0': 71d7f8b213a36b5bbd16941768f13e5bbbe7f712a52bcf0c878731f62588de57
+  '@earendil-works/pi-tui@1.4.0': 7bc347944cf4d76d7f4a106f5ccb34ca13b0873e07adf9bf12957c6bcfa206cb
 
 importers:
 
@@ -26,10 +27,10 @@ importers:
         version: 1.4.0(@aws-sdk/credential-provider-node@3.972.83)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(@smithy/signature-v4@5.7.3)(undici@8.10.2)(ws@8.21.3)(zod@4.4.3)
       '@earendil-works/pi-coding-agent':
         specifier: 1.4.0
-        version: 1.4.0(patch_hash=6a0be1f137f67a61cce799299d2fdc4d25d48cc887ae33569b73678886a151cc)(@aws-sdk/credential-provider-node@3.972.83)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.4.3)
+        version: 1.4.0(patch_hash=71d7f8b213a36b5bbd16941768f13e5bbbe7f712a52bcf0c878731f62588de57)(@aws-sdk/credential-provider-node@3.972.83)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.4.3)
       '@earendil-works/pi-tui':
         specifier: 1.4.0
-        version: 1.4.0
+        version: 1.4.0(patch_hash=7bc347944cf4d76d7f4a106f5ccb34ca13b0873e07adf9bf12957c6bcfa206cb)
       '@secretlint/core':
         specifier: 13.1.0
         version: 13.1.0
@@ -1709,13 +1710,13 @@ snapshots:
     dependencies:
       quickjs-wasi: 3.6.2
 
-  '@earendil-works/pi-coding-agent@1.4.0(patch_hash=6a0be1f137f67a61cce799299d2fdc4d25d48cc887ae33569b73678886a151cc)(@aws-sdk/credential-provider-node@3.972.83)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.4.3)':
+  '@earendil-works/pi-coding-agent@1.4.0(patch_hash=71d7f8b213a36b5bbd16941768f13e5bbbe7f712a52bcf0c878731f62588de57)(@aws-sdk/credential-provider-node@3.972.83)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(@smithy/signature-v4@5.7.3)(ws@8.21.3)(zod@4.4.3)':
     dependencies:
       '@earendil-works/pi-agent-core': 1.4.0(@aws-sdk/credential-provider-node@3.972.83)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(@smithy/signature-v4@5.7.3)(undici@8.10.2)(ws@8.21.3)(zod@4.4.3)
       '@earendil-works/pi-ai': 1.4.0(@aws-sdk/credential-provider-node@3.972.83)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(@smithy/signature-v4@5.7.3)(undici@8.10.2)(ws@8.21.3)(zod@4.4.3)
       '@earendil-works/pi-codemode': 1.4.0
       '@earendil-works/pi-mcp': 1.4.0
-      '@earendil-works/pi-tui': 1.4.0
+      '@earendil-works/pi-tui': 1.4.0(patch_hash=7bc347944cf4d76d7f4a106f5ccb34ca13b0873e07adf9bf12957c6bcfa206cb)
       '@silvia-odwyer/photon-node': 0.3.4
       brace-expansion: 5.0.12
       chalk: 6.0.0
@@ -1751,7 +1752,7 @@ snapshots:
 
   '@earendil-works/pi-telemetry@1.4.0': {}
 
-  '@earendil-works/pi-tui@1.4.0':
+  '@earendil-works/pi-tui@1.4.0(patch_hash=7bc347944cf4d76d7f4a106f5ccb34ca13b0873e07adf9bf12957c6bcfa206cb)':
     dependencies:
       get-east-asian-width: 1.6.0
       marked: 18.0.11
