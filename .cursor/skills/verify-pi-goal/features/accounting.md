@@ -26,7 +26,7 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run goal-accounting`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui goal`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 运行真实宿主 accounting 四个入口，检查 root/direct-child receipts、恢复去重、暂停 baseline 和终态。核对 input+output+cacheWrite，排除 cacheRead，缺失 usage 警告；预算允许超出后收尾但不新开自动轮次。
+3. 运行 [驱动表](../DRIVERS.md) 的 `accounting root`、`accounting child`、四个 budget 参数、`matrix freeze` 与 `matrix time`。共享 `goal-accounting` 补齐各 adapter、去重和 child baseline；区分实际 TUI、真实 SDK 与单元层级。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash

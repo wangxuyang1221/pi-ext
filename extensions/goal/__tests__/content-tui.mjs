@@ -17,11 +17,13 @@ globalThis.fetch = async () => { networkAttempts++; throw new Error("Network dis
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAI0lEQVR4nGPk0Y1iIAUwkaSaYVQDcYCJSHVwMKqBGEByKAEA9NsAs1GX4RQAAAAASUVORK5CYII=", "base64");
 // Intercept every native clipboard operation before InteractiveMode loads. No
 // real clipboard method can run, including unexpected text fallback or copy.
-const { clipboard } = await import(pathToFileURL(join(packageRoot, "dist/utils/clipboard-native.js")).href);
+const { getNativeClipboard } = await import("@earendil-works/pi-tui");
+const clipboard = getNativeClipboard();
 assert.ok(clipboard, "Native clipboard test adapter must be available");
 for (const name of Object.keys(clipboard)) if (typeof clipboard[name] === "function") clipboard[name] = () => { throw new Error(`Forbidden real clipboard operation: ${name}`); };
-clipboard.hasImage = () => true;
-clipboard.getImageBinary = async () => { log("fixture_clipboard_image"); return png; };
+clipboard.getFilePaths = async () => [];
+clipboard.getText = async () => null;
+clipboard.getImage = async () => { log("fixture_clipboard_image"); return png; };
 const sdk = await import(pathToFileURL(join(packageRoot, "dist/index.js")).href);
 const ai = await import(pathToFileURL(resolve(packageRoot, "../pi-ai/dist/index.js")).href);
 const { registerGoal } = await import("../dist/index.js");
@@ -43,6 +45,7 @@ let originalEditor;
 let originalFooter;
 const observer = pi => {
   registerGoal(pi, store);
+  pi.on("context", event => log("request", { messages: event.messages }));
   pi.on("session_start", (_event, ctx) => log("ready", { version, codex, phase, mode: ctx.mode }));
   pi.on("agent_settled", () => log("settled", { calls: faux.state.callCount }));
   pi.registerCommand("probe-begin", { description: "Record original UI components", handler: async (_args, ctx) => {

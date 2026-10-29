@@ -1,0 +1,33 @@
+import {appendFileSync,writeFileSync,readFileSync,mkdirSync} from 'node:fs';
+import {join,resolve} from 'node:path';
+import * as sdk from '@earendil-works/pi-coding-agent';
+import * as ai from '@earendil-works/pi-ai';
+import {registerGoal} from '../dist/index.js';
+import {GoalStore} from '../dist/storage.js';
+const root=process.env.GOAL_AUDIT_ROOT;
+const phase=process.env.AUDIT_PHASE ?? 'create';
+const log=(event,data={})=>appendFileSync(join(root,`events-${phase}.jsonl`),JSON.stringify({event,...data})+'\n');
+let networkAttempts=0;
+globalThis.fetch=async()=>{networkAttempts++;throw new Error('Network forbidden');};
+const agentDir=join(root,'agent');mkdirSync(agentDir,{recursive:true});
+const store=new GoalStore(join(root,'goals'));
+const faux=ai.fauxProvider({provider:'openai-codex',tokensPerSecond:100000});
+const next=()=>faux.setResponses([ai.fauxAssistantMessage({type:'toolCall',name:'update_goal',arguments:{status:'paused'},id:`pause-${Date.now()}`},{stopReason:'toolUse'}),ai.fauxAssistantMessage('AUDIT_HISTORY_RESPONSE')]);
+next();
+const modelRuntime=await sdk.ModelRuntime.create({credentials:new ai.InMemoryCredentialStore(),modelsStore:new ai.InMemoryModelsStore(),modelsPath:null,allowModelNetwork:false,refreshOnCreate:false});
+modelRuntime.registerNativeProvider(faux.provider);
+const factory=async({cwd,sessionManager,sessionStartEvent})=>{
+ const services=await sdk.createAgentSessionServices({cwd,agentDir,modelRuntime,settingsManager:sdk.SettingsManager.inMemory({compaction:{enabled:false},retry:{enabled:false}}),resourceLoaderOptions:{noExtensions:true,noSkills:true,noThemes:true,noPromptTemplates:true,noContextFiles:true,systemPromptOverride:()=> 'Offline audit fixture.',extensionFactories:[pi=>{
+ registerGoal(pi,store);
+ pi.on('session_start',(_,ctx)=>log('ready',{sessionId:ctx.sessionManager.getSessionId(),phase}));
+ pi.on('agent_settled',async(_,ctx)=>log('settled',{calls:faux.state.callCount,records:await store.records()}));
+ pi.on('context',event=>log('context',{messages:event.messages}));
+ pi.registerCommand('audit-snapshot',{description:'Observe persisted state',handler:async(label,ctx)=>{log('snapshot',{label,sessionId:ctx.sessionManager.getSessionId(),sessionFile:ctx.sessionManager.getSessionFile(),records:await store.records(),calls:faux.state.callCount,networkAttempts});ctx.ui.notify(`AUDIT_SNAPSHOT ${label}`,'info');}});
+ pi.registerCommand('audit-next',{description:'Seed the next offline provider response',handler:async()=>{next();log('seed');}});
+ pi.registerCommand('audit-exit',{description:'Save session path and exit',handler:async(_,ctx)=>{writeFileSync(join(root,'session.json'),JSON.stringify({sessionFile:ctx.sessionManager.getSessionFile()}));log('exit',{networkAttempts,calls:faux.state.callCount});ctx.shutdown();}});
+ }]}});
+ return {...await sdk.createAgentSessionFromServices({services,sessionManager,sessionStartEvent,model:faux.getModel(),tools:['read','bash','get_goal','create_goal','update_goal']}),services,diagnostics:services.diagnostics};
+};
+const manager=phase.startsWith('reopen')?sdk.SessionManager.open(JSON.parse(readFileSync(join(root,'session.json'),'utf8')).sessionFile,join(root,'sessions')):sdk.SessionManager.create(root,join(root,'sessions'));
+const runtime=await sdk.createAgentSessionRuntime(factory,{cwd:root,agentDir,sessionManager:manager});
+await new sdk.InteractiveMode(runtime,{migratedProviders:[]}).run();

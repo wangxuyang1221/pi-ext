@@ -5,7 +5,7 @@ description: "Verify pi-ext skill-mentions through Pi TUI inline $skill completi
 
 # Verify Pi skill-mentions
 
-先读 [行为索引](features/README.md)，按本次变更选择所有受影响入口。skills helper 通过本地 pi install 加载当前 checkout 的 dist，不做 pnpm 发布包安装；发布 tarball 另跑 skill-mentions:acceptance。
+先读 [行为索引](features/README.md)，按本次变更选择所有受影响入口。以下固定驱动均在仓库中维护，不依赖历史审计目录。
 
 ## Launch
 
@@ -18,7 +18,20 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs doctor
 pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills
 ```
 
-这是短生命周期验证。helper 创建空配置、会话和临时目录，驱动真实宿主，并在退出前清理。就绪条件是驱动观察到资源加载完成或匹配的 TUI 提示，再执行断言，不是进程成功启动。人工补充路径用 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui skill-mentions`，须通过工具的 PTY 模式运行；使用说明和限制见共享文档。
+这是最小 native 验收，通过本地 pi install 加载当前 dist。完整索引还需顺序执行：
+
+若依赖和 dist 已备好，且本次禁止安装或构建，先读 [loading](features/loading.md)、[history](features/history.md) 和 [integration](features/integration.md)，改用 `run skills-combination-prebuilt` 与 `run skills-resume`。前者直接加载 dist，后者实际从菜单选中旧会话并续问。下面的 `skills-combination`、`skills-unreadable` 和安装验收仍会执行本地安装，不能用“未安装依赖”代替“未执行 pi install”。
+
+```bash
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills-resume
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills-combination
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills-unreadable
+pnpm run skill-mentions:acceptance
+```
+
+变更请求快照读取或保存时，再执行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills-mutation`。它在仓库内私有副本编译 baseline、按路径缓存变异和恢复版本，用同一组合旅程验证第二次请求必须读取 V2；生产源码及 dist 保持原样。三个阶段、期望失败位置和源码哈希都必须留证。
+
+helper 创建空配置、会话和临时目录，等待资源加载或匹配的 TUI 提示后断言，退出前核对所启动进程。人工补充路径用 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui skill-mentions`，须通过工具的 PTY 模式运行；使用说明和限制见共享文档。
 
 ## Doctor
 
@@ -36,7 +49,9 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills
 
 ## Evidence
 
-记录 feature ID、入口、命令/按键、前后状态、实际文件或会话副作用。helper 在 `.tmp/test-results/verify-<case>-<id>/` 保留 `summary.json`、`output.log` 和可用的 `artifacts/`；命令 PTY 另有 `journey.json`、`terminal.ansi` 与隔离文件副本。共享说明定义证据边界。一次 smoke 不能作为整个行为索引通过。
+记录 feature ID、入口、命令/按键、前后状态、实际文件或会话副作用。helper 在 `.tmp/test-results/verify-<case>-<id>/` 保留 `summary.json`、`output.log` 和可用的 `artifacts/`。`journeys.mjs` 输出唯一证据目录，可用第二个参数指定新的仓库内 `.tmp` 目录；保留 commands、summary、逐键 actions、完整 ANSI/provider events 与 session 副本。发布包保留五模式结果、消费 lock 及其哈希。共享说明定义证据边界。一次 smoke 不能作为整个行为索引通过。
+
+自动完整路径仍缺少真实终端拖选复制，`skill-selection` 整体保持 unverified，并单列整体删除已通过。按 [人工步骤](features/labels.md#manual-terminal-selection) 取得剪贴板证据后才可改为 passed。CLI/PTY、离线 provider 和本地 MCP 不证明真实模型服务、物理字体或 IME。
 
 ## Cleanup
 

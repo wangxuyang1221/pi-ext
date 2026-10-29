@@ -5,7 +5,7 @@ description: "Verify pi-ext codex-compact through Pi TUI /compact and /codex-met
 
 # Verify Pi codex-compact
 
-先读 [行为索引](features/README.md)，按本次变更选择所有受影响入口。压缩要求 provider/API 同时为 `openai-codex` / `openai-codex-responses`。配置命令使用 faux CLI；本 skill 的专用 PTY 驱动使用真实 Codex adapter 和生产扩展，以固定服务响应验收压缩、取消及重启续聊。线上接受性和摘要质量需要另行实跑。
+先读 [行为索引](features/README.md)，按本次变更选择所有受影响入口。压缩要求 provider/API 同时为 `openai-codex` / `openai-codex-responses`。配置命令使用 faux CLI；专用 PTY 使用真实 CLI、Codex adapter 和生产扩展，以固定服务响应验收客户端行为。[场景配方](journeys.md) 提供可重复的组合、自动压缩、选择器和旧历史命令。线上接受性和摘要质量需要另行实跑。
 
 ## Launch
 
@@ -39,7 +39,9 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run metadata
 conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-compact/scripts/compact-pty.py .tmp/compact-pty-proof
 ```
 
-它通过实际默认 CLI 提交长文本和图片、输入 `/compact`、核对原生卡片和成功提示、新增一轮对话后在压缩等待中按 Esc，再退出并用 `--session` 冷启动继续请求。`/fixture-history` 仅负责经 `pi.sendUserMessage` 提交固定文本和 PNG，不替换生产的输入转换、压缩和历史恢复逻辑。模型目录、普通回复及压缩 SSE 是内存响应，不启动 HTTP server；synthetic checkpoint 仅用于验证客户端转发，不能用于线上续聊。驱动不读取真实凭据，拒绝未预期的 fetch 地址，并强制普通请求使用 SSE。
+省略第二参数运行 `combination`。它先完成手动压缩、Esc 取消、metadata 保存/reset 和重试，再用同进程 `/new` → `/resume` 搜索选择旧会话、调用工具、添加工具声明和更新系统提示，最后退出并以 `--session` 冷启动续聊。`/resume` 选择器和冷启动分别留存动作、画面及后续实际请求。
+
+`/fixture-history` 经 `pi.sendUserMessage` 提交固定文本和 PNG；`fixture_read` 返回固定工具内容并注册一个新工具，用于观察真实宿主的工具执行和系统声明更新。它们不替换生产的输入转换、压缩和历史恢复逻辑。模型目录、普通回复及压缩 SSE 是内存响应，不启动 HTTP server；synthetic checkpoint 仅用于验证客户端转发，不能用于线上续聊。驱动不读取真实凭据，拒绝未预期的 fetch 地址，并强制普通请求使用 SSE。
 
 ## Evidence
 
@@ -59,4 +61,4 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 pnpm exec node .cursor/skills/verify-pi-codex-compact/scripts/check-metadata.mjs <evidence-directory>
 ```
 
-它检查当前通知中的完整版本、来源及 Usage 尾行，避免旧通知的 Usage 被误当成当前绘制完成。`compact-pty.py`、`check-metadata.mjs` 为可执行入口，[transport.mjs](scripts/transport.mjs) 仅由专用 PTY 加载。SDK 补充入口仍是共享 `run compact`，源码与其他 case 见 [共享 helper](../verify-pi-ext/scripts/verify.mjs)。后续使用 `/maintain-verification-skill` 同步行为索引与实现。
+它检查当前通知中的完整版本、来源及 Usage 尾行，避免旧通知的 Usage 被误当成当前绘制完成。`compact-pty.py`、`check-metadata.mjs` 为可执行入口，[transport.mjs](scripts/transport.mjs) 和 [seed-legacy.mjs](scripts/seed-legacy.mjs) 仅由专用 PTY 加载。场景参数、断言范围和未覆盖分支见 [场景配方](journeys.md)。SDK 补充入口仍是共享 `run compact`，源码与其他 case 见 [共享 helper](../verify-pi-ext/scripts/verify.mjs)。后续使用 `/maintain-verification-skill` 同步行为索引与实现。

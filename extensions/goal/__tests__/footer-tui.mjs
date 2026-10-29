@@ -5,7 +5,8 @@ import { spawn } from "node:child_process";
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, "../../..");
 await mkdir(join(repo, ".tmp"), { recursive: true });
-const root = await mkdtemp(join(repo, ".tmp/goal-footer-"));
+const root = process.env.GOAL_FOOTER_EVIDENCE ? join(process.env.GOAL_FOOTER_EVIDENCE, "fixture") : await mkdtemp(join(repo, ".tmp/goal-footer-"));
+await mkdir(root, { recursive: true });
 const workspace = join(root, "workspace");
 const agent = join(root, "agent");
 const sessions = join(root, "sessions");
@@ -28,9 +29,10 @@ try {
     "--session", session.getSessionFile(), "--session-dir", sessions, "--provider", "openai", "--model", "gpt-4.1", "--api-key", "offline-fixture",
     "--tui-mode", process.argv.includes("--fullscreen") ? "fullscreen" : "regular",
   ], { cwd: workspace, env, stdio: "inherit" });
+  await writeFile(join(root, "pid.txt"), String(child.pid));
   for (const signal of ["SIGTERM", "SIGHUP", "SIGINT"]) { const handler = () => child.kill(signal); handlers.set(signal, handler); process.on(signal, handler); }
   process.exitCode = await new Promise((resolveExit, reject) => { child.once("error", reject); child.once("exit", code => resolveExit(code ?? 1)); });
 } finally {
   for (const [signal, handler] of handlers) process.off(signal, handler);
-  await rm(root, { recursive: true, force: true });
+  if (!process.env.GOAL_FOOTER_EVIDENCE) await rm(root, { recursive: true, force: true });
 }

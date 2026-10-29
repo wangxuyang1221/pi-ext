@@ -25,8 +25,9 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run codex-ui`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui codex-ui`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 运行 codemode PTY 后观察整体布局与 resize；隔离 TUI 检查 user Markdown、回复外层列表、model/cwd/permissions footer。保存 theme=codex-pi 后在 session replacement 重新检查；/copy 保留原文而非渲染标记。
-4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
+3. 按 [正式旅程](../scripts/README.md#run) 运行 `cli.py regular` 与 `cli.py fullscreen`。驱动通过原生设置菜单选择 light/codex-pi，逐列断言输入行背景，在 40/80/140 列和原生 fork/resume 后复验；实际加载 fast/permissions 检查 footer 组合。Markdown 通过 bracketed paste 进入真正模型请求与 session，同时保存 TUI 渲染画面。主题设置落盘与 composer 的 codex-pi 颜色必须同时成立。
+4. `ui-composer` 的像素与拖选、`ui-reply-markdown` 的系统 `/copy` 仍须执行 [人工边界](../scripts/README.md#manual-boundaries)。未执行时明确写出这些 ID 的自动通过部分及整体 unverified。
+5. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash
 pnpm test extensions/codex-ui/__tests__/layout.test.ts extensions/codex-ui/__tests__/theme.test.ts extensions/codex-ui/__tests__/user-markdown.test.ts extensions/codex-ui/__tests__/reply-markdown.test.ts

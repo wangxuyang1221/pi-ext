@@ -12,6 +12,7 @@ import {
 	NATIVE_COMPACTION_BYPASS_KIND,
 	NATIVE_COMPACTION_BYPASS_VERSION,
 	createBranchInputSnapshot,
+	createCheckpointReplayProjection,
 	compactionInputPlan,
 	appendPreservedInput,
 	effectiveInputForBranch,
@@ -33,6 +34,7 @@ import {
 	type ResponseItem,
 	type RequestProjectionPolicy,
 	type InputViewOptions,
+	type CheckpointReplayProjection,
 } from "./native-compaction.js";
 
 export type ModelSelectLike = {
@@ -48,6 +50,7 @@ export type CheckpointFactory = (params: {
 	input: ReturnType<typeof effectiveInputForBranch>;
 	protectedInput?: ResponseItem[];
 	replayContextWindow?: number;
+	projectReplay?: CheckpointReplayProjection;
 	basePayload?: JsonObject;
 	signal?: AbortSignal;
 	compactionHashes: CompactionHashSnapshot;
@@ -560,6 +563,12 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 	let generation = 0;
 	const requestSnapshot = (branch: SessionEntry[], tools: ReturnType<SessionCoordinatorDeps["getAllTools"]>, continuity?: RequestContinuity) =>
 		createBranchInputSnapshot({ branch, tools, projectionPolicy: continuity?.projectionPolicy });
+	const replayProjection = (ctx: ExtensionContext, model: Model<any>, branch: SessionEntry[], protectedInput: ResponseItem[],
+		basePayload: JsonObject | undefined, requestInput: ResponseItem[] | undefined, continuity?: RequestContinuity) =>
+		createCheckpointReplayProjection({ branch, model, protectedInput,
+			tools: toolsWithRequestFormats(continuity?.tools ?? deps.getAllTools(), basePayload, requestInput),
+			projectionPolicy: continuity?.projectionPolicy,
+			fallbackInstructions: typeof basePayload?.instructions === "string" ? basePayload.instructions : ctx.getSystemPrompt() });
 	const ensureCurrent = (ctx: ExtensionContext, targetModelKey: string, startGeneration: number, signal?: AbortSignal): void => {
 		ensureNotAborted(signal);
 		if (generation !== startGeneration || (ctx.model && modelKey(ctx.model) !== targetModelKey)) {
@@ -757,13 +766,15 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			const currentRequest = resolveRequest(ctx, snapshot, requestInput, previousModel, currentModel, systemPromptItems(ctx, currentModel), continuity, operationSignal);
 			const options = { excludeEntryId: currentRequest?.kind === "branch" ? currentRequest.entryId : undefined, excludeEntryIds: currentRequest?.excludeEntryIds, allowCheckpointModelMismatch: true, excludeLastAssistantError };
 			const input = historyForRequest(snapshot, previousModel, currentRequest, options);
+			const protectedInput = currentRequest ? currentRequest.suffix ?? [currentRequest.item] : continuity?.requestSuffix ?? [];
+			const projectReplay = replayProjection(ctx, currentModel, branch, protectedInput, basePayload, requestInput, continuity);
 			let native: Awaited<ReturnType<CheckpointFactory>>;
 			try {
 				native = await deps.createCheckpoint({
 					ctx,
 					model: previousModel,
 					input,
-					protectedInput: currentRequest ? currentRequest.suffix ?? [currentRequest.item] : continuity?.requestSuffix ?? [],
+					protectedInput, projectReplay,
 					replayContextWindow: currentModel.contextWindow,
 					basePayload,
 					signal: operationSignal,
@@ -781,7 +792,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 						ctx,
 						model: currentModel,
 						input: historyForRequest(snapshot, currentModel, currentRequest, options),
-						protectedInput: currentRequest ? currentRequest.suffix ?? [currentRequest.item] : continuity?.requestSuffix ?? [],
+						protectedInput, projectReplay,
 						replayContextWindow: currentModel.contextWindow,
 						basePayload,
 						signal: operationSignal,
@@ -851,11 +862,13 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			const leafId = conversationLeafId(branch);
 			const snapshot = requestSnapshot(branch, toolsWithRequestFormats(continuity?.tools ?? deps.getAllTools(), basePayload, requestInput), continuity);
 			const currentRequest = resolveRequest(ctx, snapshot, requestInput, model, model, systemPromptItems(ctx, model), continuity, operationSignal);
+			const protectedInput = currentRequest ? currentRequest.suffix ?? [currentRequest.item] : continuity?.requestSuffix ?? [];
 			const native = await deps.createCheckpoint({
 				ctx,
 				model,
 				input: historyForRequest(snapshot, model, currentRequest, { excludeLastAssistantError }),
-				protectedInput: currentRequest ? currentRequest.suffix ?? [currentRequest.item] : continuity?.requestSuffix ?? [],
+				protectedInput,
+				projectReplay: replayProjection(ctx, model, branch, protectedInput, basePayload, requestInput, continuity),
 				basePayload,
 				signal: operationSignal,
 				compactionHashes: hashes,
@@ -1142,6 +1155,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 							model,
 							input: currentHistory,
 							protectedInput,
+							projectReplay: replayProjection(ctx, model, branch, protectedInput, basePayload, requestInput, continuity),
 							basePayload,
 							signal: requestSignal,
 							compactionHashes: hashes,
@@ -1338,11 +1352,14 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			const pending = transitionBySession.get(sessionId);
 			if (pending) await pending;
 			assertCurrent();
-			const snapshot = createBranchInputSnapshot({ branch, tools,
-				projectionPolicy: policy ? { hiddenNames: new Set(policy.hiddenTools), ...(policy.forcedPrompt !== undefined ? { forcedPrompt: policy.forcedPrompt } : {}) } : observed?.policy });
+			const projectionPolicy = policy ? { hiddenNames: new Set(policy.hiddenTools), ...(policy.forcedPrompt !== undefined ? { forcedPrompt: policy.forcedPrompt } : {}) } : observed?.policy;
+			const snapshot = createBranchInputSnapshot({ branch, tools, projectionPolicy });
 			const plan = compactionInputPlan(snapshot, model, { excludeLastAssistantError });
 			const wire = snapshot.view(model, "effective", { allowCheckpointModelMismatch: true, excludeLastAssistantError });
-			return { ...plan, assertCurrent, basePayload: { ...basePayload, instructions: typeof observed?.payload.instructions === "string" ? observed.payload.instructions : wire.instructions || prompt,
+			return { ...plan, assertCurrent,
+				projectReplay: createCheckpointReplayProjection({ branch, model: modelSnapshot, tools, projectionPolicy,
+					protectedInput: plan.preservedInput, fallbackInstructions: prompt }),
+				basePayload: { ...basePayload, instructions: typeof observed?.payload.instructions === "string" ? observed.payload.instructions : wire.instructions || prompt,
 				tools: observed ? (Array.isArray(observed.payload.tools) ? observed.payload.tools : []) : wire.tools ?? [] } };
 		},
 	};

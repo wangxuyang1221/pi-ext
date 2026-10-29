@@ -49,7 +49,7 @@ const factory = async ({ cwd, sessionManager, sessionStartEvent }) => {
         pi.on("agent_settled", async () => { log("settled", { settledCount: ++settledCount, goal: (await store.records())[0]?.goal, calls: fixture.calls() }); });
         pi.registerCommand("budget-exit", { description: "Exit isolated budget acceptance", handler: async (_args, ctx) => {
           const goal = (await store.records())[0]?.goal;
-          log("result", { version, scenario, goal, calls: fixture.calls(), readyCount, networkAttempts, messages: ctx.sessionManager.getEntries() });
+          log("result", { version, scenario, goal, calls: fixture.calls(), readyCount, networkAttempts, requests: fixture.requests, messages: ctx.sessionManager.getEntries() });
           assert.equal(networkAttempts, 0);
           ctx.shutdown();
         } });

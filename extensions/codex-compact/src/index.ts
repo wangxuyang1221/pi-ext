@@ -239,7 +239,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 			if (presentation) clearRemoteCompactionPresentation(sessionId, presentation);
 		}
 	};
-	const createCheckpoint = (params: Pick<NativeCheckpointRequest, "ctx" | "model" | "input" | "basePayload" | "signal" | "protectedInput" | "replayContextWindow"> & { compactionHashes: CompactionHashSnapshot }) => {
+	const createCheckpoint = (params: Pick<NativeCheckpointRequest, "ctx" | "model" | "input" | "basePayload" | "signal" | "protectedInput" | "replayContextWindow" | "projectReplay"> & { compactionHashes: CompactionHashSnapshot }) => {
 		const lifecycleGenerationAtStart = lifecycleGeneration;
 		const sessionId = params.ctx.sessionManager.getSessionId();
 		let basePayload = params.basePayload ?? basePayloadBySession.get(sessionId);
@@ -509,7 +509,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 					const compactionHashes = await resolveCompactionHashes(ctx, model, operationSignal);
 					if (lifecycleGeneration !== lifecycleGenerationAtStart || operationSignal.aborted) return { cancel: true };
 					plan.assertCurrent?.();
-					native = await createCheckpoint({ ctx, model, input, protectedInput: plan.preservedInput, basePayload: plan.basePayload, signal: operationSignal, compactionHashes });
+					native = await createCheckpoint({ ctx, model, input, protectedInput: plan.preservedInput, projectReplay: plan.projectReplay, basePayload: plan.basePayload, signal: operationSignal, compactionHashes });
 					plan.assertCurrent?.();
 				} catch (error) {
 					if (lifecycleGeneration !== lifecycleGenerationAtStart || operationSignal.aborted) return { cancel: true };

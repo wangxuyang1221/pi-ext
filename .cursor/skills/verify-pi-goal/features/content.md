@@ -24,7 +24,7 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run goal`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui goal`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 在同一次隔离 TUI 用括号粘贴输入长目标，暂停后 /goal edit 检查完整正文；从该次 Pi 临时目录创建合法 pi-clipboard 图片，分别选择 Copy attachment、Keep as text、Cancel。读取 goals/content 与权威引用，删除临时源后附件仍可用。
+3. 运行 [驱动表](../DRIVERS.md) 的 `content` 两种 UI、`matrix content-select` 与 `matrix content-validation`。逐次核对选择器分支、旧包保留、临时源删除后读取、保存失败后的原目标。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash

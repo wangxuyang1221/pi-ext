@@ -21,10 +21,17 @@ Preconditions:
 - 已完成 [Launch 与 Doctor](../SKILL.md)，没有其他运行占用验证锁。
 - fast footer 只表示请求 priority，不证明服务端使用了 priority 或响应更快。
 
-1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run subagent`。保存返回的 evidence 路径并核对退出码。
-2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui openai-fast-mode`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 运行真实 root/child 验收，读取 fast-source.json 与 fast-dist.json 中的请求 payload。补跑定向测试核对 openai 精确名单、openai-codex 任意模型、非目标模型及明确 unsupported 后仅当前会话当前模型停止注入。
-4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
+1. 运行 `pnpm exec node .cursor/skills/verify-pi-openai-fast-mode/scripts/verify.mjs full`。provider 种子、实际终端输入和期望值见 [request journey](../scripts/README.md)。
+2. 对照 journey 的 checks、events 和相应画面逐项核对下表。不能从零退出码单独判定通过。
+3. 运行共享 `run subagent`，补充不同 child/session 的拒绝隔离。读取 evidence 的 fast-source.json、fast-dist.json 请求和 checkpoint。最后按需运行下列定向测试定位错误。
+
+| ID | Required observation |
+| --- | --- |
+| fast-openai | 七个当前默认名单逐次通过真实 `/model` 选择并发送 priority 请求 |
+| fast-codex | 两个任意 Codex ID 和 managed child 均注入 priority |
+| fast-unmatched | 相似 OpenAI ID、第三方同名 ID 无字段；切回匹配模型恢复 |
+| fast-unsupported | 明确 unsupported 请求失败并提示用户重试；无自动重放；用户重试仅一个标准请求 |
+| fast-error-scope | 被拒模型切走切回、off/on 后仍标准；其他模型和 sibling 仍 priority；普通 400 不禁用；新 session 恢复 priority；配置仍 true |
 
 ```bash
 pnpm test extensions/openai-fast-mode/__tests__/payload-status.test.ts extensions/openai-fast-mode/__tests__/extension.test.ts
@@ -34,6 +41,6 @@ pnpm test extensions/openai-fast-mode/__tests__/payload-status.test.ts extension
 
 ## Gotchas
 
-subagent helper 使用合成 provider 记录 payload。不能据此声称真实 OpenAI 服务采用了 priority；模糊网络或认证错误不得禁用 Fast。
+两个入口均使用真实 request builder，在 fetch 边界记录序列化 payload 并返回固定离线响应。它们证明本地发出的字段与错误处理，不证明远端采用 priority、billing 或性能。模糊网络与认证错误的文案矩阵由定向测试补充，远程错误实测另记层级。
 
 验收依据为 [payload-status.test.ts](../../../../extensions/openai-fast-mode/__tests__/payload-status.test.ts)、[extension.test.ts](../../../../extensions/openai-fast-mode/__tests__/extension.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

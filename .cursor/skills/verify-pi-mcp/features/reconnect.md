@@ -17,24 +17,10 @@
 
 ## Driving it with Pi PTY and host fixtures
 
-Preconditions:
-
-- 已完成 [Launch 与 Doctor](../SKILL.md)，没有其他运行占用验证锁。
-- --live 在这里表示真实本地 stdio MCP server，不使用用户的远程服务或凭据。
-
-1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run mcp-transports`。保存返回的 evidence 路径并核对退出码。
-2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui mcp`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 在本地故障夹具中触发连接错误、工具已发送后断线、timeout 与 cancel，检查 request 计数；默认 toolReplay=never 不重放。手动 reconnect 取消旧 generation；reload 后旧 timer/request 不再活动。
-4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
-
-```bash
-pnpm test extensions/mcp/__tests__/retry.test.ts extensions/mcp/__tests__/resilience-baseline.test.ts extensions/mcp/__tests__/client.test.ts
-```
-
-证据必须同时写明本次运行实际覆盖哪些 ID，以及剩余 ID 的状态。
+完成 [Launch 与 Doctor](../SKILL.md)，运行 [固定旅程的命令](../journeys.md#commands)，选择 `reload 与 recovery.mjs`。具体动作和通过条件见 [对应旅程](../journeys.md#reload)。每个 ID 分别记录实际覆盖结果、证据层级和文件路径；需要完整验收时运行固定旅程的全部六条命令及列出的定向协议测试。
 
 ## Gotchas
 
-通用 mock manager 单测不足以证明网络取消；需 transports 本地实际连接与服务端计数。认证/协议错误不可当暂时故障重试。
+`/mcp reload` 先等待空闲。活动调用正常完成后才 reload，或先按 Escape 取消再 reload；取消不能归因于 reload。固定旅程分别验证两条路径。后台 retry、真实 HTTP 退避和全阶段总截止见 [协议旅程](../journeys.md#real-http-recovery)。
 
 验收依据为 [retry.test.ts](../../../../extensions/mcp/__tests__/retry.test.ts)、[resilience-baseline.test.ts](../../../../extensions/mcp/__tests__/resilience-baseline.test.ts)、[client.test.ts](../../../../extensions/mcp/__tests__/client.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

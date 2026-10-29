@@ -5,7 +5,6 @@ import {
 	buildCodexHeaders,
 	buildCompactionRequestBody,
 	retainRecentMessages,
-	approximateResponseItemTokens,
 	buildToolPayload,
 	callRemoteCompaction,
 	loadedToolNamesFromItems,
@@ -18,6 +17,7 @@ import {
 	type JsonObject,
 	type NativeCompactionDetails,
 	type ResponseItem,
+	type CheckpointReplayProjection,
 } from "./native-compaction.js";
 
 const DEFAULT_CODEX_BASE_URL = "https://chatgpt.com/backend-api";
@@ -36,6 +36,8 @@ export type NativeCheckpointRequest = {
 	/** Request-owned suffix excluded from remote history, but included in the final capacity budget. */
 	protectedInput?: ResponseItem[];
 	replayContextWindow?: number;
+	/** Frozen budget-only projection using the replay model's declarations and prompt. */
+	projectReplay?: CheckpointReplayProjection;
 	basePayload?: JsonObject;
 	turnState?: string;
 	onTurnState?: (turnState: string) => void;
@@ -143,20 +145,24 @@ export async function createNativeCheckpoint(params: NativeCheckpointRequest): P
 		signal: params.signal,
 		onTurnState: params.onTurnState,
 	});
-	const fixedTokens = approximateCompactionRequestTokens({ input: [remote.compactionItem, ...(params.protectedInput ?? [])], instructions, tools });
+	const replayTokens = (retained: ResponseItem[]) => approximateCompactionRequestTokens(params.projectReplay
+		? params.projectReplay([...retained, remote.compactionItem])
+		: { input: [...retained, remote.compactionItem, ...(params.protectedInput ?? [])], instructions, tools });
+	const fixedTokens = replayTokens([]);
 	const replayWindow = effectiveContextWindow(config, params.replayContextWindow ?? params.model.contextWindow);
 	let budget = Math.max(0, Math.min(64_000, replayWindow - fixedTokens));
 	let retained = retainRecentMessages(input, budget);
-	if (fixedTokens + approximateResponseItemTokens(retained) > replayWindow) {
-		// Truncation markers and wire structure are not part of the retention text budget.
+	if (replayTokens(retained) > replayWindow) {
+		// Restored declarations, truncation markers and protected input all consume replay capacity.
 		// Search at most log2(64001) steps, retaining only candidates that fit the final estimator.
+		// An oversized fixed projection remains intact when no optional history can fit.
 		let low = 0;
 		let high = budget;
 		retained = [];
 		while (low < high) {
 			budget = Math.ceil((low + high) / 2);
 			const candidate = retainRecentMessages(input, budget);
-			if (fixedTokens + approximateResponseItemTokens(candidate) <= replayWindow) { low = budget; retained = candidate; }
+			if (replayTokens(candidate) <= replayWindow) { low = budget; retained = candidate; }
 			else high = budget - 1;
 		}
 	}

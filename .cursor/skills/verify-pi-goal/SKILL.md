@@ -26,7 +26,7 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run goal
 
 ## Drive
 
-运行共享 helper 以外的旧 runtime/PTY 驱动前，先读 [Pi 1.4.0 驱动兼容性](DRIVER-COMPATIBILITY.md)，区分接口/种子问题与产品回归，保留原始失败和适配证据。
+受影响的完整旅程使用 [维护中的 TUI 驱动](DRIVERS.md)。按该表运行所有对应参数组合，并保存每个命令返回的唯一证据目录。共享 `run goal` 仅为最小工具 smoke，不覆盖完整行为索引。
 
 - [Goal creation, editing and details](features/lifecycle.md)
 - [Goal model tools and availability](features/tools.md)
@@ -41,7 +41,7 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run goal
 
 ## Evidence
 
-记录 feature ID、入口、命令/按键、前后状态、实际文件或会话副作用。helper 在 `.tmp/test-results/verify-<case>-<id>/` 保留 `summary.json`、`output.log` 和可用的 `artifacts/`；命令 PTY 另有 `journey.json`、`terminal.ansi` 与隔离文件副本。共享说明定义证据边界。一次 smoke 不能作为整个行为索引通过。
+记录 feature ID、入口、命令/按键、前后状态、实际文件或会话副作用，并分别记录子分支。完整旅程的原始 session、ANSI 和请求证据格式见 [驱动说明](DRIVERS.md#evidence)。helper 在 `.tmp/test-results/verify-<case>-<id>/` 保留 `summary.json`、`output.log` 和可用的 `artifacts/`；命令 PTY 另有 `journey.json`、`terminal.ansi` 与隔离文件副本。共享说明定义证据边界。一次 smoke 不能作为整个行为索引通过。
 
 ## Cleanup
 

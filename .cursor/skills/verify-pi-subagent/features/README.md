@@ -2,6 +2,8 @@
 
 此目录维护 subagent 的用户行为。先执行 [skill](../SKILL.md) 的 Launch 与 Doctor。所有 case 使用隔离状态，恢复旅程需在同一次实例中保留其 session。
 
+正式入口分为生产宿主组、[完整 root/child PTY driver](../scripts/README.md) 和真实 v2 writer 的 legacy 旅程。原宿主组负责延迟 readiness 与凭据交接；PTY driver 负责 root `/quit`、恢复后继续消息、并发、分页和生命周期。逐条合并相应层级的证据。
+
 ## Proof rules
 
 - 每条子行为分别记录 passed、failed、blocked 或 unverified，并写出证据路径。

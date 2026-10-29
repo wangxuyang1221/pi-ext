@@ -23,7 +23,7 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run thinking`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui codex-ui`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 运行真实 thinking PTY，核对 Thinking 引用块完整文本、Ctrl+T 隐藏选择和 resize。默认 fixture 使用内存 session，成功时只输出断言日志；它不覆盖持久恢复或 OSC 标题。补验时保存原始 ANSI 与动作，在隔离持久 SessionManager 写入消息、退出并以同一 sessionFile 重开；另采集 OSC 标题，检查流中变化、settled 后静止、Esc 取消后不再变化。普通/fullscreen 分别运行。80ms 调度精度由定时器测试验证，PTY 到达间隔会受合包影响。
+3. 默认 thinking case 仍使用内存 session。持久恢复与 OSC 用 [正式旅程](../scripts/README.md#run) 的 `cli.py regular/fullscreen`：流中 Ctrl+T、结束保留隐藏、退出并以原 session 重开及后续上下文、原生 `/resume` 恢复取消和错误思考、`/compact` 后保留与切换。取消前须看到独有 `CANCEL-THINKING-FIRST`，不能用上一条思考文本充当新流已经开始的证据。检查流中多个不同 OSC 帧，settled/Esc 后静止。80ms 精度由定时器测试补充。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash

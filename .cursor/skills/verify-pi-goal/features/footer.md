@@ -23,7 +23,7 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run goal-footer`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui goal`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 运行四种 footer 驱动，核对 Codex 两行与原生单行、分钟边界、状态和预算变化；详情打开后秒数快照不自动刷新，重新打开才刷新。
+3. 运行 [驱动表](../DRIVERS.md) 的四种 footer 参数组合。核对分钟边界、状态/预算、resize；详情打开后等待不刷新，关闭重开后精确秒数必须增加。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash

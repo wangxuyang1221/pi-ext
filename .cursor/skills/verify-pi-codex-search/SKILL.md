@@ -16,6 +16,10 @@ pnpm install --frozen-lockfile --ignore-scripts
 pnpm run build
 pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs doctor
 pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search-production
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search-settings
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search-history
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search-production-fullscreen
 ```
 
 这是短生命周期验证。helper 创建空配置、会话和临时目录，驱动真实宿主，并在退出前清理。就绪条件是驱动观察到资源加载完成或匹配的 TUI 提示，再执行断言，不是进程成功启动。人工补充路径用 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui codex-search`，须通过工具的 PTY 模式运行；使用说明和限制见共享文档。
@@ -30,12 +34,15 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search
 - [Search queries and result presentation](features/queries.md)
 - [Follow-up actions and reference limits](features/references.md)
 - [Search history across resume and reload](features/history.md)
+- [Manual live acceptance](features/live.md)，仅在需要验证真实服务、搜索质量或远端截图/lookup 时，由已有授权的操作者执行。
 
 每个 feature 的自动入口只证明文件注明的范围。补充步骤必须逐项执行并记录，不得把全部单元测试通过写成全部用户旅程通过。
 
 ## Evidence
 
-记录 feature ID、入口、命令/按键、前后状态、实际文件或会话副作用。helper 在 `.tmp/test-results/verify-<case>-<id>/` 保留 `summary.json`、`output.log` 和可用的 `artifacts/`；命令 PTY 另有 `journey.json`、`terminal.ansi` 与隔离文件副本。共享说明定义证据边界。一次 smoke 不能作为整个行为索引通过。
+记录 feature ID、入口、命令/按键、前后状态、实际文件或会话副作用。helper 在 `.tmp/test-results/verify-<case>-<id>/` 保留 `summary.json`、`output.log` 和可用的 `artifacts/`。生产搜索旅程另存 `journey.json`、`terminal-*.ansi`、`requests.json`、模型上下文 `events.jsonl`，以及 home、agent、sessions、workspace 副本。检查配置实际位于 `home/.pi/`；reset 删除前的字节另存，不能只保留删除后的目录。共享说明定义证据边界。
+
+对七个包含远端分支的 ID 同时报告 local-contract 和 remote-service 状态。本地生产调用链通过不代表远端鉴权、页面或搜索质量通过；未执行人工联网验收时，整体 ID 保持 unverified。一次 smoke 不能作为整个行为索引通过。
 
 ## Cleanup
 

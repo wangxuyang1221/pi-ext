@@ -15,6 +15,8 @@ import termios
 root = Path(sys.argv[1]).resolve()
 package = str(Path(sys.argv[2]).resolve())
 root.mkdir(parents=True, exist_ok=True)
+from signal_support import install
+install(root, globals())
 assert not (root / "pids.json").exists(), "Use a fresh evidence directory"
 pids = []
 results = []

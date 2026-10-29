@@ -24,7 +24,7 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run codex-ui`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui codex-ui`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 真实 QuickJS 与本地 MCP 执行后，检查 Script completed 和 1 failed、Output to model 与子结果分离。打开 /inspect 切换 Calls/Script/Output、resize、恢复/compaction 后显示 Raw result unavailable。默认 many 的 24 个调用全部成功，不覆盖预览外失败或缓存淘汰；补充种子需让第 7 个调用失败，确认折叠摘要仍显示失败，再实际读取足够大的结果超过 4MiB，核对旧项 Raw result unavailable 和末项仍可查看。另用真实方向键、PgDn/PgUp、Shift+Tab 核对选中项及正文滚动，记录实际驱动与断言。
+3. 真实 QuickJS 与本地 MCP 执行后，检查 Script completed 和 1 failed、Output to model 与子结果分离。默认 many 的 24 个调用全部成功。预览外失败使用 codemode fixture 的 hiddenfail；缓存、真实方向键/PgDn/PgUp/Shift+Tab、原生 `/resume` 与 `/tree` 使用 [正式 CLI 旅程](../scripts/README.md#run)，核对超过 4MiB 后旧项 Raw result unavailable、末项仍可查看，并在恢复/导航后发送模型请求验证保存上下文。fixture 的公开 navigateTree API 证据和原生选择器证据分别记录。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash

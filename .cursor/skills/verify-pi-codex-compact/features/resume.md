@@ -13,7 +13,7 @@
 
 ## How to get to it (user POV)
 
-恢复已有 session；压缩后调用工具；/model；/tree。
+恢复已有 session；/resume；压缩后调用工具；/model；/tree。
 
 ## Driving it with Pi PTY and host fixtures
 
@@ -22,13 +22,13 @@ Preconditions:
 - 已完成 [Launch 与 Doctor](../SKILL.md)，没有其他运行占用验证锁。
 - 使用 [专用 PTY](../SKILL.md#drive) 的隔离 agentDir/sessionFile；它在同一验证生命周期内重启，不使用用户历史或真实凭据。
 
-1. 运行 [专用 PTY](../SKILL.md#drive)。检查第一进程提交 checkpoint 并退出；第二进程通过 `--session` 打开原文件，发出后续输入并收到回复。实际请求应含原 checkpoint、保留图片，新输入恰好一次，打开历史本身不改 session 字节。
+1. 运行 [场景配方](../journeys.md) 的 `combination`。同进程先 `/new`，再 `/resume` 搜索并选择命名会话，核对 session 路径和实际工具请求；追加工具声明与系统提示后 checkpoint 仍保留。随后退出，以 `--session` 冷启动原文件并发送输入，核对原 checkpoint、图片与新输入恰好一次，打开历史本身不改 session 字节。选择器与冷启动分别验收。
 2. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run compact`。`resume-runtime` 补验预置 checkpoint 下的工具声明与系统更新；`repair-runtime` 从生产压缩生命周期生成 checkpoint 并读回文件。保存 evidence 并核对清理。
-3. 模型切换、分支选择和等待期间状态变化须另行驱动。Codex 模型间切换检查 compHash/modelKey 的恢复或转换；切到非 Codex 模型检查完整原始分支；前缀不匹配时应拒绝而非删除 checkpoint。专用 PTY 不操作 `/resume`、`/model` 或 `/tree` 选择器。
+3. 运行配方的 `navigation`，经 `/model` 选择器搜索同 hash、不同 hash、较小窗口和非 Codex 模型，每次发送后续输入检查 checkpoint 或完整原分支；再经 `/tree` 搜索根消息、选择 No summary，核对后续实际请求移除了旧后代。运行 `stale`、`stale-session`、`stale-tree` 和 `stale-tools`，分别在模型转换等待时切换模型、会话、分支和工具声明，核对旧请求 abort 或迟到响应被拒绝、checkpoint 不变与后续请求。再运行 `model-boundaries` 与 `model-boundaries-tools`，经真实选择器缩小到12000窗口，验证重压缩后的完整请求不超过11400有效预算、pending完整且声明仍在。前缀拒绝步骤明确在请求边界注入不兼容投影，核对错误通知、零服务请求、旧checkpoint不变及恢复后的后续请求。
 4. 对照以下定向测试定位边界；它们不代替模型选择、分支导航及后续请求的实际记录。
 
 ```bash
-pnpm test extensions/codex-compact/__tests__/resume-runtime.test.ts extensions/codex-compact/__tests__/session-projection.test.ts extensions/codex-compact/__tests__/request-projection.test.ts extensions/codex-compact/__tests__/request-lifecycle.test.ts
+pnpm test extensions/codex-compact/__tests__/resume-runtime.test.ts extensions/codex-compact/__tests__/session-projection.test.ts extensions/codex-compact/__tests__/request-projection.test.ts extensions/codex-compact/__tests__/request-lifecycle.test.ts extensions/codex-compact/__tests__/session-coordinator.test.ts
 ```
 
 证据必须同时写明本次运行实际覆盖哪些 ID，以及剩余 ID 的状态。

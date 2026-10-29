@@ -160,7 +160,9 @@ test("delivers follow-up prompts with raw clear and submit bytes", async () => {
       "-d",
     ]);
     assert.deepEqual(calls[4].args, ["send-keys", "-H", "-t", "%9", "1b", "0d"]);
-    assert.deepEqual(sleeps, [100, 100]);
+    assert.equal(sleeps.length, 3);
+    assert.ok(sleeps[0] > 0 && sleeps[0] <= 600);
+    assert.deepEqual(sleeps.slice(1), [100, 100]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -249,15 +251,37 @@ test("keeps automatic clears for one pane at least 600ms apart", async () => {
     await runtime.sendPrompt(locator, "First", "steer");
     await runtime.sendPrompt(locator, "Second", "steer");
 
-    assert.deepEqual(clearTimes, [0, 600]);
+    assert.deepEqual(clearTimes, [600, 1200]);
     assert.deepEqual(submitCalls, [
       ["send-keys", "-H", "-t", "%9", "0d"],
       ["send-keys", "-H", "-t", "%9", "0d"],
     ]);
-    assert.deepEqual(sleeps, [100, 100, 400, 100, 100]);
+    assert.deepEqual(sleeps, [600, 100, 100, 400, 100, 100]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("keeps clears apart when reload creates another runtime for the same live pane", async () => {
+  const root = await mkdtemp(join(process.cwd(), ".subagent-tmux-test-"));
+  const clearTimes: number[] = [];
+  let now = 0;
+  const options = {
+    execute: async (_command: string, args: string[]) => {
+      if (args[0] === "display-message") return { code: 0, stdout: "pi-subagents-test\t@7\t%9\t1\t0\t1234\t0\n", stderr: "" };
+      if (args[0] === "send-keys" && args.at(-1) === "03") clearTimes.push(now);
+      return { code: 0, stdout: "", stderr: "" };
+    },
+    tmuxPath: "tmux", sessionName: locator.sessionName, transferDirectory: root,
+    nowMs: () => now,
+    sleep: async (milliseconds: number) => { now += milliseconds; },
+  };
+  try {
+    await new TmuxRuntime(options).sendPrompt(locator, "Before reload", "steer");
+    await new TmuxRuntime(options).sendPrompt(locator, "After reload", "steer");
+    assert.equal(clearTimes.length, 2);
+    assert.ok(clearTimes[1] - clearTimes[0] >= 600, "Reload must not send two Ctrl+C bytes within the host exit window");
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test("launches a child with quoted argv and parses its tmux locator", async () => {

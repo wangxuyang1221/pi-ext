@@ -10,7 +10,7 @@ const record: GoalRecord = { schemaVersion: 1, recordId: "r", ownerSessionId: "t
   goal: { goalId: "g", generation: 1, objective: "统一 Goal 工具 UI", status: "complete", tokensUsed: 12480, tokenBudget: 50000, elapsedSeconds: 192, createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:03:12Z" } };
 function tools(value: GoalRecord | undefined = record) {
   const registered = new Map<string, ToolDefinition<any, any>>();
-  registerGoalTools({ registerTool: (tool: ToolDefinition<any, any>) => registered.set(tool.name, tool) } as unknown as ExtensionAPI,
+  registerGoalTools({ on: () => {}, registerTool: (tool: ToolDefinition<any, any>) => registered.set(tool.name, tool) } as unknown as ExtensionAPI,
     { get: async () => value, create: async () => value!, update: async () => value! });
   return registered;
 }

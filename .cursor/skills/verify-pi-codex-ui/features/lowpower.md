@@ -22,7 +22,7 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run tool-status`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui codex-ui`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 比较开关前后 write/edit/bash/codemode 的短预览与展开，Thinking 保留全文；status 不更改值，reload 或新会话恢复关闭。确认 lowpower 下 Write 不采集旧正文或生成 diff。
+3. 按 [正式 CLI 旅程](../scripts/README.md#run) 运行普通/fullscreen，在同一 session 比较实际 write/edit/bash/codemode 的折叠和展开结果。分别断言 Write 隐藏正文、Edit 使用短 patch、Bash 紧凑标题、codemode 使用 fallback 子预览；off 后恢复 Write 预览、Edit 行数、完整 Bash 和 native read 子 renderer。Thinking 两种模式均保留末行。status 后仍执行短预览；`/reload`、`/new`、原生 `/fork`、原生 `/resume` 后查询 off。Write 不读取旧正文和不生成 diff 的 I/O 断言由 `write-execution.test.ts` 补充，不能由画面推断。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash

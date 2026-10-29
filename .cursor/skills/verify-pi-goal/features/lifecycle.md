@@ -25,7 +25,7 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run goal`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui goal`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 运行真实 tool-ui 场景，观察创建、读取和更新的卡片。隔离 TUI 输入 /goal Verify lifecycle 后 /goal pause，再用 /goal 查看，p/r、Esc/Enter 关闭；编辑目标检查统计保留，replace 要确认，clear 后重开不得从镜像复活。
+3. 运行 [驱动表](../DRIVERS.md) 的 `lifecycle` 与 `matrix lifecycle`。后者补齐接受替换、独立记账、详情滚动、p 暂停和 Enter 关闭；前者覆盖编辑、取消、原会话恢复及 tombstone 冷开。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash

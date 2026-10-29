@@ -20,6 +20,7 @@ export function responseEvents(step, id) {
 export function offlineCodex(ai, adapter, steps, onCall = () => {}) {
   let calls = 0;
   const contexts = [];
+  const requests = [];
   const fakeKey = `offline.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "offline-fixture" } })).toString("base64url")}.fixture`;
   /** @type {import("@earendil-works/pi-ai").Model<any>} */
   const model = { id: "goal-budget-fixture", name: "Offline Codex budget fixture", provider: "openai-codex", api: "openai-codex-responses", baseUrl: "https://offline.invalid", reasoning: true, input: ["text"], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 128000, maxTokens: 4096 };
@@ -30,7 +31,9 @@ export function offlineCodex(ai, adapter, steps, onCall = () => {}) {
     contexts.push(JSON.parse(JSON.stringify(context)));
     onCall(index, context, options);
     const result = adapter.stream(requestModel, context, { ...options, apiKey: fakeKey, transport: "sse", maxRetries: 0,
-      fetch: async () => {
+      fetch: async (url, init) => {
+        const body = init?.body ? await new Response(init.body).arrayBuffer() : url instanceof Request ? await url.clone().arrayBuffer() : new ArrayBuffer(0);
+        requests.push({ url: url instanceof Request ? url.url : String(url), bodyBase64: Buffer.from(body).toString("base64"), contentEncoding: new Headers(init?.headers ?? (url instanceof Request ? url.headers : {})).get("content-encoding") });
         if (step.wait) await step.wait(options?.signal);
         const events = responseEvents(step, step.id ?? `resp_fixture_${index + 1}`);
         return new Response(events.map(event => `data: ${JSON.stringify(event)}\n\n`).join(""), { status: 200, headers: { "content-type": "text/event-stream" } });
@@ -40,5 +43,5 @@ export function offlineCodex(ai, adapter, steps, onCall = () => {}) {
     return result;
   };
   const provider = ai.createProvider({ id: "openai-codex", models: [model], auth: { apiKey: { name: "Offline", resolve: async () => ({ auth: {} }) } }, api: { stream, streamSimple: stream } });
-  return { provider, model, contexts, stream, calls: () => calls };
+  return { provider, model, contexts, requests, stream, calls: () => calls };
 }

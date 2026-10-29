@@ -9,6 +9,8 @@ description: "Verify all pi-ext extensions through the real Pi CLI, PTY, private
 
 ## Launch
 
+已有匹配依赖和 dist 时从 doctor 开始。禁止安装或构建的任务，先在共享说明中选择 prebuilt 入口；下面两条准备命令仅在需要准备环境时运行。
+
 ```bash
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm run build

@@ -24,7 +24,7 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run goal`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui goal`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 在持久会话先产生用户和模型消息，再使用 /goal-fork 分别选择历史 fork 和当前位置 clone。核对新 recordId 和 ownerSessionId、保留的 goalId/状态/预算/累计统计、源记录字节不变及 continuationDeferral；reload 后仍不自动续跑，明确用户输入解除门禁。对比原生 /fork、/clone 不继承。
+3. 运行 [驱动表](../DRIVERS.md) 的 `matrix inheritance` 与 `lifecycle`。前者驱动 active 带预算目标的 clone、冷开门禁、明确输入解除、tree 和历史 fork；后者核对原生 clone 不继承。比较源文件原始字节与新记录身份。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash

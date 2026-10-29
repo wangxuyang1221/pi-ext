@@ -16,17 +16,24 @@
 
 /fast；/fast on；/fast off；/fast toggle；启动 --fast。
 
-## Driving it with Pi PTY and host fixtures
+## Driving it with Pi PTY
 
 Preconditions:
 
 - 已完成 [Launch 与 Doctor](../SKILL.md)，没有其他运行占用验证锁。
 - fast footer 只表示请求 priority，不证明服务端使用了 priority 或响应更快。
 
-1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run fast`。保存返回的 evidence 路径并核对退出码。
-2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui openai-fast-mode`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 依次切换四种命令，每次从 agent/extensions/pi-openai-fast-mode/config.json 读回 enabled；重开隔离会话检查保存值。启动 --fast 后检查落盘开关，项目安装情形检查 .pi/pi-openai-fast-mode/config.json。
-4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
+1. 运行 `pnpm exec node .cursor/skills/verify-pi-openai-fast-mode/scripts/verify.mjs full`。操作顺序、隔离种子和断言见 [request journey](../scripts/README.md)。保存输出的 evidence 目录。
+2. 在 journey 的 root、root-restarted、root-restarted-off、novel-combination 和 project-scope 中逐项核对下表；summary 必须通过且清理完成。
+3. 需要快速定位四种命令时，另运行共享 `run fast`。其结果仅补充命令和配置证据。以下定向测试用于定位边界。
+
+| IDs | Required observation |
+| --- | --- |
+| fast-bare / fast-toggle | bare 从 false 到 true，toggle 从 true 到 false，读回配置并发送后续匹配请求 |
+| fast-on / fast-off | 两种命令落盘 true/false，后续请求与状态一致 |
+| fast-flag | 空配置 `--fast` 落盘 true，首个请求带 priority |
+| fast-persist | 同一 agent 目录先 true 再 false，各冷启动新进程并发送请求 |
+| fast-scope | 显式仓库扩展写 user 路径；生产 dist 复制到项目 `.pi` 后写 project 路径；user 配置字节不变 |
 
 ```bash
 pnpm test extensions/openai-fast-mode/__tests__/commands.test.ts extensions/openai-fast-mode/__tests__/config.test.ts extensions/openai-fast-mode/__tests__/host-compatibility.test.ts
@@ -36,6 +43,6 @@ pnpm test extensions/openai-fast-mode/__tests__/commands.test.ts extensions/open
 
 ## Gotchas
 
-自动脚本覆盖四种命令和落盘。启动 flag、重启及项目安装分支需补跑。faux 模型不显示 fast，不以 footer 作为开关的唯一证据。
+项目分支验证资源位置决定配置路径，不扩张为 registry 安装流程。画面与配置之外，逐项检查 request builder 的字段；footer 不能证明服务质量。
 
 验收依据为 [commands.test.ts](../../../../extensions/openai-fast-mode/__tests__/commands.test.ts)、[config.test.ts](../../../../extensions/openai-fast-mode/__tests__/config.test.ts)、[host-compatibility.test.ts](../../../../extensions/openai-fast-mode/__tests__/host-compatibility.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

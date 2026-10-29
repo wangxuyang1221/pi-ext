@@ -11,6 +11,8 @@ import time
 
 root = Path(sys.argv[1]).resolve()
 root.mkdir(parents=True, exist_ok=True)
+from signal_support import install
+install(root, globals())
 if (root / "events.jsonl").exists():
     raise FileExistsError("Use a fresh evidence directory for each probe run")
 package_root = str(Path(sys.argv[2]).resolve())

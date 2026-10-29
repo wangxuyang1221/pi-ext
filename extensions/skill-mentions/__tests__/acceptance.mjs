@@ -37,7 +37,12 @@ try {
     copyFileSync(join(repo, "pnpm-workspace.yaml"), join(consumer, "pnpm-workspace.yaml"));
     cpSync(join(repo, "patches"), join(consumer, "patches"), { recursive: true });
   }
-  run("pnpm", ["install", "--ignore-scripts", "--prefer-offline", "--no-frozen-lockfile"], { cwd: consumer, env });
+  // Resolve this generated consumer once, then prove installation consumes its exact lock.
+  run("pnpm", ["install", "--lockfile-only", "--ignore-scripts", "--prefer-offline", "--no-frozen-lockfile"], { cwd: consumer, env });
+  const consumerLock = readFileSync(join(consumer, "pnpm-lock.yaml"));
+  run("pnpm", ["install", "--frozen-lockfile", "--ignore-scripts", "--prefer-offline"], { cwd: consumer, env });
+  assert.deepEqual(readFileSync(join(consumer, "pnpm-lock.yaml")), consumerLock, "Frozen installation must preserve the consumer lock");
+  copyFileSync(join(consumer, "pnpm-lock.yaml"), join(evidence, `${evidencePrefix}-consumer-lock.yaml`));
   const installed = realpathSync(join(consumer, "node_modules/pi-ext"));
   const packaged = JSON.parse(readFileSync(join(installed, "package.json"), "utf8"));
   assert.deepEqual(packaged.pi, manifest.pi);
@@ -70,7 +75,8 @@ try {
     node: process.version, pnpm: execFileSync("pnpm", ["--version"], { encoding: "utf8" }).trim(),
     sha256: createHash("sha256").update(readFileSync(tarball)).digest("hex"), files,
     extensionEntries: packaged.pi.extensions, modes, patchedHost: summaryOnly,
-    checks: ["prepack build", "tarball contents", "no test/log payload", "pnpm installation", "all extension compiled files byte equality", "all installed entry imports", summaryOnly ? "patched host resume selectors" : "isolated pi install", "real CLI PTY"],
+    consumerLockSha256: createHash("sha256").update(consumerLock).digest("hex"), consumerLockUnchanged: true,
+    checks: ["prepack build", "tarball contents", "no test/log payload", "consumer lock generation", "frozen pnpm installation with unchanged lock", "all extension compiled files byte equality", "all installed entry imports", summaryOnly ? "patched host resume selectors" : "isolated pi install", "real CLI PTY"],
   }, null, 2) + "\n");
 } finally {
   rmSync(root, { recursive: true, force: true });

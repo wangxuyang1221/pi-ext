@@ -38,4 +38,8 @@ pnpm test extensions/skill-mentions/__tests__/flow.test.ts extensions/skill-ment
 
 本地读取结果和 provider 输入都要保存，只有标签外观不足。原生 /skill: 是独立入口，确认 driver 是否实际覆盖再报告。
 
+不可读分支再执行 `pnpm exec node extensions/skill-mentions/__tests__/journeys.mjs permission`。驱动对已发现的 beta 设置 chmod 000，先断言实际无读取权限，再提交含 beta/alpha 的任务，核对 beta 原文保留、alpha 成功且 UI 无读取错误。恢复 644 后新请求必须成功读取 beta。以管理员身份运行导致权限前置条件不成立时，记录 blocked，不能改用删除文件冒充权限拒绝。
+
+`skills-combination` 验证 V1/V2/V3 快照和删除后上下文。快照变更另跑 [mutation 入口](../SKILL.md#launch)，同一断言必须在 baseline 通过、缓存变异的 V2 读取处失败、恢复后通过。只在仓库内副本改源码并编译，不修改正在被其他验证使用的生产 dist。
+
 验收依据为 [flow.test.ts](../../../../extensions/skill-mentions/__tests__/flow.test.ts)、[loading.test.ts](../../../../extensions/skill-mentions/__tests__/loading.test.ts)、[protocol.test.ts](../../../../extensions/skill-mentions/__tests__/protocol.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

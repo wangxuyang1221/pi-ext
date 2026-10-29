@@ -23,7 +23,7 @@ Preconditions:
 - 此 skill 测试扩展创建的产品 child。它不授权代理把开发任务委派给其他 agent。root 与直接 child 是唯一受支持拓扑。
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run subagent`。保存返回的 evidence 路径并核对退出码。
-2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui subagent`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
+2. 运行 `pnpm exec node .cursor/skills/verify-pi-subagent/scripts/run.mjs`。正式 driver 从真实 root CLI 调用生产工具并操作 child；参数、受控故障和证据层级见 [driver 说明](../scripts/README.md)。逐条审查对应断言。
 3. 运行两轮真实宿主组，检查 child 交互 readiness、角色/显式参数优先级、失败或关闭后的名额回收、认证交接文件删除。非法角色/未知模型应失败且不遗留 slot；child 不公布编排工具。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
@@ -35,7 +35,7 @@ pnpm test extensions/subagent/__tests__/roles.test.ts extensions/subagent/__test
 
 ## Gotchas
 
-并发 reservation 防超卖目前只由 manager-capacity 的受控 runtime 测试覆盖。验收 subagent-capacity 时，在真实宿主同一轮并发发出超过 maxActive 的 spawn，核对活跃 child 与 reservation 总数不超限、拒绝项无 pane/PID、关闭后名额恢复；串行第三次 spawn 被拒绝不能证明并发竞争。没有真实竞争证据时此 ID 保留 unverified。
+full driver 的 `audit_parallel` 在同一个真实 root context 并发调用五次生产 spawn。`concurrent-capacity-results` 核对三成功两拒绝，`concurrent-capacity-sampled` 核对 pending 存在且 reservation 与注册 child 的唯一进程总数始终不超三，随后核对 pane 数和名额回收。层级为真实 root/child 加并发工具派发夹具，不能改称普通模型自动并行。角色增删改与快照、thinking/model/fast 显式覆盖和非法配置零资源也在该 driver 中。
 
 helper 使用私有 socket。不得连接用户默认 tmux server；认证夹具用测试值，不拷贝真实 key。
 

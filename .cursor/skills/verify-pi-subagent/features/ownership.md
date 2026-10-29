@@ -22,8 +22,9 @@ Preconditions:
 - 此 skill 测试扩展创建的产品 child。它不授权代理把开发任务委派给其他 agent。root 与直接 child 是唯一受支持拓扑。
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run subagent`。保存返回的 evidence 路径并核对退出码。
-2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui subagent`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
+2. 运行 `pnpm exec node .cursor/skills/verify-pi-subagent/scripts/run.mjs`。正式 driver 从真实 root CLI 调用生产工具并操作 child；参数、受控故障和证据层级见 [driver 说明](../scripts/README.md)。逐条审查对应断言。
 3. 运行生命周期和生产宿主场景，检查 state/runtime 分离、唯一 namespace owner、进程身份和 pane 归属；恢复同一 session 后可以继续控制原 child，身份不明时保留状态与 slot。
+   正式 full 旅程连续执行 Leave temporarily → 恢复同一 root → reload → prompt/wait，核对同一 child ID、PID 存活和原生历史中的新消息。已有 dist 时可直接执行步骤 2，无需安装或构建。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash
@@ -34,6 +35,6 @@ pnpm test extensions/subagent/__tests__/ownership.test.ts extensions/subagent/__
 
 ## Gotchas
 
-升级 v3 前须关闭旧 child 和停止旧写入者。不得用直接改 state.json 绕过所有权校验作为成功证明。
+运行 `pnpm exec node .cursor/skills/verify-pi-subagent/scripts/run.mjs "subagent-legacy-$(date +%s)" legacy`。它加载 Git 中真实 v2 源码，先核对活 child 与活 writer 均拒绝升级且原文件未变，关闭旧进程后运行生产 upgradeOffline，再恢复原 root 并发送新任务。缺少指定历史时保持 blocked 并保存命令错误。full driver 另覆盖双 root 控制竞争、真实 pane marker 反例、child `/new` 后旧 alias 的拒绝和关闭、新 session 继续消息；不通过改 state.json 制造成功。
 
 验收依据为 [ownership.test.ts](../../../../extensions/subagent/__tests__/ownership.test.ts)、[lifecycle.test.ts](../../../../extensions/subagent/__tests__/lifecycle.test.ts)、[upgrade.test.ts](../../../../extensions/subagent/__tests__/upgrade.test.ts)、[runtime-state.test.ts](../../../../extensions/subagent/__tests__/runtime-state.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

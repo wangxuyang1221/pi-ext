@@ -13,15 +13,26 @@ import struct
 import sys
 import termios
 import time
+import tempfile
 import pyte
 
+mode = "-".join(arg.lstrip("-") for arg in sys.argv[1:]) or "regular"
+if not os.environ.get("GOAL_FOOTER_EVIDENCE") and os.environ.get("PI_VERIFY_EVIDENCE"):
+    parent = Path(os.environ["PI_VERIFY_EVIDENCE"])
+    parent.mkdir(parents=True, exist_ok=True)
+    os.environ["GOAL_FOOTER_EVIDENCE"] = tempfile.mkdtemp(prefix=f"goal-footer-{mode}-", dir=parent)
 here = Path(__file__).resolve().parent
 root = here.parent.parent.parent
+from signal_support import install
+signal_evidence = Path(os.environ["GOAL_FOOTER_EVIDENCE"]) if os.environ.get("GOAL_FOOTER_EVIDENCE") else Path(tempfile.mkdtemp(prefix="goal-footer-signal-", dir=root / ".tmp"))
+install(signal_evidence, globals())
 pid, fd = pty.fork()
 if pid == 0:
     os.chdir(root)
     os.environ["TERM"] = "xterm-256color"
     os.execvp("node", ["node", str(here / "footer-tui.mjs"), *sys.argv[1:]])
+if os.environ.get("GOAL_FOOTER_EVIDENCE"):
+    (Path(os.environ["GOAL_FOOTER_EVIDENCE"]) / "pids.json").write_text(json.dumps([pid]))
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 45, 120, 0, 0))
 screen = pyte.Screen(120, 45)
 stream = pyte.Stream(screen)
@@ -29,6 +40,7 @@ decoder = codecs.getincrementaldecoder("utf-8")("replace")
 status = None
 output = bytearray()
 screens = {}
+actions = []
 
 def view():
     return "\n".join(line.rstrip() for line in screen.display)
@@ -66,6 +78,7 @@ def settle(seconds=0.4):
         pump()
 
 def command(text):
+    actions.append({"at": time.time(), "input": text})
     os.write(fd, text.encode() + b"\r")
 
 try:
@@ -77,11 +90,21 @@ try:
     wait(lambda: "opening snapshot" in view() and "Tokens used:" in view(), "details")
     settle()
     exact = re.search(r"Elapsed: (\d+m \d+s)", view()).group(1)
+    if os.environ.get("GOAL_FOOTER_EVIDENCE"):
+        (Path(os.environ["GOAL_FOOTER_EVIDENCE"]) / "footer-ready.json").write_text(json.dumps({"pid": pid, "details": True}))
     settle(1.2)
     assert re.search(r"Elapsed: (\d+m \d+s)", view()).group(1) == exact
     screens["details"] = view()
     os.write(fd, b"\x1b")
     wait(lambda: "opening snapshot" not in view(), "close details")
+    settle(1.1)
+    command("/goal")
+    wait(lambda: "opening snapshot" in view(), "reopen details")
+    refreshed = re.search(r"Elapsed: (\d+m \d+s)", view()).group(1)
+    assert refreshed != exact, "Reopening details must refresh elapsed seconds"
+    screens["details-reopened"] = view()
+    os.write(fd, b"\x1b")
+    wait(lambda: "opening snapshot" not in view(), "close refreshed details")
     command("/fixture-complete")
     wait(lambda: "Complete ·" in view(), "production completion tool")
     screens["complete"] = view()
@@ -122,9 +145,15 @@ try:
     wait(lambda: status is not None, "shutdown")
     assert os.waitstatus_to_exitcode(status) == 0
     mode = "-".join(arg.lstrip("-") for arg in sys.argv[1:]) or "regular"
-    (root / ".tmp" / f"goal-footer-acceptance-{mode}.json").write_text(json.dumps({"passed": True, "pid": pid, "mode": mode, "idleTerminalBytes": idle_bytes, "screens": screens}, indent=2, ensure_ascii=False))
-    print(json.dumps({"passed": True, "pid": pid, "mode": mode, "idleTerminalBytes": idle_bytes}))
+    (Path(os.environ.get("GOAL_FOOTER_EVIDENCE", str(root / ".tmp"))) / f"goal-footer-acceptance-{mode}.json").write_text(json.dumps({"passed": True, "pid": pid, "mode": mode, "idleTerminalBytes": idle_bytes, "screens": screens}, indent=2, ensure_ascii=False))
+    print(json.dumps({"passed": True, "pid": pid, "mode": mode, "idleTerminalBytes": idle_bytes, "evidence": os.environ.get("GOAL_FOOTER_EVIDENCE")}))
 finally:
+    if os.environ.get("GOAL_FOOTER_EVIDENCE"):
+        evidence = Path(os.environ["GOAL_FOOTER_EVIDENCE"])
+        (evidence / "terminal.ansi").write_bytes(output)
+        (evidence / "pids.json").write_text(json.dumps([pid]))
+        (evidence / "screens.json").write_text(json.dumps(screens, ensure_ascii=False, indent=2))
+        (evidence / "actions.json").write_text(json.dumps(actions, ensure_ascii=False, indent=2))
     if status is None:
         os.kill(pid, signal.SIGTERM)
         end = time.monotonic() + 5

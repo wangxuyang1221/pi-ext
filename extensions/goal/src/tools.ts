@@ -37,6 +37,22 @@ function validateCall(args: unknown, allowed: string[], signal?: AbortSignal): a
 }
 /** Register the three upstream goal tools, with strict argument schemas. */
 export function registerGoalTools(pi: ExtensionAPI, access: GoalToolAccess): void {
+  // Pi validates a cloned argument object and may coerce an integer before
+  // execute sees it. Preserve rejection of invalid budgets from the wire.
+  const invalidBudgets = new Set<string>();
+  pi.on("session_start", () => { invalidBudgets.clear(); });
+  pi.on("message_end", event => {
+    if (event.message.role !== "assistant") return;
+    invalidBudgets.clear();
+    for (const part of event.message.content) {
+      if (part.type !== "toolCall" || part.name !== "create_goal") continue;
+      const budget = part.arguments && typeof part.arguments === "object" ? part.arguments.token_budget : undefined;
+      if (budget !== undefined && (!Number.isSafeInteger(budget) || Number(budget) <= 0)) invalidBudgets.add(part.id);
+    }
+  });
+  pi.on("tool_call", event => {
+    if (event.toolName === "create_goal" && invalidBudgets.delete(event.toolCallId)) return { block: true, reason: "Goal budgets must be positive safe integers when provided." };
+  });
   pi.registerTool({ ...goalRenderers("get_goal"), name: "get_goal", label: "Get goal", description: GET_DESCRIPTION, parameters: Type.Object({}, { additionalProperties: false }),
     execute: async (_id, args, signal, _update, ctx) => { validateCall(args, [], signal); return response(await access.get(ctx)); } });
   pi.registerTool({ ...goalRenderers("create_goal"), name: "create_goal", label: "Create goal", description: CREATE_DESCRIPTION,

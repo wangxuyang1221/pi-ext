@@ -63,6 +63,9 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
     const fixture = await fastProvider(join(home, "root-payload.jsonl"), home);
     const modelRuntime = await ModelRuntime.create({ credentials: new ai.InMemoryCredentialStore(), modelsStore: new ai.InMemoryModelsStore(), modelsPath: null, refreshOnCreate: false, allowModelNetwork: false });
     modelRuntime.registerNativeProvider(fixture.provider);
+    const unmatchedModel = { ...fixture.model, provider: "fast-unmatched" };
+    modelRuntime.registerNativeProvider(ai.createProvider({ id: unmatchedModel.provider, models: [unmatchedModel],
+      auth: fixture.provider.auth, api: { stream: fixture.provider.stream.bind(fixture.provider), streamSimple: fixture.provider.streamSimple.bind(fixture.provider) } } as any));
     const settingsManager = SettingsManager.inMemory({ retry: { enabled: false }, compaction: { enabled: false } });
     const resourceLoader = new DefaultResourceLoader({ cwd: root, agentDir, settingsManager,
       noExtensions: true, noSkills: true, noThemes: true, noContextFiles: true, noPromptTemplates: true,
@@ -85,6 +88,8 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
       for (const [name, bytes] of roleFiles) assert.equal(await readFile(join(rolesDir, `${name}.jsonc`), "utf8"), bytes, `${label}: ${name}`);
       assert.equal(await readFile(join(root, ".pi", "agents", "project-only.jsonc"), "utf8"), "{}", label);
       report.checkpoints.push(label);
+      report.sharedFiles ??= [];
+      report.sharedFiles.push({ label, config: await readFile(configPath, "utf8"), roles: Object.fromEntries(roleFiles), projectRole: await readFile(join(root, ".pi", "agents", "project-only.jsonc"), "utf8") });
     };
     const spawnResult = async (task: string, options: Record<string, unknown> = {}) => {
       await session!.prompt(`spawn:${JSON.stringify({ task, ...options })}`);
@@ -121,6 +126,8 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
     };
     const payloads = (child: any) => lines(join(home, `payload-${child.tmux.panePid}.jsonl`));
     const send = async (child: any, text: string) => {
+      report.actions ??= [];
+      report.actions.push({ agentId: child.agentId, pid: child.tmux.panePid, paneId: child.tmux.paneId, text });
       assert.equal((await executeCommand(wrapper, ["send-keys", "-t", child.tmux.paneId, "-l", `${text} `])).code, 0);
       await new Promise(resolve => setTimeout(resolve, 100));
       assert.equal((await executeCommand(wrapper, ["send-keys", "-H", "-t", child.tmux.paneId, "1b", "0d"])).code, 0);
@@ -131,6 +138,10 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
       const rows = await until(() => payloads(child), rows => rows.length === count + 1, text);
       assert.equal(rows.at(-1).payload.service_tier, tier, text);
       await until(() => new SessionStateStore(stateRoot).load(child.agentId), state => state?.runtime.status === "settled", "child settled");
+      report.steps ??= [];
+      report.steps.push({ agentId: child.agentId, text, tier: tier ?? null, payload: rows.at(-1).payload,
+        pane: (await executeCommand(wrapper, ["capture-pane", "-p", "-S", "-100", "-t", child.tmux.paneId])).stdout,
+        session: await readFile(child.sessionFile, "utf8") });
     };
     const exited = new Set<any>();
     const quit = async (child: any) => {
@@ -219,10 +230,23 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
     assert.equal((await payloads(c))[0].payload.reasoning.effort, "medium");
     assert.equal((await payloads(c))[0].payload.service_tier, "priority");
     await checkpoint("root on with explicit off and inherited on", rootOn);
+    await session.setModel(unmatchedModel as any);
+    const unmatchedChild = await spawn("child-inherits-on-from-unmatched-root", { agent_type: "empty", model: "openai-codex/fast-fixture" });
+    assert.equal((await lines(join(home, "root-payload.jsonl"))).at(-1).payload.service_tier, undefined);
+    assert.equal((await payloads(unmatchedChild))[0].payload.service_tier, "priority");
+    assert.equal(await state(unmatchedChild), true);
+    await quit(unmatchedChild);
+    await session.setModel(fixture.model as any);
+    await checkpoint("unmatched root model preserves enabled inheritance", rootOn);
     await session.prompt("/fast off");
     const nextRootOff = await readFile(configPath, "utf8");
     await command(b, true);
     await request(b, "child-b-on", "priority");
+    const beforeTrueReload = await readFile(join(home, `start-${b.tmux.panePid}.json`), "utf8");
+    await send(b, "/reload");
+    await until(() => readFile(join(home, `start-${b.tmux.panePid}.json`), "utf8"), value => value !== beforeTrueReload, "child reload saved true");
+    assert.equal(await state(b), true);
+    await request(b, "child-reload-keeps-true-despite-launch-false", "priority");
     await request(a, "child-a-stays-off", undefined);
     await request(c, "child-c-stays-on", "priority");
     await checkpoint("root and sibling switches stay independent", nextRootOff);
@@ -296,6 +320,11 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
     const d = await spawn("child-inherited-off", { agent_type: "empty" });
     assert.equal((await payloads(d))[0].payload.service_tier, undefined);
     await checkpoint("later child inherits root off", nextRootOff);
+    const explicitOn = await spawn("explicit-true-over-root-and-role-false", { agent_type: "worker", fast: true });
+    assert.equal((await payloads(explicitOn))[0].payload.service_tier, "priority");
+    assert.equal(await state(explicitOn), true);
+    await quit(explicitOn);
+    await checkpoint("explicit true overrides root and role false", nextRootOff);
     for (const child of children) {
       const rows = await payloads(child);
       assert.ok(rows.every(row => !(row.payload.tools ?? []).some((tool: any) => tool.name.startsWith("subagent_"))));
@@ -310,6 +339,35 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
     assert.equal(errors.length, 0);
     for (const child of children.filter(child => !exited.has(child))) await quit(child);
     await checkpoint("all child shutdown hooks preserve shared config", nextRootOff);
+    report.coldResumes = [];
+    for (const [child, expected] of [[a, false], [c, true]] as const) {
+      const cliArgs = [process.execPath, resolve("node_modules/@earendil-works/pi-coding-agent/dist/cli.js"), "--offline", "--no-approve", "--no-extensions", "--no-skills", "--no-context-files", "--no-prompt-templates", "--no-themes", "--no-builtin-tools", "--session", child.sessionFile, "--provider", "openai-codex", "--model", "fast-fixture", "-e", resolve("extensions/openai-fast-mode/dist/index.js"), "-e", fixturePath, "--fast"];
+      const launched = await executeCommand(wrapper, ["new-window", "-d", "-P", "-F", "#{pane_id}\t#{pane_pid}", "-t", "keeper", "-c", root,
+        `exec /usr/bin/env HOME=${quote(home)} PI_CODING_AGENT_DIR=${quote(agentDir)} PI_OFFLINE=1 ${cliArgs.map(quote).join(" ")}`]);
+      assert.equal(launched.code, 0, launched.stderr);
+      const [paneId, pidString] = launched.stdout.trim().split("\t");
+      const pid = Number(pidString); pids.add(pid);
+      const cold = { ...child, tmux: { paneId, panePid: pid } };
+      try {
+        await until(() => readFile(join(home, `start-${pid}.json`), "utf8").catch(() => ""), Boolean, "cold CLI resumed managed session");
+      } catch (error) {
+        report.coldFailure = { pid, args: cliArgs, pane: (await executeCommand(wrapper, ["capture-pane", "-p", "-S", "-100", "-t", paneId])).stdout };
+        throw error;
+      }
+      const start = JSON.parse(await readFile(join(home, `start-${pid}.json`), "utf8"));
+      assert.equal(start.sessionId, JSON.parse((await readFile(child.sessionFile, "utf8")).split("\n")[0]).id);
+      assert.equal(start.parent, undefined);
+      const prompt = `cold-managed-resume-${expected}`;
+      await send(cold, prompt);
+      const rows = await until(() => lines(join(home, `payload-${pid}.jsonl`)), rows => rows.length === 1, prompt);
+      assert.equal(rows[0].payload.service_tier, expected ? "priority" : undefined);
+      await until(() => lines(child.sessionFile), entries => entries.some(entry => entry.message?.role === "assistant" && JSON.stringify(entry).includes(`reply:${prompt}`)), "cold resumed assistant persisted");
+      const pane = await executeCommand(wrapper, ["capture-pane", "-p", "-S", "-100", "-t", paneId]);
+      await send(cold, "/quit");
+      await until(async () => (await executeCommand(wrapper, ["display-message", "-p", "-t", paneId, "#{pane_dead}\t#{pane_dead_status}"])).stdout.trim(), value => value === "1\t0", "cold resumed CLI exits");
+      report.coldResumes.push({ agentId: child.agentId, sessionFile: child.sessionFile, expected, pid, args: cliArgs, request: rows[0], start, pane: pane.stdout, session: await readFile(child.sessionFile, "utf8"), processExited: true });
+      await checkpoint(`managed CLI cold resume ${expected} preserves shared files`, nextRootOff);
+    }
     // Resume the saved child file without its original launch environment in a real host.
     for (const [child, expected] of [[a, false], [c, true]] as const) {
       const resumedLoader = new DefaultResourceLoader({ cwd: root, agentDir, settingsManager,
@@ -345,6 +403,9 @@ test.skipIf(!enabled)("isolates roles and Fast through a real root host and mana
     report.stderr = await readFile(join(root, "child-stderr"), "utf8").catch(() => "");
     report.lastPane = await readFile(join(root, "last-pane"), "utf8").catch(() => "");
     report.cleanup = { pids: [...pids], livePids: alive(), socketUnavailable: true };
+    report.sessions = {};
+    for (const child of children) report.sessions[child.agentId] = await readFile(child.sessionFile, "utf8").catch(() => null);
+    report.rootSession = await readFile(join(root, "root.jsonl"), "utf8").catch(() => null);
     if (process.env.PI_FAST_EVIDENCE) await writeFile(resolve(process.env.PI_FAST_EVIDENCE), JSON.stringify(report, null, 2) + "\n");
     await rm(root, { recursive: true, force: true });
   }

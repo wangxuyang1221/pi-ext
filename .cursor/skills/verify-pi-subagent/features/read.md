@@ -23,7 +23,7 @@ Preconditions:
 - 此 skill 测试扩展创建的产品 child。它不授权代理把开发任务委派给其他 agent。root 与直接 child 是唯一受支持拓扑。
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run subagent`。保存返回的 evidence 路径并核对退出码。
-2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui subagent`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
+2. 运行 `pnpm exec node .cursor/skills/verify-pi-subagent/scripts/run.mjs`。正式 driver 从真实 root CLI 调用生产工具并操作 child；参数、受控故障和证据层级见 [driver 说明](../scripts/README.md)。逐条审查对应断言。
 3. 用真实 child 会话执行工具并完成，读取原生 JSONL 对照摘要与最终状态；定向测试覆盖 72 KiB 摘要、16 KiB detail、pageCursor 固定快照和 after 增量游标。读取新增记录时不可倒退或重复 activity。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
@@ -35,6 +35,6 @@ pnpm test extensions/subagent/__tests__/session-reader.test.ts extensions/subage
 
 ## Gotchas
 
-tmux pane 文本不作为 finalized 活动来源。协议分页边界仍是定向测试，完整用户路径若未生成足够长的真实 child 历史应标为未验证。
+full driver 通过真实 child 写入两个 120022-byte assistant turn，将 turns 撑满多页，在分页间继续追加并核对固定快照、无重复和 after 增量。五种 detail section 均生成多页 UTF-8 内容并还原，错误路径含工具失败、部分文本失败和真实取消。`/tree` 通过真实 child 选择器回退，核对 after 游标不会重发旧 activity。finalized 活动仍以原生 JSONL 为准。
 
 验收依据为 [session-reader.test.ts](../../../../extensions/subagent/__tests__/session-reader.test.ts)、[cursor.test.ts](../../../../extensions/subagent/__tests__/cursor.test.ts)、[renderers.test.ts](../../../../extensions/subagent/__tests__/renderers.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

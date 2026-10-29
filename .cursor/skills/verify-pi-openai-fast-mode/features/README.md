@@ -8,6 +8,7 @@
 - 捕获动作与结果；修改类行为再核对文件或 session，不只看最终画面。
 - 自动 case、定向测试和人工补充的覆盖不同。未驱动的入口保持 unverified。
 - 缺少种子、认证、终端能力或有效历史时记录具体原因，不削弱通过条件。
+- 本地完整验收由 Fast `full` 的真实 CLI/PTY 请求旅程和共享 `run subagent` 的真实 managed child 旅程共同组成。远程 priority 采用、计费与服务质量始终单独记状态。
 
 ## Features
 

@@ -26,8 +26,9 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run tool-status`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui codex-ui`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 运行工具状态 PTY 的 regular/fullscreen/lowpower/restart 场景；核对进行中静态 Writing/Editing，结束后 Added/Edited、diff、错误和中断颜色。真实执行覆盖测试另读回磁盘，确认显示控制字符处理不修改文件。
-4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
+3. 运行工具状态 PTY 的 regular/fullscreen/lowpower/restart 场景，覆盖 Read 分组、状态和颜色显示。再按 [正式旅程](../scripts/README.md#run) 运行 `cli.py regular/fullscreen`，覆盖实际新建/覆盖/Edit、4002 行导致 Diff unavailable、控制字符磁盘原字节、长/多行/截断 Bash、Ctrl+O 和独立 Bash 的真实 Esc。取消必须在 BEGIN-CANCEL 已显示后发生，且延后标记文件不存在。
+4. `ui-interrupted` 的 Write/Edit 分支按 [文件修改取消边界](../scripts/README.md#file-mutation-cancellation) 记录。宿主执行短时异步文件操作，没有阶段进度；Writing/Editing 标题不能用于判断写入前取消时机。已开始的文件操作可在 signal 取消后完成，已写内容不回滚。执行层测试和真实 Esc 命中该阶段是不同证据；本 skill 没有可靠的人工步骤保证后者。
+5. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash
 pnpm test extensions/codex-ui/__tests__/write-execution.test.ts extensions/codex-ui/__tests__/write-host-validation.test.ts extensions/codex-ui/__tests__/grouped-read.test.ts extensions/codex-ui/__tests__/grouped-bash.test.ts extensions/codex-ui/__tests__/diff-display-safety.test.ts

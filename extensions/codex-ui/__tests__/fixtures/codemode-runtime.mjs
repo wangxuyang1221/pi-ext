@@ -20,8 +20,9 @@ const models = await sdk.ModelRuntime.create({ credentials: new ai.InMemoryCrede
 models.registerNativeProvider(faux.provider);
 let serial = 0, code, busy = false, savedLeaf;
 const events = [];
-const scenarios = ['success', 'partial', 'error', 'running', 'timeout', 'permission', 'nested', 'mcp', 'many', 'empty'];
+const scenarios = ['success', 'partial', 'error', 'running', 'timeout', 'permission', 'nested', 'mcp', 'many', 'hiddenfail', 'empty'];
 const scriptFor = scenario => {
+  if (scenario === 'hiddenfail') return 'await Promise.allSettled(Array.from({length:24}, (_,i) => tools.read({path:i===6 ? "missing.txt" : "package.json"}))); text("HIDDEN-FAILURE-DONE");';
   if (scenario === 'empty') return 'text("No calls required");';
   if (scenario === 'many') return 'await Promise.allSettled(Array.from({length:24}, () => tools.read({path:"package.json"}))); text("Read 24 files");';
   if (scenario === 'permission') return 'await Promise.allSettled([tools.bash({command:"printf forbidden"})]); text("Permission failure handled");';
@@ -55,7 +56,7 @@ const extension = pi => {
   pi.on('tool_call', event => {
     if (event.toolName === 'codemode') return event.input.code === code ? undefined : { block: true, reason: 'Only fixture scripts are allowed' };
     if (event.toolName === 'bash' && event.input.command === 'printf forbidden') return { block: true, reason: 'Fixture permission denied' };
-    if (['read', 'write', 'edit'].includes(event.toolName) && !['package.json', '配置.ts', 'created.txt'].includes(event.input.path)) return { block: true, reason: 'Outside fixture workspace' };
+    if (['read', 'write', 'edit'].includes(event.toolName) && !['package.json', '配置.ts', 'created.txt', 'missing.txt'].includes(event.input.path)) return { block: true, reason: 'Outside fixture workspace' };
   });
   for (const event of ['tool_execution_start', 'tool_execution_update', 'tool_execution_end']) pi.on(event, value => events.push(value));
   pi.on('session_start', (_event, ctx) => { pi.setActiveTools([...new Set([...pi.getActiveTools(), 'codemode'])]); if (ctx.mode === 'tui') ctx.ui.setToolsExpanded(false); });
@@ -107,6 +108,12 @@ try {
       if (scenario === 'nested') assert.ok(result.nestedCalls.calls.some(call => call.id === `${id}/1/1`));
       if (scenario === 'mcp') assert.match(JSON.stringify(result.content), /LOCAL-MCP-RESULT/);
       if (scenario === 'many') assert.equal(result.nestedCalls.calls.length, 24);
+      if (scenario === 'hiddenfail') {
+        assert.equal(result.isError, false);
+        assert.equal(result.nestedCalls.calls.length, 24);
+        assert.equal(result.nestedCalls.calls[6].status, 'error');
+        assert.equal(result.nestedCalls.calls.filter(call => call.status === 'error').length, 1);
+      }
       if (scenario === 'error') assert.match(await readFile(join(cwd, '配置.ts'), 'utf8'), /true/);
       console.log(`PASS production real execution: ${scenario}`);
     }

@@ -2,6 +2,8 @@
 
 此目录维护 codex-ui 的用户行为。先执行 [skill](../SKILL.md) 的 Launch 与 Doctor。所有 case 使用隔离状态，恢复旅程需在同一次实例中保留其 session。
 
+[正式 CLI/headless 驱动](../scripts/README.md) 列出每个 ID 的自动断言与人工边界。共享 smoke、这些旅程和定向执行测试属于不同层级，验收记录需保留各自入口。
+
 ## Proof rules
 
 - 每条子行为分别记录 passed、failed、blocked 或 unverified，并写出证据路径。

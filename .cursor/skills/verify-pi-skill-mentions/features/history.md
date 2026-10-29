@@ -36,7 +36,9 @@ pnpm test extensions/skill-mentions/__tests__/history-editor.test.ts extensions/
 
 ## Gotchas
 
-自动 pty-driver 的恢复入口是 --session，不覆盖 /resume 选择器。选择器专项使用 `extensions/skill-mentions/__tests__/resume-summary-driver.py`，参数为新的仓库内证据目录和 native/native-fullscreen/codex/codex-fullscreen 模式；它验证两次 /resume、首次 --resume、检索及删除源文件后的卡片和模型上下文。先构建并确认宿主已应用 [Pi 摘要补丁](../../../../docs/pi-session-summary-patch.md)。未补丁宿主的列表仍是原行为，不用 --session 成功或自动命名替代选择器验收。
+`skills` 的冷恢复入口是 --session。`skills-resume` 顺序运行 native/native-fullscreen/codex/codex-fullscreen：每模式先创建含快照的原会话和独立会话，删除源 skill，两次从独立会话打开 /resume、精确搜索并按 Enter 选回原会话。逐次断言 session 路径、选择前后历史字节、展开卡片及后续 provider 上下文，再验证首次 --resume 的冷选择器。需要单模式定位时，直接运行 `resume-summary-driver.py <新的仓库内证据目录> <mode>`。先构建并确认宿主已应用 [Pi 摘要补丁](../../../../docs/pi-session-summary-patch.md)。未补丁宿主的列表仍是原行为，不用 --session 成功或自动命名替代选择器验收。
+
+`skills-combination` 固定覆盖 steer：初次 V1 → 多行 Enter 只选候选 → Ctrl+G 外部编辑 → F7 公开 reload 保留草稿 → 源文件 V2 → 提交 → QUEUE_HOLD 期间 Enter 入队 → 消费前改 V3 → 删除源文件 → reload → Ctrl+P 取回原文 → 后续请求。断言三个快照内容、不同 requestId 和模型 user 与 session user 一致。`skills` 的 Alt+Enter follow-up 与这里的 Enter steer 分别留证。
 
 队列旅程使用 provider 延迟来保留真实 TUI 入队窗口。不会证明任意第三方编辑器兼容。
 

@@ -40,4 +40,10 @@ Backspace/Delete 整体删除、SGR 点击定位和终端拖选复制是不同�
 
 fixture 重绑 F8 撤销、F3 展开和 Ctrl+P/N 历史，这是脚本前置配置，不是产品默认键位。
 
+## Manual terminal selection
+
+在可直接观察的真实终端中运行人工入口，保存终端名称、版本和画面。只在本次 scratch 创建 alpha skill，再 /reload，输入 `Use $alpha tail` 并确认标签出现。用终端的鼠标拖选跨过完整标签和两侧正文，执行终端 Copy，将剪贴板粘贴到本次证据目录中的纯文本文件，逐字断言为 `Use $alpha tail`，不能出现图标、ANSI 或协议 envelope。保存拖选前后画面、按键和文本文件，最后 /quit 并核对清理。
+
+该步骤需要人工操作终端和剪贴板。当前 CUA 官方接口禁止终端自动化，代理不得改用其他 CUA 接口、坐标事件、SGR 点击或 pyte 单元格绕过；无法取得上述证据时，保留 `skill-selection: unverified`，注明 Backspace/Delete 子项的已通过证据。
+
 验收依据为 [label-editor.test.ts](../../../../extensions/skill-mentions/__tests__/label-editor.test.ts)、[label-body.test.ts](../../../../extensions/skill-mentions/__tests__/label-body.test.ts)、[label-preference.test.ts](../../../../extensions/skill-mentions/__tests__/label-preference.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

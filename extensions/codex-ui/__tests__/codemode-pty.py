@@ -115,11 +115,13 @@ try:
     wait(lambda: 'Raw result unavailable' in view(), 'reload metadata')
     os.write(fd, b'\x1b')
     settle()
-    for scenario, expected in [('timeout', 'Timed out'), ('permission', 'Fixture permission denied'), ('nested', 'fixture_outer'), ('mcp', 'LOCAL-MCP-RESULT'), ('error', 'Script failed'), ('many', '19 more calls'), ('empty', 'No calls required')]:
+    for scenario, expected in [('timeout', 'Timed out'), ('permission', 'Fixture permission denied'), ('nested', 'fixture_outer'), ('mcp', 'LOCAL-MCP-RESULT'), ('error', 'Script failed'), ('many', '19 more calls'), ('hiddenfail', 'HIDDEN-FAILURE-DONE'), ('empty', 'No calls required')]:
         command(f'/play {scenario}')
         wait(lambda: f'ACCEPTANCE-DONE: {scenario}' in view(), scenario)
         settle()
         assert expected in view(), (scenario, view())
+        if scenario == 'hiddenfail':
+            assert 'Script completed' in view() and '1 failed' in view() and 'missing.txt' in view(), view()
         screens[scenario] = view()
     command('/play running')
     wait(lambda: '1 running' in view(), 'running real bash')

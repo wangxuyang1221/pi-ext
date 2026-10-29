@@ -62,6 +62,7 @@ export class TmuxRuntime {
   private readonly transferDirectory: string;
   private readonly sleep: (milliseconds: number) => Promise<void>;
   private readonly nowMs: () => number;
+  private readonly createdAt: number;
   private readonly lastClearAtByPane = new Map<string, number>();
 
   constructor(options: TmuxRuntimeOptions) {
@@ -84,6 +85,7 @@ export class TmuxRuntime {
       setTimeout(resolveDelay, milliseconds);
     }));
     this.nowMs = options.nowMs ?? Date.now;
+    this.createdAt = this.nowMs();
   }
 
   async launch(options: TmuxLaunchOptions): Promise<TmuxLocator> {
@@ -370,6 +372,13 @@ export class TmuxRuntime {
   }
 
   private async waitForClearCooldown(paneId: string): Promise<void> {
+    // A reloaded root can adopt a live pane whose last Ctrl+C belonged to the previous runtime.
+    // Treat construction as the latest possible clear until this instance has its own observation.
+    if (!this.lastClearAtByPane.has(paneId)) {
+      const remaining = 600 - (this.nowMs() - this.createdAt);
+      if (remaining > 0) await this.sleep(remaining);
+      return;
+    }
     while (true) {
       const lastClearAt = this.lastClearAtByPane.get(paneId);
       if (lastClearAt === undefined) return;

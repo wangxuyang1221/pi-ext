@@ -23,7 +23,7 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run goal`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui goal`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. tool-ui 驱动经模型响应执行三个生产工具，核对卡片状态、错误、重开历史与实际权威 goal。补跑禁用必要工具后停止自动续跑、恢复工具仍需 /goal resume，以及无目标 get、重复 create、非法预算/状态的失败。
+3. 运行 [驱动表](../DRIVERS.md) 的 `matrix tools`、`matrix config` 与 `matrix missing`。逐个核对 toolResult 和权威记录，保留小数预算经过宿主转换前的拒绝断言。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash

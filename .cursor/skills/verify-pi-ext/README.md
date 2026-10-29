@@ -1,10 +1,12 @@
 # Pi extension verification runtime
 
-本目录提供共享运行入口，九个扩展各有独立 SKILL.md 和 features 索引。中文正文、英文标题与 metadata 遵循仓库语言规则。运行前读取受影响扩展的全部 feature 文件，完成后逐条标注状态。
+本目录提供共享运行入口，九个扩展各有独立 SKILL.md 和 features 索引。运行前先读所选扩展的 SKILL.md 和行为索引，再完整读取本次操作涉及的 feature 及其 driver 说明。例如创建 child 要读 spawn，组合加载技能要读 integration。完整扩展验收读取全部 feature；定向操作按本次范围逐项报告，不把未执行的行为记为通过。
 
 ## Launch
 
 从仓库根目录执行：
+
+下面的安装和构建用于首次准备。已有匹配依赖与 dist 时从 doctor 开始；任务限制安装或构建时，选择明确标注的 prebuilt 入口。执行前读该入口的副作用说明。
 
 ```bash
 node --version
@@ -42,22 +44,31 @@ Doctor 不证明 provider 认证有效，也不代替重新 build。lockPresent 
 | metadata | 真实 CLI 的 /codex-metadata 查询、保存、重置和配置文件核对 |
 | metadata-project | 隔离项目 --approve 冷启动、项目覆盖、reset 保留字段和非法版本拒绝 |
 | fast | 真实 CLI 的 /fast on/off/toggle/无参数与落盘开关 |
+| fast-managed | 直接加载已有 dist；root on/off 各创建真实 managed child，检查 launch 和首请求，End session 回收；不安装、不构建 |
 | permissions | 真实 write 审批 Deny/Allow once、磁盘副作用、full 升级取消 |
 | permissions-modes | 真实 print/json 拒绝和 RPC 客户端拒绝、取消/接受 Full access，核对文件字节 |
 | goal | 真实 InteractiveMode 的 goal 工具卡片、状态和历史，生产 dist |
 | goal-accounting | 仓库 host:accounting:check，四个真实宿主用量场景 |
 | goal-footer | 仓库 goal:footer:check，原生/Codex footer 及两种 TUI 模式 |
+| goal-journeys | 正式 Goal 工具矩阵，独立参数入口另见 Goal skill |
+| goal-lifecycle / goal-recovery / goal-content / goal-budget-interrupt | Goal 生命周期、恢复、图片内容与预算收尾 Esc 的正式旅程 |
 | mcp | resume-ui-host.py --live --repeat 1，真实本地 stdio echo 与历史重开 |
 | mcp-transports | transport-fixtures 与 integration，真实本地协议服务及边界断言 |
+| mcp-configuration / mcp-combination / mcp-history / mcp-recovery | 正式配置矩阵、请求组合、原生历史选择器与真实本地 HTTP 恢复服务 |
 | subagent | host:tmux:check，两轮生产 root/child、角色、Fast 与生命周期 |
+| subagent-journeys | 完整真实 root/child PTY，包含快速 reload、退出菜单和恢复组合 |
 | codex-ui | codemode-pty.py，真实 QuickJS、本地 MCP、调用树与 /inspect |
 | codex-ui-fullscreen | 上述场景的 fullscreen 入口 |
 | thinking | thinking-pty.py，固定模型消息的真实 TUI 思考呈现 |
 | tool-status | tool-status:check，多模式生产 renderer 的状态播放 |
 | search | search-ui/smoke.py --restart，生产搜索 renderer 与固定外部结果 |
 | search-resume | web-search:resume:check，普通/fullscreen/禁用时恢复历史 |
+| search-production / search-production-fullscreen | 真实搜索工具到本地协议服务、原生恢复选择器及冷恢复 |
+| search-settings / search-history | 真实设置作用域、主题、禁用后的历史与重开 |
 | search-references | 生产工具入口到本地 HTTP，跨会话引用、异步切换、冷恢复及原子保存；会话身份由夹具提供 |
-| skills-resume | 真实 native CLI 的两次 /resume 与首次 --resume，含精确搜索、删除源文件后恢复；要求 Pi 摘要补丁 |
+| skills-resume | native/native-fullscreen/codex/codex-fullscreen 四模式，进程内选中原会话和冷恢复，核对身份、卡片及续问；要求 Pi 摘要补丁 |
+| skills-combination / skills-permission / skills-mutation | skill 读取与 steer/reload 组合、不可读输入、私有源码副本的受控错误检出 |
+| skills-combination-prebuilt | 直接加载已有 dist 的技能 V1/V2/V3 与 steer/reload 组合；不执行本地 pi install 或构建；菜单恢复另跑 skills-resume |
 | compact | resume-runtime 与 repair-runtime，真实 SDK 会话、模型目录/HTTP 边界替身 |
 | skills | 当前 checkout 的本地 pi install 与 native PTY，全程无需模型服务 |
 
@@ -85,11 +96,19 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui permissions
 
 其他有效名称是 codex-compact、openai-fast-mode、goal、mcp、subagent、codex-ui、skill-mentions、codex-search。启动输出给出本次 evidence 和 scratch。通过 PTY 发送真实命令和按键，输出包含实际终端画面。输入 `/quit` 退出，等待外层返回后再读证据。
 
-交互启动加载该扩展及固定 faux provider，没有联网模型和默认 MCP server。普通输入返回 Verification response；包含 WRITE_PROOF 的用户输入请求真实 write 写入工作目录 proof.txt，工具结果之后返回普通回复。provider 只替换生产边界上的模型服务，记录实际 context 与工具结束事件。它不会自动生成特定 goal、搜索、远程 compact 或 subagent 编排序列。这些需要对应已有场景夹具或已授权的真实服务；缺少时报告 blocked，而不是把普通 faux 回复当成功。
+默认交互启动加载该扩展及 faux provider，没有联网模型和默认 MCP server。普通输入返回 Verification response；包含 WRITE_PROOF 的用户输入请求真实 write 写入工作目录 proof.txt，工具结果之后返回普通回复。provider 只替换模型服务，记录实际 context 与工具结束事件。
+
+需要工具参数、配置种子、多个扩展、模型或冷恢复时，使用正式 recipe 入口：
+
+```bash
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs journey permissions --recipe .cursor/skills/verify-pi-ext/recipes/permissions-resume.json
+```
+
+该示例实际审批 write、核对文件字节、退出 Pi、恢复同一 session 并继续请求。`tui <extension> --recipe <path.json>` 先执行 recipe 中的动作，再交给操作员。参数、动作、provider 协议和扩展示例见 [Journey recipes](RECIPES.md)。各扩展的正式 driver 可通过上表运行，不需要复制脚本到 .tmp。recipe 与手动 tui 成功后都标记 manual-review-required，验收者仍须按 feature 条件审查证据。
 
 skill-mentions 的交互入口启用隔离 agentDir 中的 skill 发现，创建种子后使用 /reload。codex-ui 的交互入口把仓库 codex-pi 主题复制到隔离 agentDir/themes，供 /settings 选择；不会写用户的主题目录。
 
-需要 skill、settings、图片或历史作为前置条件时，只在输出的 scratch 里创建该 feature 要求的种子，并记录 seed 动作。若后续需要重开同一会话，须在本次 driver 的生命周期内重开；tui 命令退出后 scratch 会清理，不能拿一个新 run 验证旧状态的恢复。对这类旅程复用具备 restart/resume 的对应 case。
+需要 skill、settings、图片或历史作为前置条件时，通过 recipe.seed 在本次 scratch 内创建，并在动作与 recipe.json 中留证。recipe 的 restart 动作在同一次 run 内退出并重开 Pi，可用 resume=latest 或 scratch 内的精确 session 路径。tui 命令退出后 scratch 会清理，不能拿新 run 验证旧状态的恢复。
 
 交互退出只会标记 manual-review-required。代理必须审查 action、terminal、文件与 feature 通过条件后，在证据目录另写 verdict.md；不能把零退出码当行为通过。
 
@@ -99,8 +118,8 @@ skill-mentions 的交互入口启用隔离 agentDir 中的 skill 发现，创建
 
 - summary.json 包含 command、版本、工作区修改、PID、退出码、状态和 cleanup。
 - output.log 收集自动驱动的完整输出。
-- commands.py 的旅程保存 journey.json、terminal.ansi、agent/sessions/workspace 副本，包含按键、画面、配置与工具结果。
-- artifacts 保存本次新建或更新的 fixture 证据，包括 tool-status 的五模式 JSON 与最后一次 ANSI。每个 JSON 记录各状态画面；最后一次 ANSI 不能冒充全部模式的原始终端记录。某些旧 fixture（如默认 thinking 成功路径）只输出断言日志，额外截图、OSC 或持久恢复需专用驱动导出。
+- commands.py 的旅程保存 journey.json、owners.json、terminal.ansi、home/agent/sessions/workspace 副本。home/.pi 中的实际搜索配置也保留；journey 包含每次启动命令、PID、按键、画面与实际模型 context。recipe 运行另存 recipe.json 和响应计划。
+- artifacts 保存目标 case 的已知旧 fixture 文件，包括 goal footer 四模式 JSON、tool-status 五模式 JSON 与最后一次 ANSI，以及旧 skill PTY 文件。新驱动在 JSON 输出中明确回报的 evidence 路径会复制到 artifacts/reported；已位于本次 evidence 下的输出直接保留。不会扫描其他 test-results 目录、跟随符号链接或把证据复制到自身。固定名字会复制到本次唯一目录，后续运行不会覆盖旧 run。最后一次 ANSI 不能冒充全部模式的原始终端记录；旧 fixture 若只输出断言日志，其未导出的画面仍不能判为已验证。
 
 每条验收写出 feature/sub-feature ID、实际入口、动作、结果、证据路径与边界。状态使用 passed、failed、blocked、unverified。代码测试通过属于补充证据，不替代用户入口。截图或最终文件单独都不够，至少要能重建“做了什么以及发生了什么”。修改工具同时核对文件字节或 session 结果；需要否定副作用的分支核对目标文件未出现、server 请求次数未增加或 git refs 未变。
 
@@ -118,7 +137,20 @@ helper 会在正常完成、失败和可处理的中断后回收自己启动的�
 
 SIGKILL/宿主崩溃不能执行 finally。发生此类中断时读取锁、summary 与 fixture 中的 PID/socket/端口，核验身份后只清理该次资源。保留 evidence；清理未确认前不删除 scratch，不盲删锁继续运行。隔离并不意味着可以同时运行固定文件名的旧 fixture。
 
-外层 timeout 或中断会先向自己的驱动发送 SIGTERM。新命令驱动会记录 Pi 退出；旧 fixture 若缺少这份确认，helper 保留 scratch 和锁并记录 cleanup=unverified，必须核验其分离的 PTY/tmux 进程后再清理。
+外层通过 Conda 查询 codex-py312 解释器路径，然后直接启动该 Python，summary.pid 因此就是实际驱动 PID。外层 timeout 或 SIGTERM 会向自己的驱动转发信号并等待；commands.py 记录并回收每个独立 PTY 进程组。owners.json 还供外层核对和兜底回收。中断结果仍是 failed，清理成功不会把被中断的旅程改成 passed。
+
+进程检查、日志关闭、证据归档分别执行。某一步失败仍继续复制 home、session 和旧 fixture 证据，错误汇总在 summary.cleanupErrors 与 summary.archive.errors。归档或进程检查未通过时，保留 scratch 和锁供核验。旧 fixture 缺少中断后的 PTY/tmux 退出确认时，也保持 cleanup=unverified。
+
+归档只复制普通文件与目录，跳过 socket、FIFO、设备文件和符号链接；跳过路径记录在 `summary.archive.skipped` 或 `journey.archiveSkipped`。跳过运行时 socket 不代表该服务已退出，仍须核对各 driver 的进程和 socket 清理结果。
+
+共享入口中断回归需要独占同一个锁，在没有其他验证运行时执行：
+
+```bash
+node --test .cursor/skills/verify-pi-ext/scripts/runtime-support.test.mjs
+conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-ext/scripts/interrupt-regression.py
+```
+
+前者验证证据归档、旧固定名字、嵌套更新和单项复制失败；后者从真实外层 tui 发送 SIGTERM，核对完整 PID 树、证据、锁和 scratch。回归输出保存在仓库 .tmp/test-results。
 
 ## Helpers
 

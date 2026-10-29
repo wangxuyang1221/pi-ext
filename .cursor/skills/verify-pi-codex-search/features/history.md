@@ -1,39 +1,27 @@
 # Search history across resume and reload
 
-验证 codex-search 的此组用户行为，以下每个 ID 都是独立验收项。
-
 ## Sub-features
 
-- `search-resume`：恢复显示搜索摘要。
-- `search-reload`：reload 保留历史卡片。
-- `search-disabled-history`：禁用新请求仍展示历史。
-- `search-theme`：主题切换正确渲染。
-- `search-fullscreen`：fullscreen 恢复路径。
+| ID | 可观察结果 |
+| --- | --- |
+| `search-resume` | 原生 /resume 搜索并选择 A，历史卡片恢复，继续动作复用 A 引用；退出后新进程 --session 仍成立。 |
+| `search-reload` | 生产调用形成的成功、错误、超时、取消和 standalone 卡片在 /reload 后保留，后续动作成功。 |
+| `search-disabled-history` | 菜单关闭搜索后 active tools 排除两项工具，reload 和禁用状态冷启动仍展示旧卡片。 |
+| `search-theme` | 原生 /settings 通过方向键选 light，settings.json 的 theme=light，历史诊断保留。 |
+| `search-fullscreen` | fullscreen 中执行生产工具、原生恢复选择器和进程冷恢复。 |
 
-## How to get to it (user POV)
+## Drive
 
-/resume；/reload；Ctrl+O；禁用工具后打开旧历史。
-
-## Driving it with Pi PTY and host fixtures
-
-Preconditions:
-
-- 已完成 [Launch 与 Doctor](../SKILL.md)，没有其他运行占用验证锁。
-- codex-search 不在 package.json 的 pi.extensions 中。使用 -e extensions/codex-search/src/index.ts；不得把八扩展发布包检查当作搜索已打包。
-
-1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search-resume`。保存返回的 evidence 路径并核对退出码。
-2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui codex-search`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 运行 regular/fullscreen/disabled 三种真实 TUI；检查 1 source · 1 query · 13s、展开、主题及 reload，禁用新请求仍保留历史卡片。
-4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
+完成 [Launch 与 Doctor](../SKILL.md) 后运行：
 
 ```bash
-pnpm test extensions/codex-search/__tests__/history-renderers.test.ts
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search-history
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search-production-fullscreen
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search-resume
 ```
 
-证据必须同时写明本次运行实际覆盖哪些 ID，以及剩余 ID 的状态。
+`search-history` 在正常 150×65 全屏终端先执行完整生产本地旅程，再冷恢复 A。它打开 `/settings`，输入 Theme 后 Enter，按 Down 直到画面选中行明确为 light，再 Enter、Esc；以 `settings-light.json` 核对保存值。旧卡片超出视口时发送真实 PageUp 查找 timeout/interrupted 卡片，逐页保存画面，再用 PageDown 返回最新消息。随后关闭搜索、确认宿主 active tools、reload 并再次冷启动，重复滚动核对历史。不能用主题菜单输入 light 后卡片还在，代替主题选择成功的断言。
 
-## Gotchas
+`search-production-fullscreen` 执行同样的生产请求与原生恢复链。`search-resume` 是预置历史的 regular/fullscreen/disabled 补充检查，通过 `/fixture-resume` 调用 ctx.switchSession，不能单独证明原生选择器或本次发生过真实搜索。
 
-driver 预置历史用于恢复验证，不代表本次进行了实时搜索；需与 queries 的实际调用证据分别报告。
-
-验收依据为 [history-renderers.test.ts](../../../../extensions/codex-search/__tests__/history-renderers.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。
+检查 journey.json 的原生选择器、冷恢复、light 与禁用画面，以及 terminal-*.ansi、events.jsonl、sessions 和配置副本。`pnpm test extensions/codex-search/__tests__/history-renderers.test.ts` 补充历史 renderer 边界。

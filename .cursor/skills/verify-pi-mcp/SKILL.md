@@ -26,6 +26,8 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run mcp
 
 ## Drive
 
+完整验收运行 [固定旅程](journeys.md#commands) 的六个命令。配置、三种传输组合、并发 reload、诊断和原生历史均有独立入口，具体动作、服务种子、断言和证据边界集中在该文件。旧 `run mcp` 仍是最小 smoke。
+
 - [Configuration and project trust](features/configuration.md)
 - [Tool discovery, calls and results](features/tools.md)
 - [Deadlines, retry and tool replay](features/reconnect.md)
@@ -44,4 +46,4 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run mcp
 
 ## Helpers
 
-`pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run mcp` 是本 skill 的最小验收。脚本源码与其他 case 见 [共享 helper](../verify-pi-ext/scripts/verify.mjs)。后续使用 `/maintain-verification-skill` 同步行为索引与实现。
+`pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run mcp` 是本 skill 的最小验收，不能代替固定旅程。脚本源码与其他 case 见 [共享 helper](../verify-pi-ext/scripts/verify.mjs)。后续使用 `/maintain-verification-skill` 同步行为索引与实现。

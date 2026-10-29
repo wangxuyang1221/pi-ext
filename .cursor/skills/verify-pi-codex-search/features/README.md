@@ -8,6 +8,7 @@
 - 捕获动作与结果；修改类行为再核对文件或 session，不只看最终画面。
 - 自动 case、定向测试和人工补充的覆盖不同。未驱动的入口保持 unverified。
 - 缺少种子、认证、终端能力或有效历史时记录具体原因，不削弱通过条件。
+- `search-responses`、`search-standalone`、`search-open`、`search-click`、`search-find`、`search-screenshot`、`search-lookups` 分别记录 local-contract 与 remote-service。未运行 [Manual live acceptance](live.md) 时，远端为 unverified，整体 ID 仍为 unverified；本地模拟数据只支持本地结论。
 
 ## Features
 
@@ -15,3 +16,4 @@
 - [Search queries and result presentation](queries.md)：包含 `search-responses`, `search-standalone`, `search-progress`, `search-sources`, `search-expand`, `search-error`, `search-timeout`, `search-cancel`.
 - [Follow-up actions and reference limits](references.md)：包含 `search-open`, `search-click`, `search-find`, `search-reference`, `search-screenshot`, `search-lookups`, `search-single-action`.
 - [Search history across resume and reload](history.md)：包含 `search-resume`, `search-reload`, `search-disabled-history`, `search-theme`, `search-fullscreen`.
+- [Manual live acceptance](live.md)：上述七个 ID 的真实服务、搜索质量、页面和 lookup 验收。

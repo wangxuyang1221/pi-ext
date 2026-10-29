@@ -1,39 +1,35 @@
 # Approval and file side effects
 
-验证 permissions 的此组用户行为，以下每个 ID 都是独立验收项。
-
 ## Sub-features
 
-- `permissions-allow-once`：一次批准后执行工具。
-- `permissions-deny`：拒绝后无文件副作用。
-- `permissions-deny-note`：拒绝说明交给模型。
-- `permissions-cancel-call`：取消中止调用。
-- `permissions-read-safe`：只读工具不弹确认。
+| ID | Observable result |
+| --- | --- |
+| `permissions-allow-once` | write/edit/bash/MCP 在批准前没有副作用，Allow once 后实际执行；再次调用仍需审批。 |
+| `permissions-deny` | 四种工具 Deny 和 Escape 后文件不变，MCP 没有请求。 |
+| `permissions-deny-note` | 四种工具 Deny with note 后不执行，后续模型请求中的真实 toolResult 含输入说明。 |
+| `permissions-cancel-call` | 四种工具 Cancel 后无副作用，tool result 为 aborted，模型没有接续请求。 |
+| `permissions-read-safe` | read/grep/find/ls 完成且没有审批，目录文件不变。 |
 
-## How to get to it (user POV)
+## Drive
 
-模型调用 write/edit/bash/MCP；Allow once；Deny；Deny with note；Cancel。
-
-## Driving it with Pi PTY and host fixtures
-
-Preconditions:
-
-- 已完成 [Launch 与 Doctor](../SKILL.md)，没有其他运行占用验证锁。
-- 验证默认权限模式下的真实文件副作用。普通默认启动为 Full access；本验证显式设置 PI_PERMISSIONS_MODE=default。
-
-1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run permissions`。保存返回的 evidence 路径并核对退出码。
-2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui permissions`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 发送 WRITE_PROOF denied，选择 Deny，等待 settled 后确认 workspace/proof.txt 不存在；再发送 WRITE_PROOF allowed，选择 Allow once，确认文件内容为 approved 加换行。补跑带说明拒绝与取消，检查 tool result 和文件不变；只读工具不弹审批。
-4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
+完成 [Launch 与 Doctor](../SKILL.md)，运行：
 
 ```bash
-pnpm test extensions/permissions/__tests__/permission-policy.test.ts
+pnpm exec node .cursor/skills/verify-pi-permissions/scripts/run.mjs matrix
 ```
 
-证据必须同时写明本次运行实际覆盖哪些 ID，以及剩余 ID 的状态。
+驱动使用正式 [provider.ts](../scripts/provider.ts) 的 `VERIFY_TOOL {"name":"write","args":{"path":"example.txt","content":"approved\n"}}` 种子协议，真实工具仍由 Pi 执行。矩阵已包含 edit 的原文件、bash 的真实写入和 alpha/beta 两个本地 MCP server；无需审计临时文件或外部服务。
 
-## Gotchas
+检查 `matrix/journey.json` 每次 action 的 beforeFiles/afterFiles、beforeCalls/afterCalls、choice，连同 events 和 mcpEvents。Allow once 后逐项核对文件字节或 server 参数；拒绝、说明拒绝和取消须保持快照相同。取消还需检查 aborted 与没有后续模型请求，不能只检查文件不存在。
 
-模型结果在 provider 边界替换，真实 Pi write、tool_call 审批与磁盘未替换。只读、edit、bash、MCP 和附说明拒绝是额外分支，不能从 write 路径推断全部通过。
+## Regression sensitivity
 
-验收依据为 [permission-policy.test.ts](../../../../extensions/permissions/__tests__/permission-policy.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。
+```bash
+pnpm exec node .cursor/skills/verify-pi-permissions/scripts/regression.mjs
+```
+
+正常 probe 应通过，隔离副本禁用 Deny 后同一 probe 应因实际禁写文件产生而失败。`regression.json` 记录两次 evidence，副本保留供审查，生产源码无需恢复。
+
+## Supplemental checks
+
+`pnpm test extensions/permissions/__tests__/permission-policy.test.ts` 只补充其明确断言的规则，不替代真实工具和文件验证。

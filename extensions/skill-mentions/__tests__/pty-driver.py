@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import pty
 import select
+import shutil
 import signal
 import struct
 import subprocess
@@ -15,10 +16,28 @@ import termios
 import time
 import pyte
 
+driving = False
+termination_requested = None
+
+
+def terminate(signum, frame):
+    global termination_requested
+    termination_requested = signum
+    # Defer during setup so a just-forked PTY reaches the cleanup-protected block.
+    if driving:
+        raise SystemExit(128 + signum)
+
+
+signal.signal(signal.SIGTERM, terminate)
+signal.signal(signal.SIGINT, terminate)
+
 install_root, cli, installed, mode, *extra = sys.argv[1:]
 evidence_prefix = extra[0] if extra else "skill-install"
 scope = extra[1] if len(extra) > 1 else "full"
-assert scope in ["full", "spacing"]
+prebuilt = scope in ["spacing", "combination-prebuilt"]
+if scope == "combination-prebuilt":
+    scope = "combination"
+assert scope in ["full", "spacing", "combination", "permission"]
 assert evidence_prefix and all(char in "abcdefghijklmnopqrstuvwxyz0123456789-" for char in evidence_prefix)
 repo = Path(__file__).resolve().parents[3]
 root = Path(install_root) / mode
@@ -41,14 +60,16 @@ settings_file = root / "agent/settings.json"
 settings_file.write_text(json.dumps({"quietStartup": True, "compaction": {"enabled": False},
                                      "cacheWarming": "off", "retry": {"enabled": False}, "doubleEscapeAction": "none"}))
 installation_output = ""
-if scope == "full":
+if not prebuilt:
     # Use the actual local-package install operation before applying supported resource filters.
     installation = subprocess.run(["node", cli, "install", installed], cwd=root / "workspace", env=env,
                                   capture_output=True, text=True, timeout=30)
     assert installation.returncode == 0, installation.stdout + installation.stderr
     installation_output = installation.stdout
 settings = json.loads(settings_file.read_text())
-if scope == "full":
+if prebuilt:
+    assert not settings.get("packages"), "Prebuilt journey must not register a package"
+if not prebuilt:
     assert len(settings["packages"]) == 1
     assert (settings_file.parent / settings["packages"][0]).resolve() == Path(installed), settings
 entries = json.loads((Path(installed) / "package.json").read_text())["pi"]["extensions"]
@@ -58,7 +79,7 @@ elif mode.startswith("codex"):
     selected = [entry for entry in entries if "/codex-ui/" in entry or "/skill-mentions/" in entry]
 else:
     selected = entries
-if scope == "full" and not mode.startswith("combined"):
+if not prebuilt and not mode.startswith("combined"):
     settings["packages"] = [{"source": installed, "extensions": [entry.removeprefix("./") for entry in selected]}]
 if mode.startswith("combined"):
     settings["extensions"] = ["-builtin:mcp"]
@@ -84,11 +105,11 @@ args = ["node", cli, "--extension", str(Path(install_root) / "consumer/pty-fixtu
         "--no-context-files", "--no-prompt-templates", "--approve", "--offline", "--no-builtin-tools",
         "--session-dir", str(root / "sessions"), "--provider", "faux", "--model", "faux-1",
         "--tui-mode", "fullscreen" if mode.endswith("fullscreen") else "regular"]
-if scope == "spacing":
+if prebuilt:
     args += ["--no-extensions"]
     for entry in selected:
         args += ["--extension", str(Path(installed) / entry)]
-    if mode.startswith("codex"):
+    if any("/codex-ui/" in entry for entry in selected):
         args += ["--theme", str(Path(installed) / "themes/codex-pi.json")]
 additional_extensions = [str(repo / "extensions/codex-search/src/index.ts")] if "combined-search" in mode else []
 for extension in additional_extensions:
@@ -104,6 +125,7 @@ decoder = codecs.getincrementaldecoder("utf-8")("strict")
 status = None
 raw = bytearray()
 screens = {}
+actions, file_changes = [], []
 checks = []
 reaped = []
 events_file = root / "events.jsonl"
@@ -156,6 +178,7 @@ def settle(seconds=0.25):
 
 
 def send(text):
+    actions.append({"pid": pid, "input": text, "time": time.monotonic()})
     os.write(fd, text.encode())
     settle()
 
@@ -215,9 +238,119 @@ class SpacingComplete(Exception):
     """Stop after the focused spacing checks while retaining common cleanup."""
 
 
-try:
+def run_combination():
+    global disk_users
     wait(lambda: bool(events("ready")), "actual CLI startup")
     settle(1)
+    if prebuilt and any("/codex-ui/" in entry for entry in selected):
+        assert "Codex profile theme unavailable" not in view(), "Prebuilt Codex UI must load its profile theme"
+        checks.append("prebuilt Codex UI profile theme loaded")
+    assert events("start")[0]["tty"] is True
+    paste("/skill-label-icon command")
+    send("\r")
+    wait(lambda: (root / "agent/skill-mentions.json").exists(), "icon persisted")
+    paste("Initial $alpha")
+    first = submit("Initial $alpha", ["alpha"])
+    assert "ALPHA_VERSION_ONE" in first["skills"][0]["body"]
+    screens["initial-v1"] = view()
+    paste("组合\nUse ")
+    send("$al")
+    wait(lambda: "Alpha fixture" in view(), "candidate")
+    count = len(events("request"))
+    send("\r")
+    assert editor() == "组合\nUse $alpha "
+    assert len(events("request")) == count, "First Enter selected without sending"
+    send("\x07")
+    wait(lambda: (root / "external-source.txt").exists(), "external editor")
+    settle(.6)
+    assert (root / "external-source.txt").read_text() == "组合\nUse $alpha "
+    expected = "组合\nUse $alpha  external"
+    assert editor() == expected
+    before = len(events("ready"))
+    send("\x1b[18~")
+    wait(lambda: len(events("ready")) > before, "draft reload")
+    settle(.6)
+    assert editor() == expected
+    skill = root / "agent/skills/alpha/SKILL.md"
+    original_skill = skill.read_text()
+    skill.write_text(original_skill.replace("ALPHA_VERSION_ONE", "ALPHA_VERSION_TWO"))
+    file_changes.append({"path": str(skill), "before": original_skill, "after": skill.read_text()})
+    second = submit(expected, ["alpha"])
+    assert "ALPHA_VERSION_TWO" in second["skills"][0]["body"], "New request must read VERSION_TWO after external source edit"
+    assert first["requestId"] != second["requestId"]
+    users = [m for m in events("request")[-1] if m["role"] == "user"]
+    assert "ALPHA_VERSION_ONE" in snapshot(users[0])["skills"][0]["body"], "Previous request snapshot must remain VERSION_ONE"
+    screens["external-edit-v2"] = view()
+    checks.append("multiline Enter completion -> external editor -> draft reload -> source edit -> new V2 snapshot and preserved V1 history")
+    count = len(events("request"))
+    settled_count = len(events("settled"))
+    paste("QUEUE_HOLD")
+    send("\r")
+    wait(lambda: len(events("request")) == count + 1, "steer hold")
+    paste("Steer $alpha")
+    send("\r")
+    screens["steer-queued"] = view()
+    skill.write_text(original_skill.replace("ALPHA_VERSION_ONE", "ALPHA_VERSION_THREE"))
+    file_changes.append({"path": str(skill), "after": skill.read_text()})
+    wait(lambda: len(events("request")) == count + 2 and len(events("settled")) > settled_count, "steer consumption")
+    last = [m for m in events("request")[-1] if m["role"] == "user"][-1]
+    assert snapshot(last)["task"] == "Steer $alpha"
+    assert "ALPHA_VERSION_THREE" in snapshot(last)["skills"][0]["body"]
+    assert snapshot(last)["requestId"] != second["requestId"]
+    checks.append("real Enter steer queue reads independent V3 snapshot at consumption")
+    skill.unlink()
+    file_changes.append({"path": str(skill), "deleted": True})
+    before = len(events("ready"))
+    paste("/reload")
+    send("\r")
+    wait(lambda: len(events("ready")) > before, "reload after deletion")
+    settle(.6)
+    send("\x10")
+    assert editor() == "Steer $alpha"
+    send("\x03")
+    paste("After deletion")
+    submit("After deletion", [])
+    all_users = [m for m in events("request")[-1] if m["role"] == "user"]
+    assert [snapshot(m)["skills"][0]["body"].split()[-1] for m in all_users if snapshot(m)] == ["ALPHA_VERSION_ONE", "ALPHA_VERSION_TWO", "ALPHA_VERSION_THREE"]
+    session = Path(events("start")[-1]["session"])
+    disk_users = [e["message"] for line in session.read_text().splitlines() if (e := json.loads(line)).get("type") == "message" and e["message"]["role"] == "user"]
+    assert disk_users == all_users
+    screens["post-delete-context"] = view()
+    checks.append("delete source -> reload -> history original text -> follow-on context preserves all three snapshots and disk parity")
+
+
+def run_permission():
+    skill = root / "agent/skills/beta/SKILL.md"
+    skill.chmod(0)
+    file_changes.append({"path": str(skill), "mode": "000"})
+    assert not os.access(skill, os.R_OK), "Permission-denied precondition must be real"
+    paste("Permission denied $beta, valid $alpha!")
+    value = submit("Permission denied $beta, valid $alpha!", ["alpha"])
+    assert value["task"] == "Permission denied $beta, valid $alpha!"
+    assert "EACCES" not in view() and "Failed to read" not in view()
+    screens["unreadable-permission"] = view()
+    checks.append("real chmod 000 discovered beta remains literal beside readable alpha")
+    skill.chmod(0o644)
+    file_changes.append({"path": str(skill), "mode": "644"})
+    paste("Readable again $beta")
+    submit("Readable again $beta", ["beta"])
+    checks.append("restoring permission allows a fresh beta snapshot")
+
+
+try:
+    driving = True
+    if termination_requested is not None:
+        raise SystemExit(128 + termination_requested)
+    wait(lambda: bool(events("ready")), "actual CLI startup")
+    settle(1)
+    if scope in ["combination", "permission"]:
+        run_combination() if scope == "combination" else run_permission()
+        paste("/quit")
+        send("\r")
+        wait(lambda: status is not None, "focused graceful exit")
+        assert os.waitstatus_to_exitcode(status) == 0
+        print(json.dumps({"mode": mode, "scope": scope, "passed": True, "checks": checks}))
+        raise SpacingComplete()
     assert events("start")[0]["tty"] is True and events("start")[0]["mode"] == "tui"
     assert "[Extension issues]" not in view(), view()
     if scope == "spacing":
@@ -679,12 +812,24 @@ finally:
         assert subprocess.run(["kill", "-0", str(child)], capture_output=True).returncode != 0, child
     result = {"mode": mode, "scope": scope, "pids": reaped, "mcpPids": mcp_pids, "mcpEvents": mcp_events, "exit": os.waitstatus_to_exitcode(status), "checks": checks,
               "selectedExtensions": selected, "additionalSourceExtensions": additional_extensions, "screens": screens, "lastScreen": view(),
-              "installation": installation_output, "requests": len(events("request")),
+              "installation": installation_output, "loadingMode": "prebuilt" if prebuilt else "local-install", "requests": len(events("request")),
               "diskUsers": disk_users if "disk_users" in globals() else [],
               "starts": events("start"), "shutdowns": events("shutdown"),
               "editorObservations": events("editor"), "inputs": events("input"),
               "providerUsers": [[message for message in request if message["role"] == "user"][-1:] for request in events("request")],
+              "processesStopped": True,
               "cleanup": "PTY child reaped; no listener created; parent removes isolated installation"}
     evidence_dir = repo / ".tmp/test-results"
     evidence_dir.mkdir(parents=True, exist_ok=True)
     (evidence_dir / f"{evidence_prefix}-pty-{mode}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+
+    evidence_run = evidence_dir / f"{evidence_prefix}-pty-{mode}"
+    evidence_run.mkdir(exist_ok=True)
+    (evidence_run / "terminal.ansi").write_bytes(raw)
+    (evidence_run / "actions.json").write_text(json.dumps(actions, ensure_ascii=False, indent=2))
+    (evidence_run / "file-changes.json").write_text(json.dumps(file_changes, ensure_ascii=False, indent=2))
+    for name in ["agent", "sessions"]:
+        shutil.copytree(root / name, evidence_run / name, dirs_exist_ok=True)
+    if events_file.exists():
+        shutil.copy2(events_file, evidence_run / "events.jsonl")
+    (evidence_run / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2))

@@ -1,42 +1,37 @@
 # Search queries and result presentation
 
-验证 codex-search 的此组用户行为，以下每个 ID 都是独立验收项。
-
 ## Sub-features
 
-- `search-responses`：responses 查询批次。
-- `search-standalone`：standalone 独立网页动作。
-- `search-progress`：查询进度逐项更新。
-- `search-sources`：汇总来源与引用。
-- `search-expand`：展开查询详情。
-- `search-error`：失败保留诊断。
-- `search-timeout`：超时单独展示。
-- `search-cancel`：取消停止请求。
+| ID | 可观察结果 |
+| --- | --- |
+| `search-responses` | 真实生产工具对两条 query 分别 POST responses，indexed 参数进入请求并解析 SSE。 |
+| `search-standalone` | 宿主注册的 standalone 工具发送独立网页动作，返回结果进入会话。 |
+| `search-progress` | 批次先显示 1/2 queries completed，再显示 2 sources · 2 queries。 |
+| `search-sources` | HTTP URL annotations 进入 details、来源计数与展开内容。 |
+| `search-expand` | Ctrl+O 展开显示完整来源 URL，再次按下折叠。 |
+| `search-error` | HTTP 503 经生产错误分类后显示具体诊断，tool result 的 isError 为 true。 |
+| `search-timeout` | 服务端 response.failed timeout 显示独立超时卡片，reload/冷恢复保留；真实调用方 deadline 终止未结束的 HTTP body，分类为 timeout，下一次请求可成功。 |
+| `search-cancel` | 等待真实连接建立后按 Esc，服务器观察客户端关闭连接，TUI 显示 interrupted。 |
 
-## How to get to it (user POV)
+## Drive
 
-codex_search；可选 codex_standalone_web；Ctrl+O；Esc。
-
-## Driving it with Pi PTY and host fixtures
-
-Preconditions:
-
-- 已完成 [Launch 与 Doctor](../SKILL.md)，没有其他运行占用验证锁。
-- codex-search 不在 package.json 的 pi.extensions 中。使用 -e extensions/codex-search/src/index.ts；不得把八扩展发布包检查当作搜索已打包。
-
-1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search`。保存返回的 evidence 路径并核对退出码。
-2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui codex-search`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 真实 Pi TUI 播放查询进度，检查 2/5 queries completed，再到 17 sources · 5 queries；展开逐项查询与来源。驱动还覆盖失败、超时及重启；查看状态颜色和未泄漏内部请求 JSON。协议定向测试核对实际请求构造。
-4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
+完成 [Launch 与 Doctor](../SKILL.md) 后运行：
 
 ```bash
-pnpm test extensions/codex-search/__tests__/codex.test.ts extensions/codex-search/__tests__/renderers.test.ts extensions/codex-search/__tests__/compact-renderers.test.ts
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search-production
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search
 ```
 
-证据必须同时写明本次运行实际覆盖哪些 ID，以及剩余 ID 的状态。
+`search-production` 加载源码扩展，只有模型服务和搜索 HTTP 服务使用合成数据。它把批次、展开、standalone、非法参数、503、timeout、Esc 与恢复后的成功动作连成一次旅程。`requests.json` 保存原始请求正文和 thread-id；`events.jsonl` 保存模型上下文、工具结果和 settled 事件；`journey.json` 保存按键、画面、断言及监听端口关闭结果；`terminal-*.ansi` 保存原始输出。
 
-## Gotchas
+`search` 是生产 renderer 的补充展示夹具，execute 返回固定结果，覆盖 2/5 进度、17 sources、宽度、部分失败与重启。它不证明请求传输。TUI timeout 旅程使用服务端超时事件。`timeout.test.ts` 另用真实 loopback 服务保持响应 body 不结束，连接建立后由调用方真实计时器触发 TimeoutError signal，生产 responses/standalone 请求退出、服务端观察连接关闭，随后同 transport 的新请求成功。两项证据分别记录协议层计时退出和 TUI 分类展示。
 
-离线 fixture 替换搜索结果，不证明实时网页准确性、账号认证或 freshness。实时查询需已授权账号，记录 query、来源和请求边界。
+产品没有默认客户端 deadline 或对应配置，公开接口接收调用方的 AbortSignal。上述测试证明调用方 deadline 的传递和退出，不表示未传 signal 的请求会自动超时。
 
-验收依据为 [codex.test.ts](../../../../extensions/codex-search/__tests__/codex.test.ts)、[renderers.test.ts](../../../../extensions/codex-search/__tests__/renderers.test.ts)、[compact-renderers.test.ts](../../../../extensions/codex-search/__tests__/compact-renderers.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。
+```bash
+pnpm test extensions/codex-search/__tests__/timeout.test.ts extensions/codex-search/__tests__/codex.test.ts extensions/codex-search/__tests__/renderers.test.ts extensions/codex-search/__tests__/compact-renderers.test.ts
+```
+
+## Remote boundary
+
+本地结果只证明调用与呈现。`search-responses`、`search-standalone` 的真实服务鉴权、freshness 和搜索质量须按 [Manual live acceptance](live.md) 独立执行；未执行时远端分支记为 unverified。

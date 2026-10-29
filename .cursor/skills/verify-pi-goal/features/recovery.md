@@ -25,7 +25,7 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run goal-accounting`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui goal`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 运行宿主记账恢复场景。另在隔离 TUI 创建并暂停目标，在 /goal-recover 选择记录，检查 goalId、累计值与会话归属；取消恢复不发请求。并发打开同一 agentDir 时应拒绝已有写入者，磁盘错误后需修复并显式 resume。
+3. 运行 [驱动表](../DRIVERS.md) 的 `lifecycle`、`recovery`、三个 `matrix reopen-*`、`matrix lock` 与 `matrix storage`。恢复需同时核对确认框接受/拒绝、零请求、归属及持久文件。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash

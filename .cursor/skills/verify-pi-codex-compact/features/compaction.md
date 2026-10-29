@@ -23,9 +23,9 @@ Preconditions:
 - provider/API 必须同时为 `openai-codex` / `openai-codex-responses`。离线验证的服务替换边界见 [专用 PTY](../SKILL.md#drive)。
 - 带工具的手动或宿主压缩，在没有仍有效的已观察请求投影时，需要声明 `manualProjection`。普通无隐藏工具配置使用 `{"manualProjection":{"hiddenTools":[]}}`；隐藏工具及 forced prompt 必须声明实际规则。专用 PTY 使用隔离配置并显式声明，无需修改用户配置。
 
-1. 运行 [专用 PTY](../SKILL.md#drive)。核对手动 `/compact` 的原生卡片、`Codex compaction applied` 和持久化 checkpoint。新增对话后再次压缩，在固定服务等待中按 Esc，确认 abort 传到 transport，原 checkpoint 不变。连续两次压缩之间没有新消息时，Pi 会报 Already compacted，不能用该路径验证取消。
+1. 运行 [场景配方](../journeys.md) 的 `combination`，核对手动卡片、持久化 checkpoint、Esc 取消、metadata 保存/reset 及取消后重试。连续两次手动压缩之间保留新消息，避免 Already compacted 跳过实际请求。
 2. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run compact`。它在真实 SDK 上补验 manual/threshold/overflow、单次重试与失败后的请求和 checkpoint，保存 evidence 并核对清理。
-3. `compact-pre-request` 的编辑器上方动画仍需单独触发请求前自动压缩，并记录 Esc 后动画消失及 checkpoint 未提交。专用 PTY 的手动压缩取消不能代替此分支。
+3. 运行配方的 `threshold`、`overflow`、`repeated-overflow`，分别核对真实 TUI 的宿主原因、原生成功卡片、pending 完整性与单次重试上限。运行 `automatic`，观察编辑器上方 spinner 的两个不同帧、Esc 后消失、旧 checkpoint 未变和恢复重试；随后注入 401，核对失败分类、旧 checkpoint 不变与后续继续对话。手动取消与请求前取消分别留证。
 4. 对照以下定向测试定位未覆盖边界；它们不代替对应的按键、画面和会话结果。
 
 ```bash

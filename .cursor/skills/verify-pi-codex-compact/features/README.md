@@ -9,6 +9,8 @@
 - 自动 case、定向测试和人工补充的覆盖不同。未驱动的入口保持 unverified。
 - 缺少种子、认证、终端能力或有效历史时记录具体原因，不削弱通过条件。
 
+使用 [场景配方](../journeys.md) 的命名场景，避免从临时审计目录复制 driver。报告分别提供 `strictTuiStatus` 和 `layeredStatus`，并列出每个必要分支的层级与证据。前者用于和既有严格 TUI 审计比较；生产算法或 SDK 断言的补充证据只计入后者，不能据此修改前者。
+
 ## Features
 
 - [Model metadata configuration](metadata.md)：包含 `metadata-status`, `metadata-save`, `metadata-reset`, `metadata-project-priority`, `metadata-invalid`.

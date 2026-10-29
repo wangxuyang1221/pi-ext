@@ -20,6 +20,7 @@ Preconditions:
 
 - 已完成 [Launch 与 Doctor](../SKILL.md)，没有其他运行占用验证锁。
 - skills helper 通过本地 pi install 加载当前 checkout 的 dist，不做 pnpm 发布包安装；发布 tarball 另跑 skill-mentions:acceptance。
+- `skills-combination` 与 `skills-permission` 同样执行本地 pi install。已有 dist 且禁止安装时，改用 `run skills-combination-prebuilt`，以显式 `--extension` 加载现有 dist；结果须为 `loadingMode: prebuilt`、`installation: ""`。它不证明 `skill-package`。菜单恢复另运行 `run skills-resume`。
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui skill-mentions`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
@@ -34,6 +35,10 @@ pnpm test extensions/skill-mentions/__tests__/package.test.ts extensions/skill-m
 
 ## Gotchas
 
-安装验收可能访问 registry，且会重新 build；与其他验证串行执行。native helper 不能替代 tarball 或组合模式验收。
+安装验收可能访问 registry，且 prepack 会重新 build；与其他验证串行执行。生成消费项目后，先用 lockfile-only 解析其动态 tarball 依赖，再以 `pnpm install --frozen-lockfile --ignore-scripts` 安装，断言消费锁字节不变并归档锁及 SHA-256。仓库根锁不受修改。不要把初次生成消费锁误写成已使用冻结锁安装。
+
+默认完整入口必须保留 native/native-fullscreen/codex/combined/combined-fullscreen 五模式。每模式保存 selectedExtensions、真实本地 pi install、CLI session、逐键动作及 ANSI。combined 模式还执行本地 stdio MCP echo 并断言工具结果中的 $alpha 保持原文。`--summary` 是显式补丁宿主专项，不替代默认未补丁宿主五模式。
+
+`skills-combination` 是当前 checkout 的独立组合旅程；其快照读取断言能检测进程级缓存错误，不能替代真实发布包安装。native helper 同样不能替代 tarball 或组合模式验收。
 
 验收依据为 [package.test.ts](../../../../extensions/skill-mentions/__tests__/package.test.ts)、[registration.test.ts](../../../../extensions/skill-mentions/__tests__/registration.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

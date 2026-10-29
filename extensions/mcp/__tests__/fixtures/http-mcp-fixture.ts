@@ -4,16 +4,19 @@ import type { Socket } from "node:net";
 
 export type HttpFailureStep =
   | { kind: "status"; status: number; body?: string; retryAfter?: string; contentType?: string }
+  | { kind: "protocol"; code: number }
   | { kind: "timeout" }
   | { kind: "interrupt" };
 
 export interface LocalHttpMcpFixtureOptions {
   failures?: HttpFailureStep[];
   toolCallFailures?: HttpFailureStep[];
+  listFailures?: HttpFailureStep[];
+  responseDelayMs?: number;
 }
 
 export class LocalHttpMcpFixture {
-  readonly requests: Array<{ method: string; headers: IncomingMessage["headers"] }> = [];
+  readonly requests: Array<{ at: number; method: string; headers: IncomingMessage["headers"] }> = [];
   readonly abortedMethods: string[] = [];
   readonly sockets = new Set<Socket>();
   readonly server: Server;
@@ -21,9 +24,13 @@ export class LocalHttpMcpFixture {
   private failures: HttpFailureStep[];
   private toolCallFailures: HttpFailureStep[];
   private closed = false;
+  private readonly listFailures: HttpFailureStep[];
+  private readonly responseDelayMs: number;
 
   private constructor(options: LocalHttpMcpFixtureOptions) {
     this.failures = [...(options.failures ?? [])];
+    this.listFailures = [...(options.listFailures ?? [])];
+    this.responseDelayMs = options.responseDelayMs ?? 0;
     this.toolCallFailures = [...(options.toolCallFailures ?? [])];
     this.server = createServer((request, response) => {
       void this.handleRequest(request, response).catch(() => {
@@ -64,11 +71,15 @@ export class LocalHttpMcpFixture {
   async close(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    const socketClosures = [...this.sockets].map((socket) => new Promise<void>((resolve) => {
+      socket.once("close", () => resolve());
+    }));
     this.server.closeAllConnections?.();
     for (const socket of this.sockets) socket.destroy();
     await new Promise<void>((resolve) => {
       this.server.close(() => resolve());
     });
+    await Promise.all(socketClosures);
   }
 
   private async handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
@@ -90,7 +101,7 @@ export class LocalHttpMcpFixture {
     const body = await readJsonBody(request);
     const messages = Array.isArray(body) ? body : [body];
     const method = typeof messages[0]?.method === "string" ? messages[0].method : "unknown";
-    this.requests.push({ method, headers: request.headers });
+    this.requests.push({ at: Date.now(), method, headers: request.headers });
     request.once("aborted", () => this.abortedMethods.push(method));
     response.once("close", () => {
       if (!response.writableEnded && !this.abortedMethods.includes(method)) {
@@ -98,7 +109,8 @@ export class LocalHttpMcpFixture {
       }
     });
 
-    const failures = method === "initialize"
+    if (this.responseDelayMs) await new Promise((resolve) => setTimeout(resolve, this.responseDelayMs));
+    const failures = method === "tools/list" ? this.listFailures : method === "initialize"
       ? this.failures
       : method === "tools/call"
         ? this.toolCallFailures
@@ -108,6 +120,11 @@ export class LocalHttpMcpFixture {
       if (failure.kind === "timeout") return;
       if (failure.kind === "interrupt") {
         request.socket.destroy();
+        return;
+      }
+      if (failure.kind === "protocol") {
+        response.writeHead(200, { "content-type": "application/json" });
+        response.end(JSON.stringify({ jsonrpc: "2.0", id: messages[0].id, error: { code: failure.code, message: "Fixture protocol error" } }));
         return;
       }
       const responseBody = failure.body ?? `HTTP ${failure.status}`;

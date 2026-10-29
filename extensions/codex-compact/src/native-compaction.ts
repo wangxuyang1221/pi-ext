@@ -97,6 +97,12 @@ export type JsonObject = Record<string, unknown>;
 export type ResponseItem = JsonObject & { type?: string };
 export type ResponseInputView = { items: ResponseItem[]; userSources: ReadonlyMap<number, string>; instructions?: string; tools?: JsonObject[] };
 export type RequestProjectionPolicy = { hiddenNames: ReadonlySet<string>; forcedPrompt?: string };
+/** Pure budget preview; generated IDs may use their maximum encoded length. */
+export type CheckpointReplayProjection = (replacementHistory: ResponseItem[]) => {
+	input: ResponseItem[];
+	instructions: string;
+	tools?: unknown[];
+};
 export type InputViewKind = "full-history" | "pi-context" | "effective";
 export type InputViewOptions = {
 	excludeEntryId?: string;
@@ -903,12 +909,53 @@ export function fullInputForBranch(params: { branch: SessionEntry[]; model: Mode
 	return createBranchInputSnapshot(params).view(params.model, "full-history").items;
 }
 
+/** Previews a committed checkpoint through the same immutable projection used for replay. */
+export function createCheckpointReplayProjection(params: {
+	branch: SessionEntry[];
+	model: Model<any>;
+	tools: ToolInfo[];
+	projectionPolicy?: RequestProjectionPolicy;
+	protectedInput?: ResponseItem[];
+	fallbackInstructions: string;
+}): CheckpointReplayProjection {
+	const branch = structuredClone(params.branch);
+	const model = structuredClone(params.model);
+	const protectedInput = structuredClone(params.protectedInput ?? []);
+	const tools = params.tools.map(tool => {
+		const { reachesTools, ...declaration } = tool;
+		return { ...structuredClone(declaration), ...(Object.hasOwn(tool, "reachesTools") ? { reachesTools } : {}) };
+	});
+	const projectionPolicy = params.projectionPolicy && {
+		hiddenNames: new Set(params.projectionPolicy.hiddenNames), forcedPrompt: params.projectionPolicy.forcedPrompt,
+	};
+	const fallbackInstructions = params.fallbackInstructions;
+	return replacementHistory => {
+		const view = createBranchInputSnapshot({ branch, tools, projectionPolicy,
+			lookupCheckpoint: () => ({ status: "valid", checkpoint: {
+				entryId: "codex-replay-budget-preview", entryIndex: branch.length,
+				details: { kind: NATIVE_COMPACTION_KIND, version: NATIVE_COMPACTION_VERSION,
+					modelKey: modelKey(model), replacementHistory, preservedInput: protectedInput },
+			} }),
+		}).view(model, "effective");
+		for (const item of view.items.slice(replacementHistory.length + protectedInput.length)) {
+			if ((item.type === "tool_search_call" || item.type === "tool_search_output")
+				&& typeof item.call_id === "string" && item.call_id.startsWith("pi_tool_restore_")) {
+				// The real checkpoint ID is not allocated yet. piShortHash joins two
+				// unsigned 32-bit base36 values, each at most seven ASCII bytes.
+				item.call_id = "pi_tool_restore_" + "z".repeat(14);
+			}
+		}
+		return { input: view.items, instructions: view.instructions || fallbackInstructions, tools: view.tools ?? [] };
+	};
+}
+
 export type CompactionInputPlan = {
 	input: ResponseItem[];
 	preservedInput: ResponseItem[];
 	preservedInputSources: (string | null)[];
 	basePayload?: JsonObject;
 	assertCurrent?: () => void;
+	projectReplay?: CheckpointReplayProjection;
 };
 
 function legacyPendingInputPlan(

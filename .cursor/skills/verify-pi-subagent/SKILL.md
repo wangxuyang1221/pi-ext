@@ -16,9 +16,11 @@ pnpm install --frozen-lockfile --ignore-scripts
 pnpm run build
 pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs doctor
 pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run subagent
+pnpm exec node .cursor/skills/verify-pi-subagent/scripts/run.mjs
+pnpm exec node .cursor/skills/verify-pi-subagent/scripts/run.mjs "subagent-legacy-$(date +%s)" legacy
 ```
 
-这是短生命周期验证。helper 创建空配置、会话和临时目录，驱动真实宿主，并在退出前清理。就绪条件是驱动观察到资源加载完成或匹配的 TUI 提示，再执行断言，不是进程成功启动。人工补充路径用 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui subagent`，须通过工具的 PTY 模式运行；使用说明和限制见共享文档。
+三个入口分别验证生产宿主组、完整 root CLI/PTY 旅程和真实 v2 writer 升级。依次运行并审查逐项断言，不能用第一项代替后两项。完整夹具、故障注入边界和 legacy 历史前提见 [driver 说明](scripts/README.md)。它们各自创建空配置和私有 tmux server，在匹配 readiness 后驱动，并保留清理证据。
 
 ## Doctor
 
@@ -36,12 +38,12 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run subagent
 
 ## Evidence
 
-记录 feature ID、入口、命令/按键、前后状态、实际文件或会话副作用。helper 在 `.tmp/test-results/verify-<case>-<id>/` 保留 `summary.json`、`output.log` 和可用的 `artifacts/`；命令 PTY 另有 `journey.json`、`terminal.ansi` 与隔离文件副本。共享说明定义证据边界。一次 smoke 不能作为整个行为索引通过。
+记录 feature ID、入口、命令/按键、前后状态、实际文件或会话副作用。共享宿主 helper 在 `.tmp/test-results/verify-<case>-<id>/` 保留 `summary.json`、`output.log` 和可用的 `artifacts/`。本 skill 的 runner 输出自己的 evidence 路径，其中有 `journey.json`、每个 root 的 `terminal-<pid>.ansi`、`wrapper-cleanup.json` 和隔离文件副本。共享说明定义证据边界。一次 smoke 不能作为整个行为索引通过。
 
 ## Cleanup
 
-自动 helper 在成功、失败及可处理取消后清理所启动进程和 scratch，最后应为 `cleanup: removed`。交互路径发送 `/quit`，等待外层 helper 返回，再检查 evidence 仍存在。清理未核实或缺少前置条件时不得记为通过；按 [共享清理规则](../verify-pi-ext/README.md#cleanup) 处理。
+共享 helper 最后应为 `cleanup: removed`。本 skill runner 还须核对 `journey.cleanup.allStopped`、`wrapper-cleanup.scratchRemoved` 和 `evidenceRetained` 均为 true。交互路径发送 `/quit`，等待外层返回，再检查 evidence。清理未核实或缺少前置条件时不得记为通过；按 [共享清理规则](../verify-pi-ext/README.md#cleanup) 处理。
 
 ## Helpers
 
-`pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run subagent` 是本 skill 的最小验收。脚本源码与其他 case 见 [共享 helper](../verify-pi-ext/scripts/verify.mjs)。后续使用 `/maintain-verification-skill` 同步行为索引与实现。
+`run subagent` 是宿主协议验收。完整用户操作由 [run.mjs](scripts/run.mjs) 和 [driver.py](scripts/driver.py) 执行，其中 `/quit` 三个选择与恢复后 prompt 都是正式断言。需要人工使用普通 faux 交互入口时，先读共享说明的限制；它不自动编排本 skill 的旅程。后续使用 `/maintain-verification-skill` 同步行为索引与实现。

@@ -1,39 +1,27 @@
 # Permission mode selection
 
-验证 permissions 的此组用户行为，以下每个 ID 都是独立验收项。
-
 ## Sub-features
 
-- `permissions-env`：环境变量选择启动模式。
-- `permissions-menu`：菜单选择权限模式。
-- `permissions-default`：命令切回 default。
-- `permissions-full`：进入 full 必须确认。
-- `permissions-cancel`：取消升级保留原模式。
+| ID | Observable result |
+| --- | --- |
+| `permissions-env` | default 启动要求审批；full 与未设置变量启动写入成功、没有审批。 |
+| `permissions-menu` | `/permissions` 选择 full 后出现确认；选择 default 后，下次未授权写入重新审批；Escape 保留模式。 |
+| `permissions-default` | full 下执行 `/permissions default`，footer 更新，下次写入要求审批。 |
+| `permissions-full` | 命令与菜单升级均先确认，接受后 footer 显示 full access，未授权目标可写入。 |
+| `permissions-cancel` | Escape 和 Cancel 取消升级后，下次未授权写入仍需审批，拒绝不写入。 |
 
-## How to get to it (user POV)
+## Drive
 
-PI_PERMISSIONS_MODE；/permissions；/permissions default；/permissions full。
-
-## Driving it with Pi PTY and host fixtures
-
-Preconditions:
-
-- 已完成 [Launch 与 Doctor](../SKILL.md)，没有其他运行占用验证锁。
-- 验证默认权限模式下的真实文件副作用。普通默认启动为 Full access；本验证显式设置 PI_PERMISSIONS_MODE=default。
-
-1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run permissions`。保存返回的 evidence 路径并核对退出码。
-2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui permissions`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 先在 default 模式执行拒绝和允许写入，再打开 /permissions full 并取消。交互模式补跑 /permissions 菜单选择、full 的 Continue 和 default 切回，检查 footer 与下一次工具调用是否再审批。
-4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
+完成 [Launch 与 Doctor](../SKILL.md)，运行：
 
 ```bash
-pnpm test extensions/permissions/__tests__/host-compatibility.test.ts
+pnpm exec node .cursor/skills/verify-pi-permissions/scripts/run.mjs matrix
 ```
 
-证据必须同时写明本次运行实际覆盖哪些 ID，以及剩余 ID 的状态。
+驱动保留 default、full、未设置变量的独立 Pi 进程，以及命令和菜单的按键、画面、后续工具结果和文件字节。检查 `matrix/journey.json` 的 actions/results，结合 `tools.ansi`、`tools.screens.json` 和 `env-*.ansi`。
 
-## Gotchas
+单纯观察 footer 或确认框消失不足以通过。必须保留其后未授权目标的实际调用；full 写入应成功，default 拒绝应保持文件不变。
 
-自动脚本只验证 full 确认出现并取消，不代表接受升级和菜单路径通过。单独 dialogs-pty.py 只测试 Pi 对话框堆栈。
+## Supplemental checks
 
-验收依据为 [host-compatibility.test.ts](../../../../extensions/permissions/__tests__/host-compatibility.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。
+`pnpm test extensions/permissions/__tests__/host-compatibility.test.ts` 提供 SDK 边界检查，不能替代本组 CLI/PTY 行为。

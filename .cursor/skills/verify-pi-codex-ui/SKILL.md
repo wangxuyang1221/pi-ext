@@ -26,6 +26,8 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run codex-ui
 
 ## Drive
 
+先执行受影响 feature 对应的已有 case，再运行 [正式 CLI/headless 旅程](scripts/README.md#run)。其中包含原生设置、fork/resume/tree、Markdown、配置拒绝与修复、工具副作用、lowpower 切换、持久 Thinking 和缓存压力。新增组合无需复制临时审计脚本；驱动及离线模型边界已随 skill 维护。
+
 - [Composer, footer and theme](features/layout.md)
 - [Thinking and terminal activity](features/thinking.md)
 - [Read, Bash, Edit and Write display](features/tools.md)
@@ -34,6 +36,8 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run codex-ui
 - [Execution settings and fail-closed configuration](features/execution.md)
 
 每个 feature 的自动入口只证明文件注明的范围。补充步骤必须逐项执行并记录，不得把全部单元测试通过写成全部用户旅程通过。
+
+终端拖选、像素外观、系统剪贴板按 [人工边界](scripts/README.md#manual-boundaries) 记录。Write/Edit 没有可观察、可控制的文件操作阶段，真实 Esc 命中该阶段的缺口见 [文件修改取消边界](scripts/README.md#file-mutation-cancellation)；已完成文件改动不回滚。脚本通过时这些分支仍可为 unverified。
 
 ## Evidence
 

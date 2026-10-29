@@ -25,8 +25,9 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run tool-status`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui codex-ui`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 先执行定向配置/宿主测试；隔离配置改变前缀或 shell，发真实 bash 并核对实际输出；损坏配置后 read/bash 返回英文错误、底层命令未执行，修复后 /reload 恢复。未信任项目配置不读取。
-4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
+3. 按 [正式旅程](../scripts/README.md#run) 运行 `cli.py regular/fullscreen` 和 `headless.py`。CLI 实际验证 shell prefix/path、全局错误快照、可信项目语法错误/不可读、修复未 reload 仍拒绝和 reload 后恢复，以及可信启动切换不信任后排除项目配置。print/json 与 RPC 分别验证正常图片 resize 的字节尺寸、真实 Bash 文件，以及全局/可信项目配置损坏和不可读时 read/bash 失败且无文件或图片副作用。
+4. headless 没有 `/reload` 用户命令，恢复需修复后重启。cwd/信任作为 snapshot key 和 SDK 显式 execution options/tool factories 的规则继续由 `execution-settings.test.ts` 覆盖，证据层级单列。
+5. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash
 pnpm test extensions/codex-ui/__tests__/execution-settings.test.ts extensions/codex-ui/__tests__/tools.test.ts

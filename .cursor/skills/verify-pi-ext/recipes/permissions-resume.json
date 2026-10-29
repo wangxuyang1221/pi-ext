@@ -1,0 +1,83 @@
+{
+  "seed": [
+    {
+      "path": "home/.pi/verification-seed.json",
+      "json": {
+        "marker": "isolated-home-proof"
+      }
+    }
+  ],
+  "responses": [
+    {
+      "toolCalls": [
+        {
+          "name": "write",
+          "arguments": {
+            "path": "recipe-proof.txt",
+            "content": "approved by recipe\n"
+          }
+        }
+      ]
+    },
+    {
+      "text": "Recipe write completed"
+    },
+    {
+      "text": "Recipe resumed successfully"
+    }
+  ],
+  "actions": [
+    {
+      "send": "Write the recipe proof file"
+    },
+    {
+      "wait": {
+        "screenIncludes": "Allow Pi to run write?"
+      }
+    },
+    {
+      "keys": "enter"
+    },
+    {
+      "wait": {
+        "eventType": "settled",
+        "eventCount": 1
+      }
+    },
+    {
+      "expect": {
+        "file": "workspace/recipe-proof.txt",
+        "text": "approved by recipe\n"
+      }
+    },
+    {
+      "restart": {
+        "resume": "latest"
+      }
+    },
+    {
+      "send": "Continue after restoring this session"
+    },
+    {
+      "wait": {
+        "eventType": "settled",
+        "eventCount": 2,
+        "screenIncludes": "Recipe resumed successfully"
+      }
+    },
+    {
+      "expect": {
+        "eventType": "request",
+        "eventContains": "Continue after restoring this session"
+      }
+    },
+    {
+      "expect": {
+        "screenIncludes": "Recipe resumed successfully"
+      }
+    },
+    {
+      "snapshot": "resumed-followup"
+    }
+  ]
+}

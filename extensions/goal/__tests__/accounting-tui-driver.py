@@ -17,6 +17,8 @@ import pyte
 
 root = Path(sys.argv[1]).resolve()
 root.mkdir(parents=True, exist_ok=True)
+from signal_support import install
+install(root, globals())
 assert not (root / "events.jsonl").exists(), "Use a fresh fixture directory"
 sdk = str(Path(sys.argv[2]).resolve())
 source = os.environ.get("GOAL_USAGE_SOURCE", "root")
@@ -24,6 +26,7 @@ pid, fd = pty.fork()
 if pid == 0:
     os.environ.update({"GOAL_PROBE_ROOT": str(root), "TERM": "xterm-256color", "HOME": str(root), "TMPDIR": str(root)})
     os.execvp("node", ["node", "extensions/goal/__tests__/accounting-tui.mjs", sdk])
+(root / "pid.txt").write_text(str(pid))
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 60, 140, 0, 0))
 screen = pyte.Screen(140, 60)
 stream = pyte.Stream(screen)

@@ -16,21 +16,7 @@
 
 ## Driving it with Pi PTY and host fixtures
 
-Preconditions:
-
-- 已完成 [Launch 与 Doctor](../SKILL.md)，没有其他运行占用验证锁。
-- --live 在这里表示真实本地 stdio MCP server，不使用用户的远程服务或凭据。
-
-1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run mcp`。保存返回的 evidence 路径并核对退出码。
-2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui mcp`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 运行真实 MCP 会话，检查未信任目录的 sentinel 未写入。隔离 TUI 运行 /mcp-init，检查生成文件和 /mcp status；用无效高优先级文件确认不降级读取较低文件，单个无效 server 不阻塞其他有效 server。
-4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
-
-```bash
-pnpm test extensions/mcp/__tests__/config.test.ts extensions/mcp/__tests__/pi-modes-smoke.test.ts
-```
-
-证据必须同时写明本次运行实际覆盖哪些 ID，以及剩余 ID 的状态。
+完成 [Launch 与 Doctor](../SKILL.md)，运行 [固定旅程的命令](../journeys.md#commands)，选择 `configuration`。具体动作和通过条件见 [对应旅程](../journeys.md#configuration)。每个 ID 分别记录实际覆盖结果、证据层级和文件路径；需要完整验收时运行固定旅程的全部六条命令及列出的定向协议测试。
 
 ## Gotchas
 
