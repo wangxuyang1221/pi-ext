@@ -131,3 +131,11 @@
 需要补验时完整交接本worktree .cursor/skills/verify-pi-text-regions/SKILL.md和.cursor/skills/verify-pi-codex-ui/SKILL.md的绝对路径及必要features/references。联网凭据通过安全secret入口获取，不让用户在聊天贴密钥；不擅自读取用户auth、发付费请求或写系统剪贴板。精确Write/Edit await的缺口不是已证实产品故障，不能通过不可靠抢时序或弱化断言填补。
 
 最终必须验证两种 renderer、原版降级、实际补丁安装/发布入口、CPU 预算、真实交互及清理。所有 Implementation 通过后提交用户确认；不能自行合并、关闭 Map/Spec 或移除尚未处置原型的 worktree。
+
+## Termius supplemental verification
+
+#66 本轮独立补验仅覆盖 Termius 实机/拖选/系统复制边界，没有重跑 CPU/完整自动矩阵。见[增量报告](evidence/termius-verification.md)与[索引](evidence/termius-verification.json)。Termius 9.41.1 可获取应用、AX及菜单，也可新建/关闭本地标签，没有安全拒绝；但 CUA typeText/paste/Return 未进入专用本地 shell，Pi 未启动，关闭标签后的 AX/截图亦不一致。此为实机驱动未建立，不是产品失败，没有新增通过 ID，仍53 passed、0 failed、5 unverified。
+
+用户已明确授权隔离样本覆盖系统剪贴板并粘贴至本工作目录，无需再次申请。本轮未运行生产 /copy，无实际粘贴文件，未读取用户原剪贴板或操作远程标签。图片协议能力未核实，不能由应用访问成功推断图片像素已验。远程 provider 与 Write/Edit 精确 await 仍保留原缺口。
+
+新 RUN `.tmp/termius-verification-66-20261029`。73份前轮来源哈希、两消费者各7个生产JS及tarball匹配，doctor通过，明确复用原安装。12组准备但未启动的runtime已清理，脚本/样本/agent副本/裁剪现场保留。AX确认自己的Local Terminal (1)移除，原本本地标签和远程标签未动；没有Pi PID或测试监听。恢复可确认的CUA键盘输入及新鲜截图后，按保留manual入口继续，不把现有授权缺失误写为阻塞，也不将未启动旅程算通过。

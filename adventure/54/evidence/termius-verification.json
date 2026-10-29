@@ -1,0 +1,686 @@
+{
+  "schemaVersion": 1,
+  "task": 66,
+  "generatedAt": "2026-10-29T07:03:43.483Z",
+  "workspace": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation",
+  "verifiedRevision": "d9a8eed80295226b142ca8cbe0f372ee0bb65463",
+  "overallResult": "unverified",
+  "productFailures": 0,
+  "driverProductFailures": 0,
+  "coverageCounts": {
+    "passed": 53,
+    "failed": 0,
+    "unverified": 5,
+    "newPassed": 0
+  },
+  "coverage": [
+    {
+      "id": "interaction-physical",
+      "result": "unverified",
+      "newPassedBranches": []
+    },
+    {
+      "id": "ui-composer",
+      "result": "unverified",
+      "newPassedBranches": []
+    },
+    {
+      "id": "ui-reply-markdown",
+      "result": "unverified",
+      "newPassedBranches": []
+    },
+    {
+      "id": "interaction-network",
+      "result": "unverified",
+      "newPassedBranches": []
+    },
+    {
+      "id": "ui-interrupted",
+      "result": "unverified",
+      "newPassedBranches": []
+    }
+  ],
+  "terminal": {
+    "bundle": "com.termius-dmg.mac",
+    "installedVersion": "9.41.1",
+    "availableUpdateVersion": "10.2.1",
+    "screenshotPixels": [
+      2764,
+      1724
+    ],
+    "font": "unverified",
+    "terminalCellSize": "unverified",
+    "imageProtocols": "unverified",
+    "safetyRejection": false,
+    "axAccess": true,
+    "nativeMenus": true,
+    "keyboardInputEstablished": false,
+    "screenshotFreshness": "unverified"
+  },
+  "authorization": {
+    "clipboardSampleWriteAndPaste": true,
+    "remoteProvider": false,
+    "remoteTabs": false,
+    "userOriginalClipboardRead": false
+  },
+  "baseline": {
+    "newInstall": false,
+    "installationReuse": {
+      "newInstallation": false,
+      "root": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-eoWVvw",
+      "tarball": "8469325ca95bf53ccfce46aef45c7dedd4c3a57d1a0986fd1b06b6f3f1cfa7e1",
+      "files": [
+        {
+          "host": "patched",
+          "file": "index",
+          "repo": "27634c2332e5f9a13ef4fd82d823a5d339f1e9d1b0fc1800708359e537b204ac",
+          "consumer": "27634c2332e5f9a13ef4fd82d823a5d339f1e9d1b0fc1800708359e537b204ac"
+        },
+        {
+          "host": "patched",
+          "file": "working",
+          "repo": "d53f61c6687cc58c3b89f32522b4880a59ab02f267dba19dabeb5474b3a48be6",
+          "consumer": "d53f61c6687cc58c3b89f32522b4880a59ab02f267dba19dabeb5474b3a48be6"
+        },
+        {
+          "host": "patched",
+          "file": "working-session",
+          "repo": "dd9a860213e0f658eda9ad4faaeb6843d15be13ce84f461fcb56cd7c5f302783",
+          "consumer": "dd9a860213e0f658eda9ad4faaeb6843d15be13ce84f461fcb56cd7c5f302783"
+        },
+        {
+          "host": "patched",
+          "file": "token-rate",
+          "repo": "f8257b6a2923de8c2f4c5cfef23eda7c1b0523b42faba0397040c231fb8c578c",
+          "consumer": "f8257b6a2923de8c2f4c5cfef23eda7c1b0523b42faba0397040c231fb8c578c"
+        },
+        {
+          "host": "patched",
+          "file": "json-units",
+          "repo": "dbc401333658a79afad7c0c6584b58fbf093a4a2768648ec4645f0a34a80d165",
+          "consumer": "dbc401333658a79afad7c0c6584b58fbf093a4a2768648ec4645f0a34a80d165"
+        },
+        {
+          "host": "patched",
+          "file": "context-usage",
+          "repo": "eb79dbd07cdf8b463566e6b7b0192a2e8fee98c6d68b99eb0c26aa67da69227f",
+          "consumer": "eb79dbd07cdf8b463566e6b7b0192a2e8fee98c6d68b99eb0c26aa67da69227f"
+        },
+        {
+          "host": "patched",
+          "file": "footer",
+          "repo": "5cd097c319ea147fc15e29cbb2a9104f1dbe7544a2f0b45b4fac76981839f6c1",
+          "consumer": "5cd097c319ea147fc15e29cbb2a9104f1dbe7544a2f0b45b4fac76981839f6c1"
+        },
+        {
+          "host": "original",
+          "file": "index",
+          "repo": "27634c2332e5f9a13ef4fd82d823a5d339f1e9d1b0fc1800708359e537b204ac",
+          "consumer": "27634c2332e5f9a13ef4fd82d823a5d339f1e9d1b0fc1800708359e537b204ac"
+        },
+        {
+          "host": "original",
+          "file": "working",
+          "repo": "d53f61c6687cc58c3b89f32522b4880a59ab02f267dba19dabeb5474b3a48be6",
+          "consumer": "d53f61c6687cc58c3b89f32522b4880a59ab02f267dba19dabeb5474b3a48be6"
+        },
+        {
+          "host": "original",
+          "file": "working-session",
+          "repo": "dd9a860213e0f658eda9ad4faaeb6843d15be13ce84f461fcb56cd7c5f302783",
+          "consumer": "dd9a860213e0f658eda9ad4faaeb6843d15be13ce84f461fcb56cd7c5f302783"
+        },
+        {
+          "host": "original",
+          "file": "token-rate",
+          "repo": "f8257b6a2923de8c2f4c5cfef23eda7c1b0523b42faba0397040c231fb8c578c",
+          "consumer": "f8257b6a2923de8c2f4c5cfef23eda7c1b0523b42faba0397040c231fb8c578c"
+        },
+        {
+          "host": "original",
+          "file": "json-units",
+          "repo": "dbc401333658a79afad7c0c6584b58fbf093a4a2768648ec4645f0a34a80d165",
+          "consumer": "dbc401333658a79afad7c0c6584b58fbf093a4a2768648ec4645f0a34a80d165"
+        },
+        {
+          "host": "original",
+          "file": "context-usage",
+          "repo": "eb79dbd07cdf8b463566e6b7b0192a2e8fee98c6d68b99eb0c26aa67da69227f",
+          "consumer": "eb79dbd07cdf8b463566e6b7b0192a2e8fee98c6d68b99eb0c26aa67da69227f"
+        },
+        {
+          "host": "original",
+          "file": "footer",
+          "repo": "5cd097c319ea147fc15e29cbb2a9104f1dbe7544a2f0b45b4fac76981839f6c1",
+          "consumer": "5cd097c319ea147fc15e29cbb2a9104f1dbe7544a2f0b45b4fac76981839f6c1"
+        }
+      ]
+    },
+    "sourceReusePath": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/source-reuse.json",
+    "previousReport": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/adventure/54/evidence/final-verification.json",
+    "fullCheckRepeated": false,
+    "cpuRepeated": false
+  },
+  "run": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029",
+  "attemptedUICommand": "unset HISTFILE; exec /bin/sh /Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/isolate.sh",
+  "actions": [
+    {
+      "step": 1,
+      "action": "Get Termius and observe local shell",
+      "result": "AX and screenshot returned"
+    },
+    {
+      "step": 2,
+      "action": "File > New Local Terminal",
+      "result": "AX added Local Terminal (1)"
+    },
+    {
+      "step": 3,
+      "action": "Focus Terminal input; typeText isolation command; Return",
+      "result": "No visible shell execution"
+    },
+    {
+      "step": 4,
+      "action": "Doctor, ctrl+u, app.paste isolation command, Return",
+      "result": "Doctor exit 0; no visible shell execution"
+    },
+    {
+      "step": 5,
+      "action": "AX Raise, coordinate click, ctrl+u, typeText unset HISTFILE, Return; select own tab, BackSpace, a",
+      "result": "No visible shell execution"
+    },
+    {
+      "step": 6,
+      "action": "setValue Terminal input to unset HISTFILE; Return",
+      "result": "AX value changed, Return did not clear value or execute command"
+    },
+    {
+      "step": 7,
+      "action": "Window > own makeKeyAndOrderFront item; clear AX value; focus, ctrl+u, paste isolation command, Return",
+      "result": "No visible shell execution"
+    },
+    {
+      "step": 8,
+      "action": "Capture failure; close only own tab",
+      "result": "AX removed Local Terminal (1); screenshots still show prior frame"
+    },
+    {
+      "step": 9,
+      "action": "Read-only final doctor, source/consumer hashes, cleanup",
+      "result": "No launch marker or Pi PID; prepared runtimes removed"
+    }
+  ],
+  "cleanup": {
+    "at": "2026-10-29T07:01:35.803190+00:00",
+    "piStarted": false,
+    "pidFiles": [],
+    "eventsFiles": [],
+    "runtimeRemoved": [
+      "composer-original-fullscreen",
+      "composer-original-regular",
+      "composer-patched-fullscreen",
+      "composer-patched-regular",
+      "regions-original-fullscreen",
+      "regions-original-regular",
+      "regions-patched-fullscreen",
+      "regions-patched-regular",
+      "working-original-fullscreen",
+      "working-original-regular",
+      "working-patched-fullscreen",
+      "working-patched-regular"
+    ],
+    "newLocalTabClosed": true,
+    "originalLocalTabPreserved": true,
+    "remoteTabsUntouched": true,
+    "clipboardReadByAgent": false,
+    "clipboardProductCopyExecuted": false,
+    "paidRequests": 0,
+    "notes": [
+      "CUA AX confirms Local Terminal (1) removed; screenshot after close still shows old frame, so screenshot freshness is unverified.",
+      "No Pi launch markers exist. No Pi PID or listening port was created.",
+      "The ttys002 shell found during cleanup predates this run, so it was not terminated."
+    ]
+  },
+  "screenshots": [
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/00-isolated-shell.png",
+      "sourceSha256": "051f793ecd5004045e63d7ac0fa3e611dba50a988e8634a5d545b1d06778a22e",
+      "sha256": "6541dd78a4c72a32ebfca53b3a52d18c8c61cafc6b8885730793836a3775f7b5",
+      "crop": [
+        0,
+        90,
+        2764,
+        1724
+      ],
+      "source": "CUA getAXStateAndScreenshot",
+      "transform": "Crop only; remove remote tab strip"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/01-input-blocked.png",
+      "sourceSha256": "8ba28e3219fd6ac93abf18e1b5bfddd25aa9256778b9ab895c2ee1816ceef1a2",
+      "sha256": "4a5088be7e624c1afe92e9bd1b66723cab917b56bafde7f6405c0910e6f1de51",
+      "crop": [
+        0,
+        90,
+        2764,
+        1724
+      ],
+      "source": "CUA getAXStateAndScreenshot",
+      "transform": "Crop only; remove remote tab strip"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/02-after-close.png",
+      "sourceSha256": "fec3605bab29310fb33ca9caba4d38078cebdf1c5b5b6e6cd9504e9cf26f7820",
+      "sha256": "4b27bea932d6b082e5685a1cceccd3b7fb960d8f14feba50aabb81f3b780eed2",
+      "crop": [
+        0,
+        90,
+        2764,
+        1724
+      ],
+      "source": "CUA getAXStateAndScreenshot",
+      "transform": "Crop only; remove remote tab strip"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/00-isolated-shell.png",
+      "sha256": "6541dd78a4c72a32ebfca53b3a52d18c8c61cafc6b8885730793836a3775f7b5",
+      "bytes": 172980
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/01-input-blocked.png",
+      "sha256": "4a5088be7e624c1afe92e9bd1b66723cab917b56bafde7f6405c0910e6f1de51",
+      "bytes": 173424
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/02-after-close.png",
+      "sha256": "4b27bea932d6b082e5685a1cceccd3b7fb960d8f14feba50aabb81f3b780eed2",
+      "bytes": 166684
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/captures.json",
+      "sha256": "dd96267a14b88f59e73db53a94058ec056d1a71c8a724093c15c03aed6ad08a1",
+      "bytes": 666
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/cleanup.json",
+      "sha256": "53f30cd2adc1b396b1846cdd82dc7eacc49077b7f8b1caa18f2fcd66a035f102",
+      "bytes": 1046
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-original-fullscreen/artifacts/prepared-agent/settings.json",
+      "sha256": "04e8f3a846f01a253eb4405bf7f38b6ed6a869990541f65f22df025053192e53",
+      "bytes": 179
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-original-fullscreen/artifacts/prepared-agent/themes/codex-pi.json",
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad",
+      "bytes": 2690
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-original-fullscreen/command.json",
+      "sha256": "7f89ffbc64069e9dc0dc916af2bb5f13184156e547c048fd7d7138cfbd145397",
+      "bytes": 2562
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-original-fullscreen/launch.sh",
+      "sha256": "f6217235d0670c2c293b86df5b0ed5bd4c76ce28fb1b9680eb0b453629ca13b3",
+      "bytes": 3249
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-original-fullscreen/plan.json",
+      "sha256": "3c9944430150b46dcf40f1a6e47fcb564f70afb740b5cee92c075e54652fcdb4",
+      "bytes": 215
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-original-regular/artifacts/prepared-agent/settings.json",
+      "sha256": "04e8f3a846f01a253eb4405bf7f38b6ed6a869990541f65f22df025053192e53",
+      "bytes": 179
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-original-regular/artifacts/prepared-agent/themes/codex-pi.json",
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad",
+      "bytes": 2690
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-original-regular/command.json",
+      "sha256": "68003c52b20f2c7df1ec83b457135f0396d1fe1fc01f4f206e444cc348ed6e9b",
+      "bytes": 2529
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-original-regular/launch.sh",
+      "sha256": "956988b3bf002a2b12dfee74a448db490ba853bf501cc66839e63de71d1c89f0",
+      "bytes": 3204
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-original-regular/plan.json",
+      "sha256": "3c9944430150b46dcf40f1a6e47fcb564f70afb740b5cee92c075e54652fcdb4",
+      "bytes": 215
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-patched-fullscreen/artifacts/prepared-agent/settings.json",
+      "sha256": "04e8f3a846f01a253eb4405bf7f38b6ed6a869990541f65f22df025053192e53",
+      "bytes": 179
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-patched-fullscreen/artifacts/prepared-agent/themes/codex-pi.json",
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad",
+      "bytes": 2690
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-patched-fullscreen/command.json",
+      "sha256": "101245dbf8c3e98aef6864548a9633463220b9efcefc76023c2fd843a490d575",
+      "bytes": 2550
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-patched-fullscreen/launch.sh",
+      "sha256": "d37101211f057a5aad719592a27b97648775c414d2929d19371c3ad7196d2c05",
+      "bytes": 3233
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-patched-fullscreen/plan.json",
+      "sha256": "3c9944430150b46dcf40f1a6e47fcb564f70afb740b5cee92c075e54652fcdb4",
+      "bytes": 215
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-patched-regular/artifacts/prepared-agent/settings.json",
+      "sha256": "04e8f3a846f01a253eb4405bf7f38b6ed6a869990541f65f22df025053192e53",
+      "bytes": 179
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-patched-regular/artifacts/prepared-agent/themes/codex-pi.json",
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad",
+      "bytes": 2690
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-patched-regular/command.json",
+      "sha256": "e61be1d13e4ce7239e21d37e897f2374dbc9d1bc0e3079f837000f8bfee5bf3e",
+      "bytes": 2517
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-patched-regular/launch.sh",
+      "sha256": "bab0d8ca1cff012210a001fb7416718bbd15e9e85de52773279b31a3120d4e6c",
+      "bytes": 3188
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/composer-patched-regular/plan.json",
+      "sha256": "3c9944430150b46dcf40f1a6e47fcb564f70afb740b5cee92c075e54652fcdb4",
+      "bytes": 215
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/doctor-codex-ui.json",
+      "sha256": "3a42745f0d944b6726d649f66224c1788eadad0818db4ed0e335737821a151aa",
+      "bytes": 2361
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/doctor-final.json",
+      "sha256": "da878aa125416a7575d16613100714fb5312af16f278d7e22e4d6331aa092c20",
+      "bytes": 2227
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/doctor-input-recovery.json",
+      "sha256": "da878aa125416a7575d16613100714fb5312af16f278d7e22e4d6331aa092c20",
+      "bytes": 2227
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/doctor-original.json",
+      "sha256": "adfa499cc7f38b1bdc105dfcc4563b30af629035ae497d8fbfe76ec19a780b5f",
+      "bytes": 2528
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/doctor-patched.json",
+      "sha256": "2633643173410284b01371f78054bd5e75b3d4f9a4f6a693426e1abce6218238",
+      "bytes": 2597
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/doctor-repository.json",
+      "sha256": "da878aa125416a7575d16613100714fb5312af16f278d7e22e4d6331aa092c20",
+      "bytes": 2227
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/expected-markdown.txt",
+      "sha256": "999f50e3c7fb47d9a3aa5d16591583bc3d3b1defcdd1a07d8b4fa721c4903bf9",
+      "bytes": 185
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/installation-reuse.json",
+      "sha256": "536954234fec0951c3b6ccd907ac5eaadcb3c79c756dab33614506001e5a4bcc",
+      "bytes": 3505
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/isolate.sh",
+      "sha256": "2f56a8ed99ae4f1ca7510efe6829cf080e79cacab9cdce46aba807ac4b978e6e",
+      "bytes": 1515
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/process-observations.json",
+      "sha256": "c5f6022d55672035d9983f12f5aeec6e6a71afa0e023c2a62229cfd256955eb2",
+      "bytes": 1643
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-original-fullscreen/artifacts/prepared-agent/settings.json",
+      "sha256": "84db78bf69d29b932887e754f35f689b8ae95d0171e47273074d167d2a5f3ed0",
+      "bytes": 175
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-original-fullscreen/artifacts/prepared-agent/themes/codex-pi.json",
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad",
+      "bytes": 2690
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-original-fullscreen/command.json",
+      "sha256": "823f00ed59d8c6f72a4df1eaae6b6a808eaa16cfbcff5975400ac682684d9ee9",
+      "bytes": 2358
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-original-fullscreen/launch.sh",
+      "sha256": "eafa0213f08d7d839bc580904c676b30def3d0ad7d3efd8c074a360d581713d3",
+      "bytes": 3046
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-original-fullscreen/plan.json",
+      "sha256": "3c9944430150b46dcf40f1a6e47fcb564f70afb740b5cee92c075e54652fcdb4",
+      "bytes": 215
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-original-regular/artifacts/prepared-agent/settings.json",
+      "sha256": "84db78bf69d29b932887e754f35f689b8ae95d0171e47273074d167d2a5f3ed0",
+      "bytes": 175
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-original-regular/artifacts/prepared-agent/themes/codex-pi.json",
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad",
+      "bytes": 2690
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-original-regular/command.json",
+      "sha256": "a63e4e82dc4c741a96a447bdd3050fcd7933ec476bba0384edbd7ad16d1f5559",
+      "bytes": 2325
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-original-regular/launch.sh",
+      "sha256": "9fc287ff812f92eb87b14d0f02473f27d4e2212faa6e7bc68061a7f30d083c8d",
+      "bytes": 3001
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-original-regular/plan.json",
+      "sha256": "3c9944430150b46dcf40f1a6e47fcb564f70afb740b5cee92c075e54652fcdb4",
+      "bytes": 215
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-patched-fullscreen/artifacts/prepared-agent/settings.json",
+      "sha256": "84db78bf69d29b932887e754f35f689b8ae95d0171e47273074d167d2a5f3ed0",
+      "bytes": 175
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-patched-fullscreen/artifacts/prepared-agent/themes/codex-pi.json",
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad",
+      "bytes": 2690
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-patched-fullscreen/command.json",
+      "sha256": "75c5afadd6fa169aadeb9c8901df0e71d47a7405a4ca72f9689ecbe06b546b15",
+      "bytes": 2347
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-patched-fullscreen/launch.sh",
+      "sha256": "22cdc5dd633661d2d3e8235593cb970dcb6b30fcb804e3ad023ec23577683032",
+      "bytes": 3031
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-patched-fullscreen/plan.json",
+      "sha256": "3c9944430150b46dcf40f1a6e47fcb564f70afb740b5cee92c075e54652fcdb4",
+      "bytes": 215
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-patched-regular/artifacts/prepared-agent/settings.json",
+      "sha256": "84db78bf69d29b932887e754f35f689b8ae95d0171e47273074d167d2a5f3ed0",
+      "bytes": 175
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-patched-regular/artifacts/prepared-agent/themes/codex-pi.json",
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad",
+      "bytes": 2690
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-patched-regular/command.json",
+      "sha256": "d7b5754d537358f86f99688b35c9cf36d8743fd69499db74761838f0caeb3e77",
+      "bytes": 2314
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-patched-regular/launch.sh",
+      "sha256": "d12ac0db4a0f00087f7cebf9da2991c32d8306a360c720f0de88ae5c2894acaa",
+      "bytes": 2986
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/regions-patched-regular/plan.json",
+      "sha256": "3c9944430150b46dcf40f1a6e47fcb564f70afb740b5cee92c075e54652fcdb4",
+      "bytes": 215
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/screenshots.json",
+      "sha256": "a835d5f2f36d16eb7c0a44b944a80f3ab6996e7e3bdb48a63d08d70e907aab60",
+      "bytes": 1454
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/source-reuse.json",
+      "sha256": "3dfb01f8988e5f5b12ac91ad3b78cc1c58b66ab776ec44bb66df35a35e3a5a75",
+      "bytes": 22709
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-original-fullscreen/artifacts/prepared-agent/settings.json",
+      "sha256": "04e8f3a846f01a253eb4405bf7f38b6ed6a869990541f65f22df025053192e53",
+      "bytes": 179
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-original-fullscreen/artifacts/prepared-agent/themes/codex-pi.json",
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad",
+      "bytes": 2690
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-original-fullscreen/command.json",
+      "sha256": "c57818b451e8470365fdc15ac2c9ac195b909d062b6a00dadd468716474d0ed4",
+      "bytes": 2543
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-original-fullscreen/launch.sh",
+      "sha256": "697bf89a243fc41c1a307daee3311406d71ea98b0a35a45d286f58a8b12e6bd9",
+      "bytes": 3226
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-original-fullscreen/plan.json",
+      "sha256": "2a9274393fb60fa75699ec9f90e636799e4e92bdc087697ab5cd92caa17cd15f",
+      "bytes": 52
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-original-regular/artifacts/prepared-agent/settings.json",
+      "sha256": "04e8f3a846f01a253eb4405bf7f38b6ed6a869990541f65f22df025053192e53",
+      "bytes": 179
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-original-regular/artifacts/prepared-agent/themes/codex-pi.json",
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad",
+      "bytes": 2690
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-original-regular/command.json",
+      "sha256": "01d3288b6a5617931a653af029364527e4263a53d069a1ab8b0ab2c4b2a3a694",
+      "bytes": 2510
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-original-regular/launch.sh",
+      "sha256": "cc8a150af445b4dcd95ed3c0f5212a79e18f723431f0f329e48a08a45d64120e",
+      "bytes": 3181
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-original-regular/plan.json",
+      "sha256": "904e80cfce893b1fce827abf006ee2affb4555c92370651c2286bb138891506e",
+      "bytes": 49
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-patched-fullscreen/artifacts/prepared-agent/settings.json",
+      "sha256": "04e8f3a846f01a253eb4405bf7f38b6ed6a869990541f65f22df025053192e53",
+      "bytes": 179
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-patched-fullscreen/artifacts/prepared-agent/themes/codex-pi.json",
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad",
+      "bytes": 2690
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-patched-fullscreen/command.json",
+      "sha256": "5ecfd6fb4df9497e2f34797a2e06e1972ad855c4905bebbb69f8d22a38aea22f",
+      "bytes": 2531
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-patched-fullscreen/launch.sh",
+      "sha256": "52c6d8597b4ac84238049ce92de406bd725a7d006697cc105ba296a79ea59df9",
+      "bytes": 3210
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-patched-fullscreen/plan.json",
+      "sha256": "6f737a8f6ee2c26a590236b10d0f60d3c05ce22815385e37e8ffc4a606152faf",
+      "bytes": 51
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-patched-regular/artifacts/prepared-agent/settings.json",
+      "sha256": "04e8f3a846f01a253eb4405bf7f38b6ed6a869990541f65f22df025053192e53",
+      "bytes": 179
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-patched-regular/artifacts/prepared-agent/themes/codex-pi.json",
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad",
+      "bytes": 2690
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-patched-regular/command.json",
+      "sha256": "a23c7f3054bfd372d413eb00529a9456b1af56aaf156c204161906b4cde2f927",
+      "bytes": 2498
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-patched-regular/launch.sh",
+      "sha256": "d19386fb02a484a92e411f367e22b9fcb4fe90201a768b9f437f16a20e7c5071",
+      "bytes": 3165
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-verification-66-20261029/working-patched-regular/plan.json",
+      "sha256": "1f50be0d511d5fa90a32f65c962bb222807634bed87e605e54c5feeca636cb15",
+      "bytes": 48
+    }
+  ],
+  "analysisCorrections": [
+    {
+      "operation": "Import sharp in cua_repl for cropping",
+      "error": "Unsupported import specifier \"../package.json\" in node_repl. Only .js and .mjs files are supported.",
+      "resolution": "Saved documented CUA screenshot bytes using node:fs; cropped only with Conda Pillow in workspace. No UI action used a fallback tool."
+    }
+  ],
+  "remaining": [
+    "CUA keyboard input and current screenshot must be established before Pi manual journeys.",
+    "All four physical host/mode combinations and production Working/composer journeys remain unexecuted.",
+    "No production /copy or actual system paste file.",
+    "Actual terminal image capability and pixels unknown.",
+    "Remote provider and precise Write/Edit await remain outside this run."
+  ]
+}
