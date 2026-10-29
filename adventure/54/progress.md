@@ -104,6 +104,14 @@
 - 主代理已重新校验73份来源/879份artifact哈希、逐批重算全部58项CPU、核对14份summary和六份完整finished帧、读回686个记录PID无存活。子代理最终清理记录119组无监听，runtime/CPU scratch/锁清理，旧证据及用户原型保留。原始报告精确区分ANSI、远程及物理证据。
 - #66第一次验收仅自动范围通过，整体未通过，Issue保持open。5个未验证ID为interaction-physical、interaction-network、ui-composer、ui-reply-markdown、ui-interrupted，实质边界为物理像素/拖选/图片/系统复制，真实远程provider，及Write/Edit精确await键盘落点。已知Ghostty工具拒绝不能绕过；无当前剪贴板写入/远程请求授权条件；后者没有可观察可控制阶段。未发现产品错误，不把这些改写成已通过。
 
+### Termius supplemental verification
+
+- 用户指定Termius替代终端，主代理实际成功访问com.termius-dmg.mac及Local Terminal。用户明确同意用隔离会话样本文本覆盖系统剪贴板并粘贴到本工作目录比对；不读原剪贴板、不向远程粘贴。此授权持续有效，不能再将系统复制写成缺授权。
+- 新独立gpt-6.1-sol/high任务已完成，证据a593b9df618622df559fdf6b1a7bbe3ae4798929，见[Termius报告](evidence/termius-verification.md)及[索引](evidence/termius-verification.json)。实际版本9.41.1，10.2.1只是待更新提示，未更新。应用/菜单/标签可控，没有安全拒绝；键盘与粘贴未进入shell，Pi未启动，截图与AX存在不同步，实机新增通过0，仍53/0/5。不要把应用可访问当作实机已通过。
+- 已备12组隔离入口与Markdown样本，均未运行，runtime已清理；原始脚本/doctor/截图在.tmp/termius-verification-66-20261029，复用安装eoWVvw，73份来源及14份发布JS哈希相同。主代理重新核验77份artifact哈希。未执行生产/copy，没有实际粘贴文件。
+- 主代理随后只做控制诊断，重建cua_repl连接未解决观察异常，可选cua.computer.launch_app在runtime不是函数。经切换到原本本地标签，AX显示本轮新建Local Terminal (1)，再用其close-tab控件关闭，AX确认移除；原本本地和远程标签保留。未输入Pi启动命令，未创建测试进程。没有重新委派相同失败尝试。
+- 下一步等待用户手动检查：Termius置前，在本机Local Terminal空闲提示符输入T66_INPUT，不回车，确认可见后Ctrl+U清空。区分Termius本身输入与自动控制通道故障；不是再次授权。用户尚未接受验证豁免，实机、远程provider、精确Write/Edit await仍未验证。
+
 ### Prototypes
 
 - [布局原型证据](evidence/status-placement-prototype.md)：34 项真实 PTY 检查；用户选择 B。旧省略号动画被否决。
@@ -126,9 +134,9 @@
 
 #64创建和#65维护均已完成，不重新派发。#66独立验证也已返回，无仍运行的worker；T3任务node:delegated-task:command%3Amcp%3A822fce32-fc22-461e-8ff6-d2c62deea274%3Adelegate-task%3A0310c78d-cd81-4709-8946-e95a78c62cb3。主代理已读取最终返回、审核原始证据并在Issue66写第一次验收：自动范围通过，整体保留unverified。当前基准和推送状态用git确认，代码及两个验证skill均已完备，不因外部验证缺口再次修改产品。
 
-接续点：全部安全可执行验证已完成。等待用户决定是否接受报告列明的外部验证边界后交付，或保留原门槛并补齐前置条件。尚未有豁免或最终接受，不提前关闭#66、Map、Spec，不清worktree。用户若要求继续补验，按其授权范围安排新独立gpt-6.1-sol/high任务，只补缺口；新产品问题由Astra high按ub-mode修复后再新建验证任务。不能用t3_thread_send给已完成子线程开启新review，也不能绕过Ghostty安全拒绝。
+接续点：用户没有接受豁免，而是指定Termius并授权系统复制。独立Termius补验已返回，尚未启动Pi；主代理复核控制通道仍异常，当前等待用户手动检查本地键盘输入。完整自动范围已完成，不重复CPU矩阵。尚未有豁免或最终接受，不提前关闭#66、Map、Spec，不清worktree。用户若要求继续补验，按其授权范围安排新独立gpt-6.1-sol/high任务，只补缺口；新产品问题由Astra high按ub-mode修复后再新建验证任务。不能用t3_thread_send给已完成子线程开启新review，也不能绕过Ghostty安全拒绝。
 
-需要补验时完整交接本worktree .cursor/skills/verify-pi-text-regions/SKILL.md和.cursor/skills/verify-pi-codex-ui/SKILL.md的绝对路径及必要features/references。联网凭据通过安全secret入口获取，不让用户在聊天贴密钥；不擅自读取用户auth、发付费请求或写系统剪贴板。精确Write/Edit await的缺口不是已证实产品故障，不能通过不可靠抢时序或弱化断言填补。
+需要补验时完整交接本worktree .cursor/skills/verify-pi-text-regions/SKILL.md和.cursor/skills/verify-pi-codex-ui/SKILL.md的绝对路径及必要features/references。联网凭据通过安全secret入口获取，不让用户在聊天贴密钥；不擅自读取用户auth或发付费请求；系统剪贴板测试已获上述限定范围授权。精确Write/Edit await的缺口不是已证实产品故障，不能通过不可靠抢时序或弱化断言填补。
 
 最终必须验证两种 renderer、原版降级、实际补丁安装/发布入口、CPU 预算、真实交互及清理。所有 Implementation 通过后提交用户确认；不能自行合并、关闭 Map/Spec 或移除尚未处置原型的 worktree。
 
