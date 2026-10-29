@@ -2,6 +2,8 @@
 
 ## Decision and scope
 
+最新状态：用户认可第二轮反光效果，要求再加入早期 codex-ui 的转圈图标，并报告 `/quit` 无法退出。本次在同一原型入口加入十帧转圈，保留反光与 B 位置，并修复 `/quit`；新结果见下方 Spinner and quit revision。第二轮原始验证记录保留以供追溯。
+
 用户审阅第一轮布局后选择 B：速率放在 footer 右侧。用户不满意 `Working..` 的省略号动画，希望观看 Codex CLI 大幅调整 TUI 样式之前的动画原型。此次保留 B，单独制作动画原型，仍不调用模型或修改正式功能。
 
 布局已确认；动画尚待体验。旧原型与其证据保持可追溯，新入口在 `adventure/54/prototypes/old-codex-working/README.md`，仅本 worktree 保留，遵守仓库对 prototypes 的忽略和提交门禁。
@@ -51,4 +53,20 @@ conda run --no-capture-output -n codex-py312 python adventure/54/prototypes/old-
 
 未接入局部刷新补丁，32ms 调度仍走宿主现有刷新，不是 CPU 优化交付。没有验证模型实时统计、真实运行生命周期、取消传播、低功耗或非 truecolor 配色。产品 CPU 和语义要求保持不变。
 
-当前等待用户确认动画是否为所指效果，位置 B 不再重复询问。之后完成 #59 剩余生命周期决定，再修订实施切片。
+用户已认可反光，当前等待体验叠加转圈后的效果，位置 B 不再重复询问。之后完成 #59 剩余生命周期决定，再修订实施切片。
+
+## Spinner and quit revision
+
+用户已同意保留反光，新增转圈属于用户明确要求。采用仓库 `extensions/codex-ui/src/terminal-title.ts` 的十帧序列 `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`，每帧 80ms。Working 前方的小圆点替换为转圈，文字反光保持不变。共用原型已有的 32ms 调度和单调时钟，没有另加计时器。
+
+历史查证：`48e3878` 引入该序列的 500ms 标题动画，`0f42559` 移除，`1d0bd5a` 恢复为 80ms 标题动画，当前生产代码仍保留标题转圈。最初 `aef2803` 的行内指示器则是大小圆点。因此本次是将仓库已有转圈序列放到 Working 行，不把标题动画历史误写为同一行内实现。是否降低 CPU 仍需正式局部刷新集成验收。
+
+`/quit` 根因是原型 `onTerminalInput` 对所有 Enter 返回 consume，宿主的原生 `/quit` 分支无法执行。修复后，仅当编辑器内容 trim 后为 `/quit` 时放行 Enter，仍由宿主原生 onSubmit/shutdown 执行退出；普通输入继续被拦截，不会触发模型或 shell。F10/Ctrl+C 仍保留。已打开的旧进程需用 F10/Ctrl+C 退出后重启，新代码不会热替换旧进程。
+
+真实 PTY 红绿验证：
+
+- `verification-1793239043396976000`：修改验收为输入 `/quit` 后 Enter，旧原型在退出断言失败，日志 `.tmp/working-quit-red.log`；已回收本次测试进程。
+- `verification-1793239073024889000`：修复后两种模式均通过原生 `/quit` 和零模型调用检查，但原脚本最后的全目录清理断言将用户已打开的原型实例误报为残留。未终止用户实例、未删除其目录。后续按 launcher 回报的本次临时路径核验清理，不再断言所有 `.run-*` 均不存在。
+- `verification-1793239144646059000`：最终普通/全屏共 40 项检查通过，含十帧转圈全部出现、逐字反光、二者暂停、B 位置、32/40/100 列、无数据、四位速率、停止/重启、真实 `/quit`、零模型调用及本次目录删除。两组测试进程均停止，无测试监听服务；用户仍在体验的实例未动。
+
+`pnpm_config_verify_deps_before_run=false pnpm run check` 本轮再次退出码 0，196 个文件、2913 个测试通过；日志 `.tmp/working-spinner-check.log`。正式源码、全局 Pi 及依赖配置没有改动。原型本体继续仅在本 worktree 保留，40 项独立 PTY 验证才是它的行为证据。

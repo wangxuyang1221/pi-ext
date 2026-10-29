@@ -49,7 +49,9 @@
 - 新范围的源码证据见 [token-rate-sources.md](evidence/token-rate-sources.md)。OpenAI/Codex 的准确 usage 在响应结束时更新；delta 不是 token；最终 output 已含 reasoning；durationMs 是完成后的请求总时长。实时估算标识已获用户确认，算法未定。现有动画只作用于标题，TUI 内的 Working 被隐藏。
 - [窗口实验](experiments/token-window.mjs) 与 [结果](evidence/token-window.json) 已通过真实 AssistantMessageEventStream 队列验证片段数量无关、共享 partial 不重复计数、过期、完整工具参数去重、响应隔离和固定桶存储。字符/3.5 仅为低成本实验，不代表精确 tokenizer；完整 provider 与生产生命周期未验。无后台进程或联网模型请求。
 
-第一轮布局原型见 [证据摘要](evidence/status-placement-prototype.md)，34 项 PTY 检查通过。用户随后已选择 B「footer 右侧」，拒绝省略号动画，要求旧版 Codex 动画原型。第二轮见 [新证据](evidence/old-codex-working-prototype.md)：以 Codex rust-v0.97.0 的两秒逐字明暗扫描和小圆点为参照，采用上游灰白回退色；用户尚未确认是否为记忆中的效果。真实 Pi 普通/全屏共 36 项 PTY 检查通过，无模型调用，进程与临时会话均清理。
+第一轮布局原型见 [证据摘要](evidence/status-placement-prototype.md)，34 项 PTY 检查通过。用户已选择 B「footer 右侧」，拒绝省略号动画。第二轮按 Codex rust-v0.97.0 制作两秒逐字明暗扫描，36 项 PTY 检查通过。用户随后认可反光，明确要求加入早期 codex-ui 的转圈，并指出 `/quit` 不能退出。
+
+第三轮已在同一入口加入仓库既有十帧/80ms 转圈，替换前方小圆点，保留文字反光；共用原型 32ms 调度。`/quit` 先真实复现失败，再放行其 Enter 到宿主原生退出流程。最终普通/全屏 40 项 PTY 检查通过、模型调用为零；本轮完整 check 的 2913 tests passed。测试只清理自己启动的进程及目录，用户已打开的体验实例未动。详细历史与证据见 [新证据](evidence/old-codex-working-prototype.md) 的 Spinner and quit revision。
 
 新入口为本 worktree 的 `adventure/54/prototypes/old-codex-working/README.md` 和 `launch.mjs`，原 `status-placement/` 保留。两者均因仓库规则只保留本地，未加入 Git；清理 worktree 前须处置。原型没有局部刷新补丁，不能证明 CPU 收益或作为生产实现。
 
@@ -61,7 +63,7 @@ CPU 预算为待审核切片的一部分：200/1000 对历史纯动态帧至少�
 
 ## Continuation Point
 
-继续 Planning #59。位置 B 已获用户明确确认，不再询问 A/B。当前等待用户体验 `old-codex-working` 原型，确认旧版 Working 动画是否符合期待。F3 切数据，F4 暂停，Esc 停止模拟运行，F2 重启，F10/Ctrl+C 退出。动画参照版本与配色回退是助手为试做选定，不能冒充用户最终确认。
+继续 Planning #59。位置 B 和保留反光已获用户确认，不再重复询问。当前等待体验同一 `old-codex-working` 入口的反光加转圈效果。F3 切数据，F4 暂停，Esc 停止模拟运行，F2 重启，`/quit`、F10/Ctrl+C 退出。用户已打开的旧进程仍有原来的拦截，需用 F10/Ctrl+C 退出后重新运行。不要替用户终止其正在体验的实例。组合效果仍待审阅，不能把新增转圈的要求当成已确认成品。
 
 如需修改原型，沿用 `/Users/wangxuyang/.agents/skills/wangxuyang/make-a-prototype/SKILL.md`；修改后补验受影响场景，再交用户审阅。按 adventure 的原型流程，用户确认结论或明确跳过后才推进依赖该结论的工作。还要确定最终结束显示、Working 的启停/等待/中断、窄屏和低功耗/原版行为，再修订切片；已定统计口径不重复询问。
 
