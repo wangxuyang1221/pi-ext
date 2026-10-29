@@ -2,7 +2,7 @@ import { appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { matchesKey } from "@earendil-works/pi-tui";
+import { Image, matchesKey } from "@earendil-works/pi-tui";
 
 export default function (pi: ExtensionAPI) {
   const root = process.env.LOCAL_REFRESH_EVIDENCE!;
@@ -23,6 +23,13 @@ export default function (pi: ExtensionAPI) {
       handleInput(data: string) { if (data === "q" || matchesKey(data, "escape")) done(); },
     }), { overlay: true, overlayOptions: { width: 32 } });
     record("overlayClosed", true);
+  } });
+  pi.registerCommand("fixture-image", { handler: async (args, ctx) => {
+    if (args.trim() === "off") ctx.ui.setWidget("region-image", undefined);
+    else ctx.ui.setWidget("region-image", (_tui, theme) => new Image(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
+      "image/png", { fallbackColor: text => theme.fg("dim", text) }, { maxWidthCells: 2, maxHeightCells: 1 }));
+    record("image", args.trim() === "off" ? "off" : "on");
   } });
   pi.registerCommand("fixture-reload", { handler: async (_args, ctx) => { await ctx.reload(); } });
   pi.registerCommand("fixture-theme", { handler: async (_args, ctx) => { const result = ctx.ui.setTheme("light"); record("theme", result); } });

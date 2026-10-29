@@ -28,11 +28,22 @@ const repetitions = Number(option("samples", "7"));
 const interval = Number(option("interval", "0"));
 const historySizes = option("pairs", "0,200,1000").split(",").map(Number);
 const workloads = option("workloads", "animation-and-rate,streaming-and-animation,unused-api").split(",");
+const mode = option("mode", "regular");
+assert.ok(["regular", "fullscreen"].includes(mode));
 const baselineOnly = process.argv.includes("--baseline-only");
 assert.ok(Number.isInteger(frames) && frames > 0 && Number.isInteger(repetitions) && repetitions > 0 && interval >= 0);
 const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
 const message = text => ({ role: "assistant", content: [{ type: "text", text }], api: "openai-responses", provider: "openai", model: "gpt-4.1", usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } }, stopReason: "stop", timestamp: 0 });
 
+const viewportModules = {
+  baseline: await import(pathToFileURL(resolve(baselineAgentPath, "dist/modes/interactive/chat-viewport.js")).href),
+  candidate: await import("../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/chat-viewport.js"),
+};
+function layoutSnapshot(frame) {
+  const box = value => ({ rect: value.rect, clip: value.clip, lines: value.lines, lineOffset: value.lineOffset,
+    scrollContentLines: value.scrollContentLines, children: value.children.map(box) });
+  return { width: frame.width, height: frame.height, lines: frame.lines, root: box(frame.root) };
+}
 function createFixture(implementation, historyPairs) {
   const Host = implementation === "baseline" ? originalTui : tui;
   const Agent = implementation === "baseline" ? originalAgent : agent;
@@ -55,7 +66,12 @@ function createFixture(implementation, historyPairs) {
   } };
   const widget = new Host.Container(); widget.addChild(animation);
   const bottom = new Host.Container(); bottom.addChild(footer);
-  const renderer = new Host.TuiMainScreen(terminal, true);
+  const renderer = mode === "fullscreen" ? new Host.TuiAltScreen(terminal, true) : new Host.TuiMainScreen(terminal, true);
+  if (mode === "fullscreen") {
+    const viewport = viewportModules[implementation === "baseline" ? "baseline" : "candidate"].createChatViewport({ document: chat, pendingMessages: new Host.Container(), status: new Host.Container(), widgetsAbove: widget, editor, footer: bottom });
+    renderer.setLayoutRoot(viewport.root);
+    renderer.altScreenActive = true;
+  }
   for (const component of [chat, widget, editor, bottom]) renderer.addChild(component);
   const handles = implementation === "region" ? [animation, footer].map(c => renderer.registerTextRegion(c)) : [];
   renderer.renderNow();
@@ -71,7 +87,7 @@ function createFixture(implementation, historyPairs) {
       }
     },
     advance(streaming) { step++; if (streaming) tail.updateContent(message(`Current response ${step}: ${"text ".repeat(step % 30 + 1)}`), true); },
-    snapshot: () => ({ state: renderer.captureRenderState(), output }),
+    snapshot: () => ({ state: mode === "fullscreen" ? { screen: renderer.getScreenLines(), layout: layoutSnapshot(renderer.currentLayout) } : renderer.captureRenderState(), output }),
     bytes: () => bytes,
     dispose() { for (const h of handles) h.dispose(); renderer.stopped = true; renderer.cancelRenderTimer(); },
   };
@@ -115,7 +131,7 @@ for (const historyPairs of historySizes) for (const workload of workloads) {
     results.push({ passed, tolerance, historyPairs, workload, framesPerSample: frames, repetitions, baselineCpuMsPerFrame: baseline, regionCpuMsPerFrame: region, regionReductionPercent: (baseline - region) / baseline * 100, samples });
   } finally { for (const f of Object.values(fixtures)) f.dispose(); }
 }
-console.log(JSON.stringify({ node: process.version, pi: "1.4.0", columns: 120, rows: 40, intervalMs: interval,
+console.log(JSON.stringify({ node: process.version, mode, pi: "1.4.0", columns: 120, rows: 40, intervalMs: interval,
   metric: "Process user+system CPU per frame; median of rotating repeated batches", baselinePath, baselineAgentPath,
   sources,
-  limitations: ["Controlled real message components and CodexFooter; external model not called", "In-memory terminal; terminal emulator CPU excluded", "Regular mode only", "Synchronous mode flushes the real queued frame; interval mode uses the native timer"], results }, null, 2));
+  limitations: ["Controlled real message components and CodexFooter; external model not called", "In-memory terminal; terminal emulator CPU excluded", "Synchronous mode flushes the real queued frame; interval mode uses the native timer"], results }, null, 2));
