@@ -12,7 +12,7 @@
 
 为仓库内 Pi 提供可复用的文本区域刷新能力，降低动画和 footer 更新带来的额外 CPU，并给 codex-ui 实际加入 Working 动画及实时估算 token 速率。全局 Pi 的启动、安装及升级保持独立。
 
-[Planning #59](https://github.com/wangxuyang1221/pi-ext/issues/59) 已通关，样式、位置与生命周期已确认。[三关正式实施草案](slices.md) 等待用户审核。用户另行明确要求立即移除 lowpower，独立 [Implementation #60](https://github.com/wangxuyang1221/pi-ext/issues/60) 已完成并通过验收；这不代表三关新草案已获授权。
+[Planning #59](https://github.com/wangxuyang1221/pi-ext/issues/59) 已通关，样式、位置与生命周期已确认。[正式实施切片](slices.md) 已获认可，用户另追加验证系统创建、维护、独立验收和修复重验闭环。#61–#66 已建立。用户另行明确要求立即移除 lowpower，独立 [Implementation #60](https://github.com/wangxuyang1221/pi-ext/issues/60) 已完成并通过验收；该清理已结束；当前继续已获授权的正式开发。
 
 ## Evolution
 
@@ -32,7 +32,7 @@
 - 沿用原型窄屏布局，32/40/100 列已测，窄于 40 列省略中断提示，更极端宽度安全截断。对话框保留焦点与遮挡优先级，局部刷新不安全时回退。
 - 用户直接授权删除 lowpower 命令、补全、状态及专用简化渲染分支，完整模式的缓存、输出边界、diff、展开与执行正确性保留。不是把开关隐藏起来。
 - 分支 `adventure/pi-animation`，worktree `/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation`；资料 `adventure/54/`。仅在该 worktree 开发，提交并推送本场成果；不创建 PR、不合并、不部署、不修改全局 Pi。
-- 按 adventure 先审核实施切片，再由主代理协调单个独立 worker 逐关执行。#60 是用户直接要求实施的独立例外，不能推导其余草案获审。
+- 用户已认可正式开发切片并直接追加最终验证要求。按 adventure 由主代理协调独立 worker 依次执行。编码 worker 固定 gpt-6-astra / high，验证及维护源码审查 subagent 固定 gpt-6.1-sol / high，不自行换模型。使用 T3 delegate_task 承载用户指定配置；本线程已查询 orchestrator_capabilities，providerInstanceId=codex，options.reasoningEffort=high。后续无错误或用户指定 provider 变化无需再查询。
 - Python 使用 conda 的 `codex-py312`；pnpm 脚本及提交使用命令级 `pnpm_config_verify_deps_before_run=false`，避免 pnpm 11 自动安装写回占位配置，不跳过门禁。`npm_config_` 前缀无效。
 
 ## Established Facts and Required Context
@@ -76,8 +76,12 @@
 
 独立 #60 已通过验收，命令、状态及专用分支已删除，默认完整工具显示和执行边界保留。提交 `7480598`；主代理随后提交本存档、生命周期证据和三关草案，并推送冒险分支。无待返工项、无继续运行的 worker 任务，不要重新委派移除工作。
 
-当前等待用户审核 [完整三关草案](slices.md)。#59 已通关，全部主要 UI 规则已移交 Spec，不再循环提问。草案顺序为普通模式机制、全屏机制、正式 Working/速率及整体验收。未经审核不创建这三关 Implementation 或派发 worker。
+用户已认可三关并增加验证交付条件，不要再请求同一范围审核。当前进入 [#61](https://github.com/wangxuyang1221/pi-ext/issues/61) 普通模式局部刷新，随后 #62 全屏、#63 正式 Working/速率、#64 新能力验证 skill、#65 维护 codex-ui 验证、#66 独立最终验收。原生父子和阻塞依赖已建立或在本轮保存前核验。
 
-审核通过后按 adventure 建立实际 Issues 和依赖，保存后依次派发。worker 使用新上下文，不继承整段对话，不再委派；提供当时 HEAD、worktree、Spec 和必要证据，要求完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md`，执行计划只维护在实施 Issue。工具选择遵守当前 orchestration 规则。
+#61 编码任务使用 Codex gpt-6-astra / high，工作位置必须显式指定本冒险 worktree，T3 shared child 默认根目录不能当成工作位置。当前已保存 HEAD 从 git 获取。worker 不继承对话，不再委派，完整读取 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md 及必要引用，计划写在 Issue。遵循 T3 返回的 next，完成自动唤醒主线程，不轮询正在运行任务。任务 ID 与线程链接将写入 Map；未收到结果前不能重复派发。
+
+开发结束后 #64 编码 worker 必须完整使用 /Users/wangxuyang/.agents/skills/pstack/create-verification-skill/SKILL.md 及其 references/feature-map-example，为实际新增能力生成并实跑项目 skill。不要为“新 extension”字样凭空新增无必要产品扩展。#65 使用 /Users/wangxuyang/.agents/skills/pstack/maintain-verification-skill/SKILL.md 维护 .cursor/skills/verify-pi-codex-ui，完整执行每 feature 的并行只读源码审查及串行 live 验证；维护协调者和其只读子代理均 gpt-6.1-sol / high。明确授权该维护任务进行 skill 所要求的只读委派，其他 worker 不再委派。
+
+#66 是新上下文的独立 gpt-6.1-sol / high 验证 subagent，必须完整读取并调用新旧验证 skill。任何派发中的 skill 都提供绝对路径，并要求完整读取及必要引用。产品问题交 gpt-6-astra / high 修复，随后发起新的独立验证任务，全部完成才交付。维护 skill 阶段只编辑其目录；产品修复单独进行，不改文档掩盖回归。用户既有不创建 PR 约定覆盖维护 skill 的 changed 建 PR 步骤，其他义务保留；简洁维护运行笔记留 scratch，不提交。
 
 最终必须验证两种 renderer、原版降级、实际补丁安装/发布入口、CPU 预算、真实交互及清理。所有 Implementation 通过后提交用户确认；不能自行合并、关闭 Map/Spec 或移除尚未处置原型的 worktree。
