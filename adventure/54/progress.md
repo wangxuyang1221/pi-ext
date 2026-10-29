@@ -12,7 +12,7 @@
 
 为仓库内 Pi 提供可复用的文本区域刷新能力，降低动画和 footer 更新带来的额外 CPU，并给 codex-ui 实际加入 Working 动画及实时估算 token 速率。全局 Pi 的启动、安装及升级保持独立。
 
-[Planning #59](https://github.com/wangxuyang1221/pi-ext/issues/59) 已通关，样式、位置与生命周期已确认。[正式实施切片](slices.md) 已获认可，用户另追加验证系统创建、维护、独立验收和修复重验闭环。#61–#66 已建立；#61 普通模式和 #62 全屏局部刷新均已通过主代理验收，正式 Working/速率 #63 也已验收，新能力验证系统 #64 也已验收，旧skill维护 #65 也已验收，当前进入 #66 独立最终验证。用户另行明确要求立即移除 lowpower，独立 [Implementation #60](https://github.com/wangxuyang1221/pi-ext/issues/60) 已完成并通过验收；该清理已结束；当前继续已获授权的正式开发。
+[Planning #59](https://github.com/wangxuyang1221/pi-ext/issues/59) 已通关，样式、位置与生命周期已确认。[正式实施切片](slices.md) 已获认可，用户另追加验证系统创建、维护、独立验收和修复重验闭环。#61–#66 已建立；#61 普通模式和 #62 全屏局部刷新均已通过主代理验收，正式 Working/速率 #63 也已验收，新能力验证系统 #64 也已验收，旧skill维护 #65 也已验收，当前 #66 独立自动验证已通过，整体仍待外部边界决定。用户另行明确要求立即移除 lowpower，独立 [Implementation #60](https://github.com/wangxuyang1221/pi-ext/issues/60) 已完成并通过验收；该清理已结束；当前继续已获授权的正式开发。
 
 ## Evolution
 
@@ -97,6 +97,13 @@
 - 本地原始证据在.tmp/maintain-codex-ui-65/{coverage.md,coverage.json,source-wave.md,run-notes.md,cleanup-final.json}，包含所有入口和失败/恢复时序；当前安装.tmp/local-refresh-install-ZQW7Cw。#66必须新跑，不以这些历史结果代替独立验证。
 - 物理终端尝试cua.getApp("com.mitchellh.ghostty")被工具拒绝：Computer Use is not allowed to use the app 'com.mitchellh.ghostty' for safety reasons. 不绕过拒绝控制同一应用。物理像素/实际拖选/图片像素未验；系统剪贴板无当前写入授权未写；远程凭据仅存在性检查为false，未读取用户auth或发付费请求；Write/Edit精确await按键落点无可观察阶段仍未验。这些边界与完整CPU矩阵交#66按Spec处理，不算通过或自动豁免。
 
+### Independent final verification
+
+- #66独立gpt-6.1-sol/high已完成，证据提交d8813effe03332b6779d23af5b74d3a69c20ab75，仅报告和JSON，无产品或驱动修改。[报告](evidence/final-verification.md)与[索引](evidence/final-verification.json)记录58个ID中53通过、0失败、5未验证，整体unverified。不要重新派发同样的完整自动轮次。
+- 全新安装.tmp/local-refresh-install-eoWVvw，原始根.tmp/final-verification-66-20261029。14个新skill旅程，六个Working各54项；旧CLI两模式各124项、headless12、其余完整入口通过。八份新CPU三轮同步及原生32ms补测全部58项预算通过，无挑选重跑。完整check204文件/2951测试，source/dist加载通过；安装冻结、发布字节及全局Pi隔离通过。
+- 主代理已重新校验73份来源/879份artifact哈希、逐批重算全部58项CPU、核对14份summary和六份完整finished帧、读回686个记录PID无存活。子代理最终清理记录119组无监听，runtime/CPU scratch/锁清理，旧证据及用户原型保留。原始报告精确区分ANSI、远程及物理证据。
+- #66第一次验收仅自动范围通过，整体未通过，Issue保持open。5个未验证ID为interaction-physical、interaction-network、ui-composer、ui-reply-markdown、ui-interrupted，实质边界为物理像素/拖选/图片/系统复制，真实远程provider，及Write/Edit精确await键盘落点。已知Ghostty工具拒绝不能绕过；无当前剪贴板写入/远程请求授权条件；后者没有可观察可控制阶段。未发现产品错误，不把这些改写成已通过。
+
 ### Prototypes
 
 - [布局原型证据](evidence/status-placement-prototype.md)：34 项真实 PTY 检查；用户选择 B。旧省略号动画被否决。
@@ -107,7 +114,7 @@
 
 ## Current Assumptions
 
-普通模式和全屏正式机制均已实现并验收。实际 Working/速率及采样组合已由 #63 开发验证；新增验证系统已由#64创建并自证；旧skill已由#65维护并验收；最终独立验收仍待#66。已有实验足以确定路线，不能推导最终 CPU 和正确性已经通过；失败须修复或重开规划，不由 worker 放宽预算。
+普通模式和全屏正式机制均已实现并验收。实际 Working/速率及采样组合已由 #63 开发验证；新增验证系统已由#64创建并自证；旧skill已由#65维护并验收；最终独立自动范围已由#66通过，外部边界仍未验证，整体待用户决定。已有实验足以确定路线，不能推导最终 CPU 和正确性已经通过；失败须修复或重开规划，不由 worker 放宽预算。
 
 估算算法是内部实施选择，须说明精度、有界内存和开销。组合 CPU 已按生产组件验证，#66 仍须独立复验，不能仅引用此前通过结论。
 
@@ -115,12 +122,12 @@
 
 独立 #60 已通过验收，命令、状态及专用分支已删除，默认完整工具显示和执行边界保留。提交 `7480598`；主代理随后提交本存档、生命周期证据和三关草案，并推送冒险分支。无待返工项、无继续运行的 worker 任务，不要重新委派移除工作。
 
-用户已认可三关并增加验证交付条件，不要再请求同一范围审核。[#61](https://github.com/wangxuyang1221/pi-ext/issues/61) 已完成，提交 d3599d77fb96d3964208f6f0b745185223bae0a9，主代理已审阅源码/测试与 CPU 样本并验收关闭。随后 #62 也已通过验收，提交 c835fb27d95fec9b420332a847efe6d2f80f931b。随后 #63 已验收，提交 554e6fa48cf6ffcdd340a44b5554733a04d773c0。#64也已验收，提交173e57c7cc935fc2cbf5fcee6f5ba1f9b78f948d。随后#65已验收，提交5e275638130373a726dbb29c84bda3ebd5d5c003。当前进入#66独立最终验收。原生父子和阻塞依赖已建立。不要重新派发已完成的两种模式机制实现。
+用户已认可三关并增加验证交付条件，不要再请求同一范围审核。[#61](https://github.com/wangxuyang1221/pi-ext/issues/61) 已完成，提交 d3599d77fb96d3964208f6f0b745185223bae0a9，主代理已审阅源码/测试与 CPU 样本并验收关闭。随后 #62 也已通过验收，提交 c835fb27d95fec9b420332a847efe6d2f80f931b。随后 #63 已验收，提交 554e6fa48cf6ffcdd340a44b5554733a04d773c0。#64也已验收，提交173e57c7cc935fc2cbf5fcee6f5ba1f9b78f948d。随后#65已验收，提交5e275638130373a726dbb29c84bda3ebd5d5c003。随后#66完成独立自动范围，证据d8813ef，整体因五个ID边界仍unverified。原生父子和阻塞依赖已建立。不要重新派发已完成的两种模式机制实现。
 
-#65已完整执行maintain-verification-skill并验收，不重新派发维护或源码reader。当前无运行中的维护worker。#64新skill无需重新生成。下一步派发全新gpt-6.1-sol/high最终验证代理，显式使用本worktree，shared child默认项目根目录不是任务目录。最新已保存HEAD从git读取，任务ID和线程入口写入Map，遵循delegate返回next，完成自动唤醒，不轮询。
+#64创建和#65维护均已完成，不重新派发。#66独立验证也已返回，无仍运行的worker；T3任务node:delegated-task:command%3Amcp%3A822fce32-fc22-461e-8ff6-d2c62deea274%3Adelegate-task%3A0310c78d-cd81-4709-8946-e95a78c62cb3。主代理已读取最终返回、审核原始证据并在Issue66写第一次验收：自动范围通过，整体保留unverified。当前基准和推送状态用git确认，代码及两个验证skill均已完备，不因外部验证缺口再次修改产品。
 
-#66代理必须完整读取并实际调用本worktree的.cursor/skills/verify-pi-text-regions/SKILL.md及.cursor/skills/verify-pi-codex-ui/SKILL.md，包括全部feature和必要引用。交接给出绝对路径。计划用/Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md写在Issue#66。新建证据，独立执行全部适用入口、完整CPU矩阵、干净发布安装、补丁和原版两模式及完整check，不只阅读旧报告。无进一步委派；不修改产品或驱动掩盖问题，报告最小复现，由Astra high修复后新建独立验证任务重验。
+接续点：全部安全可执行验证已完成。等待用户决定是否接受报告列明的外部验证边界后交付，或保留原门槛并补齐前置条件。尚未有豁免或最终接受，不提前关闭#66、Map、Spec，不清worktree。用户若要求继续补验，按其授权范围安排新独立gpt-6.1-sol/high任务，只补缺口；新产品问题由Astra high按ub-mode修复后再新建验证任务。不能用t3_thread_send给已完成子线程开启新review，也不能绕过Ghostty安全拒绝。
 
-产品问题交gpt-6-astra/high修复，所有编码及测试修改用ub-mode；最终验证代理只提交本关证据，不push或关闭Issue，Acceptance由主代理填写。发现真实外部阻塞前先完成全部安全可执行项，准确报告未验证范围和前置条件，不绕过Ghostty工具拒绝，不自行写系统剪贴板或读取用户凭据。维护scratch不提交；最终验收摘要和原始数据索引放adventure/54/evidence/。
+需要补验时完整交接本worktree .cursor/skills/verify-pi-text-regions/SKILL.md和.cursor/skills/verify-pi-codex-ui/SKILL.md的绝对路径及必要features/references。联网凭据通过安全secret入口获取，不让用户在聊天贴密钥；不擅自读取用户auth、发付费请求或写系统剪贴板。精确Write/Edit await的缺口不是已证实产品故障，不能通过不可靠抢时序或弱化断言填补。
 
 最终必须验证两种 renderer、原版降级、实际补丁安装/发布入口、CPU 预算、真实交互及清理。所有 Implementation 通过后提交用户确认；不能自行合并、关闭 Map/Spec 或移除尚未处置原型的 worktree。
