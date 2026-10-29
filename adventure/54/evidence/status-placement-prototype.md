@@ -2,6 +2,8 @@
 
 ## Scope and status
 
+后续状态：用户已选择 B「footer 右侧」，并要求替换 Working 动画。第一轮记录保留如下；新的动画原型与审阅状态见 [第二轮证据](old-codex-working-prototype.md)。
+
 用户已同意在 Planning #59 制作真实 TUI 原型，以比较速率与 Working 同行或放在 footer。范围为 Working 动画、模拟速率、`-- t/s` 和窄窗口，不调用模型，不改正式功能。原型已可运行，最终布局等待用户体验决定；#59 保持 open。
 
 ## Local entry

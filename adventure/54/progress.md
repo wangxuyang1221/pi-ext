@@ -10,7 +10,7 @@
 
 ## Current Goal or Problem
 
-为仓库内 Pi 提供可复用的 TUI 局部刷新机制，降低动态 UI 额外引起的 CPU 渲染开销，并实际给 codex-ui 添加 Working 动画和 token 速率显示。统计口径已确定；位置与 UI 生命周期尚待确定。旧两关切片已暂停审核，当前在 Planning #59，真实 TUI 布局原型已完成，等待用户体验，尚未派发 worker。
+为仓库内 Pi 提供可复用的 TUI 局部刷新机制，降低动态 UI 额外引起的 CPU 渲染开销，并实际给 codex-ui 添加 Working 动画和 token 速率显示。统计口径及速率放在 footer 右侧的位置 B 已确定；动画样式与 UI 生命周期尚待确定。旧两关切片已暂停审核，当前在 Planning #59，旧版 Codex 动画原型已完成，等待用户体验，尚未派发 worker。
 
 ## Evolution
 
@@ -49,7 +49,9 @@
 - 新范围的源码证据见 [token-rate-sources.md](evidence/token-rate-sources.md)。OpenAI/Codex 的准确 usage 在响应结束时更新；delta 不是 token；最终 output 已含 reasoning；durationMs 是完成后的请求总时长。实时估算标识已获用户确认，算法未定。现有动画只作用于标题，TUI 内的 Working 被隐藏。
 - [窗口实验](experiments/token-window.mjs) 与 [结果](evidence/token-window.json) 已通过真实 AssistantMessageEventStream 队列验证片段数量无关、共享 partial 不重复计数、过期、完整工具参数去重、响应隔离和固定桶存储。字符/3.5 仅为低成本实验，不代表精确 tokenizer；完整 provider 与生产生命周期未验。无后台进程或联网模型请求。
 
-已按用户确认制作布局原型，见 [证据摘要](evidence/status-placement-prototype.md)。真实 Pi CLI 的普通和全屏模式共 34 项 PTY 断言通过；无模型调用，进程与临时会话均清理。原型本体位于本 worktree 的 `adventure/54/prototypes/status-placement/`，因仓库忽略与提交门禁规则仅保留本地，未加入 Git；清理 worktree 前须处置。原型未含局部刷新补丁，不可当 CPU 收益证明或生产实现。最终位置尚未获用户确认。
+第一轮布局原型见 [证据摘要](evidence/status-placement-prototype.md)，34 项 PTY 检查通过。用户随后已选择 B「footer 右侧」，拒绝省略号动画，要求旧版 Codex 动画原型。第二轮见 [新证据](evidence/old-codex-working-prototype.md)：以 Codex rust-v0.97.0 的两秒逐字明暗扫描和小圆点为参照，采用上游灰白回退色；用户尚未确认是否为记忆中的效果。真实 Pi 普通/全屏共 36 项 PTY 检查通过，无模型调用，进程与临时会话均清理。
+
+新入口为本 worktree 的 `adventure/54/prototypes/old-codex-working/README.md` 和 `launch.mjs`，原 `status-placement/` 保留。两者均因仓库规则只保留本地，未加入 Git；清理 worktree 前须处置。原型没有局部刷新补丁，不能证明 CPU 收益或作为生产实现。
 
 ## Current Assumptions
 
@@ -59,7 +61,7 @@ CPU 预算为待审核切片的一部分：200/1000 对历史纯动态帧至少�
 
 ## Continuation Point
 
-继续 Planning #59。用户已批准制作，原型已完成并技术验证，当前等待用户体验后比较 A「Working 同行」与 B「footer 右侧」。运行方式与边界见证据摘要和原型本地 README；按 Tab 切换，F3 切换数据，F10/Ctrl+C 退出。不要重新询问是否制作，也不要默认用户已选位置。
+继续 Planning #59。位置 B 已获用户明确确认，不再询问 A/B。当前等待用户体验 `old-codex-working` 原型，确认旧版 Working 动画是否符合期待。F3 切数据，F4 暂停，Esc 停止模拟运行，F2 重启，F10/Ctrl+C 退出。动画参照版本与配色回退是助手为试做选定，不能冒充用户最终确认。
 
 如需修改原型，沿用 `/Users/wangxuyang/.agents/skills/wangxuyang/make-a-prototype/SKILL.md`；修改后补验受影响场景，再交用户审阅。按 adventure 的原型流程，用户确认结论或明确跳过后才推进依赖该结论的工作。还要确定最终结束显示、Working 的启停/等待/中断、窄屏和低功耗/原版行为，再修订切片；已定统计口径不重复询问。
 
