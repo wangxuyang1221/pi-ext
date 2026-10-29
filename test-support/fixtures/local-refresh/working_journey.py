@@ -198,6 +198,7 @@ def run(driver):
     command("Task after reload")
     wait(working, "new timer after reload")
     wait(lambda: len(events("agent_settled")) > before, "reloaded task settles")
+    wait(lambda: not working() and not re.search(r"(?:≈[\d.]+|--) t/s", view()), "reloaded settlement removes Working and rate from the screen")
     capture("finished")
     command("/quit")
     wait(lambda: driver["status"] is not None, "native quit exits without retained timer")
