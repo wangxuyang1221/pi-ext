@@ -12,7 +12,7 @@
 
 为仓库内 Pi 提供可复用的文本区域刷新能力，降低动画和 footer 更新带来的额外 CPU，并给 codex-ui 实际加入 Working 动画及实时估算 token 速率。全局 Pi 的启动、安装及升级保持独立。
 
-[Planning #59](https://github.com/wangxuyang1221/pi-ext/issues/59) 已通关，样式、位置与生命周期已确认。[正式实施切片](slices.md) 已获认可，用户另追加验证系统创建、维护、独立验收和修复重验闭环。#61–#66 已建立；#61 普通模式和 #62 全屏局部刷新均已通过主代理验收，当前进入 #63 正式 Working/速率。用户另行明确要求立即移除 lowpower，独立 [Implementation #60](https://github.com/wangxuyang1221/pi-ext/issues/60) 已完成并通过验收；该清理已结束；当前继续已获授权的正式开发。
+[Planning #59](https://github.com/wangxuyang1221/pi-ext/issues/59) 已通关，样式、位置与生命周期已确认。[正式实施切片](slices.md) 已获认可，用户另追加验证系统创建、维护、独立验收和修复重验闭环。#61–#66 已建立；#61 普通模式和 #62 全屏局部刷新均已通过主代理验收，正式 Working/速率 #63 也已验收，当前进入 #64 新能力验证系统。用户另行明确要求立即移除 lowpower，独立 [Implementation #60](https://github.com/wangxuyang1221/pi-ext/issues/60) 已完成并通过验收；该清理已结束；当前继续已获授权的正式开发。
 
 ## Evolution
 
@@ -33,6 +33,7 @@
 - 用户直接授权删除 lowpower 命令、补全、状态及专用简化渲染分支，完整模式的缓存、输出边界、diff、展开与执行正确性保留。不是把开关隐藏起来。
 - 分支 `adventure/pi-animation`，worktree `/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation`；资料 `adventure/54/`。仅在该 worktree 开发，提交并推送本场成果；不创建 PR、不合并、不部署、不修改全局 Pi。
 - 用户已认可正式开发切片并直接追加最终验证要求。按 adventure 由主代理协调独立 worker 依次执行。编码 worker 固定 gpt-6-astra / high，验证及维护源码审查 subagent 固定 gpt-6.1-sol / high，不自行换模型。使用 T3 delegate_task 承载用户指定配置；本线程已查询 orchestrator_capabilities，providerInstanceId=codex，options.reasoningEffort=high。后续无错误或用户指定 provider 变化无需再查询。
+- 用户最新AGENTS要求编码、测试修改、修复和重构使用 /Users/wangxuyang/.agents/skills/ub-mode/SKILL.md，完整执行先行为红灯、质量工具和动作记录；不使用skill-creator。后续派发须明确交接这项更新。
 - Python 使用 conda 的 `codex-py312`；pnpm 脚本及提交使用命令级 `pnpm_config_verify_deps_before_run=false`，避免 pnpm 11 自动安装写回占位配置，不跳过门禁。`npm_config_` 前缀无效。
 
 ## Established Facts and Required Context
@@ -69,8 +70,16 @@
 ### Rate and lifecycle
 
 - [统计来源](evidence/token-rate-sources.md) 说明准确 usage 常在响应结束更新，delta 不是 token，最终 output 可能含 reasoning。字符/3.5 只用于低成本实验，不代表用户指定的估算算法。
-- [窗口实验](experiments/token-window.mjs) 和 [结果](evidence/token-window.json) 经真实 AssistantMessageEventStream 验证片段数量无关、共享 partial 去重、过期、工具参数完整补齐去重、响应隔离和固定桶存储。尚未覆盖正式 provider 到 UI 全链路。
-- [生命周期证据](evidence/working-lifecycle.md) 记录任务结束、取消和等待边界。Pi 1.4.0 实际已有 `ui_prompt_start/end`，此前未找到属于检索未完成，不要再声称无此能力。用户选择等待时不暂停，故不必新增等待接口。现有 terminal-title 使用 agent_settled，提供可复用依据；不等于行内组件已实现。
+- [窗口实验](experiments/token-window.mjs) 和 [结果](evidence/token-window.json) 经真实 AssistantMessageEventStream 验证片段数量无关、共享 partial 去重、过期、工具参数完整补齐去重、响应隔离和固定桶存储。此项是历史实验，正式链路验证见下方 #63 记录。
+- [生命周期证据](evidence/working-lifecycle.md) 记录任务结束、取消和等待边界。Pi 1.4.0 实际已有 `ui_prompt_start/end`，此前未找到属于检索未完成，不要再声称无此能力。用户选择等待时不暂停，故不必新增等待接口。现有 terminal-title 使用 agent_settled，提供可复用依据；正式行内组件现已由 #63 完成。
+
+### Production Working and rate
+
+- #63 提交554e6fa，WorkingSession将整项任务与逐响应速率分开，共享32ms调度，agent_settled结束；footer保留goal后续行。增量UTF-16/4估算、20个100ms桶、固定两秒分母，方法边界见[说明](../../docs/codex-working-rate.md)。
+- [详细证据](evidence/working-token-rate.md)、[CPU全部批次](evidence/working-token-rate-cpu.json)、[安装与交互索引](evidence/working-token-rate-verification.json)、[质量工具](evidence/working-token-rate-quality.json)。主代理重算最终8轮58项预算并核对全部源码/补丁哈希与字节等价，全部通过。早期失败阶段保留，不能混为最终数据。
+- 最终check203文件/2941测试，四个实际发布入口各53项PTY；真实权限批准、bash副作用/取消、retry、overflow压缩、dialog/overlay、窄屏、模式/session/reload/quit。原版正常回退。旧CLI两模式各124项、goal-footer四入口、codemode两模式通过。物理像素、系统剪贴板和远程联网未验，#66须按Spec处理边界。
+- 生产CPU增加真实上下文投影成本后暴露全屏失败，最终按分支/模型缓存上下文、独立缓存goal行、减少重复裁剪及同宽字符串校验修复；原版和补丁对比使用相同生产组件。虚拟模型仍实时读上下文，补丁公共契约不变。
+- 本地原始记录在.tmp/working-token-rate/，最终发布安装.tmp/local-refresh-install-4tyVm9。67个记录PID退出、无监听，证据保留。质量结果区分等价变异与既有高复杂度/未覆盖分支，不冒称全仓库零问题。
 
 ### Prototypes
 
@@ -82,17 +91,17 @@
 
 ## Current Assumptions
 
-普通模式和全屏正式机制均已实现并验收。实际 Working/速率的生产组合、采样开销及最终独立验收仍待 #63–#66。已有实验足以确定路线，不能推导最终 CPU 和正确性已经通过；失败须修复或重开规划，不由 worker 放宽预算。
+普通模式和全屏正式机制均已实现并验收。实际 Working/速率及采样组合已由 #63 开发验证；验证系统与最终独立验收仍待 #64–#66。已有实验足以确定路线，不能推导最终 CPU 和正确性已经通过；失败须修复或重开规划，不由 worker 放宽预算。
 
-估算算法是内部实施选择，须说明精度、有界内存和开销。真实统计与动画整合后可能改变 CPU，最后一关必须测组合路径，不能仅复用示例结果。
+估算算法是内部实施选择，须说明精度、有界内存和开销。组合 CPU 已按生产组件验证，#66 仍须独立复验，不能仅引用此前通过结论。
 
 ## Continuation Point
 
 独立 #60 已通过验收，命令、状态及专用分支已删除，默认完整工具显示和执行边界保留。提交 `7480598`；主代理随后提交本存档、生命周期证据和三关草案，并推送冒险分支。无待返工项、无继续运行的 worker 任务，不要重新委派移除工作。
 
-用户已认可三关并增加验证交付条件，不要再请求同一范围审核。[#61](https://github.com/wangxuyang1221/pi-ext/issues/61) 已完成，提交 d3599d77fb96d3964208f6f0b745185223bae0a9，主代理已审阅源码/测试与 CPU 样本并验收关闭。随后 #62 也已通过验收，提交 c835fb27d95fec9b420332a847efe6d2f80f931b。当前进入 #63 正式 Working/速率，随后 #64 新能力验证 skill、#65 维护 codex-ui 验证、#66 独立最终验收。原生父子和阻塞依赖已建立。不要重新派发已完成的两种模式机制实现。
+用户已认可三关并增加验证交付条件，不要再请求同一范围审核。[#61](https://github.com/wangxuyang1221/pi-ext/issues/61) 已完成，提交 d3599d77fb96d3964208f6f0b745185223bae0a9，主代理已审阅源码/测试与 CPU 样本并验收关闭。随后 #62 也已通过验收，提交 c835fb27d95fec9b420332a847efe6d2f80f931b。随后 #63 已验收，提交 554e6fa48cf6ffcdd340a44b5554733a04d773c0。当前进入 #64 新能力验证 skill，随后 #65 维护 codex-ui 验证、#66 独立最终验收。原生父子和阻塞依赖已建立。不要重新派发已完成的两种模式机制实现。
 
-#63 编码任务使用 Codex gpt-6-astra / high，工作位置必须显式指定本冒险 worktree，T3 shared child 默认根目录不能当成工作位置。当前已保存 HEAD 从 git 获取。worker 不继承对话，不再委派，完整读取 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md 及必要引用，计划写在 Issue。遵循 T3 返回的 next，完成自动唤醒主线程，不轮询正在运行任务。任务 ID 与线程链接将写入 Map；未收到结果前不能重复派发。
+#64 编码任务使用 Codex gpt-6-astra / high，工作位置必须显式指定本冒险 worktree，T3 shared child 默认根目录不能当成工作位置。当前已保存 HEAD 从 git 获取。worker 不继承对话，不再委派，完整读取 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md 及必要引用，计划写在 Issue。遵循 T3 返回的 next，完成自动唤醒主线程，不轮询正在运行任务。任务 ID 与线程链接将写入 Map；未收到结果前不能重复派发。
 
 开发结束后 #64 编码 worker 必须完整使用 /Users/wangxuyang/.agents/skills/pstack/create-verification-skill/SKILL.md 及其 references/feature-map-example，为实际新增能力生成并实跑项目 skill。不要为“新 extension”字样凭空新增无必要产品扩展。#65 使用 /Users/wangxuyang/.agents/skills/pstack/maintain-verification-skill/SKILL.md 维护 .cursor/skills/verify-pi-codex-ui，完整执行每 feature 的并行只读源码审查及串行 live 验证；维护协调者和其只读子代理均 gpt-6.1-sol / high。明确授权该维护任务进行 skill 所要求的只读委派，其他 worker 不再委派。
 
