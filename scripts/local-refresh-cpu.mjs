@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";

@@ -58,6 +58,8 @@ const dispose = () => handle?.dispose();
 
 ## Verification
 
+新增能力的完整操作索引见 [verify-pi-text-regions](../.cursor/skills/verify-pi-text-regions/SKILL.md)，包含空目录启动、只读 doctor、用户旅程、CPU/安装入口及清理留证。
+
 [契约测试](../test-support/__tests__/local-refresh.test.ts) 使用真实 renderer，比较终端输出、保留行和光标。运行：
 
 ```bash

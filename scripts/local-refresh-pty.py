@@ -1,3 +1,4 @@
+#!/usr/bin/env -S conda run --no-capture-output -n codex-py312 python
 """Drive the public text-region example through a real, isolated Pi CLI PTY."""
 import argparse
 import codecs
@@ -59,10 +60,12 @@ if args.working:
         "-e", str(repo / "extensions/permissions/dist/index.js"),
         "-e", str(repo / "test-support/fixtures/local-refresh/working-provider.ts"),
         "--provider", "faux", "--model", "faux-1", "--tui-mode", args.mode]
+initial_workspace_empty = not any((runtime / "workspace").iterdir())
 pid, fd = pty.fork()
 if pid == 0:
     os.chdir(runtime / "workspace")
     os.execve(command_line[0], command_line, env)
+(root / "instance.json").write_text(json.dumps({"pid": pid, "command": command_line, "runtime": str(runtime), "startedAt": time.time(), "initialWorkspaceEmpty": initial_workspace_empty}, indent=2))
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 40, 120, 0, 0))
 class DualScreen(pyte.Screen):
     """Model the xterm alternate screen used by real renderer switching."""
@@ -158,7 +161,7 @@ def settle(seconds=0.3):
             raise AssertionError("Synchronized frame did not finish")
 
 def send(text):
-    actions.append({"input": text, "time": time.monotonic()})
+    actions.append({"input": text, "time": time.monotonic(), "rawBytes": len(raw)})
     os.write(fd, text.encode())
     settle()
 
@@ -354,7 +357,12 @@ finally:
     (root / "terminal.ansi").write_bytes(raw)
     (root / "screens.json").write_text(json.dumps(screens, ensure_ascii=False, indent=2))
     (root / "actions.json").write_text(json.dumps(actions, ensure_ascii=False, indent=2))
-    shutil.rmtree(runtime)
+    artifacts = root / "artifacts"
+    artifacts.mkdir()
+    for name in ["workspace", "agent"]:
+        shutil.copytree(runtime / name, artifacts / name)
+    if not survivors:
+        shutil.rmtree(runtime)
     result = {"passed": passed, "pid": pid, "exitCode": os.waitstatus_to_exitcode(status), "mode": args.mode, "original": args.original, "kitty": args.kitty, "working": args.working,
               "cli": str(args.cli), "checks": checks, "cleanup": {"processGroupEmpty": not survivors, "survivors": survivors, "runtimeRemoved": not runtime.exists(), "servicesStarted": []}}
     (root / "summary.json").write_text(json.dumps(result, indent=2))

@@ -140,7 +140,7 @@ CI 配置与本机验证是两类证据。本机通过不代表另一平台已�
 
 `pnpm run codemode:check` 覆盖生产调用树、真实 QuickJS、本地 MCP、普通与全屏 PTY，以及缓存预算和性能；不依赖视觉原型。Goal footer 使用 `goal:footer:check` 和正式 presentation 测试。
 
-文本区域刷新宿主补丁另有[契约、干净安装、真实 CLI/PTY 与 CPU 入口](pi-text-region-refresh.md#verification)。示例及离线 provider 的类型也纳入 `typecheck:tests`。
+文本区域刷新宿主补丁另有[契约、干净安装、真实 CLI/PTY 与 CPU 入口](pi-text-region-refresh.md#verification)。示例及离线 provider 的类型也纳入 `typecheck:tests`。按 [verify-pi-text-regions](../.cursor/skills/verify-pi-text-regions/SKILL.md) 从空目录驱动用户旅程，并分别记录自动与物理终端边界。
 
 ## Archived quality evidence
 
