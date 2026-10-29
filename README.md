@@ -198,7 +198,7 @@ managed child 的 Fast 开关保存在自己的 Pi session 中，不写上述共
 - model、thinking、Fast Mode、cwd、git branch、context-left 和 permissions 主状态行，另显示可选 goal 状态行
 - 普通 assistant 回复使用外层列表缩进，自动换行和后续段落保持对齐
 - 原生消息位置用 `Thinking` 标题和引用竖线显示完整思考文本，流式与完成后保持同一规则
-- 隐藏 streaming working row；运行时窗口标题使用 80ms 单色转圈，正文思考状态仍保持静态
+- 隐藏原生 streaming working row；输入框上方显示 Working 转圈、反光与计时，footer 右侧显示估算接收速率（[说明](docs/codex-working-rate.md)）；窗口标题保持原有 80ms 单色转圈，正文思考状态仍保持静态
 - Read 连续文件分组与每文件三行短预览，以及 `edit`、`write` 的紧凑 renderer
 - Bash 逐条显示 `$ Bash(command)` 与前三行输出，按 `Ctrl+O` 原位展开完整命令和已捕获输出
 - Codemode 调用树与 `/inspect` 面板，分别显示父脚本输出和子调用结果
@@ -271,6 +271,8 @@ SDK 内存覆盖、自定义 settings 存储和宿主自定义执行器不在自
 这个共享设置同时影响用户消息、普通回复和思考，左右各去掉原生的一列留白；工具和输入框内部 padding 不变。扩展不自动写全局配置，也不修改 Pi 私有组件。若历史仍右偏一列，检查已信任项目的 `.pi/settings.json` 是否覆盖了全局值。设回 `1` 或删除该字段即可恢复默认消息留白。
 
 ### Terminal activity
+
+任务运行时，输入框上方显示青色转圈、Working 反光与计时，footer 右侧显示最近约两秒的估算输出速率。等待权限、工具、重试和自动压缩期间继续动画，无近期输出显示 `-- t/s`，任务真正 settled 后隐藏。统计口径、精度与原版回退见 [Working 与速率说明](docs/codex-working-rate.md)。
 
 `write`、`edit`、`bash` 和 codemode 子项统一使用完整渲染，不再提供 `/lowpower` 命令。Pi 内置的 streaming working row 保持隐藏，思考文本使用原生 Markdown 完整显示。窗口标题独立使用 `80ms` 单色转圈，与自动 compact 相同帧序列；项目名和会话名保持固定，不再播放动态省略号。按单调时钟选择帧，延迟后跳过错过的帧，不补播；仅写入 OSC 标题，不请求正文重绘。动画跨重试和自动 compact 保持运行，任务 settled、取消完成或会话退出时停止，恢复静态标题；手动 compact 也有标题反馈。默认 package manifest 将 `codex-ui` 放在 `codex-compact` 前加载，使标题在耗时压缩 handler 开始前启动；手动分别加载扩展时也需保持这个相对顺序。
 

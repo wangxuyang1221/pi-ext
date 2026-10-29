@@ -16,6 +16,7 @@ import {
 import { renderGoalDisplay, type GoalFooterDisplay } from "./goal-display.js";
 
 export interface CodexFooterOptions {
+  getRate?: () => string | undefined;
   getGoalDisplay?: () => GoalFooterDisplay | undefined;
   cwd: string;
   home?: string;
@@ -82,6 +83,7 @@ export class CodexFooter implements Component {
   } | undefined;
 
   private combined: { base: string[]; key: string; theme: Theme; lines: string[] } | undefined;
+  private cachedGoal: { key: string; theme: Theme; lines: string[] } | undefined;
 
   constructor(private readonly options: CodexFooterOptions) {}
 
@@ -94,16 +96,32 @@ export class CodexFooter implements Component {
     const safeWidth = normalizeWidth(width);
     if (safeWidth === 0) return [];
     const statuses = this.options.getExtensionStatuses();
-    const base = this.renderBase(safeWidth, statuses);
+    const rate = this.options.getRate?.();
+    const suffix = rate ? ` ${rate.padStart(10)} ` : "";
+    const remaining = Math.max(0, safeWidth - visibleWidth(suffix));
+    const base = this.renderBase(remaining, statuses);
     const theme = this.options.getTheme();
     const goal = this.readStatus(statuses, "goal");
     const display = goal ? this.options.getGoalDisplay?.() : undefined;
-    const key = JSON.stringify([safeWidth, display ?? goal]);
-    if (this.combined?.base === base && this.combined.key === key && this.combined.theme === theme) return this.combined.lines;
-    const lines = [...base];
-    if (display) lines.push(...renderGoalDisplay(display, safeWidth, theme));
-    else if (goal) lines.push(fitToWidth(theme.fg("muted", ` ${goal}`), safeWidth));
+    const key = JSON.stringify([safeWidth, display ?? goal, rate]);
+    const cached = this.reuseCombined(base, key, theme);
+    if (cached) return cached;
+    const lines = composeFooter(base, safeWidth, remaining, suffix, theme);
+    lines.push(...this.renderGoal(goal, display, safeWidth, theme));
     this.combined = { base, key, theme, lines };
+    return lines;
+  }
+
+  private reuseCombined(base: string[], key: string, theme: Theme): string[] | undefined {
+    const cached = this.combined;
+    return cached?.base === base && cached.key === key && cached.theme === theme ? cached.lines : undefined;
+  }
+
+  private renderGoal(goal: string | undefined, display: GoalFooterDisplay | undefined, width: number, theme: Theme): string[] {
+    const key = JSON.stringify([width, display ?? goal]);
+    if (this.cachedGoal?.key === key && this.cachedGoal.theme === theme) return this.cachedGoal.lines;
+    const lines = goalLines(goal, display, width, theme);
+    this.cachedGoal = { key, theme, lines };
     return lines;
   }
 
@@ -163,6 +181,7 @@ export class CodexFooter implements Component {
 
   invalidate(): void {
     this.combined = undefined;
+    this.cachedGoal = undefined;
     this.cachedSnapshot = undefined;
   }
 
@@ -185,6 +204,19 @@ export class CodexFooter implements Component {
     this.statusCache.set(key, { raw, sanitized });
     return sanitized || undefined;
   }
+}
+
+function composeFooter(base: string[], width: number, remaining: number, suffix: string, theme: Theme): string[] {
+  if (!suffix) return [...base];
+  const first = base[0] ?? "";
+  const line = first + " ".repeat(Math.max(0, remaining - visibleWidth(first))) + theme.fg("muted", suffix);
+  // The base already fits remaining columns and the suffix reserved its exact width.
+  return [remaining > 0 ? line : fitToWidth(line, width)];
+}
+
+function goalLines(goal: string | undefined, display: GoalFooterDisplay | undefined, width: number, theme: Theme): string[] {
+  if (display) return renderGoalDisplay(display, width, theme);
+  return goal ? [fitToWidth(theme.fg("muted", ` ${goal}`), width)] : [];
 }
 
 type FooterRenderInput = {

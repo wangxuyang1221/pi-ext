@@ -229,6 +229,19 @@ function fullscreenFixture(local: boolean, inTranscript = false) {
 }
 
 describe("fullscreen text regions", () => {
+  it("revalidates changed strings after repeated styled multirow updates", async () => {
+    const baseline = fullscreenFixture(false), local = fullscreenFixture(true);
+    const rows = ["\x1b[36m状态 กำ ຳ\x1b[39m", "Goal: stable second row"];
+    try {
+      for (const f of [baseline, local]) { f.animation.render = () => rows; f.tui.renderNow(); }
+      for (const text of ["\x1b[36m状态 กำ ຳ\x1b[39m", "\x1b[33mchanged 中文\x1b[39m", "x".repeat(140), "\x1b[2Junsafe", "restored"]) {
+        rows[0] = text;
+        for (const f of [baseline, local]) { f.clear(); f.request(); }
+        await settle(); expect(local.snapshot()).toEqual(baseline.snapshot());
+        if (text.length === 140 || text.includes("unsafe")) expect(local.calls.history).toBeGreaterThan(0);
+      }
+    } finally { baseline.dispose(); local.dispose(); }
+  });
   it.each([false, true])("updates screen and layout text without rendering history or editor (transcript=%s)", async inTranscript => {
     const baseline = fullscreenFixture(false, inTranscript), local = fullscreenFixture(true, inTranscript);
     try {

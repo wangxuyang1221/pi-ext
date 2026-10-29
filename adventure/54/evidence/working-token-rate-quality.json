@@ -1,0 +1,129 @@
+{
+  "mutator": {
+    "sites": 137,
+    "killed": 131,
+    "equivalentSurvivors": 6,
+    "uncovered": 0,
+    "score": 95.6,
+    "commandExit": 3,
+    "explanations": [
+      {
+        "file": "token-rate.ts",
+        "lines": [
+          35,
+          56
+        ],
+        "mutation": "?? to ||",
+        "reason": "Map values are truthy objects or undefined; both operators select the same value."
+      },
+      {
+        "file": "token-rate.ts",
+        "line": 67,
+        "mutations": [
+          "delete unary minus",
+          "1 to 0"
+        ],
+        "reason": "A reset bucket has zero units; its sentinel tick is unobservable until first add initializes it."
+      },
+      {
+        "file": "token-rate.ts",
+        "line": 96,
+        "mutation": "<= to <",
+        "reason": "Adding zero only changes an empty/expired bucket tick; observable window sum remains unchanged."
+      },
+      {
+        "file": "working.ts",
+        "line": 42,
+        "mutation": "<= to <",
+        "reason": "At distance 5, cosine(pi) gives zero intensity in either branch."
+      }
+    ]
+  },
+  "crapper": {
+    "newModulesMaximum": 9,
+    "changedFooterRender": 8,
+    "preexistingFunctions": [
+      {
+        "name": "codexUiExtension",
+        "score": 21.6
+      },
+      {
+        "name": "renderBase",
+        "score": 15
+      },
+      {
+        "name": "fitItems",
+        "score": 11.4
+      }
+    ],
+    "note": "Legacy entry registration and footer fitting were measured and retained; no claim that the whole repository is below CRAP 10."
+  },
+  "dryer": {
+    "threshold": 0.8,
+    "candidates": 0,
+    "scope": [
+      "working.ts",
+      "working-session.ts",
+      "token-rate.ts",
+      "json-units.ts",
+      "context-usage.ts"
+    ]
+  },
+  "contextReader": {
+    "crap": 5,
+    "coveragePercent": 100,
+    "mutation": {
+      "sites": 7,
+      "killed": 7,
+      "survived": 0,
+      "uncovered": 0
+    }
+  },
+  "renderMutation": {
+    "scope": "Changed Working.render and footer composition/cache lines; raw report includes preexisting unexecuted sites outside the requested lines.",
+    "killed": 30,
+    "equivalentSurvivors": 5,
+    "uncovered": 1,
+    "commandExit": 3,
+    "score": 85.7,
+    "reportedTotalSites": 170,
+    "explanations": [
+      {
+        "file": "footer.ts",
+        "lines": [
+          106,
+          121
+        ],
+        "mutation": "?? to ||",
+        "reason": "display is an object or undefined, both choose identical cache keys."
+      },
+      {
+        "file": "footer.ts",
+        "line": 211,
+        "mutation": "?? to ||",
+        "reason": "first is a string or undefined; empty string falls back to the same empty string."
+      },
+      {
+        "file": "footer.ts",
+        "line": 214,
+        "mutation": "0 to 1",
+        "reason": "At remaining=1 the fitting branch and safe truncation return the same already-fitting line."
+      },
+      {
+        "file": "working.ts",
+        "line": 33,
+        "mutation": "<= to <",
+        "reason": "At exact fit width, safe truncation preserves the same rendered line."
+      }
+    ],
+    "uncoveredDetails": [
+      {
+        "file": "footer.ts",
+        "line": 399,
+        "function": "nextShorterVariant",
+        "mutation": "0 to 1",
+        "reason": "Preexisting no-shorter-variant fallback, outside requested changed lines; retained as uncovered."
+      }
+    ]
+  }
+}

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test, vi } from "vitest";
 import {
   AssistantMessageComponent,
+  SessionManager,
   initTheme,
   type ExtensionAPI,
   type Theme,
@@ -158,6 +159,7 @@ test("session UI installs only in TUI mode", async () => {
       mode: "tui",
       cwd: "/repo/app",
       model: { id: "gpt-test" },
+      sessionManager: SessionManager.inMemory(),
       getContextUsage: () => ({ tokens: 10, contextWindow: 100, percent: 10 }),
       isIdle: () => true,
       ui,

@@ -18,7 +18,8 @@ it("accepts only bounded current-session display fields", () => {
 it("renders structured goal rows without recomputing the unchanged model line", () => {
   let theme = { fg: vi.fn((_tone, text) => text), bold: (text: string) => text, getColorMode: () => "256color" } as unknown as Theme;
   let goal = { version: 1 as const, ownerSessionId: "s", goalId: "g", objective: "中文目标".repeat(80), status: "active", summary: "Active · 12m · 12.3k / 80k tokens" };
-  const footer = new CodexFooter({ cwd: "/repo", getModelId: () => "model", getThinkingLevel: () => "off", getContextUsage: () => undefined, getBranch: () => "main", getExtensionStatuses: () => new Map([["goal", "native fallback"]]), getTheme: () => theme, getGoalDisplay: () => goal });
+  let rate: string | undefined;
+  const footer = new CodexFooter({ cwd: "/repo", getModelId: () => "model", getThinkingLevel: () => "off", getContextUsage: () => undefined, getBranch: () => "main", getExtensionStatuses: () => new Map([["goal", "native fallback"]]), getTheme: () => theme, getGoalDisplay: () => goal, getRate: () => rate });
   const first = footer.render(80);
   expect(first).toHaveLength(3);
   expect(first.map(stripTerminalSequences).join("\n")).toContain("Active · 12m");
@@ -36,4 +37,19 @@ it("renders structured goal rows without recomputing the unchanged model line", 
   expect(footer.render(80)[1]).toContain("[Goal]");
   footer.invalidate();
   expect(footer.render(80)[2]).toContain("13m");
+  vi.mocked(theme.fg).mockClear();
+  rate = "≈10 t/s"; footer.render(80);
+  expect(vi.mocked(theme.fg).mock.calls.some(([, text]) => text === goal.summary)).toBe(false);
+  for (const width of [1, 12, 32, 40, 100]) {
+    rate = undefined;
+    const idle = footer.render(width);
+    rate = "≈12 t/s";
+    const active = footer.render(width);
+    expect(active).toHaveLength(3);
+    expect(active.slice(1)).toEqual(idle.slice(1));
+    expect(active.every(line => visibleWidth(line) <= width)).toBe(true);
+    if (width >= 32) expect(active[0]).toContain(rate);
+    rate = undefined;
+    expect(footer.render(width)).toEqual(idle);
+  }
 });

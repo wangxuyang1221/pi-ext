@@ -91,7 +91,7 @@ index 99485d8881b299a8a2e5dff990515ae132836daf..c1e204e2d9a20d3bd8e03cffbda93d49
      return x >= rect.x && x < rect.x + rect.width && y >= rect.y && y < rect.y + rect.height;
  }
 diff --git a/dist/tui-alt-screen.js b/dist/tui-alt-screen.js
-index 043d2c7952af7908b7cbb576f47d2bc18adada22..9fa0b91db993dc7e9a2df8ad65c9ba87002488e2 100644
+index 043d2c7952af7908b7cbb576f47d2bc18adada22..38219fb2fb8a42ee5bef8db820638b252035dd87 100644
 --- a/dist/tui-alt-screen.js
 +++ b/dist/tui-alt-screen.js
 @@ -3,10 +3,10 @@ import { AltScreenFlashContainer } from "./components/alt-screen-flash.js";
@@ -107,7 +107,7 @@ index 043d2c7952af7908b7cbb576f47d2bc18adada22..9fa0b91db993dc7e9a2df8ad65c9ba87
  import { extractAnsiCode, getGraphemeCellRange, getOsc8LinkAtColumn, getWordSegmenter, sliceByColumn, stripTerminalSequences, truncateToWidth, visibleWidth, } from "./utils.js";
  import { WheelScrollAccelerator } from "./wheel-scroll.js";
  const ENTER_ALT_SCREEN = "\x1b[?1049h";
-@@ -36,6 +36,107 @@ const wordSegmenter = getWordSegmenter();
+@@ -36,6 +36,119 @@ const wordSegmenter = getWordSegmenter();
  /** Alternate-screen TUI with a scrollable, application-owned viewport. */
  export class TuiAltScreen extends TuiBase {
      mode = "fullscreen";
@@ -166,7 +166,18 @@ index 043d2c7952af7908b7cbb576f47d2bc18adada22..9fa0b91db993dc7e9a2df8ad65c9ba87
 +        const hasImages = box => box.lines?.some(isImageLine) || box.scrollContentLines?.some(isImageLine) || box.children.some(hasImages);
 +        frame.hasImages ??= hasImages(layout.root);
 +        if (frame.hasImages) return undefined;
-+        const isText = line => !/[\x00-\x1f\x7f]/.test(line.replace(/\x1b\[[0-9;:]*m/g, "").replace(/\x1b\]8;[^\x07\x1b]*(?:\x07|\x1b\\)/g, "")) && visibleWidth(line) <= width;
++        // Width is unchanged for this retained frame. Keep only this frame's
++        // validated strings, so unchanged rows do not repeat Unicode measurement.
++        const validatedText = new Set();
++        const isText = line => {
++            if (validatedText.has(line) || frame.validatedText?.has(line)) {
++                validatedText.add(line);
++                return true;
++            }
++            if (/[\x00-\x1f\x7f]/.test(line.replace(/\x1b\[[0-9;:]*m/g, "").replace(/\x1b\]8;[^\x07\x1b]*(?:\x07|\x1b\\)/g, "")) || visibleWidth(line) > width) return false;
++            validatedText.add(line);
++            return true;
++        };
 +        const updates = new Map();
 +        const ranges = [];
 +        for (const region of pending) {
@@ -210,12 +221,13 @@ index 043d2c7952af7908b7cbb576f47d2bc18adada22..9fa0b91db993dc7e9a2df8ad65c9ba87
 +            for (let y = Math.max(start, box.rect.y, box.clip.y, 0); y < Math.min(start + count, box.rect.y + box.rect.height, box.clip.y + box.clip.height, height); y++) dirtyRows.add(y);
 +        }
 +        repaintLayoutFrame(layout, dirtyRows);
-+        return { layout, frame };
++        frame.validatedText = validatedText;
++        return { layout, frame, validatedText };
 +    }
      [VIEWPORT_TUI] = true;
      previousScreen = [];
      lastDocument = [];
-@@ -194,6 +295,7 @@ export class TuiAltScreen extends TuiBase {
+@@ -194,6 +307,7 @@ export class TuiAltScreen extends TuiBase {
          this.terminal.write(`${ENTER_ALT_SCREEN}${DISABLE_AUTOWRAP}${this.mouseEnabled ? mouseSequence : ""}\x1b[2J\x1b[H\x1b[?25l`);
      }
      beforeTerminalStop(_options) {
@@ -223,7 +235,7 @@ index 043d2c7952af7908b7cbb576f47d2bc18adada22..9fa0b91db993dc7e9a2df8ad65c9ba87
          this.closeSearch();
          this.stopSelectionAutoScroll();
          this.selectionPressActive = false;
-@@ -292,6 +394,7 @@ export class TuiAltScreen extends TuiBase {
+@@ -292,6 +406,7 @@ export class TuiAltScreen extends TuiBase {
          return { lines, evictedImageDeletion };
      }
      resetRenderState() {
@@ -231,7 +243,7 @@ index 043d2c7952af7908b7cbb576f47d2bc18adada22..9fa0b91db993dc7e9a2df8ad65c9ba87
          this.previousScreen = [];
          this.previousScreenWidth = 0;
          this.previousScreenHeight = 0;
-@@ -1452,7 +1555,8 @@ export class TuiAltScreen extends TuiBase {
+@@ -1452,7 +1567,8 @@ export class TuiAltScreen extends TuiBase {
          const width = Math.max(1, this.terminal.columns);
          const height = Math.max(1, this.terminal.rows);
          const root = this.layoutRoot ?? this.implicitScrollView;
@@ -241,7 +253,7 @@ index 043d2c7952af7908b7cbb576f47d2bc18adada22..9fa0b91db993dc7e9a2df8ad65c9ba87
          if (this.refreshSearch(nextLayout)) {
              nextLayout = renderLayoutFrame(root, width, height, () => this.requestRender());
          }
-@@ -1466,11 +1570,14 @@ export class TuiAltScreen extends TuiBase {
+@@ -1466,11 +1582,19 @@ export class TuiAltScreen extends TuiBase {
          screen = this.applySelection(screen, nextLayout);
          screen = this.compositeFlashes(screen, width, height);
          const cursorPos = this.extractCursorPosition(screen, height);
@@ -255,13 +267,18 @@ index 043d2c7952af7908b7cbb576f47d2bc18adada22..9fa0b91db993dc7e9a2df8ad65c9ba87
 +        // Reuse normalization only when the fully composited source row matches.
 +        // Cursor extraction and overlays still use the host's current frame.
 +        screen = local
-+            ? screen.map((line, row) => line === local.frame.sourceLines?.[row]
-+                ? this.previousScreen[row] : clampLine(this.applyLineResets([line])[0]))
++            ? screen.map((line, row) => {
++                if (line === local.frame.sourceLines?.[row]) return this.previousScreen[row];
++                const normalized = this.applyLineResets([line])[0];
++                // Terminal normalization preserves cell width. Any composited
++                // string not validated above still takes the host width clamp.
++                return local.validatedText.has(line) ? normalized : clampLine(normalized);
++            })
 +            : this.applyLineResets(screen).map(clampLine);
          const fullRedraw = this.previousScreen.length === 0 || this.previousScreenWidth !== width || this.previousScreenHeight !== height;
          const changedRows = screen.map((line, row) => line !== this.previousScreen[row]);
          const imageAnchorsNeedRedraw = screen.some((line, row) => changedRows[row] && (isImageLine(line) || isImageLine(this.previousScreen[row] ?? "")));
-@@ -1555,6 +1662,10 @@ export class TuiAltScreen extends TuiBase {
+@@ -1555,6 +1679,10 @@ export class TuiAltScreen extends TuiBase {
          this.previousScreenWidth = width;
          this.previousScreenHeight = height;
          this.currentLayout = nextLayout;
@@ -272,7 +289,6 @@ index 043d2c7952af7908b7cbb576f47d2bc18adada22..9fa0b91db993dc7e9a2df8ad65c9ba87
      }
  }
  //# sourceMappingURL=tui-alt-screen.js.map
-\ No newline at end of file
 diff --git a/dist/tui-main-screen.js b/dist/tui-main-screen.js
 index 88eca823778ee1d70143bd94588437021f856333..0ce11db69d345df0f5b06b07ee4cf3a0d6118b5f 100644
 --- a/dist/tui-main-screen.js

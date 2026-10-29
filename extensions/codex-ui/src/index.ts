@@ -9,6 +9,8 @@ import { CodexEditor, CodexFooter, CodexHeader } from "./components.js";
 import { registerCodexTools, type CodexToolFactories, type CodexToolRenderServices } from "./tools.js";
 import { registerCodemodeUi } from "./codemode.js";
 import { registerTerminalTitleSpinner } from "./terminal-title.js";
+import { registerWorking } from "./working-session.js";
+import { createContextUsageReader } from "./context-usage.js";
 import { readGoalDisplay, type GoalFooterDisplay } from "./goal-display.js";
 
 export const CODEX_THEME_NAME = "codex-pi";
@@ -28,6 +30,7 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
   let unsubscribeGoal: (() => void) | undefined;
   let currentKeybindings: KeybindingsManager | undefined;
   const installTitleSpinner = registerTerminalTitleSpinner(pi);
+  const installWorking = registerWorking(pi);
 
   const nativeRenderers = registerCodexTools(pi, options.toolFactories, {
     getExecutionOptions: options.getExecutionOptions,
@@ -106,23 +109,25 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
       return new CodexEditor(tui, editorTheme, keybindings, getTheme);
     });
 
+    const working = installWorking(ctx);
     ctx.ui.setFooter((tui, _theme, footerData) => {
       const footer = new CodexFooter({
         cwd: ctx.cwd,
         home: process.env.HOME,
         getModelId,
         getThinkingLevel,
-        getContextUsage: () => ctx.getContextUsage(),
+        getContextUsage: createContextUsageReader(ctx),
         getBranch: () => footerData.getGitBranch(),
         getExtensionStatuses: () => footerData.getExtensionStatuses(),
         getGoalDisplay: () => goalDisplay,
+        getRate: () => working?.activity.label(),
         getTheme,
       });
       footer.setBranchSubscription(footerData.onBranchChange(() => {
         footer.invalidate();
         tui.requestRender();
       }));
-      return footer;
+      return working ? working.bind(footer, tui) : footer;
     });
 
     installTitleSpinner(ctx);

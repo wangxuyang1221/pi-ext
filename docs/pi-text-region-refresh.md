@@ -6,7 +6,7 @@
 
 补丁由 [pnpm-workspace.yaml](../pnpm-workspace.yaml)、[锁文件](../pnpm-lock.yaml) 和 [pi-tui patch](../patches/@earendil-works__pi-tui@1.4.0.patch) 固定。[coding-agent patch](../patches/@earendil-works__pi-coding-agent@1.4.0.patch) 保留会话摘要能力，并让稳定 TUI 引用在 renderer 切换后重新登记区域。仓库 bin 继续通过原有摘要补丁加载未打包 runtime，见 [宿主入口说明](pi-session-summary-patch.md)。
 
-这项能力不采集 token，不改变 codex-ui 的默认 UI。示例中的速率是受控演示值。
+API 本身不采集 token。codex-ui 已通过该 API 接入生产 Working 和真实事件驱动的估算速率，见 [Working 与速率](codex-working-rate.md)。独立示例中的速率仍是受控演示值。
 
 ## Contract
 
@@ -28,7 +28,7 @@ interface TUI {
 - 目标行数变化、图片、光标标记、其他终端控制序列、overlay、不支持的容器或无有效几何时执行正常渲染。全屏有有效选区、拖选、搜索、滚动条拖动或组件鼠标捕获时也正常回退；普通点击结束后的空选区不阻止局部刷新。高度变化不会抛出新增的布局错误，也不会丢弃目标内容。原有 render 错误继续传播，失败帧不作为后续局部帧依据。
 - `dispose()` 幂等，释放注册和待处理请求；随后请求不产生刷新。它不负责移除已挂载组件。组件的 `dispose()` 应释放句柄及自身定时器，再通过现有 UI API 移除组件。
 - renderer 停止后，其直接注册句柄失效，重新启动该实例也不会复活旧句柄。widget/footer factory 接收的稳定 TUI 引用会在模式切换后将仍有效的句柄迁移到当前 renderer。已释放句柄不会迁移。会话切换和 reload 仍应通过组件销毁释放注册。
-- 每个存活注册保留一条容器路径和固定大小的几何信息。普通 renderer 复用原有上一帧行数组，局部合成临时复制行数组。全屏保留最后成功帧，在局部请求时按需定位区域，同时更新叶节点、滚动内容和受影响的布局屏幕行。鼠标边界、裁剪和滚动位置在高度不变时保留；最终合成源行未变时复用 ANSI/宽度处理结果。正常帧不额外维护全树组件缓存，不保存逐帧历史。滚动文档内目标仍可能产生随文档长度增长的数组复制。
+- 每个存活注册保留一条容器路径和固定大小的几何信息。普通 renderer 复用原有上一帧行数组，局部合成临时复制行数组。全屏保留最后成功帧，在局部请求时按需定位区域，同时更新叶节点、滚动内容和受影响的布局屏幕行。鼠标边界、裁剪和滚动位置在高度不变时保留；最终合成源行未变时复用 ANSI/宽度处理结果。全屏另外保留本次目标行的已验证字符串，宽度和内容相同时复用校验；最终合成得到不同字符串仍走原有宽度裁剪。终端归一化保留单元格宽度，样式重置不需要再量同一行。正常帧不额外维护全树组件缓存，不保存逐帧历史。滚动文档内目标仍可能产生随文档长度增长的数组复制。
 
 ## Example
 
@@ -84,7 +84,7 @@ conda run -n codex-py312 python scripts/local-refresh-pty.py .tmp/local-refresh-
 
 ## CPU budget
 
-[CPU 驱动](../scripts/local-refresh-cpu.mjs) 对比干净原版与当前补丁版的真实消息组件，使用 120×40、dark 主题、0/200/1000 对历史、相同动态文本与 CodexFooter。每路径先预热并核对 50 帧，默认 7 批、每批 320 帧轮换顺序；逐批报告 user/system CPU、总 CPU 每帧中位数、字节数，并断言画面及光标相同。`--mode=fullscreen` 使用宿主 `createChatViewport` 的真实 transcript/dock 布局，额外比较每个布局节点的边界、裁剪、文本及滚动内容。
+[CPU 驱动](../scripts/local-refresh-cpu.mjs) 对比干净原版与当前补丁版的真实消息组件，使用 120×40、dark 主题、0/200/1000 对历史、相同生产 Working、CodexFooter、增量采样及受控接收事件。每路径先预热并核对 50 帧，默认 7 批、每批 320 帧轮换顺序；逐批报告 user/system CPU、总 CPU 每帧中位数、字节数，并断言画面及光标相同。`--mode=fullscreen` 使用宿主 `createChatViewport` 的真实 transcript/dock 布局，额外比较每个布局节点的边界、裁剪、文本及滚动内容。
 
 CPU 夹具读取构建后的 CodexFooter，先运行 `pnpm run build:codex-ui`。将安装驱动返回的原版 pi-tui 目录传入：
 
@@ -93,7 +93,7 @@ pnpm exec node --expose-gc scripts/local-refresh-cpu.mjs --baseline=.tmp/INSTALL
 pnpm exec node --expose-gc scripts/local-refresh-cpu.mjs --mode=fullscreen --baseline=.tmp/INSTALL_ROOT/original/node_modules/@earendil-works/pi-tui
 ```
 
-默认同步执行已排队的帧，用于隔离 renderer CPU；不把 `renderNow()` 冒充局部刷新。加入 `--interval=80 --pairs=200,1000 --workloads=animation-and-rate --frames=40 --samples=3` 可复验真实调度器的 80ms 节奏。两条路径的内容、帧数、节奏和主题相同；本工具不测终端模拟器自身 CPU，也不调用外部模型。
+默认同步执行已排队的帧，用于隔离 renderer CPU；不把 `renderNow()` 冒充局部刷新。加入 `--interval=32 --pairs=200,1000 --workloads=animation-and-rate --frames=40 --samples=3` 可复验真实调度器的 32ms 节奏。两条路径的内容、帧数、节奏和主题相同；本工具不测终端模拟器自身 CPU，也不调用外部模型。
 
 200/1000 对历史动态帧中位数须至少下降 30%。0/200/1000 的正常更新和未注册 API 路径，额外中位数须不超过 `max(原版 10%, 0.1ms/帧)`。超出预算时进程退出码为 1。应单独运行 CPU 测量，保留所有批次，报告噪声及绝对值，不只选择最佳批次。
 
