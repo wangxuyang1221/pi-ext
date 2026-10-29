@@ -25,7 +25,7 @@
 - [Map #54](https://github.com/wangxuyang1221/pi-ext/issues/54)、[Spec #55](https://github.com/wangxuyang1221/pi-ext/issues/55)；完整规格只维护在 Spec 正文。
 - [方向 Planning #56](https://github.com/wangxuyang1221/pi-ext/issues/56) 已通关。其初始仅提供机制的范围后来被用户扩展，当前以 Spec 修订及 #58/#59 为准，实际 Working 和 token 速率已在范围内，样式和位置尚待确认。
 - [可行性 Planning #57](https://github.com/wangxuyang1221/pi-ext/issues/57) 的有效规则已移交 Spec。采用显式文本区域与保留帧方向；无效几何、正常更新或其他复杂情况允许正确回退，不用全树通用缓存作为生产路线。CPU 预算和完整边界以 Spec 为准。
-- 新增 [#58](https://github.com/wangxuyang1221/pi-ext/issues/58) 确定 token 来源/口径，[#59](https://github.com/wangxuyang1221/pi-ext/issues/59) 确定 Working 与速率布局/生命周期。已确认可实时估算并显示 `≈`；当前只询问最近约 2 秒速率或当前响应平均速率，尚待答复。正文自身渲染优化仍不在范围。
+- 新增 [#58](https://github.com/wangxuyang1221/pi-ext/issues/58) 确定 token 来源/口径，[#59](https://github.com/wangxuyang1221/pi-ext/issues/59) 确定 Working 与速率布局/生命周期。已确认可实时估算并显示 `≈`，采用最近约 2 秒速率。当前询问计入正文/可见思考/工具调用参数，还是仅回复正文；推荐前者，尚待答复。正文自身渲染优化仍不在范围。
 - 独立分支为 `adventure/pi-animation`，worktree 为 `/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation`；资料位于本目录。
 - 沿用 adventure 流程，规划取舍和实施切片均需用户确认，之后由主代理协调 worker 逐关实施。当前没有 worker，没有产品代码修改。
 - 提交推送仅包含本场工作；不创建 PR、不合并、不部署，不修改全局 Pi。工作目录外未授权写入需先征得同意。
@@ -56,7 +56,7 @@ CPU 预算为待审核切片的一部分：200/1000 对历史纯动态帧至少�
 
 ## Continuation Point
 
-继续 Planning #58，等待用户回答短窗口实时速率还是本次响应平均速率，再明确计入内容和缺失/结束行为。随后推进 #59 的位置、Working 生命周期和低功耗/原版行为。用户未同意制作原型；若需要，用 adventure 的 references/prototyping.md 先商定范围，再读取 make-a-prototype。
+继续 Planning #58，最近约 2 秒窗口已确认，不再重复询问。等待用户回答计入内容，再明确缺失/结束行为；不能计入工具结果、输入或凭空补计隐藏思考。随后推进 #59 的位置、Working 生命周期和低功耗/原版行为。用户未同意制作原型；若需要，用 adventure 的 references/prototyping.md 先商定范围，再读取 make-a-prototype。
 
 完成新增 Planning 后移交 Spec，重写 [已失效的切片草案](slices.md)，重新提交审核。当前没有 Implementation Issue 或 worker。用户接受修订后的完整切片后，按 adventure 创建实际需要的 Implementation Issues 与依赖，保存并派发首关。worker 必须完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md` 及必要引用，在 Issue 正文维护计划；提供本 worktree、当时 HEAD 和操作限制，不继承整段对话、不再委派。委派工具遵守当前 orchestration 规则。
 
