@@ -119,7 +119,7 @@ skill-mentions 的交互入口启用隔离 agentDir 中的 skill 发现，创建
 - summary.json 包含 command、版本、工作区修改、PID、退出码、状态和 cleanup。
 - output.log 收集自动驱动的完整输出。
 - commands.py 的旅程保存 journey.json、owners.json、terminal.ansi、home/agent/sessions/workspace 副本。home/.pi 中的实际搜索配置也保留；journey 包含每次启动命令、PID、按键、画面与实际模型 context。recipe 运行另存 recipe.json 和响应计划。
-- artifacts 保存目标 case 的已知旧 fixture 文件，包括 goal footer 四模式 JSON、tool-status 五模式 JSON 与最后一次 ANSI，以及旧 skill PTY 文件。新驱动在 JSON 输出中明确回报的 evidence 路径会复制到 artifacts/reported；已位于本次 evidence 下的输出直接保留。不会扫描其他 test-results 目录、跟随符号链接或把证据复制到自身。固定名字会复制到本次唯一目录，后续运行不会覆盖旧 run。最后一次 ANSI 不能冒充全部模式的原始终端记录；旧 fixture 若只输出断言日志，其未导出的画面仍不能判为已验证。
+- artifacts 保存目标 case 的已知旧 fixture 文件，包括 goal footer 四模式 JSON、tool-status 三模式 JSON 与最后一次 ANSI，以及旧 skill PTY 文件。新驱动在 JSON 输出中明确回报的 evidence 路径会复制到 artifacts/reported；已位于本次 evidence 下的输出直接保留。不会扫描其他 test-results 目录、跟随符号链接或把证据复制到自身。固定名字会复制到本次唯一目录，后续运行不会覆盖旧 run。最后一次 ANSI 不能冒充全部模式的原始终端记录；旧 fixture 若只输出断言日志，其未导出的画面仍不能判为已验证。
 
 每条验收写出 feature/sub-feature ID、实际入口、动作、结果、证据路径与边界。状态使用 passed、failed、blocked、unverified。代码测试通过属于补充证据，不替代用户入口。截图或最终文件单独都不够，至少要能重建“做了什么以及发生了什么”。修改工具同时核对文件字节或 session 结果；需要否定副作用的分支核对目标文件未出现、server 请求次数未增加或 git refs 未变。
 

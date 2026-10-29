@@ -63,7 +63,7 @@ function commandLines(member: BashMember, expanded: boolean, theme: Theme, width
   return commands.map((line, index) => fitToWidth((index ? continuation : prefix) + line, width));
 }
 
-/** Render full-mode Bash calls using the selected Claude-style inline layout. */
+/** Render Bash calls using the selected Claude-style inline layout. */
 export function renderBashGroup(group: BashGroup, expanded: boolean, theme: Theme, availableWidth: number, toggleKeys: string): string[] {
   const width = normalizeWidth(availableWidth);
   if (!width) return [];

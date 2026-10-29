@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test, vi } from "vitest";
 import {
   AssistantMessageComponent,
+  SessionManager,
   initTheme,
   type ExtensionAPI,
   type Theme,
@@ -74,158 +75,12 @@ test("markdown transformer quotes all thinking during streaming and replay", () 
   assert.match(rendered, /Last body\./u);
 });
 
-function createLowPowerCommandHarness() {
+test("does not register the removed lowpower command or argument completion", () => {
   const commands = new Map<string, Parameters<ExtensionAPI["registerCommand"]>[1]>();
-  const registeredTools: ToolDefinition[] = [];
-  const pi = {
-    registerTool(tool: ToolDefinition) {
-      registeredTools.push(tool);
-    },
-    registerCommand(name: string, options: Parameters<ExtensionAPI["registerCommand"]>[1]) {
-      commands.set(name, options);
-    },
-    registerMarkdownTransformer() {},
-    on() {},
-  } as unknown as ExtensionAPI;
-  codexUiExtension(pi);
-
-  const command = commands.get("lowpower");
-  assert.ok(command);
-
-  const statusCalls: Array<[string, string | undefined]> = [];
-  const notifications: Array<[string, string | undefined]> = [];
-  const workingVisibility: boolean[] = [];
-  const context = {
-    ui: {
-      theme: createTheme(),
-      setStatus(key: string, text: string | undefined) {
-        statusCalls.push([key, text]);
-      },
-      setWorkingVisible(visible: boolean) {
-        workingVisibility.push(visible);
-      },
-      notify(message: string, type?: string) {
-        notifications.push([message, type]);
-      },
-    },
-  };
-
-  return { command, context, notifications, registeredTools, statusCalls, workingVisibility };
-}
-
-test("lowpower command keeps the built-in working row hidden in both modes", async () => {
-  const { command, context, workingVisibility } = createLowPowerCommandHarness();
-
-  await command.handler("on", context as never);
-  await command.handler("off", context as never);
-
-  assert.deepEqual(workingVisibility, [false, false]);
-});
-
-test("lowpower command toggles the runtime footer status", async () => {
-  const { command, context, notifications, statusCalls, workingVisibility } = createLowPowerCommandHarness();
-
-  await command.handler("", context as never);
-  await command.handler("", context as never);
-
-  assert.deepEqual(statusCalls, [
-    ["codex-ui-lowpower", "Low power"],
-    ["codex-ui-lowpower", undefined],
-  ]);
-  assert.deepEqual(notifications, [
-    ["Low power: on", "info"],
-    ["Low power: off", "info"],
-  ]);
-  assert.deepEqual(workingVisibility, [false, false]);
-});
-
-test("lowpower command supports idempotent on, off, and status arguments", async () => {
-  const { command, context, notifications, registeredTools, statusCalls } = createLowPowerCommandHarness();
-
-  await command.handler(" on ", context as never);
-  await command.handler("ON", context as never);
-  await command.handler("status", context as never);
-  await command.handler("off", context as never);
-  await command.handler("OFF", context as never);
-
-  assert.deepEqual(statusCalls, [
-    ["codex-ui-lowpower", "Low power"],
-    ["codex-ui-lowpower", "Low power"],
-    ["codex-ui-lowpower", undefined],
-    ["codex-ui-lowpower", undefined],
-  ]);
-  assert.deepEqual(notifications, [
-    ["Low power: on", "info"],
-    ["Low power: on", "info"],
-    ["Low power: on", "info"],
-    ["Low power: off", "info"],
-    ["Low power: off", "info"],
-  ]);
-  assert.equal(registeredTools.length, 4);
-});
-
-test("lowpower command rejects invalid arguments without changing mode", async () => {
-  const { command, context, notifications, statusCalls, workingVisibility } = createLowPowerCommandHarness();
-
-  await command.handler("on later", context as never);
-  await command.handler("status", context as never);
-
-  assert.deepEqual(statusCalls, []);
-  assert.deepEqual(notifications, [
-    ["Usage: /lowpower [on|off|status]", "error"],
-    ["Low power: off", "info"],
-  ]);
-  assert.deepEqual(workingVisibility, []);
-});
-
-test("lowpower command completes only supported arguments", async () => {
-  const { command } = createLowPowerCommandHarness();
-
-  assert.equal(command.description, "Toggle low-power rendering for write, edit, bash, and codemode");
-  assert.deepEqual(await command.getArgumentCompletions?.(""), [
-    { value: "on", label: "on" },
-    { value: "off", label: "off" },
-    { value: "status", label: "status" },
-  ]);
-  assert.deepEqual(await command.getArgumentCompletions?.("o"), [
-    { value: "on", label: "on" },
-    { value: "off", label: "off" },
-  ]);
-  assert.deepEqual(await command.getArgumentCompletions?.("st"), [
-    { value: "status", label: "status" },
-  ]);
-  assert.equal(await command.getArgumentCompletions?.("unknown"), null);
-});
-
-test("lowpower command affects newly rendered write calls without re-registering tools", async () => {
-  const { command, context, registeredTools } = createLowPowerCommandHarness();
-  const write = registeredTools.find((tool) => tool.name === "write");
-  assert.ok(write?.renderCall);
-
-  await command.handler("on", context as never);
-  const args = {
-    path: "src/new.ts",
-    get content() {
-      throw new Error("enabled low-power mode must not read write content");
-    },
-  };
-  const component = write.renderCall(args, createTheme(), {
-    args,
-    state: {},
-    lastComponent: undefined,
-    cwd: "/repo/app",
-    executionStarted: true,
-    argsComplete: false,
-    isPartial: true,
-    expanded: false,
-    showImages: true,
-    isError: false,
-    toolCallId: "write-1",
-    invalidate() {},
-  } as never);
-
-  assert.equal(component.render(80).join("\n"), "~ Writing src/new.ts");
-  assert.equal(registeredTools.length, 4);
+  codexUiExtension({ registerTool() {}, registerMarkdownTransformer() {}, on() {},
+    registerCommand(name: string, command: Parameters<ExtensionAPI["registerCommand"]>[1]) { commands.set(name, command); },
+  } as unknown as ExtensionAPI);
+  assert.equal(commands.has("lowpower"), false);
 });
 
 test("session UI installs only in TUI mode", async () => {
@@ -304,6 +159,7 @@ test("session UI installs only in TUI mode", async () => {
       mode: "tui",
       cwd: "/repo/app",
       model: { id: "gpt-test" },
+      sessionManager: SessionManager.inMemory(),
       getContextUsage: () => ({ tokens: 10, contextWindow: 100, percent: 10 }),
       isIdle: () => true,
       ui,
@@ -311,7 +167,6 @@ test("session UI installs only in TUI mode", async () => {
   );
 
   assert.deepEqual(calls.map((call) => call.name), [
-    "status",
     "getTheme",
     "theme",
     "header",
@@ -320,9 +175,9 @@ test("session UI installs only in TUI mode", async () => {
     "title",
     "working-visible",
   ]);
-  assert.deepEqual(calls[0]?.value, ["codex-ui-lowpower", undefined]);
-  assert.equal(calls[1]?.value, CODEX_THEME_NAME);
-  assert.equal(calls[2]?.value, profileTheme);
+  assert.ok(!calls.some(call => call.name === "status"));
+  assert.equal(calls[0]?.value, CODEX_THEME_NAME);
+  assert.equal(calls[1]?.value, profileTheme);
   assert.match(String(calls.find((call) => call.name === "title")?.value), /^π · app$/u);
   assert.equal(calls.find((call) => call.name === "working-visible")?.value, false);
 

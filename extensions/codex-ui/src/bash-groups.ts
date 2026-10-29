@@ -25,7 +25,7 @@ export interface BashGroupRowState { bashMember?: BashMember }
 interface Candidate { ids: string[] }
 interface SourceMessage { role: string; content?: unknown }
 
-/** Session-local ownership. Only bound full-mode rows may hide behind another row. */
+/** Session-local ownership. Only bound rows may hide behind another row. */
 export class BashGroups {
   private readonly members = new Map<string, BashMember>();
   private readonly candidates = new Map<string, Candidate>();
@@ -68,7 +68,7 @@ export class BashGroups {
       const existingKey = this.membership.get(block.id);
       const historical = existingKey !== undefined && !activeKeys.has(existingKey);
       if (seen.has(block.id) || historical) {
-        // Even an unbound/low-power first occurrence reserves its historical slot.
+        // Even an unbound first occurrence reserves its historical slot.
         // Existing owners stay put; no later binding may claim an ambiguous ID.
         this.ambiguousIds.add(block.id);
         current = undefined;
@@ -158,7 +158,7 @@ export class BashGroups {
       seen.add(id);
       const member = this.members.get(id);
       if (member) segment.push(member);
-      else flush(); // Unbound or low-power rows remain visible barriers.
+      else flush(); // Unbound rows remain visible barriers.
     }
     flush();
   }

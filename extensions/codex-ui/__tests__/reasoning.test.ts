@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
-import { test, vi } from "vitest";
+import { afterEach, test, vi } from "vitest";
 import { stripTerminalSequences } from "@earendil-works/pi-tui";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import codexUi from "../src/index.js";
 import { reasoningPipeline } from "./fixtures/reasoning-pipeline.js";
 
+afterEach(() => vi.useRealTimers());
+
 test("equal-height thinking changes never replay static offscreen tool history", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
   for (const outputPad of [0, 1] as const) {
     const writes: string[] = [];
     for (const history of [0, 20]) {
@@ -78,18 +81,16 @@ test("inline thinking remains static while the independent terminal title animat
   try {
     await pipeline.begin();
     await pipeline.update("**Reading the fixture**\n\nBody", "**Reading the fixture**\n\nBody");
-    assert.equal(pipeline.widgets.size, 0);
+    assert.deepEqual([...pipeline.widgets.keys()], ["codex-ui-working"]);
     const stable = pipeline.assistant.render(120);
     assert.match(stable.map(stripTerminalSequences).join("\n"), /Body/u);
     const requests = pipeline.stats().requests;
     for (let index = 0; index < 100; index++) assert.deepEqual(pipeline.assistant.render(120), stable);
     vi.advanceTimersByTime(2000);
     assert.equal(pipeline.stats().requests, requests);
-    assert.equal(vi.getTimerCount(), 1);
+    assert.equal(vi.getTimerCount(), 2);
     const windowTitles = [...pipeline.titles];
-    await pipeline.commands.get("lowpower").handler("on", pipeline.context);
     assert.deepEqual(pipeline.assistant.render(120), stable);
-    await pipeline.commands.get("lowpower").handler("off", pipeline.context);
     vi.advanceTimersByTime(2000);
     assert.deepEqual(pipeline.assistant.render(120), stable);
     assert(pipeline.titles.length > windowTitles.length);

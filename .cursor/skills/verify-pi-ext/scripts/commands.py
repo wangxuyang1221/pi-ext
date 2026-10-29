@@ -31,6 +31,8 @@ pids, launches = [], []
 raw, actions, snapshots = bytearray(), [], {}
 cleanup_errors = []
 archive_skipped = []
+original_terminal = None
+forward_terminal_input = False
 
 def interrupted(signum, _frame):
     raise InterruptedError(f"Verification interrupted by signal {signum}")
@@ -138,8 +140,17 @@ def records():
     path = root / "events.jsonl"
     return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
 
-def pump():
-    global status
+def forward_input():
+    if not select.select([sys.stdin], [], [], 0)[0]:
+        return
+    data = os.read(sys.stdin.fileno(), 65536)
+    if not data:
+        raise EOFError("Terminal input closed; exit with /quit")
+    actions.append({"at": time.monotonic(), "bytes": data.hex()})
+    snapshots[f"before-input-{len(actions)}"] = view()
+    os.write(fd, data)
+
+def relay_output():
     if select.select([fd], [], [], 0.05)[0]:
         try:
             chunk = os.read(fd, 65536)
@@ -150,13 +161,19 @@ def pump():
         raw.extend(chunk)
         if interactive:
             os.write(sys.stdout.fileno(), chunk)
-        if b"\x1b[6n" in chunk:
+        if not interactive and b"\x1b[6n" in chunk:
             os.write(fd, b"\x1b[1;1R")
         stream.feed(decoder.decode(chunk))
+
+def pump():
+    global status
+    relay_output()
     if status is None:
         done, result = os.waitpid(pid, os.WNOHANG)
         if done:
             status = result
+    if forward_terminal_input and status is None:
+        forward_input()
 
 def wait(predicate, label):
     deadline = time.monotonic() + recipe.get("timeoutSeconds", 30)
@@ -274,6 +291,11 @@ def drive(steps):
 
 passed = False
 try:
+    if interactive:
+        original_terminal = termios.tcgetattr(sys.stdin.fileno())
+        # Capability queries can arrive before the extension's ready event.
+        tty.setraw(sys.stdin.fileno())
+        forward_terminal_input = True
     start()
     wait(lambda: condition(recipe.get("ready", {"eventType": "ready"})), "ready")
     assert "Extension issues" not in view(), view()
@@ -282,20 +304,8 @@ try:
     elif custom and recipe.get("actions"):
         drive(recipe["actions"])
     if interactive:
-        original = termios.tcgetattr(sys.stdin.fileno())
-        tty.setraw(sys.stdin.fileno())
-        try:
-            while status is None:
-                pump()
-                if select.select([sys.stdin], [], [], 0.05)[0]:
-                    data = os.read(sys.stdin.fileno(), 65536)
-                    if not data:
-                        break
-                    actions.append({"at": time.monotonic(), "bytes": data.hex()})
-                    snapshots[f"before-input-{len(actions)}"] = view()
-                    os.write(fd, data)
-        finally:
-            termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, original)
+        while status is None:
+            pump()
         assert status is not None and os.waitstatus_to_exitcode(status) == 0, "Exit with /quit"
     elif scripted:
         pass
@@ -370,6 +380,7 @@ finally:
     # Ignore a second termination request while collecting proof and reaping owned PTYs.
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+    forward_terminal_input = False
     try:
         if pid is not None and status is None:
             try:
@@ -401,6 +412,11 @@ finally:
             os.close(fd)
         except Exception as error:
             cleanup_errors.append({"stage": "terminal-close", "error": str(error)})
+    if original_terminal is not None:
+        try:
+            termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, original_terminal)
+        except Exception as error:
+            cleanup_errors.append({"stage": "terminal-restore", "error": str(error)})
     stopped = []
     for owned in pids:
         try:

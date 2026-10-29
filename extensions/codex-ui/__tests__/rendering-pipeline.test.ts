@@ -177,7 +177,7 @@ test("completion recolors the real offscreen command instead of freezing its run
   } finally { pipeline.dispose(); }
 });
 
-test("elapsed time alone produces no terminal writes or full-mode timers", () => {
+test("elapsed time alone produces no terminal writes or Bash timers", () => {
   vi.useFakeTimers();
   vi.setSystemTime(0);
   const pipeline = createPipeline(20);

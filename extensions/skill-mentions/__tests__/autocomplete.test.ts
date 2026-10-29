@@ -13,7 +13,7 @@ const editors: Editor[] = [];
 afterEach(() => { for (const editor of editors.splice(0)) editor.setText(""); });
 const settle = () => new Promise(resolve => setTimeout(resolve, 80));
 function editorFor(kind: string) {
-  const editor = kind === "native" ? new Editor(tui, theme) : new CodexEditor(tui, theme, { matches: () => false } as never, () => ({ fg: (_: string, text: string) => text, getBgAnsi: () => "" }) as unknown as Theme);
+  const editor = kind === "native" ? new Editor(tui, theme) : new CodexEditor(tui, theme, { matches: () => false } as never, () => ({ fg: (_: string, text: string) => text, getBgAnsi: () => "", getFgAnsi: () => "" }) as unknown as Theme);
   editor.setAutocompleteProvider(skillAutocomplete(new CombinedAutocompleteProvider([{ name: "help" }], process.cwd()), () => commands));
   editors.push(editor);
   return editor;

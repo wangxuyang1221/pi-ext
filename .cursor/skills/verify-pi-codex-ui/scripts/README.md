@@ -12,6 +12,10 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 
 `cli.py` 启动仓库固定版本的原生 CLI。`model-provider.ts` 只提供离线模型响应、记录公开事件、注册宿主原有 codemode 工具，并为 `/compact` 提供确定摘要。工具、QuickJS、文件、配置、session、选择器和生产 renderer 均实际运行。该路径不证明真实远程模型会生成相同响应。
 
+两条驱动在每次新 CLI 进程前调用 [health.py](health.py)，保存 `doctor-*.json/.stderr`，对应进程条目的 `doctor` 字段指向它。它复用共享只读 doctor，非零退出、无效输出或验证锁占用时拒绝继续。失败后重新 doctor 并检查该次证据/cleanup，UI 卡住则重启已知状态。所有 pnpm 命令使用 `pnpm_config_verify_deps_before_run=false`，不要并发构建与 PTY。
+
+单独执行 preflight 的命令见 [Helpers](../SKILL.md#helpers)。驱动回归入口为 `conda run --no-capture-output -n codex-py312 python -m unittest discover -s .cursor/skills/verify-pi-codex-ui/scripts -p 'test_*.py' -v`，覆盖 preflight 与 composer 颜色断言。后者只提取真实断言函数并输入 pyte 单元格，证明会拒绝默认、不可见、混合或错误的草稿前景；真实 CLI 旅程仍须单独执行。
+
 `headless.py` 分别启动原生 `--print --mode json` 和 `--mode rpc`。RPC 通过客户端消息发起 prompt；它不是给 SDK 设置一个 mode 字段。工具返回的 PNG 字节需解析为 4000×40 或 2000×20，实际 shell 输出必须写入并读回文件。
 
 只补验控制字符 diff 时，可运行 `cli.py regular --controls` 和 `cli.py fullscreen --controls`。该聚焦路径实际覆盖已有 CRLF 文件、展开 diff，并检查源文件中的清屏和 OSC 标题指令没有执行；它不能代替完整 CLI 旅程。
@@ -22,20 +26,23 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 | --- | --- |
 | `ui-header`, `ui-composer`, `ui-resize` | 启动 Pi header；输入时逐列检查整行背景；40/80/140 列；真实设置菜单选择 light 与 codex-pi；fork/resume 后再检查背景。保存 pyte 文本与颜色区间、原始 ANSI。 |
 | `ui-status` | 加载生产 fast 与 permissions 扩展，离线支持模型显示目录、模型、fast、full access 组合，关闭 fast 并切回 Default permissions 后对应状态消失。窄屏另存画面。 |
-| `ui-theme`, `ui-lowpower-reset` | 原生 `/settings` 落盘主题；`/reload`、`/new`、原生 `/fork` 与 `/resume` 选择器替换后检查 codex-pi 背景和 lowpower=off。fork 的多行预填须 Ctrl+C 清除。 |
+| `ui-theme` | 原生 `/settings` 落盘主题；`/reload`、`/new`、原生 `/fork` 与 `/resume` 选择器替换后检查 codex-pi 背景。fork 的多行预填须 Ctrl+C 清除。 |
 | `ui-user-markdown`, `ui-reply-markdown` | bracketed paste 输入标题、嵌套列表、表格、代码围栏、引用、链接；核对真正模型请求和持久 session 原文，另检查 TUI 内容。`/copy` 的系统剪贴板部分须按下节人工补验。 |
-| `ui-lowpower-on`, `ui-lowpower-off`, `ui-lowpower-status` | 同一会话切换前后执行实际 write/edit/bash/codemode；保存折叠与 Ctrl+O 展开结果；核对 Write 预览恢复、完整 Thinking、文件字节及工具成功结果。status 后执行工具，验证查询不改变值。 |
+| `ui-tool-rendering` | 普通/fullscreen 的真实命令清单保留 `/inspect` 且排除 `/lowpower`；Tab 补全 `/inspec` 成功、`/lowp` 保持原输入。reload/new/fork/resume 后重复检查。始终执行真实 write/edit/bash/codemode，保存完整折叠预览与 Ctrl+O 展开结果，核对文件字节及工具成功结果。 |
 | `ui-write-added`, `ui-write-edited`, `ui-diff`, `ui-bash-preview`, `ui-expand`, `ui-error`, `ui-interrupted` | 真实新建、覆盖、Edit、大结果 Diff unavailable、控制字符原始字节、长/多行/截断 Bash；真实 Esc 取消独立 Bash，确认延后文件未生成。Write/Edit 使用短时异步文件操作，无可观察的分阶段进度，取消证据见下方文件修改边界。 |
 | `ui-shell-prefix`, `ui-shell-path`, `ui-project-trust`, `ui-settings-error`, `ui-settings-reload` | shell wrapper 真实输出；未信任项目前缀不生效；可信项目语法错误和不可读文件均阻止 read/bash；修复而未 reload 仍拒绝；reload 后恢复；重启为不信任后再次排除项目前缀。 |
 | `ui-codemode-cache`, `ui-inspect-tabs`, `ui-inspect-scroll`, `ui-codemode-resume` | 真实读取累计超过 4MiB；首项缺失、末项可读；方向键/PgDn/PgUp/Shift+Tab；原生 `/resume`、`/tree` 后发后续模型请求核对已保存结果，并确认 raw cache 不从历史恢复。调用顺序、预览外失败和本地 MCP 仍运行 skill 的 codemode case。 |
 | `ui-thinking-stream`, `ui-thinking-collapse`, `ui-thinking-resume`, `ui-title`, `ui-title-stop` | 实际流式 Thinking、Ctrl+T 隐藏选择、持久重开及后续上下文、原生 `/resume` 恢复取消/错误思考、`/compact` 后保留及开关；流中 OSC 动画、settled/取消后静止。80ms 精度仍由计时器测试验证。 |
+| `ui-working`, `ui-receive-rate` | 复用 [text-regions Working](../../verify-pi-text-regions/features/working.md) 的完整 regular/fullscreen 旅程，覆盖生产事件到组件、真实权限/文件/取消、input/retry/compaction、宽度、goal、new/reload/renderer/quit。先执行其 Launch/Doctor；这些不在旧 cli.py 的断言内。原版/发布/CPU 与物理边界按新 skill 对应 feature 另行验证。 |
 
 ## Manual boundaries
 
 以下部分不能凭 pyte 或文件断言标为通过。执行人必须保存动作、画面和结果；缺少该证据时，对应 ID 保留 `unverified`，同时记录自动通过部分。
 
-1. `ui-composer` 的终端像素和拖选。用真实终端启动共享 `tui codex-ui`，输入含中文、ASCII、长行的三行文本。分别在 light/codex-pi、窄屏/宽屏、`/new`/`/fork`/`/resume` 后拖选输入和空白区，检查背景无缺口、光标无残影、选择内容与输入一致。pyte 的逐列背景断言只证明 ANSI 单元格语义。
-2. `ui-reply-markdown` 的 `/copy`。在已允许写系统剪贴板的人工终端中，生成上述代表 Markdown，运行 `/copy`，粘贴到临时纯文本编辑器，与 session 中 assistant 原文逐字比较。代码围栏、缩进和表格分隔线必须一致，不含 renderer 添加的外层列表。自动驱动不会写系统剪贴板。
+多行选区的真实粘贴先按 [Paste transport](../../verify-pi-text-regions/references/manual-terminal.md#paste-transport) 校准终端通道。选区内容一致和剪贴板原始字节一致分开报告；校准不放宽下方 `/copy` 的逐字节要求。
+
+1. `ui-composer` 的终端像素和拖选。用真实终端启动共享 `tui codex-ui`，输入含中文、ASCII、长行的三行文本。分别在 light/codex-pi、窄屏/宽屏、`/new`/`/fork`/`/resume` 后拖选输入和空白区，检查文字清晰、背景无缺口、光标无残影、选择内容与输入一致。保留当前终端配色以检验草稿是否依赖终端默认前景。pyte 的前景和背景断言只证明 ANSI 单元格语义。
+2. `ui-reply-markdown` 的 `/copy`。在已允许写系统剪贴板的人工终端中，生成上述代表 Markdown，包含首尾空白、尾部 LF 和多段正文；运行 `/copy`，确认成功提示后实际粘贴到本轮文件，与当前分支最近已完成 assistant 的各段正文连接结果逐字节比较。代码围栏、缩进和表格分隔线必须一致，不含 renderer 添加的外层列表；不得先 trim 或规范化换行。补丁/原版、普通/全屏分别留证。自动驱动不会写系统剪贴板。
 
 ## File mutation cancellation
 

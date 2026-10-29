@@ -12,22 +12,20 @@ interface RowView extends Component {
 interface RowState { codemodeView?: RowView }
 export interface CodemodeServices {
   nativeRenderers: ReadonlyMap<string, ToolRenderers>;
-  isLowPowerEnabled?: () => boolean;
   getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
 }
 
 /** Display-only integration. Never registers, wraps or executes a tool. */
-export function registerCodemodeUi(pi: ExtensionAPI, services: CodemodeServices): { refresh(): void } {
+export function registerCodemodeUi(pi: ExtensionAPI, services: CodemodeServices): void {
   // Older hosts keep their own renderer. Test/SDK hosts may omit renderer registration too.
-  if (typeof pi.registerToolRenderer !== "function") return { refresh() {} };
+  if (typeof pi.registerToolRenderer !== "function") return;
   const store = new CodemodeStore();
-  const presentation = new CodemodePresentation(store, services.nativeRenderers, services.isLowPowerEnabled);
+  const presentation = new CodemodePresentation(store, services.nativeRenderers);
   const invalidators = new Map<string, () => void>();
   store.listeners.add(row => {
     if (row) { invalidators.get(row.id)?.(); if (row.evicted) invalidators.delete(row.id); }
     else for (const invalidate of invalidators.values()) invalidate();
   });
-  const refresh = () => { presentation.clear(); store.notify(); };
   const rebuild = (_event: unknown, ctx: ExtensionContext) => {
     if (ctx.mode !== "tui") return;
     presentation.clear();
@@ -125,5 +123,4 @@ export function registerCodemodeUi(pi: ExtensionAPI, services: CodemodeServices)
       }, { overlay: true, overlayOptions: { width: "95%", maxHeight: "90%", anchor: "center" } });
     },
   });
-  return { refresh };
 }

@@ -1,0 +1,323 @@
+{
+  "checkedAt": "2026-10-29T05:20:57.825Z",
+  "baseRevision": "845fdc408a45feaf74745167a53991352bc22e15",
+  "node": "v22.22.2",
+  "rawRoot": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/verify-text-regions-bukMuU",
+  "scope": "Implementation #64 self-proof; not #65 maintenance or #66 independent acceptance",
+  "entries": [
+    {
+      "entry": "working-regular-red",
+      "pid": 9727,
+      "processGroupEmpty": true,
+      "listeners": [],
+      "journeyPassed": true,
+      "exitCode": 0,
+      "checks": 53,
+      "runtimeRemoved": true,
+      "evidenceRetained": [
+        "actions.json",
+        "events.jsonl",
+        "plan.json",
+        "screens.json",
+        "summary.json",
+        "terminal.ansi"
+      ],
+      "rawDirectory": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/verify-text-regions-bukMuU/working-regular-red",
+      "evidenceContractPassed": false,
+      "reason": "Tool file was deleted by the old cleanup; retained as the red iteration"
+    },
+    {
+      "entry": "working-regular",
+      "pid": 10993,
+      "processGroupEmpty": true,
+      "listeners": [],
+      "journeyPassed": true,
+      "exitCode": 0,
+      "checks": 53,
+      "runtimeRemoved": true,
+      "evidenceRetained": [
+        "actions.json",
+        "artifacts",
+        "events.jsonl",
+        "instance.json",
+        "plan.json",
+        "screens.json",
+        "summary.json",
+        "terminal.ansi"
+      ],
+      "rawDirectory": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/verify-text-regions-bukMuU/working-regular",
+      "evidenceContractPassed": true,
+      "initialWorkspaceEmpty": true,
+      "toolProof": "TOOL-FINISHED",
+      "cancelledFileAbsent": true
+    },
+    {
+      "entry": "missing-cli",
+      "pid": 11463,
+      "processGroupEmpty": true,
+      "listeners": [],
+      "journeyPassed": false,
+      "exitCode": 1,
+      "checks": 0,
+      "runtimeRemoved": true,
+      "evidenceRetained": [
+        "actions.json",
+        "artifacts",
+        "instance.json",
+        "screens.json",
+        "summary.json",
+        "terminal.ansi"
+      ],
+      "rawDirectory": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/verify-text-regions-bukMuU/missing-cli",
+      "expectedFailure": true
+    },
+    {
+      "entry": "published-original-fullscreen",
+      "pid": 14961,
+      "processGroupEmpty": true,
+      "listeners": [],
+      "journeyPassed": true,
+      "exitCode": 0,
+      "checks": 53,
+      "runtimeRemoved": true,
+      "evidenceRetained": [
+        "actions.json",
+        "artifacts",
+        "events.jsonl",
+        "instance.json",
+        "plan.json",
+        "screens.json",
+        "summary.json",
+        "terminal.ansi"
+      ],
+      "rawDirectory": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/verify-text-regions-bukMuU/published-original-fullscreen",
+      "evidenceContractPassed": true,
+      "initialWorkspaceEmpty": true,
+      "toolProof": "TOOL-FINISHED",
+      "cancelledFileAbsent": true
+    }
+  ],
+  "installation": {
+    "root": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy",
+    "tarball": {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/pi-ext.tgz",
+      "sha256": "8469325ca95bf53ccfce46aef45c7dedd4c3a57d1a0986fd1b06b6f3f1cfa7e1"
+    },
+    "projects": {
+      "patched": {
+        "cwd": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/patched",
+        "installedExtension": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/patched/node_modules/pi-ext/extensions/codex-ui/dist/index.js",
+        "publishedFilesMatch": true,
+        "publishedFrozenLockUnchanged": true,
+        "cli": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/patched/node_modules/.bin/pi",
+        "tui": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/patched/node_modules/@earendil-works/pi-tui",
+        "agent": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/patched/node_modules/@earendil-works/pi-coding-agent",
+        "lockUnchanged": true,
+        "lockSha256": "f2830f6a572d6d77f15a365b6a9761a9aa5b4705956c0d953fb8b98ed5f64616",
+        "probe": {
+          "regionApi": true
+        }
+      },
+      "original": {
+        "cwd": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/original",
+        "installedExtension": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/original/node_modules/pi-ext/extensions/codex-ui/dist/index.js",
+        "publishedFilesMatch": true,
+        "publishedFrozenLockUnchanged": true,
+        "cli": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/original/node_modules/.bin/pi",
+        "tui": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/original/node_modules/@earendil-works/pi-tui",
+        "agent": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/original/node_modules/@earendil-works/pi-coding-agent",
+        "lockUnchanged": true,
+        "lockSha256": "08b444333b8ac4382cc51ad49c009ce1750ea2507c1097aa04af81a870106bc2",
+        "probe": {
+          "regionApi": false
+        }
+      }
+    },
+    "process": {
+      "pid": 13596,
+      "processGroupEmpty": true,
+      "listeners": []
+    }
+  },
+  "doctorReports": [
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/verify-text-regions-bukMuU/doctor-green.json",
+      "report": {
+        "ok": true,
+        "repo": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation",
+        "project": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation",
+        "revision": "845fdc408a45feaf74745167a53991352bc22e15",
+        "node": "v22.22.2",
+        "pnpm": "11.9.0",
+        "python": {
+          "version": "3.12.13",
+          "executable": "/opt/homebrew/Caskroom/miniconda/base/envs/codex-py312/bin/python",
+          "pyte": "0.8.2"
+        },
+        "extension": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/index.js",
+        "extensionSha256": "27634c2332e5f9a13ef4fd82d823a5d339f1e9d1b0fc1800708359e537b204ac",
+        "sources": {
+          "package.json": "e11fcca9b63715ae60354a0829ba572ccab944e237e246522be73f3b069a58fd",
+          "pnpm-lock.yaml": "f2830f6a572d6d77f15a365b6a9761a9aa5b4705956c0d953fb8b98ed5f64616",
+          "pnpm-workspace.yaml": "41f6b2ff9ec2a64643f64e691324bb71908c6ff37d81792a06e596665de44210",
+          "patches/@earendil-works__pi-tui@1.4.0.patch": "9ab9eee762f356fe6da3f13f22369bc93bacba54811d895eb7362f051657424f",
+          "patches/@earendil-works__pi-coding-agent@1.4.0.patch": "71d7f8b213a36b5bbd16941768f13e5bbbe7f712a52bcf0c878731f62588de57"
+        },
+        "cli": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/node_modules/.bin/pi",
+        "cliSha256": "1d1ae382527fb2659dd33a83b3f868485844b6eb3e246817dcd19736f971e56a",
+        "cliVersion": "1.4.0",
+        "agent": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/node_modules/.pnpm/@earendil-works+pi-coding-agent@1.4.0_patch_hash=71d7f8b213a36b5bbd16941768f13e5bbbe7f7_65c37c3781faa0df266cd10ff28c5c90/node_modules/@earendil-works/pi-coding-agent",
+        "tui": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/node_modules/.pnpm/@earendil-works+pi-tui@1.4.0_patch_hash=9ab9eee762f356fe6da3f13f22369bc93bacba54811d895eb7362f051657424f/node_modules/@earendil-works/pi-tui",
+        "versions": {
+          "pi-coding-agent": "1.4.0",
+          "pi-tui": "1.4.0",
+          "pi-ai": "1.4.0"
+        },
+        "regionApi": {
+          "regular": true,
+          "fullscreen": true
+        },
+        "auth": "Offline faux provider; no remote credentials needed",
+        "instance": "Short-lived PTY; ready and PID recorded by the drive",
+        "servicesStarted": []
+      }
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/verify-text-regions-bukMuU/doctor-patched.json",
+      "report": {
+        "ok": true,
+        "repo": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation",
+        "project": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/patched",
+        "revision": "845fdc408a45feaf74745167a53991352bc22e15",
+        "node": "v22.22.2",
+        "pnpm": "11.9.0",
+        "python": {
+          "version": "3.12.13",
+          "executable": "/opt/homebrew/Caskroom/miniconda/base/envs/codex-py312/bin/python",
+          "pyte": "0.8.2"
+        },
+        "extension": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/patched/node_modules/.pnpm/pi-ext@file+..+pi-ext.tgz_@earendil-works+pi-ai@1.4.0_@aws-sdk+credential-provider-node_7356c787caa45767bfa08e1f025ef932/node_modules/pi-ext/extensions/codex-ui/dist/index.js",
+        "extensionSha256": "27634c2332e5f9a13ef4fd82d823a5d339f1e9d1b0fc1800708359e537b204ac",
+        "sources": {
+          "package.json": "e11fcca9b63715ae60354a0829ba572ccab944e237e246522be73f3b069a58fd",
+          "pnpm-lock.yaml": "f2830f6a572d6d77f15a365b6a9761a9aa5b4705956c0d953fb8b98ed5f64616",
+          "pnpm-workspace.yaml": "41f6b2ff9ec2a64643f64e691324bb71908c6ff37d81792a06e596665de44210",
+          "patches/@earendil-works__pi-tui@1.4.0.patch": "9ab9eee762f356fe6da3f13f22369bc93bacba54811d895eb7362f051657424f",
+          "patches/@earendil-works__pi-coding-agent@1.4.0.patch": "71d7f8b213a36b5bbd16941768f13e5bbbe7f712a52bcf0c878731f62588de57"
+        },
+        "cli": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/patched/node_modules/.bin/pi",
+        "cliSha256": "2f91ded99adbb4fcacae53850684708b274510fc4302c96e9efb43fcb4be5807",
+        "cliVersion": "1.4.0",
+        "agent": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/patched/node_modules/.pnpm/@earendil-works+pi-coding-agent@1.4.0_patch_hash=71d7f8b213a36b5bbd16941768f13e5bbbe7f7_0f8a8bc3d71f80e0d0fa435b932d511d/node_modules/@earendil-works/pi-coding-agent",
+        "tui": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/patched/node_modules/.pnpm/@earendil-works+pi-tui@1.4.0_patch_hash=9ab9eee762f356fe6da3f13f22369bc93bacba54811d895eb7362f051657424f/node_modules/@earendil-works/pi-tui",
+        "versions": {
+          "pi-coding-agent": "1.4.0",
+          "pi-tui": "1.4.0",
+          "pi-ai": "1.4.0"
+        },
+        "regionApi": {
+          "regular": true,
+          "fullscreen": true
+        },
+        "auth": "Offline faux provider; no remote credentials needed",
+        "instance": "Short-lived PTY; ready and PID recorded by the drive",
+        "servicesStarted": []
+      }
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/verify-text-regions-bukMuU/doctor-original.json",
+      "report": {
+        "ok": true,
+        "repo": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation",
+        "project": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/original",
+        "revision": "845fdc408a45feaf74745167a53991352bc22e15",
+        "node": "v22.22.2",
+        "pnpm": "11.9.0",
+        "python": {
+          "version": "3.12.13",
+          "executable": "/opt/homebrew/Caskroom/miniconda/base/envs/codex-py312/bin/python",
+          "pyte": "0.8.2"
+        },
+        "extension": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/original/node_modules/.pnpm/pi-ext@file+..+pi-ext.tgz_@earendil-works+pi-ai@1.4.0_@aws-sdk+credential-provider-node_81f3bf1f29cdaa65964bef0145f15e9f/node_modules/pi-ext/extensions/codex-ui/dist/index.js",
+        "extensionSha256": "27634c2332e5f9a13ef4fd82d823a5d339f1e9d1b0fc1800708359e537b204ac",
+        "sources": {
+          "package.json": "e11fcca9b63715ae60354a0829ba572ccab944e237e246522be73f3b069a58fd",
+          "pnpm-lock.yaml": "f2830f6a572d6d77f15a365b6a9761a9aa5b4705956c0d953fb8b98ed5f64616",
+          "pnpm-workspace.yaml": "41f6b2ff9ec2a64643f64e691324bb71908c6ff37d81792a06e596665de44210",
+          "patches/@earendil-works__pi-tui@1.4.0.patch": "9ab9eee762f356fe6da3f13f22369bc93bacba54811d895eb7362f051657424f",
+          "patches/@earendil-works__pi-coding-agent@1.4.0.patch": "71d7f8b213a36b5bbd16941768f13e5bbbe7f712a52bcf0c878731f62588de57"
+        },
+        "cli": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/original/node_modules/.bin/pi",
+        "cliSha256": "fe4779b57ef90993d52e3222ed16ad6b6c27b1856ce6cc705b061c3f7fddf4ae",
+        "cliVersion": "1.4.0",
+        "agent": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/original/node_modules/.pnpm/@earendil-works+pi-coding-agent@1.4.0_@aws-sdk+credential-provider-node@3.972.83_@model_d3e2c377f8b5051985df00c88f4d1038/node_modules/@earendil-works/pi-coding-agent",
+        "tui": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-VfmMYy/original/node_modules/.pnpm/@earendil-works+pi-tui@1.4.0/node_modules/@earendil-works/pi-tui",
+        "versions": {
+          "pi-coding-agent": "1.4.0",
+          "pi-tui": "1.4.0",
+          "pi-ai": "1.4.0"
+        },
+        "regionApi": {
+          "regular": false,
+          "fullscreen": false
+        },
+        "auth": "Offline faux provider; no remote credentials needed",
+        "instance": "Short-lived PTY; ready and PID recorded by the drive",
+        "servicesStarted": []
+      }
+    }
+  ],
+  "globalPiUnchanged": true,
+  "sources": {
+    ".cursor/skills/verify-pi-text-regions/scripts/doctor.mjs": "40a9579f68a65324dd0a1cb24deb5fa26507ea3ac51a5acaf06f1a7a1cc66793",
+    "scripts/local-refresh-pty.py": "c7ca1082a428252b91baf5f9ef383a662169c29959720829be6186f5276a8142",
+    "scripts/local-refresh-install.mjs": "2a6bdce79d4dbaf5d9b88ebef3c35f787c5b5357284ee5a6ffaf1c348196a2e8",
+    "scripts/local-refresh-cpu.mjs": "dae4d8d9386842effc33d924b8339a1eb70ca07b842695be805bf8f474f754de",
+    "test-support/__tests__/text-region-doctor.test.ts": "4c21336fd0aa867394e27b138b3ecf79bf548b8621f518bd0586d106fd122f86",
+    "patches/@earendil-works__pi-tui@1.4.0.patch": "9ab9eee762f356fe6da3f13f22369bc93bacba54811d895eb7362f051657424f",
+    "patches/@earendil-works__pi-coding-agent@1.4.0.patch": "71d7f8b213a36b5bbd16941768f13e5bbbe7f712a52bcf0c878731f62588de57"
+  },
+  "unverified": [
+    "Full eight-run CPU matrix",
+    "All four published combinations",
+    "Physical terminal pixels",
+    "Physical drag selection",
+    "System clipboard",
+    "Terminal image pixels",
+    "Remote provider network",
+    "Precise Write/Edit await cancellation"
+  ],
+  "finalCheck": {
+    "command": "pnpm_config_verify_deps_before_run=false pnpm run check",
+    "exitCode": 0,
+    "testFiles": 204,
+    "tests": 2951,
+    "pid": 17638,
+    "processExited": true,
+    "listeners": [],
+    "log": ".tmp/create-text-region-verification/check.log"
+  },
+  "quality": {
+    "doctorTests": 10,
+    "crapMax": 3,
+    "coverage": {
+      "linesPercent": 94.11,
+      "branchesPercent": 93.75,
+      "functionsPercent": 100
+    },
+    "mutation": {
+      "killed": 11,
+      "survived": 0,
+      "uncovered": 0,
+      "raw": ".tmp/create-text-region-verification/mutator-final.log",
+      "perMutationOutputs": ".tmp/create-text-region-verification/mutation-output-*"
+    },
+    "dryer": {
+      "threshold": 0.8,
+      "duplicates": 0,
+      "note": "Doctor byte-identical .ts adapter required because dryer does not recognize .mjs; Python checked directly"
+    },
+    "pythonCoverage": "not collected",
+    "mutationWorkersEmpty": true
+  }
+}

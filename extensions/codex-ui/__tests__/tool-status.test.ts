@@ -19,13 +19,13 @@ function theme(offset = 0): Theme {
     getFgAnsi: () => "",
   } as unknown as Theme;
 }
-function tools(lowPower = false) {
+function tools() {
   const registered: ToolDefinition[] = [];
   const handlers = new Map<string, Function[]>();
   registerCodexTools({
     registerTool: (tool: ToolDefinition) => registered.push(tool),
     on: (event: string, handler: Function) => handlers.set(event, [...(handlers.get(event) ?? []), handler]),
-  } as unknown as ExtensionAPI, undefined, { isLowPowerEnabled: () => lowPower, getKeybindings: () => ({ getKeys: () => ["ctrl+o"] }) });
+  } as unknown as ExtensionAPI, undefined, { getKeybindings: () => ({ getKeys: () => ["ctrl+o"] }) });
   registered.push({
     name: "mcp", label: "MCP", description: "Fixture renderer", parameters: {type: "object", properties: {}},
     execute: async () => { throw new Error("Unexpected execution"); },
@@ -71,7 +71,7 @@ function row(tool: ToolDefinition, id = tool.name, initialTheme = theme()) {
 afterEach(() => vi.useRealTimers());
 
 test("uses bright body text without brightening metadata or unrelated theme roles", () => {
-  for (const lowPower of [false, true]) for (const tool of tools(lowPower).registered.filter(tool => ["bash", "read", "mcp"].includes(tool.name))) {
+  for (const tool of tools().registered.filter(tool => ["bash", "read", "mcp"].includes(tool.name))) {
     const item = row(tool);
     item.ctx.executionStarted = true;
     item.result("hello\nsecond\nthird\nfourth\nfifth\nsixth");
@@ -81,12 +81,9 @@ test("uses bright body text without brightening metadata or unrelated theme role
         item.ctx.expanded = expanded;
         const lines = item.paint();
         const body = lines.slice(1).filter(line => /^(?:\s*[│⎿└]?\s*)(?:\d+\s+)?(?:hello|second|third|fourth|fifth|sixth)/u.test(stripTerminalSequences(line)));
-        if (lowPower && tool.name === "bash" && !expanded) expect(body).toEqual([]);
-        else {
-          expect(body.length).toBeGreaterThan(0);
-          expect(body.every(line => line.includes(palette.fg("text", "").split("m")[0] + "m"))).toBe(true);
-          expect(body.join("\n")).not.toContain(palette.fg("toolOutput", "").split("m")[0] + "m");
-        }
+        expect(body.length).toBeGreaterThan(0);
+        expect(body.every(line => line.includes(palette.fg("text", "").split("m")[0] + "m"))).toBe(true);
+        expect(body.join("\n")).not.toContain(palette.fg("toolOutput", "").split("m")[0] + "m");
         if (tool.name === "read") expect(lines.join("\n")).toContain(palette.fg("dim", "  src/"));
         if (tool.name === "mcp" && !expanded) {
           expect(lines[1]).toContain(palette.fg("dim", "  └ "));
@@ -99,7 +96,7 @@ test("uses bright body text without brightening metadata or unrelated theme role
 
 test("recognizes native abort diagnostics without treating arbitrary error prose as cancellation", () => {
   const palette = theme();
-  for (const lowPower of [false, true]) for (const tool of tools(lowPower).registered.filter(tool => tool.name !== "mcp")) {
+  for (const tool of tools().registered.filter(tool => tool.name !== "mcp")) {
     const item = row(tool);
     item.ctx.executionStarted = true;
     const interrupted = tool.name === "bash" ? "partial output\n\nCommand aborted" : "Operation aborted";
@@ -170,8 +167,8 @@ test("keeps mixed group colors independent and reuses captured output across pai
   }
 });
 
-test("does not reread a low-power Bash failure to recolor an unchanged row", () => {
-  const bash = tools(true).registered.find(tool => tool.name === "bash")!;
+test("does not reread a Bash failure to recolor an unchanged row", () => {
+  const bash = tools().registered.find(tool => tool.name === "bash")!;
   const item = row(bash);
   item.ctx.executionStarted = true;
   const read = vi.fn(() => "partial output\n\nCommand aborted");
@@ -209,15 +206,15 @@ test("preserves native abort and Bash timeout diagnostics through serialization"
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });
 
-test("uses yellow static markers from argument generation through execution in both modes", () => {
+test("uses yellow static markers from argument generation through execution without refresh timers", () => {
   vi.useFakeTimers();
   const palette = theme();
-  for (const lowPower of [false, true]) for (const tool of tools(lowPower).registered) {
+  for (const tool of tools().registered) {
     const item = row(tool);
     for (const argsComplete of [false, true]) {
       item.ctx.argsComplete = argsComplete;
       const pending = item.paint();
-      if (tool.name === "bash" && !lowPower) expect(pending).toEqual([]);
+      if (tool.name === "bash") expect(pending).toEqual([]);
       else expect(pending[0]).toContain(palette.fg("warning", glyph(tool.name)) + " ");
       vi.advanceTimersByTime(30_000);
       expect(item.paint()).toEqual(pending);

@@ -20,7 +20,10 @@ export default function (pi: any) {
     return fauxAssistantMessage(plan.reply || 'AUDIT-DONE');
   }));
   pi.registerProvider(faux.provider);
-  pi.on('session_start', () => pi.setActiveTools([...new Set([...pi.getActiveTools(), 'codemode'])]));
+  pi.on('session_start', () => {
+    pi.setActiveTools([...new Set([...pi.getActiveTools(), 'codemode'])]);
+    record('commands', pi.getCommands());
+  });
   for (const type of ['resources_discover', 'session_start', 'agent_start', 'tool_execution_end', 'agent_settled']) {
     pi.on(type, event => record(type, event));
   }

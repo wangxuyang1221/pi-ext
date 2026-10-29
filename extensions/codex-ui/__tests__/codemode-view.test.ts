@@ -69,9 +69,9 @@ test("a child update preserves cached sibling bodies", () => {
   assert.notEqual(presentation.child(row.calls[1], 80, theme, "/repo"), changed);
 });
 
-test("hot child and inspector renders reuse preparation, and low power does not retain stale styles", () => {
-  const store = fixture(); let low = false;
-  const presentation = new CodemodePresentation(store, new Map(), () => low);
+test("hot child and inspector renders reuse preparation and observe cache eviction", () => {
+  const store = fixture();
+  const presentation = new CodemodePresentation(store, new Map());
   const row = store.get("p")!;
   const before = presentation.child(row.calls[0], 80, theme, "/repo");
   assert.equal(presentation.child(row.calls[0], 80, theme, "/repo"), before);
@@ -80,8 +80,6 @@ test("hot child and inspector renders reuse preparation, and low power does not 
   assert.equal(presentation.detail(row, { ...state, scroll: 100 }, theme, 80, "/repo"), first);
   const hits = presentation.stats().layouts.hits;
   assert.ok(hits >= 2);
-  low = true;
-  assert.notEqual(presentation.child(row.calls[0], 80, theme, "/repo"), before);
   store.results.clear();
   assert.match(presentation.child(row.calls[0], 80, theme, "/repo").join("\n"), /Raw result unavailable/);
   assert.ok(presentation.stats().layouts.chargedBytes <= presentation.stats().layouts.limitBytes);

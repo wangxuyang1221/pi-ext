@@ -1,0 +1,568 @@
+{
+  "schemaVersion": 1,
+  "at": "2026-10-29T11:44:10.478Z",
+  "baseRevision": "e5ef3a871c90cf2f641ba04606f0b547a3ca25bb",
+  "priorReview": {
+    "sources": 49,
+    "artifacts": 399,
+    "copies": [
+      {
+        "root": ".tmp/termius-shared-startup-66-0cpCwK/shared-regular",
+        "bytes": 22,
+        "sha256": "d6ae72488ae5076ceac1f85b727f9b3ab2e2fa617b064a295b9e161e766c43bc",
+        "equal": true
+      },
+      {
+        "root": ".tmp/termius-shared-startup-66-0cpCwK/regions-original-fullscreen",
+        "bytes": 18,
+        "sha256": "6f28f684122f99ba9d04e7c3c72348f8d4b438b1431e90b237448a9e259bca0c",
+        "equal": true
+      },
+      {
+        "root": ".tmp/termius-shared-startup-66-0cpCwK/regions-original-regular",
+        "bytes": 20,
+        "sha256": "6974d5c08af073d2f7c78855c75d733955788ac4417e4bd1463b7cb09489749b",
+        "equal": true
+      },
+      {
+        "root": ".tmp/termius-shared-startup-66-0cpCwK/regions-patched-regular-outer",
+        "bytes": 19,
+        "sha256": "8b7fae206acb79b29826262efb1a32b89fd1139fc2640777b873defd5d2570d8",
+        "equal": true
+      }
+    ],
+    "processes": [
+      {
+        "pid": 9100,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9101,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9109,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9110,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9119,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9120,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9121,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9122,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9545,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9549,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9562,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9563,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9590,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9592,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9838,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9864,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9895,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 9921,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10040,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10042,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10043,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10044,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10045,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10046,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10047,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10048,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10095,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10171,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10206,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10207,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10863,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10864,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10865,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 10871,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 11035,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 11089,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 11090,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 12095,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 12122,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 13202,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 13245,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 14179,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 14467,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 14494,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 14896,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 15133,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 15134,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 15489,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 15490,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 16037,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 16038,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 16214,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 16441,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 16484,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 17240,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 17920,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 17921,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 18284,
+        "stopped": true,
+        "listeners": []
+      }
+    ]
+  },
+  "experiment": {
+    "clipboardWritten": "expected-lf.txt",
+    "sourceBytes": 24,
+    "lf": {
+      "exitCode": 1,
+      "actualSaved": false
+    },
+    "cr": {
+      "exitCode": 0,
+      "bytes": 24,
+      "sha256": "a6bb5632520739d7caf25a2c39aca839a0f96b8930a857430d43bb1d6ae149fb",
+      "matchesPredeclaredCR": true
+    },
+    "capturedNormalization": false,
+    "termiosRestored": true,
+    "productCopyExercised": false
+  },
+  "authorization": {
+    "provider": "openai-codex",
+    "model": "gpt-6-luna",
+    "thinking": "medium",
+    "spendingCap": null,
+    "remoteRequestsThisRound": 0
+  },
+  "cleanup": {
+    "processes": [
+      {
+        "pid": 22649,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 22650,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 23578,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 23580,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 23581,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 23583,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 23956,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 23958,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 23959,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 23962,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 24066,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 24068,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 24070,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 24073,
+        "stopped": true,
+        "listeners": []
+      }
+    ],
+    "ownTabClosed": true,
+    "originalTabRetained": true,
+    "windowRestored": true
+  },
+  "limitations": [
+    "Initial cancelled run exit file was reused; exit2 remains in tool record and screenshots.",
+    "Calibration does not establish product selection or raw clipboard LF/CR preservation."
+  ],
+  "sources": [
+    {
+      "path": "adventure/54/experiments/selection-copy/receiver.py",
+      "sha256": "58b2940dd0f86a41b0f41924e378aa48e034e5b7b90ab41c4b9487f2fb6f5a5a"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/references/manual-terminal.md",
+      "sha256": "c1533a08ba0e43f72c6b763f38821f1805baa8b1a7d19603585da137f6745f11"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/scripts/README.md",
+      "sha256": "2cc68f5904f0179f75c7e88cedff28638a9cd7d299e3b8f0dc4116a64fc6983d"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/actual-cr.txt",
+      "bytes": 24,
+      "sha256": "a6bb5632520739d7caf25a2c39aca839a0f96b8930a857430d43bb1d6ae149fb"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/clipboard-control.json",
+      "bytes": 101,
+      "sha256": "d1e5cdb159104275ed886b0f007346dfa94131e964727ca5edf1398d107b6161"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/cr-exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/cr-ready.jpg",
+      "bytes": 653167,
+      "sha256": "440849248491f59601936b5c1a175d82cfe9be88ca744d82eacb735c23e41b03"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/cr-result.jpg",
+      "bytes": 685619,
+      "sha256": "f5a5ae056abdf04cbea3cb7892dc14595278d3283d7d27ed6f9c53b9229c6b99"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/cr-running-processes.txt",
+      "bytes": 1136,
+      "sha256": "2bb300ba76fb23a93f7fdb40bc8e02198afb743f0ef0f1254ec987afdb403301"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/cr-termios-after",
+      "bytes": 227,
+      "sha256": "00e0e45635e79ca788f0ab621d8a9bceeced0a21619376ca709f2254df8b3464"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/cr-termios-before",
+      "bytes": 227,
+      "sha256": "00e0e45635e79ca788f0ab621d8a9bceeced0a21619376ca709f2254df8b3464"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/cr-wrapper.pid",
+      "bytes": 6,
+      "sha256": "d4739ce42cd5dfe38e36574af591d88bb19e7a689525883f256072f1dbc18335"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/doctor-after-stale-screen.json",
+      "bytes": 2361,
+      "sha256": "49020d82fa087ba58a11d83d81ee198bef7afae51a309e499c888851989221c9"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/expected-cr.txt",
+      "bytes": 24,
+      "sha256": "a6bb5632520739d7caf25a2c39aca839a0f96b8930a857430d43bb1d6ae149fb"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/expected-lf.txt",
+      "bytes": 24,
+      "sha256": "082f5a648754d15e564af0705fd4f53620f9ee6f34467dab6deb59cca97023e0"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/lf-exit",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/lf-ready.jpg",
+      "bytes": 455426,
+      "sha256": "8a60d28c417473c1682ffea6375aafc37a141abdbe1e58ab664a5d085f179676"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/lf-result.jpg",
+      "bytes": 634897,
+      "sha256": "a5326c760ac3384565a58b0efefc39b9a6a46619574bb26e3347a57c9debb357"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/lf-running-processes.txt",
+      "bytes": 1136,
+      "sha256": "89c6ee8cf7b36dcc257c4e9068f7b0bbf30882f56ab8d9e54f4e441804182b7e"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/lf-termios-after",
+      "bytes": 227,
+      "sha256": "00e0e45635e79ca788f0ab621d8a9bceeced0a21619376ca709f2254df8b3464"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/lf-termios-before",
+      "bytes": 227,
+      "sha256": "00e0e45635e79ca788f0ab621d8a9bceeced0a21619376ca709f2254df8b3464"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/lf-wrapper.pid",
+      "bytes": 6,
+      "sha256": "ef038d215f34b77199873c63a170e00087dd5acbcbb7c74822997b3f023ff535"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/own-tab-closed.jpg",
+      "bytes": 132188,
+      "sha256": "ec4b5719b86b75af08cacccaa58f9234bd0a09cd018ba627b81f956f9911388e"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/run-cr.sh",
+      "bytes": 1011,
+      "sha256": "cea95a333d1317b4c0a498e02ac3a9595c2fd503a3e3e572bd4c61ad1ae5d50d"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/run-lf.sh",
+      "bytes": 1011,
+      "sha256": "e28f73888164435c7c01a18d9c4c141b0ddf32807fe4928374a7238dc3522f43"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/shell.pid",
+      "bytes": 6,
+      "sha256": "81f6d8dc3372a05fd9f0bc6fcedba2f48686951025f9cee931fbfa353c660472"
+    },
+    {
+      "path": ".tmp/termius-paste-diagnosis-66/tty.txt",
+      "bytes": 13,
+      "sha256": "41d8a6dfa9337b69e629aea9bcd92cf5e167943ab779c85eef322ef505ee4bc0"
+    }
+  ]
+}

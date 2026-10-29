@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import {
-  AgentSession, AssistantMessageComponent, convertToLlm, initTheme, SessionManager,
+  AssistantMessageComponent, convertToLlm, initTheme, SessionManager,
   type ExtensionAPI, type MarkdownTransformer,
 } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
@@ -114,7 +114,7 @@ test("reply markers, thinking quotes and native failure labels stay separate", (
   }
 });
 
-test("rendering leaves session and model text untouched and raw copy excludes the display marker", () => {
+test("rendering leaves session and model text untouched", () => {
   initTheme("dark", false);
   const snapshot = message(fixture);
   snapshot.content.unshift({ type: "thinking", thinking: "**First title**\n\nFirst body.\n\n**Last title**\n\nLast body." });
@@ -126,8 +126,6 @@ test("rendering leaves session and model text untouched and raw copy excludes th
   assert(plain(row).some(line => line.startsWith("- This long reply")), "Screen selection includes rendered list markers");
   assert.equal(JSON.stringify(manager.getEntries()), before);
   assert.deepEqual(convertToLlm(manager.buildSessionContext().messages), contextBefore);
-  // This is the host's /copy text source, without invoking the OS clipboard.
-  assert.equal(AgentSession.prototype.getLastAssistantText.call({ messages: [snapshot] } as AgentSession), fixture);
 });
 
 test("unrelated history is not re-transformed when the active reply updates", () => {

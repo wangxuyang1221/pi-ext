@@ -29,7 +29,7 @@ test("thinking grows inline and retains its contents through tool finalization",
     assert.match(visible(), /Checking frame stability/u);
     assert.match(visible(), /Second body\./u);
     assert.ok(pipeline.screen.render(120).length > rowsBefore, "New thinking must grow instead of replacing earlier content");
-    assert.equal(pipeline.widgets.size, 0, "Thinking must not reserve an editor status row");
+    assert.deepEqual([...pipeline.widgets.keys()], ["codex-ui-working"], "Thinking remains inline; only task activity has a widget");
 
     const message = { ...initial, content: [
       { type: "thinking" as const, thinking: text },
@@ -52,7 +52,7 @@ test("thinking grows inline and retains its contents through tool finalization",
     assert.ok(before.title >= 0 && before.tool > before.title && before.editor > before.tool);
     for (const type of ["thinking_end", "toolcall_start", "toolcall_delta", "toolcall_delta", "toolcall_end"]) {
       await pipeline.emit("message_update", { message, assistantMessageEvent: { type,
-        contentIndex: type === "thinking_end" ? 0 : 1 } });
+        contentIndex: type === "thinking_end" ? 0 : 1, partial: message, content: text, delta: "", toolCall: call } });
       pipeline.assistant.updateContent(message, true);
       assert.deepEqual(positions(), before);
       assert.equal(visible(), thinkingBefore);
@@ -63,7 +63,7 @@ test("thinking grows inline and retains its contents through tool finalization",
     assert.deepEqual(positions(), before, "Finalization must not insert previously hidden thinking");
     tool.updateResult({ content: [{ type: "text", text: "fixture" }], isError: false });
     await pipeline.emit("agent_settled");
-    assert.deepEqual(positions(), before);
+    assert.deepEqual(positions(), { ...before, editor: before.editor - 1, height: before.height - 1 });
     assert.equal(visible(), thinkingBefore);
     assert.deepEqual(message, original, "Rendering must not modify the original message");
   } finally { await pipeline.dispose(); }

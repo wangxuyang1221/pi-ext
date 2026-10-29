@@ -1,0 +1,450 @@
+{
+  "schemaVersion": 1,
+  "baseRevision": "c0b4b6c0cc3684a721029e141f975631bed87fd1",
+  "generatedAt": "2026-10-29T10:43:34.518Z",
+  "result": "automated-passed-physical-pending",
+  "sources": [
+    {
+      "path": ".cursor/skills/verify-pi-ext/scripts/commands.py",
+      "sha256": "9b831014b86a992615bc4bf117df6f30508b4d597f05052a3c377f14b8a1b74b"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-ext/scripts/test_commands_terminal.py",
+      "sha256": "cbb6f7e68499c10b2e45dc994db274284c16a1755775b45aae6907070006a8d0"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".tmp/shared-terminal-66/check.log",
+      "bytes": 42171,
+      "sha256": "803db4ec7ac6f5a015d622afb1cabe347ded2801c83160f1f4c18b98d69a43cb"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/cleanup.json",
+      "bytes": 1651,
+      "sha256": "fe606218088f91242163d5bdb1edc866ef78e8aeb647d9d98caa9a1ff9771d5a"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/coverage-tests.log",
+      "bytes": 101,
+      "sha256": "78eb99bf5d3bf73e014954da7a114ce44735c229fbe233bd185f67fa77520a13"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/crapper-final.log",
+      "bytes": 1907,
+      "sha256": "5cb05382e07288b805d66622845e67b172e996e8435dc52340203caa40887461"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/crapper.log",
+      "bytes": 1809,
+      "sha256": "c38154e53623e18c693bb446c3af80f130501f546139e2207750899c7ab62589"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/doctor.json",
+      "bytes": 2492,
+      "sha256": "60b5dc48e4afe60d75e07c1092df79ef5d5139b3ee79a15a84c35f74cfa2caf3"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/dryer-final.log",
+      "bytes": 31,
+      "sha256": "0b3c8989c7694f6c580fdff18178f5b9268b2d104d6a7b7e1e36be9f5d818740"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/dryer.log",
+      "bytes": 31,
+      "sha256": "0b3c8989c7694f6c580fdff18178f5b9268b2d104d6a7b7e1e36be9f5d818740"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/final-python-recorded.log",
+      "bytes": 106,
+      "sha256": "a4a2ac125dc2ea588f6deb9560d6ca89d5124a20bed9cffdd1dd7550d6c80a6e"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/final-python.log",
+      "bytes": 106,
+      "sha256": "fc68b085e507de14f8699f99987415de2107813478c431f0dff325c5273572df"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/green.log",
+      "bytes": 100,
+      "sha256": "4dbfdbb0d840132733b93a7cd69d863e62d13931876d45f440d5a90128799f2c"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/lcov.info",
+      "bytes": 4130,
+      "sha256": "1d2e5ace2596d22c1fb53c7c594253c4d237020cacc551f2b63bc1c6066e82cd"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/metadata.log",
+      "bytes": 3742,
+      "sha256": "83f9642011b241c2541709262171793aba22d60b849d6449324f6dd2b5882041"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/metrics/crap.edn",
+      "bytes": 2139,
+      "sha256": "26e5c19323ed596e561981e28fc5aa0ca3c7b753d12f6f7675d2b7636958fe89"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/metrics/dry-final.edn",
+      "bytes": 17,
+      "sha256": "d4096cccbc2108ff3f8dca9d20dbc6ebf313423ad28abf5b50a196ce923a91d5"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/metrics/dry.edn",
+      "bytes": 17,
+      "sha256": "d4096cccbc2108ff3f8dca9d20dbc6ebf313423ad28abf5b50a196ce923a91d5"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/metrics/mutate/.cursor.skills.verify-pi-ext.scripts.commands.edn",
+      "bytes": 5559,
+      "sha256": "c2ff01d1a7627184a2b4c1c66c1b5fcae47e2d00366c8c1f93df5e4aeedec887"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/mutation-sites.log",
+      "bytes": 6239,
+      "sha256": "707fd42272732dbb59f1f477be5df7680859c2d6475a3a93db3a4923fe1f94b4"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/mutator-final.log",
+      "bytes": 2958,
+      "sha256": "660a00914880bd2130a44163c95abd2d2b4b683755fffd9783347571a7fa4f9b"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/mutator.log",
+      "bytes": 588,
+      "sha256": "39a32a4f5a3a59b01ba7e9ba27310557fc9f63888c7ba8aa3db43b045e8da968"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/parent-review.json",
+      "bytes": 3249,
+      "sha256": "46ccca336cdc3ccc2d9a07610e39f28c45fc7f9965667a6780cc2702d7eaba89"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/red.log",
+      "bytes": 2038,
+      "sha256": "b823f8c8c00e68e4fbc99c0b8bd3734fc892148b26d30016d532a6d34c3b90f4"
+    },
+    {
+      "path": ".tmp/shared-terminal-66/terminal-tests.jsonl",
+      "bytes": 1163,
+      "sha256": "62c16a75b2994f0affbfa0b07a194e749e2748296df0117e01bf04ec79477359"
+    }
+  ],
+  "tests": {
+    "python": 8,
+    "realPiScenarios": 6,
+    "checkFiles": 205,
+    "checkTests": 2958,
+    "mutationsKilled": 9,
+    "mutationsSurvived": 0,
+    "changedFunctionCrap": {
+      "forward_input": 3,
+      "relay_output": 7,
+      "pump": 5
+    }
+  },
+  "cleanup": {
+    "at": "2026-10-29T10:43:34.515Z",
+    "processes": [
+      {
+        "pid": 6226,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 6227,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 6242,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 6243,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 6253,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 6254,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 6255,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 6256,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 6257,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 6258,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 6285,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 6286,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 99623,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 99624,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 98782,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 98812,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 98921,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 98924,
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": 99141,
+        "stopped": true,
+        "listeners": []
+      }
+    ],
+    "globalPiSha256": "f04afd35fb16a3647b49ebb4bb67cbccba10a64fc6b5d1d5dfdd320e4f4ef331",
+    "mutationWorkerRemoved": true
+  },
+  "parentReview": {
+    "at": "2026-10-29T10:41:34.556Z",
+    "revision": "c0b4b6c0cc3684a721029e141f975631bed87fd1",
+    "sources": 45,
+    "artifacts": 322,
+    "copy": {
+      "equal": true,
+      "bytes": 18,
+      "sha256": "913bb9ba95f0ff54ecc888ca0e3a078d6c9319aef386933bbd976f39ff6423d0"
+    },
+    "processes": [
+      {
+        "pid": "83167",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "83168",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "84643",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "84645",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "85226",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "85227",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "85499",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "85554",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "85556",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "86372",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "86554",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "86924",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "87831",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "88592",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "88593",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "88600",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "88608",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "89055",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "89669",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "90436",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "90483",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "90484",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "91286",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "92113",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "92114",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "86552",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "86922",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "87829",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "89053",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "89667",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "90405",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "92041",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "84401",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "84354",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "84307",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "84260",
+        "stopped": true,
+        "listeners": []
+      },
+      {
+        "pid": "95797",
+        "stopped": true,
+        "listeners": []
+      }
+    ]
+  },
+  "boundaries": [
+    "Independent physical recheck pending",
+    "54 passed, 0 failed, 4 unverified inherited feature IDs"
+  ]
+}

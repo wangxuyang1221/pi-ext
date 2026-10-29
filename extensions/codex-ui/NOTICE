@@ -1,0 +1,7 @@
+OpenAI Codex
+Copyright 2025 OpenAI
+
+Working 文字反光适配自 OpenAI Codex rust-v0.97.0 的
+codex-rs/tui/src/shimmer.rs，遵循 Apache License 2.0，见 CODEX-LICENSE。
+本地 TypeScript 实现沿用两秒扫描、余弦强度和灰白回退配色；
+转圈、计时、宿主事件接入及区域刷新由 pi-ext 实现。

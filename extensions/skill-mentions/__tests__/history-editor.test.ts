@@ -45,7 +45,7 @@ function fixture(kind: "native" | "codex", order: "before" | "after" = "before",
   let base: CodexEditor | undefined;
   const installCodex = () => {
     if (kind === "codex") ui.setEditorComponent((tui: any, theme: any, keys: any) => {
-      base = new CodexEditor(tui, theme, keys, () => ({ fg: (_key: string, text: string) => text, getBgAnsi: () => "" }) as any);
+      base = new CodexEditor(tui, theme, keys, () => ({ fg: (_key: string, text: string) => text, getBgAnsi: () => "", getFgAnsi: () => "" }) as any);
       return base;
     });
   };

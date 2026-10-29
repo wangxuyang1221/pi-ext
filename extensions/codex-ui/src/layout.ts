@@ -6,6 +6,7 @@ import {
 
 const BACKGROUND_RESET = "\x1b[49m";
 const FULL_SGR_RESET = /\x1b\[(?:0)?m/g;
+const TEXT_COLOR_RESET = /\x1b\[(?:0?|39|22;39)m/g;
 
 export interface FitToWidthOptions {
   ellipsis?: string;
@@ -52,6 +53,12 @@ export function paintBackground(
     (reset) => `${reset}${backgroundAnsi}${modifierAfterReset}`,
   );
   return `${backgroundAnsi}${backgroundSafe}${BACKGROUND_RESET}`;
+}
+
+/** Set a default text color while preserving nested colors and cursor attributes. */
+export function paintForeground(text: string, foregroundAnsi: string): string {
+  const restored = text.replace(TEXT_COLOR_RESET, reset => `${reset}${foregroundAnsi}`);
+  return `${foregroundAnsi}${restored}\x1b[39m`;
 }
 
 export function fitSegments(

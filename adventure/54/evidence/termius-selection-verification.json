@@ -1,0 +1,2714 @@
+{
+  "schemaVersion": 1,
+  "task": 66,
+  "map": 54,
+  "spec": 55,
+  "verifiedRevision": "ad39016c9c5cfed27ae485d3b24614b6825546c3",
+  "generatedAt": "2026-10-29T09:36:06.531Z",
+  "workspace": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation",
+  "run": ".tmp/termius-selection-verification-66-20261029-r1",
+  "overallResult": "unverified",
+  "coverageCounts": {
+    "passed": 54,
+    "failed": 0,
+    "unverified": 4,
+    "total": 58,
+    "verifiedUnreachable": 0
+  },
+  "newCompletePassedIds": [],
+  "newPhysicalPassedBranches": [],
+  "coverage": [
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "regions",
+      "id": "region-independent",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "regions",
+          "id": "region-independent",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "八个示例旅程及真实 renderer 契约补证",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "regions",
+      "id": "region-edit",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "regions",
+          "id": "region-edit",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "八个示例旅程及真实 renderer 契约补证",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "regions",
+      "id": "region-lifecycle",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "regions",
+          "id": "region-lifecycle",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "八个示例旅程及真实 renderer 契约补证",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "regions",
+      "id": "region-original",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "regions",
+          "id": "region-original",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "八个示例旅程及真实 renderer 契约补证",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "working",
+      "id": "working-stream",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "working",
+          "id": "working-stream",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "六个生产 Working 旅程各54项、原始ANSI重放及真实文件/session",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "新增四个 CzIw6h 发布 Working 入口各54项及独立收尾检查"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "working",
+      "id": "working-permission",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "working",
+          "id": "working-permission",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "六个生产 Working 旅程各54项、原始ANSI重放及真实文件/session",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "新增四个 CzIw6h 发布 Working 入口各54项及独立收尾检查"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "working",
+      "id": "working-cancel",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "working",
+          "id": "working-cancel",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "六个生产 Working 旅程各54项、原始ANSI重放及真实文件/session",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "新增四个 CzIw6h 发布 Working 入口各54项及独立收尾检查"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "working",
+      "id": "working-recovery",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "working",
+          "id": "working-recovery",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "六个生产 Working 旅程各54项、原始ANSI重放及真实文件/session",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "新增四个 CzIw6h 发布 Working 入口各54项及独立收尾检查"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "working",
+      "id": "working-replacement",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "working",
+          "id": "working-replacement",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "六个生产 Working 旅程各54项、原始ANSI重放及真实文件/session",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "新增四个 CzIw6h 发布 Working 入口各54项及独立收尾检查"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "interactions",
+      "id": "interaction-focus",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "interactions",
+          "id": "interaction-focus",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "示例/Working PTY、Kitty字节及独立边界记录",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "interactions",
+      "id": "interaction-transcript",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "interactions",
+          "id": "interaction-transcript",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "示例/Working PTY、Kitty字节及独立边界记录",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "interactions",
+      "id": "interaction-image",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "interactions",
+          "id": "interaction-image",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "示例/Working PTY、Kitty字节及独立边界记录",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "interactions",
+      "id": "interaction-physical",
+      "coverage": "unverified",
+      "result": "unverified",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "interactions",
+          "id": "interaction-physical",
+          "coverage": "unverified",
+          "result": "unverified",
+          "evidence": "补丁全屏 regions 独立/同时更新、中文编辑、overlay、七轮历史、Ctrl+Home/End、鼠标滚动、实际图片文本降级和生命周期；选区复制尝试未通过",
+          "remaining": "最新动态选区实际系统复制、真实搜索、物理32/40列、其余三个 regions 实机入口及图片像素",
+          "basis": "终端/控制通道边界未解决，未以离线证据代替",
+          "thisRound": "新增物理子分支；无完整通过"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": "最新动态选区实际系统复制、真实搜索、物理32/40列、其余三个 regions 实机入口及图片像素"
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "interactions",
+      "id": "interaction-network",
+      "coverage": "unverified",
+      "result": "unverified",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "interactions",
+          "id": "interaction-network",
+          "coverage": "unverified",
+          "result": "unverified",
+          "evidence": "No remote provider request was made.",
+          "remaining": "未指定 provider/model、凭据与费用范围；未读取用户auth或发付费请求",
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "边界保留"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": "未指定 provider/model、凭据与费用范围；未读取用户auth或发付费请求"
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "performance",
+      "id": "cpu-dynamic",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "performance",
+          "id": "cpu-dynamic",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "八份新原始CPU结果及58项逐批重算",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "performance",
+      "id": "cpu-normal",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "performance",
+          "id": "cpu-normal",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "八份新原始CPU结果及58项逐批重算",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "performance",
+      "id": "cpu-native",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "performance",
+          "id": "cpu-native",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "八份新原始CPU结果及58项逐批重算",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "performance",
+      "id": "cpu-equivalence",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "performance",
+          "id": "cpu-equivalence",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "八份新原始CPU结果及58项逐批重算",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "installation",
+      "id": "install-patched",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "installation",
+          "id": "install-patched",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "本次 --pack、新消费者、doctor、7JS字节、全局前后哈希",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "新增四个 CzIw6h 发布 Working 入口各54项及独立收尾检查"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "installation",
+      "id": "install-original",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "installation",
+          "id": "install-original",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "本次 --pack、新消费者、doctor、7JS字节、全局前后哈希",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "新增四个 CzIw6h 发布 Working 入口各54项及独立收尾检查"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "installation",
+      "id": "install-published",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "installation",
+          "id": "install-published",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "本次 --pack、新消费者、doctor、7JS字节、全局前后哈希",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "新增四个 CzIw6h 发布 Working 入口各54项及独立收尾检查"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-text-regions",
+      "group": "installation",
+      "id": "install-isolation",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-text-regions",
+          "group": "installation",
+          "id": "install-isolation",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "本次 --pack、新消费者、doctor、7JS字节、全局前后哈希",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "新增四个 CzIw6h 发布 Working 入口各54项及独立收尾检查"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "layout",
+      "id": "ui-header",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "layout",
+          "id": "ui-header",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "CLI两模式各124项、Goal四入口、六个Working入口及定向契约",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "layout",
+      "id": "ui-composer",
+      "coverage": "unverified",
+      "result": "unverified",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "layout",
+          "id": "ui-composer",
+          "coverage": "unverified",
+          "result": "unverified",
+          "evidence": "四入口 codex-pi/light 草稿可读，中间编辑及部分拖选、new/fork/resume有实机截图",
+          "remaining": "物理32/40列、全部宽度/主题/会话/拖选组合及选区内容实际粘贴未完整覆盖",
+          "basis": "前轮可读性失败已在四入口修复复验，必要物理分支仍缺证据",
+          "thisRound": "failed → unverified，修复分支 passed"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": "物理32/40列、全部宽度/主题/会话/拖选组合及选区内容实际粘贴未完整覆盖"
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "layout",
+      "id": "ui-status",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "layout",
+          "id": "ui-status",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "CLI两模式各124项、Goal四入口、六个Working入口及定向契约",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "layout",
+      "id": "ui-theme",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "layout",
+          "id": "ui-theme",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "CLI两模式各124项、Goal四入口、六个Working入口及定向契约",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "layout",
+      "id": "ui-resize",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "layout",
+          "id": "ui-resize",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "CLI两模式各124项、Goal四入口、六个Working入口及定向契约",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "layout",
+      "id": "ui-user-markdown",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "layout",
+          "id": "ui-user-markdown",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "CLI两模式各124项、Goal四入口、六个Working入口及定向契约",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "layout",
+      "id": "ui-reply-markdown",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "layout",
+          "id": "ui-reply-markdown",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "54-copy-refocused-return.png; markdown-regular-assistant.txt; markdown-regular-retry-pasted.txt; markdown-regular-comparison.json",
+          "remaining": null,
+          "basis": "既有 Markdown 自动范围加本轮四入口生产 /copy 和真实系统粘贴",
+          "thisRound": "新增完整通过，185/185及四份191/191逐字节相等"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "layout",
+      "id": "ui-working",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "layout",
+          "id": "ui-working",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "CLI两模式各124项、Goal四入口、六个Working入口及定向契约",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "新增四个 CzIw6h 发布 Working 入口各54项及独立收尾检查"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "layout",
+      "id": "ui-receive-rate",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "layout",
+          "id": "ui-receive-rate",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "CLI两模式各124项、Goal四入口、六个Working入口及定向契约",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "新增四个 CzIw6h 发布 Working 入口各54项及独立收尾检查"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "thinking",
+      "id": "ui-thinking-stream",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "thinking",
+          "id": "ui-thinking-stream",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "Thinking两模式、CLI持久恢复/取消/OSC、18个retry/compaction标题区间",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "thinking",
+      "id": "ui-thinking-collapse",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "thinking",
+          "id": "ui-thinking-collapse",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "Thinking两模式、CLI持久恢复/取消/OSC、18个retry/compaction标题区间",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "thinking",
+      "id": "ui-thinking-resume",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "thinking",
+          "id": "ui-thinking-resume",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "Thinking两模式、CLI持久恢复/取消/OSC、18个retry/compaction标题区间",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "thinking",
+      "id": "ui-title",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "thinking",
+          "id": "ui-title",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "Thinking两模式、CLI持久恢复/取消/OSC、18个retry/compaction标题区间",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "thinking",
+      "id": "ui-title-stop",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "thinking",
+          "id": "ui-title-stop",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "Thinking两模式、CLI持久恢复/取消/OSC、18个retry/compaction标题区间",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "tools",
+      "id": "ui-tool-rendering",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "tools",
+          "id": "ui-tool-rendering",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "tool-status三入口、CLI真实工具/文件/取消及执行层补证",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "tools",
+      "id": "ui-read-group",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "tools",
+          "id": "ui-read-group",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "tool-status三入口、CLI真实工具/文件/取消及执行层补证",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "tools",
+      "id": "ui-bash-preview",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "tools",
+          "id": "ui-bash-preview",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "tool-status三入口、CLI真实工具/文件/取消及执行层补证",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "tools",
+      "id": "ui-expand",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "tools",
+          "id": "ui-expand",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "tool-status三入口、CLI真实工具/文件/取消及执行层补证",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "tools",
+      "id": "ui-write-added",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "tools",
+          "id": "ui-write-added",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "tool-status三入口、CLI真实工具/文件/取消及执行层补证",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "tools",
+      "id": "ui-write-edited",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "tools",
+          "id": "ui-write-edited",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "tool-status三入口、CLI真实工具/文件/取消及执行层补证",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "tools",
+      "id": "ui-diff",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "tools",
+          "id": "ui-diff",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "tool-status三入口、CLI真实工具/文件/取消及执行层补证",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "tools",
+      "id": "ui-error",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "tools",
+          "id": "ui-error",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "tool-status三入口、CLI真实工具/文件/取消及执行层补证",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "tools",
+      "id": "ui-interrupted",
+      "coverage": "unverified",
+      "result": "unverified",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "tools",
+          "id": "ui-interrupted",
+          "coverage": "unverified",
+          "result": "unverified",
+          "evidence": "Prior controlled cancellation and Bash evidence retained.",
+          "remaining": "真实 Esc 精确命中 Write/Edit filesystem await 仍无可观察、可控制阶段",
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "边界保留"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": "真实 Esc 精确命中 Write/Edit filesystem await 仍无可观察、可控制阶段"
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "codemode",
+      "id": "ui-codemode-order",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "codemode",
+          "id": "ui-codemode-order",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "codemode两模式、真实QuickJS/本地MCP、CLI >4MiB缓存/选择器与续问",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "codemode",
+      "id": "ui-codemode-failure",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "codemode",
+          "id": "ui-codemode-failure",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "codemode两模式、真实QuickJS/本地MCP、CLI >4MiB缓存/选择器与续问",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "codemode",
+      "id": "ui-inspect-tabs",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "codemode",
+          "id": "ui-inspect-tabs",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "codemode两模式、真实QuickJS/本地MCP、CLI >4MiB缓存/选择器与续问",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "codemode",
+      "id": "ui-inspect-scroll",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "codemode",
+          "id": "ui-inspect-scroll",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "codemode两模式、真实QuickJS/本地MCP、CLI >4MiB缓存/选择器与续问",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "codemode",
+      "id": "ui-codemode-cache",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "codemode",
+          "id": "ui-codemode-cache",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "codemode两模式、真实QuickJS/本地MCP、CLI >4MiB缓存/选择器与续问",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "codemode",
+      "id": "ui-codemode-resume",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "codemode",
+          "id": "ui-codemode-resume",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "codemode两模式、真实QuickJS/本地MCP、CLI >4MiB缓存/选择器与续问",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "execution",
+      "id": "ui-shell-prefix",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "execution",
+          "id": "ui-shell-prefix",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "CLI实际配置快照与修复、print/json和RPC共12场景",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "execution",
+      "id": "ui-shell-path",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "execution",
+          "id": "ui-shell-path",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "CLI实际配置快照与修复、print/json和RPC共12场景",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "execution",
+      "id": "ui-image-resize",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "execution",
+          "id": "ui-image-resize",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "CLI实际配置快照与修复、print/json和RPC共12场景",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "execution",
+      "id": "ui-project-trust",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "execution",
+          "id": "ui-project-trust",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "CLI实际配置快照与修复、print/json和RPC共12场景",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "execution",
+      "id": "ui-settings-error",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "execution",
+          "id": "ui-settings-error",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "CLI实际配置快照与修复、print/json和RPC共12场景",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "execution",
+      "id": "ui-settings-reload",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "execution",
+          "id": "ui-settings-reload",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "CLI实际配置快照与修复、print/json和RPC共12场景",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    },
+    {
+      "skill": "verify-pi-codex-ui",
+      "group": "execution",
+      "id": "ui-headless",
+      "coverage": "covered",
+      "result": "passed",
+      "inheritedEvidence": {
+        "report": "adventure/54/evidence/termius-repair-verification.json",
+        "entry": {
+          "skill": "verify-pi-codex-ui",
+          "group": "execution",
+          "id": "ui-headless",
+          "coverage": "covered",
+          "result": "passed",
+          "evidence": "CLI实际配置快照与修复、print/json和RPC共12场景",
+          "remaining": null,
+          "basis": "沿用既有独立自动证据，本轮未重跑完整旧矩阵",
+          "thisRound": "no new complete ID"
+        }
+      },
+      "thisRound": "未新增完整ID通过；本轮未执行实机动作。",
+      "remaining": null
+    }
+  ],
+  "continuity": {
+    "generatedAt": "2026-10-29T09:34:29.829Z",
+    "wrapperPid": 71478,
+    "installation": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h",
+    "publishedBytes": [
+      {
+        "kind": "patched",
+        "file": "bash-group-layout.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/bash-group-layout.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/bash-group-layout.js",
+        "sourceSha256": "275da38a1bf2ff2e0dc752f67ff70d5c0d43c5cae470d8602e6c6f4b6931506a",
+        "installedSha256": "275da38a1bf2ff2e0dc752f67ff70d5c0d43c5cae470d8602e6c6f4b6931506a",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "bash-groups.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/bash-groups.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/bash-groups.js",
+        "sourceSha256": "af9781ad5ea3ee9527e89766da82ba1c90fe9e8cc1c8a07d889df1b919acda13",
+        "installedSha256": "af9781ad5ea3ee9527e89766da82ba1c90fe9e8cc1c8a07d889df1b919acda13",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "codemode-data.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/codemode-data.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/codemode-data.js",
+        "sourceSha256": "d234c789bc63b01cba8329ddc82fec660a3f8c29363116eb60952d34cee4be36",
+        "installedSha256": "d234c789bc63b01cba8329ddc82fec660a3f8c29363116eb60952d34cee4be36",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "codemode-model.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/codemode-model.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/codemode-model.js",
+        "sourceSha256": "f71fc87febf5ad01866b1ae66a8a2d39557585a0b6b9b4940d3e43a7e58f4d4e",
+        "installedSha256": "f71fc87febf5ad01866b1ae66a8a2d39557585a0b6b9b4940d3e43a7e58f4d4e",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "codemode-presentation.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/codemode-presentation.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/codemode-presentation.js",
+        "sourceSha256": "1015d5bff9e0912c32ca6fb17cee8832bbc0f7e725229596afa8c44653db950b",
+        "installedSha256": "1015d5bff9e0912c32ca6fb17cee8832bbc0f7e725229596afa8c44653db950b",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "codemode-view.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/codemode-view.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/codemode-view.js",
+        "sourceSha256": "14d982ddbe0af066fda757695e600dc5b012bd05f6aeecb72c1669f6a365dda5",
+        "installedSha256": "14d982ddbe0af066fda757695e600dc5b012bd05f6aeecb72c1669f6a365dda5",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "codemode.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/codemode.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/codemode.js",
+        "sourceSha256": "919a3dc74bee22d13ac4854bae00343765943388cd082ae5ff60e778c0e8623a",
+        "installedSha256": "919a3dc74bee22d13ac4854bae00343765943388cd082ae5ff60e778c0e8623a",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "components.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/components.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/components.js",
+        "sourceSha256": "eed2dc17f584a0817d23d68acf143196f2a660031f6f047dc1394c4019d3c9b1",
+        "installedSha256": "eed2dc17f584a0817d23d68acf143196f2a660031f6f047dc1394c4019d3c9b1",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "context-usage.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/context-usage.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/context-usage.js",
+        "sourceSha256": "eb79dbd07cdf8b463566e6b7b0192a2e8fee98c6d68b99eb0c26aa67da69227f",
+        "installedSha256": "eb79dbd07cdf8b463566e6b7b0192a2e8fee98c6d68b99eb0c26aa67da69227f",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "diff-source.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/diff-source.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/diff-source.js",
+        "sourceSha256": "16ff2e9b1d8cfa8cfbcf855feba7e222572c1a962a58444d536d41586ebbae35",
+        "installedSha256": "16ff2e9b1d8cfa8cfbcf855feba7e222572c1a962a58444d536d41586ebbae35",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "exact-visual-tail.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/exact-visual-tail.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/exact-visual-tail.js",
+        "sourceSha256": "ebf90387b2f302188dc8b48d9cb612e7d6c3fb5c295af7f2a5b7d57666bdf540",
+        "installedSha256": "ebf90387b2f302188dc8b48d9cb612e7d6c3fb5c295af7f2a5b7d57666bdf540",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "execution-settings.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/execution-settings.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/execution-settings.js",
+        "sourceSha256": "6eed1645c5d909813f32c47d571933f01309eecbd6a7199a0080681d152335ca",
+        "installedSha256": "6eed1645c5d909813f32c47d571933f01309eecbd6a7199a0080681d152335ca",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "footer.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/footer.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/footer.js",
+        "sourceSha256": "5cd097c319ea147fc15e29cbb2a9104f1dbe7544a2f0b45b4fac76981839f6c1",
+        "installedSha256": "5cd097c319ea147fc15e29cbb2a9104f1dbe7544a2f0b45b4fac76981839f6c1",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "goal-display.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/goal-display.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/goal-display.js",
+        "sourceSha256": "e55f9ed4f0a599357c97bbfcbc81fcc0e8f42780a4659f744264e5a27808c443",
+        "installedSha256": "e55f9ed4f0a599357c97bbfcbc81fcc0e8f42780a4659f744264e5a27808c443",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "index.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/index.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/index.js",
+        "sourceSha256": "1b5e8850b7f221393bf2426f4f60d7af5514c11bea9b7ae9c67daa3c00893965",
+        "installedSha256": "1b5e8850b7f221393bf2426f4f60d7af5514c11bea9b7ae9c67daa3c00893965",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "json-units.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/json-units.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/json-units.js",
+        "sourceSha256": "dbc401333658a79afad7c0c6584b58fbf093a4a2768648ec4645f0a34a80d165",
+        "installedSha256": "dbc401333658a79afad7c0c6584b58fbf093a4a2768648ec4645f0a34a80d165",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "layout.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/layout.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/layout.js",
+        "sourceSha256": "2bbcdf83c4ae5594fcfe569b4affa7a67344d87784cac4156884bd47aa5e5a53",
+        "installedSha256": "2bbcdf83c4ae5594fcfe569b4affa7a67344d87784cac4156884bd47aa5e5a53",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "mcp-renderers.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/mcp-renderers.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/mcp-renderers.js",
+        "sourceSha256": "6a9142fdbc53f4c6e76fef80797baacd7c6ea56d53c97c6b5bee2f3b46c2d55e",
+        "installedSha256": "6a9142fdbc53f4c6e76fef80797baacd7c6ea56d53c97c6b5bee2f3b46c2d55e",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "mcp-text.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/mcp-text.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/mcp-text.js",
+        "sourceSha256": "7496e0032cb26b9128532bd3020a519164c28d1d97f4300daa3243f94c200722",
+        "installedSha256": "7496e0032cb26b9128532bd3020a519164c28d1d97f4300daa3243f94c200722",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "read-group-layout.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/read-group-layout.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/read-group-layout.js",
+        "sourceSha256": "2cc32e22402eb0ddc28161cd4bb928248261e8f6dc3b457a5ed3cbf456b3675e",
+        "installedSha256": "2cc32e22402eb0ddc28161cd4bb928248261e8f6dc3b457a5ed3cbf456b3675e",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "read-groups.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/read-groups.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/read-groups.js",
+        "sourceSha256": "a790199ca8f2ef8c7277b08b83fb03c15defea10ccd6470a9a9f45b04ebf25c0",
+        "installedSha256": "a790199ca8f2ef8c7277b08b83fb03c15defea10ccd6470a9a9f45b04ebf25c0",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "read-view.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/read-view.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/read-view.js",
+        "sourceSha256": "5f873b55a391ba6b7b10b00a3074130755e74a9358b5ad4369a9f3401fe3124f",
+        "installedSha256": "5f873b55a391ba6b7b10b00a3074130755e74a9358b5ad4369a9f3401fe3124f",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "render-cache.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/render-cache.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/render-cache.js",
+        "sourceSha256": "d302386cf0fd386ccbd77b9939807e275a60ae442f20d07f24d125a62e8aaab8",
+        "installedSha256": "d302386cf0fd386ccbd77b9939807e275a60ae442f20d07f24d125a62e8aaab8",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "reply-copy.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/reply-copy.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/reply-copy.js",
+        "sourceSha256": "81a57e9520d05e2b9dfbcddde7fbcfa2c03600b8fad1234e20746e8dbe1ab7f4",
+        "installedSha256": "81a57e9520d05e2b9dfbcddde7fbcfa2c03600b8fad1234e20746e8dbe1ab7f4",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "responsive-lines.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/responsive-lines.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/responsive-lines.js",
+        "sourceSha256": "831c7dfeb6e19a6b4d710b6049bb3439b2335733a85fb3d6d6c3e112e7969d4a",
+        "installedSha256": "831c7dfeb6e19a6b4d710b6049bb3439b2335733a85fb3d6d6c3e112e7969d4a",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "terminal-title.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/terminal-title.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/terminal-title.js",
+        "sourceSha256": "6037c98c3ed2389364ee908733d9fa3beb5152239b72e0e011a65d678bf67caf",
+        "installedSha256": "6037c98c3ed2389364ee908733d9fa3beb5152239b72e0e011a65d678bf67caf",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "token-rate.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/token-rate.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/token-rate.js",
+        "sourceSha256": "f8257b6a2923de8c2f4c5cfef23eda7c1b0523b42faba0397040c231fb8c578c",
+        "installedSha256": "f8257b6a2923de8c2f4c5cfef23eda7c1b0523b42faba0397040c231fb8c578c",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "tool-status.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/tool-status.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/tool-status.js",
+        "sourceSha256": "75cf715cc84aa5978bf6b8ec3b5a5c00a9260dc331dc41611b31a5a9fae43f03",
+        "installedSha256": "75cf715cc84aa5978bf6b8ec3b5a5c00a9260dc331dc41611b31a5a9fae43f03",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "tools.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/tools.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/tools.js",
+        "sourceSha256": "e7be196c3249c3a3f2fcac09a8b8a644328859266b1362b7835f6b7b8370f604",
+        "installedSha256": "e7be196c3249c3a3f2fcac09a8b8a644328859266b1362b7835f6b7b8370f604",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "working-session.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/working-session.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/working-session.js",
+        "sourceSha256": "dd9a860213e0f658eda9ad4faaeb6843d15be13ce84f461fcb56cd7c5f302783",
+        "installedSha256": "dd9a860213e0f658eda9ad4faaeb6843d15be13ce84f461fcb56cd7c5f302783",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "working.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/working.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/working.js",
+        "sourceSha256": "d53f61c6687cc58c3b89f32522b4880a59ab02f267dba19dabeb5474b3a48be6",
+        "installedSha256": "d53f61c6687cc58c3b89f32522b4880a59ab02f267dba19dabeb5474b3a48be6",
+        "equal": true
+      },
+      {
+        "kind": "patched",
+        "file": "write-changes.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/write-changes.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/write-changes.js",
+        "sourceSha256": "e2f90348ca5c3b21fb733f0fc9604a3db5a65255be9c4793aeb284d7ffcff2cb",
+        "installedSha256": "e2f90348ca5c3b21fb733f0fc9604a3db5a65255be9c4793aeb284d7ffcff2cb",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "bash-group-layout.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/bash-group-layout.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/bash-group-layout.js",
+        "sourceSha256": "275da38a1bf2ff2e0dc752f67ff70d5c0d43c5cae470d8602e6c6f4b6931506a",
+        "installedSha256": "275da38a1bf2ff2e0dc752f67ff70d5c0d43c5cae470d8602e6c6f4b6931506a",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "bash-groups.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/bash-groups.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/bash-groups.js",
+        "sourceSha256": "af9781ad5ea3ee9527e89766da82ba1c90fe9e8cc1c8a07d889df1b919acda13",
+        "installedSha256": "af9781ad5ea3ee9527e89766da82ba1c90fe9e8cc1c8a07d889df1b919acda13",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "codemode-data.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/codemode-data.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/codemode-data.js",
+        "sourceSha256": "d234c789bc63b01cba8329ddc82fec660a3f8c29363116eb60952d34cee4be36",
+        "installedSha256": "d234c789bc63b01cba8329ddc82fec660a3f8c29363116eb60952d34cee4be36",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "codemode-model.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/codemode-model.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/codemode-model.js",
+        "sourceSha256": "f71fc87febf5ad01866b1ae66a8a2d39557585a0b6b9b4940d3e43a7e58f4d4e",
+        "installedSha256": "f71fc87febf5ad01866b1ae66a8a2d39557585a0b6b9b4940d3e43a7e58f4d4e",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "codemode-presentation.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/codemode-presentation.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/codemode-presentation.js",
+        "sourceSha256": "1015d5bff9e0912c32ca6fb17cee8832bbc0f7e725229596afa8c44653db950b",
+        "installedSha256": "1015d5bff9e0912c32ca6fb17cee8832bbc0f7e725229596afa8c44653db950b",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "codemode-view.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/codemode-view.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/codemode-view.js",
+        "sourceSha256": "14d982ddbe0af066fda757695e600dc5b012bd05f6aeecb72c1669f6a365dda5",
+        "installedSha256": "14d982ddbe0af066fda757695e600dc5b012bd05f6aeecb72c1669f6a365dda5",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "codemode.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/codemode.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/codemode.js",
+        "sourceSha256": "919a3dc74bee22d13ac4854bae00343765943388cd082ae5ff60e778c0e8623a",
+        "installedSha256": "919a3dc74bee22d13ac4854bae00343765943388cd082ae5ff60e778c0e8623a",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "components.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/components.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/components.js",
+        "sourceSha256": "eed2dc17f584a0817d23d68acf143196f2a660031f6f047dc1394c4019d3c9b1",
+        "installedSha256": "eed2dc17f584a0817d23d68acf143196f2a660031f6f047dc1394c4019d3c9b1",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "context-usage.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/context-usage.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/context-usage.js",
+        "sourceSha256": "eb79dbd07cdf8b463566e6b7b0192a2e8fee98c6d68b99eb0c26aa67da69227f",
+        "installedSha256": "eb79dbd07cdf8b463566e6b7b0192a2e8fee98c6d68b99eb0c26aa67da69227f",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "diff-source.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/diff-source.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/diff-source.js",
+        "sourceSha256": "16ff2e9b1d8cfa8cfbcf855feba7e222572c1a962a58444d536d41586ebbae35",
+        "installedSha256": "16ff2e9b1d8cfa8cfbcf855feba7e222572c1a962a58444d536d41586ebbae35",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "exact-visual-tail.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/exact-visual-tail.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/exact-visual-tail.js",
+        "sourceSha256": "ebf90387b2f302188dc8b48d9cb612e7d6c3fb5c295af7f2a5b7d57666bdf540",
+        "installedSha256": "ebf90387b2f302188dc8b48d9cb612e7d6c3fb5c295af7f2a5b7d57666bdf540",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "execution-settings.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/execution-settings.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/execution-settings.js",
+        "sourceSha256": "6eed1645c5d909813f32c47d571933f01309eecbd6a7199a0080681d152335ca",
+        "installedSha256": "6eed1645c5d909813f32c47d571933f01309eecbd6a7199a0080681d152335ca",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "footer.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/footer.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/footer.js",
+        "sourceSha256": "5cd097c319ea147fc15e29cbb2a9104f1dbe7544a2f0b45b4fac76981839f6c1",
+        "installedSha256": "5cd097c319ea147fc15e29cbb2a9104f1dbe7544a2f0b45b4fac76981839f6c1",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "goal-display.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/goal-display.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/goal-display.js",
+        "sourceSha256": "e55f9ed4f0a599357c97bbfcbc81fcc0e8f42780a4659f744264e5a27808c443",
+        "installedSha256": "e55f9ed4f0a599357c97bbfcbc81fcc0e8f42780a4659f744264e5a27808c443",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "index.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/index.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/index.js",
+        "sourceSha256": "1b5e8850b7f221393bf2426f4f60d7af5514c11bea9b7ae9c67daa3c00893965",
+        "installedSha256": "1b5e8850b7f221393bf2426f4f60d7af5514c11bea9b7ae9c67daa3c00893965",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "json-units.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/json-units.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/json-units.js",
+        "sourceSha256": "dbc401333658a79afad7c0c6584b58fbf093a4a2768648ec4645f0a34a80d165",
+        "installedSha256": "dbc401333658a79afad7c0c6584b58fbf093a4a2768648ec4645f0a34a80d165",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "layout.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/layout.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/layout.js",
+        "sourceSha256": "2bbcdf83c4ae5594fcfe569b4affa7a67344d87784cac4156884bd47aa5e5a53",
+        "installedSha256": "2bbcdf83c4ae5594fcfe569b4affa7a67344d87784cac4156884bd47aa5e5a53",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "mcp-renderers.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/mcp-renderers.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/mcp-renderers.js",
+        "sourceSha256": "6a9142fdbc53f4c6e76fef80797baacd7c6ea56d53c97c6b5bee2f3b46c2d55e",
+        "installedSha256": "6a9142fdbc53f4c6e76fef80797baacd7c6ea56d53c97c6b5bee2f3b46c2d55e",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "mcp-text.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/mcp-text.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/mcp-text.js",
+        "sourceSha256": "7496e0032cb26b9128532bd3020a519164c28d1d97f4300daa3243f94c200722",
+        "installedSha256": "7496e0032cb26b9128532bd3020a519164c28d1d97f4300daa3243f94c200722",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "read-group-layout.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/read-group-layout.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/read-group-layout.js",
+        "sourceSha256": "2cc32e22402eb0ddc28161cd4bb928248261e8f6dc3b457a5ed3cbf456b3675e",
+        "installedSha256": "2cc32e22402eb0ddc28161cd4bb928248261e8f6dc3b457a5ed3cbf456b3675e",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "read-groups.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/read-groups.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/read-groups.js",
+        "sourceSha256": "a790199ca8f2ef8c7277b08b83fb03c15defea10ccd6470a9a9f45b04ebf25c0",
+        "installedSha256": "a790199ca8f2ef8c7277b08b83fb03c15defea10ccd6470a9a9f45b04ebf25c0",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "read-view.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/read-view.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/read-view.js",
+        "sourceSha256": "5f873b55a391ba6b7b10b00a3074130755e74a9358b5ad4369a9f3401fe3124f",
+        "installedSha256": "5f873b55a391ba6b7b10b00a3074130755e74a9358b5ad4369a9f3401fe3124f",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "render-cache.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/render-cache.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/render-cache.js",
+        "sourceSha256": "d302386cf0fd386ccbd77b9939807e275a60ae442f20d07f24d125a62e8aaab8",
+        "installedSha256": "d302386cf0fd386ccbd77b9939807e275a60ae442f20d07f24d125a62e8aaab8",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "reply-copy.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/reply-copy.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/reply-copy.js",
+        "sourceSha256": "81a57e9520d05e2b9dfbcddde7fbcfa2c03600b8fad1234e20746e8dbe1ab7f4",
+        "installedSha256": "81a57e9520d05e2b9dfbcddde7fbcfa2c03600b8fad1234e20746e8dbe1ab7f4",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "responsive-lines.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/responsive-lines.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/responsive-lines.js",
+        "sourceSha256": "831c7dfeb6e19a6b4d710b6049bb3439b2335733a85fb3d6d6c3e112e7969d4a",
+        "installedSha256": "831c7dfeb6e19a6b4d710b6049bb3439b2335733a85fb3d6d6c3e112e7969d4a",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "terminal-title.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/terminal-title.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/terminal-title.js",
+        "sourceSha256": "6037c98c3ed2389364ee908733d9fa3beb5152239b72e0e011a65d678bf67caf",
+        "installedSha256": "6037c98c3ed2389364ee908733d9fa3beb5152239b72e0e011a65d678bf67caf",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "token-rate.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/token-rate.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/token-rate.js",
+        "sourceSha256": "f8257b6a2923de8c2f4c5cfef23eda7c1b0523b42faba0397040c231fb8c578c",
+        "installedSha256": "f8257b6a2923de8c2f4c5cfef23eda7c1b0523b42faba0397040c231fb8c578c",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "tool-status.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/tool-status.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/tool-status.js",
+        "sourceSha256": "75cf715cc84aa5978bf6b8ec3b5a5c00a9260dc331dc41611b31a5a9fae43f03",
+        "installedSha256": "75cf715cc84aa5978bf6b8ec3b5a5c00a9260dc331dc41611b31a5a9fae43f03",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "tools.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/tools.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/tools.js",
+        "sourceSha256": "e7be196c3249c3a3f2fcac09a8b8a644328859266b1362b7835f6b7b8370f604",
+        "installedSha256": "e7be196c3249c3a3f2fcac09a8b8a644328859266b1362b7835f6b7b8370f604",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "working-session.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/working-session.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/working-session.js",
+        "sourceSha256": "dd9a860213e0f658eda9ad4faaeb6843d15be13ce84f461fcb56cd7c5f302783",
+        "installedSha256": "dd9a860213e0f658eda9ad4faaeb6843d15be13ce84f461fcb56cd7c5f302783",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "working.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/working.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/working.js",
+        "sourceSha256": "d53f61c6687cc58c3b89f32522b4880a59ab02f267dba19dabeb5474b3a48be6",
+        "installedSha256": "d53f61c6687cc58c3b89f32522b4880a59ab02f267dba19dabeb5474b3a48be6",
+        "equal": true
+      },
+      {
+        "kind": "original",
+        "file": "write-changes.js",
+        "source": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/codex-ui/dist/write-changes.js",
+        "installed": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/write-changes.js",
+        "sourceSha256": "e2f90348ca5c3b21fb733f0fc9604a3db5a65255be9c4793aeb284d7ffcff2cb",
+        "installedSha256": "e2f90348ca5c3b21fb733f0fc9604a3db5a65255be9c4793aeb284d7ffcff2cb",
+        "equal": true
+      }
+    ],
+    "allPublishedMatch": true,
+    "filesPerConsumer": 32,
+    "globalPi": {
+      "path": "/Users/wangxuyang/Library/pnpm/bin/pi",
+      "real": "/Users/wangxuyang/Library/pnpm/bin/pi",
+      "sha256": "f04afd35fb16a3647b49ebb4bb67cbccba10a64fc6b5d1d5dfdd320e4f4ef331",
+      "unchanged": true,
+      "actualSha256": "f04afd35fb16a3647b49ebb4bb67cbccba10a64fc6b5d1d5dfdd320e4f4ef331"
+    },
+    "referenceHashes": [
+      {
+        "path": "adventure/54/experiments/selection-copy/receiver.py",
+        "sha256": "58b2940dd0f86a41b0f41924e378aa48e034e5b7b90ab41c4b9487f2fb6f5a5a",
+        "actualSha256": "58b2940dd0f86a41b0f41924e378aa48e034e5b7b90ab41c4b9487f2fb6f5a5a",
+        "equal": true
+      },
+      {
+        "path": "adventure/54/experiments/selection-copy/test_receiver.py",
+        "sha256": "6aed28def78c84783a9c47d11fd7d07629dce34ee627f4b5a383f4d537a1d528",
+        "actualSha256": "6aed28def78c84783a9c47d11fd7d07629dce34ee627f4b5a383f4d537a1d528",
+        "equal": true
+      },
+      {
+        "path": "adventure/54/evidence/termius-repair-verification.md",
+        "sha256": "abe8329a09652d5d12753cdbea36cf9a3b974945114e57f9d57a796bc655b7e7",
+        "actualSha256": "abe8329a09652d5d12753cdbea36cf9a3b974945114e57f9d57a796bc655b7e7",
+        "equal": true
+      },
+      {
+        "path": "adventure/54/evidence/termius-repair-verification.json",
+        "sha256": "ab511a1d1ceab1906465d933463fe400def7b01a21426f5b3ef00c6f05e9fcef",
+        "actualSha256": "ab511a1d1ceab1906465d933463fe400def7b01a21426f5b3ef00c6f05e9fcef",
+        "equal": true
+      }
+    ],
+    "priorCoverageCounts": {
+      "passed": 54,
+      "failed": 0,
+      "unverified": 4,
+      "total": 58,
+      "verifiedUnreachable": 0
+    },
+    "coverageIds": [
+      "region-independent",
+      "region-edit",
+      "region-lifecycle",
+      "region-original",
+      "working-stream",
+      "working-permission",
+      "working-cancel",
+      "working-recovery",
+      "working-replacement",
+      "interaction-focus",
+      "interaction-transcript",
+      "interaction-image",
+      "interaction-physical",
+      "interaction-network",
+      "cpu-dynamic",
+      "cpu-normal",
+      "cpu-native",
+      "cpu-equivalence",
+      "install-patched",
+      "install-original",
+      "install-published",
+      "install-isolation",
+      "ui-header",
+      "ui-composer",
+      "ui-status",
+      "ui-theme",
+      "ui-resize",
+      "ui-user-markdown",
+      "ui-reply-markdown",
+      "ui-working",
+      "ui-receive-rate",
+      "ui-thinking-stream",
+      "ui-thinking-collapse",
+      "ui-thinking-resume",
+      "ui-title",
+      "ui-title-stop",
+      "ui-tool-rendering",
+      "ui-read-group",
+      "ui-bash-preview",
+      "ui-expand",
+      "ui-write-added",
+      "ui-write-edited",
+      "ui-diff",
+      "ui-error",
+      "ui-interrupted",
+      "ui-codemode-order",
+      "ui-codemode-failure",
+      "ui-inspect-tabs",
+      "ui-inspect-scroll",
+      "ui-codemode-cache",
+      "ui-codemode-resume",
+      "ui-shell-prefix",
+      "ui-shell-path",
+      "ui-image-resize",
+      "ui-project-trust",
+      "ui-settings-error",
+      "ui-settings-reload",
+      "ui-headless"
+    ],
+    "tarball": {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/pi-ext.tgz",
+      "sha256": "03058ebfa8f11a6f2f554cf93c61919eb40bcc6544382cd8b70305daefdedd0d",
+      "actualSha256": "03058ebfa8f11a6f2f554cf93c61919eb40bcc6544382cd8b70305daefdedd0d"
+    },
+    "versions": {
+      "node": "v22.22.2",
+      "tmux": "tmux 3.6b",
+      "pnpm": "11.9.0"
+    },
+    "initialHead": "ad39016c9c5cfed27ae485d3b24614b6825546c3"
+  },
+  "sourceContinuity": [
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/features/layout.md",
+      "sha256": "84a66505b0bf936a8a38031de474fae7253b0123825f2721872eb4ceb20ee00f",
+      "actualSha256": "84a66505b0bf936a8a38031de474fae7253b0123825f2721872eb4ceb20ee00f",
+      "equal": true
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/scripts/README.md",
+      "sha256": "ca4489816cfbbb9d6983a4595024338fe6f2b3f0ee7696e270651bdc21f40117",
+      "actualSha256": "ca4489816cfbbb9d6983a4595024338fe6f2b3f0ee7696e270651bdc21f40117",
+      "equal": true
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/scripts/cli.py",
+      "sha256": "856a48a933b4e4a55a3210c11bb5ea3ceaf6169d83e1a74408db4c46dfc2dfd6",
+      "actualSha256": "856a48a933b4e4a55a3210c11bb5ea3ceaf6169d83e1a74408db4c46dfc2dfd6",
+      "equal": true
+    },
+    {
+      "path": "README.md",
+      "sha256": "1b83cfb6b7cfc238b8884f4b4600e59177f7aa002139ad4c2396a82a49e514ec",
+      "actualSha256": "1b83cfb6b7cfc238b8884f4b4600e59177f7aa002139ad4c2396a82a49e514ec",
+      "equal": true
+    },
+    {
+      "path": "extensions/codex-ui/__tests__/components.test.ts",
+      "sha256": "ed73d91740794c37d6fbba99f54687458e12a776daf45cd3816b9d5a3b721dd6",
+      "actualSha256": "ed73d91740794c37d6fbba99f54687458e12a776daf45cd3816b9d5a3b721dd6",
+      "equal": true
+    },
+    {
+      "path": "extensions/codex-ui/__tests__/reply-markdown.test.ts",
+      "sha256": "cb4053b37026b18e64a42c211217b26a0532b2ffce0bfa502f2703b62d0664f5",
+      "actualSha256": "cb4053b37026b18e64a42c211217b26a0532b2ffce0bfa502f2703b62d0664f5",
+      "equal": true
+    },
+    {
+      "path": "extensions/codex-ui/src/components.ts",
+      "sha256": "0af0636c854a1f765123198aa4c8c234c522121ca8ad159fe03554f7b9380925",
+      "actualSha256": "0af0636c854a1f765123198aa4c8c234c522121ca8ad159fe03554f7b9380925",
+      "equal": true
+    },
+    {
+      "path": "extensions/codex-ui/src/index.ts",
+      "sha256": "60dfcb86c734b575bee0531810838d2644b956efb85e24fbb9ccacaa6d7d3a26",
+      "actualSha256": "60dfcb86c734b575bee0531810838d2644b956efb85e24fbb9ccacaa6d7d3a26",
+      "equal": true
+    },
+    {
+      "path": "extensions/codex-ui/src/layout.ts",
+      "sha256": "feaab21be173f0878ac49c26c16637bdab20ec4c5663fd20672e39d5fdbe7c41",
+      "actualSha256": "feaab21be173f0878ac49c26c16637bdab20ec4c5663fd20672e39d5fdbe7c41",
+      "equal": true
+    },
+    {
+      "path": "extensions/codex-ui/src/tools.ts",
+      "sha256": "ed5abca5a425a7925cf5478628f8b1d0a95f0f968e9af04aad117b2145082523",
+      "actualSha256": "ed5abca5a425a7925cf5478628f8b1d0a95f0f968e9af04aad117b2145082523",
+      "equal": true
+    },
+    {
+      "path": "extensions/skill-mentions/__tests__/autocomplete.test.ts",
+      "sha256": "7361f6ae42246d47884194952802d06ea1555b727c478be08941c398a169f3bc",
+      "actualSha256": "7361f6ae42246d47884194952802d06ea1555b727c478be08941c398a169f3bc",
+      "equal": true
+    },
+    {
+      "path": "extensions/skill-mentions/__tests__/history-editor.test.ts",
+      "sha256": "91b9f7d3b46674e16b680b8014399d46c5d0098f642e4fe6965d7968b1ca5f53",
+      "actualSha256": "91b9f7d3b46674e16b680b8014399d46c5d0098f642e4fe6965d7968b1ca5f53",
+      "equal": true
+    },
+    {
+      "path": "extensions/skill-mentions/__tests__/label-api-boundaries.test.ts",
+      "sha256": "984eeae84591a32ef8d7ad95b71302107b965bbeda04df97c2d88a546e6375fa",
+      "actualSha256": "984eeae84591a32ef8d7ad95b71302107b965bbeda04df97c2d88a546e6375fa",
+      "equal": true
+    },
+    {
+      "path": "extensions/skill-mentions/__tests__/lifecycle-fixture.ts",
+      "sha256": "2f9ec45decff4d93c3c83fa90bf1558bf230f67a50e5de1e205a62b54760c055",
+      "actualSha256": "2f9ec45decff4d93c3c83fa90bf1558bf230f67a50e5de1e205a62b54760c055",
+      "equal": true
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/scripts/test_composer.py",
+      "sha256": "8aaa35e401d2bb6d1c0b98fd83fec676a51af6aebebc17fc3da17fda51c45e4b",
+      "actualSha256": "8aaa35e401d2bb6d1c0b98fd83fec676a51af6aebebc17fc3da17fda51c45e4b",
+      "equal": true
+    },
+    {
+      "path": "extensions/codex-ui/__tests__/reply-copy.test.ts",
+      "sha256": "73ac20c60ca73e491c82afdb0e444d6a8f70f85384a1b3f519b25200e919515d",
+      "actualSha256": "73ac20c60ca73e491c82afdb0e444d6a8f70f85384a1b3f519b25200e919515d",
+      "equal": true
+    },
+    {
+      "path": "extensions/codex-ui/src/reply-copy.ts",
+      "sha256": "35c4ed508a889208264529bc7e95451f9f1c63de6bff461a45d5938e16038392",
+      "actualSha256": "35c4ed508a889208264529bc7e95451f9f1c63de6bff461a45d5938e16038392",
+      "equal": true
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "8fe243b06be7533e880b509c94d24e28720e399f6efd763c5193b3589f3ca3a1",
+      "actualSha256": "8fe243b06be7533e880b509c94d24e28720e399f6efd763c5193b3589f3ca3a1",
+      "equal": true
+    },
+    {
+      "path": "docs/agents/repository-language-policy.md",
+      "sha256": "158bc0678ea6354926e9b3e7757bb9083d3b25264f37f8eddb25ed0fa84f474b",
+      "actualSha256": "158bc0678ea6354926e9b3e7757bb9083d3b25264f37f8eddb25ed0fa84f474b",
+      "equal": true
+    },
+    {
+      "path": "docs/agents/commit-message-policy.md",
+      "sha256": "818153a0f847aff30fe1e59319660791dd329ea7958c5dd05bc7125ae3f1fe1e",
+      "actualSha256": "818153a0f847aff30fe1e59319660791dd329ea7958c5dd05bc7125ae3f1fe1e",
+      "equal": true
+    },
+    {
+      "path": "docs/testing.md",
+      "sha256": "cfd97566fcdbbab5beeb7a55b04930decaeaa97afa07bd7d9347f458834297ec",
+      "actualSha256": "cfd97566fcdbbab5beeb7a55b04930decaeaa97afa07bd7d9347f458834297ec",
+      "equal": true
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/SKILL.md",
+      "sha256": "d9b1264cd4d747d078983affebb2463c5a575c2acea22d20fecda8e10f559b28",
+      "actualSha256": "d9b1264cd4d747d078983affebb2463c5a575c2acea22d20fecda8e10f559b28",
+      "equal": true
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/features/README.md",
+      "sha256": "a7dfdf06595da5d5c5ac1a82a3c21287fd80888a20efe3f27b0fb95a0163b78c",
+      "actualSha256": "a7dfdf06595da5d5c5ac1a82a3c21287fd80888a20efe3f27b0fb95a0163b78c",
+      "equal": true
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/SKILL.md",
+      "sha256": "6bb9252b03f057dd675a1523ef10c825e81ca89513f37ef1778672b4a1fc5d09",
+      "actualSha256": "6bb9252b03f057dd675a1523ef10c825e81ca89513f37ef1778672b4a1fc5d09",
+      "equal": true
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/features/README.md",
+      "sha256": "4e70df17fe9623689f744c765a78e80c6b3e72a22a056183324829c863fbe6c6",
+      "actualSha256": "4e70df17fe9623689f744c765a78e80c6b3e72a22a056183324829c863fbe6c6",
+      "equal": true
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/features/working.md",
+      "sha256": "f4db6ddf8437f29a4c6ac1fee3530396870179abe637284a46949f1284d0f20b",
+      "actualSha256": "f4db6ddf8437f29a4c6ac1fee3530396870179abe637284a46949f1284d0f20b",
+      "equal": true
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/features/installation.md",
+      "sha256": "a44380e84357360ce9c78b1e7c87417b201412bb98827191e1b7e3c718767f27",
+      "actualSha256": "a44380e84357360ce9c78b1e7c87417b201412bb98827191e1b7e3c718767f27",
+      "equal": true
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/features/interactions.md",
+      "sha256": "143e574cc19cc1206de4710c8282c5321a1d87d033fb79fef42624482e31ba45",
+      "actualSha256": "143e574cc19cc1206de4710c8282c5321a1d87d033fb79fef42624482e31ba45",
+      "equal": true
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/features/regions.md",
+      "sha256": "f561a8fd3b74773f26e7c7c15edb6970eddc20193fe55ffafdec35026142c1da",
+      "actualSha256": "f561a8fd3b74773f26e7c7c15edb6970eddc20193fe55ffafdec35026142c1da",
+      "equal": true
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/references/manual-terminal.md",
+      "sha256": "4068e5fccaea1dc37484796a842cbbcd90b8c859521991017db750160731a0e8",
+      "actualSha256": "4068e5fccaea1dc37484796a842cbbcd90b8c859521991017db750160731a0e8",
+      "equal": true
+    },
+    {
+      "path": ".cursor/skills/verify-pi-ext/README.md",
+      "sha256": "9bfa32199cb65bcd8c73d2320ed84cc06fab211ce9ada71b5da4476f301f0d24",
+      "actualSha256": "9bfa32199cb65bcd8c73d2320ed84cc06fab211ce9ada71b5da4476f301f0d24",
+      "equal": true
+    }
+  ],
+  "commands": [
+    {
+      "label": "doctor-repository",
+      "command": [
+        "node",
+        ".cursor/skills/verify-pi-text-regions/scripts/doctor.mjs"
+      ],
+      "cwd": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation",
+      "pid": 71508,
+      "startedAt": "2026-10-29T09:34:25.349Z",
+      "endedAt": "2026-10-29T09:34:26.878Z",
+      "exitCode": 0
+    },
+    {
+      "label": "doctor-patched",
+      "command": [
+        "node",
+        ".cursor/skills/verify-pi-text-regions/scripts/doctor.mjs",
+        "--project",
+        "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched",
+        "--extension",
+        "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/index.js"
+      ],
+      "cwd": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation",
+      "pid": 71555,
+      "startedAt": "2026-10-29T09:34:26.878Z",
+      "endedAt": "2026-10-29T09:34:28.183Z",
+      "exitCode": 0
+    },
+    {
+      "label": "doctor-original",
+      "command": [
+        "node",
+        ".cursor/skills/verify-pi-text-regions/scripts/doctor.mjs",
+        "--project",
+        "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original",
+        "--extension",
+        "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/index.js",
+        "--original"
+      ],
+      "cwd": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation",
+      "pid": 71601,
+      "startedAt": "2026-10-29T09:34:28.183Z",
+      "endedAt": "2026-10-29T09:34:29.071Z",
+      "exitCode": 0
+    },
+    {
+      "label": "doctor-codex-ui",
+      "command": [
+        "node",
+        ".cursor/skills/verify-pi-ext/scripts/verify.mjs",
+        "doctor"
+      ],
+      "cwd": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation",
+      "pid": 71648,
+      "startedAt": "2026-10-29T09:34:29.071Z",
+      "endedAt": "2026-10-29T09:34:29.810Z",
+      "exitCode": 0
+    }
+  ],
+  "receiver": {
+    "command": [
+      "conda",
+      "run",
+      "-n",
+      "codex-py312",
+      "python",
+      "test_receiver.py"
+    ],
+    "cwd": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-selection-verification-66-20261029-r1/receiver",
+    "execSession": 36726,
+    "exitCode": 0,
+    "tests": 6,
+    "observedOutput": "......\nRan 6 tests in 0.874s\nOK",
+    "outputProvenance": "Transcribed from completed exec/write_stdin tool result, not a raw redirected log.",
+    "sourceCoverage": {
+      "covered_lines": 38,
+      "num_statements": 38,
+      "percent_covered": 100,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100,
+      "percent_statements_covered_display": "100"
+    },
+    "systemClipboardUsed": false,
+    "sourceAndTestsUnmodified": true
+  },
+  "nativeControl": {
+    "checkedAt": "2026-10-29T09:35:37.638Z",
+    "nativeCuaToolNames": [],
+    "namedFunction": "mcp__cua_repl__js",
+    "namedFunctionType": "undefined",
+    "nodeReplAvailable": true,
+    "nodeReplInspection": "Object.keys(nodeRepl) exposed cwd, env, homeDir, tmpDir, requestMeta, write, emitImage, rpc; no documented native app control API was supplied.",
+    "result": "unavailable",
+    "physicalActions": 0
+  },
+  "physicalBranches": [
+    {
+      "id": "selection-fullscreen",
+      "result": "unverified",
+      "required": "fullscreenCopyOnSelect=true、暂停后单次更新、稳定最新帧、真实Copied反馈、受限receiver实际系统粘贴",
+      "actual": "CUA不可用，未启动，未创建expected/actual。"
+    },
+    {
+      "id": "selection-regular",
+      "result": "unverified",
+      "required": "真实终端选区及系统复制粘贴；与宿主全屏选择分开记录",
+      "actual": "未启动。"
+    },
+    {
+      "id": "physical-tmux-widths",
+      "result": "unverified",
+      "required": "本轮私有tmux server及可见左右pane，32/40列，pane_width与Pi stty及截图一致",
+      "actual": "只读确认tmux 3.6b；没有启动server或创建socket。"
+    },
+    {
+      "id": "physical-search-alternative",
+      "result": "unverified",
+      "required": "隔离keybindings公开映射、物理按键打开、匹配最新内容、关闭",
+      "actual": "未配置或启动；默认Ctrl+Shift+F仍沿用未验证限制。"
+    },
+    {
+      "id": "remaining-regions",
+      "result": "unverified",
+      "required": "patched regular、original regular/fullscreen剩余物理旅程",
+      "actual": "仅doctor确认实际消费入口，未启动Pi。"
+    },
+    {
+      "id": "composer-matrix",
+      "result": "unverified",
+      "required": "32/40列、全部宽度/主题/会话/拖选组合及实际选区内容",
+      "actual": "无新增实机子证据。"
+    },
+    {
+      "id": "physical-image",
+      "result": "unverified",
+      "required": "终端实际图片能力及可见像素",
+      "actual": "无新增协议或像素证据；沿用patched fullscreen文本降级结果。"
+    }
+  ],
+  "externalBoundaries": {
+    "network": {
+      "result": "unverified",
+      "providerOrModelSpecified": false,
+      "userAuthRead": false,
+      "paidRequests": false
+    },
+    "writeEditAwait": {
+      "result": "unverified",
+      "reason": "无可观察可控制的filesystem await阶段；未抢时序。"
+    }
+  },
+  "cleanup": {
+    "checkedAt": "2026-10-29T09:35:37.789Z",
+    "processChecks": [
+      {
+        "pid": 71478,
+        "psExit": 1,
+        "psOutput": "",
+        "lsofExit": 1,
+        "listeners": "",
+        "stderr": ""
+      },
+      {
+        "pid": 71508,
+        "psExit": 1,
+        "psOutput": "",
+        "lsofExit": 1,
+        "listeners": "",
+        "stderr": ""
+      },
+      {
+        "pid": 71555,
+        "psExit": 1,
+        "psOutput": "",
+        "lsofExit": 1,
+        "listeners": "",
+        "stderr": ""
+      },
+      {
+        "pid": 71601,
+        "psExit": 1,
+        "psOutput": "",
+        "lsofExit": 1,
+        "listeners": "",
+        "stderr": ""
+      },
+      {
+        "pid": 71648,
+        "psExit": 1,
+        "psOutput": "",
+        "lsofExit": 1,
+        "listeners": "",
+        "stderr": ""
+      }
+    ],
+    "matchingProcesses": [],
+    "physicalPiStarted": false,
+    "tmuxServerStarted": false,
+    "termiusTabsCreated": 0,
+    "clipboardAccessed": false,
+    "runtimeCreated": false,
+    "lockPresent": false,
+    "receiverTemporaryDirectories": [],
+    "limitation": "Receiver test harness and six transient child PIDs were not separately persisted; successful unittest return includes finally wait, and a targeted process scan is retained."
+  },
+  "notRerun": [
+    "build",
+    "check",
+    "CPU",
+    "old CLI",
+    "Working matrix"
+  ],
+  "sources": [
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/features/layout.md",
+      "sha256": "84a66505b0bf936a8a38031de474fae7253b0123825f2721872eb4ceb20ee00f"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/scripts/README.md",
+      "sha256": "ca4489816cfbbb9d6983a4595024338fe6f2b3f0ee7696e270651bdc21f40117"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/scripts/cli.py",
+      "sha256": "856a48a933b4e4a55a3210c11bb5ea3ceaf6169d83e1a74408db4c46dfc2dfd6"
+    },
+    {
+      "path": "README.md",
+      "sha256": "1b83cfb6b7cfc238b8884f4b4600e59177f7aa002139ad4c2396a82a49e514ec"
+    },
+    {
+      "path": "extensions/codex-ui/__tests__/components.test.ts",
+      "sha256": "ed73d91740794c37d6fbba99f54687458e12a776daf45cd3816b9d5a3b721dd6"
+    },
+    {
+      "path": "extensions/codex-ui/__tests__/reply-markdown.test.ts",
+      "sha256": "cb4053b37026b18e64a42c211217b26a0532b2ffce0bfa502f2703b62d0664f5"
+    },
+    {
+      "path": "extensions/codex-ui/src/components.ts",
+      "sha256": "0af0636c854a1f765123198aa4c8c234c522121ca8ad159fe03554f7b9380925"
+    },
+    {
+      "path": "extensions/codex-ui/src/index.ts",
+      "sha256": "60dfcb86c734b575bee0531810838d2644b956efb85e24fbb9ccacaa6d7d3a26"
+    },
+    {
+      "path": "extensions/codex-ui/src/layout.ts",
+      "sha256": "feaab21be173f0878ac49c26c16637bdab20ec4c5663fd20672e39d5fdbe7c41"
+    },
+    {
+      "path": "extensions/codex-ui/src/tools.ts",
+      "sha256": "ed5abca5a425a7925cf5478628f8b1d0a95f0f968e9af04aad117b2145082523"
+    },
+    {
+      "path": "extensions/skill-mentions/__tests__/autocomplete.test.ts",
+      "sha256": "7361f6ae42246d47884194952802d06ea1555b727c478be08941c398a169f3bc"
+    },
+    {
+      "path": "extensions/skill-mentions/__tests__/history-editor.test.ts",
+      "sha256": "91b9f7d3b46674e16b680b8014399d46c5d0098f642e4fe6965d7968b1ca5f53"
+    },
+    {
+      "path": "extensions/skill-mentions/__tests__/label-api-boundaries.test.ts",
+      "sha256": "984eeae84591a32ef8d7ad95b71302107b965bbeda04df97c2d88a546e6375fa"
+    },
+    {
+      "path": "extensions/skill-mentions/__tests__/lifecycle-fixture.ts",
+      "sha256": "2f9ec45decff4d93c3c83fa90bf1558bf230f67a50e5de1e205a62b54760c055"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/scripts/test_composer.py",
+      "sha256": "8aaa35e401d2bb6d1c0b98fd83fec676a51af6aebebc17fc3da17fda51c45e4b"
+    },
+    {
+      "path": "extensions/codex-ui/__tests__/reply-copy.test.ts",
+      "sha256": "73ac20c60ca73e491c82afdb0e444d6a8f70f85384a1b3f519b25200e919515d"
+    },
+    {
+      "path": "extensions/codex-ui/src/reply-copy.ts",
+      "sha256": "35c4ed508a889208264529bc7e95451f9f1c63de6bff461a45d5938e16038392"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "8fe243b06be7533e880b509c94d24e28720e399f6efd763c5193b3589f3ca3a1"
+    },
+    {
+      "path": "docs/agents/repository-language-policy.md",
+      "sha256": "158bc0678ea6354926e9b3e7757bb9083d3b25264f37f8eddb25ed0fa84f474b"
+    },
+    {
+      "path": "docs/agents/commit-message-policy.md",
+      "sha256": "818153a0f847aff30fe1e59319660791dd329ea7958c5dd05bc7125ae3f1fe1e"
+    },
+    {
+      "path": "docs/testing.md",
+      "sha256": "cfd97566fcdbbab5beeb7a55b04930decaeaa97afa07bd7d9347f458834297ec"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/SKILL.md",
+      "sha256": "d9b1264cd4d747d078983affebb2463c5a575c2acea22d20fecda8e10f559b28"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/features/README.md",
+      "sha256": "a7dfdf06595da5d5c5ac1a82a3c21287fd80888a20efe3f27b0fb95a0163b78c"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/SKILL.md",
+      "sha256": "6bb9252b03f057dd675a1523ef10c825e81ca89513f37ef1778672b4a1fc5d09"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/features/README.md",
+      "sha256": "4e70df17fe9623689f744c765a78e80c6b3e72a22a056183324829c863fbe6c6"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/features/working.md",
+      "sha256": "f4db6ddf8437f29a4c6ac1fee3530396870179abe637284a46949f1284d0f20b"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/features/installation.md",
+      "sha256": "a44380e84357360ce9c78b1e7c87417b201412bb98827191e1b7e3c718767f27"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/features/interactions.md",
+      "sha256": "143e574cc19cc1206de4710c8282c5321a1d87d033fb79fef42624482e31ba45"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/features/regions.md",
+      "sha256": "f561a8fd3b74773f26e7c7c15edb6970eddc20193fe55ffafdec35026142c1da"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/references/manual-terminal.md",
+      "sha256": "4068e5fccaea1dc37484796a842cbbcd90b8c859521991017db750160731a0e8"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-ext/README.md",
+      "sha256": "9bfa32199cb65bcd8c73d2320ed84cc06fab211ce9ada71b5da4476f301f0d24"
+    },
+    {
+      "path": "adventure/54/evidence/termius-repair-review.md",
+      "sha256": "12ff346b9ac3892fbaa96419f21d4fea283fb7f39affcf6a27fe14de0ac9a58c"
+    },
+    {
+      "path": "adventure/54/evidence/termius-repair-review.json",
+      "sha256": "e5baf67f2b3a78e7468e6c20e229347e471a60d3ab2edf07c243f2bea77e62fc"
+    },
+    {
+      "path": "adventure/54/experiments/selection-copy/receiver.py",
+      "sha256": "58b2940dd0f86a41b0f41924e378aa48e034e5b7b90ab41c4b9487f2fb6f5a5a"
+    },
+    {
+      "path": "adventure/54/experiments/selection-copy/test_receiver.py",
+      "sha256": "6aed28def78c84783a9c47d11fd7d07629dce34ee627f4b5a383f4d537a1d528"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-text-regions/features/performance.md",
+      "sha256": "cfcfc457909b47b1f2cf25d97d1848a89599cab3257a6f1be24216e9fc705b82"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/features/tools.md",
+      "sha256": "3db1bb4fe77955bcd931f669301b3f831d2745ab4060043a0a70d54d6cd474d6"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/cleanup.json",
+      "bytes": 1181,
+      "sha256": "ec5a47220df965753bc0def0fce069312a5010930843e204008eb612364f053c"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/commands.json",
+      "bytes": 2105,
+      "sha256": "0f6fe50e95515c36b4429318e3571dd60a3fb659b5ac843c7fdc86325ea8d436"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/continuity.json",
+      "bytes": 41898,
+      "sha256": "c122c8a6d173e6d6fbca1bac763713c9ff3a00680e60a717e582e553ca176a95"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/cua-availability.json",
+      "bytes": 401,
+      "sha256": "972a10626fc831af50b872fb7a2d5eb1f80e4cda734c9a4c9a61f8b58106f6c5"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/doctor-codex-ui.json",
+      "bytes": 2361,
+      "sha256": "e0a4ea353848a81a5321fd215a02a0d48592f2f7d9fd633c3b311d2e7bc61e6c"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/doctor-codex-ui.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/doctor-original.json",
+      "bytes": 2528,
+      "sha256": "4526507be71bb4ffd8c73ecdde64c89dd71aebad002921153ee8de558c02404c"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/doctor-original.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/doctor-patched.json",
+      "bytes": 2597,
+      "sha256": "e50e15d60c68cdf825d5c205927ea588d1aa5ee21c723315dc1070f0cf4cd4a2"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/doctor-patched.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/doctor-repository.json",
+      "bytes": 2227,
+      "sha256": "cf56df964cf5ab7c8a8af37e7a7bbf880512b9e3fa8ae16842e27fd4e98e27bd"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/doctor-repository.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/installation.json",
+      "bytes": 2556,
+      "sha256": "1aca567854e9c5204436f804f5a47456e7ecf59a7925013995a3997f969ab3fd"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/receiver/.coverage",
+      "bytes": 53248,
+      "sha256": "b912705332353b5efc8dda2c5d9c1f210748a3b1db5fc2151df972c3a6fdc4c1"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/receiver/coverage.json",
+      "bytes": 7126,
+      "sha256": "f0d57ceb1e45a4098369076b56d52657ba11931c552552fe7ed6b7c627ab13dc"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/receiver/receiver.py",
+      "bytes": 1337,
+      "sha256": "58b2940dd0f86a41b0f41924e378aa48e034e5b7b90ab41c4b9487f2fb6f5a5a"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/receiver/selftest.json",
+      "bytes": 822,
+      "sha256": "1b10de7a5fe7a57ae4439a05f2a3706ed676db9a3526368ae74c052fdfd97e84"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/receiver/test_receiver.py",
+      "bytes": 3151,
+      "sha256": "6aed28def78c84783a9c47d11fd7d07629dce34ee627f4b5a383f4d537a1d528"
+    },
+    {
+      "path": ".tmp/termius-selection-verification-66-20261029-r1/source-continuity.json",
+      "bytes": 8017,
+      "sha256": "2328cde1c872e31b1960985bd120bcb02997868075d3b2e65ce8b422c5bf66cd"
+    }
+  ],
+  "evidenceLimitations": [
+    "没有本轮实机截图、真实Copied反馈、系统粘贴文件、tmux pane或Pi stty读回。",
+    "CUA缺失是当前harness能力缺口，不是Termius或产品失败；未尝试任何替代原生app控制。",
+    "receiver自测stdout由完成的工具结果转录，非原始重定向日志；测试父子PID未逐个持久化。",
+    "receiver.py source line coverage为38/38，整个coverage目录因包含未被coverage执行的test_receiver.py总计37%，不得混称全目录100%。"
+  ],
+  "delivery": {
+    "scope": "仅报告和JSON索引",
+    "push": false,
+    "pr": false,
+    "acceptanceModified": false
+  }
+}

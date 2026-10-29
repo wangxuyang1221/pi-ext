@@ -1,0 +1,1999 @@
+{
+  "schemaVersion": 1,
+  "baselineRevision": "e88fce5788b935bc2f9d7f5a65d30fd5061810c6",
+  "generatedAt": "2026-10-29T08:10:32.490Z",
+  "workspace": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation",
+  "result": "automated-repair-passed; independent-physical-reverification-pending",
+  "run": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66",
+  "sources": [
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/features/layout.md",
+      "sha256": "84a66505b0bf936a8a38031de474fae7253b0123825f2721872eb4ceb20ee00f"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/scripts/README.md",
+      "sha256": "ca4489816cfbbb9d6983a4595024338fe6f2b3f0ee7696e270651bdc21f40117"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/scripts/cli.py",
+      "sha256": "856a48a933b4e4a55a3210c11bb5ea3ceaf6169d83e1a74408db4c46dfc2dfd6"
+    },
+    {
+      "path": "README.md",
+      "sha256": "1b83cfb6b7cfc238b8884f4b4600e59177f7aa002139ad4c2396a82a49e514ec"
+    },
+    {
+      "path": "extensions/codex-ui/__tests__/components.test.ts",
+      "sha256": "ed73d91740794c37d6fbba99f54687458e12a776daf45cd3816b9d5a3b721dd6"
+    },
+    {
+      "path": "extensions/codex-ui/__tests__/reply-markdown.test.ts",
+      "sha256": "cb4053b37026b18e64a42c211217b26a0532b2ffce0bfa502f2703b62d0664f5"
+    },
+    {
+      "path": "extensions/codex-ui/src/components.ts",
+      "sha256": "0af0636c854a1f765123198aa4c8c234c522121ca8ad159fe03554f7b9380925"
+    },
+    {
+      "path": "extensions/codex-ui/src/index.ts",
+      "sha256": "60dfcb86c734b575bee0531810838d2644b956efb85e24fbb9ccacaa6d7d3a26"
+    },
+    {
+      "path": "extensions/codex-ui/src/layout.ts",
+      "sha256": "feaab21be173f0878ac49c26c16637bdab20ec4c5663fd20672e39d5fdbe7c41"
+    },
+    {
+      "path": "extensions/codex-ui/src/tools.ts",
+      "sha256": "ed5abca5a425a7925cf5478628f8b1d0a95f0f968e9af04aad117b2145082523"
+    },
+    {
+      "path": "extensions/skill-mentions/__tests__/autocomplete.test.ts",
+      "sha256": "7361f6ae42246d47884194952802d06ea1555b727c478be08941c398a169f3bc"
+    },
+    {
+      "path": "extensions/skill-mentions/__tests__/history-editor.test.ts",
+      "sha256": "91b9f7d3b46674e16b680b8014399d46c5d0098f642e4fe6965d7968b1ca5f53"
+    },
+    {
+      "path": "extensions/skill-mentions/__tests__/label-api-boundaries.test.ts",
+      "sha256": "984eeae84591a32ef8d7ad95b71302107b965bbeda04df97c2d88a546e6375fa"
+    },
+    {
+      "path": "extensions/skill-mentions/__tests__/lifecycle-fixture.ts",
+      "sha256": "2f9ec45decff4d93c3c83fa90bf1558bf230f67a50e5de1e205a62b54760c055"
+    },
+    {
+      "path": ".cursor/skills/verify-pi-codex-ui/scripts/test_composer.py",
+      "sha256": "8aaa35e401d2bb6d1c0b98fd83fec676a51af6aebebc17fc3da17fda51c45e4b"
+    },
+    {
+      "path": "extensions/codex-ui/__tests__/reply-copy.test.ts",
+      "sha256": "73ac20c60ca73e491c82afdb0e444d6a8f70f85384a1b3f519b25200e919515d"
+    },
+    {
+      "path": "extensions/codex-ui/src/reply-copy.ts",
+      "sha256": "35c4ed508a889208264529bc7e95451f9f1c63de6bff461a45d5938e16038392"
+    }
+  ],
+  "check": {
+    "path": ".tmp/termius-fixes-66/check-complete.log",
+    "exitCode": 0,
+    "files": 205,
+    "tests": 2958
+  },
+  "pythonTests": 11,
+  "quality": {
+    "maximumChangedProductionCrap": 9,
+    "cliComposerCrap": 7,
+    "mutations": {
+      "copy": 11,
+      "editor": 19,
+      "cli": 10,
+      "killed": 40,
+      "survived": 0
+    },
+    "dryerCandidates": 0,
+    "unchangedFitSegmentsCrap": 12
+  },
+  "journeys": [
+    {
+      "mode": "regular",
+      "path": ".tmp/test-results/codex-ui-cli-regular-1793260960719796000/journey.json",
+      "assertions": 139,
+      "passed": true,
+      "scratchRemoved": true,
+      "processes": [
+        {
+          "pid": 73226,
+          "doctor": "doctor-1.json",
+          "stopped": true,
+          "groupStopped": true
+        },
+        {
+          "pid": 73478,
+          "doctor": "doctor-2.json",
+          "stopped": true,
+          "groupStopped": true
+        },
+        {
+          "pid": 73572,
+          "doctor": "doctor-3.json",
+          "stopped": true,
+          "groupStopped": true
+        },
+        {
+          "pid": 73692,
+          "doctor": "doctor-4.json",
+          "stopped": true,
+          "groupStopped": true
+        },
+        {
+          "pid": 73778,
+          "doctor": "doctor-5.json",
+          "stopped": true,
+          "groupStopped": true
+        }
+      ]
+    },
+    {
+      "mode": "fullscreen",
+      "path": ".tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/journey.json",
+      "assertions": 139,
+      "passed": true,
+      "scratchRemoved": true,
+      "processes": [
+        {
+          "pid": 74133,
+          "doctor": "doctor-1.json",
+          "stopped": true,
+          "groupStopped": true
+        },
+        {
+          "pid": 74467,
+          "doctor": "doctor-2.json",
+          "stopped": true,
+          "groupStopped": true
+        },
+        {
+          "pid": 74537,
+          "doctor": "doctor-3.json",
+          "stopped": true,
+          "groupStopped": true
+        },
+        {
+          "pid": 74648,
+          "doctor": "doctor-4.json",
+          "stopped": true,
+          "groupStopped": true
+        },
+        {
+          "pid": 74745,
+          "doctor": "doctor-5.json",
+          "stopped": true,
+          "groupStopped": true
+        }
+      ]
+    }
+  ],
+  "editorCpu": {
+    "pid": 72918,
+    "node": "v22.22.2",
+    "baseline": "e88fce5788b935bc2f9d7f5a65d30fd5061810c6",
+    "samples": 7,
+    "frames": 2000,
+    "sources": {
+      "extensions/codex-ui/src/components.ts": "0af0636c854a1f765123198aa4c8c234c522121ca8ad159fe03554f7b9380925",
+      "extensions/codex-ui/src/layout.ts": "feaab21be173f0878ac49c26c16637bdab20ec4c5663fd20672e39d5fdbe7c41",
+      "extensions/codex-ui/dist/components.js": "eed2dc17f584a0817d23d68acf143196f2a660031f6f047dc1394c4019d3c9b1",
+      "extensions/codex-ui/dist/layout.js": "2bbcdf83c4ae5594fcfe569b4affa7a67344d87784cac4156884bd47aa5e5a53"
+    },
+    "limitations": [
+      "Editor render CPU only; repeated two-line draft, no remote model or terminal emulator",
+      "Old editor uses unchanged layout operations from current dependency modules"
+    ],
+    "results": [
+      {
+        "round": 1,
+        "width": 40,
+        "raw": {
+          "baseline": [
+            {
+              "userMs": 55.15,
+              "systemMs": 2.945,
+              "cpuMsPerFrame": 0.0290475
+            },
+            {
+              "userMs": 45.449,
+              "systemMs": 1.141,
+              "cpuMsPerFrame": 0.023295000000000003
+            },
+            {
+              "userMs": 39.431,
+              "systemMs": 0.759,
+              "cpuMsPerFrame": 0.020095
+            },
+            {
+              "userMs": 42.931,
+              "systemMs": 0.975,
+              "cpuMsPerFrame": 0.021953
+            },
+            {
+              "userMs": 49.393,
+              "systemMs": 1.098,
+              "cpuMsPerFrame": 0.0252455
+            },
+            {
+              "userMs": 46.878,
+              "systemMs": 1.046,
+              "cpuMsPerFrame": 0.023962
+            },
+            {
+              "userMs": 38.508,
+              "systemMs": 0.615,
+              "cpuMsPerFrame": 0.0195615
+            }
+          ],
+          "candidate": [
+            {
+              "userMs": 81.091,
+              "systemMs": 3.059,
+              "cpuMsPerFrame": 0.042075
+            },
+            {
+              "userMs": 91.529,
+              "systemMs": 2.724,
+              "cpuMsPerFrame": 0.0471265
+            },
+            {
+              "userMs": 82.779,
+              "systemMs": 1.705,
+              "cpuMsPerFrame": 0.042241999999999995
+            },
+            {
+              "userMs": 79.664,
+              "systemMs": 1.907,
+              "cpuMsPerFrame": 0.0407855
+            },
+            {
+              "userMs": 79.161,
+              "systemMs": 1.459,
+              "cpuMsPerFrame": 0.040310000000000006
+            },
+            {
+              "userMs": 77.149,
+              "systemMs": 1.296,
+              "cpuMsPerFrame": 0.039222499999999993
+            },
+            {
+              "userMs": 73.676,
+              "systemMs": 0.677,
+              "cpuMsPerFrame": 0.037176499999999994
+            }
+          ]
+        },
+        "baseline": 0.023295000000000003,
+        "candidate": 0.0407855,
+        "extra": 0.0174905,
+        "budget": 0.1,
+        "passed": true
+      },
+      {
+        "round": 1,
+        "width": 120,
+        "raw": {
+          "baseline": [
+            {
+              "userMs": 105.017,
+              "systemMs": 0.8,
+              "cpuMsPerFrame": 0.0529085
+            },
+            {
+              "userMs": 109.789,
+              "systemMs": 1.336,
+              "cpuMsPerFrame": 0.0555625
+            },
+            {
+              "userMs": 104.927,
+              "systemMs": 1.462,
+              "cpuMsPerFrame": 0.0531945
+            },
+            {
+              "userMs": 99.711,
+              "systemMs": 0.262,
+              "cpuMsPerFrame": 0.049986499999999996
+            },
+            {
+              "userMs": 98.859,
+              "systemMs": 0.198,
+              "cpuMsPerFrame": 0.0495285
+            },
+            {
+              "userMs": 101.991,
+              "systemMs": 0.285,
+              "cpuMsPerFrame": 0.051137999999999996
+            },
+            {
+              "userMs": 105.691,
+              "systemMs": 0.193,
+              "cpuMsPerFrame": 0.052942
+            }
+          ],
+          "candidate": [
+            {
+              "userMs": 189.346,
+              "systemMs": 1.047,
+              "cpuMsPerFrame": 0.0951965
+            },
+            {
+              "userMs": 193.533,
+              "systemMs": 0.83,
+              "cpuMsPerFrame": 0.0971815
+            },
+            {
+              "userMs": 196.602,
+              "systemMs": 1.658,
+              "cpuMsPerFrame": 0.09913
+            },
+            {
+              "userMs": 204.499,
+              "systemMs": 2.917,
+              "cpuMsPerFrame": 0.103708
+            },
+            {
+              "userMs": 196.928,
+              "systemMs": 0.374,
+              "cpuMsPerFrame": 0.098651
+            },
+            {
+              "userMs": 191.12,
+              "systemMs": 0.283,
+              "cpuMsPerFrame": 0.0957015
+            },
+            {
+              "userMs": 194.522,
+              "systemMs": 1.136,
+              "cpuMsPerFrame": 0.097829
+            }
+          ]
+        },
+        "baseline": 0.0529085,
+        "candidate": 0.097829,
+        "extra": 0.0449205,
+        "budget": 0.1,
+        "passed": true
+      },
+      {
+        "round": 2,
+        "width": 40,
+        "raw": {
+          "baseline": [
+            {
+              "userMs": 43.045,
+              "systemMs": 0.454,
+              "cpuMsPerFrame": 0.0217495
+            },
+            {
+              "userMs": 41.017,
+              "systemMs": 0.455,
+              "cpuMsPerFrame": 0.020736
+            },
+            {
+              "userMs": 44.904,
+              "systemMs": 0.521,
+              "cpuMsPerFrame": 0.0227125
+            },
+            {
+              "userMs": 47.833,
+              "systemMs": 0.401,
+              "cpuMsPerFrame": 0.024117
+            },
+            {
+              "userMs": 37.771,
+              "systemMs": 0.099,
+              "cpuMsPerFrame": 0.018935
+            },
+            {
+              "userMs": 38.523,
+              "systemMs": 0.334,
+              "cpuMsPerFrame": 0.0194285
+            },
+            {
+              "userMs": 38.315,
+              "systemMs": 0.435,
+              "cpuMsPerFrame": 0.019375
+            }
+          ],
+          "candidate": [
+            {
+              "userMs": 81.138,
+              "systemMs": 1.105,
+              "cpuMsPerFrame": 0.0411215
+            },
+            {
+              "userMs": 76.348,
+              "systemMs": 0.783,
+              "cpuMsPerFrame": 0.0385655
+            },
+            {
+              "userMs": 75.772,
+              "systemMs": 0.608,
+              "cpuMsPerFrame": 0.038189999999999995
+            },
+            {
+              "userMs": 78.035,
+              "systemMs": 0.673,
+              "cpuMsPerFrame": 0.039354
+            },
+            {
+              "userMs": 72.492,
+              "systemMs": 0.108,
+              "cpuMsPerFrame": 0.0363
+            },
+            {
+              "userMs": 78.071,
+              "systemMs": 0.3,
+              "cpuMsPerFrame": 0.0391855
+            },
+            {
+              "userMs": 77.569,
+              "systemMs": 0.546,
+              "cpuMsPerFrame": 0.039057499999999995
+            }
+          ]
+        },
+        "baseline": 0.020736,
+        "candidate": 0.039057499999999995,
+        "extra": 0.018321499999999994,
+        "budget": 0.1,
+        "passed": true
+      },
+      {
+        "round": 2,
+        "width": 120,
+        "raw": {
+          "baseline": [
+            {
+              "userMs": 101.432,
+              "systemMs": 1.204,
+              "cpuMsPerFrame": 0.051317999999999996
+            },
+            {
+              "userMs": 103.156,
+              "systemMs": 0.234,
+              "cpuMsPerFrame": 0.051695
+            },
+            {
+              "userMs": 97.83,
+              "systemMs": 0.235,
+              "cpuMsPerFrame": 0.0490325
+            },
+            {
+              "userMs": 101.087,
+              "systemMs": 0.232,
+              "cpuMsPerFrame": 0.0506595
+            },
+            {
+              "userMs": 103.62,
+              "systemMs": 0.234,
+              "cpuMsPerFrame": 0.051927
+            },
+            {
+              "userMs": 111.961,
+              "systemMs": 2.954,
+              "cpuMsPerFrame": 0.0574575
+            },
+            {
+              "userMs": 103.619,
+              "systemMs": 1.957,
+              "cpuMsPerFrame": 0.052787999999999995
+            }
+          ],
+          "candidate": [
+            {
+              "userMs": 193.454,
+              "systemMs": 1.498,
+              "cpuMsPerFrame": 0.097476
+            },
+            {
+              "userMs": 196.686,
+              "systemMs": 1.504,
+              "cpuMsPerFrame": 0.099095
+            },
+            {
+              "userMs": 195.186,
+              "systemMs": 0.595,
+              "cpuMsPerFrame": 0.0978905
+            },
+            {
+              "userMs": 189.876,
+              "systemMs": 0.661,
+              "cpuMsPerFrame": 0.0952685
+            },
+            {
+              "userMs": 198.835,
+              "systemMs": 3.741,
+              "cpuMsPerFrame": 0.101288
+            },
+            {
+              "userMs": 200.121,
+              "systemMs": 3.697,
+              "cpuMsPerFrame": 0.101909
+            },
+            {
+              "userMs": 195.008,
+              "systemMs": 3.494,
+              "cpuMsPerFrame": 0.099251
+            }
+          ]
+        },
+        "baseline": 0.051695,
+        "candidate": 0.099095,
+        "extra": 0.047400000000000005,
+        "budget": 0.1,
+        "passed": true
+      },
+      {
+        "round": 3,
+        "width": 40,
+        "raw": {
+          "baseline": [
+            {
+              "userMs": 49.114,
+              "systemMs": 0.682,
+              "cpuMsPerFrame": 0.024898
+            },
+            {
+              "userMs": 48.545,
+              "systemMs": 1.149,
+              "cpuMsPerFrame": 0.024847
+            },
+            {
+              "userMs": 43.958,
+              "systemMs": 1.579,
+              "cpuMsPerFrame": 0.0227685
+            },
+            {
+              "userMs": 42.912,
+              "systemMs": 1.217,
+              "cpuMsPerFrame": 0.022064499999999997
+            },
+            {
+              "userMs": 41.729,
+              "systemMs": 1.56,
+              "cpuMsPerFrame": 0.0216445
+            },
+            {
+              "userMs": 47.709,
+              "systemMs": 1.796,
+              "cpuMsPerFrame": 0.0247525
+            },
+            {
+              "userMs": 50.68,
+              "systemMs": 1.821,
+              "cpuMsPerFrame": 0.0262505
+            }
+          ],
+          "candidate": [
+            {
+              "userMs": 83.61,
+              "systemMs": 3.119,
+              "cpuMsPerFrame": 0.0433645
+            },
+            {
+              "userMs": 75.182,
+              "systemMs": 1.065,
+              "cpuMsPerFrame": 0.0381235
+            },
+            {
+              "userMs": 85.096,
+              "systemMs": 3.087,
+              "cpuMsPerFrame": 0.044091500000000006
+            },
+            {
+              "userMs": 94.736,
+              "systemMs": 2.845,
+              "cpuMsPerFrame": 0.0487905
+            },
+            {
+              "userMs": 89.022,
+              "systemMs": 3.023,
+              "cpuMsPerFrame": 0.0460225
+            },
+            {
+              "userMs": 104.55,
+              "systemMs": 3.835,
+              "cpuMsPerFrame": 0.054192500000000005
+            },
+            {
+              "userMs": 83.466,
+              "systemMs": 2.367,
+              "cpuMsPerFrame": 0.042916499999999996
+            }
+          ]
+        },
+        "baseline": 0.0247525,
+        "candidate": 0.044091500000000006,
+        "extra": 0.019339000000000005,
+        "budget": 0.1,
+        "passed": true
+      },
+      {
+        "round": 3,
+        "width": 120,
+        "raw": {
+          "baseline": [
+            {
+              "userMs": 111.626,
+              "systemMs": 3.717,
+              "cpuMsPerFrame": 0.0576715
+            },
+            {
+              "userMs": 107.069,
+              "systemMs": 0.601,
+              "cpuMsPerFrame": 0.053835
+            },
+            {
+              "userMs": 110.812,
+              "systemMs": 0.574,
+              "cpuMsPerFrame": 0.055693
+            },
+            {
+              "userMs": 117.053,
+              "systemMs": 2.691,
+              "cpuMsPerFrame": 0.059872
+            },
+            {
+              "userMs": 112.32,
+              "systemMs": 1.664,
+              "cpuMsPerFrame": 0.056991999999999994
+            },
+            {
+              "userMs": 107.997,
+              "systemMs": 2.054,
+              "cpuMsPerFrame": 0.0550255
+            },
+            {
+              "userMs": 107.643,
+              "systemMs": 0.684,
+              "cpuMsPerFrame": 0.054163499999999996
+            }
+          ],
+          "candidate": [
+            {
+              "userMs": 218.105,
+              "systemMs": 5.634,
+              "cpuMsPerFrame": 0.1118695
+            },
+            {
+              "userMs": 209.338,
+              "systemMs": 5.496,
+              "cpuMsPerFrame": 0.107417
+            },
+            {
+              "userMs": 200.068,
+              "systemMs": 2.625,
+              "cpuMsPerFrame": 0.1013465
+            },
+            {
+              "userMs": 207.606,
+              "systemMs": 4.336,
+              "cpuMsPerFrame": 0.10597100000000001
+            },
+            {
+              "userMs": 223.306,
+              "systemMs": 3.551,
+              "cpuMsPerFrame": 0.1134285
+            },
+            {
+              "userMs": 228.022,
+              "systemMs": 4.967,
+              "cpuMsPerFrame": 0.1164945
+            },
+            {
+              "userMs": 212.141,
+              "systemMs": 2.535,
+              "cpuMsPerFrame": 0.10733799999999999
+            }
+          ]
+        },
+        "baseline": 0.055693,
+        "candidate": 0.107417,
+        "extra": 0.051724,
+        "budget": 0.1,
+        "passed": true
+      }
+    ]
+  },
+  "cpuContinuity": {
+    "sources": [
+      {
+        "path": "scripts/local-refresh-cpu.mjs",
+        "expected": "dae4d8d9386842effc33d924b8339a1eb70ca07b842695be805bf8f474f754de",
+        "actual": "dae4d8d9386842effc33d924b8339a1eb70ca07b842695be805bf8f474f754de"
+      },
+      {
+        "path": "extensions/codex-ui/src/working.ts",
+        "expected": "963ee300fda2aac47c4bba15ec01e5a28a845a7de135189361be41207e08c154",
+        "actual": "963ee300fda2aac47c4bba15ec01e5a28a845a7de135189361be41207e08c154"
+      },
+      {
+        "path": "extensions/codex-ui/src/token-rate.ts",
+        "expected": "920f6fc68acbd7b8750213ae8eef2cc0a67dc20254864916bae125fe916f99e9",
+        "actual": "920f6fc68acbd7b8750213ae8eef2cc0a67dc20254864916bae125fe916f99e9"
+      },
+      {
+        "path": "extensions/codex-ui/src/json-units.ts",
+        "expected": "6a4b9580ba44daa4e13212006c79cb1890ab0bbc716d2610f514dee4096556b1",
+        "actual": "6a4b9580ba44daa4e13212006c79cb1890ab0bbc716d2610f514dee4096556b1"
+      },
+      {
+        "path": "extensions/codex-ui/src/footer.ts",
+        "expected": "f1f532e541b0d4ebd08b2d3986d2e93c8b222f248366277ad356d120bb07427d",
+        "actual": "f1f532e541b0d4ebd08b2d3986d2e93c8b222f248366277ad356d120bb07427d"
+      },
+      {
+        "path": "extensions/codex-ui/src/context-usage.ts",
+        "expected": "d4fa0064cf85e616483c1e54ca70c9f6009eb0af8c91a5b17a1f07af540cb768",
+        "actual": "d4fa0064cf85e616483c1e54ca70c9f6009eb0af8c91a5b17a1f07af540cb768"
+      },
+      {
+        "path": "patches/@earendil-works__pi-tui@1.4.0.patch",
+        "expected": "9ab9eee762f356fe6da3f13f22369bc93bacba54811d895eb7362f051657424f",
+        "actual": "9ab9eee762f356fe6da3f13f22369bc93bacba54811d895eb7362f051657424f"
+      },
+      {
+        "path": "patches/@earendil-works__pi-coding-agent@1.4.0.patch",
+        "expected": "71d7f8b213a36b5bbd16941768f13e5bbbe7f712a52bcf0c878731f62588de57",
+        "actual": "71d7f8b213a36b5bbd16941768f13e5bbbe7f712a52bcf0c878731f62588de57"
+      }
+    ],
+    "raw": [
+      {
+        "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/cpu/regular-1.json",
+        "expected": "37727308217751b58bf9f7bb2cf3440501f416e4cb76bf8530c53ee1f80a8cb2",
+        "actual": "37727308217751b58bf9f7bb2cf3440501f416e4cb76bf8530c53ee1f80a8cb2"
+      },
+      {
+        "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/cpu/fullscreen-1.json",
+        "expected": "76a0ea5c35f464bb78d6f29a58d715727ab9e9eee7649693a0380c1ccbde8534",
+        "actual": "76a0ea5c35f464bb78d6f29a58d715727ab9e9eee7649693a0380c1ccbde8534"
+      },
+      {
+        "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/cpu/regular-2.json",
+        "expected": "d808906f2998ef0c0fea0b3831dd6858784b5ece215911edd117be330a384ed0",
+        "actual": "d808906f2998ef0c0fea0b3831dd6858784b5ece215911edd117be330a384ed0"
+      },
+      {
+        "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/cpu/fullscreen-2.json",
+        "expected": "af624fa43e517c7f11dc2b2619cec4eeb9bdf0847a7167f0118dc3374a54afae",
+        "actual": "af624fa43e517c7f11dc2b2619cec4eeb9bdf0847a7167f0118dc3374a54afae"
+      },
+      {
+        "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/cpu/regular-3.json",
+        "expected": "ab10b0345c4abc22449af2bec24e1671d541ab5591b4670583286eca990eedb0",
+        "actual": "ab10b0345c4abc22449af2bec24e1671d541ab5591b4670583286eca990eedb0"
+      },
+      {
+        "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/cpu/fullscreen-3.json",
+        "expected": "9d60599b60978775a6d72afb9e6729640bfb208c0c7c4053955ba5eb2be2ece6",
+        "actual": "9d60599b60978775a6d72afb9e6729640bfb208c0c7c4053955ba5eb2be2ece6"
+      },
+      {
+        "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/cpu/regular-native.json",
+        "expected": "57768707ffea575e9ae1eefdb88ce0878a1863af2d99a67d83a989bd2c1166f0",
+        "actual": "57768707ffea575e9ae1eefdb88ce0878a1863af2d99a67d83a989bd2c1166f0"
+      },
+      {
+        "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/cpu/fullscreen-native.json",
+        "expected": "2cce1d11df9331acb197944d6584d53f7c5e5b763d910cb4774a4d326643b696",
+        "actual": "2cce1d11df9331acb197944d6584d53f7c5e5b763d910cb4774a4d326643b696"
+      }
+    ],
+    "unchanged": true,
+    "scope": "Existing Working/footer matrix; new editor render cost measured separately"
+  },
+  "installation": {
+    "root": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h",
+    "node": "v22.22.2",
+    "projects": {
+      "patched": {
+        "cwd": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched",
+        "installedExtension": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/pi-ext/extensions/codex-ui/dist/index.js",
+        "publishedFilesMatch": true,
+        "publishedFrozenLockUnchanged": true,
+        "cli": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/.bin/pi",
+        "tui": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/@earendil-works/pi-tui",
+        "agent": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched/node_modules/@earendil-works/pi-coding-agent",
+        "lockUnchanged": true,
+        "lockSha256": "f2830f6a572d6d77f15a365b6a9761a9aa5b4705956c0d953fb8b98ed5f64616",
+        "probe": {
+          "regionApi": true
+        }
+      },
+      "original": {
+        "cwd": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original",
+        "installedExtension": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/pi-ext/extensions/codex-ui/dist/index.js",
+        "publishedFilesMatch": true,
+        "publishedFrozenLockUnchanged": true,
+        "cli": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/.bin/pi",
+        "tui": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/@earendil-works/pi-tui",
+        "agent": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original/node_modules/@earendil-works/pi-coding-agent",
+        "lockUnchanged": true,
+        "lockSha256": "08b444333b8ac4382cc51ad49c009ce1750ea2507c1097aa04af81a870106bc2",
+        "probe": {
+          "regionApi": false
+        }
+      }
+    },
+    "tarball": {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/pi-ext.tgz",
+      "sha256": "03058ebfa8f11a6f2f554cf93c61919eb40bcc6544382cd8b70305daefdedd0d"
+    }
+  },
+  "published": {
+    "patched": {
+      "files": [
+        {
+          "name": "bash-group-layout.js",
+          "sha256": "275da38a1bf2ff2e0dc752f67ff70d5c0d43c5cae470d8602e6c6f4b6931506a"
+        },
+        {
+          "name": "bash-groups.js",
+          "sha256": "af9781ad5ea3ee9527e89766da82ba1c90fe9e8cc1c8a07d889df1b919acda13"
+        },
+        {
+          "name": "codemode-data.js",
+          "sha256": "d234c789bc63b01cba8329ddc82fec660a3f8c29363116eb60952d34cee4be36"
+        },
+        {
+          "name": "codemode-model.js",
+          "sha256": "f71fc87febf5ad01866b1ae66a8a2d39557585a0b6b9b4940d3e43a7e58f4d4e"
+        },
+        {
+          "name": "codemode-presentation.js",
+          "sha256": "1015d5bff9e0912c32ca6fb17cee8832bbc0f7e725229596afa8c44653db950b"
+        },
+        {
+          "name": "codemode-view.js",
+          "sha256": "14d982ddbe0af066fda757695e600dc5b012bd05f6aeecb72c1669f6a365dda5"
+        },
+        {
+          "name": "codemode.js",
+          "sha256": "919a3dc74bee22d13ac4854bae00343765943388cd082ae5ff60e778c0e8623a"
+        },
+        {
+          "name": "components.js",
+          "sha256": "eed2dc17f584a0817d23d68acf143196f2a660031f6f047dc1394c4019d3c9b1"
+        },
+        {
+          "name": "context-usage.js",
+          "sha256": "eb79dbd07cdf8b463566e6b7b0192a2e8fee98c6d68b99eb0c26aa67da69227f"
+        },
+        {
+          "name": "diff-source.js",
+          "sha256": "16ff2e9b1d8cfa8cfbcf855feba7e222572c1a962a58444d536d41586ebbae35"
+        },
+        {
+          "name": "exact-visual-tail.js",
+          "sha256": "ebf90387b2f302188dc8b48d9cb612e7d6c3fb5c295af7f2a5b7d57666bdf540"
+        },
+        {
+          "name": "execution-settings.js",
+          "sha256": "6eed1645c5d909813f32c47d571933f01309eecbd6a7199a0080681d152335ca"
+        },
+        {
+          "name": "footer.js",
+          "sha256": "5cd097c319ea147fc15e29cbb2a9104f1dbe7544a2f0b45b4fac76981839f6c1"
+        },
+        {
+          "name": "goal-display.js",
+          "sha256": "e55f9ed4f0a599357c97bbfcbc81fcc0e8f42780a4659f744264e5a27808c443"
+        },
+        {
+          "name": "index.js",
+          "sha256": "1b5e8850b7f221393bf2426f4f60d7af5514c11bea9b7ae9c67daa3c00893965"
+        },
+        {
+          "name": "json-units.js",
+          "sha256": "dbc401333658a79afad7c0c6584b58fbf093a4a2768648ec4645f0a34a80d165"
+        },
+        {
+          "name": "layout.js",
+          "sha256": "2bbcdf83c4ae5594fcfe569b4affa7a67344d87784cac4156884bd47aa5e5a53"
+        },
+        {
+          "name": "mcp-renderers.js",
+          "sha256": "6a9142fdbc53f4c6e76fef80797baacd7c6ea56d53c97c6b5bee2f3b46c2d55e"
+        },
+        {
+          "name": "mcp-text.js",
+          "sha256": "7496e0032cb26b9128532bd3020a519164c28d1d97f4300daa3243f94c200722"
+        },
+        {
+          "name": "read-group-layout.js",
+          "sha256": "2cc32e22402eb0ddc28161cd4bb928248261e8f6dc3b457a5ed3cbf456b3675e"
+        },
+        {
+          "name": "read-groups.js",
+          "sha256": "a790199ca8f2ef8c7277b08b83fb03c15defea10ccd6470a9a9f45b04ebf25c0"
+        },
+        {
+          "name": "read-view.js",
+          "sha256": "5f873b55a391ba6b7b10b00a3074130755e74a9358b5ad4369a9f3401fe3124f"
+        },
+        {
+          "name": "render-cache.js",
+          "sha256": "d302386cf0fd386ccbd77b9939807e275a60ae442f20d07f24d125a62e8aaab8"
+        },
+        {
+          "name": "reply-copy.js",
+          "sha256": "81a57e9520d05e2b9dfbcddde7fbcfa2c03600b8fad1234e20746e8dbe1ab7f4"
+        },
+        {
+          "name": "responsive-lines.js",
+          "sha256": "831c7dfeb6e19a6b4d710b6049bb3439b2335733a85fb3d6d6c3e112e7969d4a"
+        },
+        {
+          "name": "terminal-title.js",
+          "sha256": "6037c98c3ed2389364ee908733d9fa3beb5152239b72e0e011a65d678bf67caf"
+        },
+        {
+          "name": "token-rate.js",
+          "sha256": "f8257b6a2923de8c2f4c5cfef23eda7c1b0523b42faba0397040c231fb8c578c"
+        },
+        {
+          "name": "tool-status.js",
+          "sha256": "75cf715cc84aa5978bf6b8ec3b5a5c00a9260dc331dc41611b31a5a9fae43f03"
+        },
+        {
+          "name": "tools.js",
+          "sha256": "e7be196c3249c3a3f2fcac09a8b8a644328859266b1362b7835f6b7b8370f604"
+        },
+        {
+          "name": "working-session.js",
+          "sha256": "dd9a860213e0f658eda9ad4faaeb6843d15be13ce84f461fcb56cd7c5f302783"
+        },
+        {
+          "name": "working.js",
+          "sha256": "d53f61c6687cc58c3b89f32522b4880a59ab02f267dba19dabeb5474b3a48be6"
+        },
+        {
+          "name": "write-changes.js",
+          "sha256": "e2f90348ca5c3b21fb733f0fc9604a3db5a65255be9c4793aeb284d7ffcff2cb"
+        }
+      ],
+      "doctor": ".tmp/termius-fixes-66/doctor-patched.json"
+    },
+    "original": {
+      "files": [
+        {
+          "name": "bash-group-layout.js",
+          "sha256": "275da38a1bf2ff2e0dc752f67ff70d5c0d43c5cae470d8602e6c6f4b6931506a"
+        },
+        {
+          "name": "bash-groups.js",
+          "sha256": "af9781ad5ea3ee9527e89766da82ba1c90fe9e8cc1c8a07d889df1b919acda13"
+        },
+        {
+          "name": "codemode-data.js",
+          "sha256": "d234c789bc63b01cba8329ddc82fec660a3f8c29363116eb60952d34cee4be36"
+        },
+        {
+          "name": "codemode-model.js",
+          "sha256": "f71fc87febf5ad01866b1ae66a8a2d39557585a0b6b9b4940d3e43a7e58f4d4e"
+        },
+        {
+          "name": "codemode-presentation.js",
+          "sha256": "1015d5bff9e0912c32ca6fb17cee8832bbc0f7e725229596afa8c44653db950b"
+        },
+        {
+          "name": "codemode-view.js",
+          "sha256": "14d982ddbe0af066fda757695e600dc5b012bd05f6aeecb72c1669f6a365dda5"
+        },
+        {
+          "name": "codemode.js",
+          "sha256": "919a3dc74bee22d13ac4854bae00343765943388cd082ae5ff60e778c0e8623a"
+        },
+        {
+          "name": "components.js",
+          "sha256": "eed2dc17f584a0817d23d68acf143196f2a660031f6f047dc1394c4019d3c9b1"
+        },
+        {
+          "name": "context-usage.js",
+          "sha256": "eb79dbd07cdf8b463566e6b7b0192a2e8fee98c6d68b99eb0c26aa67da69227f"
+        },
+        {
+          "name": "diff-source.js",
+          "sha256": "16ff2e9b1d8cfa8cfbcf855feba7e222572c1a962a58444d536d41586ebbae35"
+        },
+        {
+          "name": "exact-visual-tail.js",
+          "sha256": "ebf90387b2f302188dc8b48d9cb612e7d6c3fb5c295af7f2a5b7d57666bdf540"
+        },
+        {
+          "name": "execution-settings.js",
+          "sha256": "6eed1645c5d909813f32c47d571933f01309eecbd6a7199a0080681d152335ca"
+        },
+        {
+          "name": "footer.js",
+          "sha256": "5cd097c319ea147fc15e29cbb2a9104f1dbe7544a2f0b45b4fac76981839f6c1"
+        },
+        {
+          "name": "goal-display.js",
+          "sha256": "e55f9ed4f0a599357c97bbfcbc81fcc0e8f42780a4659f744264e5a27808c443"
+        },
+        {
+          "name": "index.js",
+          "sha256": "1b5e8850b7f221393bf2426f4f60d7af5514c11bea9b7ae9c67daa3c00893965"
+        },
+        {
+          "name": "json-units.js",
+          "sha256": "dbc401333658a79afad7c0c6584b58fbf093a4a2768648ec4645f0a34a80d165"
+        },
+        {
+          "name": "layout.js",
+          "sha256": "2bbcdf83c4ae5594fcfe569b4affa7a67344d87784cac4156884bd47aa5e5a53"
+        },
+        {
+          "name": "mcp-renderers.js",
+          "sha256": "6a9142fdbc53f4c6e76fef80797baacd7c6ea56d53c97c6b5bee2f3b46c2d55e"
+        },
+        {
+          "name": "mcp-text.js",
+          "sha256": "7496e0032cb26b9128532bd3020a519164c28d1d97f4300daa3243f94c200722"
+        },
+        {
+          "name": "read-group-layout.js",
+          "sha256": "2cc32e22402eb0ddc28161cd4bb928248261e8f6dc3b457a5ed3cbf456b3675e"
+        },
+        {
+          "name": "read-groups.js",
+          "sha256": "a790199ca8f2ef8c7277b08b83fb03c15defea10ccd6470a9a9f45b04ebf25c0"
+        },
+        {
+          "name": "read-view.js",
+          "sha256": "5f873b55a391ba6b7b10b00a3074130755e74a9358b5ad4369a9f3401fe3124f"
+        },
+        {
+          "name": "render-cache.js",
+          "sha256": "d302386cf0fd386ccbd77b9939807e275a60ae442f20d07f24d125a62e8aaab8"
+        },
+        {
+          "name": "reply-copy.js",
+          "sha256": "81a57e9520d05e2b9dfbcddde7fbcfa2c03600b8fad1234e20746e8dbe1ab7f4"
+        },
+        {
+          "name": "responsive-lines.js",
+          "sha256": "831c7dfeb6e19a6b4d710b6049bb3439b2335733a85fb3d6d6c3e112e7969d4a"
+        },
+        {
+          "name": "terminal-title.js",
+          "sha256": "6037c98c3ed2389364ee908733d9fa3beb5152239b72e0e011a65d678bf67caf"
+        },
+        {
+          "name": "token-rate.js",
+          "sha256": "f8257b6a2923de8c2f4c5cfef23eda7c1b0523b42faba0397040c231fb8c578c"
+        },
+        {
+          "name": "tool-status.js",
+          "sha256": "75cf715cc84aa5978bf6b8ec3b5a5c00a9260dc331dc41611b31a5a9fae43f03"
+        },
+        {
+          "name": "tools.js",
+          "sha256": "e7be196c3249c3a3f2fcac09a8b8a644328859266b1362b7835f6b7b8370f604"
+        },
+        {
+          "name": "working-session.js",
+          "sha256": "dd9a860213e0f658eda9ad4faaeb6843d15be13ce84f461fcb56cd7c5f302783"
+        },
+        {
+          "name": "working.js",
+          "sha256": "d53f61c6687cc58c3b89f32522b4880a59ab02f267dba19dabeb5474b3a48be6"
+        },
+        {
+          "name": "write-changes.js",
+          "sha256": "e2f90348ca5c3b21fb733f0fc9604a3db5a65255be9c4793aeb284d7ffcff2cb"
+        }
+      ],
+      "doctor": ".tmp/termius-fixes-66/doctor-original.json"
+    }
+  },
+  "cleanup": {
+    "pids": [
+      {
+        "pid": 66896,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 60791,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 59800,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 74006,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 66788,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 73156,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 57470,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 74933,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 73226,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 73478,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 73572,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 73692,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 73778,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 74133,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 74467,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 74537,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 74648,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 74745,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 72918,
+        "alive": false,
+        "listeners": []
+      },
+      {
+        "pid": 55145,
+        "alive": false,
+        "listeners": []
+      }
+    ],
+    "mutationWorkersEmpty": true
+  },
+  "globalPi": {
+    "path": "/Users/wangxuyang/Library/pnpm/bin/pi",
+    "real": "/Users/wangxuyang/Library/pnpm/bin/pi",
+    "sha256": "f04afd35fb16a3647b49ebb4bb67cbccba10a64fc6b5d1d5dfdd320e4f4ef331",
+    "unchanged": true
+  },
+  "artifacts": [
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/check-complete.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/check-complete.log",
+      "bytes": 42311,
+      "sha256": "63af1e8fd3d10f725d8d9517b9a607bd8a266c48ef3e95afc9ed25dc2eb7ab93"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/check-complete.pid",
+      "bytes": 6,
+      "sha256": "8e3a802be08cdd50bd44be688f3b2f6f5326b7fa105c95a7d638901de85882a4"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/check-final.exit",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/check-final.log",
+      "bytes": 44294,
+      "sha256": "73e974cb53a021b42da07bbd65031358cdbcb916189e357e14cd3622d35503e0"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/check-final.pid",
+      "bytes": 6,
+      "sha256": "88f802c7b83a053801c32a0ee41e9d45c353017e18ea835fa04d4f336d696e9c"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/check.exit",
+      "bytes": 2,
+      "sha256": "53c234e5e8472b6ac51c1ae1cab3fe06fad053beb8ebfd8977b010655bfdd3c3"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/check.log",
+      "bytes": 2167,
+      "sha256": "7fac33d98d50d61194377f5d0be5f7119efe2e8a8961301dc83ccf329bf017db"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/check.pid",
+      "bytes": 6,
+      "sha256": "09e194474dd73334008fbd3e0e53e0c4726a176045bc85de2d2689e2f831204e"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/cleanup.json",
+      "bytes": 1591,
+      "sha256": "bf3806c1f46b830acefad1c30a4da26c13596f44e8de9330c9a91b23a650c90d"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/cli-complexity.log",
+      "bytes": 2686,
+      "sha256": "0c0bed94078226e4ac48fb4751e1316e25f3661e6c492519bdd40e2a5f7f0663"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/cli-fullscreen.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/cli-fullscreen.log",
+      "bytes": 163,
+      "sha256": "043e177213decd3ab2eb4fb2a2e2f17ab57851553c4112fe521fea1012e46455"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/cli-fullscreen.pid",
+      "bytes": 6,
+      "sha256": "52f571ff3f00f821e365a3509809be3afa0bb90ccbe19e2e7aa09047e83f2ad5"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/cli-mutator.log",
+      "bytes": 4443,
+      "sha256": "6948c4338659002d2f69b37e9c9e05a9dbecfc3ec810d094823f2f0233d92cc0"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/cli-mutator.pid",
+      "bytes": 6,
+      "sha256": "e1b6fe434486817e2f14f2c566959ac4ad1ceea66940b70b598e4e90adebcdc5"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/cli-regular.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/cli-regular.log",
+      "bytes": 160,
+      "sha256": "98e1c76b332a0f4043264c18c0399f713bdb7deb9995893f1068c92cc344a8ad"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/cli-regular.pid",
+      "bytes": 6,
+      "sha256": "fed1a785f06b906944b775ecb53f4d0cca8e56d01488df7cecf6f96949b45793"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/composer-assertions.log",
+      "bytes": 103,
+      "sha256": "464e0ee629edf74de09ef21e4232fbcedc26588ff7cc23c470f47fe2da88c255"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/composer-coverage.log",
+      "bytes": 160,
+      "sha256": "ae157d65f2f6ae7aab3a2a6af404b67a8e6b6c80f4d645625ecd0be350c29efb"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/composer-narrow-before.log",
+      "bytes": 1159,
+      "sha256": "8daa8d5a59c30fec1a3aa0b1aee13fafd91203c83b5f574c0364d5f9780d6782"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/composer-red.log",
+      "bytes": 2861,
+      "sha256": "035fe014c396447931c1330e1a6a53508704fe0a8ff10335fc11ecf22094d8f2"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/composer.coverage",
+      "bytes": 53248,
+      "sha256": "8dace111292846a726b3dee514c9368e9f0bcef5293f966d7ba15ff862e52abb"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/composer.lcov",
+      "bytes": 5845,
+      "sha256": "7170553d36e89511179088405136d6e645a49f77f9b9ad91b9eccd3b93f553a6"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/copy-green.log",
+      "bytes": 799,
+      "sha256": "f112a7de3d743ece8dfae899c8d40381b356303b8210bd77087101c226b26f1b"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/copy-green2.log",
+      "bytes": 1294,
+      "sha256": "f75fb4630b010aab2b44e4d26c6c4b505d671ce6b15ca17de1de175805ba000f"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/copy-mutator.log",
+      "bytes": 1110,
+      "sha256": "350d7f9b0a6cf2eddf47710d55dbb8d06b94f8093c3b0084e30476cc9f0b468e"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/copy-red-behavior.log",
+      "bytes": 2179,
+      "sha256": "4696e02efa20db283511e299daf77035283726c19e50bf765892d2d4033cb969"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/copy-red.log",
+      "bytes": 2356,
+      "sha256": "18e3855cfebfe5c8bfdff10b569da7798065fb0187821a5f43cd555cae387907"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/coverage.log",
+      "bytes": 1505,
+      "sha256": "8d8a6640951f0797aa7808c6dfb14ec46fdd75a5ca3f4ccb4cf665c8602b778a"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/cpu-source-continuity.json",
+      "bytes": 4658,
+      "sha256": "424e64ceab5755f089603cafaa02f589bf481196e4fbc759553152dcccf5c6a6"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/crapper-complete.log",
+      "bytes": 4560,
+      "sha256": "8dd3cf216f9a0175848ed1f9f49fe35fd6cb62fbfdf8128b185c912640206bab"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/crapper-final.log",
+      "bytes": 1990,
+      "sha256": "2e8dbda282b76643c716ab71883edf0ffc1482f94df1b19113e7d9ad103c87e6"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/crapper.log",
+      "bytes": 1990,
+      "sha256": "cab34aa98521bc0810798d30d7a6e3dc62b79791087ae21ba4d8ae8728926ba2"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/doctor-before-cli.json",
+      "bytes": 3228,
+      "sha256": "e4147ad6e74d2744625173bb672cdf55ab9f64c7c5187643a0855a0e381b8c53"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/doctor-before-cli.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/doctor-before-fullscreen.json",
+      "bytes": 3228,
+      "sha256": "e4147ad6e74d2744625173bb672cdf55ab9f64c7c5187643a0855a0e381b8c53"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/doctor-before-fullscreen.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/doctor-original.json",
+      "bytes": 2528,
+      "sha256": "a06dcaa26ba09c179c98b8f7a358e4a9752758ed6d8f350b014012e47de3af5d"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/doctor-patched.json",
+      "bytes": 2597,
+      "sha256": "35cb013c3af832b07938781eea91b5423243c1ce7a536d102ff57a6edb1d6396"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/dryer-complete.log",
+      "bytes": 123,
+      "sha256": "0fdc4ac70275ded245e3e5521ae75ef291eda2850e1ad5ce55471888085d6319"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/dryer.log",
+      "bytes": 123,
+      "sha256": "0fdc4ac70275ded245e3e5521ae75ef291eda2850e1ad5ce55471888085d6319"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/editor-cpu.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/editor-cpu.json",
+      "bytes": 13170,
+      "sha256": "885f22fafe1531f1308a48bc30f38f2b108df9920d57b99c96544ad1f59b470c"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/editor-cpu.mjs",
+      "bytes": 3800,
+      "sha256": "ac2ac96c96a9e70ffa8800ada55b67dbb96d8f8c5f22d625ae187c33d40cc04f"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/editor-cpu.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/editor-mutator-final.log",
+      "bytes": 2813,
+      "sha256": "85ceae8894a95058c0306b6029fd852f03c560c8980125bcc84fe450a9fc2d90"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/editor-mutator.log",
+      "bytes": 1202,
+      "sha256": "bef917177453abdc98e68bc19d2bb030a85f337982e8183d3bacaddfa517eb0e"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/editor-mutator.pid",
+      "bytes": 6,
+      "sha256": "5467e7000e3dd1a785335c2050ac1445e8517309b48f8e4e9b7a7f8c4911023e"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/editor-mutator2.log",
+      "bytes": 3128,
+      "sha256": "b4fdcff79e66bb085784165f984189e5afdb9b3eb1f2515451234fac4e253c7a"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/fullscreen-cleanup.json",
+      "bytes": 523,
+      "sha256": "a0e2cc11384af2d31bb6642d98c01eeea71d188fbba7b70a3af2de8d3cbc981c"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/global-pi-after.json",
+      "bytes": 206,
+      "sha256": "021aff0daae4e1821a59c77d6a60325cacf0ce3e92faac82c49fa4b244122eb0"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/global-pi-before.json",
+      "bytes": 185,
+      "sha256": "cb8da5843f02cd4539b28f38e92c8a6a6e4f7bd180d21c718f113a0cb247aeb3"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/install.pid",
+      "bytes": 6,
+      "sha256": "f1bf571a6f53d1e46178d7e6c4d67c8089976c41a1a30f72979f97f5c5f1f981"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/installation.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/installation.json",
+      "bytes": 2556,
+      "sha256": "1aca567854e9c5204436f804f5a47456e7ecf59a7925013995a3997f969ab3fd"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/installation.stderr",
+      "bytes": 489,
+      "sha256": "edcca46e5c7b6f93759964b065421af98d9ce557a78d9db349b64064522445bb"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/menu-test.log",
+      "bytes": 2762,
+      "sha256": "16796d32e37b9549766f6604f1944818f19fea8ebc39288b8a016065e38442d9"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/menu-test2.log",
+      "bytes": 3019,
+      "sha256": "3ee3aa10295e396ee48bef7654c0c0030631d99e8e12bdea5ea2dab8d6c2a103"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/menu-test3.log",
+      "bytes": 3244,
+      "sha256": "bc33a6809e629e6794a3392a4411d14b53970e657c3c34ba86f2ca63d2d9b162"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/menu-test4.log",
+      "bytes": 1164,
+      "sha256": "436c086e4c64865a5a065b6dbd75f36c7434880c6e8afb0f67162f1a11d01f28"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/metrics/crap.edn",
+      "bytes": 4837,
+      "sha256": "a23e9408522a2c3d7e26ae36e36c930bae7a85112ac976404d49a1bb080653c3"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/metrics/dry.edn",
+      "bytes": 17,
+      "sha256": "d4096cccbc2108ff3f8dca9d20dbc6ebf313423ad28abf5b50a196ce923a91d5"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/metrics/mutate/.cursor.skills.verify-pi-codex-ui.scripts.cli.edn",
+      "bytes": 7338,
+      "sha256": "d83558c7b26c89ff76ddb6d810e329a65028d80a5c46fbc87b4e03885d274598"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/metrics/mutate/components.CodexEditor.edn",
+      "bytes": 3904,
+      "sha256": "bd3ab9732e16708a9bf7264d2c548106bfab5a42a7c2ac40ac1767c5fab7177d"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/metrics/mutate/components.CodexHeader.edn",
+      "bytes": 824,
+      "sha256": "b5810ae3df36a864060d01d73bd57659f8e70a3b7c5838785415ff3dcd9bfa3d"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/metrics/mutate/components.edn",
+      "bytes": 369,
+      "sha256": "f664a3d82386a4f63dcaf8c4ae21aafff3e528cc64c62b4d6ed56ed4a222d354"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/metrics/mutate/reply-copy.edn",
+      "bytes": 1628,
+      "sha256": "3dedd124c04b6d0a52dfa7057530b67fb66876913a5a9625912b9947510ca904"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/mutation-scan.log",
+      "bytes": 9804,
+      "sha256": "2527cb9182f35808dcb3bc4b2f8461edc9e914139433b50658f806123f3b02c0"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/mutation.config.ts",
+      "bytes": 441,
+      "sha256": "81bcb0045a9d83ad6db245dcfb9b9b38aee8622a0095132ce3e88f439c9705ef"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/old-components.mjs",
+      "bytes": 5464,
+      "sha256": "ed699b0a37be254b2a3d01b242b420488df6c6e099c47ca9c90f68ff23c6d66d"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/published-files.json",
+      "bytes": 8955,
+      "sha256": "b588a0066d98c88ea7e775c9765e05686fbffc1b9a78199108097a6d2723ab3f"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/python-tests.log",
+      "bytes": 1355,
+      "sha256": "2bc3ea56c864cae069e4125a5181759c386dab37077a4a8a7df7d85c19c38777"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/regular-cleanup.json",
+      "bytes": 520,
+      "sha256": "8e24c04073cc6106681568378343a68fefcaeb4ced3125fd16c09ec0b4eb22f4"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/termius-fixes-66/skill-mentions-regression.log",
+      "bytes": 1325,
+      "sha256": "971e65852be8e30457d132f5b2862c0c3bac17d64d00ee2410687989ffab0f25"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/agent/auth.json",
+      "bytes": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/agent/extensions/pi-openai-fast-mode/config.json",
+      "bytes": 754,
+      "sha256": "59d016424869616564c3960077aa7733cfbb83f668eee365589fea0bb166496c"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/agent/models-store.json",
+      "bytes": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/agent/settings.json",
+      "bytes": 516,
+      "sha256": "ac4eef2f30a6b4ebe13cdbffcacad8912b838300b822b84aede1aab99b2a82c1"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/agent/themes/codex-pi.json",
+      "bytes": 2690,
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/doctor-1.json",
+      "bytes": 3228,
+      "sha256": "e4147ad6e74d2744625173bb672cdf55ab9f64c7c5187643a0855a0e381b8c53"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/doctor-1.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/doctor-2.json",
+      "bytes": 3228,
+      "sha256": "e4147ad6e74d2744625173bb672cdf55ab9f64c7c5187643a0855a0e381b8c53"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/doctor-2.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/doctor-3.json",
+      "bytes": 3228,
+      "sha256": "e4147ad6e74d2744625173bb672cdf55ab9f64c7c5187643a0855a0e381b8c53"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/doctor-3.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/doctor-4.json",
+      "bytes": 3228,
+      "sha256": "e4147ad6e74d2744625173bb672cdf55ab9f64c7c5187643a0855a0e381b8c53"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/doctor-4.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/doctor-5.json",
+      "bytes": 3228,
+      "sha256": "e4147ad6e74d2744625173bb672cdf55ab9f64c7c5187643a0855a0e381b8c53"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/doctor-5.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/events.json",
+      "bytes": 10690689,
+      "sha256": "332cfa6e1d0c6e14fa9a9b3b96c72b0b65253fb409107bc39812e7b47815df73"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/journey.json",
+      "bytes": 1835136,
+      "sha256": "2de3be9b0c1aa0f66356e38b37074776a1c5132526b27880f731ea101c7dfeaa"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/sessions/2026-10-29T08-02-41-905Z_01a186ae-c071-7773-81e2-51bc7b18e189.jsonl",
+      "bytes": 18768,
+      "sha256": "30f3c50d8876de7ce7d0eef0df383b0a5f1ed59611dab65451fbab2af0ae7078"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/sessions/2026-10-29T08-02-52-775Z_01a186ae-eae7-7773-81e2-51be346a1e2a.jsonl",
+      "bytes": 10338,
+      "sha256": "cffa379a62bf6a330e2c83d87a5720ac9d2d01a578994a0c8772a1763149cece"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/sessions/2026-10-29T08-03-03-869Z_01a186af-163d-7773-81e2-51c053cfe193.jsonl",
+      "bytes": 83287,
+      "sha256": "b2355e14bf3729b9ea3d8e749be572c536dd25aaf7dcc1067a12ceb7ce95cd42"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/sessions/2026-10-29T08-03-22-260Z_01a186af-5e14-7773-81e2-51c36cf41808.jsonl",
+      "bytes": 17072,
+      "sha256": "c298ddb06fbd6177efdd749da7aa4ea60733dfa5fc512b213beb0105c3558618"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/sessions/2026-10-29T08-03-30-625Z_01a186af-7ec0-77b3-8820-0ac7ebd97143.jsonl",
+      "bytes": 20843,
+      "sha256": "715c0582caeed68e5830a5cb1f008476c82809640b1be78945b9fa448ef105b5"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/sessions/2026-10-29T08-03-36-897Z_01a186af-9741-7691-bbce-1f610963a19c.jsonl",
+      "bytes": 38306,
+      "sha256": "623d6e3b7f28bd45333abf9610315c3d1e52bed3c08220e92d98538828206c90"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/sessions/2026-10-29T08-03-45-921Z_01a186af-ba81-7691-bbce-1f645635fe76.jsonl",
+      "bytes": 23046,
+      "sha256": "35853bc9bf0b13279e083d4639e90de90343c645eaffed75975938028029d1f3"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/terminal-1.ansi",
+      "bytes": 920972,
+      "sha256": "b6001624fadfff64d162a95adde5885600fbd16ff0c96d41de02ce42fdc7b92c"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/terminal-2.ansi",
+      "bytes": 83596,
+      "sha256": "01df1b369a63a4c30332b45b61bc1c2c0988e05ade2bab2f504c20669293f4ed"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/terminal-3.ansi",
+      "bytes": 127528,
+      "sha256": "38db80468248bb07332c65d8c68b1e851793d74dda6f82918420a29f55291bcf"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/terminal-4.ansi",
+      "bytes": 113702,
+      "sha256": "8b1c45d8a3d6684aa81893b4d666c0d6d86617ce0ae65fc764a8190eb8eec265"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/terminal-5.ansi",
+      "bytes": 12302,
+      "sha256": "aee5518d61450d334d485af41201b5e7f595705966f37fba70a9029caf893ad2"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/workspace/.pi/settings.json",
+      "bytes": 53,
+      "sha256": "8d538bd0f42f6f6a3e5646f8dc74029fffa94bc9e2520b35c329a933462e6339"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/workspace/cache.txt",
+      "bytes": 45508,
+      "sha256": "f4e326992af398c4bb0cb9bc56583accfae635c967b70d161073e727d17d91cc"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/workspace/controls.txt",
+      "bytes": 64,
+      "sha256": "4db36c5f76a6ac359ab49f8ba36169e4f0f1927110f4d7260fea7cf93aad5fef"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/workspace/large.txt",
+      "bytes": 16008,
+      "sha256": "f88f1f5c2b56aa1fb8662c43fef609b7040f5be1abffb3a76e7b6ec0cb1b0eec"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/workspace/pair.txt",
+      "bytes": 15,
+      "sha256": "95bf068575c8cfabedef1946b467eef3f271b3da3446a62c625ffd7bbc9a796f"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/workspace/proof.txt",
+      "bytes": 12,
+      "sha256": "1d054714357ce5ee01723ed91fcaa69206e221faaf9c1fad64f73be2e5d051da"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793260960719796000/workspace/read.txt",
+      "bytes": 13,
+      "sha256": "a9c831c6652b50a566ed6982efdd2dad6c87978d29ac0e1e2755fc89db1d5542"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/agent/auth.json",
+      "bytes": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/agent/extensions/pi-openai-fast-mode/config.json",
+      "bytes": 754,
+      "sha256": "59d016424869616564c3960077aa7733cfbb83f668eee365589fea0bb166496c"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/agent/models-store.json",
+      "bytes": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/agent/settings.json",
+      "bytes": 519,
+      "sha256": "cb18d3a5a55e38102a7037b04349052b9a8b5e2da7fdeb34c3818f5085c389e8"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/agent/themes/codex-pi.json",
+      "bytes": 2690,
+      "sha256": "8133e7f833db46b86e76f2a42c641f839b1a1f539346306127c1daafac90d1ad"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/doctor-1.json",
+      "bytes": 3228,
+      "sha256": "e4147ad6e74d2744625173bb672cdf55ab9f64c7c5187643a0855a0e381b8c53"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/doctor-1.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/doctor-2.json",
+      "bytes": 3228,
+      "sha256": "e4147ad6e74d2744625173bb672cdf55ab9f64c7c5187643a0855a0e381b8c53"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/doctor-2.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/doctor-3.json",
+      "bytes": 3228,
+      "sha256": "e4147ad6e74d2744625173bb672cdf55ab9f64c7c5187643a0855a0e381b8c53"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/doctor-3.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/doctor-4.json",
+      "bytes": 3228,
+      "sha256": "e4147ad6e74d2744625173bb672cdf55ab9f64c7c5187643a0855a0e381b8c53"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/doctor-4.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/doctor-5.json",
+      "bytes": 3228,
+      "sha256": "e4147ad6e74d2744625173bb672cdf55ab9f64c7c5187643a0855a0e381b8c53"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/doctor-5.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/events.json",
+      "bytes": 10690946,
+      "sha256": "c01f3faa8602de03adb45c98d2f9065ad2b247422d619d5969ed3b312740fc3a"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/journey.json",
+      "bytes": 1855218,
+      "sha256": "81a12a076278c1ef529d56e196ab2ed091186e0a2b6080960dbb2ed37f9a631f"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/sessions/2026-10-29T08-04-48-173Z_01a186b0-adad-7198-93f4-7e01b4ed0fd9.jsonl",
+      "bytes": 18773,
+      "sha256": "90bda0f641c6084d6a31d0d652c6513837f261668e6e96ae02c5e68dc8df3de9"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/sessions/2026-10-29T08-04-59-189Z_01a186b0-d8b5-7198-93f4-7e03e3ba0c4c.jsonl",
+      "bytes": 10347,
+      "sha256": "01ca8000c3e3329ab681247eefb14ce8c5ad7afab7f39f63c8dd042c945fd90f"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/sessions/2026-10-29T08-05-10-271Z_01a186b1-03ff-7198-93f4-7e055337c890.jsonl",
+      "bytes": 83301,
+      "sha256": "5a213856232b2b42f25fe9332ff19c5c6ffb503c2579fdf7345110a8c3b6c999"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/sessions/2026-10-29T08-05-28-696Z_01a186b1-4bf8-7198-93f4-7e07e7edfe9a.jsonl",
+      "bytes": 17078,
+      "sha256": "e2fe557d55fba3219e9bae0da09bc5a2946b71ac6fd65833e64538cd19c4f005"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/sessions/2026-10-29T08-05-36-509Z_01a186b1-6a7c-749b-bc4c-1e33d6ce78fc.jsonl",
+      "bytes": 20853,
+      "sha256": "fb526aa9419465a13c8cf17864e29529d7ea3521d7a2d8490e6cd8a6b6ffaf41"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/sessions/2026-10-29T08-05-42-763Z_01a186b1-82ea-707e-9c58-d94c350e1538.jsonl",
+      "bytes": 38305,
+      "sha256": "afcb458b5f93f1fadb8d1cf6967acd4331e7a12b1b63494311675565f482d5d0"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/sessions/2026-10-29T08-05-51-861Z_01a186b1-a675-707e-9c58-d951368a3985.jsonl",
+      "bytes": 23056,
+      "sha256": "a675f995077dc3b93186a03085423b056cbe36e64742542cf9aee76ca1330b4e"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/terminal-1.ansi",
+      "bytes": 762650,
+      "sha256": "739bf2d44c3204026c0fa9d88c44d5af5f580d660a894a68def119bbf071ecb3"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/terminal-2.ansi",
+      "bytes": 122173,
+      "sha256": "488203dc6d6b412ea7610f3fbce30737d3640167dedbb384366c5311a9d7e579"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/terminal-3.ansi",
+      "bytes": 120748,
+      "sha256": "c0c7c3d497e465ee25e78a8e89a9cf11a41c43ba6a59b2c667e9e814caca3779"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/terminal-4.ansi",
+      "bytes": 156195,
+      "sha256": "63553acf13257e7c20efc978b64861a89d0dc27a85055599383599f7c4492e8a"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/terminal-5.ansi",
+      "bytes": 16935,
+      "sha256": "da4f55e317c0fd49a113f6575860a364e07c012dce15aa6e34010197173d3433"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/workspace/.pi/settings.json",
+      "bytes": 53,
+      "sha256": "8d538bd0f42f6f6a3e5646f8dc74029fffa94bc9e2520b35c329a933462e6339"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/workspace/cache.txt",
+      "bytes": 45508,
+      "sha256": "f4e326992af398c4bb0cb9bc56583accfae635c967b70d161073e727d17d91cc"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/workspace/controls.txt",
+      "bytes": 64,
+      "sha256": "4db36c5f76a6ac359ab49f8ba36169e4f0f1927110f4d7260fea7cf93aad5fef"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/workspace/large.txt",
+      "bytes": 16008,
+      "sha256": "f88f1f5c2b56aa1fb8662c43fef609b7040f5be1abffb3a76e7b6ec0cb1b0eec"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/workspace/pair.txt",
+      "bytes": 15,
+      "sha256": "95bf068575c8cfabedef1946b467eef3f271b3da3446a62c625ffd7bbc9a796f"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/workspace/proof.txt",
+      "bytes": 12,
+      "sha256": "1d054714357ce5ee01723ed91fcaa69206e221faaf9c1fad64f73be2e5d051da"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-fullscreen-1793261086664041000/workspace/read.txt",
+      "bytes": 13,
+      "sha256": "a9c831c6652b50a566ed6982efdd2dad6c87978d29ac0e1e2755fc89db1d5542"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/installation.json",
+      "bytes": 2556,
+      "sha256": "1aca567854e9c5204436f804f5a47456e7ecf59a7925013995a3997f969ab3fd"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original-install.log",
+      "bytes": 1028,
+      "sha256": "a2a5f7713bc23a5ca5282145d2781097a5eab4a92c52d75663d2fb66f67baaea"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original-package-frozen.log",
+      "bytes": 167,
+      "sha256": "ec00513b82116306f4eafa3fb6e90ab9510522cc05c636de7ddc312e5dbec14d"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/original-package-install.log",
+      "bytes": 4544,
+      "sha256": "9d1059c6a10fece9a5c05884ad6848c0c3850c3d05c18f0feb86aa97e1c62348"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/pack.log",
+      "bytes": 31255,
+      "sha256": "ba0dd3915041d514ab617ea9a8572350fba4420d45c22611f7ffddd1ba373fb8"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched-install.log",
+      "bytes": 963,
+      "sha256": "10887e6a8c0f007b62b8ebf09162be3bf5192c7fc057ed1b401cb91e74558f17"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched-package-frozen.log",
+      "bytes": 167,
+      "sha256": "ca6ccec6f31d7756f61b46ac9ac500ea5c5ab29511a4fc455a6624a481cfef80"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/patched-package-install.log",
+      "bytes": 4602,
+      "sha256": "1f8ccccc2506fe9c48509973ebf4f6f6b532b89858fcae56d04456a289ffa624"
+    },
+    {
+      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/local-refresh-install-CzIw6h/pi-ext.tgz",
+      "bytes": 1686827,
+      "sha256": "03058ebfa8f11a6f2f554cf93c61919eb40bcc6544382cd8b70305daefdedd0d"
+    }
+  ]
+}

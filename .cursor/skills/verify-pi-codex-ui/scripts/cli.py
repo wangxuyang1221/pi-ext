@@ -1,7 +1,9 @@
+#!/usr/bin/env -S conda run --no-capture-output -n codex-py312 python
 """Real CLI/PTy acceptance. Substitute the model boundary; keep tools and storage real."""
 import codecs, errno, fcntl, json, os, pty, re, select, shutil, signal, struct, subprocess, sys, tempfile, termios, time, traceback
 from pathlib import Path
 import pyte
+from health import doctor
 
 BASE = Path(__file__).resolve().parent
 REPO = BASE.parents[3]
@@ -40,13 +42,14 @@ def check(condition, message):
 
 def start(extra=None):
     global pid, fd, status, screen, stream, decoder, raw
+    preflight = doctor(REPO, EVIDENCE, str(len(processes) + 1))
     raw = bytearray(); status = None
     args = cli + ['--tui-mode', MODE] + (extra or [])
     before = sum(e['type']=='resources_discover' for e in records())
     pid, fd = pty.fork()
     if pid == 0:
         os.chdir(ROOT/'workspace'); os.execvpe(args[0], args, env)
-    processes.append({'pid':pid,'command':args})
+    processes.append({'pid':pid,'command':args,'doctor':preflight})
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 60, 140, 0, 0))
     screen = pyte.Screen(140,60); stream=pyte.Stream(screen); decoder=codecs.getincrementaldecoder('utf8')('replace')
     wait(lambda:sum(e['type']=='resources_discover' for e in records())>before,'ready')
@@ -112,6 +115,10 @@ def composer(label,expected_bg='484848'):
     check(all({screen.buffer[y][x].bg for x in range(screen.columns)}==colors for y in [row-1,row+1]),label+' paints the blank padding rows')
     if expected_bg:check(colors=={expected_bg},label+' uses the selected theme background')
     else:check(colors!={'484848'},label+' changes composer background from codex-pi')
+    start=screen.display[row].index('COMPOSER-INPUT')
+    foregrounds={screen.buffer[row][x].fg for x in range(start,start+len('COMPOSER-INPUT'))}
+    check(len(foregrounds)==1 and 'default' not in foregrounds and foregrounds!=colors,label+' paints readable draft text with the selected theme')
+    if expected_bg=='484848':check(foregrounds=={'d6d6d6'},label+' uses the codex-pi text color')
     snap(label); keys(b'\x15',label+' clear')
 def resize(width):
     fcntl.ioctl(fd,termios.TIOCSWINSZ,struct.pack('HHHH',60,width,0,0));screen.resize(60,width);os.kill(pid,signal.SIGWINCH);settle()
@@ -120,9 +127,18 @@ def native_resume(label):
     n=sum(e['type']=='session_start' for e in records()); command('/resume'); settle(.8);snap(label+' selector')
     keys(b'\r',label+' choose first session')
     wait(lambda:sum(e['type']=='session_start' for e in records())>n,label+' resumed');settle()
+def command_availability(label):
+    commands=[entry['name'] for entry in [e for e in records() if e['type']=='commands'][-1]['data']]
+    check('inspect' in commands and 'lowpower' not in commands,label+' command registry keeps inspect and excludes lowpower')
+    keys(b'\x15/inspec\t',label+' complete inspect');settle()
+    check('→ inspect' in view() or '/inspect' in view(),label+' offers the available inspect command')
+    keys(b'\t',label+' accept inspect completion');settle();snap(label+' inspect completion')
+    check('/inspect' in view(),label+' completes the available inspect command')
+    keys(b'\x15/lowp\t',label+' complete removed command');settle();snap(label+' removed command completion')
+    check('/lowp' in view() and '/lowpower' not in view(),label+' has no lowpower completion')
+    keys(b'\x15',label+' clear command input');settle()
 def replacement_checks(label):
-    command('/lowpower status');settle()
-    check('Low power: off' in view(),label+' resets lowpower')
+    command_availability(label)
     check(json.loads((ROOT/'agent/settings.json').read_text())['theme']=='codex-pi',label+' preserves selected theme')
     composer(label+' composer')
 def select_theme(name):
@@ -163,6 +179,7 @@ try:
     if '--controls' in sys.argv:
         control_case();stop();passed=True
         raise SystemExit(0)
+    command_availability('startup')
     composer('startup')
     for width in [40,80,140]:
         resize(width);composer('width-'+str(width))
@@ -180,45 +197,34 @@ try:
     check('REPLY-HEADING' in view() and 'const answer = 42;' in view(),'Complex reply Markdown renders in the real TUI')
     snap('Markdown transcript')
     # Native fork and resume selectors replace the active session.
-    command('/lowpower on');settle();n=sum(e['type']=='session_start' for e in records());command('/fork');settle();snap('fork selector')
+    n=sum(e['type']=='session_start' for e in records());command('/fork');settle();snap('fork selector')
     keys(b'\r','choose native fork message');wait(lambda:sum(e['type']=='session_start' for e in records())>n,'fork session');settle()
     keys(b'\x03','clear multiline fork prefill');settle();replacement_checks('fork')
     request('Fork followup',{'reply':'FORK-FOLLOWUP'})
-    command('/lowpower on');settle();native_resume('native resume');replacement_checks('resume')
-    # A new combination: lowpower status -> write -> reload -> status -> overwrite.
-    command('/lowpower on'); wait(lambda:'Low power: on' in view(),'lowpower-on')
-    command('/lowpower status'); settle(); snap('lowpower-status-on')
-    check('Low power: on' in view(),'status retains on state')
+    native_resume('native resume');replacement_checks('resume')
+    # Actual file execution keeps full display across reload and session replacement.
     data='alpha\nbeta\ngamma\ndelta\nepsilon\n'
-    result=request('Write in lowpower',{'calls':[tool('write',path='proof.txt',content=data)]})
-    check((ROOT/'workspace/proof.txt').read_text()==data,'Lowpower real write preserves all bytes')
-    check('Added' in view(),'Lowpower new file displays Added')
-    reload(); command('/lowpower status'); settle(); snap('lowpower-after-reload')
-    check('Low power: off' in view(),'reload resets lowpower to off')
+    result=request('Write before reload',{'calls':[tool('write',path='proof.txt',content=data)]})
+    check((ROOT/'workspace/proof.txt').read_text()==data,'Real write preserves all bytes')
+    check('Added' in view() and 'alpha' in view(),'New file displays Added and diff preview')
+    reload();command_availability('reload')
     result=request('Overwrite after reload',{'calls':[tool('write',path='proof.txt',content='replacement\n')]})
     check((ROOT/'workspace/proof.txt').read_text()=='replacement\n','Overwrite changes actual file')
-    check('Edited' in view(),'Overwrite displays Edited')
-    # Compare actual write/edit/bash/codemode execution in one session around the switch.
-    for lowpower in [True,False]:
-        command('/lowpower '+('on' if lowpower else 'off'));settle()
-        label='lowpower' if lowpower else 'fullpower'
-        (ROOT/'workspace/pair.txt').write_text('before\n')
-        result=request(label+' tools',{'calls':[tool('write',path='pair.txt',content='WRITE-PAIR-'+label+'\n'),tool('edit',path='pair.txt',edits=[{'oldText':'WRITE-PAIR','newText':'EDIT-PAIR'}]),tool('bash',command='printf "BASH-PAIR-'+label+'\\n"'),tool('codemode',code='text(await tools.read({path:"pair.txt"}));')],'reply':'PAIR-DONE-'+label})
-        check((ROOT/'workspace/pair.txt').read_text()=='EDIT-PAIR-'+label+'\n',label+' actual write and edit bytes')
-        check(all(not r.get('isError') for r in result[-4:]),label+' all four real tools succeed')
-        snap(label+' collapsed tools')
-        write_card=view().split('~ Edited pair.txt')[-2]
-        if lowpower: check('WRITE-PAIR-lowpower' not in write_card, 'Lowpower hides write body')
-        else: check('WRITE-PAIR-fullpower' in write_card,'Off restores write body preview')
-        keys(b'\x0f',label+' Ctrl+O');settle();snap(label+' expanded tools')
-        section=view().split(label+' tools')[-1]
-        if lowpower:
-            check('--- pair.txt' in section and 'Bash completed' in section and '└─ read pair.txt' in section,'Lowpower edit patch, compact Bash and fallback codemode previews are visible')
-        else:
-            check('(+1 -1)' in section and 'Bash(' in section and '@ Read pair.txt' in section,'Off restores edit line stats, full Bash and native codemode child renderer')
-        keys(b'\x0f',label+' Ctrl+O collapse');settle()
-        request(label+' thinking',{'thinking':'LOWPOWER-THINKING-FIRST\n'+'all reasoning is preserved. '*20+'\nLOWPOWER-THINKING-LAST','reply':'THINKING-PAIR-DONE'})
-        check('LOWPOWER-THINKING-LAST' in view(),label+' keeps full Thinking')
+    check('Edited' in view() and 'replacement' in view(),'Overwrite displays Edited and diff preview')
+    label='full'
+    (ROOT/'workspace/pair.txt').write_text('before\n')
+    result=request(label+' tools',{'calls':[tool('write',path='pair.txt',content='WRITE-PAIR-'+label+'\n'),tool('edit',path='pair.txt',edits=[{'oldText':'WRITE-PAIR','newText':'EDIT-PAIR'}]),tool('bash',command='printf "BASH-PAIR-'+label+'\\n"'),tool('codemode',code='text(await tools.read({path:"pair.txt"}));')],'reply':'PAIR-DONE-'+label})
+    check((ROOT/'workspace/pair.txt').read_text()=='EDIT-PAIR-'+label+'\n','Actual write and edit preserve expected bytes')
+    check(all(not r.get('isError') for r in result[-4:]),'All four real tools succeed')
+    snap('full collapsed tools')
+    write_card=view().split('~ Edited pair.txt')[-2]
+    check('WRITE-PAIR-full' in write_card,'Write keeps full body preview')
+    keys(b'\x0f','Full tools Ctrl+O');settle();snap('full expanded tools')
+    section=view().split(label+' tools')[-1]
+    check('(+1 -1)' in section and 'Bash(' in section and '@ Read pair.txt' in section,'Full edit line stats, Bash and native codemode child renderer are visible')
+    keys(b'\x0f','Full tools Ctrl+O collapse');settle()
+    request('Full thinking',{'thinking':'FULL-THINKING-FIRST\n'+'all reasoning is preserved. '*20+'\nFULL-THINKING-LAST','reply':'THINKING-PAIR-DONE'})
+    check('FULL-THINKING-LAST' in view(),'Full Thinking remains visible')
     command('/new');settle(1)
     # Large and control-character writes must keep disk bytes while reporting display limits.
     (ROOT/'workspace/large.txt').write_text('old\n'*4002)
@@ -240,9 +246,7 @@ try:
     aborted=[e['data'] for e in records() if e['type']=='tool_execution_end' and e['data']['toolName']=='bash'][-1]
     check(aborted.get('isError') and 'Command aborted' in json.dumps(aborted['result']['content']),'Independent Bash reports actual abort result')
     check('Interrupted' in view() or 'Command aborted' in view(),'Cancellation has an explicit terminal result');snap('independent interruption')
-    command('/lowpower on'); settle(); command('/new'); settle(1)
-    command('/lowpower status'); settle(); snap('lowpower-after-new')
-    check('Low power: off' in view(),'new session resets lowpower to off')
+    command('/new'); settle(1);command_availability('new session')
     check(json.loads((ROOT/'agent/settings.json').read_text())['theme']=='codex-pi','Saved theme remains after reload/new')
     # Prefix, shell and untrusted project configuration through real model tool execution.
     shell=ROOT/'shell-wrapper'
