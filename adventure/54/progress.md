@@ -10,7 +10,7 @@
 
 ## Current Goal or Problem
 
-为仓库内 Pi 提供可复用的 TUI 局部刷新机制，降低动态 UI 额外引起的 CPU 渲染开销，并实际给 codex-ui 添加 Working 动画和 token 速率显示。位置与完整统计口径尚待确定，旧两关切片已暂停审核，当前回到新增 Planning，尚未派发 worker。
+为仓库内 Pi 提供可复用的 TUI 局部刷新机制，降低动态 UI 额外引起的 CPU 渲染开销，并实际给 codex-ui 添加 Working 动画和 token 速率显示。统计口径已确定；位置与 UI 生命周期尚待确定。旧两关切片已暂停审核，当前在 Planning #59，真实 TUI 布局原型已完成，等待用户体验，尚未派发 worker。
 
 ## Evolution
 
@@ -49,6 +49,8 @@
 - 新范围的源码证据见 [token-rate-sources.md](evidence/token-rate-sources.md)。OpenAI/Codex 的准确 usage 在响应结束时更新；delta 不是 token；最终 output 已含 reasoning；durationMs 是完成后的请求总时长。实时估算标识已获用户确认，算法未定。现有动画只作用于标题，TUI 内的 Working 被隐藏。
 - [窗口实验](experiments/token-window.mjs) 与 [结果](evidence/token-window.json) 已通过真实 AssistantMessageEventStream 队列验证片段数量无关、共享 partial 不重复计数、过期、完整工具参数去重、响应隔离和固定桶存储。字符/3.5 仅为低成本实验，不代表精确 tokenizer；完整 provider 与生产生命周期未验。无后台进程或联网模型请求。
 
+已按用户确认制作布局原型，见 [证据摘要](evidence/status-placement-prototype.md)。真实 Pi CLI 的普通和全屏模式共 34 项 PTY 断言通过；无模型调用，进程与临时会话均清理。原型本体位于本 worktree 的 `adventure/54/prototypes/status-placement/`，因仓库忽略与提交门禁规则仅保留本地，未加入 Git；清理 worktree 前须处置。原型未含局部刷新补丁，不可当 CPU 收益证明或生产实现。最终位置尚未获用户确认。
+
 ## Current Assumptions
 
 正式区域追踪、稳定 TUI Proxy 下的句柄、全屏 layout 更新及复杂交互回退仍需实施验证，义务保留，待修订切片重新分配。已有机制证据有效，无需重复调查；新增实际 UI 和统计需要独立规划，不能按旧草案补几个执行步骤就视作已审核。
@@ -57,9 +59,9 @@ CPU 预算为待审核切片的一部分：200/1000 对历史纯动态帧至少�
 
 ## Continuation Point
 
-继续 Planning #59。已向用户提出原型范围：真实 TUI 中可切换“速率与 Working 同行”和“速率放 footer”，包含动画、受控速率、`-- t/s` 与窄窗口，不调用模型、不改正式功能。当前等待是否制作的答复，不默认同意，也不要求再次确认已定统计口径。
+继续 Planning #59。用户已批准制作，原型已完成并技术验证，当前等待用户体验后比较 A「Working 同行」与 B「footer 右侧」。运行方式与边界见证据摘要和原型本地 README；按 Tab 切换，F3 切换数据，F10/Ctrl+C 退出。不要重新询问是否制作，也不要默认用户已选位置。
 
-若同意，完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/make-a-prototype/SKILL.md` 及必要引用，在本场 `prototypes/` 按批准范围制作并技术验证，交给用户体验后决定位置；遵守该 skill 的工具与协作要求。若不做原型，直接逐项讨论位置与 UI 生命周期。无论哪条路，都要确定最终结束显示、Working 的启停/等待/中断、窄屏和低功耗/原版行为，再修订切片。
+如需修改原型，沿用 `/Users/wangxuyang/.agents/skills/wangxuyang/make-a-prototype/SKILL.md`；修改后补验受影响场景，再交用户审阅。按 adventure 的原型流程，用户确认结论或明确跳过后才推进依赖该结论的工作。还要确定最终结束显示、Working 的启停/等待/中断、窄屏和低功耗/原版行为，再修订切片；已定统计口径不重复询问。
 
 完成新增 Planning 后移交 Spec，重写 [已失效的切片草案](slices.md)，重新提交审核。当前没有 Implementation Issue 或 worker。用户接受修订后的完整切片后，按 adventure 创建实际需要的 Implementation Issues 与依赖，保存并派发首关。worker 必须完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md` 及必要引用，在 Issue 正文维护计划；提供本 worktree、当时 HEAD 和操作限制，不继承整段对话、不再委派。委派工具遵守当前 orchestration 规则。
 
