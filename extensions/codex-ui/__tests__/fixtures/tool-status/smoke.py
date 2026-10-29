@@ -13,6 +13,7 @@ import sys
 import termios
 import time
 import pyte
+from held_frame import held_frame
 here = Path(__file__).resolve().parent
 repo = here.parents[4]
 pid, fd = pty.fork()
@@ -28,6 +29,7 @@ decoder = codecs.getincrementaldecoder('utf-8')('replace')
 status = None
 output = bytearray()
 screens = {}
+held_frames = {}
 success_color = '85858a'
 mcp_only = '--mcp-only' in sys.argv
 target = 'mcp' if mcp_only else 'all'
@@ -118,12 +120,26 @@ try:
         screens[f'running-{outcome}'] = view()
         colors = marker_colors()
         assert len(colors) >= call_count and colors[-call_count:] == ['ffe66d'] * call_count, colors
-        frozen = view()
-        settle(1.1)
         if mcp_only:
+            # This entry intentionally does not load codex-ui or its Working widget.
+            row = next(y for y in reversed(range(screen.lines)) if '⌁ Calling fixture / search' in screen.display[y])
+            frozen = tuple(screen.buffer[row][col] for col in range(screen.columns))
+            settle(1.1)
+            assert tuple(screen.buffer[row][col] for col in range(screen.columns)) == frozen
             assert marker_colors()[-call_count:] == ['ffe66d'] * call_count
         else:
-            assert view() == frozen, 'Static markers must not animate while held'
+            frozen, initial_animation = held_frame(screen, f'Fixture: {target} / hold')
+            animations = [initial_animation]
+            for _ in range(14):
+                settle(0.08)
+                cards, animation = held_frame(screen, f'Fixture: {target} / hold')
+                assert cards == frozen, 'Held tool text, positions and cell styles must remain static'
+                assert marker_colors()[-call_count:] == ['ffe66d'] * call_count
+                animations.append(animation)
+            assert len({frame[0] for frame in animations}) >= 5, 'Working spinner must keep advancing'
+            assert len({frame[1] for frame in animations}) >= 2, 'Working shimmer must keep advancing'
+            assert all(frame[2] == '5efcff' for frame in animations), 'Working spinner must retain its accent'
+            held_frames[outcome] = {'staticRows': [row for row, _cells in frozen], 'animations': animations}
         command(f'/finish {outcome}')
         wait(lambda: 'Fixture finished.' in view().split(f'Fixture: {target} / hold')[-1], f'finish {outcome}')
         settle()
@@ -213,7 +229,7 @@ try:
     wait(lambda: status is not None, 'shutdown')
     assert os.waitstatus_to_exitcode(status) == 0
     mode = '-'.join((arg.lstrip('-') for arg in sys.argv[1:])) or 'regular'
-    (repo / '.tmp' / f'tool-status-smoke-{mode}.json').write_text(json.dumps({'passed': True, 'pid': pid, 'screens': screens}, ensure_ascii=False, indent=2))
+    (repo / '.tmp' / f'tool-status-smoke-{mode}.json').write_text(json.dumps({'passed': True, 'pid': pid, 'screens': screens, 'heldFrames': held_frames}, ensure_ascii=False, indent=2))
     print(json.dumps({'passed': True, 'mode': mode, 'pid': pid}))
 finally:
     checking_markers = False
