@@ -70,3 +70,11 @@ conda run --no-capture-output -n codex-py312 python adventure/54/prototypes/old-
 - `verification-1793239144646059000`：最终普通/全屏共 40 项检查通过，含十帧转圈全部出现、逐字反光、二者暂停、B 位置、32/40/100 列、无数据、四位速率、停止/重启、真实 `/quit`、零模型调用及本次目录删除。两组测试进程均停止，无测试监听服务；用户仍在体验的实例未动。
 
 `pnpm_config_verify_deps_before_run=false pnpm run check` 本轮再次退出码 0，196 个文件、2913 个测试通过；日志 `.tmp/working-spinner-check.log`。正式源码、全局 Pi 及依赖配置没有改动。原型本体继续仅在本 worktree 保留，40 项独立 PTY 验证才是它的行为证据。
+
+## Spinner color correction
+
+用户认可图标形状，但指出应有颜色。上一版原型将转圈传给 `theme.fg('muted', ...)`，因此显示灰色；现改为主题 `accent`，codex-pi 的值为青色 `#5efcff`。文字反光和 80ms 转圈周期不变。
+
+历史最初的行内大小圆点指示器确有 accent 色，主题的青色值也与当前一致；标题转圈历史仅包含纯文本，不应把本次改动描述为已经证实的同一彩色转圈实现复刻。
+
+真实 PTY 两种模式共 42 项检查通过，新增读取实际转圈单元格并断言前景色为 `5efcff`，同时保留十帧、反光、暂停、窄屏、原生 `/quit`、零模型调用与本次资源清理检查。原始证据为 `verification-1793239317110803000/`，日志 `.tmp/working-spinner-color.log`。两组本次测试进程均停止，用户体验实例未动。

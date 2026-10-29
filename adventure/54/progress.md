@@ -55,6 +55,8 @@
 
 新入口为本 worktree 的 `adventure/54/prototypes/old-codex-working/README.md` 和 `launch.mjs`，原 `status-placement/` 保留。两者均因仓库规则只保留本地，未加入 Git；清理 worktree 前须处置。原型没有局部刷新补丁，不能证明 CPU 收益或作为生产实现。
 
+用户随后指出转圈应有颜色。原型由 `muted` 改为主题 `accent`，codex-pi 为青色 `#5efcff`，文字反光不变。历史早期行内指示器含 accent 色，标题转圈本身仅为纯文本；不要声称已经证实旧版同一转圈有相同着色实现。当前采用主题强调色满足彩色图标要求，仍在同一原型入口体验。
+
 ## Current Assumptions
 
 正式区域追踪、稳定 TUI Proxy 下的句柄、全屏 layout 更新及复杂交互回退仍需实施验证，义务保留，待修订切片重新分配。已有机制证据有效，无需重复调查；新增实际 UI 和统计需要独立规划，不能按旧草案补几个执行步骤就视作已审核。
