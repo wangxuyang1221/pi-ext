@@ -12,7 +12,7 @@
 
 为仓库内 Pi 提供可复用的文本区域刷新能力，降低动画和 footer 更新带来的额外 CPU，并给 codex-ui 实际加入 Working 动画及实时估算 token 速率。全局 Pi 的启动、安装及升级保持独立。
 
-[Planning #59](https://github.com/wangxuyang1221/pi-ext/issues/59) 已通关，样式、位置与生命周期已确认。[正式实施切片](slices.md) 已获认可，用户另追加验证系统创建、维护、独立验收和修复重验闭环。#61–#66 已建立；#61 普通模式局部刷新已通过主代理验收，当前进入 #62 全屏实现。用户另行明确要求立即移除 lowpower，独立 [Implementation #60](https://github.com/wangxuyang1221/pi-ext/issues/60) 已完成并通过验收；该清理已结束；当前继续已获授权的正式开发。
+[Planning #59](https://github.com/wangxuyang1221/pi-ext/issues/59) 已通关，样式、位置与生命周期已确认。[正式实施切片](slices.md) 已获认可，用户另追加验证系统创建、维护、独立验收和修复重验闭环。#61–#66 已建立；#61 普通模式和 #62 全屏局部刷新均已通过主代理验收，当前进入 #63 正式 Working/速率。用户另行明确要求立即移除 lowpower，独立 [Implementation #60](https://github.com/wangxuyang1221/pi-ext/issues/60) 已完成并通过验收；该清理已结束；当前继续已获授权的正式开发。
 
 ## Evolution
 
@@ -40,7 +40,7 @@
 ### Repository and implementation
 
 - 初始基线 `31a7061ce853233bdeb8686487a35d03fb4c1e5a`，Node v22.22.2，pnpm 11.9.0，Pi 固定 1.4.0；#60 实施基准 `01be7d6`。
-- 已有 coding-agent 会话摘要补丁及仓库 `pnpm exec pi`，见 [说明](../../docs/pi-session-summary-patch.md)。新增 pi-tui 补丁已由 #61 实现并验证干净冻结安装、仓库 bin 加载和原版回退；全屏局部优化仍待 #62。原版正常 requestRender 保留功能，缺失的仅是 CPU 优化。
+- 已有 coding-agent 会话摘要补丁及仓库 `pnpm exec pi`，见 [说明](../../docs/pi-session-summary-patch.md)。新增 pi-tui 补丁已由 #61 实现并验证干净冻结安装、仓库 bin 加载和原版回退；全屏局部优化已由 #62 实现并验收。原版正常 requestRender 保留功能，缺失的仅是 CPU 优化。
 - #60 已交付，提交 `7480598722ed333db5948e67b11e94384c37bc04`。codex-ui 269 项定向测试、普通/全屏真实 CLI 各 124 项检查、codemode 两入口、tool-status 三旅程及 headless 12 场景通过；最终 check 为 196 文件/2898 测试。主代理核对代码、实际输入/工具路径、日志和清理结果。详细证据及未验证边界见 [移除记录](evidence/remove-lowpower.md)，原始运行资料仅保留在本 worktree 的 .tmp。
 - 主仓库 main 未修改。原型位于忽略目录，只保留本地；产品清理不删除原型或用户启动的实例。
 
@@ -59,6 +59,13 @@
 - 完整 check 197 文件/2908 测试，10 项真实 renderer 契约；干净安装、原版/补丁实际 CLI、扩展真实 factory 与 PTY、既有 codex-ui 两模式各124项回归通过。23个记录PID均退出，无监听，用户原型未动。没有执行物理终端像素/拖选/系统剪贴板，不将自动测试当作 #65/#66 全部通过。
 - 安装夹具和原始日志位于本 worktree .tmp/local-refresh/、.tmp/local-refresh-install-CT3VmH/。CPU脚本 scripts/local-refresh-cpu.mjs、安装脚本 local-refresh-install.mjs、PTY脚本 local-refresh-pty.py 已成为正式仓库入口；后续扩展这些入口，不复制临时实验作为生产能力。
 
+### Fullscreen region implementation
+
+- #62 提交 c835fb2，沿用正式 API，同步真实 layout 叶节点 lines、直接所属 ScrollView 的 scrollContentLines 和受影响屏幕行；同高时保留真实几何。有效选区、搜索、overlay、图片、横向/复杂嵌套布局及动态 visible 回调正常回退，不能把旧屏幕字符串当作唯一缓存。
+- [本关证据](evidence/fullscreen-local-refresh.md) 和 [全部 CPU 批次](evidence/fullscreen-local-refresh-cpu.json)。主代理核对最终 8 轮样本的中位数、预算、样本数量、终端字节和 patch 哈希，全部一致；早期失败与排除样本另保留，不能混为最终结论。
+- 完整 check 为197文件/2918测试、正式契约20项；最终干净补丁普通/全屏PTY、原版兼容、Kitty协议及既有codex-ui两模式各124项回归通过。宿主复制回调得到最新文本，鼠标命中和搜索读取更新后的布局内容。物理终端像素、系统剪贴板和图片像素仍不是这些证据覆盖的范围。
+- 23个记录PID和进程组已退出，无监听，运行目录删除而证据保留。原始结果在 .tmp/fullscreen-local-refresh/；最终干净安装在 .tmp/local-refresh-install-2up97B/。动态visible守卫后已经重验最终patch；既有未接入API的codex-ui回归版本边界见证据。
+
 ### Rate and lifecycle
 
 - [统计来源](evidence/token-rate-sources.md) 说明准确 usage 常在响应结束更新，delta 不是 token，最终 output 可能含 reasoning。字符/3.5 只用于低成本实验，不代表用户指定的估算算法。
@@ -75,7 +82,7 @@
 
 ## Current Assumptions
 
-普通模式正式局部帧已由 #61 实现并验收；全屏局部帧的布局同步和交互边界仍待 #62 实施。已有实验足以确定路线，不能推导最终 CPU 和正确性已经通过；失败须修复或重开规划，不由 worker 放宽预算。
+普通模式和全屏正式机制均已实现并验收。实际 Working/速率的生产组合、采样开销及最终独立验收仍待 #63–#66。已有实验足以确定路线，不能推导最终 CPU 和正确性已经通过；失败须修复或重开规划，不由 worker 放宽预算。
 
 估算算法是内部实施选择，须说明精度、有界内存和开销。真实统计与动画整合后可能改变 CPU，最后一关必须测组合路径，不能仅复用示例结果。
 
@@ -83,9 +90,9 @@
 
 独立 #60 已通过验收，命令、状态及专用分支已删除，默认完整工具显示和执行边界保留。提交 `7480598`；主代理随后提交本存档、生命周期证据和三关草案，并推送冒险分支。无待返工项、无继续运行的 worker 任务，不要重新委派移除工作。
 
-用户已认可三关并增加验证交付条件，不要再请求同一范围审核。[#61](https://github.com/wangxuyang1221/pi-ext/issues/61) 已完成，提交 d3599d77fb96d3964208f6f0b745185223bae0a9，主代理已审阅源码/测试与 CPU 样本并验收关闭。当前进入 #62 全屏，随后 #63 正式 Working/速率、#64 新能力验证 skill、#65 维护 codex-ui 验证、#66 独立最终验收。原生父子和阻塞依赖已建立。不要重新派发普通模式实现。
+用户已认可三关并增加验证交付条件，不要再请求同一范围审核。[#61](https://github.com/wangxuyang1221/pi-ext/issues/61) 已完成，提交 d3599d77fb96d3964208f6f0b745185223bae0a9，主代理已审阅源码/测试与 CPU 样本并验收关闭。随后 #62 也已通过验收，提交 c835fb27d95fec9b420332a847efe6d2f80f931b。当前进入 #63 正式 Working/速率，随后 #64 新能力验证 skill、#65 维护 codex-ui 验证、#66 独立最终验收。原生父子和阻塞依赖已建立。不要重新派发已完成的两种模式机制实现。
 
-#62 编码任务使用 Codex gpt-6-astra / high，工作位置必须显式指定本冒险 worktree，T3 shared child 默认根目录不能当成工作位置。当前已保存 HEAD 从 git 获取。worker 不继承对话，不再委派，完整读取 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md 及必要引用，计划写在 Issue。遵循 T3 返回的 next，完成自动唤醒主线程，不轮询正在运行任务。任务 ID 与线程链接将写入 Map；未收到结果前不能重复派发。
+#63 编码任务使用 Codex gpt-6-astra / high，工作位置必须显式指定本冒险 worktree，T3 shared child 默认根目录不能当成工作位置。当前已保存 HEAD 从 git 获取。worker 不继承对话，不再委派，完整读取 /Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md 及必要引用，计划写在 Issue。遵循 T3 返回的 next，完成自动唤醒主线程，不轮询正在运行任务。任务 ID 与线程链接将写入 Map；未收到结果前不能重复派发。
 
 开发结束后 #64 编码 worker 必须完整使用 /Users/wangxuyang/.agents/skills/pstack/create-verification-skill/SKILL.md 及其 references/feature-map-example，为实际新增能力生成并实跑项目 skill。不要为“新 extension”字样凭空新增无必要产品扩展。#65 使用 /Users/wangxuyang/.agents/skills/pstack/maintain-verification-skill/SKILL.md 维护 .cursor/skills/verify-pi-codex-ui，完整执行每 feature 的并行只读源码审查及串行 live 验证；维护协调者和其只读子代理均 gpt-6.1-sol / high。明确授权该维护任务进行 skill 所要求的只读委派，其他 worker 不再委派。
 
