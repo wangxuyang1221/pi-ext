@@ -122,7 +122,7 @@
 
 ## Current Assumptions
 
-Working/footer实现与CPU预算已通过独立自动验收；产品和宿主补丁本轮未变。Termius输入框前景及生产/copy修复已有独立证据。共享验证驱动的启动回显修复现已在真实Termius普通/全屏独立复验通过。完整#66仍为54 passed、0 failed、4 unverified；多行composer选区、滚动/默认搜索输入、图片像素、远程provider及Write/Edit精确await不能由已有局部通过推断。
+Working/footer实现与CPU预算已通过独立自动验收；产品和宿主补丁本轮未变。Termius输入框前景及生产/copy修复已有独立证据。共享验证驱动的启动回显修复现已在真实Termius普通/全屏独立复验通过。最近独立计数仍为54 passed、0 failed、4 unverified。主代理受控实机对照已证明Termius粘贴LF→CR，完整三行选择须按校准后的通道重新验证；不能据此推断剪贴板原始LF/CR字节。联网模型和费用现已获明确授权，详见续接点。
 
 ## Execution and Verification
 
@@ -138,12 +138,16 @@ Working/footer实现与CPU预算已通过独立自动验收；产品和宿主补
 
 ## Continuation Point
 
-#60–#65已验收。#66共享启动修复已获本轮独立验证；累计仍54 passed、0 failed、4 unverified，未关闭#66/Map/Spec。58个ID逐条结果和skill手工条款映射见最新报告；没有新增完整通过ID。当前报告与progress仅待主代理验收，未push、未建PR/merge/deploy。
+#60–#65已验收。#66共享启动修复的独立证据提交`e5ef3a8`已由主代理核对：49份当前来源、399份artifact哈希、四份实际复制文件和58个已退出PID均一致。最近独立计数54 passed、0 failed、4 unverified，58项逐条条件见[最新报告](evidence/termius-shared-startup-verification.md)。没有用户最终接受，不关闭#66、Map或Spec。
 
-下一步主代理先核对本轮hash、六份共享summary/原始ANSI、四份直接事件、四份实际粘贴文件、两次多行REJECTED及清理记录。需要定位三行composer真实选区复制不一致、普通/全屏滚动和默认搜索键无可见效果；不得补夹具或降低断言。若需产品或驱动修复，由主代理按ub-mode实施，再派新的独立Sol high复验；本轮验证者未做编码修复。
+主代理已定位多行接收的传输差异，见[对照报告](evidence/termius-paste-transport.md)及其JSON索引。在不经过Pi复制的真实Termius中，预先写入LF样本，未修改的严格receiver按LF拒绝、按预先定义CR完全匹配22字节；没有改写实际数据。旧两次三行REJECTED不能单独归因为产品故障。两个验证skill的manual说明已加入校准指针和边界，未修改产品、驱动、测试或预算。
 
-图片像素需获准且实际支持相应协议的终端，不伪造TERM_PROGRAM，不以文本fallback/协议字节冒充。远程provider仍缺指定模型、凭据与费用范围，不读用户auth、不发付费请求；Write/Edit精确await仍缺可观察可控阶段。真实前置条件满足后才继续对应独立会话，不反复跑离线证据。
+下一独立Sol high任务先校准同一终端粘贴通道，再重验预先固定的85字节三行草稿。源LF文本、预先导出的CR传输预期、实际原始文件三者分开；只能按已证明转换逐字节匹配，不能trim/补空格/从actual反推。该证据可证明选择内容及换行结构一致，不证明剪贴板原始LF/CR区别。旧/copy严格原始字节要求保持，独立审查其接收器canonical/ICRNL条件及结论边界，不因文本相等就断言未发生转换，也不修改旧原始证据。
 
-Termius 9.41.1当前原生CUA可用，10.2.1只是更新提示，不更新；AX隐藏Value可能滞后，用新鲜截图。只创建并操作新的Local Terminal，保留原标签/原型/旧证据，不访问已安全拒绝的Ghostty，不绕过CUA。剪贴板隔离样本及真实系统粘贴授权持续有效；使用受限receiver，REJECTED即停止，不读未知内容，copy至接收结束不用app.paste。消费安装仍`.tmp/local-refresh-install-CzIw6h`，不需要重新build/pack或完整CPU矩阵。
+用户已指定联网目标：Pi中实际可用的`openai-codex/gpt-6-luna`、thinking `medium`，不设费用上限。最初6.1-luna不可用，现模型为用户明确改选，不能自行再换。验证者仍gpt-6.1-sol/high，测试对象模型为gpt-6-luna，两者不要混淆。只执行本任务所需的隔离真实请求和生产codex-ui Working/速率旅程；不得把T3委派成功当成真实TUI联网验收。允许使用现有Pi认证但不要把凭据值读入日志或证据，不复制用户历史；隔离临时凭据不得归档或提交，结束删除。不修改全局Pi入口、配置或升级流程；缺凭据时通过安全输入工具处理，不向聊天索要密钥。
 
-没有用户最终接受，不关闭#66、Map、Spec或删除worktree。没有本轮遗留build/PTY/质量进程。
+剩余可执行物理分支包括普通终端滚动、全屏鼠标滚动及默认搜索键；替代Ctrl+F与Ctrl+Home/End的既有通过范围保留，不反复重跑。图片像素仍需实际支持协议的获准终端，禁止伪造TERM_PROGRAM或访问被安全拒绝的Ghostty。Write/Edit精确await需要可观察可控阶段，不用人工抢时序冒充。每个条件分别报告，不新增所有维度笛卡尔积，也不自行豁免。
+
+Termius9.41.1当前可操作，但本轮曾截图滞后于实际shell：命令已启动而截图仍显示探针；Ctrl+C正常取消，原生Window Zoom后显示真实状态。确认新鲜READY画面再输入；自己的标签关闭并恢复窗口后14个记录PID已退出、无监听。原标签和原型保留，原始诊断在`.tmp/termius-paste-diagnosis-66`。只有已知受控样本写入剪贴板，未读取原内容，授权继续有效。复制至接收完成不用app.paste。不要重复之前失败的焦点假设而不核对实际PID/画面。
+
+消费安装仍`.tmp/local-refresh-install-CzIw6h`，各32个JS与dist已核对。当前无主代理build/PTY/质量进程。没有产品代码变化，不需要重跑完整CPU或完整自动矩阵；新独立任务以当前skills/来源和现有证据为基础。最新提交与运行任务以Map和git为准，异步完成自动通知，不轮询。

@@ -39,6 +39,8 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 
 以下部分不能凭 pyte 或文件断言标为通过。执行人必须保存动作、画面和结果；缺少该证据时，对应 ID 保留 `unverified`，同时记录自动通过部分。
 
+多行选区的真实粘贴先按 [Paste transport](../../verify-pi-text-regions/references/manual-terminal.md#paste-transport) 校准终端通道。选区内容一致和剪贴板原始字节一致分开报告；校准不放宽下方 `/copy` 的逐字节要求。
+
 1. `ui-composer` 的终端像素和拖选。用真实终端启动共享 `tui codex-ui`，输入含中文、ASCII、长行的三行文本。分别在 light/codex-pi、窄屏/宽屏、`/new`/`/fork`/`/resume` 后拖选输入和空白区，检查文字清晰、背景无缺口、光标无残影、选择内容与输入一致。保留当前终端配色以检验草稿是否依赖终端默认前景。pyte 的前景和背景断言只证明 ANSI 单元格语义。
 2. `ui-reply-markdown` 的 `/copy`。在已允许写系统剪贴板的人工终端中，生成上述代表 Markdown，包含首尾空白、尾部 LF 和多段正文；运行 `/copy`，确认成功提示后实际粘贴到本轮文件，与当前分支最近已完成 assistant 的各段正文连接结果逐字节比较。代码围栏、缩进和表格分隔线必须一致，不含 renderer 添加的外层列表；不得先 trim 或规范化换行。补丁/原版、普通/全屏分别留证。自动驱动不会写系统剪贴板。
 
