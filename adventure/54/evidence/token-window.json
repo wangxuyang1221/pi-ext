@@ -1,0 +1,24 @@
+{
+  "node": "v22.22.2",
+  "pi": "1.4.0",
+  "checks": [
+    "no data returns unavailable, not zero",
+    "queued shared partial cannot double-count text, thinking or tool arguments",
+    "final usage and reasoning totals do not replace recent visible-output rate",
+    "two-second inactivity expires to unavailable",
+    "new response clears the window and rejects old callbacks",
+    "complete tool arguments without deltas count once at completion",
+    "redacted payloads and tool results are excluded",
+    "fragmentation does not change the estimate",
+    "sample storage remains twenty buckets after 100000 updates"
+  ],
+  "fixtureRate": 10,
+  "sampleBuckets": 20,
+  "timeQuantumMs": 100,
+  "limitations": [
+    "Controlled events through the real stream queue, not live provider integration",
+    "Character/3.5 is a coarse estimate, not calibrated model tokenization",
+    "No final missing-suffix reconciliation or arbitrary provider replay handling",
+    "Lifecycle-to-extension event mapping and production resource cleanup remain to implement"
+  ]
+}

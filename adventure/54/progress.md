@@ -25,7 +25,7 @@
 - [Map #54](https://github.com/wangxuyang1221/pi-ext/issues/54)、[Spec #55](https://github.com/wangxuyang1221/pi-ext/issues/55)；完整规格只维护在 Spec 正文。
 - [方向 Planning #56](https://github.com/wangxuyang1221/pi-ext/issues/56) 已通关。其初始仅提供机制的范围后来被用户扩展，当前以 Spec 修订及 #58/#59 为准，实际 Working 和 token 速率已在范围内，样式和位置尚待确认。
 - [可行性 Planning #57](https://github.com/wangxuyang1221/pi-ext/issues/57) 的有效规则已移交 Spec。采用显式文本区域与保留帧方向；无效几何、正常更新或其他复杂情况允许正确回退，不用全树通用缓存作为生产路线。CPU 预算和完整边界以 Spec 为准。
-- 新增 [#58](https://github.com/wangxuyang1221/pi-ext/issues/58) 确定 token 来源/口径，[#59](https://github.com/wangxuyang1221/pi-ext/issues/59) 确定 Working 与速率布局/生命周期。已确认实时估算显示 `≈`、最近约 2 秒窗口、计入正文/可见思考/工具调用参数，不计输入/工具结果/未传出的隐藏思考。当前询问运行中暂无可计数输出时显示 `-- t/s` 还是隐藏速率，推荐前者，尚待答复。正文自身渲染优化仍不在范围。
+- [#58](https://github.com/wangxuyang1221/pi-ext/issues/58) 已通关，统计规则已移交 Spec：实时估算带 `≈`、最近约 2 秒窗口、计入正文/可见思考/工具调用参数，不计输入/工具结果/未传出的隐藏思考；运行中暂无可计数新输出时显示 `-- t/s`，保留位置，不显示 `0 t/s`。正文自身渲染优化仍不在范围。当前进入 [#59](https://github.com/wangxuyang1221/pi-ext/issues/59) 确定位置与 UI 生命周期。
 - 独立分支为 `adventure/pi-animation`，worktree 为 `/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation`；资料位于本目录。
 - 沿用 adventure 流程，规划取舍和实施切片均需用户确认，之后由主代理协调 worker 逐关实施。当前没有 worker，没有产品代码修改。
 - 提交推送仅包含本场工作；不创建 PR、不合并、不部署，不修改全局 Pi。工作目录外未授权写入需先征得同意。
@@ -47,6 +47,7 @@
 - 区域实验仍使用夹具坐标，未实现自动几何、布局元数据同步或正式 API；仅证明收益空间。不能直接把实验包装当成正式宿主补丁。临时生成的 renderer 文件已清理。
 - CPU 调查后的 `pnpm_config_verify_deps_before_run=false pnpm run check` 再次通过，2913 tests passed。没有产品代码变更或全局 Pi 变更。
 - 新范围的源码证据见 [token-rate-sources.md](evidence/token-rate-sources.md)。OpenAI/Codex 的准确 usage 在响应结束时更新；delta 不是 token；最终 output 已含 reasoning；durationMs 是完成后的请求总时长。实时估算标识已获用户确认，算法未定。现有动画只作用于标题，TUI 内的 Working 被隐藏。
+- [窗口实验](experiments/token-window.mjs) 与 [结果](evidence/token-window.json) 已通过真实 AssistantMessageEventStream 队列验证片段数量无关、共享 partial 不重复计数、过期、完整工具参数去重、响应隔离和固定桶存储。字符/3.5 仅为低成本实验，不代表精确 tokenizer；完整 provider 与生产生命周期未验。无后台进程或联网模型请求。
 
 ## Current Assumptions
 
@@ -56,7 +57,9 @@ CPU 预算为待审核切片的一部分：200/1000 对历史纯动态帧至少�
 
 ## Continuation Point
 
-继续 Planning #58，窗口和计入内容均已确认，不再重复询问。当前等待用户决定运行中无可计数新输出时显示 `-- t/s` 或隐藏速率。随后完成必要的数据规则并推进 #59 的位置、最终结束显示、Working 生命周期和低功耗/原版行为。用户未同意制作原型；若需要，用 adventure 的 references/prototyping.md 先商定范围，再读取 make-a-prototype。
+继续 Planning #59。已向用户提出原型范围：真实 TUI 中可切换“速率与 Working 同行”和“速率放 footer”，包含动画、受控速率、`-- t/s` 与窄窗口，不调用模型、不改正式功能。当前等待是否制作的答复，不默认同意，也不要求再次确认已定统计口径。
+
+若同意，完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/make-a-prototype/SKILL.md` 及必要引用，在本场 `prototypes/` 按批准范围制作并技术验证，交给用户体验后决定位置；遵守该 skill 的工具与协作要求。若不做原型，直接逐项讨论位置与 UI 生命周期。无论哪条路，都要确定最终结束显示、Working 的启停/等待/中断、窄屏和低功耗/原版行为，再修订切片。
 
 完成新增 Planning 后移交 Spec，重写 [已失效的切片草案](slices.md)，重新提交审核。当前没有 Implementation Issue 或 worker。用户接受修订后的完整切片后，按 adventure 创建实际需要的 Implementation Issues 与依赖，保存并派发首关。worker 必须完整读取 `/Users/wangxuyang/.agents/skills/wangxuyang/write-todo-list/SKILL.md` 及必要引用，在 Issue 正文维护计划；提供本 worktree、当时 HEAD 和操作限制，不继承整段对话、不再委派。委派工具遵守当前 orchestration 规则。
 
