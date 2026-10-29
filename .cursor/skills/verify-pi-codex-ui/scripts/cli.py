@@ -1,7 +1,9 @@
+#!/usr/bin/env -S conda run --no-capture-output -n codex-py312 python
 """Real CLI/PTy acceptance. Substitute the model boundary; keep tools and storage real."""
 import codecs, errno, fcntl, json, os, pty, re, select, shutil, signal, struct, subprocess, sys, tempfile, termios, time, traceback
 from pathlib import Path
 import pyte
+from health import doctor
 
 BASE = Path(__file__).resolve().parent
 REPO = BASE.parents[3]
@@ -40,13 +42,14 @@ def check(condition, message):
 
 def start(extra=None):
     global pid, fd, status, screen, stream, decoder, raw
+    preflight = doctor(REPO, EVIDENCE, str(len(processes) + 1))
     raw = bytearray(); status = None
     args = cli + ['--tui-mode', MODE] + (extra or [])
     before = sum(e['type']=='resources_discover' for e in records())
     pid, fd = pty.fork()
     if pid == 0:
         os.chdir(ROOT/'workspace'); os.execvpe(args[0], args, env)
-    processes.append({'pid':pid,'command':args})
+    processes.append({'pid':pid,'command':args,'doctor':preflight})
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 60, 140, 0, 0))
     screen = pyte.Screen(140,60); stream=pyte.Stream(screen); decoder=codecs.getincrementaldecoder('utf8')('replace')
     wait(lambda:sum(e['type']=='resources_discover' for e in records())>before,'ready')

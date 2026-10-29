@@ -41,4 +41,6 @@ pnpm test extensions/codex-ui/__tests__/write-execution.test.ts extensions/codex
 
 固定工具播放用于显示，不证明 write 实际落盘。超过 diff 限制应显示 Diff unavailable；不能伪造行数。
 
+工具卡片的静态状态标记与 Working 动画属于不同区域。held 工具期间分别核对卡片文案/颜色稳定和 Working 持续推进；整张屏幕不变不是工具状态的通过条件。
+
 验收依据为 [write-execution.test.ts](../../../../extensions/codex-ui/__tests__/write-execution.test.ts)、[write-host-validation.test.ts](../../../../extensions/codex-ui/__tests__/write-host-validation.test.ts)、[grouped-read.test.ts](../../../../extensions/codex-ui/__tests__/grouped-read.test.ts)、[grouped-bash.test.ts](../../../../extensions/codex-ui/__tests__/grouped-bash.test.ts)、[diff-display-safety.test.ts](../../../../extensions/codex-ui/__tests__/diff-display-safety.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

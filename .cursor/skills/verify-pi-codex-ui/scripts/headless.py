@@ -1,6 +1,8 @@
+#!/usr/bin/env -S conda run --no-capture-output -n codex-py312 python
 """Exercise CLI print/json and RPC, not SDK mode flags."""
 import json, os, select, shutil, signal, struct, subprocess, tempfile, time, traceback, zlib, base64
 from pathlib import Path
+from health import doctor
 BASE=Path(__file__).resolve().parent
 REPO=BASE.parents[3]
 EVIDENCE=REPO/'.tmp/test-results'/('codex-ui-headless-'+str(time.time_ns())); EVIDENCE.mkdir(parents=True)
@@ -19,6 +21,7 @@ try:
     for mode in ['print','rpc']:
         for scenario,resize in [('healthy',False),('healthy',True),('global-broken',False),('project-broken',False),('global-unreadable',False),('project-unreadable',False)]:
             label=f'{mode}-{scenario}-{resize}'
+            preflight=doctor(REPO,EVIDENCE,label)
             root=ROOT/label; root.mkdir()
             for name in ['home','agent','workspace','sessions','tmp','config','cache','state','data']: (root/name).mkdir()
             (root/'workspace/.pi').mkdir()
@@ -39,7 +42,7 @@ try:
             if scenario.startswith('project-'): args+=['--approve']
             log=(EVIDENCE/(label+'.jsonl')).open('wb');err=(EVIDENCE/(label+'.stderr')).open('wb')
             p=subprocess.Popen(args,cwd=root/'workspace',env=env,stdin=subprocess.PIPE,stdout=log,stderr=err,start_new_session=True)
-            owned={'pid':p.pid,'command':args,'mode':mode,'autoResize':resize}
+            owned={'pid':p.pid,'command':args,'mode':mode,'autoResize':resize,'doctor':preflight}
             results.append(owned)
             try:
                 if mode=='rpc':

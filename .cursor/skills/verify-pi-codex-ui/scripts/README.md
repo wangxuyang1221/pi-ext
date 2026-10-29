@@ -12,6 +12,10 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 
 `cli.py` 启动仓库固定版本的原生 CLI。`model-provider.ts` 只提供离线模型响应、记录公开事件、注册宿主原有 codemode 工具，并为 `/compact` 提供确定摘要。工具、QuickJS、文件、配置、session、选择器和生产 renderer 均实际运行。该路径不证明真实远程模型会生成相同响应。
 
+两条驱动在每次新 CLI 进程前调用 [health.py](health.py)，保存 `doctor-*.json/.stderr`，对应进程条目的 `doctor` 字段指向它。它复用共享只读 doctor，非零退出、无效输出或验证锁占用时拒绝继续。失败后重新 doctor 并检查该次证据/cleanup，UI 卡住则重启已知状态。所有 pnpm 命令使用 `pnpm_config_verify_deps_before_run=false`，不要并发构建与 PTY。
+
+单独执行 preflight 的命令见 [Helpers](../SKILL.md#helpers)。回归入口为 `conda run --no-capture-output -n codex-py312 python -m unittest discover -s .cursor/skills/verify-pi-codex-ui/scripts -p test_health.py -v`。
+
 `headless.py` 分别启动原生 `--print --mode json` 和 `--mode rpc`。RPC 通过客户端消息发起 prompt；它不是给 SDK 设置一个 mode 字段。工具返回的 PNG 字节需解析为 4000×40 或 2000×20，实际 shell 输出必须写入并读回文件。
 
 只补验控制字符 diff 时，可运行 `cli.py regular --controls` 和 `cli.py fullscreen --controls`。该聚焦路径实际覆盖已有 CRLF 文件、展开 diff，并检查源文件中的清屏和 OSC 标题指令没有执行；它不能代替完整 CLI 旅程。
@@ -29,6 +33,7 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 | `ui-shell-prefix`, `ui-shell-path`, `ui-project-trust`, `ui-settings-error`, `ui-settings-reload` | shell wrapper 真实输出；未信任项目前缀不生效；可信项目语法错误和不可读文件均阻止 read/bash；修复而未 reload 仍拒绝；reload 后恢复；重启为不信任后再次排除项目前缀。 |
 | `ui-codemode-cache`, `ui-inspect-tabs`, `ui-inspect-scroll`, `ui-codemode-resume` | 真实读取累计超过 4MiB；首项缺失、末项可读；方向键/PgDn/PgUp/Shift+Tab；原生 `/resume`、`/tree` 后发后续模型请求核对已保存结果，并确认 raw cache 不从历史恢复。调用顺序、预览外失败和本地 MCP 仍运行 skill 的 codemode case。 |
 | `ui-thinking-stream`, `ui-thinking-collapse`, `ui-thinking-resume`, `ui-title`, `ui-title-stop` | 实际流式 Thinking、Ctrl+T 隐藏选择、持久重开及后续上下文、原生 `/resume` 恢复取消/错误思考、`/compact` 后保留及开关；流中 OSC 动画、settled/取消后静止。80ms 精度仍由计时器测试验证。 |
+| `ui-working`, `ui-receive-rate` | 复用 [text-regions Working](../../verify-pi-text-regions/features/working.md) 的完整 regular/fullscreen 旅程，覆盖生产事件到组件、真实权限/文件/取消、input/retry/compaction、宽度、goal、new/reload/renderer/quit。先执行其 Launch/Doctor；这些不在旧 cli.py 的断言内。原版/发布/CPU 与物理边界按新 skill 对应 feature 另行验证。 |
 
 ## Manual boundaries
 
