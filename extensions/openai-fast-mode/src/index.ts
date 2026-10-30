@@ -229,18 +229,10 @@ export function createPiFastModeExtension(
       }
     });
 
-    pi.on("session_shutdown", async (_event, ctx) => {
+    pi.on("session_shutdown", (_event, ctx) => {
       excludedCodexModels.clear();
       pendingCodexFastModels.clear();
-      try {
-        if (configPath) {
-          await saveConfigToPath(configPath, config);
-        }
-      } catch (error) {
-        notifyError(ctx, error);
-      } finally {
-        clearFastStatus(ctx);
-      }
+      clearFastStatus(ctx);
     });
   };
 }
