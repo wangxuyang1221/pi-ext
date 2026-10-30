@@ -66,12 +66,16 @@ interface ResponseUsage {
 interface ResponseEnvelope {
   id?: string;
   usage?: ResponseUsage;
+  error?: { message?: string; code?: string };
+  incomplete_details?: { reason?: string };
 }
 
 interface ResponseEventData {
   response?: ResponseEnvelope;
   item?: ResponseOutputItem;
   delta?: string;
+  message?: string;
+  code?: string;
   error?: {
     message?: string;
     code?: string;
@@ -146,6 +150,7 @@ export async function runResponsesSearch(
 
   let responseId: string | undefined;
   let usage: ResponseUsage | undefined;
+  let completed = false;
   let streamedText = "";
   const messageTextParts: string[] = [];
   const searchCalls = new Map<string, CodexSearchCall>();
@@ -185,13 +190,19 @@ export async function runResponsesSearch(
 
     if (event.type === "response.completed") {
       usage = data.response?.usage;
-      continue;
+      completed = true;
+      break;
     }
 
-    if (event.type === "response.failed") {
-      const message = data.error?.message ?? data.error?.code ?? "Codex web search failed";
+    if (event.type === "response.failed" || event.type === "response.incomplete" || event.type === "error") {
+      const error = data.response?.error ?? data.error ?? data;
+      const message = error.message ?? error.code ?? data.response?.incomplete_details?.reason ?? "Codex web search failed";
       throw new CodexError(classifyEventErrorMessage(message), message);
     }
+  }
+
+  if (!completed) {
+    throw new CodexError("transport", "Codex web search stream ended before response.completed");
   }
 
   return {
@@ -267,7 +278,8 @@ function parseSseFrame(frame: string): SseEvent | undefined {
   if (raw === "[DONE]") return undefined;
 
   try {
-    return { type, data: JSON.parse(raw) };
+    const data = JSON.parse(raw);
+    return { type: typeof data?.type === "string" ? data.type : type, data };
   } catch {
     return { type, raw };
   }

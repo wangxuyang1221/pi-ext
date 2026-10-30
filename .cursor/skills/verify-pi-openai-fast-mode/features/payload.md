@@ -7,8 +7,8 @@
 - `fast-openai`：OpenAI 模型精确匹配。
 - `fast-codex`：Codex 任意模型注入 priority。
 - `fast-unmatched`：非目标模型不注入。
-- `fast-unsupported`：明确不支持后提示失败与标准重试。
-- `fast-error-scope`：禁用只限当前会话和模型。
+- `fast-unsupported`：Codex 明确不支持后提示失败与标准重试。
+- `fast-error-scope`：Codex 拒绝后的禁用只限当前会话和模型。
 
 ## How to get to it (user POV)
 
@@ -41,6 +41,6 @@ pnpm test extensions/openai-fast-mode/__tests__/payload-status.test.ts extension
 
 ## Gotchas
 
-两个入口均使用真实 request builder，在 fetch 边界记录序列化 payload 并返回固定离线响应。它们证明本地发出的字段与错误处理，不证明远端采用 priority、billing 或性能。模糊网络与认证错误的文案矩阵由定向测试补充，远程错误实测另记层级。
+两个入口均使用真实 request builder，在 fetch 边界记录序列化 payload 并返回固定离线响应。它们证明本地发出的字段与错误处理，不证明远端采用 priority、billing 或性能。定向测试补充 429、网络、普通 400 与暂时不可用错误，认证错误文案未纳入该矩阵；远程错误实测另记层级。
 
 验收依据为 [payload-status.test.ts](../../../../extensions/openai-fast-mode/__tests__/payload-status.test.ts)、[extension.test.ts](../../../../extensions/openai-fast-mode/__tests__/extension.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

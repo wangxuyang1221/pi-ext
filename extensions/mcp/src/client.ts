@@ -252,12 +252,12 @@ export class McpClientManager {
       return this.snapshot(runtime.state);
     }
 
-    await this.stopRuntimeWork(runtime, true);
     const generation = ++runtime.generation;
+    const stopped = this.stopRuntimeWork(runtime, true);
     const controller = new AbortController();
     const detachCaller = forwardAbort(options.signal, controller);
     runtime.connectController = controller;
-    const promise = this.runForegroundConnect(runtime, generation, source, controller.signal)
+    const promise = stopped.then(() => this.runForegroundConnect(runtime, generation, source, controller.signal))
       .finally(() => {
         detachCaller();
         if (runtime!.connectPromise === promise) runtime!.connectPromise = undefined;
@@ -752,6 +752,9 @@ export class McpClientManager {
       }
 
       const tools = await this.listAllTools(client, deadlineMs, scope);
+      if (!this.isCurrent(runtime, generation) || scope.signal.aborted) {
+        throw abortReason(scope.signal);
+      }
       if (connection.closed) {
         throw new McpConnectionError(runtime.name, "The connection closed during tool discovery");
       }
@@ -1311,6 +1314,7 @@ export class McpClientManager {
           await this.commitConnection(runtime, connection, "background");
           break;
         } catch (error) {
+          if (controller.signal.aborted || !this.isCurrent(runtime, generation)) break;
           const normalized = this.normalizeConnectFailure(error, controller.signal, deadlineMs);
           failedAttempt += 1;
           this.recordConnectFailure(runtime, failedAttempt, normalized);

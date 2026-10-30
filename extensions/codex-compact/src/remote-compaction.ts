@@ -84,7 +84,9 @@ export async function createNativeCheckpoint(params: NativeCheckpointRequest): P
 	usage?: Awaited<ReturnType<typeof callRemoteCompaction>>["usage"];
 }> {
 	params = { ...params, ...structuredClone({ model: params.model, input: params.input, protectedInput: params.protectedInput,
-		basePayload: params.basePayload, allTools: params.allTools, activeToolNames: params.activeToolNames }) };
+		basePayload: params.basePayload,
+		allTools: params.allTools.map(({ reachesTools: _reachesTools, ...declaration }) => declaration),
+		activeToolNames: params.activeToolNames }) };
 	const sessionId = params.ctx.sessionManager.getSessionId();
 	const basePayload = compactionBasePayload(params);
 	const fallbackPrompt = params.ctx.getSystemPrompt();

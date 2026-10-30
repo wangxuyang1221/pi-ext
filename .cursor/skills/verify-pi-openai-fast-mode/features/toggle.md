@@ -9,7 +9,7 @@
 - `fast-off`：显式关闭。
 - `fast-toggle`：toggle 切换。
 - `fast-flag`：启动 --fast 启用并保存。
-- `fast-persist`：重开读取持久开关。
+- `fast-persist`：重开读取持久开关；旧 root 退出不覆盖另一 root 刚保存的开关。
 - `fast-scope`：全局和项目安装分别定位配置。
 
 ## How to get to it (user POV)
@@ -36,10 +36,12 @@ Preconditions:
 | fast-scope | 显式仓库扩展写 user 路径；生产 dist 复制到项目 `.pi` 后写 project 路径；user 配置字节不变 |
 
 ```bash
-pnpm test extensions/openai-fast-mode/__tests__/commands.test.ts extensions/openai-fast-mode/__tests__/config.test.ts extensions/openai-fast-mode/__tests__/host-compatibility.test.ts
+pnpm test extensions/openai-fast-mode/__tests__/commands.test.ts extensions/openai-fast-mode/__tests__/config.test.ts extensions/openai-fast-mode/__tests__/host-compatibility.test.ts extensions/openai-fast-mode/__tests__/extension.test.ts
 ```
 
 证据必须同时写明本次运行实际覆盖哪些 ID，以及剩余 ID 的状态。
+
+`extension.test.ts` 用两个扩展实例共用真实配置文件，分别验证 true → false 和 false → true 后旧 root shutdown 不改文件字节。`full` 的冷启动旅程串行启动 root，不能证明两个真实 PTY 同时存活的退出顺序；未补跑该组合时，保留此 TUI 分支为 unverified。
 
 ## Gotchas
 

@@ -28,8 +28,10 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search
 
 产品没有默认客户端 deadline 或对应配置，公开接口接收调用方的 AbortSignal。上述测试证明调用方 deadline 的传递和退出，不表示未传 signal 的请求会自动超时。
 
+`responses-stream.test.ts` 补验协议边界：SSE 可仅用 JSON `type` 标识事件，文本、引用、搜索调用和 usage 均须保留；failed、incomplete 和 error 拒绝部分结果；EOF 或 `[DONE]` 不能代替 completed。收到 completed 后取消仍未关闭的 body，读流的 AbortError 原样传播。该测试使用内存流，生产 PTY 旅程不覆盖这些帧组合，分别记录证据层级。
+
 ```bash
-pnpm test extensions/codex-search/__tests__/timeout.test.ts extensions/codex-search/__tests__/codex.test.ts extensions/codex-search/__tests__/renderers.test.ts extensions/codex-search/__tests__/compact-renderers.test.ts
+pnpm test extensions/codex-search/__tests__/responses-stream.test.ts extensions/codex-search/__tests__/timeout.test.ts extensions/codex-search/__tests__/codex.test.ts extensions/codex-search/__tests__/renderers.test.ts extensions/codex-search/__tests__/compact-renderers.test.ts
 ```
 
 ## Remote boundary

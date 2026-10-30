@@ -187,6 +187,30 @@ describe("piFastModeExtension runtime behavior", () => {
     }
   });
 
+  it.each([false, true])("keeps another root session's saved change when a stale enabled=%s session exits", async enabled => {
+    const root = await makeTempDir();
+    const cwd = join(root, "project");
+    const agentDir = join(root, "agent");
+    const options = { extensionDir: join(root, "global", "pi-openai-fast-mode", "src"), agentDir };
+    await mkdir(cwd, { recursive: true });
+    const active = createFakePi(enabled);
+    const stale = createFakePi();
+    createPiFastModeExtension(options)(active.pi as any);
+    createPiFastModeExtension(options)(stale.pi as any);
+    const activeCtx = makeCtx(cwd, { provider: "openai-codex", id: "gpt-6-astra" });
+    const staleCtx = makeCtx(cwd, activeCtx.model);
+    await runHandler(active.handlers, "session_start", { reason: "startup" }, activeCtx);
+    await runHandler(stale.handlers, "session_start", { reason: "startup" }, staleCtx);
+    await active.commands.get("fast")!.handler(enabled ? "off" : "on", activeCtx);
+    const configPath = getUserConfigPath(agentDir);
+    const saved = await readFile(configPath, "utf8");
+    expect(JSON.parse(saved).enabled).toBe(!enabled);
+    await runHandler(stale.handlers, "session_shutdown", {}, staleCtx);
+    expect(await readFile(configPath, "utf8")).toBe(saved);
+    expectFastIndicatorHidden(staleCtx);
+    expect(staleCtx.ui.notify).not.toHaveBeenCalled();
+  });
+
   it("--fast enables, persists, shows status, and mutates matching payloads", async () => {
     const root = await makeTempDir();
     const cwd = join(root, "project");
