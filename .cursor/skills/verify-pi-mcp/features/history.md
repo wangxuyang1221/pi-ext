@@ -14,7 +14,7 @@
 
 ## How to get to it (user POV)
 
---session/--continue/--resume；/resume；/tree；/reload；离线历史工具卡片。
+--session/--continue/--resume；/resume；/tree；/import <path>；/mcp reload；/reload；离线历史工具卡片。固定 combination 旅程使用 `/mcp reload`。
 
 ## Driving it with Pi PTY and host fixtures
 

@@ -8,7 +8,7 @@
 - `mcp-priority`：按环境/项目/全局优先级读取。
 - `mcp-invalid`：无效高优先级不静默降级。
 - `mcp-disabled`：disabled server 不连接。
-- `mcp-trust`：未信任项目不执行配置命令。
+- `mcp-trust`：未信任项目忽略项目配置并拒绝 `/mcp-init`；显式环境配置和全局配置仍可连接。
 
 ## How to get to it (user POV)
 
@@ -20,6 +20,6 @@
 
 ## Gotchas
 
-/mcp-init 需要受信任项目，已有文件会确认覆盖；模板包含 pnpm dlx，只有显式配置并 reload 才运行服务器，不能把模板生成当连接成功。helper 的 live 配置是本地 echo；配置不展开环境占位。
+/mcp-init 需要受信任项目，已有文件会确认覆盖；模板包含 pnpm dlx，生成文件本身不连接。后续 reload 或新会话启动会读取配置并连接，不能把模板生成当连接成功。helper 的 live 配置是本地 echo；配置不展开环境占位。
 
 验收依据为 [config.test.ts](../../../../extensions/mcp/__tests__/config.test.ts)、[pi-modes-smoke.test.ts](../../../../extensions/mcp/__tests__/pi-modes-smoke.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

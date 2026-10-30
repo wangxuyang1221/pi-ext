@@ -34,6 +34,8 @@ pnpm test extensions/codex-compact/__tests__/repair-runtime.test.ts extensions/c
 
 证据必须同时写明本次运行实际覆盖哪些 ID，以及剩余 ID 的状态。
 
+`repair-runtime.test.ts` 使用真实 codemode `reachesTools` 回调，执行首请求、手动压缩、valid checkpoint 检查与续聊，验证函数不进入声明数据的 structuredClone。共享 `run compact` 包含该 SDK 检查。专用 PTY 的 `combination` 未启用 codemode，不能用其结果代替 codemode 组合的 TUI 证据；续聊 payload 中的 checkpoint 和实际 codemode 工具执行也需单独断言。
+
 ## Gotchas
 
 共享 compact helper 是 SDK 证据，替换模型目录、配置和 HTTP/SSE；专用 PTY 保留生产配置读取、目录解析和 Codex adapter，只替换服务响应。两者均不证明线上认证、服务端接受性或摘要质量。共享 faux TUI 不能验收压缩；在线验收缺少认证和服务使用授权时记为 blocked。focus text 当前不消费。

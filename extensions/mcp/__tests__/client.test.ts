@@ -837,6 +837,37 @@ describe("stdio and server diagnostics", () => {
 });
 
 describe("background recovery", () => {
+  it.each(["resolve", "reject"] as const)("preserves disabled state after stale background discovery %s", async outcome => {
+    const scheduler = new ControlledScheduler();
+    const connecting = deferred<void>();
+    const releaseConnect = deferred<void>();
+    const discovering = deferred<void>();
+    const discovery = deferred<{ tools: McpTool[] }>();
+    const { manager, clients } = createHarness([
+      { connect: async () => { throw new Error("fetch failed"); } },
+      { connect: async () => { connecting.resolve(); await releaseConnect.promise; } },
+    ], { scheduler });
+    try {
+      await manager.connectServer("docs", {
+        command: "docs", retry: { maxAttempts: 1, background: true, baseDelayMs: 10, maxDelayMs: 10 },
+      });
+      scheduler.releaseNext();
+      await connecting.promise;
+      clients[1].listTools.mockImplementationOnce(() => { discovering.resolve(); return discovery.promise; });
+      releaseConnect.resolve();
+      await discovering.promise;
+      const disabled = manager.setUnavailableServer("docs", "disabled");
+      if (outcome === "resolve") discovery.resolve({ tools: [tool("stale")] });
+      else discovery.reject(new Error("fetch failed"));
+      await settle();
+      expect(manager.getServerState("docs")).toEqual(disabled);
+      expect([...manager.getAllTools().keys()]).toEqual([]);
+      expect(manager.isServerConnected("docs")).toBe(false);
+    } finally {
+      releaseConnect.resolve(); discovery.resolve({ tools: [] }); await manager.shutdown();
+    }
+  });
+
   it("recovers after the foreground attempt and emits a background tool event", async () => {
     const scheduler = new ControlledScheduler();
     const { manager } = createHarness([

@@ -1314,6 +1314,7 @@ export class McpClientManager {
           await this.commitConnection(runtime, connection, "background");
           break;
         } catch (error) {
+          if (controller.signal.aborted || !this.isCurrent(runtime, generation)) break;
           const normalized = this.normalizeConnectFailure(error, controller.signal, deadlineMs);
           failedAttempt += 1;
           this.recordConnectFailure(runtime, failedAttempt, normalized);

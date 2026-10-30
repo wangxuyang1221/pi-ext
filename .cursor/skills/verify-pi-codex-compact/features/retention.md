@@ -4,7 +4,7 @@
 
 ## Sub-features
 
-- `compact-retention`：按消息类型筛选历史，保留内容满足明文上限和最终请求窗口预算。
+- `compact-retention`：按消息类型筛选历史，在明文上限和最终请求预算内收紧可选历史；固定部分超窗时仍完整保留 pending 和声明，由服务判断接受性。
 - `compact-media`：图片和相邻标签、resize notice 原子保留；媒体协议估算按可解码格式处理。
 - `compact-pending-input`：本次待发送输入完整保留。
 - `compact-legacy`：旧来源无法证明时拒绝。
