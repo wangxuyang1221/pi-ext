@@ -25,13 +25,14 @@ assert.ok(evidence.startsWith(resolve(".tmp") + "/"), "Load evidence must remain
 mkdirSync(resolve(evidence, ".."), { recursive: true });
 const proof = [];
 for (const kind of ["src", "dist"]) {
+  const selectedNames = kind === "src" ? [...names, "codex-search"] : names;
   const isolated = createTestEnvironment(`stock-load-${kind}`);
   try {
     const cwd = join(isolated.directory, "workspace");
     mkdirSync(cwd);
     const loader = new DefaultResourceLoader({ cwd, agentDir: isolated.env.PI_CODING_AGENT_DIR,
       settingsManager: SettingsManager.inMemory({}), noSkills: true, noPromptTemplates: true, noContextFiles: true,
-      additionalExtensionPaths: names.map(name => join(repo, `extensions/${name}/${kind}/index.${kind === "src" ? "ts" : "js"}`)),
+      additionalExtensionPaths: selectedNames.map(name => join(repo, `extensions/${name}/${kind}/index.${kind === "src" ? "ts" : "js"}`)),
       additionalThemePaths: [join(repo, "themes/codex-pi.json")],
       extensionFactories: [
         { name: "mcp", factory: createMcpExtension(), builtin: true, replaceable: true },
@@ -44,7 +45,7 @@ for (const kind of ["src", "dist"]) {
     const paths = result.extensions.map(extension => extension.path);
     assert.ok(paths.includes("builtin:codemode"));
     assert.ok(!paths.includes("builtin:mcp"));
-    for (const name of names) assert.ok(paths.some(path => path.endsWith(`extensions/${name}/${kind}/index.${kind === "src" ? "ts" : "js"}`)));
+    for (const name of selectedNames) assert.ok(paths.some(path => path.endsWith(`extensions/${name}/${kind}/index.${kind === "src" ? "ts" : "js"}`)));
     assert.ok(result.warnings.some(warning => warning.message?.includes("mcp") || warning.warning?.includes("mcp")));
     assert.ok(loader.getThemes().themes.some(theme => theme.name === "codex-pi"));
     assert.equal(result.extensions.some(extension => !!extension.sessionSummaryTransformer), patched);
