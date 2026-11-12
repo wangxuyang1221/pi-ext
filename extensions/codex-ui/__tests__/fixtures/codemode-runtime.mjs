@@ -20,6 +20,8 @@ const models = await sdk.ModelRuntime.create({ credentials: new ai.InMemoryCrede
 models.registerNativeProvider(faux.provider);
 let serial = 0, code, busy = false, savedLeaf;
 const events = [];
+const mutations = [];
+const evidenceSuffix = `${process.argv.includes('--fullscreen') ? 'fullscreen' : 'regular'}${process.argv.includes('--custom-keys') ? '-custom-keys' : ''}`;
 const scenarios = ['success', 'partial', 'error', 'running', 'timeout', 'permission', 'nested', 'mcp', 'many', 'hiddenfail', 'empty'];
 const scriptFor = scenario => {
   if (scenario === 'hiddenfail') return 'await Promise.allSettled(Array.from({length:24}, (_,i) => tools.read({path:i===6 ? "missing.txt" : "package.json"}))); text("HIDDEN-FAILURE-DONE");';
@@ -59,6 +61,15 @@ const extension = pi => {
     if (['read', 'write', 'edit'].includes(event.toolName) && !['package.json', '配置.ts', 'created.txt', 'missing.txt'].includes(event.input.path)) return { block: true, reason: 'Outside fixture workspace' };
   });
   for (const event of ['tool_execution_start', 'tool_execution_update', 'tool_execution_end']) pi.on(event, value => events.push(value));
+  pi.on('tool_execution_end', async event => {
+    if (event.isError || !['edit', 'write'].includes(event.toolName)) return;
+    const path = event.toolName === 'edit' ? '配置.ts' : 'created.txt';
+    const bytes = await readFile(join(cwd, path), 'utf8');
+    if (event.toolName === 'edit') assert.match(bytes, /enabled = true/);
+    else assert.equal(bytes, 'created by real write\n');
+    mutations.push({ tool: event.toolName, path, bytes, id: event.toolCallId });
+    await writeFile(join(repo, `.tmp/codemode-side-effects-${evidenceSuffix}-${resume ? 'resumed' : 'initial'}.json`), JSON.stringify({ mutations, networkAttempts, pid: process.pid, resumed: resume }, null, 2));
+  });
   pi.on('session_start', (_event, ctx) => { pi.setActiveTools([...new Set([...pi.getActiveTools(), 'codemode'])]); if (ctx.mode === 'tui') ctx.ui.setToolsExpanded(false); });
   pi.registerCommand('play', { description: 'Run an offline acceptance scenario', async handler(args, ctx) {
     const scenario = args.trim() || 'partial';
@@ -122,4 +133,5 @@ try {
 } finally {
   await runtime.session.abort(); await runtime.dispose();
   assert.equal(networkAttempts, 0);
+  await writeFile(join(repo, `.tmp/codemode-side-effects-${evidenceSuffix}-${resume ? 'resumed' : 'initial'}.json`), JSON.stringify({ mutations, networkAttempts, pid: process.pid, resumed: resume }, null, 2));
 }

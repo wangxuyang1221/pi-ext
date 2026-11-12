@@ -12,7 +12,7 @@ test("does not inherit provider credentials into the isolated check", () => {
 test("aligns supported Pi peers with the pinned host and refuses a mismatched baseline", () => {
   const manifest = JSON.parse(readFileSync("package.json", "utf8"));
   for (const name of ["pi-ai", "pi-coding-agent", "pi-tui"]) {
-    expect(manifest.peerDependencies[`@earendil-works/${name}`]).toBe(expectedPiVersion);
+    expect(manifest.peerDependencies[`@earendil-works/${name}`].split(" || ")).toContain(expectedPiVersion);
   }
   const info = inspectPiHost();
   expect(info.versions["pi-coding-agent"]).toBe(expectedPiVersion);

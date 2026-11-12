@@ -108,7 +108,8 @@
     "test:host": "pnpm run host:tmux:check",
     "test:offline": "pnpm test",
     "typecheck:tests": "tsc -p tsconfig.tests.json",
-    "repository:check": "node ./scripts/check-repository.mjs"
+    "repository:check": "node ./scripts/check-repository.mjs",
+    "pi152:verify": "node scripts/pi152-verify.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
@@ -116,9 +117,9 @@
     "zod": "4.4.3"
   },
   "peerDependencies": {
-    "@earendil-works/pi-ai": "1.4.0",
-    "@earendil-works/pi-coding-agent": "1.4.0",
-    "@earendil-works/pi-tui": "1.4.0",
+    "@earendil-works/pi-ai": "1.4.0 || 1.5.2",
+    "@earendil-works/pi-coding-agent": "1.4.0 || 1.5.2",
+    "@earendil-works/pi-tui": "1.4.0 || 1.5.2",
     "typebox": "*"
   },
   "devDependencies": {

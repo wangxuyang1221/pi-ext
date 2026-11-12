@@ -19,6 +19,7 @@ repo = Path(__file__).resolve().parents[3]
 root = Path(sys.argv[1]).resolve()
 mode = sys.argv[2] if len(sys.argv) > 2 else "native"
 installed = Path(sys.argv[4]).resolve() if len(sys.argv) > 4 else repo
+stock_summary = "--stock-summary" in sys.argv
 assert mode in ["native", "native-fullscreen", "codex", "codex-fullscreen"]
 assert root.is_relative_to(repo / ".tmp"), "Evidence must stay inside the repository .tmp"
 root.mkdir(parents=True, exist_ok=False)
@@ -120,6 +121,7 @@ def stop():
 
 
 task = "中文任务 $alpha"
+selector_text = "<pi-ext-skill-mentions" if stock_summary else task
 def terminate(signum, frame):
     raise SystemExit(128 + signum)
 
@@ -144,11 +146,16 @@ try:
     actions.append({"kind": "file-delete", "path": str(skill)})
     for attempt in range(2):
         send("/resume\r")
-        wait(lambda: "Resume Session" in view() and task in view(), "readable in-process selector")
+        wait(lambda: "Resume Session" in view() and selector_text in view(), "readable in-process selector")
         screens[f"resume-{attempt}"] = view()
-        assert "<pi-ext-skill-mentions" not in view().split("Resume Session", 1)[-1]
+        assert ("<pi-ext-skill-mentions" in view().split("Resume Session", 1)[-1]) == stock_summary
+        if stock_summary:
+            send("SAVED_SKILL_BODY")
+            wait(lambda: selector_text in view().split("Resume Session", 1)[-1] and "Independent session" not in view().split("Resume Session", 1)[-1], "stock body search retains snapshot")
+            screens[f"stock-body-search-{attempt}"] = view()
+            send("\x15")
         send('"中文任务"')
-        wait(lambda: task in view().split("Resume Session", 1)[-1] and "Independent session" not in view().split("Resume Session", 1)[-1], "in-process exact search")
+        wait(lambda: selector_text in view().split("Resume Session", 1)[-1] and "Independent session" not in view().split("Resume Session", 1)[-1], "in-process exact search")
         screens[f"in-process-search-{attempt}"] = view()
         history_before = Path(original_session).read_bytes()
         ready_count = len(events("ready"))
@@ -178,12 +185,12 @@ try:
     ready_count = len(events("ready"))
     settled_count = len(events("settled"))
     start(["--resume"])
-    wait(lambda: "Resume Session" in view() and task in view(), "readable cold selector before session_start")
+    wait(lambda: "Resume Session" in view() and selector_text in view(), "cold selector before session_start")
     assert len(events("ready")) == ready_count, "Selection must precede session startup"
-    assert "<pi-ext-skill-mentions" not in view()
+    assert ("<pi-ext-skill-mentions" in view()) == stock_summary
     screens["cold-resume"] = view()
     send('"中文任务"')
-    wait(lambda: task in view() and "Independent session" not in view(), "projected exact search")
+    wait(lambda: selector_text in view() and "Independent session" not in view(), "projected exact search")
     screens["cold-search"] = view()
     send("\r")
     wait(lambda: len(events("ready")) == ready_count + 1, "selected history restored")
@@ -225,5 +232,5 @@ finally:
     assert all(stopped), "All PTY children must be stopped"
     for name in ["home", "tmp", "cache", "workspace"]:
         shutil.rmtree(root / name, ignore_errors=True)
-    (root / "journey.json").write_text(json.dumps({"mode": mode, "cli": str(cli), "pids": children, "stopped": stopped, "actions": actions, "assertions": assertions, "runtimeDirectoriesRemoved": True}, ensure_ascii=False, indent=2))
+    (root / "journey.json").write_text(json.dumps({"mode": mode, "stockSummary": stock_summary, "cli": str(cli), "pids": children, "stopped": stopped, "actions": actions, "assertions": assertions, "runtimeDirectoriesRemoved": True}, ensure_ascii=False, indent=2))
 print(json.dumps({"mode": mode, "selectors": 3, "modelSnapshotPreserved": True, "childrenStopped": stopped}))

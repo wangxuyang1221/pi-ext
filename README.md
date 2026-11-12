@@ -15,7 +15,7 @@
 
 - 支持 Linux 和 macOS；原生 Windows 不在支持与 CI 验证范围内。
 - Node.js 22.19 或更高版本
-- 开发、测试和发布只支持 Pi AI、Coding Agent、TUI `1.4.0`，三个 peer 依赖精确固定为该版本。
+- 根开发环境固定 Pi `1.4.0`；五个扩展及主题另支持原版 `1.5.2`，范围、降级和隔离验证见 [Pi compatibility](docs/pi152-compatibility.md)。
 - `subagent` 运行时需要 tmux 3.6 或兼容版本
 - 支持 24-bit color 的终端可获得最接近设计稿的颜色效果
 

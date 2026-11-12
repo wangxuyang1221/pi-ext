@@ -3,6 +3,9 @@ import type { Component, TUI } from "@earendil-works/pi-tui";
 import { Working, WorkingActivity } from "./working.js";
 
 type DisposableComponent = Component & { dispose?(): void };
+interface TextRegionCapability {
+  registerTextRegion?(component: Component): { requestRender(): void; dispose(): void };
+}
 const WIDGET_KEY = "codex-ui-working";
 
 /** Own both dynamic regions and their single 32ms animation clock for this session. */
@@ -25,7 +28,8 @@ export class WorkingSession {
         released = true; handle?.dispose(); this.bindings.delete(wrapper.dispose); component.dispose?.();
       },
     };
-    const handle = tui.registerTextRegion?.(wrapper);
+    const regions = tui as TUI & TextRegionCapability;
+    const handle = typeof regions.registerTextRegion === "function" ? regions.registerTextRegion(wrapper) : undefined;
     this.bindings.set(wrapper.dispose, normal => {
       if (normal || !handle) tui.requestRender();
       else handle.requestRender();

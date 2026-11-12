@@ -7,8 +7,9 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, "../../..");
-const [scenario = "combination", evidenceArgument] = process.argv.slice(2);
-assert(["combination", "combination-prebuilt", "permission", "resume", "mutation"].includes(scenario), "Unknown skill journey");
+const [scenario = "combination", evidenceArgument, ptyMode = "combined-fullscreen"] = process.argv.slice(2);
+assert(["combination", "combination-prebuilt", "permission", "resume", "resume-stock", "mutation"].includes(scenario), "Unknown skill journey");
+assert(["native", "native-fullscreen", "codex", "codex-fullscreen", "combined", "combined-fullscreen"].includes(ptyMode), "Unknown PTY mode");
 let evidence;
 let scratch;
 let python;
@@ -116,11 +117,11 @@ async function pty(label, installed = repo, scope = scenario) {
   mkdirSync(join(root, "consumer"), { recursive: true });
   copyFileSync(join(here, "pty-fixture.ts"), join(root, "consumer/pty-fixture.ts"));
   const evidencePrefix = `${prefix}-${label}`;
-  const source = join(repo, ".tmp/test-results", `${evidencePrefix}-pty-combined-fullscreen`);
+  const source = join(repo, ".tmp/test-results", `${evidencePrefix}-pty-${ptyMode}`);
   pendingProof = join(source, "result.json");
   let result;
   try {
-    result = await run(python, [join(here, "pty-driver.py"), root, cli, installed, "combined-fullscreen", evidencePrefix, scope], true);
+    result = await run(python, [join(here, "pty-driver.py"), root, cli, installed, ptyMode, evidencePrefix, scope], true);
   } finally {
     if (existsSync(source)) cpSync(source, join(evidence, label), { recursive: true });
   }
@@ -141,10 +142,10 @@ try {
   const interpreter = await run("conda", ["run", "-n", "codex-py312", "python", "-c", "import sys; print(sys.executable)"]);
   python = interpreter.stdout.trim();
   assert(python.startsWith("/") && existsSync(python), "Conda must return an existing absolute Python executable");
-  if (scenario === "resume") {
+  if (scenario === "resume" || scenario === "resume-stock") {
     for (const mode of ["native", "native-fullscreen", "codex", "codex-fullscreen"]) {
       pendingProof = join(evidence, mode, "journey.json");
-      await run(python, [join(here, "resume-summary-driver.py"), join(evidence, mode), mode]);
+      await run(python, [join(here, "resume-summary-driver.py"), join(evidence, mode), mode, cli, repo, ...(scenario === "resume-stock" ? ["--stock-summary"] : [])]);
       assert(JSON.parse(readFileSync(pendingProof, "utf8")).stopped.every(Boolean), "All resume children must stop");
       pendingProof = undefined;
     }

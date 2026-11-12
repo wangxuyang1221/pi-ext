@@ -6,6 +6,8 @@
 pnpm exec node .cursor/skills/verify-pi-openai-fast-mode/scripts/verify.mjs full
 ```
 
+只验证根会话时用 `root` 替换 `full`。它保留完整 root、冷启动、命令组合与项目配置旅程，跳过所有 child 场景。原版 Pi 1.5.2 的独立包树入口见 [compatibility](../../../../docs/pi152-compatibility.md)。
+
 运行要求与共享 helper 相同的 Node、pnpm、Conda `codex-py312` 和 pyte。此入口不使用共享 fixture 文件或 tmux，不占共享验证锁。运行期间保持 dist 不变。
 
 默认进程期限为 180 秒，Conda Python 路径探测另限 30 秒。`--timeout-ms <正整数>` 可缩短进程期限；`--python <绝对路径>` 可指定已经核实的 Conda Python。后者也用于验证启动失败路径。超时或中断后先给 TERM 两秒宽限，再强制回收 driver 进程组，最后依据 `owners.json` 回收独立 PTY 组。启动失败和断言失败同样归档配置，并把最终 summary 记为 failed；进程、证据归档或清理无法确认时保留 scratch，cleanup 记为 unverified。

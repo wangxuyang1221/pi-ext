@@ -133,25 +133,27 @@ try:
         cli.send('/fast toggle'); cli.wait(lambda:enabled() is False,'novel-toggle-off')
         cli.model('openai','gpt-6-astra'); cli.request('novel-matched-off',None)
         cli.send('/fast'); cli.wait(lambda:enabled() is True,'novel-bare-on'); cli.request('novel-matched-on','priority'); cli.close()
-        # Cold CLI resume of saved child state, preserving global bytes.
         before=config.read_bytes()
-        cli=Cli('child-initial',child=True); cli.request('child-initial-priority','priority')
-        session=Path(cli.session)
-        cli.send('/fast off')
-        def child_value():
-            entries=[json.loads(s) for s in session.read_text().splitlines()]
-            return [e['data']['enabled'] for e in entries if e.get('customType')=='pi-fast-mode-session'][-1]
-        cli.wait(lambda:child_value() is False,'child-saved-off')
-        n=len(events()); cli.send('/reload'); cli.wait(lambda:any(e['type']=='ready' for e in events()[n:]),'child-reload')
-        cli.request('child-reload-off',None); cli.close()
-        cli=Cli('child-cold-resume',['--session',str(session),'--fast'],child=True)
-        cli.request('saved-off-overrides-launch-true-and-flag',None)
-        cli.send('/fast on'); cli.wait(lambda:child_value() is True,'child-saved-on'); cli.close()
-        cli=Cli('child-resume-no-launch',['--session',str(session)])
-        cli.request('child-saved-on-without-launch','priority')
-        n=len(events()); cli.send('/reload'); cli.wait(lambda:any(e['type']=='ready' for e in events()[n:]),'child-reload-on')
-        cli.request('child-reload-keeps-on','priority'); cli.close()
-        assert config.read_bytes()==before, 'Child changed global configuration'
+        if mode == "full":
+            # Cold CLI resume of saved child state, preserving global bytes.
+            before=config.read_bytes()
+            cli=Cli('child-initial',child=True); cli.request('child-initial-priority','priority')
+            session=Path(cli.session)
+            cli.send('/fast off')
+            def child_value():
+                entries=[json.loads(s) for s in session.read_text().splitlines()]
+                return [e['data']['enabled'] for e in entries if e.get('customType')=='pi-fast-mode-session'][-1]
+            cli.wait(lambda:child_value() is False,'child-saved-off')
+            n=len(events()); cli.send('/reload'); cli.wait(lambda:any(e['type']=='ready' for e in events()[n:]),'child-reload')
+            cli.request('child-reload-off',None); cli.close()
+            cli=Cli('child-cold-resume',['--session',str(session),'--fast'],child=True)
+            cli.request('saved-off-overrides-launch-true-and-flag',None)
+            cli.send('/fast on'); cli.wait(lambda:child_value() is True,'child-saved-on'); cli.close()
+            cli=Cli('child-resume-no-launch',['--session',str(session)])
+            cli.request('child-saved-on-without-launch','priority')
+            n=len(events()); cli.send('/reload'); cli.wait(lambda:any(e['type']=='ready' for e in events()[n:]),'child-reload-on')
+            cli.request('child-reload-keeps-on','priority'); cli.close()
+            assert config.read_bytes()==before, 'Child changed global configuration'
         # Project-local extension loaded from an actual .pi path.
         local=root/'workspace/.pi/extensions/fast'
         shutil.copytree(repo/'extensions/openai-fast-mode/dist',local)

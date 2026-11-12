@@ -29,6 +29,8 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills-unread
 pnpm run skill-mentions:acceptance
 ```
 
+原版 Pi 1.5.2 使用 [独立验证副本](../../../docs/pi152-compatibility.md)，恢复旅程选择 `journeys.mjs resume-stock`。它验收核心恢复和原版摘要降级，不执行要求摘要补丁的增强通过断言。
+
 变更请求快照读取或保存时，再执行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills-mutation`。它在仓库内私有副本编译 baseline、按路径缓存变异和恢复版本，用同一组合旅程验证第二次请求必须读取 V2；生产源码及 dist 保持原样。三个阶段、期望失败位置和源码哈希都必须留证。
 
 helper 创建空配置、会话和临时目录，等待资源加载或匹配的 TUI 提示后断言，退出前核对所启动进程。人工补充路径用 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui skill-mentions`，须通过工具的 PTY 模式运行；使用说明和限制见共享文档。

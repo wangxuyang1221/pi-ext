@@ -307,7 +307,7 @@ export function registerCodexTools(
       bashGroups.updateCall(member, context, component);
       component.setRenderer((width) => member.group.members[0] === member
         ? renderBashGroup(member.group, context.expanded, theme, width,
-          formatBashExpandKeys(services))
+          formatBashExpandKeys(services, context))
         : [], { linesAlreadyFit: true });
       return component;
     },
@@ -663,7 +663,9 @@ function renderDiffTruncationFooter(remaining: number, theme: Theme, width: numb
   return fitToWidth(theme.fg("dim", `  │     … ${remaining} more lines`), width);
 }
 
-function formatBashExpandKeys(services: CodexToolRenderServices): string {
+function formatBashExpandKeys(services: CodexToolRenderServices, context: object): string {
+  const hints = context as { keyText?: typeof keyText };
+  if (hints.keyText) return hints.keyText("app.tools.expand");
   const bindings = services.getKeybindings?.();
   if (!bindings) return keyText("app.tools.expand");
   return bindings.getKeys("app.tools.expand")

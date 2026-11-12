@@ -42,6 +42,13 @@ function stripAnsi(value: string): string {
 }
 
 describe("MCP tool renderers", () => {
+  it("uses the active host hint for expandable errors", () => {
+    const context = { state: {}, isError: true, isPartial: false, lastComponent: undefined,
+      keyHint: () => "HOST-F9 expand" };
+    const result = renderMcpToolResult({ content: [{ type: "text", text: "Denied" }] },
+      { expanded: false, isPartial: false }, createTheme(), context);
+    expect(result.render(120).join("\n")).toContain("HOST-F9 expand");
+  });
   it("handles official MCP errors without relying on legacy details", () => {
     const context = { state: {}, isError: false, isPartial: false, lastComponent: undefined };
     const result = renderMcpToolResult({ content: [{ type: "text", text: "Permission denied" }],

@@ -4,10 +4,11 @@ import { CodemodeStore, type CodemodeRow } from "./codemode-model.js";
 import { CodemodePresentation } from "./codemode-presentation.js";
 import { renderInspector, type InspectorState } from "./codemode-view.js";
 import { record } from "./codemode-data.js";
+import { hostKeybindingHints, type HostKeybindingHints } from "./keybinding-hints.js";
 
 type RenderContext = Parameters<NonNullable<ToolRenderers["renderCall"]>>[2];
 interface RowView extends Component {
-  row: CodemodeRow; generation: number; theme: Theme; expanded: boolean; cwd: string; hint: string;
+  row: CodemodeRow; generation: number; theme: Theme; expanded: boolean; cwd: string; context: RenderContext; hints: HostKeybindingHints;
 }
 interface RowState { codemodeView?: RowView }
 export interface CodemodeServices {
@@ -49,15 +50,21 @@ export function registerCodemodeUi(pi: ExtensionAPI, services: CodemodeServices)
     let view = state.codemodeView;
     if (!view) {
       const row = store.ensure(context.toolCallId, record(context.args)?.code);
-      view = { row, generation: store.generation, theme, expanded: context.expanded, cwd: context.cwd, hint: "",
+      let hintContext = context;
+      let hintKeys = services.getKeybindings?.();
+      view = { row, generation: store.generation, theme, expanded: context.expanded, cwd: context.cwd, context, hints: hostKeybindingHints(context as RenderContext & Partial<HostKeybindingHints>, hintKeys),
         invalidate() {}, render(width) {
+          const keys = services.getKeybindings?.();
+          if (hintContext !== this.context || hintKeys !== keys) {
+            hintContext = this.context; hintKeys = keys;
+            this.hints = hostKeybindingHints(hintContext as RenderContext & Partial<HostKeybindingHints>, hintKeys);
+          }
           const current = store.get(row.id) ?? this.row;
-          return presentation.tree(current, this.theme, width, this.expanded, this.cwd, this.hint);
+          return presentation.tree(current, this.theme, width, this.expanded, this.cwd, this.hints.keyHint("app.tools.expand", "to expand"), this.hints);
         } };
       state.codemodeView = view;
     } else if (view.generation === store.generation && !view.row.evicted) store.ensure(context.toolCallId, record(context.args)?.code);
-    view.theme = theme; view.expanded = context.expanded; view.cwd = context.cwd;
-    view.hint = `${services.getKeybindings?.()?.getKeys("app.tools.expand").join("/") || "ctrl+o"} to expand`;
+    view.theme = theme; view.expanded = context.expanded; view.cwd = context.cwd; view.context = context;
     if (store.get(context.toolCallId)) invalidators.set(context.toolCallId, context.invalidate);
     return view;
   };
@@ -83,6 +90,7 @@ export function registerCodemodeUi(pi: ExtensionAPI, services: CodemodeServices)
       if (!row) { ctx.ui.notify("No codemode execution on this branch.", "info"); return; }
       const generation = store.generation;
       await ctx.ui.custom<void>((tui, initialTheme, keys, done) => {
+        const hints = hostKeybindingHints({}, keys);
         const state: InspectorState = { tab: "Calls", selected: 0, scroll: 0 };
         let closed = false;
         const close = () => { if (closed) return; closed = true; store.listeners.delete(update); done(); };
@@ -99,7 +107,7 @@ export function registerCodemodeUi(pi: ExtensionAPI, services: CodemodeServices)
             const inner = Math.max(1, width - 4), height = Math.max(4, Math.min(30, tui.terminal.rows - 8));
             state.selected = Math.max(0, Math.min(state.selected, row.calls.length - 1));
             const detailWidth = state.tab === "Calls" && inner >= 90 ? inner - Math.floor(inner * 0.4) - 3 : inner;
-            const detail = presentation.detail(row, state, theme, detailWidth, ctx.cwd);
+            const detail = presentation.detail(row, state, theme, detailWidth, ctx.cwd, hints);
             const body = renderInspector(row, state, theme, inner, height, detail);
             if (body.length >= 2) body[body.length - 2] = truncateToWidth(theme.fg("dim", `Tab: view · ${keys.getKeys("tui.select.up").join("/")}/${keys.getKeys("tui.select.down").join("/")}: call · ${keys.getKeys("tui.select.pageDown").join("/")}: scroll`), inner);
             if (body.length) body[body.length - 1] = truncateToWidth(theme.fg("dim", `${keys.getKeys("tui.select.cancel").join("/")}: close`), inner);

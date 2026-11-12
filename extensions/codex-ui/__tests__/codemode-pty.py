@@ -16,6 +16,9 @@ import pyte
 
 here = Path(__file__).resolve().parent
 repo = here.parents[2]
+suffix = 'fullscreen' if '--fullscreen' in sys.argv else 'regular'
+if '--custom-keys' in sys.argv:
+    suffix += '-custom-keys'
 before = {p for p in (repo / '.tmp').glob('codemode-production-*') if p.is_dir()}
 pid, fd = pty.fork()
 if pid == 0:
@@ -23,12 +26,15 @@ if pid == 0:
     os.environ['TERM'] = 'xterm-256color'
     os.environ['COLORTERM'] = 'truecolor'
     os.execvp('node', ['node', str(here / 'fixtures/codemode-cli.mjs'), '--restart', *sys.argv[1:]])
+(repo / '.tmp' / f'codemode-owners-{suffix}.json').write_text(json.dumps({'driverPid': os.getpid(), 'ptyPid': pid}))
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 80, 120, 0, 0))
 screen = pyte.Screen(120, 80)
 stream = pyte.Stream(screen)
 decoder = codecs.getincrementaldecoder('utf-8')('replace')
 status = None
 screens = {}
+raw = bytearray()
+expand_key = b"\x1bOR" if "--custom-keys" in sys.argv else b"\x0f"
 
 def view():
     return '\n'.join(line.rstrip() for line in screen.display)
@@ -43,6 +49,7 @@ def pump():
             if error.errno != errno.EIO:
                 raise
             data = b''
+        raw.extend(data)
         stream.feed(decoder.decode(data))
     if status is None:
         done, value = os.waitpid(pid, os.WNOHANG)
@@ -79,10 +86,10 @@ try:
     assert 'Extension issues' not in view(), view()
     assert 'PAYLOAD-FROM-SCRIPT' in view(), view()
     screens['collapsed'] = view()
-    os.write(fd, b'\x0f')
+    os.write(fd, expand_key)
     wait(lambda: 'false;' in view() and 'true;' in view(), 'native diff expansion')
     screens['expanded'] = view()
-    os.write(fd, b'\x0f')
+    os.write(fd, expand_key)
     settle()
     inspect()
     os.write(fd, b'\t')
@@ -109,8 +116,14 @@ try:
     screens['tree-history'] = view()
     os.write(fd, b'\x1b')
     settle()
+    if '--custom-keys' in sys.argv:
+        command('/play many')
+        wait(lambda: 'ACCEPTANCE-DONE: many' in view() and '19 more calls' in view(), 'expandable history before reload')
     command('/reload')
     wait(lambda: 'Reloaded' in view(), 'reload')
+    if '--custom-keys' in sys.argv:
+        wait(lambda: 'f3 to expand' in view(), 'custom expansion hint after reload')
+        screens['reload-custom-keys'] = view()
     inspect()
     wait(lambda: 'Raw result unavailable' in view(), 'reload metadata')
     os.write(fd, b'\x1b')
@@ -120,23 +133,28 @@ try:
         wait(lambda: f'ACCEPTANCE-DONE: {scenario}' in view(), scenario)
         settle()
         assert expected in view(), (scenario, view())
+        if scenario == 'many' and '--custom-keys' in sys.argv:
+            assert 'f3' in view(), view()
         if scenario == 'hiddenfail':
             assert 'Script completed' in view() and '1 failed' in view() and 'missing.txt' in view(), view()
         screens[scenario] = view()
     command('/play running')
     wait(lambda: '1 running' in view(), 'running real bash')
     settle()
+    assert 'Working' in view(), view()
+    screens['working'] = view()
     command('/stop')
     wait(lambda: 'Interrupted' in view(), 'real interruption')
+    wait(lambda: 'Working' not in view(), 'working stops after cancellation')
     screens['interrupted'] = view()
     settle()
     command('/play success')
     wait(lambda: 'ACCEPTANCE-DONE: success' in view(), 'success after abort')
-    os.write(fd, b'\x0f')
+    os.write(fd, expand_key)
     settle()
     assert '@ Read' in view(), view()
     screens['full-expanded'] = view()
-    os.write(fd, b'\x0f')
+    os.write(fd, expand_key)
     settle()
     for width in [40, 80, 120]:
         fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 80, width, 0, 0))
@@ -175,10 +193,16 @@ finally:
         settle(3)
     if status is None:
         os.killpg(pid, signal.SIGKILL)
-        os.waitpid(pid, 0)
+        _, status = os.waitpid(pid, 0)
     os.close(fd)
-    suffix = 'fullscreen' if '--fullscreen' in sys.argv else 'regular'
+    (repo / '.tmp' / f'codemode-production-{suffix}.ansi').write_bytes(raw)
     (repo / '.tmp' / f'codemode-production-{suffix}.json').write_text(json.dumps(screens, ensure_ascii=False, indent=2))
+    try:
+        os.killpg(pid, 0)
+        raise AssertionError(f'Owned PTY group still alive: {pid}')
+    except ProcessLookupError:
+        pass
+    (repo / '.tmp' / f'codemode-process-{suffix}.json').write_text(json.dumps({'pid': pid, 'groupStopped': True, 'exitCode': os.waitstatus_to_exitcode(status)}))
 after = {p for p in (repo / '.tmp').glob('codemode-production-*') if p.is_dir()}
 assert after == before, after
 print('Production codemode PTY passed: tree, inspector, states, nested tools, MCP, branch/reload/compact/resume, themes, cleanup.')

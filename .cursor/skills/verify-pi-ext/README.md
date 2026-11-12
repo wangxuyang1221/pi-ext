@@ -19,6 +19,8 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run metadata
 
 Node 要求 22.19+，pnpm 按 package.json 的 packageManager。Pi coding-agent、ai、agent-core、tui 必须版本一致，当前固定 1.4.0。使用本地 node_modules 中的 CLI，不使用全局 pi。Python 使用 Conda 的 codex-py312，需要 pyte；subagent 还需要 tmux 和 fish。
 
+五个扩展及主题的原版 1.5.2 验收使用 [隔离验证入口](../../../docs/pi152-compatibility.md)。它在 `.tmp` 内创建独立包树和源码副本，再复用本目录与扩展各自的正式 driver；根基线与补丁保持 1.4.0。
+
 Context7 未提供这个包的 1.4.0 版本文档，因此 CLI 参数依据已安装的官方 dist/cli/args.js，版本核验复用 scripts/pi-host.mjs。运行与隔离依据 [仓库测试说明](../../../docs/testing.md)。
 
 每次 run 从空目录启动。共享 helper 复用 test-support/environment.mjs 的凭据白名单与目录隔离；所有配置、session、临时文件和证据都在仓库 .tmp 下，不加载用户的 HOME 配置和外部凭据。外层只负责运行与收集证据，生产工具、TUI、session 和文件操作由真实 Pi 执行。
