@@ -1,10 +1,9 @@
-import { StringEnum, Type } from "@earendil-works/pi-ai";
+import { Type, type Static } from "typebox";
 import {
   defineTool,
   type ExtensionAPI,
   type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import type { Static } from "@earendil-works/pi-ai";
 import {
   assertSupportedStandaloneCombination,
   classifyError,
@@ -102,12 +101,14 @@ function buildSearchParametersSchema(config: ResolvedConfig) {
       description: `One or more search queries to run in parallel (max ${config.batchSize}).`,
     }),
     search_context_size: Type.Optional(
-      StringEnum(["low", "medium", "high"] as const, {
+      Type.Enum(["low", "medium", "high"] as const, {
+        type: "string",
         description: "Amount of web context to retrieve. Defaults to medium.",
       }),
     ),
     freshness: Type.Optional(
-      StringEnum(["cached", "indexed", "live"] as const, {
+      Type.Enum(["cached", "indexed", "live"] as const, {
+        type: "string",
         description:
           "Use 'live' for time-sensitive queries; 'indexed' for OpenAI-indexed web access; 'cached' for stable topics. Defaults to live.",
       }),
@@ -117,13 +118,15 @@ function buildSearchParametersSchema(config: ResolvedConfig) {
 
 const StandaloneParametersSchema = Type.Object({
   search_context_size: Type.Optional(
-    StringEnum(["medium", "high"] as const, {
+    Type.Enum(["medium", "high"] as const, {
+      type: "string",
       description:
         'Amount of web context to retrieve. Defaults to medium. Standalone mode disables "low".',
     }),
   ),
   freshness: Type.Optional(
-    StringEnum(["cached", "indexed", "live"] as const, {
+    Type.Enum(["cached", "indexed", "live"] as const, {
+      type: "string",
       description:
         "Use 'live' for time-sensitive queries; 'indexed' for OpenAI-indexed web access; 'cached' for stable topics. Defaults to live.",
     }),
@@ -165,7 +168,7 @@ const StandaloneParametersSchema = Type.Object({
     Type.Array(
       Type.Object({
         ticker: Type.String({ minLength: 1 }),
-        type: StringEnum(["equity", "fund", "crypto", "index"] as const),
+        type: Type.Enum(["equity", "fund", "crypto", "index"] as const, { type: "string" }),
         market: Type.Optional(Type.String()),
       }),
       { maxItems: 1, description: "Look up one stock/ETF/crypto/index price." },
@@ -184,8 +187,8 @@ const StandaloneParametersSchema = Type.Object({
   sports: Type.Optional(
     Type.Array(
       Type.Object({
-        fn: StringEnum(["schedule", "standings"] as const),
-        league: StringEnum([
+        fn: Type.Enum(["schedule", "standings"] as const, { type: "string" }),
+        league: Type.Enum([
           "nba",
           "wnba",
           "nfl",
@@ -195,7 +198,7 @@ const StandaloneParametersSchema = Type.Object({
           "ncaamb",
           "ncaawb",
           "ipl",
-        ] as const),
+        ] as const, { type: "string" }),
         team: Type.Optional(Type.String()),
         opponent: Type.Optional(Type.String()),
         date_from: Type.Optional(Type.String()),

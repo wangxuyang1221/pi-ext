@@ -4,7 +4,9 @@
 
 原版 Pi `1.5.2` 的兼容范围是 `codex-ui`、`codex-compact`、`openai-fast-mode`、`mcp`、`skill-mentions` 和 `themes/codex-pi.json`。根开发环境仍固定在 `1.4.0`，保留现有可选补丁。包仍发布五个扩展入口。使用 `pi config` 选择上述五个扩展，或逐个用 `-e` 加载构建入口。
 
-三个 Pi peer 依赖接受 `1.4.0 || 1.5.2`。不要把此范围理解成八个发布入口都已通过新宿主验收，也不要将根开发依赖整体升级后套用旧补丁。
+`codex-search` 另以独立源码入口进行类型和宿主加载检查，不进入发布包、构建入口或自动加载清单。该检查不代替搜索服务和完整终端旅程验收。
+
+三个 Pi peer 依赖接受 `1.4.0 || 1.5.2`。支持范围和验收层级以上述入口为准；不要将根开发依赖整体升级后套用旧补丁。
 
 ## Stock behavior
 
@@ -31,9 +33,9 @@ pnpm run pi152:verify run node test-support/pi152/load.mjs
 pnpm run pi152:verify run pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs doctor
 ```
 
-`prepare` 在 `.tmp/pi152-adaptation/runtime` 创建验证副本及独立 node_modules。这是源码验证副本，不是独立 Git checkout。它仅复制范围内生产源码，另外复制共享脚本和测试夹具，不复制根 node_modules、补丁配置或根锁。每次 prepare 保留独立 node_modules 和 `.tmp` 验收证据，清除其余旧副本内容，再复制当前源码、主题及夹具，随后必须重新 build。运行旅程时不要同时 prepare/build。`test-support/pi152/pnpm-lock.yaml` 是独立锁，以 `pnpm install --frozen-lockfile --ignore-scripts` 安装。锁最初沿用根锁中已存在的间接依赖版本，再解析官方 Pi `1.5.2` 包，避免浮动 AWS 依赖选中 registry 尚未提供的版本。
+`prepare` 在 `.tmp/pi152-adaptation/runtime` 创建验证副本及独立 node_modules。这是源码验证副本，不是独立 Git checkout。它复制五个发布扩展及独立 `codex-search` 的生产源码，另外复制共享脚本和测试夹具，不复制根 node_modules、补丁配置或根锁。每次 prepare 保留独立 node_modules 和 `.tmp` 验收证据，清除其余旧副本内容，再复制当前源码、主题及夹具，随后必须重新 build。运行旅程时不要同时 prepare/build。`test-support/pi152/pnpm-lock.yaml` 是独立锁，以 `pnpm install --frozen-lockfile --ignore-scripts` 安装。锁最初沿用根锁中已存在的间接依赖版本，再解析官方 Pi `1.5.2` 包，避免浮动 AWS 依赖选中 registry 尚未提供的版本。
 
-`host-proof.json` 记录四个 Pi 包的绝对目录、版本、入口和 manifest 的 SHA-256。入口拒绝工作区外的宿主路径和 pnpm patch hash。源码从副本路径加载，不会从原仓库源码路径解析旧依赖。两种 build 入口都会复制并校验 compact 的 WASM 和配套资源。`load.mjs` 同时检查五扩展 source/dist、主题、内置 MCP 替代及 codemode 保留，并实际调用编译产物中的 XML、原始图片和音频解码入口。运行命令过滤凭据环境；HOME、agentDir、cache、temp、session 和证据都在仓库 `.tmp`。
+`host-proof.json` 记录四个 Pi 包的绝对目录、版本、入口和 manifest 的 SHA-256。入口拒绝工作区外的宿主路径和 pnpm patch hash。源码从副本路径加载，不会从原仓库源码路径解析旧依赖。两种 build 入口都会复制并校验 compact 的 WASM 和配套资源。`types` 检查五个发布扩展和 `codex-search`。`build` 只构建五个发布扩展。`load.mjs` 同时检查五扩展 source/dist、独立 `codex-search` 源码入口、主题、内置 MCP 替代及 codemode 保留，并实际调用编译产物中的 XML、原始图片和音频解码入口。运行命令过滤凭据环境；HOME、agentDir、cache、temp、session 和证据都在仓库 `.tmp`。
 
 ## User journeys
 
