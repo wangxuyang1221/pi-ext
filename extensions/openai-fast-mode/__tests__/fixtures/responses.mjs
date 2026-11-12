@@ -23,7 +23,7 @@ export function offlineCodex(ai, adapter, steps, onCall = () => {}) {
   const requests = [];
   const fakeKey = `offline.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "offline-fixture" } })).toString("base64url")}.fixture`;
   /** @type {import("@earendil-works/pi-ai").Model<any>} */
-  const model = { id: "goal-budget-fixture", name: "Offline Codex budget fixture", provider: "openai-codex", api: "openai-codex-responses", baseUrl: "https://offline.invalid", reasoning: true, input: ["text"], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 128000, maxTokens: 4096 };
+  const model = { id: "fast-transport-fixture", name: "Offline Codex transport fixture", provider: "openai-codex", api: "openai-codex-responses", baseUrl: "https://offline.invalid", reasoning: true, input: ["text"], cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, contextWindow: 128000, maxTokens: 4096 };
   const stream = (requestModel, context, options) => {
     const index = calls++;
     const step = steps[index];

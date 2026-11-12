@@ -121,7 +121,6 @@ async function runPi(
   input?: string,
 ): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
   const childEnvironment = { ...process.env };
-  delete childEnvironment.PI_SUBAGENT;
   childEnvironment.PI_MCP_CONFIG = configPath;
   childEnvironment.PI_TELEMETRY = "0";
   const child = spawn(process.execPath, [piCliPath, ...args], {

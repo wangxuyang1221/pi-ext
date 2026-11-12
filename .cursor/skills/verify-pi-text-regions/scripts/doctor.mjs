@@ -48,7 +48,7 @@ export async function doctor(args = process.argv.slice(2)) {
   assert.match(python.version, /^3\.12\./, "Expected Python 3.12");
   assert.equal(python.pyte, "0.8.2", "Expected pyte 0.8.2");
   const sources = Object.fromEntries(["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", `patches/@earendil-works__pi-tui@${values.profile === "pi152" ? "1.5.2" : "1.4.0"}.patch`, `patches/@earendil-works__pi-coding-agent@${values.profile === "pi152" ? "1.5.2" : "1.4.0"}.patch`].map(path => [path, hash(join(repo, path))]));
-  for (const path of [...(values.profile === "pi140" ? ["extensions/permissions/dist/index.js"] : []), "examples/text-region.ts", "test-support/fixtures/local-refresh/provider.ts", "test-support/fixtures/local-refresh/working-provider.ts", "test-support/fixtures/local-refresh/working_journey.py", "scripts/local-refresh-pty.py"]) accessSync(join(repo, path), constants.R_OK);
+  for (const path of ["examples/text-region.ts", "test-support/fixtures/local-refresh/provider.ts", "test-support/fixtures/local-refresh/working-provider.ts", "test-support/fixtures/local-refresh/working_journey.py", "scripts/local-refresh-pty.py"]) accessSync(join(repo, path), constants.R_OK);
   return { ok: true, repo, project, revision: run("git", ["rev-parse", "HEAD"], repo), node: process.version, pnpm, python, extension, extensionSha256: hash(extension), sources, ...await inspectHost(project, values.original, values.profile), auth: "Offline faux provider; no remote credentials needed", instance: "Short-lived PTY; ready and PID recorded by the drive", servicesStarted: [] };
 }
 

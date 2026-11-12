@@ -1,5 +1,7 @@
 # Termius supplemental verification
 
+本文为当时的终端与局部刷新历史证据，画面和动作保留原始语义。当前验收入口见 [Testing](../../../docs/testing.md)，历史计数不代表当前产品通过。
+
 ## Result
 
 本轮只补 #66 的 Termius 实机与系统复制边界，没有委派，没有重跑 CPU、完整自动矩阵或安装。结果为 `unverified`，新增完整通过 ID 为 0，产品/共享驱动失败为 0。既有 58 个 ID 的总计仍为 53 passed、0 failed、5 unverified。

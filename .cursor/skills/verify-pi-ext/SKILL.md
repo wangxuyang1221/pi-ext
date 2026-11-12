@@ -1,11 +1,11 @@
 ---
 name: verify-pi-ext
-description: "Verify all pi-ext extensions through the real Pi CLI, PTY, private tmux and local protocol fixtures. Use for cross-extension changes or to select an extension-specific verification journey."
+description: "Verify all pi-ext extensions through the real Pi CLI, PTY and local protocol fixtures. Use for cross-extension changes or to select an extension-specific verification journey."
 ---
 
 # Verify Pi extensions
 
-先读取 [共享运行说明](README.md)，再选择对应扩展的行为索引。覆盖八个发布扩展和源码形式的 codex-search。
+先读取 [共享运行说明](README.md)，再选择对应扩展的行为索引。覆盖五个发布扩展和源码形式的 codex-search。
 
 ## Launch
 
@@ -27,11 +27,8 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run metadata
 ## Drive
 
 - [verify-pi-codex-compact](../verify-pi-codex-compact/SKILL.md)：4 组核心行为。
-- [verify-pi-openai-fast-mode](../verify-pi-openai-fast-mode/SKILL.md)：3 组核心行为。
-- [verify-pi-permissions](../verify-pi-permissions/SKILL.md)：4 组核心行为。
-- [verify-pi-goal](../verify-pi-goal/SKILL.md)：8 组核心行为。
+- [verify-pi-openai-fast-mode](../verify-pi-openai-fast-mode/SKILL.md)：2 组核心行为。
 - [verify-pi-mcp](../verify-pi-mcp/SKILL.md)：5 组核心行为。
-- [verify-pi-subagent](../verify-pi-subagent/SKILL.md)：5 组核心行为。
 - [verify-pi-codex-ui](../verify-pi-codex-ui/SKILL.md)：6 组核心行为。
 - [verify-pi-skill-mentions](../verify-pi-skill-mentions/SKILL.md)：5 组核心行为。
 - [verify-pi-codex-search](../verify-pi-codex-search/SKILL.md)：4 组核心行为。

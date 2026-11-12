@@ -12,7 +12,6 @@ mkdirSync(join(repo, ".tmp"), { recursive: true });
 const root = mkdtempSync(join(repo, ".tmp/skill-spacing-pty-"));
 const modes = ["native-fullscreen", "codex-fullscreen"];
 const env = { ...process.env, TMPDIR: join(root, "tmp") };
-for (const key of ["PI_SUBAGENT_PARENT", "PI_SUBAGENT_LAUNCH", "PI_SUBAGENT", "PI_SUBAGENT_ID"]) delete env[key];
 try {
   mkdirSync(join(root, "consumer")); mkdirSync(env.TMPDIR);
   copyFileSync(join(here, "pty-fixture.ts"), join(root, "consumer/pty-fixture.ts"));

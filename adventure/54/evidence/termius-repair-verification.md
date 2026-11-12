@@ -1,5 +1,7 @@
 # Termius repair verification
 
+本文为当时的终端与局部刷新历史证据，画面和动作保留原始语义。当前验收入口见 [Testing](../../../docs/testing.md)，历史计数不代表当前产品通过。
+
 ## Result
 
 本轮由独立 gpt-6.1-sol / high 执行，没有委派，没有修改产品、宿主补丁、共享驱动、断言或 CPU 预算。基准为 `6bd1c3e2071e9c020c2e7c8fde8b4621ffc800a4`。
@@ -14,7 +16,7 @@
 
 - cwd 始终为 `/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation`，分支 `adventure/pi-animation`，开始工作树干净；主 checkout 未改。
 - 完整读取本 worktree 的 AGENTS、语言政策、提交政策、testing，以及两个指定 skill、feature map、working/installation/interactions/regions/layout、manual-terminal、旧 driver 和共享运行说明；实际调用两个 skill 的 doctor 与驱动。读取 unslop；诊断前另完整读取 ub-mode，没有新增或修改产品测试。
-- Node v22.22.2、pnpm 11.9.0、Pi 1.4.0、Python 3.12.13。依赖独立，旧 skill doctor 的 independentCheckout=true、sharedDependencies=false、lockPresent=false。该 doctor 的 subagent socket 长度提示与本轮未运行的 subagent case 无关。
+- Node v22.22.2、pnpm 11.9.0、Pi 1.4.0、Python 3.12.13。依赖独立，旧 skill doctor 的 independentCheckout=true、sharedDependencies=false、lockPresent=false。
 - 独立核对修复索引的 17 份来源和 157 份 artifact，174 个哈希全部匹配。全局 Pi 入口 SHA-256 前后均为 `f04afd35fb16a3647b49ebb4bb67cbccba10a64fc6b5d1d5dfdd320e4f4ef331`。
 - 使用新消费安装 `.tmp/local-refresh-install-CzIw6h`。独立 check 构建后，两个消费者各 32 个 codex-ui JS 与当前 dist 逐字节一致，64 项全部匹配。tarball SHA-256 为 `03058ebfa8f11a6f2f554cf93c61919eb40bcc6544382cd8b70305daefdedd0d`。未重新 pack，没有用旧 eoWVvw 安装证明修复。
 - 新消费 doctor 均通过，补丁 regular/fullscreen API 为 true/true，原版为 false/false。每个实际新实机实例启动前保存独立 doctor；恢复实例使用单独的 PID 和退出文件。
@@ -39,7 +41,7 @@ pnpm_config_verify_deps_before_run=false pnpm exec node .cursor/skills/verify-pi
 | original / regular | 54 | passed |
 | original / fullscreen, serial recheck | 54 | passed |
 
-每个有效入口均核对完整旅程、公开事件、真实工具文件 `TOOL-FINISHED`、取消文件缺失、正常退出和逐实例清理。独立读回的 finished 帧均为完整 synchronized frame，无 Working、无速率、Goal 行保留。原版 fullscreen 的有效证据使用 `published-original-fullscreen-serial-recheck`；第一次同入口的功能通过记录保留，但不作为串行要求的有效证据。
+每个有效入口均核对完整旅程、公开事件、真实工具文件 `TOOL-FINISHED`、取消文件缺失、正常退出和逐实例清理。独立读回的 finished 帧均为完整 synchronized frame，无 Working、无速率、历史状态行保留。原版 fullscreen 的有效证据使用 `published-original-fullscreen-serial-recheck`；第一次同入口的功能通过记录保留，但不作为串行要求的有效证据。
 
 旧 codex-ui skill 的正式 smoke 串行重跑通过，证据为 `.tmp/test-results/verify-codex-ui-DsnydK`，summary.status=passed、exitCode=0、cleanup=removed。它实际驱动生产 codemode 树、inspector、真实本地 MCP 及恢复等路径。修复轮的 CLI regular/fullscreen 各 139 项与 10 份逐进程 doctor 独立读回，作为已有证据保留，不冒充本轮新跑。
 

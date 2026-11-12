@@ -13,11 +13,8 @@ import {
   normalizeWidth,
 } from "./layout.js";
 
-import { renderGoalDisplay, type GoalFooterDisplay } from "./goal-display.js";
-
 export interface CodexFooterOptions {
   getRate?: () => string | undefined;
-  getGoalDisplay?: () => GoalFooterDisplay | undefined;
   cwd: string;
   home?: string;
   getModelId: () => string | undefined;
@@ -55,7 +52,6 @@ type FooterItemState = {
 };
 
 const FAST_STATUS_KEY = "pi-openai-fast-mode";
-const PERMISSIONS_STATUS_KEY = "permissions";
 const ITEM_SEPARATOR = " ⋅ ";
 const SIDE_PADDING = 1;
 const ANSI_FOREGROUND_RESET = "\x1b[39m";
@@ -78,12 +74,10 @@ export class CodexFooter implements Component {
     branch: string | null;
     contextPercent: number | null | undefined;
     fast: string | undefined;
-    permissions: string | undefined;
     lines: string[];
   } | undefined;
 
   private combined: { base: string[]; key: string; theme: Theme; lines: string[] } | undefined;
-  private cachedGoal: { key: string; theme: Theme; lines: string[] } | undefined;
 
   constructor(private readonly options: CodexFooterOptions) {}
 
@@ -101,13 +95,13 @@ export class CodexFooter implements Component {
     const remaining = Math.max(0, safeWidth - visibleWidth(suffix));
     const base = this.renderBase(remaining, statuses);
     const theme = this.options.getTheme();
-    const goal = this.readStatus(statuses, "goal");
-    const display = goal ? this.options.getGoalDisplay?.() : undefined;
-    const key = JSON.stringify([safeWidth, display ?? goal, rate]);
+    const status = this.readStatus(statuses, "status");
+    const statusLines = status ? [status] : [];
+    const key = JSON.stringify([safeWidth, statusLines, rate]);
     const cached = this.reuseCombined(base, key, theme);
     if (cached) return cached;
     const lines = composeFooter(base, safeWidth, remaining, suffix, theme);
-    lines.push(...this.renderGoal(goal, display, safeWidth, theme));
+    lines.push(...statusLines.map(text => fitToWidth(theme.fg("muted", ` ${text}`), safeWidth)));
     this.combined = { base, key, theme, lines };
     return lines;
   }
@@ -115,14 +109,6 @@ export class CodexFooter implements Component {
   private reuseCombined(base: string[], key: string, theme: Theme): string[] | undefined {
     const cached = this.combined;
     return cached?.base === base && cached.key === key && cached.theme === theme ? cached.lines : undefined;
-  }
-
-  private renderGoal(goal: string | undefined, display: GoalFooterDisplay | undefined, width: number, theme: Theme): string[] {
-    const key = JSON.stringify([width, display ?? goal]);
-    if (this.cachedGoal?.key === key && this.cachedGoal.theme === theme) return this.cachedGoal.lines;
-    const lines = goalLines(goal, display, width, theme);
-    this.cachedGoal = { key, theme, lines };
-    return lines;
   }
 
   private renderBase(width: number, statuses: ReadonlyMap<string, string>): string[] {
@@ -136,7 +122,6 @@ export class CodexFooter implements Component {
     const contextPercent = this.options.getContextUsage()?.percent;
     const fastStatus = this.readStatus(statuses, FAST_STATUS_KEY);
     const fast = fastStatus?.toLowerCase() === "fast" ? "fast" : undefined;
-    const permissions = this.readStatus(statuses, PERMISSIONS_STATUS_KEY);
 
     const cached = this.cachedSnapshot;
     if (
@@ -147,7 +132,6 @@ export class CodexFooter implements Component {
       && cached.branch === branch
       && cached.contextPercent === contextPercent
       && cached.fast === fast
-      && cached.permissions === permissions
     ) {
       return cached.lines;
     }
@@ -161,7 +145,6 @@ export class CodexFooter implements Component {
       branch,
       contextPercent,
       fast,
-      permissions,
       theme,
     };
     const lines = [renderFooter(input)];
@@ -173,7 +156,6 @@ export class CodexFooter implements Component {
       branch,
       contextPercent,
       fast,
-      permissions,
       lines,
     };
     return lines;
@@ -181,7 +163,6 @@ export class CodexFooter implements Component {
 
   invalidate(): void {
     this.combined = undefined;
-    this.cachedGoal = undefined;
     this.cachedSnapshot = undefined;
   }
 
@@ -214,11 +195,6 @@ function composeFooter(base: string[], width: number, remaining: number, suffix:
   return [remaining > 0 ? line : fitToWidth(line, width)];
 }
 
-function goalLines(goal: string | undefined, display: GoalFooterDisplay | undefined, width: number, theme: Theme): string[] {
-  if (display) return renderGoalDisplay(display, width, theme);
-  return goal ? [fitToWidth(theme.fg("muted", ` ${goal}`), width)] : [];
-}
-
 type FooterRenderInput = {
   width: number;
   modelId: string;
@@ -228,7 +204,6 @@ type FooterRenderInput = {
   branch: string | null;
   contextPercent: number | null | undefined;
   fast: string | undefined;
-  permissions: string | undefined;
   theme: Theme;
 };
 
@@ -261,7 +236,6 @@ function buildItems(input: FooterRenderInput): FooterItem[] {
 
   const context = createContextItem(input.contextPercent);
   if (context) items.push(context);
-  if (input.permissions) items.push(createPermissionsItem(input.permissions));
   return items;
 }
 
@@ -338,16 +312,6 @@ function createContextItem(percent: number | null | undefined): FooterItem | und
       variant(part(`${left}% left`, "usage")),
       variant(part(`${left}%`, "usage")),
     ]),
-  };
-}
-
-function createPermissionsItem(text: string): FooterItem {
-  return {
-    key: "permissions",
-    priority: 110,
-    order: 300,
-    pinned: true,
-    variants: [variant(part(text, /full access/iu.test(text) ? "warning" : "muted"))],
   };
 }
 

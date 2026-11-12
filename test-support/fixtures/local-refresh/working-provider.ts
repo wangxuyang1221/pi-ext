@@ -34,8 +34,7 @@ export default function workingProvider(pi: ExtensionAPI): void {
   }));
   pi.registerProvider(faux.provider);
   pi.on("session_start", (event, ctx) => {
-    if (process.env.LOCAL_REFRESH_PROFILE === "pi152") ctx.ui.setStatus("goal", "Status: active | Keep the second footer row intact");
-    else ctx.ui.setStatus("goal", "Goal: active | Keep the second footer row intact");
+    ctx.ui.setStatus("status", "Status: active | Keep the second footer row intact");
     record("start", { reason: event.reason, pid: process.pid, tty: process.stdin.isTTY, session: ctx.sessionManager.getSessionFile() });
   });
   pi.on("agent_start", event => record("agent_start", event));

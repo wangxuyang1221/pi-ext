@@ -35,11 +35,11 @@ test("working keeps ten 80ms frames, a fixed label, shimmer and elapsed time unt
   assert.equal(activity.label(), undefined);
 });
 
-test("rate occupies the first footer row while the goal row retains its full width", () => {
+test("rate occupies the first footer row while the status row retains its full width", () => {
   let rate: string | undefined;
   const footer = new CodexFooter({ cwd: "/workspace/pi-ext", getModelId: () => "gpt-test", getThinkingLevel: () => "high",
     getContextUsage: () => ({ percent: 12 }), getBranch: () => "main", getTheme: () => theme,
-    getExtensionStatuses: () => new Map([["goal", "Goal: active | long objective with useful details"], ["permissions", "full access"], ["pi-openai-fast-mode", "fast"]]),
+    getExtensionStatuses: () => new Map([["status", "Status: active | long status with useful details"], ["pi-openai-fast-mode", "fast"]]),
     getRate: () => rate,
   });
   const before = footer.render(100);
@@ -48,7 +48,7 @@ test("rate occupies the first footer row while the goal row retains its full wid
   assert.equal(active.length, 2);
   assert.equal(active[1], before[1]);
   assert.match(stripTerminalSequences(active[0]!), /≈1008 t\/s\s*$/u);
-  assert.match(stripTerminalSequences(active[0]!), /fast.*full access/u);
+  assert.match(stripTerminalSequences(active[0]!), /fast/u);
   for (let width = 1; width <= 100; width++) {
     const lines = footer.render(width);
     assert.equal(lines.length, 2);

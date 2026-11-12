@@ -27,11 +27,11 @@ export function verifyPi152({ patched = false } = {}) {
       for (const entry of readdirSync(runtime)) {
         if (entry !== "node_modules" && entry !== ".tmp") rmSync(join(runtime, entry), { recursive: true, force: true });
       }
-      const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], { cwd: repo }).toString().split("\0").filter(Boolean);
+      const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], { cwd: repo }).toString().split("\0").filter(file => file && existsSync(join(repo, file)));
       for (const file of files) {
         if (file.includes("/") && !["extensions", "scripts", "test-support", ".cursor", "docs", "examples", "themes"].includes(file.split("/")[0])) continue;
         if (["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"].includes(file) || file.startsWith("patches/")) continue;
-        if (file.startsWith("extensions/") && !extensions.includes(file.split("/")[1]) && file.split("/")[2] !== "__tests__") continue;
+        if (file.startsWith("extensions/") && !extensions.includes(file.split("/")[1])) continue;
         const target = join(runtime, file);
         mkdirSync(dirname(target), { recursive: true });
         cpSync(join(repo, file), target);

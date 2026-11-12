@@ -321,7 +321,6 @@ function stripAnsi(value: string): string {
   return value.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
-let inheritedPiSubagent: string | undefined;
 let inheritedAgentDir: string | undefined;
 let historyAgentDir: string;
 
@@ -331,8 +330,6 @@ describe("MCP Pi integration", () => {
     mkdirSync(".tmp", { recursive: true });
     historyAgentDir = mkdtempSync(join(process.cwd(), ".tmp/mcp-index-"));
     process.env.PI_CODING_AGENT_DIR = historyAgentDir;
-    inheritedPiSubagent = process.env.PI_SUBAGENT;
-    delete process.env.PI_SUBAGENT;
   });
 
   afterEach(() => {
@@ -345,12 +342,9 @@ describe("MCP Pi integration", () => {
     mocks.connectServerImpl.mockReset();
     mocks.reconnectServerImpl.mockReset();
     mocks.managerInstances.length = 0;
-    if (inheritedPiSubagent === undefined) delete process.env.PI_SUBAGENT;
-    else process.env.PI_SUBAGENT = inheritedPiSubagent;
   });
 
-  it("bootstraps cold history before background connections and replaces it with current live definitions", async () => {
-    process.env.PI_SUBAGENT = "1";
+  it("bootstraps cold history before connections and replaces it with current live definitions", async () => {
     mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({ docs: { command: "docs-mcp" } }));
     const pending = deferred<any>();
     mocks.connectServerImpl.mockImplementation(() => pending.promise);
@@ -358,7 +352,8 @@ describe("MCP Pi integration", () => {
     const ctx = createContext();
     ctx.sessionManager.getEntries.mockReturnValue([{ type: "message", message: { role: "assistant", content: [{ type: "toolCall", name: "mcp__docs__query" }] } }]);
     registerMcpExtension(pi as never);
-    await pi.emit("session_start", {}, ctx);
+    const starting = pi.emit("session_start", {}, ctx);
+    await flushPromises();
     const placeholder = pi.tools.get("mcp__docs__query");
     expect(placeholder?.renderShell).toBe("self");
     expect(pi.getActiveTools()).toEqual(["read", "other-extension"]);
@@ -366,6 +361,7 @@ describe("MCP Pi integration", () => {
     await expect(placeholder.execute("id", {})).rejects.toThrow("history-only");
     expect(manager().callTool).not.toHaveBeenCalled();
     pending.resolve(makeState("docs"));
+    await starting;
     await flushPromises();
     await flushPromises();
     expect(pi.tools.get("mcp__docs__query")).not.toBe(placeholder);
@@ -1122,7 +1118,6 @@ describe("MCP Pi integration", () => {
   });
 
   it("invalidates stale manager and startup callbacks before shutdown completes", async () => {
-    process.env.PI_SUBAGENT = "1";
     mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({ docs: { command: "docs-mcp" } }));
     const pending = deferred<any>();
     mocks.connectServerImpl.mockReturnValue(pending.promise);
@@ -1130,7 +1125,8 @@ describe("MCP Pi integration", () => {
     const ctx = createContext("rpc");
     registerMcpExtension(pi as never);
 
-    await pi.emit("session_start", {}, ctx);
+    const starting = pi.emit("session_start", {}, ctx);
+    await flushPromises();
     expect(manager().connectServer).toHaveBeenCalledTimes(1);
     const notifyCount = ctx.ui.notify.mock.calls.length;
     const statusCount = ctx.ui.setStatus.mock.calls.length;
@@ -1140,6 +1136,7 @@ describe("MCP Pi integration", () => {
     expect(manager().listeners.size).toBe(0);
 
     pending.resolve(makeState("docs", { tools: [makeTool("late-tool")] }));
+    await starting;
     await flushPromises();
     manager().emit({
       type: "tools",

@@ -1456,26 +1456,6 @@
       "result": "passed"
     },
     {
-      "name": "goal-footer",
-      "outerExitCode": 0,
-      "evidence": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W",
-      "status": "passed",
-      "cleanup": "removed",
-      "recordedProcesses": 35,
-      "processGroupsEmpty": true,
-      "listeners": [],
-      "command": [
-        "pnpm",
-        "exec",
-        "node",
-        ".cursor/skills/verify-pi-ext/scripts/verify.mjs",
-        "run",
-        "goal-footer"
-      ],
-      "commandRecord": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/old-goal-footer.command.json",
-      "result": "passed"
-    },
-    {
       "name": "cli-regular",
       "outerExitCode": 0,
       "evidence": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/codex-ui-cli-regular-1793255499410319000",
@@ -10005,73 +9985,6 @@
       }
     ]
   },
-  "goalFooter": {
-    "passed": true,
-    "results": [
-      {
-        "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/goal-footer-acceptance-fullscreen.json",
-        "pid": 81869,
-        "mode": "fullscreen",
-        "idleTerminalBytes": 0,
-        "frames": [
-          "active",
-          "details",
-          "details-reopened",
-          "complete",
-          "width-80",
-          "width-40",
-          "width-120"
-        ]
-      },
-      {
-        "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/goal-footer-acceptance-native.json",
-        "pid": 82102,
-        "mode": "native",
-        "idleTerminalBytes": 0,
-        "frames": [
-          "active",
-          "details",
-          "details-reopened",
-          "complete",
-          "width-80",
-          "width-40",
-          "width-120"
-        ]
-      },
-      {
-        "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/goal-footer-acceptance-native-fullscreen.json",
-        "pid": 82541,
-        "mode": "native-fullscreen",
-        "idleTerminalBytes": 0,
-        "frames": [
-          "active",
-          "details",
-          "details-reopened",
-          "complete",
-          "width-80",
-          "width-40",
-          "width-120"
-        ]
-      },
-      {
-        "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/goal-footer-acceptance-regular.json",
-        "pid": 81635,
-        "mode": "regular",
-        "idleTerminalBytes": 0,
-        "frames": [
-          "active",
-          "details",
-          "details-reopened",
-          "complete",
-          "width-80",
-          "width-40",
-          "width-120"
-        ]
-      }
-    ],
-    "codeEntrances": "Native and codex-ui × regular/fullscreen; footer-fixture.ts imports production source, not dist",
-    "boundary": "Controlled clock/usage and intercepted continuation; real goal store/commands/footer/session/PTY"
-  },
   "processHealth": {
     "passed": true,
     "count": 22,
@@ -10749,7 +10662,6 @@
           ".tmp/final-verification-66-20261029/doctor-old-cli-fullscreen.command.json",
           ".tmp/final-verification-66-20261029/doctor-old-cli-regular.command.json",
           ".tmp/final-verification-66-20261029/doctor-old-codex-ui-fullscreen.command.json",
-          ".tmp/final-verification-66-20261029/doctor-old-goal-footer.command.json",
           ".tmp/final-verification-66-20261029/doctor-old-headless.command.json",
           ".tmp/final-verification-66-20261029/doctor-old-python-health.command.json",
           ".tmp/final-verification-66-20261029/doctor-old-python-held-frame.command.json",
@@ -10759,7 +10671,6 @@
           ".tmp/final-verification-66-20261029/old-cli-fullscreen.command.json",
           ".tmp/final-verification-66-20261029/old-cli-regular.command.json",
           ".tmp/final-verification-66-20261029/old-codex-ui-fullscreen.command.json",
-          ".tmp/final-verification-66-20261029/old-goal-footer.command.json",
           ".tmp/final-verification-66-20261029/old-headless.command.json",
           ".tmp/final-verification-66-20261029/old-python-health.command.json",
           ".tmp/final-verification-66-20261029/old-python-held-frame.command.json",
@@ -10851,22 +10762,15 @@
       },
       {
         "pid": 81401,
-        "sources": [
-          ".tmp/final-verification-66-20261029/doctor-old-goal-footer.command.json",
-          ".tmp/final-verification-66-20261029/doctor-old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81435,
-        "sources": [
-          ".tmp/final-verification-66-20261029/doctor-old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81443,
-        "sources": [
-          ".tmp/final-verification-66-20261029/doctor-old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 88222,
@@ -13666,222 +13570,143 @@
       },
       {
         "pid": 81502,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.command.json",
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81550,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81558,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81599,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81618,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81619,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81620,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81624,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81625,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81626,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81634,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81635,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json",
-          "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/owned-pty-pids.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81643,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json",
-          "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/pid.txt"
-        ]
+        "sources": []
       },
       {
         "pid": 81852,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81854,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81858,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81859,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81860,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81868,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81869,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json",
-          "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/owned-pty-pids.json"
-        ]
+        "sources": []
       },
       {
         "pid": 81877,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json",
-          "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/pid.txt"
-        ]
+        "sources": []
       },
       {
         "pid": 82086,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 82087,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 82091,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 82092,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 82093,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 82101,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 82102,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json",
-          "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/owned-pty-pids.json"
-        ]
+        "sources": []
       },
       {
         "pid": 82118,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json",
-          "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/pid.txt"
-        ]
+        "sources": []
       },
       {
         "pid": 82517,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 82525,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 82526,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 82540,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json"
-        ]
+        "sources": []
       },
       {
         "pid": 82541,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json",
-          "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/owned-pty-pids.json"
-        ]
+        "sources": []
       },
       {
         "pid": 82564,
-        "sources": [
-          ".tmp/final-verification-66-20261029/old-goal-footer.processes.json",
-          "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/pid.txt"
-        ]
+        "sources": []
       },
       {
         "pid": 88310,
@@ -18581,24 +18406,6 @@
       "result": "passed"
     },
     {
-      "label": "doctor-old-goal-footer",
-      "command": [
-        "pnpm",
-        "exec",
-        "node",
-        ".cursor/skills/verify-pi-ext/scripts/verify.mjs",
-        "doctor"
-      ],
-      "cwd": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation",
-      "startedAt": "2026-10-29T06:30:48.793Z",
-      "recorderPid": 76879,
-      "pid": 81401,
-      "finishedAt": "2026-10-29T06:30:49.713Z",
-      "exitCode": 0,
-      "recordPath": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/doctor-old-goal-footer.command.json",
-      "result": "passed"
-    },
-    {
       "label": "doctor-old-headless",
       "command": [
         "pnpm",
@@ -19209,25 +19016,6 @@
       "finishedAt": "2026-10-29T06:27:39.462Z",
       "exitCode": 0,
       "recordPath": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/old-codex-ui.command.json",
-      "result": "passed"
-    },
-    {
-      "label": "old-goal-footer",
-      "command": [
-        "pnpm",
-        "exec",
-        "node",
-        ".cursor/skills/verify-pi-ext/scripts/verify.mjs",
-        "run",
-        "goal-footer"
-      ],
-      "cwd": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation",
-      "startedAt": "2026-10-29T06:30:49.713Z",
-      "recorderPid": 76879,
-      "pid": 81502,
-      "finishedAt": "2026-10-29T06:31:37.463Z",
-      "exitCode": 0,
-      "recordPath": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/old-goal-footer.command.json",
       "result": "passed"
     },
     {
@@ -20487,30 +20275,6 @@
       "result": "retained"
     },
     {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/doctor-old-goal-footer.command.json",
-      "bytes": 389,
-      "sha256": "2aebabaae5ff91367f3c11cdc6cff0684c60fbaf2a90cc5695bb122dc697f11c",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/doctor-old-goal-footer.log",
-      "bytes": 2361,
-      "sha256": "f03ca47c028cf1808176f7374e69fb76b10f10f5c02c760740a09b3063633a5e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/doctor-old-goal-footer.processes.json",
-      "bytes": 795,
-      "sha256": "fc1a0f0fd77b25625156ab175d0170e25408470ec87aed2f8f3bca66f48104cd",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/doctor-old-goal-footer.stderr",
-      "bytes": 0,
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "result": "retained"
-    },
-    {
       "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/doctor-old-headless.command.json",
       "bytes": 386,
       "sha256": "7c9017053c8280679ddb7cab5e31731bfa16967a099649c08aa6039a75af3b7f",
@@ -21204,36 +20968,6 @@
       "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/old-codex-ui.verdict.json",
       "bytes": 778,
       "sha256": "9a9a0493b693bc437613589a6f555029223ccb64d7dbed893d34bd433516a28a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/old-goal-footer.command.json",
-      "bytes": 398,
-      "sha256": "7233534ef1f03f20707c2b1c3e48f52d35264eadd52771448cd32c8027ed0491",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/old-goal-footer.log",
-      "bytes": 2516,
-      "sha256": "e699b02144e9442791a62955a6caa70b288b796a506c4251521e9dda5e7d08a0",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/old-goal-footer.processes.json",
-      "bytes": 10541,
-      "sha256": "4c94b9a52255790d24641ae3beef4893d6f707fd54cb3b21e7cdf47e40f48d67",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/old-goal-footer.stderr",
-      "bytes": 0,
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/final-verification-66-20261029/old-goal-footer.verdict.json",
-      "bytes": 302,
-      "sha256": "c4b66d54f96373aea159ee41ffc3018e2889195028ece2dd5e88a9b4177386ac",
       "result": "retained"
     },
     {
@@ -22854,1482 +22588,6 @@
       "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-tool-status-MfMT8L/summary.json",
       "bytes": 3300,
       "sha256": "b5264f224b3b84c631268a1301191cc67faccb0fa6de69264fb9a5c122931220",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/actions.json",
-      "bytes": 705,
-      "sha256": "40724b245f4f8f928cc43fe159a0640df39f8092fc2b36479ac0f378ab68f66e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/agent/auth.json",
-      "bytes": 2,
-      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/agent/models-store.json",
-      "bytes": 2,
-      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/agent/settings.json",
-      "bytes": 52,
-      "sha256": "f8198ec3e8e54b1e8226da2d113fd0efb2d49af62b983706b083affc3eb4311f",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/goals/4bec744cf9233ecf32886548128b0e0a5ebdead8637b7c9c6c7b83141b53b32c.json",
-      "bytes": 660,
-      "sha256": "d2eb149617623340613110d75d2fe6a5fcb5815ed763c844a9acc3ab38803012",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/pid.txt",
-      "bytes": 5,
-      "sha256": "c5c912183e9938651544d9d39cada3f37c944d8a4776dffc4b9d192273c2d302",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/sessions/2026-10-29T06-31-03-316Z_01a1865a-d993-7476-ab0a-3602ed0591fd.jsonl",
-      "bytes": 8410,
-      "sha256": "001ca7eb82575d8d505de1f8dee1198cad088574e3724b813a321c5b5747c227",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/__tests__-footer-fixture.cf9d6029.mjs",
-      "bytes": 3232,
-      "sha256": "4e3d63eba8828330ccc07138c296efab14c5798a32e2629837aa4f3b0e1b4cdd",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-accounting.94287751.mjs",
-      "bytes": 6924,
-      "sha256": "762855a397136ca978bf142c24726f6dcafc97ea4eb9840d566f393fab5fa542",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-bash-group-layout.88b28f84.mjs",
-      "bytes": 6733,
-      "sha256": "d6908a5ea735f274f4681e6cf98e87897daa49d50d9cbd992641c6a4e94749ca",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-bash-groups.0f077da7.mjs",
-      "bytes": 6090,
-      "sha256": "46061d003025c4eaac2d4ce7e8e7a585e25a426ce3fd8d896caf4ebb0cfd9253",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-budget.9c948e1f.mjs",
-      "bytes": 1016,
-      "sha256": "254eac4c945188e7ff72135681e01e2e985d6c5575ad5f5602917a53228650af",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-capability.af65ef70.mjs",
-      "bytes": 615,
-      "sha256": "89c6c366886bdecf742d6a170c351445c6793529d635ce11a5284ea42f8adabc",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-children.75a965d0.mjs",
-      "bytes": 5326,
-      "sha256": "28e514816c5a284ef935481879015954a03d5a6dde271b8f89bab64e461a9727",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-codemode-data.e7f66e5c.mjs",
-      "bytes": 4381,
-      "sha256": "a43c8a39de035258bbb56dfe9afeb5977c33a3f94dd8063a30b25b65205f7d23",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-codemode-model.3d19921f.mjs",
-      "bytes": 9902,
-      "sha256": "959885ed51a13783bb9a6376ab2c60de3519526e5f21d28221be1675fc617628",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-codemode-presentation.cf99ad6f.mjs",
-      "bytes": 7038,
-      "sha256": "853ccc7df6bea0eac1bbe95131b678d977bcd0d5decabae3a79767fccfc2a2d0",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-codemode-view.3d7a3bc7.mjs",
-      "bytes": 7312,
-      "sha256": "09ed1b97ede82ee60a0e574273ea7fda255a7f83af3000790a0aa50a439552e0",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-codemode.01afb164.mjs",
-      "bytes": 7327,
-      "sha256": "2064ad61e9bedbd97a6e61fde4d28c98ef8b9df6081ca35492a8b5692c660ef3",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-components.0de4d22c.mjs",
-      "bytes": 5369,
-      "sha256": "8100d4ee7ca4b1b1f0517f7182738704ca8dcd02673cb0de44614aa77eb355ef",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-content.898ecf86.mjs",
-      "bytes": 9460,
-      "sha256": "50935f549b130a1fea92044c3341c8267023d47c6c3744e59769397c2bcfe2a9",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-context-usage.6c40bd7d.mjs",
-      "bytes": 868,
-      "sha256": "90110ca0d8e90411297459aa8dac91d3aecf6c7e43016edb9a323771d5dda3ea",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-details.608dc369.mjs",
-      "bytes": 2383,
-      "sha256": "3a6338236ac6f466fbca7d9a1da2ba5ce96b7005be2126d078894438860b62bd",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-diff-source.95602bfe.mjs",
-      "bytes": 2218,
-      "sha256": "ee0d054a5b6479c931e076693cc3ab22a683130964dfa0b1ec3b4221c0f57201",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-execution-settings.dac896d3.mjs",
-      "bytes": 2909,
-      "sha256": "13bcad8f7e7ecb035922a0b49a4ecd445f2f2589cb9d885c91a989cc7b4e35e5",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-footer.b1622449.mjs",
-      "bytes": 11658,
-      "sha256": "6f7d6dee28d7ef30375631da47bd33b177d984387c770d4d1f47bf836561c7ce",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-goal-display.129bc18c.mjs",
-      "bytes": 1567,
-      "sha256": "919441cb24ec61abcced7d20be4ca479806f7fee6df56e3b13d2ab259f472975",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-index.23e4f2b9.mjs",
-      "bytes": 4691,
-      "sha256": "998e520ce8e8b89abbba605f12a72bf5518d4121b69bb2c84f352e8592bbfd16",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-index.7f312ecd.mjs",
-      "bytes": 34851,
-      "sha256": "0a00bc157a3ade9a4db2878b11ba5933cb4acab2f2f1e73e8874198fd256ec1a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-json-units.04f3d516.mjs",
-      "bytes": 1118,
-      "sha256": "aca520fe5168332174389f37f79d9c6a900a4d0209731412268400e07cd007e6",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-layout.6be058e2.mjs",
-      "bytes": 4205,
-      "sha256": "f1569b74bba9ab9362cd3f065642bc1a710511d13c14b70ace9e08db693729ef",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-lock.d9e934a6.mjs",
-      "bytes": 5870,
-      "sha256": "800e40d8861be3b12a5f24c97a6f4d5ddd875e1b65616fb8c480d906a0ca38f9",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-loop.020275c1.mjs",
-      "bytes": 3907,
-      "sha256": "e91f28f7740e5dcad464eeb22da8c1230821e7b8299845ecb48fa6a31f62c103",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-presentation.e3a097dc.mjs",
-      "bytes": 4624,
-      "sha256": "882bbf32383356c5a7c1bca14419d047b23811008082e760759253e06cd137e7",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-quota.aa394791.mjs",
-      "bytes": 1768,
-      "sha256": "191738d0285799b87b1ef554bd4bfa19972e552c2a5ccaa4d70f91bba803c483",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-read-group-layout.50ca5ad2.mjs",
-      "bytes": 6958,
-      "sha256": "756c77c9a21026959d8beac1094e2bb912ba34fbe686fff1ab54aa94427bb40e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-read-groups.b4caf6a7.mjs",
-      "bytes": 9122,
-      "sha256": "35a949db38b01ccb7058ed0f54d196a55287fcb707e554784231ed933cff816a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-read-view.bf15cbf8.mjs",
-      "bytes": 1292,
-      "sha256": "8d9b5c6d68e4a239293ba6371714bf103d88967f07c0af1c11d794e72acf8af8",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-render-cache.a93b3c16.mjs",
-      "bytes": 3390,
-      "sha256": "94f5e8f3c40846b056363c25e0bd80bd5124db869c0eb5b19383384a544f7611",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-renderers.2f1baf47.mjs",
-      "bytes": 6624,
-      "sha256": "4d0b032edd5964c667e2e7632371be236802bd34a1826815f5719928b62f1897",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-responsive-lines.9933844f.mjs",
-      "bytes": 1091,
-      "sha256": "0e7762c08256c3ccb91543b233ef434c1507474f6ff61341dc70583430e86527",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-scheduler.9e5aa3ab.mjs",
-      "bytes": 21305,
-      "sha256": "5ce5133c4762ecf11d9f449b98663043cb3b634ec6327005b5a832b2a90e829e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-storage.64cce7b6.mjs",
-      "bytes": 20380,
-      "sha256": "9a0821bda6cf16069f7cfe029612c2749f186812249b86d4d3d3ca933389a943",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-terminal-title.dd9c4ea2.mjs",
-      "bytes": 3268,
-      "sha256": "af0c3ff68aec4f8bc9caba987949c0364fbcfa67f9a04b6941ac9f66c9f67000",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-token-rate.53290832.mjs",
-      "bytes": 3764,
-      "sha256": "5702eb3c300a8aff206567b1cff82490e592e4f8eca11729a53152dfe76d656c",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-tool-status.4d5de628.mjs",
-      "bytes": 1501,
-      "sha256": "f09120fa23fce2b0736f55790e501875d9f0705228e18382fec1001ae3417fd8",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-tools.1ed360a3.mjs",
-      "bytes": 25752,
-      "sha256": "52482144469a9ceb59b3eea99b7411233f66337d15a5d4fd4983171b6743022e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-tools.7a1345f7.mjs",
-      "bytes": 6027,
-      "sha256": "26140770bb8cebf732c9de283cd763c9e386646df289c5be40616d9c45c8dac3",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-upstream.1036c690.mjs",
-      "bytes": 11552,
-      "sha256": "9db01bf16f639787454bf21cd326b717f84904db6745234efa9417d92b31b0bd",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-working-session.b8549171.mjs",
-      "bytes": 3297,
-      "sha256": "633c9e5874e0e3c1aae57e1ed45da913ca2552c406fcc20fa0d2db3e6e10e196",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-working.d6a72a02.mjs",
-      "bytes": 2650,
-      "sha256": "7f9ffec16da7bb26f7af489261bef6745c1d91592086553126c15d46dfa192c7",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/fixture/tmp/jiti/src-write-changes.ef74c276.mjs",
-      "bytes": 4591,
-      "sha256": "c62b049d6492ecf216b3191bf338a6f3a9ca7199e07be3bbcb01d8d72a63e2ec",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/footer-ready.json",
-      "bytes": 31,
-      "sha256": "8601454089ebb0c7833807e4d3e8ffb364fe4fc85276d319874928fc1c9f254f",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/goal-footer-acceptance-fullscreen.json",
-      "bytes": 10026,
-      "sha256": "c3624101bd2ba9fb4353e1a06fd119405a83e6de6f1270b8aead964e44793172",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/owned-pty-pids.json",
-      "bytes": 7,
-      "sha256": "39fde8ee82ef26e0b8b0e013ca9c4d8fed8e73b915453b64a0bf7cd180d45903",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/pids.json",
-      "bytes": 7,
-      "sha256": "39fde8ee82ef26e0b8b0e013ca9c4d8fed8e73b915453b64a0bf7cd180d45903",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/screens.json",
-      "bytes": 9909,
-      "sha256": "6ba1fd65f7a1093b731f75144b80543fc1374f6afe5d7550f8111e157290789b",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/signal-cleanup.json",
-      "bytes": 53,
-      "sha256": "61674e3e89761b3c2f7747246bff90b88a8dfc8ddd09aed5d43e50b855a5ddc6",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/signal-screen.txt",
-      "bytes": 1479,
-      "sha256": "c4d1c060e4ed464d80471fe8fbab43f0f04000875c56fe80cc01f94b7a5bc726",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/signal-terminal.ansi",
-      "bytes": 29860,
-      "sha256": "2e83297717adbbed6c313d6063a1bf1b102d1ade78b575eeeaa0adace49bec65",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-fullscreen-1iqd47xi/terminal.ansi",
-      "bytes": 29860,
-      "sha256": "2e83297717adbbed6c313d6063a1bf1b102d1ade78b575eeeaa0adace49bec65",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/actions.json",
-      "bytes": 701,
-      "sha256": "050190f5a0ca05057c3994dc8b5d039c992a45c296803f461932c1b23b1b5190",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/agent/auth.json",
-      "bytes": 2,
-      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/agent/models-store.json",
-      "bytes": 2,
-      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/agent/settings.json",
-      "bytes": 52,
-      "sha256": "f8198ec3e8e54b1e8226da2d113fd0efb2d49af62b983706b083affc3eb4311f",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/goals/a16832d96921afef097c9f6c2e787e00999ba44427905333fdaa99bd642d2d10.json",
-      "bytes": 652,
-      "sha256": "58ae638b4dbbce4d942740d8fad8603aa4b5d43a1b42de1e4061ffcd41a12ad9",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/pid.txt",
-      "bytes": 5,
-      "sha256": "eea282c73dcaa397e3714eadb2e0f00ab549340935afeba1c28dd6448dac3352",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/sessions/2026-10-29T06-31-14-873Z_01a1865b-06b9-7259-a890-aeab80a45b9e.jsonl",
-      "bytes": 8350,
-      "sha256": "d3dafe1c25ebc332725dc533e710d70250c52bc87844ffdcb7331387afc9cc17",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/__tests__-footer-fixture.cf9d6029.mjs",
-      "bytes": 3232,
-      "sha256": "4e3d63eba8828330ccc07138c296efab14c5798a32e2629837aa4f3b0e1b4cdd",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-accounting.94287751.mjs",
-      "bytes": 6924,
-      "sha256": "762855a397136ca978bf142c24726f6dcafc97ea4eb9840d566f393fab5fa542",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-bash-group-layout.88b28f84.mjs",
-      "bytes": 6733,
-      "sha256": "d6908a5ea735f274f4681e6cf98e87897daa49d50d9cbd992641c6a4e94749ca",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-bash-groups.0f077da7.mjs",
-      "bytes": 6090,
-      "sha256": "46061d003025c4eaac2d4ce7e8e7a585e25a426ce3fd8d896caf4ebb0cfd9253",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-budget.9c948e1f.mjs",
-      "bytes": 1016,
-      "sha256": "254eac4c945188e7ff72135681e01e2e985d6c5575ad5f5602917a53228650af",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-capability.af65ef70.mjs",
-      "bytes": 615,
-      "sha256": "89c6c366886bdecf742d6a170c351445c6793529d635ce11a5284ea42f8adabc",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-children.75a965d0.mjs",
-      "bytes": 5326,
-      "sha256": "28e514816c5a284ef935481879015954a03d5a6dde271b8f89bab64e461a9727",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-codemode-data.e7f66e5c.mjs",
-      "bytes": 4381,
-      "sha256": "a43c8a39de035258bbb56dfe9afeb5977c33a3f94dd8063a30b25b65205f7d23",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-codemode-model.3d19921f.mjs",
-      "bytes": 9902,
-      "sha256": "959885ed51a13783bb9a6376ab2c60de3519526e5f21d28221be1675fc617628",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-codemode-presentation.cf99ad6f.mjs",
-      "bytes": 7038,
-      "sha256": "853ccc7df6bea0eac1bbe95131b678d977bcd0d5decabae3a79767fccfc2a2d0",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-codemode-view.3d7a3bc7.mjs",
-      "bytes": 7312,
-      "sha256": "09ed1b97ede82ee60a0e574273ea7fda255a7f83af3000790a0aa50a439552e0",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-codemode.01afb164.mjs",
-      "bytes": 7327,
-      "sha256": "2064ad61e9bedbd97a6e61fde4d28c98ef8b9df6081ca35492a8b5692c660ef3",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-components.0de4d22c.mjs",
-      "bytes": 5369,
-      "sha256": "8100d4ee7ca4b1b1f0517f7182738704ca8dcd02673cb0de44614aa77eb355ef",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-content.898ecf86.mjs",
-      "bytes": 9460,
-      "sha256": "50935f549b130a1fea92044c3341c8267023d47c6c3744e59769397c2bcfe2a9",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-context-usage.6c40bd7d.mjs",
-      "bytes": 868,
-      "sha256": "90110ca0d8e90411297459aa8dac91d3aecf6c7e43016edb9a323771d5dda3ea",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-details.608dc369.mjs",
-      "bytes": 2383,
-      "sha256": "3a6338236ac6f466fbca7d9a1da2ba5ce96b7005be2126d078894438860b62bd",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-diff-source.95602bfe.mjs",
-      "bytes": 2218,
-      "sha256": "ee0d054a5b6479c931e076693cc3ab22a683130964dfa0b1ec3b4221c0f57201",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-execution-settings.dac896d3.mjs",
-      "bytes": 2909,
-      "sha256": "13bcad8f7e7ecb035922a0b49a4ecd445f2f2589cb9d885c91a989cc7b4e35e5",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-footer.b1622449.mjs",
-      "bytes": 11658,
-      "sha256": "6f7d6dee28d7ef30375631da47bd33b177d984387c770d4d1f47bf836561c7ce",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-goal-display.129bc18c.mjs",
-      "bytes": 1567,
-      "sha256": "919441cb24ec61abcced7d20be4ca479806f7fee6df56e3b13d2ab259f472975",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-index.23e4f2b9.mjs",
-      "bytes": 4691,
-      "sha256": "998e520ce8e8b89abbba605f12a72bf5518d4121b69bb2c84f352e8592bbfd16",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-index.7f312ecd.mjs",
-      "bytes": 34851,
-      "sha256": "0a00bc157a3ade9a4db2878b11ba5933cb4acab2f2f1e73e8874198fd256ec1a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-json-units.04f3d516.mjs",
-      "bytes": 1118,
-      "sha256": "aca520fe5168332174389f37f79d9c6a900a4d0209731412268400e07cd007e6",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-layout.6be058e2.mjs",
-      "bytes": 4205,
-      "sha256": "f1569b74bba9ab9362cd3f065642bc1a710511d13c14b70ace9e08db693729ef",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-lock.d9e934a6.mjs",
-      "bytes": 5870,
-      "sha256": "800e40d8861be3b12a5f24c97a6f4d5ddd875e1b65616fb8c480d906a0ca38f9",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-loop.020275c1.mjs",
-      "bytes": 3907,
-      "sha256": "e91f28f7740e5dcad464eeb22da8c1230821e7b8299845ecb48fa6a31f62c103",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-presentation.e3a097dc.mjs",
-      "bytes": 4624,
-      "sha256": "882bbf32383356c5a7c1bca14419d047b23811008082e760759253e06cd137e7",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-quota.aa394791.mjs",
-      "bytes": 1768,
-      "sha256": "191738d0285799b87b1ef554bd4bfa19972e552c2a5ccaa4d70f91bba803c483",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-read-group-layout.50ca5ad2.mjs",
-      "bytes": 6958,
-      "sha256": "756c77c9a21026959d8beac1094e2bb912ba34fbe686fff1ab54aa94427bb40e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-read-groups.b4caf6a7.mjs",
-      "bytes": 9122,
-      "sha256": "35a949db38b01ccb7058ed0f54d196a55287fcb707e554784231ed933cff816a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-read-view.bf15cbf8.mjs",
-      "bytes": 1292,
-      "sha256": "8d9b5c6d68e4a239293ba6371714bf103d88967f07c0af1c11d794e72acf8af8",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-render-cache.a93b3c16.mjs",
-      "bytes": 3390,
-      "sha256": "94f5e8f3c40846b056363c25e0bd80bd5124db869c0eb5b19383384a544f7611",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-renderers.2f1baf47.mjs",
-      "bytes": 6624,
-      "sha256": "4d0b032edd5964c667e2e7632371be236802bd34a1826815f5719928b62f1897",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-responsive-lines.9933844f.mjs",
-      "bytes": 1091,
-      "sha256": "0e7762c08256c3ccb91543b233ef434c1507474f6ff61341dc70583430e86527",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-scheduler.9e5aa3ab.mjs",
-      "bytes": 21305,
-      "sha256": "5ce5133c4762ecf11d9f449b98663043cb3b634ec6327005b5a832b2a90e829e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-storage.64cce7b6.mjs",
-      "bytes": 20380,
-      "sha256": "9a0821bda6cf16069f7cfe029612c2749f186812249b86d4d3d3ca933389a943",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-terminal-title.dd9c4ea2.mjs",
-      "bytes": 3268,
-      "sha256": "af0c3ff68aec4f8bc9caba987949c0364fbcfa67f9a04b6941ac9f66c9f67000",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-token-rate.53290832.mjs",
-      "bytes": 3764,
-      "sha256": "5702eb3c300a8aff206567b1cff82490e592e4f8eca11729a53152dfe76d656c",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-tool-status.4d5de628.mjs",
-      "bytes": 1501,
-      "sha256": "f09120fa23fce2b0736f55790e501875d9f0705228e18382fec1001ae3417fd8",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-tools.1ed360a3.mjs",
-      "bytes": 25752,
-      "sha256": "52482144469a9ceb59b3eea99b7411233f66337d15a5d4fd4983171b6743022e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-tools.7a1345f7.mjs",
-      "bytes": 6027,
-      "sha256": "26140770bb8cebf732c9de283cd763c9e386646df289c5be40616d9c45c8dac3",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-upstream.1036c690.mjs",
-      "bytes": 11552,
-      "sha256": "9db01bf16f639787454bf21cd326b717f84904db6745234efa9417d92b31b0bd",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-working-session.b8549171.mjs",
-      "bytes": 3297,
-      "sha256": "633c9e5874e0e3c1aae57e1ed45da913ca2552c406fcc20fa0d2db3e6e10e196",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-working.d6a72a02.mjs",
-      "bytes": 2650,
-      "sha256": "7f9ffec16da7bb26f7af489261bef6745c1d91592086553126c15d46dfa192c7",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/fixture/tmp/jiti/src-write-changes.ef74c276.mjs",
-      "bytes": 4591,
-      "sha256": "c62b049d6492ecf216b3191bf338a6f3a9ca7199e07be3bbcb01d8d72a63e2ec",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/footer-ready.json",
-      "bytes": 31,
-      "sha256": "5d2c53aefba2e62bed5ef5d6ba35e8c74ef790d601daf11f6bfbffba9e4b4559",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/goal-footer-acceptance-native.json",
-      "bytes": 7898,
-      "sha256": "f27b3e38dccf125b0b718b5bea7b93948f8a3828ca2b53997103e88097e9160e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/owned-pty-pids.json",
-      "bytes": 7,
-      "sha256": "7c1ea5db0a3a993fa7e9971ec291454b398c5d3d1df7f1be6b8c6b4350552d20",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/pids.json",
-      "bytes": 7,
-      "sha256": "7c1ea5db0a3a993fa7e9971ec291454b398c5d3d1df7f1be6b8c6b4350552d20",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/screens.json",
-      "bytes": 7785,
-      "sha256": "2638bac1c285fef20d27df1d097d7bff27fb97f28e9059bf848d4eaf8ebba178",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/signal-cleanup.json",
-      "bytes": 53,
-      "sha256": "4cfcd060560f4a43ef812ea4bd34ee4cc5112c77a63236aa3c417db8b8db7227",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/signal-screen.txt",
-      "bytes": 1468,
-      "sha256": "31a1d9eb9a1b6c0961eeab06b230750394d7a5af75f8f1b8cc0125b1a30ce685",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/signal-terminal.ansi",
-      "bytes": 29251,
-      "sha256": "d0160cba638ac993c32e982334c3847fb77cd7e048b3136635b4247a4fabd3d3",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-3uymriy1/terminal.ansi",
-      "bytes": 29251,
-      "sha256": "d0160cba638ac993c32e982334c3847fb77cd7e048b3136635b4247a4fabd3d3",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/actions.json",
-      "bytes": 702,
-      "sha256": "a8ef3d5a6e0394e1817c8f2795ce1a01468c871d4ea9a7c5c35239fd4d213e2e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/agent/auth.json",
-      "bytes": 2,
-      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/agent/models-store.json",
-      "bytes": 2,
-      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/agent/settings.json",
-      "bytes": 52,
-      "sha256": "f8198ec3e8e54b1e8226da2d113fd0efb2d49af62b983706b083affc3eb4311f",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/goals/81c27726d21dcd938907dcde8b9198e58fd82026add3a373d782f904489cd41f.json",
-      "bytes": 674,
-      "sha256": "db5d15d6c5fb99d1b7fca02bcb5fab29193b2e2ae2dda617a32743fc6b929478",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/pid.txt",
-      "bytes": 5,
-      "sha256": "7af6d4e92dda189bd80ef545e04f2711452b6e61fe396ef375f576ff0b2ee328",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/sessions/2026-10-29T06-31-26-661Z_01a1865b-34c4-76a0-946e-6f136dcf73a6.jsonl",
-      "bytes": 8515,
-      "sha256": "72f01458e3fa37ee45f61c64f0a39c20229e349e2bf60544b37130c17cb55149",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/__tests__-footer-fixture.cf9d6029.mjs",
-      "bytes": 3232,
-      "sha256": "4e3d63eba8828330ccc07138c296efab14c5798a32e2629837aa4f3b0e1b4cdd",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-accounting.94287751.mjs",
-      "bytes": 6924,
-      "sha256": "762855a397136ca978bf142c24726f6dcafc97ea4eb9840d566f393fab5fa542",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-bash-group-layout.88b28f84.mjs",
-      "bytes": 6733,
-      "sha256": "d6908a5ea735f274f4681e6cf98e87897daa49d50d9cbd992641c6a4e94749ca",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-bash-groups.0f077da7.mjs",
-      "bytes": 6090,
-      "sha256": "46061d003025c4eaac2d4ce7e8e7a585e25a426ce3fd8d896caf4ebb0cfd9253",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-budget.9c948e1f.mjs",
-      "bytes": 1016,
-      "sha256": "254eac4c945188e7ff72135681e01e2e985d6c5575ad5f5602917a53228650af",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-capability.af65ef70.mjs",
-      "bytes": 615,
-      "sha256": "89c6c366886bdecf742d6a170c351445c6793529d635ce11a5284ea42f8adabc",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-children.75a965d0.mjs",
-      "bytes": 5326,
-      "sha256": "28e514816c5a284ef935481879015954a03d5a6dde271b8f89bab64e461a9727",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-codemode-data.e7f66e5c.mjs",
-      "bytes": 4381,
-      "sha256": "a43c8a39de035258bbb56dfe9afeb5977c33a3f94dd8063a30b25b65205f7d23",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-codemode-model.3d19921f.mjs",
-      "bytes": 9902,
-      "sha256": "959885ed51a13783bb9a6376ab2c60de3519526e5f21d28221be1675fc617628",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-codemode-presentation.cf99ad6f.mjs",
-      "bytes": 7038,
-      "sha256": "853ccc7df6bea0eac1bbe95131b678d977bcd0d5decabae3a79767fccfc2a2d0",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-codemode-view.3d7a3bc7.mjs",
-      "bytes": 7312,
-      "sha256": "09ed1b97ede82ee60a0e574273ea7fda255a7f83af3000790a0aa50a439552e0",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-codemode.01afb164.mjs",
-      "bytes": 7327,
-      "sha256": "2064ad61e9bedbd97a6e61fde4d28c98ef8b9df6081ca35492a8b5692c660ef3",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-components.0de4d22c.mjs",
-      "bytes": 5369,
-      "sha256": "8100d4ee7ca4b1b1f0517f7182738704ca8dcd02673cb0de44614aa77eb355ef",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-content.898ecf86.mjs",
-      "bytes": 9460,
-      "sha256": "50935f549b130a1fea92044c3341c8267023d47c6c3744e59769397c2bcfe2a9",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-context-usage.6c40bd7d.mjs",
-      "bytes": 868,
-      "sha256": "90110ca0d8e90411297459aa8dac91d3aecf6c7e43016edb9a323771d5dda3ea",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-details.608dc369.mjs",
-      "bytes": 2383,
-      "sha256": "3a6338236ac6f466fbca7d9a1da2ba5ce96b7005be2126d078894438860b62bd",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-diff-source.95602bfe.mjs",
-      "bytes": 2218,
-      "sha256": "ee0d054a5b6479c931e076693cc3ab22a683130964dfa0b1ec3b4221c0f57201",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-execution-settings.dac896d3.mjs",
-      "bytes": 2909,
-      "sha256": "13bcad8f7e7ecb035922a0b49a4ecd445f2f2589cb9d885c91a989cc7b4e35e5",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-footer.b1622449.mjs",
-      "bytes": 11658,
-      "sha256": "6f7d6dee28d7ef30375631da47bd33b177d984387c770d4d1f47bf836561c7ce",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-goal-display.129bc18c.mjs",
-      "bytes": 1567,
-      "sha256": "919441cb24ec61abcced7d20be4ca479806f7fee6df56e3b13d2ab259f472975",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-index.23e4f2b9.mjs",
-      "bytes": 4691,
-      "sha256": "998e520ce8e8b89abbba605f12a72bf5518d4121b69bb2c84f352e8592bbfd16",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-index.7f312ecd.mjs",
-      "bytes": 34851,
-      "sha256": "0a00bc157a3ade9a4db2878b11ba5933cb4acab2f2f1e73e8874198fd256ec1a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-json-units.04f3d516.mjs",
-      "bytes": 1118,
-      "sha256": "aca520fe5168332174389f37f79d9c6a900a4d0209731412268400e07cd007e6",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-layout.6be058e2.mjs",
-      "bytes": 4205,
-      "sha256": "f1569b74bba9ab9362cd3f065642bc1a710511d13c14b70ace9e08db693729ef",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-lock.d9e934a6.mjs",
-      "bytes": 5870,
-      "sha256": "800e40d8861be3b12a5f24c97a6f4d5ddd875e1b65616fb8c480d906a0ca38f9",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-loop.020275c1.mjs",
-      "bytes": 3907,
-      "sha256": "e91f28f7740e5dcad464eeb22da8c1230821e7b8299845ecb48fa6a31f62c103",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-presentation.e3a097dc.mjs",
-      "bytes": 4624,
-      "sha256": "882bbf32383356c5a7c1bca14419d047b23811008082e760759253e06cd137e7",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-quota.aa394791.mjs",
-      "bytes": 1768,
-      "sha256": "191738d0285799b87b1ef554bd4bfa19972e552c2a5ccaa4d70f91bba803c483",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-read-group-layout.50ca5ad2.mjs",
-      "bytes": 6958,
-      "sha256": "756c77c9a21026959d8beac1094e2bb912ba34fbe686fff1ab54aa94427bb40e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-read-groups.b4caf6a7.mjs",
-      "bytes": 9122,
-      "sha256": "35a949db38b01ccb7058ed0f54d196a55287fcb707e554784231ed933cff816a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-read-view.bf15cbf8.mjs",
-      "bytes": 1292,
-      "sha256": "8d9b5c6d68e4a239293ba6371714bf103d88967f07c0af1c11d794e72acf8af8",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-render-cache.a93b3c16.mjs",
-      "bytes": 3390,
-      "sha256": "94f5e8f3c40846b056363c25e0bd80bd5124db869c0eb5b19383384a544f7611",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-renderers.2f1baf47.mjs",
-      "bytes": 6624,
-      "sha256": "4d0b032edd5964c667e2e7632371be236802bd34a1826815f5719928b62f1897",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-responsive-lines.9933844f.mjs",
-      "bytes": 1091,
-      "sha256": "0e7762c08256c3ccb91543b233ef434c1507474f6ff61341dc70583430e86527",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-scheduler.9e5aa3ab.mjs",
-      "bytes": 21305,
-      "sha256": "5ce5133c4762ecf11d9f449b98663043cb3b634ec6327005b5a832b2a90e829e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-storage.64cce7b6.mjs",
-      "bytes": 20380,
-      "sha256": "9a0821bda6cf16069f7cfe029612c2749f186812249b86d4d3d3ca933389a943",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-terminal-title.dd9c4ea2.mjs",
-      "bytes": 3268,
-      "sha256": "af0c3ff68aec4f8bc9caba987949c0364fbcfa67f9a04b6941ac9f66c9f67000",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-token-rate.53290832.mjs",
-      "bytes": 3764,
-      "sha256": "5702eb3c300a8aff206567b1cff82490e592e4f8eca11729a53152dfe76d656c",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-tool-status.4d5de628.mjs",
-      "bytes": 1501,
-      "sha256": "f09120fa23fce2b0736f55790e501875d9f0705228e18382fec1001ae3417fd8",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-tools.1ed360a3.mjs",
-      "bytes": 25752,
-      "sha256": "52482144469a9ceb59b3eea99b7411233f66337d15a5d4fd4983171b6743022e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-tools.7a1345f7.mjs",
-      "bytes": 6027,
-      "sha256": "26140770bb8cebf732c9de283cd763c9e386646df289c5be40616d9c45c8dac3",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-upstream.1036c690.mjs",
-      "bytes": 11552,
-      "sha256": "9db01bf16f639787454bf21cd326b717f84904db6745234efa9417d92b31b0bd",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-working-session.b8549171.mjs",
-      "bytes": 3297,
-      "sha256": "633c9e5874e0e3c1aae57e1ed45da913ca2552c406fcc20fa0d2db3e6e10e196",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-working.d6a72a02.mjs",
-      "bytes": 2650,
-      "sha256": "7f9ffec16da7bb26f7af489261bef6745c1d91592086553126c15d46dfa192c7",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/fixture/tmp/jiti/src-write-changes.ef74c276.mjs",
-      "bytes": 4591,
-      "sha256": "c62b049d6492ecf216b3191bf338a6f3a9ca7199e07be3bbcb01d8d72a63e2ec",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/footer-ready.json",
-      "bytes": 31,
-      "sha256": "4f8242dce659b6a5c31ec9d7a05cf1fe00b01f43869b728c01f1c012d38920cc",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/goal-footer-acceptance-native-fullscreen.json",
-      "bytes": 8102,
-      "sha256": "4f5c087e62d698b1786536462dd880f8f0176049a6183d01b8246e39ad0c8bbf",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/owned-pty-pids.json",
-      "bytes": 7,
-      "sha256": "ce6a68bac1b5d23e9871be1dacfec65ed9b27c83e3ae8e46c5aa435e56a7d75c",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/pids.json",
-      "bytes": 7,
-      "sha256": "ce6a68bac1b5d23e9871be1dacfec65ed9b27c83e3ae8e46c5aa435e56a7d75c",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/screens.json",
-      "bytes": 7978,
-      "sha256": "0a1ba1d8fb940b85deeec4f04ea539634641ccbb4ed121e2c7bcff7dc882c0b0",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/signal-cleanup.json",
-      "bytes": 53,
-      "sha256": "d6303ab76b07a72db0c235979bfc11506f7c64af311af92592bf015471fcdfe5",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/signal-screen.txt",
-      "bytes": 1959,
-      "sha256": "12769790358659f2426507ebf790e7113ad6126aed9fce105f3ced99ceaee518",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/signal-terminal.ansi",
-      "bytes": 26526,
-      "sha256": "7ffed7cdc45211d030c3d3e45dcc131ffc3b122740f9df22fc211a32ed64960a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-native-fullscreen-fvqcpu5w/terminal.ansi",
-      "bytes": 26526,
-      "sha256": "7ffed7cdc45211d030c3d3e45dcc131ffc3b122740f9df22fc211a32ed64960a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/actions.json",
-      "bytes": 702,
-      "sha256": "bc6ead0f8ef26ca80a998d2da2d9e94b552a79e4c6ad5a3804dc3586d1aa64ba",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/agent/auth.json",
-      "bytes": 2,
-      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/agent/models-store.json",
-      "bytes": 2,
-      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/agent/settings.json",
-      "bytes": 52,
-      "sha256": "f8198ec3e8e54b1e8226da2d113fd0efb2d49af62b983706b083affc3eb4311f",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/goals/cbbd00d8bdcc2844f4e592b46661edf60d2c0f5a6cc929d7f32bcc83b0022646.json",
-      "bytes": 654,
-      "sha256": "1e3c16eff0c9f6db8ec7e28cd5117538ac7e55999334621c7ef6599eca930b44",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/pid.txt",
-      "bytes": 5,
-      "sha256": "f625665cc3865c6d52cf2ee19b5b7de4a0e34f348ac8df70e52b3c78960f4521",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/sessions/2026-10-29T06-30-51-775Z_01a1865a-ac7f-718e-b89e-2366389afe5e.jsonl",
-      "bytes": 8365,
-      "sha256": "f2013e5088c19bc9499e2d198ecae9b4513aa9e4dfbf53b7bd56b79389449b1c",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/__tests__-footer-fixture.cf9d6029.mjs",
-      "bytes": 3232,
-      "sha256": "4e3d63eba8828330ccc07138c296efab14c5798a32e2629837aa4f3b0e1b4cdd",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-accounting.94287751.mjs",
-      "bytes": 6924,
-      "sha256": "762855a397136ca978bf142c24726f6dcafc97ea4eb9840d566f393fab5fa542",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-bash-group-layout.88b28f84.mjs",
-      "bytes": 6733,
-      "sha256": "d6908a5ea735f274f4681e6cf98e87897daa49d50d9cbd992641c6a4e94749ca",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-bash-groups.0f077da7.mjs",
-      "bytes": 6090,
-      "sha256": "46061d003025c4eaac2d4ce7e8e7a585e25a426ce3fd8d896caf4ebb0cfd9253",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-budget.9c948e1f.mjs",
-      "bytes": 1016,
-      "sha256": "254eac4c945188e7ff72135681e01e2e985d6c5575ad5f5602917a53228650af",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-capability.af65ef70.mjs",
-      "bytes": 615,
-      "sha256": "89c6c366886bdecf742d6a170c351445c6793529d635ce11a5284ea42f8adabc",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-children.75a965d0.mjs",
-      "bytes": 5326,
-      "sha256": "28e514816c5a284ef935481879015954a03d5a6dde271b8f89bab64e461a9727",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-codemode-data.e7f66e5c.mjs",
-      "bytes": 4381,
-      "sha256": "a43c8a39de035258bbb56dfe9afeb5977c33a3f94dd8063a30b25b65205f7d23",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-codemode-model.3d19921f.mjs",
-      "bytes": 9902,
-      "sha256": "959885ed51a13783bb9a6376ab2c60de3519526e5f21d28221be1675fc617628",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-codemode-presentation.cf99ad6f.mjs",
-      "bytes": 7038,
-      "sha256": "853ccc7df6bea0eac1bbe95131b678d977bcd0d5decabae3a79767fccfc2a2d0",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-codemode-view.3d7a3bc7.mjs",
-      "bytes": 7312,
-      "sha256": "09ed1b97ede82ee60a0e574273ea7fda255a7f83af3000790a0aa50a439552e0",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-codemode.01afb164.mjs",
-      "bytes": 7327,
-      "sha256": "2064ad61e9bedbd97a6e61fde4d28c98ef8b9df6081ca35492a8b5692c660ef3",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-components.0de4d22c.mjs",
-      "bytes": 5369,
-      "sha256": "8100d4ee7ca4b1b1f0517f7182738704ca8dcd02673cb0de44614aa77eb355ef",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-content.898ecf86.mjs",
-      "bytes": 9460,
-      "sha256": "50935f549b130a1fea92044c3341c8267023d47c6c3744e59769397c2bcfe2a9",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-context-usage.6c40bd7d.mjs",
-      "bytes": 868,
-      "sha256": "90110ca0d8e90411297459aa8dac91d3aecf6c7e43016edb9a323771d5dda3ea",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-details.608dc369.mjs",
-      "bytes": 2383,
-      "sha256": "3a6338236ac6f466fbca7d9a1da2ba5ce96b7005be2126d078894438860b62bd",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-diff-source.95602bfe.mjs",
-      "bytes": 2218,
-      "sha256": "ee0d054a5b6479c931e076693cc3ab22a683130964dfa0b1ec3b4221c0f57201",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-execution-settings.dac896d3.mjs",
-      "bytes": 2909,
-      "sha256": "13bcad8f7e7ecb035922a0b49a4ecd445f2f2589cb9d885c91a989cc7b4e35e5",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-footer.b1622449.mjs",
-      "bytes": 11658,
-      "sha256": "6f7d6dee28d7ef30375631da47bd33b177d984387c770d4d1f47bf836561c7ce",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-goal-display.129bc18c.mjs",
-      "bytes": 1567,
-      "sha256": "919441cb24ec61abcced7d20be4ca479806f7fee6df56e3b13d2ab259f472975",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-index.23e4f2b9.mjs",
-      "bytes": 4691,
-      "sha256": "998e520ce8e8b89abbba605f12a72bf5518d4121b69bb2c84f352e8592bbfd16",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-index.7f312ecd.mjs",
-      "bytes": 34851,
-      "sha256": "0a00bc157a3ade9a4db2878b11ba5933cb4acab2f2f1e73e8874198fd256ec1a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-json-units.04f3d516.mjs",
-      "bytes": 1118,
-      "sha256": "aca520fe5168332174389f37f79d9c6a900a4d0209731412268400e07cd007e6",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-layout.6be058e2.mjs",
-      "bytes": 4205,
-      "sha256": "f1569b74bba9ab9362cd3f065642bc1a710511d13c14b70ace9e08db693729ef",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-lock.d9e934a6.mjs",
-      "bytes": 5870,
-      "sha256": "800e40d8861be3b12a5f24c97a6f4d5ddd875e1b65616fb8c480d906a0ca38f9",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-loop.020275c1.mjs",
-      "bytes": 3907,
-      "sha256": "e91f28f7740e5dcad464eeb22da8c1230821e7b8299845ecb48fa6a31f62c103",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-presentation.e3a097dc.mjs",
-      "bytes": 4624,
-      "sha256": "882bbf32383356c5a7c1bca14419d047b23811008082e760759253e06cd137e7",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-quota.aa394791.mjs",
-      "bytes": 1768,
-      "sha256": "191738d0285799b87b1ef554bd4bfa19972e552c2a5ccaa4d70f91bba803c483",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-read-group-layout.50ca5ad2.mjs",
-      "bytes": 6958,
-      "sha256": "756c77c9a21026959d8beac1094e2bb912ba34fbe686fff1ab54aa94427bb40e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-read-groups.b4caf6a7.mjs",
-      "bytes": 9122,
-      "sha256": "35a949db38b01ccb7058ed0f54d196a55287fcb707e554784231ed933cff816a",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-read-view.bf15cbf8.mjs",
-      "bytes": 1292,
-      "sha256": "8d9b5c6d68e4a239293ba6371714bf103d88967f07c0af1c11d794e72acf8af8",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-render-cache.a93b3c16.mjs",
-      "bytes": 3390,
-      "sha256": "94f5e8f3c40846b056363c25e0bd80bd5124db869c0eb5b19383384a544f7611",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-renderers.2f1baf47.mjs",
-      "bytes": 6624,
-      "sha256": "4d0b032edd5964c667e2e7632371be236802bd34a1826815f5719928b62f1897",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-responsive-lines.9933844f.mjs",
-      "bytes": 1091,
-      "sha256": "0e7762c08256c3ccb91543b233ef434c1507474f6ff61341dc70583430e86527",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-scheduler.9e5aa3ab.mjs",
-      "bytes": 21305,
-      "sha256": "5ce5133c4762ecf11d9f449b98663043cb3b634ec6327005b5a832b2a90e829e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-storage.64cce7b6.mjs",
-      "bytes": 20380,
-      "sha256": "9a0821bda6cf16069f7cfe029612c2749f186812249b86d4d3d3ca933389a943",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-terminal-title.dd9c4ea2.mjs",
-      "bytes": 3268,
-      "sha256": "af0c3ff68aec4f8bc9caba987949c0364fbcfa67f9a04b6941ac9f66c9f67000",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-token-rate.53290832.mjs",
-      "bytes": 3764,
-      "sha256": "5702eb3c300a8aff206567b1cff82490e592e4f8eca11729a53152dfe76d656c",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-tool-status.4d5de628.mjs",
-      "bytes": 1501,
-      "sha256": "f09120fa23fce2b0736f55790e501875d9f0705228e18382fec1001ae3417fd8",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-tools.1ed360a3.mjs",
-      "bytes": 25752,
-      "sha256": "52482144469a9ceb59b3eea99b7411233f66337d15a5d4fd4983171b6743022e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-tools.7a1345f7.mjs",
-      "bytes": 6027,
-      "sha256": "26140770bb8cebf732c9de283cd763c9e386646df289c5be40616d9c45c8dac3",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-upstream.1036c690.mjs",
-      "bytes": 11552,
-      "sha256": "9db01bf16f639787454bf21cd326b717f84904db6745234efa9417d92b31b0bd",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-working-session.b8549171.mjs",
-      "bytes": 3297,
-      "sha256": "633c9e5874e0e3c1aae57e1ed45da913ca2552c406fcc20fa0d2db3e6e10e196",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-working.d6a72a02.mjs",
-      "bytes": 2650,
-      "sha256": "7f9ffec16da7bb26f7af489261bef6745c1d91592086553126c15d46dfa192c7",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/fixture/tmp/jiti/src-write-changes.ef74c276.mjs",
-      "bytes": 4591,
-      "sha256": "c62b049d6492ecf216b3191bf338a6f3a9ca7199e07be3bbcb01d8d72a63e2ec",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/footer-ready.json",
-      "bytes": 31,
-      "sha256": "8263aaee2332570b4484966cb84a76dd4889d8f2bc7d67ebd6cf28e0c2a3eee0",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/goal-footer-acceptance-regular.json",
-      "bytes": 9941,
-      "sha256": "f25a32f2dcb5020fe19c0e8a01fe1b3cc3c0d67e9e586cf1a731b45bd209ff6d",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/owned-pty-pids.json",
-      "bytes": 7,
-      "sha256": "024d4a55171bfc89e450064abaf6c9958530f7db980d985a6c4ca8c77df30367",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/pids.json",
-      "bytes": 7,
-      "sha256": "024d4a55171bfc89e450064abaf6c9958530f7db980d985a6c4ca8c77df30367",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/screens.json",
-      "bytes": 9827,
-      "sha256": "92d8a351ae9703c69082c41e397712c53ff6eb39e20a2acac059c2bb4d414ce6",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/signal-cleanup.json",
-      "bytes": 53,
-      "sha256": "781cd2f99caacee7bf7463469ce98696041fe02b119a2231a23f6873acd20d25",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/signal-screen.txt",
-      "bytes": 1473,
-      "sha256": "dff5eb14ba12b4a36686a0e6881006f54f7c15d2e790f82d90ac9f56e227bea4",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/signal-terminal.ansi",
-      "bytes": 29697,
-      "sha256": "801285eb2d91ac6d8211047630734cc97a499f4a4d81126ebce4ac225416c10e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/goal-footer-regular-0acm8bpg/terminal.ansi",
-      "bytes": 29697,
-      "sha256": "801285eb2d91ac6d8211047630734cc97a499f4a4d81126ebce4ac225416c10e",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/output.log",
-      "bytes": 1327,
-      "sha256": "0bdf3a69fa7891a718f08c27bd73a7db8fbfb9b2f3cd83d2ec1d68535934fdb2",
-      "result": "retained"
-    },
-    {
-      "path": "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/.tmp/test-results/verify-goal-footer-WFqA0W/summary.json",
-      "bytes": 2627,
-      "sha256": "cd5d9d75fb24822e912307ffc8698576dae3d707e0aa0a276096061d86fde077",
       "result": "retained"
     },
     {

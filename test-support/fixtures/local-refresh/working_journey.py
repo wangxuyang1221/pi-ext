@@ -14,8 +14,7 @@ def run(driver):
     view, settle, capture, events = (driver[name] for name in ["view", "settle", "capture", "events"])
     root, runtime, screen, checks = (driver[name] for name in ["root", "runtime", "screen", "checks"])
 
-    scoped = driver["args"].profile == "pi152"
-    status_label = "Status:" if scoped else "Goal:"
+    status_label = "Status:"
 
     def command(text):
         send("\x15" + text)
@@ -121,36 +120,23 @@ def run(driver):
     checks.append("native tool expansion key remains usable during animation")
     cancel()
 
-    # A real tool approval dialog, actual shell execution, and subsequent response.
+    # Actual shell execution, and subsequent response.
     plan("tool")
-    command("Run the permission tool")
-    if not scoped:
-        wait(lambda: "Allow Pi to run bash?" in view(), "production permissions gate")
-    if not scoped:
-        advances("Working continues during production permission wait")
-        settle(2.2)
-        assert "-- t/s" in view() and working(), view()
-        capture("permission-expired-rate")
+    command("Run the shell tool")
     before = len(events("agent_settled"))
-    if not scoped:
-        send("\r")
-    wait(lambda: bool(events("tool_execution_start")), "approved tool executes through host")
+    wait(lambda: bool(events("tool_execution_start")), "shell tool executes through host")
     advances("Working continues during actual shell wait")
-    if scoped:
-        settle(2.2)
-        assert "-- t/s" in view() and working(), view()
-        capture("tool-expired-rate")
+    settle(2.2)
+    assert "-- t/s" in view() and working(), view()
+    capture("tool-expired-rate")
     wait(lambda: len(events("agent_settled")) > before, "tool and continuation settle")
     wait(lambda: not working(), "tool completion hides Working")
     assert (runtime / "workspace/tool-proof.txt").read_text() == "TOOL-FINISHED"
     assert "t/s" not in view(), view()
-    checks.append("host tool preserves real file side effect and neutral status row" if scoped else "permission approval preserves real file side effect and footer goal row")
+    checks.append("host tool preserves real file side effect and neutral status row")
 
     plan("cancel")
     command("Cancel the running tool")
-    if not scoped:
-        wait(lambda: "Allow Pi to run bash?" in view(), "cancel scenario permission gate")
-        send("\r")
     wait(lambda: any("CANCEL-TOOL-ENTERED" in json.dumps(event) for event in events("tool_execution_update")), "cancel hits executing shell")
     cancel()
     assert not (runtime / "workspace/should-not-exist.txt").exists()

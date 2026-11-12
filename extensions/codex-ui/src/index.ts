@@ -11,7 +11,6 @@ import { registerCodemodeUi } from "./codemode.js";
 import { registerTerminalTitleSpinner } from "./terminal-title.js";
 import { registerWorking } from "./working-session.js";
 import { createContextUsageReader } from "./context-usage.js";
-import { readGoalDisplay, type GoalFooterDisplay } from "./goal-display.js";
 import { copyLastReply } from "./reply-copy.js";
 
 export const CODEX_THEME_NAME = "codex-pi";
@@ -27,8 +26,6 @@ export interface CodexUiOptions {
 }
 
 export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptions = {}): void {
-  let goalDisplay: GoalFooterDisplay | undefined;
-  let unsubscribeGoal: (() => void) | undefined;
   let currentKeybindings: KeybindingsManager | undefined;
   const installTitleSpinner = registerTerminalTitleSpinner(pi);
   const installWorking = registerWorking(pi);
@@ -62,22 +59,8 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
     return markdown;
   });
 
-  pi.on("session_shutdown", () => {
-    unsubscribeGoal?.(); unsubscribeGoal = undefined;
-    goalDisplay = undefined;
-  });
   pi.on("session_start", (_event, ctx) => {
     if (ctx.mode !== "tui") return;
-    goalDisplay = undefined;
-    unsubscribeGoal?.();
-    unsubscribeGoal = pi.events?.on("pi-ext:goal-display:v1", data => {
-      if (data === undefined) goalDisplay = undefined;
-      else {
-        const next = readGoalDisplay(data, ctx.sessionManager.getSessionId());
-        if (next) goalDisplay = next;
-      }
-    });
-    pi.events?.emit("pi-ext:goal-display:request", undefined);
 
     currentModelId = ctx.model?.id;
     if (ctx.ui.theme.name !== CODEX_THEME_NAME) {
@@ -120,7 +103,6 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
         getContextUsage: createContextUsageReader(ctx),
         getBranch: () => footerData.getGitBranch(),
         getExtensionStatuses: () => footerData.getExtensionStatuses(),
-        getGoalDisplay: () => goalDisplay,
         getRate: () => working?.activity.label(),
         getTheme,
       });

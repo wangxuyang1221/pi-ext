@@ -1,5 +1,7 @@
 # Termius recovery verification
 
+本文为当时的终端与局部刷新历史证据，画面和动作保留原始语义。当前验收入口见 [Testing](../../../docs/testing.md)，历史计数不代表当前产品通过。
+
 ## Result
 
 本轮在 gpt-6.1-sol / high 独立补验，没有委派，没有修改产品、宿主补丁、正式驱动或测试。当前 CUA 输入和截图可用，Pi 已实际运行。发现两项验收失败，按委托交主代理 Astra high 判断和修复，不把失败改为通过。
@@ -31,10 +33,10 @@
 
 | Entrance | Actual observations | Exit |
 | --- | --- | --- |
-| patched / regular | 生产青色 spinner、灰白 Working 反光、0s 到后续计时、右侧 ≈ 速率、Goal 第二行；overlay 开关；中文中间插入；取消后隐藏；真实权限等待仍动画且速率过期为 --，批准后 shell 生成 TOOL-FINISHED；settled 后隐藏；/quit | 0 |
-| patched / fullscreen | 生产 spinner/反光/计时/≈、Goal、三行中文草稿和中间插入；F8 input 等待与关闭；取消后隐藏；原生 /settings 双向切换 renderer，settings 落盘；/new 与真实 reload 后 idle 无旧 Working；/quit | 0 |
-| original / regular | 生产组件正常回退，spinner/反光/计时/≈、Goal；中文草稿；light/codex-pi 切换；真实窗口 212→73 列时 footer/草稿保持；取消后隐藏；/quit | 0 |
-| original / fullscreen | 73 列中的生产 spinner/反光/计时/≈、三行中文、Goal；取消后隐藏；同一草稿 light/codex-pi 对照；/quit | 0 |
+| patched / regular | 生产青色 spinner、灰白 Working 反光、0s 到后续计时、右侧 ≈ 速率、历史状态第二行；overlay 开关；中文中间插入；取消后隐藏；真实权限等待仍动画且速率过期为 --，批准后 shell 生成 TOOL-FINISHED；settled 后隐藏；/quit | 0 |
+| patched / fullscreen | 生产 spinner/反光/计时/≈、三行中文草稿和中间插入；F8 input 等待与关闭；取消后隐藏；原生 /settings 双向切换 renderer，settings 落盘；/new 与真实 reload 后 idle 无旧 Working；/quit | 0 |
+| original / regular | 生产组件正常回退，spinner/反光/计时/≈；中文草稿；light/codex-pi 切换；真实窗口 212→73 列时 footer/草稿保持；取消后隐藏；/quit | 0 |
+| original / fullscreen | 73 列中的生产 spinner/反光/计时/≈、三行中文；取消后隐藏；同一草稿 light/codex-pi 对照；/quit | 0 |
 
 关键截图位于 RUN：`04-working-stream-a.png`、`06-working-overlay.png`、`12-working-permission-expired-a.png`、`15-working-tool-settled.png`、`20-fullscreen-multiline-draft.png`、`21-fullscreen-input.png`、`26-fullscreen-mode-switched.png`、`29-fullscreen-reload.png`、`35-original-regular-narrow-attempt.png`、`40-original-fullscreen-draft.png`。精确计时精度依赖既有测试；本轮静态截图不证明 80ms/32ms 调度精度，也不证明远程 provider。
 

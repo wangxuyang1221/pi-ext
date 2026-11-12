@@ -6,9 +6,9 @@
 pnpm exec node .cursor/skills/verify-pi-openai-fast-mode/scripts/verify.mjs full
 ```
 
-只验证根会话时用 `root` 替换 `full`。它保留完整 root、冷启动、命令组合与项目配置旅程，跳过所有 child 场景。原版 Pi 1.5.2 的独立包树入口见 [compatibility](../../../../docs/pi152-compatibility.md)。
+只验证根会话时用 `root` 替换 `full`。两种模式均覆盖 root、冷启动、命令组合与项目配置旅程。原版 Pi 1.5.2 的独立包树入口见 [compatibility](../../../../docs/pi152-compatibility.md)。
 
-运行要求与共享 helper 相同的 Node、pnpm、Conda `codex-py312` 和 pyte。此入口不使用共享 fixture 文件或 tmux，不占共享验证锁。运行期间保持 dist 不变。
+运行要求与共享 helper 相同的 Node、pnpm、Conda `codex-py312` 和 pyte。此入口使用独立证据目录，不占共享验证锁。运行期间保持 dist 不变。
 
 默认进程期限为 180 秒，Conda Python 路径探测另限 30 秒。`--timeout-ms <正整数>` 可缩短进程期限；`--python <绝对路径>` 可指定已经核实的 Conda Python。后者也用于验证启动失败路径。超时或中断后先给 TERM 两秒宽限，再强制回收 driver 进程组，最后依据 `owners.json` 回收独立 PTY 组。启动失败和断言失败同样归档配置，并把最终 summary 记为 failed；进程、证据归档或清理无法确认时保留 scratch，cleanup 记为 unverified。
 
@@ -26,13 +26,10 @@ provider 注册七个精确匹配的 OpenAI 模型、相似但不匹配 ID、两
 | root rejection | `reject-fast`，用户重试，off/on，再切其他模型和切回 | 失败通知明确要求重试；每次输入仅一个请求；原模型停用 priority，其他模型继续；普通 400 不停用；off/on 不清除原模型拒绝 |
 | root-restarted | `/quit` 后使用同一 agent 配置启动新 session，发消息，再保存 off | 新进程恢复 priority，随后配置为 false |
 | root-restarted-off | 再次冷启动并发送消息 | 保留 false，请求无 priority |
+| root-cold-resume | 使用上一根会话 `--session` 冷恢复，打开 Fast 并 reload | 先无 priority，再为 priority，开关写入配置 |
 | novel-combination | `--fast`，`/fast on now`，`/reload`，切相似 ID，toggle，切匹配 ID，bare | 非法命令不改配置字节，reload 完成，三次请求依次无字段、无字段、priority |
-| child-initial | 受控 child 环境初值 true，保存 off，`/reload`，发送消息 | session custom entry 保存 false；reload 后无 priority |
-| child-cold-resume | 用上一 session `--session` 冷启动，launch=true 且 `--fast`，再保存 on | 保存 false 优先于启动初值和 flag；请求无 priority |
-| child-resume-no-launch | 不传 child 环境，重开同一 session，发消息再 reload 发消息 | 保存 true 使宿主识别 child；两次请求均 priority，user 配置字节不变 |
 | project-scope | 将实际 dist 复制到隔离项目 `.pi/extensions/fast`，`--approve --fast`，请求，保存 off | `.pi/pi-openai-fast-mode/config.json` 先 true 后 false，user 配置字节不变 |
 
-受控 child 的种子只用于检查 Fast 自身的持久化边界。完整 managed spawn 和实际 managed session 的 CLI 冷恢复由 [child journey](../features/child.md) 提供。
 
 ## Evidence and cleanup
 

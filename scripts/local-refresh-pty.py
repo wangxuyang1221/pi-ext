@@ -27,7 +27,7 @@ parser.add_argument("--mode", choices=["regular", "fullscreen"], default="regula
 parser.add_argument("--original", action="store_true")
 parser.add_argument("--kitty", action="store_true", help="Advertise Kitty image protocol; verify emitted bytes, not physical pixels")
 parser.add_argument("--working", action="store_true", help="Drive production Working and rate with controlled provider events")
-parser.add_argument("--profile", choices=["legacy", "pi152"], default="legacy")
+parser.add_argument("--profile", choices=["pi14", "pi152"], default="pi14")
 parser.add_argument("--extension", type=Path, help="Installed codex-ui entry for the working journey")
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
@@ -50,7 +50,6 @@ command_line = [str(args.cli.resolve()), "--no-extensions", "--no-skills", "--no
                 "--provider", "faux", "--model", "faux-1", "--tui-mode", args.mode]
 if args.working:
     env["LOCAL_REFRESH_PROFILE"] = args.profile
-    env["PI_PERMISSIONS_MODE"] = "default"
     (runtime / "agent/themes").mkdir()
     shutil.copyfile(repo / "themes/codex-pi.json", runtime / "agent/themes/codex-pi.json")
     settings = json.loads((runtime / "agent/settings.json").read_text())
@@ -59,7 +58,6 @@ if args.working:
     (root / "plan.json").write_text(json.dumps({"kind": "idle", "id": "initial"}))
     command_line = [str(args.cli.resolve()), "--no-extensions", "--no-skills", "--no-context-files", "--no-prompt-templates",
         "-e", str(args.extension.resolve() if args.extension else repo / "extensions/codex-ui/dist/index.js"),
-        *(["-e", str(repo / "extensions/permissions/dist/index.js")] if args.profile == "legacy" else []),
         "-e", str(repo / "test-support/fixtures/local-refresh/working-provider.ts"),
         "--provider", "faux", "--model", "faux-1", "--tui-mode", args.mode]
 initial_workspace_empty = not any((runtime / "workspace").iterdir())

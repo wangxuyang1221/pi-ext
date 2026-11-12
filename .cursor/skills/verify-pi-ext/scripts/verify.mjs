@@ -26,25 +26,12 @@ const cases = {
   metadata: (root, evidence) => python(join(here, "commands.py"), "metadata", root, evidence),
   "metadata-project": (root, evidence) => python(join(here, "commands.py"), "metadata-project", root, evidence),
   fast: (root, evidence) => python(join(here, "commands.py"), "fast", root, evidence),
-  "fast-managed": (root, evidence) => python(join(here, "../../verify-pi-openai-fast-mode/scripts/managed.py"), root, evidence),
-  permissions: (root, evidence) => python(join(here, "commands.py"), "permissions", root, evidence),
-  "permissions-modes": (root, evidence) => [process.execPath, join(here, "permissions-modes.mjs"), root, evidence],
-  goal: () => python("extensions/goal/__tests__/tool-ui-driver.py"),
-  "goal-accounting": () => ["pnpm", "run", "host:accounting:check"],
-  "goal-footer": () => ["pnpm", "run", "goal:footer:check"],
-  "goal-journeys": () => [process.execPath, "extensions/goal/__tests__/verification.mjs", "matrix", "tools"],
-  "goal-budget-interrupt": () => [process.execPath, "extensions/goal/__tests__/verification.mjs", "budget", "interrupt"],
-  "goal-lifecycle": () => [process.execPath, "extensions/goal/__tests__/verification.mjs", "lifecycle"],
-  "goal-recovery": () => [process.execPath, "extensions/goal/__tests__/verification.mjs", "recovery"],
-  "goal-content": () => [process.execPath, "extensions/goal/__tests__/verification.mjs", "content", "0"],
   mcp: () => python("extensions/mcp/__tests__/resume-ui-host.py", "--live", "--repeat", "1"),
   "mcp-transports": () => ["pnpm", "test", "extensions/mcp/__tests__/transport-fixtures.test.ts", "extensions/mcp/__tests__/progress-transport.test.ts", "extensions/mcp/__tests__/integration.test.ts"],
   "mcp-configuration": () => python("extensions/mcp/__tests__/verification-journeys.py", "configuration"),
   "mcp-combination": () => python("extensions/mcp/__tests__/verification-journeys.py", "combination"),
   "mcp-history": () => python("extensions/mcp/__tests__/verification-journeys.py", "history"),
   "mcp-recovery": () => [process.execPath, "extensions/mcp/__tests__/fixtures/verification/recovery.mjs"],
-  subagent: () => ["pnpm", "run", "host:tmux:check"],
-  "subagent-journeys": () => [process.execPath, ".cursor/skills/verify-pi-subagent/scripts/run.mjs"],
   "codex-ui": () => python("extensions/codex-ui/__tests__/codemode-pty.py"),
   "codex-ui-fullscreen": () => python("extensions/codex-ui/__tests__/codemode-pty.py", "--fullscreen"),
   thinking: () => python("extensions/codex-ui/__tests__/thinking-pty.py"),
@@ -79,13 +66,8 @@ function doctor() {
   const pythonInfo = inspectPython();
   const gitRoot = realpathSync(execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim());
   const dependencyRoot = realpathSync("node_modules");
-  // The longest fixed prefix in the current subagent host fixture group.
-  const socketPath = resolve(".subagent-integration-test-XXXXXX/tmux.sock");
-  const socketLimit = process.platform === "darwin" ? 104 : process.platform === "linux" ? 108 : null;
   return { ...host, pnpm, python: pythonInfo.version, pythonExecutable: pythonInfo.executable, gitRoot, independentCheckout: gitRoot === realpathSync(repo),
     dependencyRoot, sharedDependencies: dependencyRoot !== join(realpathSync(repo), "node_modules"),
-    subagentSocket: { path: socketPath, bytes: Buffer.byteLength(socketPath), limit: socketLimit,
-      fits: socketLimit === null ? null : Buffer.byteLength(socketPath) < socketLimit },
     revision: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
     workingTree: execFileSync("git", ["status", "--short"], { encoding: "utf8" }).trim() };
 }
@@ -107,8 +89,6 @@ if (operation === "doctor") {
   assert.ok(operation === "run" || commandJourney, "Use doctor, run <case>, tui <extension>, or journey <extension> --recipe <path.json>");
   assert.ok(Object.hasOwn(cases, selected), `Unknown case: ${selected}`);
   const checked = doctor();
-  if (selected === "subagent") assert.notEqual(checked.subagentSocket.fits, false,
-    "Subagent fixture socket path is too long; use a shorter workspace path before running");
   mkdirSync(".tmp/test-results", { recursive: true });
   // Existing PTY fixtures have fixed evidence names; one run owns them at a time.
   const lock = resolve(".tmp/verify-pi-ext.lock");
@@ -133,7 +113,6 @@ if (operation === "doctor") {
     log = createWriteStream(join(evidence, "output.log"));
     child = spawn(command[0], command.slice(1), { cwd: repo, detached: true, stdio: interactive ? "inherit" : ["ignore", "pipe", "pipe"], env: {
       ...isolated.env, TERM: "xterm-256color", COLORTERM: "truecolor", SHELL: "/bin/sh",
-      GOAL_UI_EVIDENCE: join(evidence, "goal-ui"),
       PI_VERIFY_EVIDENCE: evidence,
       PI_VERIFY_SCRATCH: scratch,
     } });

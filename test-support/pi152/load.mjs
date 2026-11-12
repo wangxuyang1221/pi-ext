@@ -19,7 +19,10 @@ for (const renderer of [TuiMainScreen, TuiAltScreen]) {
 }
 const repo = process.cwd();
 const names = ["codex-ui", "codex-compact", "openai-fast-mode", "mcp", "skill-mentions"];
-const evidence = resolve(".tmp/load-proof.json");
+const evidenceIndex = process.argv.indexOf("--evidence");
+const evidence = resolve(evidenceIndex < 0 ? ".tmp/load-proof.json" : process.argv[evidenceIndex + 1]);
+assert.ok(evidence.startsWith(resolve(".tmp") + "/"), "Load evidence must remain in the runtime .tmp tree");
+mkdirSync(resolve(evidence, ".."), { recursive: true });
 const proof = [];
 for (const kind of ["src", "dist"]) {
   const isolated = createTestEnvironment(`stock-load-${kind}`);

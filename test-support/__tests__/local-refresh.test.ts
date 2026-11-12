@@ -231,7 +231,7 @@ function fullscreenFixture(local: boolean, inTranscript = false) {
 describe("fullscreen text regions", () => {
   it("revalidates changed strings after repeated styled multirow updates", async () => {
     const baseline = fullscreenFixture(false), local = fullscreenFixture(true);
-    const rows = ["\x1b[36m状态 กำ ຳ\x1b[39m", "Goal: stable second row"];
+    const rows = ["\x1b[36m状态 กำ ຳ\x1b[39m", "Status: stable second row"];
     try {
       for (const f of [baseline, local]) { f.animation.render = () => rows; f.tui.renderNow(); }
       for (const text of ["\x1b[36m状态 กำ ຳ\x1b[39m", "\x1b[33mchanged 中文\x1b[39m", "x".repeat(140), "\x1b[2Junsafe", "restored"]) {

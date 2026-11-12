@@ -17,8 +17,8 @@ import { createContextUsageReader } from "../extensions/codex-ui/dist/context-us
 // Compare installed production components. Synchronous batches isolate renderer CPU;
 // --interval=32 additionally drives the native scheduler at the production cadence.
 const option = (name, fallback) => process.argv.find(arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3) ?? fallback;
-const profile = option("profile", "legacy");
-assert.ok(["legacy", "pi152"].includes(profile));
+const profile = option("profile", "pi14");
+assert.ok(["pi14", "pi152"].includes(profile));
 const baselinePath = option("baseline");
 const startedAt = new Date().toISOString();
 assert.ok(baselinePath, "Pass --baseline=<pristine pi-tui package directory>");
@@ -93,8 +93,7 @@ async function createFixture(implementation, historyPairs) {
   const editor = { invalidate() {}, render() { return [`> draft${Host.CURSOR_MARKER}`]; } };
   const footer = new CodexFooter({ cwd: process.cwd(), getModelId: () => "gpt-4.1", getThinkingLevel: () => "high",
     getContextUsage: createContextUsageReader({ sessionManager: manager, get model() { return session.model; }, getContextUsage: () => session.getContextUsage() }), getBranch: () => "main", getTheme: () => theme,
-    getGoalDisplay: () => profile === "pi152" ? undefined : ({ version: 1, ownerSessionId: "benchmark", goalId: "benchmark", objective: "Preserve the complete goal footer", status: "active", summary: "Active · 12m · 12.3k / 80k tokens" }),
-    getExtensionStatuses: () => profile === "pi152" ? new Map([["goal", "Status: active | neutral footer second row"]]) : new Map([["goal", "Goal: active | production footer second row"], ["permissions", "full access"], ["pi-openai-fast-mode", "fast"]]), getRate: () => activity.label() });
+    getExtensionStatuses: () => new Map([["status", "Status: active | neutral footer second row"], ["pi-openai-fast-mode", "fast"]]), getRate: () => activity.label() });
   const widget = new Host.Container(); widget.addChild(animation);
   const bottom = new Host.Container(); bottom.addChild(footer);
   const renderer = mode === "fullscreen" ? new Host.TuiAltScreen(terminal, true) : new Host.TuiMainScreen(terminal, true);

@@ -34,6 +34,6 @@ test("loads every registered extension through the pinned Pi filesystem loader",
     const result = loader.getExtensions();
     expect(result.errors).toEqual([]);
     expect(result.extensions).toHaveLength(paths.length);
-    expect(result.extensions.flatMap(extension => [...extension.tools.keys()])).toContain("create_goal");
+    expect(result.extensions.flatMap(extension => [...extension.tools.keys()])).toContain("write");
   } finally { rmSync(cwd, { recursive: true, force: true }); }
 });

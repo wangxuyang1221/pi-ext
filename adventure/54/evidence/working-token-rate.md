@@ -1,5 +1,7 @@
 # Working and token-rate implementation evidence
 
+本文为当时的终端与局部刷新历史证据，画面和动作保留原始语义。当前验收入口见 [Testing](../../../docs/testing.md)，历史计数不代表当前产品通过。
+
 ## Scope
 
 本记录对应 Implementation #63 的开发自测。基线为 `845e2f9c3bab4fac13e455b1c756bd3917e8a529`，工作区为 `.scratch/worktrees/pi-animation`，分支为 `adventure/pi-animation`。#64、#65 的验证系统工作与 #66 的独立验收仍属后续关卡。
@@ -10,7 +12,7 @@
 
 生产入口为 `extensions/codex-ui/src/index.ts`。WorkingSession 监听公开生命周期和 message 事件，挂载独立 widget，并包装真实 CodexFooter。两个组件共享一个 32ms 定时器，各自注册 factory 实际返回的组件。原版缺少 `registerTextRegion` 时调用正常刷新。开始、结束和移除行强制正常刷新，防止高度变化遗漏。标题调度保持原实现，原生 Working 仍隐藏。
 
-Working 持续至 `agent_settled`，不在 `agent_end`、输入等待或 Esc 按键时结束。重复 start 保留开始时间和唯一调度器；replacement、reload、shutdown 释放句柄与定时器。旧定时回调通过 generation 拒绝，旧响应数组通过身份拒绝。footer 保留状态字段和 goal 后续行，速率仅占第一行右侧。估算口径、精度及 100ms 桶边界见[生产说明](../../../docs/codex-working-rate.md)。
+Working 持续至 `agent_settled`，不在 `agent_end`、输入等待或 Esc 按键时结束。重复 start 保留开始时间和唯一调度器；replacement、reload、shutdown 释放句柄与定时器。旧定时回调通过 generation 拒绝，旧响应数组通过身份拒绝。footer 保留状态字段和 ，历史状态后续行，速率仅占第一行右侧。估算口径、精度及 100ms 桶边界见[生产说明](../../../docs/codex-working-rate.md)。
 
 本关保留 coding-agent 的原有摘要补丁。pi-tui 补丁内部增加全屏文本校验结果复用，字符串或宽度变化重新验证，合成得到其他字符串仍裁剪；#61/#62 的 API 和回退契约不变。没有引入新等待接口、生产 F 键或模拟速率。
 
@@ -42,11 +44,11 @@ pnpm_config_verify_deps_before_run=false pnpm run check
 
 生产 provider 夹具只替代远程模型和摘要结果。权限来自生产 permissions 扩展，批准后执行真实 bash 并核对 `tool-proof.txt`。取消通过真实 Esc 传播到正在执行的 shell，检查 `should-not-exist.txt` 不存在。429 触发宿主 retry，context overflow 触发宿主自动压缩，记录 `reason=overflow`、`willRetry=true` 及后续恢复。不是直接设置 session 内部状态。
 
-旅程还覆盖 idle/active input dialog、overlay 焦点、草稿和输入位置、32/40/100/12/120 列、light/codex-pi、Ctrl+O、最终错误、双向模式切换、真实 `/new`、reload 及 `/quit`。权限和 dialog 等待期间检查 Braille 与灰度变化；约两秒没有样本后显示 `-- t/s`。结束后 Working 和 rate 都消失，goal 行保留。
+旅程还覆盖 idle/active input dialog、overlay 焦点、草稿和输入位置、32/40/100/12/120 列、light/codex-pi、Ctrl+O、最终错误、双向模式切换、真实 `/new`、reload 及 `/quit`。权限和 dialog 等待期间检查 Braille 与灰度变化；约两秒没有样本后显示 `-- t/s`。结束后 Working 和 rate 都消失，历史状态行保留。
 
 首次发布安装记录为 `.tmp/working-token-rate/published-installation.json`。四个入口的 `published-{patched,original}-{regular,fullscreen}` 中，原版两模式与补丁版全屏通过；补丁版普通模式首次在并发全量测试时光标断言失败，独立重跑 `published-patched-regular-2` 通过。两次记录均保留，不把失败批次删去。footer 分拆后再次打包，安装根为 `.tmp/local-refresh-install-1CfaxF`，包 SHA-256 为 `5fd982e1f4ddb523c394d04e4405b21c9b5c70ebdf50fcb076899fb0b5d215ca`。该阶段 `final-{patched,original}-{regular,fullscreen}` 四个入口均通过 53 项检查，正常 `/quit` 返回 0，运行目录删除且进程组为空。
 
-既有 CLI 回归记录为 `codex-ui-cli-regular-1793247680134449000`、`codex-ui-cli-fullscreen-1793247680106806000`，headless 为 `codex-ui-headless-1793247681612027000`。两个 CLI 各通过 124 项断言。codemode 的共享 helper 两模式及 goal-footer 四入口也通过，局部刷新示例两模式回归通过。正式旅程通过不等于物理终端像素、拖选和系统剪贴板通过，这些本次未测。真实 Esc 命中 Write/Edit 某个文件系统 await 的旧边界仍未验证；本关验证的是可观察的 bash 取消。
+既有 CLI 回归记录为 `codex-ui-cli-regular-1793247680134449000`、`codex-ui-cli-fullscreen-1793247680106806000`，headless 为 `codex-ui-headless-1793247681612027000`。两个 CLI 各通过 124 项断言。正式旅程通过不等于物理终端像素、拖选和系统剪贴板通过，这些本次未测。真实 Esc 命中 Write/Edit 某个文件系统 await 的旧边界仍未验证；本关验证的是可观察的 bash 取消。
 
 ## CPU protocol
 
@@ -69,7 +71,7 @@ pnpm_config_verify_deps_before_run=false pnpm run check
 | mutator-first | 共享依赖 overlay 可能共用 Vite 缓存 | 停止本次运行，增加独立 configLoader runner 和禁用测试缓存的配置 |
 | mutator-isolated | Unicode 分片时机、40列边界、非零开始时间、旧回调等断言不足 | 增补行为断言，删除冗余生命周期 guard；复测保留等价变异说明 |
 | cpu-fullscreen-1/2/3 | 三轮 200 对历史下降仅约 26%，共同成本是每个动画帧重复统计未变历史 | 先写真实 SessionManager 分支变更的红灯测试，再按分支和模型缓存；两侧使用同一生产优化，原预算不变 |
-| cpu-optimized-fullscreen-1/2/3 | 单独缓存上下文后，相对收益仍不足；两侧共同变快，说明首次定位不完整 | V8 profile 查明组件裁剪热点；拆开 goal 缓存并避免裁剪已知能放下的行，保留所有窄屏断言 |
+| cpu-optimized-fullscreen-1/2/3 | 单独缓存上下文后，相对收益仍不足；两侧共同变快，说明首次定位不完整 | V8 profile 查明组件裁剪热点；避免裁剪已知能放下的行，保留所有窄屏断言 |
 | green-render-cost | index 测试的 context 缺少公开 sessionManager 字段 | 夹具改用真实 SessionManager，生产代码保持正式接口契约 |
 | cpu-final-fullscreen-2 | 组件优化后仍有一轮 200 对历史低于预算 | 全屏复用同宽、同字符串的文本校验；归一化后直接保留已验证行，合成变更照常裁剪。追加共享可变数组、样式、Thai/Lao、超宽和控制序列回归 |
 | patch-commit | pnpm 11 因忽略依赖构建脚本返回 1，补丁已生成 | 用 ignore-scripts 和 strict-dep-builds=false 完成 patch-commit；移除自动生成的 allowBuilds 占位，没有执行依赖脚本 |
@@ -116,7 +118,6 @@ mutator 最终为 137 个位置，131 killed、6 equivalent survivors、0 uncove
 
 最后对变更的 Working.render 和 footer 缓存/组合分支追加变异检查，30 killed、5 equivalent survivors。三个默认值运算符变异对对象/undefined 或空字符串等价；两个恰好能放下的边界只改变是否经过无变化裁剪。原始工具报告另含既有 `nextShorterVariant` 的 1 个 uncovered，位于所选变更行以外，保留该记录，不宣称零未覆盖或将等价项记为 killed。详细统计见 [质量结果](working-token-rate-quality.json)。
 
-最终旧 CLI 回归为 `codex-ui-cli-regular-1793249968003738000`、`codex-ui-cli-fullscreen-1793249969129635000`，各 124 项断言通过且临时目录删除。goal-footer 四入口为 `verify-goal-footer-QntFCa`，codemode 两模式为 `verify-codex-ui-LcQMnH`、`verify-codex-ui-fullscreen-IqEeCq`，均通过并清理进程组。
 
 安装、逐项 PTY 结果、公开宿主事件计数、回归摘要、最终源码/补丁哈希和清理明细见 [验证索引](working-token-rate-verification.json)。八份最终 CPU 原始样本的源码和补丁哈希均匹配本提交文件，源码冻结后只补充证据文档。安装包比对为同一批源码构建的 dist，没有手工修改构建产物。
 

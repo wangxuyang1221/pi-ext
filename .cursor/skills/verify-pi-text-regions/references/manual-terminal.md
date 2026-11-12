@@ -35,10 +35,10 @@ const file=`${process.env.MANUAL}/runtime/agent/settings.json`;
 writeFileSync(file,JSON.stringify({...JSON.parse(readFileSync(file)),theme:'codex-pi'}));
 writeFileSync(`${process.env.MANUAL}/plan.json`,JSON.stringify({kind:'stream',id:'manual-stream'}));
 JS
-(cd "$MANUAL/runtime/workspace" && env -i PATH="$PATH" LANG="${LANG:-en_US.UTF-8}" TERM="${TERM:-xterm-256color}" COLORTERM=truecolor HOME="$MANUAL/runtime/home" TMPDIR="$MANUAL/runtime/tmp" PI_CODING_AGENT_DIR="$MANUAL/runtime/agent" PI_PERMISSIONS_MODE=default PI_OFFLINE=1 PI_SKIP_VERSION_CHECK=1 PI_TELEMETRY=0 LOCAL_REFRESH_EVIDENCE="$MANUAL" MANUAL="$MANUAL" REPO="$REPO" sh -c 'echo $$ > "$MANUAL/pid"; exec "$REPO/node_modules/.bin/pi" --no-extensions --no-skills --no-context-files --no-prompt-templates -e "$REPO/extensions/codex-ui/dist/index.js" -e "$REPO/extensions/permissions/dist/index.js" -e "$REPO/test-support/fixtures/local-refresh/working-provider.ts" --provider faux --model faux-1 --tui-mode regular')
+(cd "$MANUAL/runtime/workspace" && env -i PATH="$PATH" LANG="${LANG:-en_US.UTF-8}" TERM="${TERM:-xterm-256color}" COLORTERM=truecolor HOME="$MANUAL/runtime/home" TMPDIR="$MANUAL/runtime/tmp" PI_CODING_AGENT_DIR="$MANUAL/runtime/agent" PI_OFFLINE=1 PI_SKIP_VERSION_CHECK=1 PI_TELEMETRY=0 LOCAL_REFRESH_EVIDENCE="$MANUAL" MANUAL="$MANUAL" REPO="$REPO" sh -c 'echo $$ > "$MANUAL/pid"; exec "$REPO/node_modules/.bin/pi" --no-extensions --no-skills --no-context-files --no-prompt-templates -e "$REPO/extensions/codex-ui/dist/index.js" -e "$REPO/test-support/fixtures/local-refresh/working-provider.ts" --provider faux --model faux-1 --tui-mode regular')
 ```
 
-提交 `Generate visible thinking and text`，观察生产 spinner/反光/计时/速率与 goal 行，再 Esc 等待真正结束、`/quit`。全屏另用新目录，将最后模式改成 fullscreen。此处只验证物理显示，完整权限/retry/compaction 仍走 Working 自动旅程。
+提交 `Generate visible thinking and text`，观察生产 spinner/反光/计时/速率与 状态行，再 Esc 等待真正结束、`/quit`。全屏另用新目录，将最后模式改成 fullscreen。此处只验证物理显示，完整工具/retry/compaction 仍走 Working 自动旅程。
 
 ## Actions and evidence
 

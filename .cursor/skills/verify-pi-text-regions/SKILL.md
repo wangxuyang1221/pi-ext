@@ -9,7 +9,7 @@ description: "Verify Pi 1.4.0 and isolated 1.5.2 text-region refresh through rea
 
 ## Host profiles
 
-1.5.2 迁移、独立安装、摘要或无 permissions 的 Working 验证先执行 [Pi 1.5.2 profile](features/pi152.md)。以下原有命令保留 1.4.0 的 legacy 覆盖。两个 profile 的证据分别记录。
+1.5.2 迁移、独立安装、摘要或 Working 验证先执行 [Pi 1.5.2 profile](features/pi152.md)。以下原有命令保留 1.4.0 的 基线覆盖。两个 profile 的证据分别记录。
 
 ## Launch
 
@@ -33,7 +33,7 @@ node .cursor/skills/verify-pi-text-regions/scripts/doctor.mjs > "$RUN/doctor.jso
 
 保留 RUN 的实际绝对路径；后续新 shell 用该值恢复，不能拿旧运行目录充当新运行。
 
-Drive 的证据子目录必须尚不存在。PTY 驱动从空的 `runtime/home`、`agent`、`workspace` 创建所需设置、主题和 offline provider 计划，关闭缓存预热、版本检查和遥测，过滤凭据环境。初始没有历史、auth 或用户文件。首次 trust 提示由真实按键确认。示例 ready 为同一完整帧出现 `Region demo` 和 `Controlled example`；Working ready 为公开 `start` 事件及生产 `Goal:` footer。PID 已存在不代表 ready。不要同时启动会清理 dist 的构建或其他 UI 检查。
+Drive 的证据子目录必须尚不存在。PTY 驱动从空的 `runtime/home`、`agent`、`workspace` 创建所需设置、主题和 offline provider 计划，关闭缓存预热、版本检查和遥测，过滤凭据环境。初始没有历史、auth 或用户文件。首次 trust 提示由真实按键确认。示例 ready 为同一完整帧出现 `Region demo` 和 `Controlled example`；Working ready 为公开 `start` 事件及生产 `Status:` 状态行。PID 已存在不代表 ready。不要同时启动会清理 dist 的构建或其他 UI 检查。
 
 ## Doctor
 
@@ -49,7 +49,7 @@ node .cursor/skills/verify-pi-text-regions/scripts/doctor.mjs
 
 ## Drive
 
-最小完整自证选生产 Working 旅程，含真实权限、shell 文件、取消、retry、compaction、模式切换、new/reload/quit：
+最小完整自证选生产 Working 旅程，含真实工具、shell 文件、取消、retry、compaction、模式切换、new/reload/quit：
 
 ```bash
 conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/working-regular" --working --cli "$PWD/node_modules/.bin/pi" > "$RUN/working-regular.log" 2>&1
@@ -61,7 +61,7 @@ conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/working-regul
 
 每个入口记录命令、开始/结束时间、外层命令退出码、feature ID、doctor 和 revision。PTY 的 `instance.json` 保存实际命令、PID、runtime 和空目录起点；`actions.json` 保存输入及 ANSI 字节位置，`terminal.ansi` 保存原始输出，`screens.json` 保存单元格状态/光标/颜色及完整帧标记，`events.jsonl` 保存公开会话/工具事件，`summary.json` 保存断言、CLI 退出码和清理状态。`artifacts/` 保留实际 workspace、设置和 session 文件，失败也保留已有结果。
 
-外部 provider 和摘要通过既有生产接口替换；权限、输入、shell、取消、retry、compaction 和退出均走宿主。检查真实生成文件和取消后缺失的文件，不能只读终态截图。faux 速率证明事件到生产采样/显示的链路，不证明远程网络或模型准确 tokenizer。示例 `101 t/s` 类值是演示值。CPU 数据须新跑，协议和预算见 [performance](features/performance.md)。
+外部 provider 和摘要通过既有生产接口替换；工具、输入、shell、取消、retry、compaction 和退出均走宿主。检查真实生成文件和取消后缺失的文件，不能只读终态截图。faux 速率证明事件到生产采样/显示的链路，不证明远程网络或模型准确 tokenizer。示例 `101 t/s` 类值是演示值。CPU 数据须新跑，协议和预算见 [performance](features/performance.md)。
 
 物理终端像素、真实拖选、系统剪贴板和图片像素按 [interaction boundaries](features/interactions.md) 独立记录 `passed / failed / unverified`。pyte 和复制 callback 都不等于系统剪贴板。未满足前置条件必须写明缺项、尝试命令和可续验步骤；本关自证不代替 #66。
 

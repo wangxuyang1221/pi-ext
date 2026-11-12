@@ -6,7 +6,7 @@ repo = Path(__file__).resolve().parents[4]
 os.chdir(repo)
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--output", default=f".tmp/test-results/shared-interrupt-{time.time_ns()}")
-parser.add_argument("--case", choices=["codex-search", "fast-managed"], default="codex-search")
+parser.add_argument("--case", choices=["codex-search"], default="codex-search")
 options = parser.parse_args()
 out = (repo / options.output).resolve()
 assert out.is_relative_to(repo), "Regression output must remain in the repository"
@@ -15,7 +15,7 @@ out.mkdir(parents=True, exist_ok=False)
 pid,fd=pty.fork()
 if pid==0:
     os.execvp('node',['node','.cursor/skills/verify-pi-ext/scripts/verify.mjs',
-                      'run' if options.case == 'fast-managed' else 'tui', options.case])
+                      'tui', options.case])
 raw=bytearray(); summary_path=None; status=None; observed=[]
 def pump():
     global status
@@ -37,10 +37,7 @@ try:
         if summary_path and summary_path.exists():
             summary=json.loads(summary_path.read_text()); scratch=Path(summary['scratch'])
             events=scratch/'events.jsonl'
-            if options.case == 'fast-managed':
-                starts = list((scratch / 'home').glob('start-*.json'))
-                if any(json.loads(path.read_text()).get('parent') for path in starts): break
-            elif events.exists() and any(json.loads(line).get('type') == 'ready' for line in events.read_text().splitlines()): break
+            if events.exists() and any(json.loads(line).get('type') == 'ready' for line in events.read_text().splitlines()): break
         if status is not None: raise AssertionError('outer process exited before ready')
     else: raise AssertionError('ready timeout')
     import subprocess
@@ -49,10 +46,6 @@ try:
     owned={pid}; changed=True
     while changed:
         new={p for p,pp in pairs if pp in owned}; changed=bool(new-owned); owned|=new
-    if options.case == 'fast-managed':
-        owned.update(int(path.stem.split('-')[1]) for path in starts)
-        server = subprocess.check_output([str(scratch/'tmux'), 'display-message', '-p', '#{pid}']).decode().strip()
-        owned.add(int(server))
     observed=sorted(owned)
     (out/'before.json').write_text(json.dumps({'pids':observed,'evidence':str(summary_path.parent)},indent=2))
     os.kill(pid,signal.SIGTERM)
@@ -66,9 +59,6 @@ try:
         try: os.kill(p,0); alive.append(p)
         except ProcessLookupError: pass
     checks['processesStopped']=not alive
-    if options.case == 'fast-managed':
-        managed = json.loads((summary_path.parent/'managed.json').read_text())
-        checks['managedStopped'] = not managed['livePids'] and managed['socketUnavailable']
     result={'checks':checks,'alive':alive,'summary':summary}
     (out/'result.json').write_text(json.dumps(result,indent=2))
     print(json.dumps({"checks": checks, "evidence": str(summary_path.parent), "regression": str(out)}))

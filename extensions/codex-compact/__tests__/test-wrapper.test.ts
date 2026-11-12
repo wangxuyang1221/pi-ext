@@ -49,7 +49,7 @@ test("isolates every supported external AWS credential source while preserving o
     "AWS_WEB_IDENTITY_TOKEN_FILE", "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI", "AWS_CONTAINER_CREDENTIALS_FULL_URI",
     "AWS_CONTAINER_AUTHORIZATION_TOKEN", "AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE", "AWS_PROFILE",
     "AWS_SHARED_CREDENTIALS_FILE", "AWS_CONFIG_FILE", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN",
-    "PI_MCP_CONFIG", "PI_SUBAGENT_PARENT", "PI_CODING_AGENT_SESSION_DIR"];
+    "PI_MCP_CONFIG", "PI_TEST_UNTRUSTED_ENV", "PI_CODING_AGENT_SESSION_DIR"];
   const sdk = pathToFileURL(resolve("node_modules/@earendil-works/pi-coding-agent/dist/index.js")).href;
   const f = fixture(`import {ModelRuntime} from ${JSON.stringify(sdk)};
     test('records the isolated environment',async()=>{
@@ -57,13 +57,13 @@ test("isolates every supported external AWS credential source while preserving o
       writeFileSync(RESULT_FILE,JSON.stringify({
         inherited:${JSON.stringify(keys)}.filter(key=>process.env[key]!==undefined),
         bedrockAuth:!!(await runtime.getAuth('amazon-bedrock')),
-        switches:[process.env.PI_SUBAGENT_ISOLATED_INTEGRATION,process.env.PI_SUBAGENT_FIXTURE_DIST],
+        switches:[process.env.PI_MCP_TEST_PI_ROOT,process.env.PI_CODEX_TEST_PI_ROOT],
         home:process.env.HOME,agentDir:process.env.PI_CODING_AGENT_DIR,path:!!process.env.PATH
       }));
     });`);
   // All values are inert sentinels. No real identity file or endpoint is supplied.
   const sentinels = Object.fromEntries(keys.map(key => [key, key.includes("URI") ? "http://127.0.0.1:1" : join(f.root, "nonexistent-credential")]));
-  const execution = await run(f.config, { ...sentinels, PI_SUBAGENT_ISOLATED_INTEGRATION: "1", PI_SUBAGENT_FIXTURE_DIST: "1" });
+  const execution = await run(f.config, { ...sentinels, PI_MCP_TEST_PI_ROOT: "1", PI_CODEX_TEST_PI_ROOT: "1" });
   try {
     const [code] = await execution.exited;
     assert.equal(code, 0, execution.output());

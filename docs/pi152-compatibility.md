@@ -2,7 +2,7 @@
 
 ## Scope
 
-原版 Pi `1.5.2` 的兼容范围是 `codex-ui`、`codex-compact`、`openai-fast-mode`、`mcp`、`skill-mentions` 和 `themes/codex-pi.json`。根开发环境仍固定在 `1.4.0`，保留现有可选补丁。包仍发布八个扩展入口；本次范围以外的 `goal`、`subagent`、`permissions` 不包含在 `1.5.2` 支持声明中。使用 `pi config` 选择上述五个扩展，或逐个用 `-e` 加载构建入口。
+原版 Pi `1.5.2` 的兼容范围是 `codex-ui`、`codex-compact`、`openai-fast-mode`、`mcp`、`skill-mentions` 和 `themes/codex-pi.json`。根开发环境仍固定在 `1.4.0`，保留现有可选补丁。包仍发布五个扩展入口。使用 `pi config` 选择上述五个扩展，或逐个用 `-e` 加载构建入口。
 
 三个 Pi peer 依赖接受 `1.4.0 || 1.5.2`。不要把此范围理解成八个发布入口都已通过新宿主验收，也不要将根开发依赖整体升级后套用旧补丁。
 
@@ -55,7 +55,7 @@ pnpm run pi152:verify run conda run --no-capture-output -n codex-py312 python ex
 pnpm run pi152:verify run conda run --no-capture-output -n codex-py312 python extensions/mcp/__tests__/verification-journeys.py history
 ```
 
-`resume-stock` 保留原有四种编辑器/终端组合及真实菜单、会话身份、历史字节和后续请求检查，另断言原版封套显示和技能正文搜索降级。要求摘要补丁的 `resume` 入口继续用于根补丁基线。Fast 的 `root` 模式覆盖根会话完整请求旅程及项目配置，跳过 child 场景。
+`resume-stock` 保留原有四种编辑器/终端组合及真实菜单、会话身份、历史字节和后续请求检查，另断言原版封套显示和技能正文搜索降级。要求摘要补丁的 `resume` 入口继续用于根补丁基线。Fast 的 `root` 模式覆盖根会话完整请求旅程及项目配置及同一根会话冷恢复。
 
 `pi152-codemode.json` 使用真实 CLI 同时加载五扩展和内置 codemode，执行嵌套 read/bash/edit/write、核对文件字节，再以 F3 展开并打开 inspector 三个 tab。复制 recipe 到验证副本的 `.tmp`，在 `cliArgs` 加入 `--tui-mode`、`fullscreen` 即可复验全屏入口；recipe 路径由验证副本解析。共享 `journey` 结束后仍须审查 `journey.json` 和画面，并记录 verdict。
 

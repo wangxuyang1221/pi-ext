@@ -29,7 +29,7 @@ SessionManager 预置聊天内容；模拟数据包括 Working 状态、速率�
 
 ## Verification
 
-Node v22.22.2，pnpm 11.9.0，Python 3.12.13，Pi 四个包版本均为 1.4.0。doctor 确认当前为独立 worktree 和独立依赖，无验证锁；subagent socket 路径过长与本次不启动 subagent 的 PTY 原型无关。
+Node v22.22.2，pnpm 11.9.0，Python 3.12.13，Pi 四个包版本均为 1.4.0。
 
 执行：
 
