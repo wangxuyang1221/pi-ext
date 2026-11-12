@@ -154,6 +154,11 @@ try:
             wait(lambda: selector_text in view().split("Resume Session", 1)[-1] and "Independent session" not in view().split("Resume Session", 1)[-1], "stock body search retains snapshot")
             screens[f"stock-body-search-{attempt}"] = view()
             send("\x15")
+        if not stock_summary:
+            send("SAVED_SKILL_BODY")
+            wait(lambda: "No sessions" in view(), "hidden snapshot body excluded from hot search")
+            screens[f"hidden-body-search-{attempt}"] = view()
+            send("\x15")
         send('"中文任务"')
         wait(lambda: selector_text in view().split("Resume Session", 1)[-1] and "Independent session" not in view().split("Resume Session", 1)[-1], "in-process exact search")
         screens[f"in-process-search-{attempt}"] = view()
@@ -184,11 +189,18 @@ try:
 
     ready_count = len(events("ready"))
     settled_count = len(events("settled"))
+    start_count, request_count = len(events("start")), len(events("request"))
     start(["--resume"])
     wait(lambda: "Resume Session" in view() and selector_text in view(), "cold selector before session_start")
     assert len(events("ready")) == ready_count, "Selection must precede session startup"
+    assert len(events("start")) == start_count and len(events("request")) == request_count
     assert ("<pi-ext-skill-mentions" in view()) == stock_summary
     screens["cold-resume"] = view()
+    if not stock_summary:
+        send("SAVED_SKILL_BODY")
+        wait(lambda: "No sessions" in view(), "hidden snapshot body excluded from cold search")
+        screens["cold-hidden-body-search"] = view()
+        send("\x15")
     send('"中文任务"')
     wait(lambda: selector_text in view() and "Independent session" not in view(), "projected exact search")
     screens["cold-search"] = view()
@@ -205,6 +217,73 @@ try:
     assert original in events("request")[-1], "Original user snapshot must reach the model"
     assertions.append({"selector": "cold", "session": original_session, "modelSnapshotPreserved": True, "historyUnchangedOnSelection": True})
     stop()
+
+    if "--cwd-cases" in sys.argv:
+        from hashlib import sha256
+        source_bytes = Path(original_session).read_bytes()
+        project = root / "workspace/.pi/extensions"
+        project.mkdir(parents=True)
+        marker = root / "untrusted-loaded"
+        (project / "untrusted.ts").write_text('import { writeFileSync } from "node:fs"; writeFileSync(' + json.dumps(str(marker)) + ', "loaded"); export default function() {}')
+        saved_args = args[:]
+        args = [value for value in args if value not in ["--approve", "--no-extensions"]]
+        args += ["--no-approve"]
+        ready_count = len(events("ready"))
+        start_count, request_count = len(events("start")), len(events("request"))
+        start(["--resume"])
+        wait(lambda: "Resume Session" in view() and selector_text in view(), "untrusted startup selector")
+        assert len(events("ready")) == ready_count and not marker.exists()
+        assert len(events("start")) == start_count and len(events("request")) == request_count
+        screens["untrusted-startup"] = view()
+        send("\x1b")
+        wait(lambda: status is not None, "cancel startup selector")
+        assert os.waitstatus_to_exitcode(status) == 0
+        os.close(fd)
+        assert len(events("ready")) == ready_count and not marker.exists()
+        assertions.append({"selector": "cold-trust", "untrustedExtensionNotLoaded": True, "noSessionLifecycleBeforeSelection": True})
+        args = saved_args
+        missing = root / "sessions/missing-cwd.jsonl"
+        rows = [json.loads(line) for line in source_bytes.decode().splitlines()]
+        rows[0]["cwd"] = str(root / "does-not-exist")
+        rows[0]["id"] = "15215215-2152-4152-8152-152152152152"
+        rows.append({"type": "session_info", "id": "152label", "parentId": rows[-1]["id"], "timestamp": "2026-11-12T00:00:00.000Z", "name": "CWD152"})
+        missing.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows))
+        missing_bytes = missing.read_bytes()
+        for branch in ["cancel", "continue", "fork"]:
+            ready_count = len(events("ready"))
+            start(["--resume"])
+            wait(lambda: "Resume Session" in view(), "missing cwd cold resume selector")
+            send("\t")
+            send("CWD152")
+            wait(lambda: any(line.lstrip().startswith("› CWD152") for line in screen.display), "all-project selector finds selected missing cwd row")
+            settle()
+            send("\r")
+            wait(lambda: "Continue" in view() and "Fork" in view(), "missing cwd options retained")
+            screens[f"missing-cwd-{branch}"] = view()
+            if branch == "cancel":
+                send("\x1b")
+                wait(lambda: status is not None, "missing cwd cancel exits")
+                assert os.waitstatus_to_exitcode(status) == 0
+                os.close(fd)
+                assert len(events("ready")) == ready_count
+            else:
+                if branch == "fork":
+                    send("\x1b[B")
+                send("\r")
+                wait(lambda: len(events("ready")) == ready_count + 1, "missing cwd selected runtime ready")
+                assert events("start")[-1]["cwd"] == str(root / "workspace")
+                selected = events("start")[-1]["session"]
+                if branch == "continue":
+                    assert selected == str(missing)
+                else:
+                    assert selected != str(missing)
+                    fork_rows = [json.loads(line) for line in Path(selected).read_text().splitlines()]
+                    assert fork_rows[0]["cwd"] == str(root / "workspace")
+                    assert any(row.get("type") == "message" for row in fork_rows)
+                stop()
+            assert missing.read_bytes() == missing_bytes
+            assert Path(original_session).read_bytes() == source_bytes
+            assertions.append({"selector": "missing-cwd", "branch": branch, "originalSha256": sha256(source_bytes).hexdigest(), "missingSha256": sha256(missing_bytes).hexdigest(), "historyUnchanged": True})
 finally:
     if pid is not None and status is None:
         # Release the PTY before waiting: macOS can block exit while output drains.

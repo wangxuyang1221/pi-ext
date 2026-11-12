@@ -2,11 +2,35 @@ import { appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Image, matchesKey } from "@earendil-works/pi-tui";
+import { Image, matchesKey, type TextRegionHandle, type TUI } from "@earendil-works/pi-tui";
 
 export default function (pi: ExtensionAPI) {
   const root = process.env.LOCAL_REFRESH_EVIDENCE!;
   const record = (type: string, data: unknown) => appendFileSync(join(root, "events.jsonl"), JSON.stringify({ type, data }) + "\n");
+  let documentVersion = 0;
+  let documentTui: TUI | undefined;
+  let documentHandle: TextRegionHandle | undefined;
+  let documentTimer: ReturnType<typeof setTimeout> | undefined;
+  const documentComponent = { invalidate() {}, render: () => [`Local document revision ${documentVersion}`] };
+  pi.registerMessageRenderer("local-refresh-document", () => documentComponent);
+  pi.registerCommand("fixture-document", { handler: async (args, ctx) => {
+    if (args.trim() === "step") {
+      documentTimer = setTimeout(() => {
+        documentVersion++;
+        if (documentHandle) documentHandle.requestRender(); else documentTui?.requestRender();
+        record("documentUpdated", documentVersion);
+      }, 800);
+      return;
+    }
+    ctx.ui.setWidget("document-region-access", tui => {
+      documentHandle?.dispose();
+      documentTui = tui;
+      documentHandle = tui.registerTextRegion?.(documentComponent);
+      return { invalidate() {}, render: () => [], dispose() { documentHandle?.dispose(); } };
+    });
+    pi.sendMessage({ customType: "local-refresh-document", content: "Local document", display: true });
+  } });
+  pi.on("session_shutdown", () => { if (documentTimer) clearTimeout(documentTimer); documentHandle?.dispose(); });
   const faux = fauxProvider({ tokensPerSecond: 4000 });
   faux.setResponses(Array.from({ length: 100 }, (_, index) => async context => {
     record("request", context.messages.at(-1));

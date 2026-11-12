@@ -1,11 +1,15 @@
 ---
 name: verify-pi-text-regions
-description: "Verify Pi 1.4.0 text-region refresh through real regular/fullscreen TUI journeys. Use for region API, Working/footer lifecycle, fallback, CPU budget, or patched/original installation changes."
+description: "Verify Pi 1.4.0 and isolated 1.5.2 text-region refresh through real regular/fullscreen TUI journeys. Use for region API, Working/footer lifecycle, fallback, CPU budget, or patched/original installation changes."
 ---
 
 # Verify Pi text regions
 
 先读 [feature map](features/README.md)，选择本次涉及的全部入口。这个 skill 验证 [文本区域能力](../../../docs/pi-text-region-refresh.md) 和 [生产 Working/速率](../../../docs/codex-working-rate.md)，不新增产品 extension。旧 codex-ui 全功能验证由 [verify-pi-codex-ui](../verify-pi-codex-ui/SKILL.md) 负责。
+
+## Host profiles
+
+1.5.2 迁移、独立安装、摘要或无 permissions 的 Working 验证先执行 [Pi 1.5.2 profile](features/pi152.md)。以下原有命令保留 1.4.0 的 legacy 覆盖。两个 profile 的证据分别记录。
 
 ## Launch
 

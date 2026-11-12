@@ -9,9 +9,9 @@ const allowed = new Set([
   "PI_MCP_TEST_PI_ROOT", "PI_MCP_TEST_PI_VERSION", "PI_CODEX_TEST_PI_ROOT", "PI_GOAL_TEST_ENTRY",
 ]);
 
-export function createTestEnvironment(prefix) {
-  mkdirSync(resolve(".tmp"), { recursive: true });
-  const directory = mkdtempSync(resolve(`.tmp/${prefix}-`));
+export function createTestEnvironment(prefix, root = process.cwd()) {
+  mkdirSync(resolve(root, ".tmp"), { recursive: true });
+  const directory = mkdtempSync(resolve(root, `.tmp/${prefix}-`));
   for (const name of ["home", "agent", "tmp", "cache", "config", "data", "state"]) mkdirSync(join(directory, name));
   const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => allowed.has(key.toUpperCase())));
   return { directory, env: {

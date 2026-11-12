@@ -1,0 +1,315 @@
+diff --git a/dist/bundle/cli.js b/dist/bundle/cli.js
+--- a/dist/bundle/cli.js
++++ b/dist/bundle/cli.js
+@@ -1,5 +1,6 @@
+ #!/usr/bin/env node
+-import { createRequire, enableCompileCache } from "node:module";
++import { enableCompileCache } from "node:module";
+ 
+ enableCompileCache();
+-createRequire(import.meta.url)("./cli-runtime.js");
++// Use the patched modules rather than the prebuilt runtime bundle.
++await import("../cli.js");
+diff --git a/dist/core/extensions/loader.js b/dist/core/extensions/loader.js
+--- a/dist/core/extensions/loader.js
++++ b/dist/core/extensions/loader.js
+@@ -282,6 +282,10 @@
+         registerMessageRenderer(customType, renderer) {
+             assertActive();
+             extension.messageRenderers.set(customType, renderer);
++        },
++        registerSessionSummaryTransformer(transformer) {
++            assertActive();
++            extension.sessionSummaryTransformer = transformer;
+         },
+         registerMarkdownTransformer(transformer, options) {
+             assertActive();
+diff --git a/dist/core/extensions/runner.d.ts b/dist/core/extensions/runner.d.ts
+--- a/dist/core/extensions/runner.d.ts
++++ b/dist/core/extensions/runner.d.ts
+@@ -152,6 +152,7 @@
+     getMessageRenderer(customType: string): MessageRenderer | undefined;
+     /** Markdown transformers in extension load order; each one leaves Markdown of unregistered surfaces unchanged. */
+     getMarkdownTransformers(): MarkdownTransformer[];
++    getSessionSummaryTransformers(): import("../session-manager.ts").SessionSummaryTransformer[];
+     /** Renderers of calls to `toolName`: extension resolvers in load order, then `base`. */
+     resolveToolRenderers(toolName: string, base: () => ToolRenderers | undefined): ToolRenderers | undefined;
+     getEntryRenderer(customType: string): EntryRenderer | undefined;
+diff --git a/dist/core/extensions/runner.js b/dist/core/extensions/runner.js
+--- a/dist/core/extensions/runner.js
++++ b/dist/core/extensions/runner.js
+@@ -536,6 +536,9 @@
+         return undefined;
+     }
+     /** Markdown transformers in extension load order; each one leaves Markdown of unregistered surfaces unchanged. */
++    getSessionSummaryTransformers() {
++        return this.extensions.flatMap(ext => ext.sessionSummaryTransformer ? [ext.sessionSummaryTransformer] : []);
++    }
+     getMarkdownTransformers() {
+         return this.extensions.flatMap((ext) => {
+             if (!ext.markdownTransformer)
+diff --git a/dist/core/extensions/types.d.ts b/dist/core/extensions/types.d.ts
+--- a/dist/core/extensions/types.d.ts
++++ b/dist/core/extensions/types.d.ts
+@@ -1290,6 +1290,8 @@
+     getFlag(name: string): boolean | string | undefined;
+     /** Register a custom renderer for CustomMessageEntry. */
+     registerMessageRenderer<T = unknown>(customType: string, renderer: MessageRenderer<T>): void;
++    /** Register a pure synchronous display/search projection before session_start. */
++    registerSessionSummaryTransformer(transformer: import("../session-manager.ts").SessionSummaryTransformer): void;
+     /**
+      * Register a transformer for Markdown before Pi renders it in interactive mode. By default it runs on user,
+      * assistant and thinking Markdown; `options.messageTypes` selects the surfaces instead.
+@@ -1774,6 +1776,7 @@
+     messageRenderers: Map<string, MessageRenderer>;
+     toolRenderers?: ToolRendererResolver[];
+     markdownTransformer?: MarkdownTransformerRegistration;
++    sessionSummaryTransformer?: import("../session-manager.ts").SessionSummaryTransformer;
+     entryRenderers?: Map<string, EntryRenderer>;
+     commands: Map<string, RegisteredCommand>;
+     flags: Map<string, ExtensionFlag>;
+diff --git a/dist/core/session-manager.d.ts b/dist/core/session-manager.d.ts
+--- a/dist/core/session-manager.d.ts
++++ b/dist/core/session-manager.d.ts
+@@ -160,6 +160,8 @@
+         modelId: string;
+     } | null;
+ }
++/** Pure display/search projection. Undefined or failure preserves the current text. */
++export type SessionSummaryTransformer = (text: string, context: { role: "user" | "assistant"; sessionId: string }) => string | undefined;
+ export interface SessionInfo {
+     path: string;
+     id: string;
+@@ -412,12 +414,12 @@
+      * @param sessionDir Optional session directory. If omitted, uses default (~/.pi/agent/sessions/<encoded-cwd>/).
+      * @param onProgress Optional callback for progress updates (loaded, total)
+      */
+-    static list(cwd: string, sessionDir?: string, onProgress?: SessionListProgress, signal?: AbortSignal): Promise<SessionInfo[]>;
++    static list(cwd: string, sessionDir?: string, onProgress?: SessionListProgress, signal?: AbortSignal, summaryTransformers?: readonly SessionSummaryTransformer[]): Promise<SessionInfo[]>;
+     /**
+      * List all sessions across all project directories.
+      * @param onProgress Optional callback for progress updates (loaded, total)
+      */
+     static listAll(onProgress?: SessionListProgress, signal?: AbortSignal): Promise<SessionInfo[]>;
+-    static listAll(sessionDir?: string, onProgress?: SessionListProgress, signal?: AbortSignal): Promise<SessionInfo[]>;
++    static listAll(sessionDir?: string, onProgress?: SessionListProgress, signal?: AbortSignal, summaryTransformers?: readonly SessionSummaryTransformer[]): Promise<SessionInfo[]>;
+ }
+ //# sourceMappingURL=session-manager.d.ts.map
+\ No newline at end of file
+diff --git a/dist/core/session-manager.js b/dist/core/session-manager.js
+--- a/dist/core/session-manager.js
++++ b/dist/core/session-manager.js
+@@ -490,7 +490,7 @@
+     const t = new Date(entry.timestamp).getTime();
+     return Number.isNaN(t) ? undefined : t;
+ }
+-async function buildSessionInfo(filePath, signal, fileStats) {
++async function buildSessionInfo(filePath, signal, fileStats, summaryTransformers = []) {
+     try {
+         const stats = fileStats ?? (await stat(filePath));
+         let header = null;
+@@ -529,7 +529,13 @@
+                 continue;
+             if (message.role !== "user" && message.role !== "assistant")
+                 continue;
+-            const textContent = extractTextContent(message);
++            let textContent = extractTextContent(message);
++            for (const transform of summaryTransformers) {
++                try {
++                    const projected = transform(textContent, { role: message.role, sessionId: header.id });
++                    if (typeof projected === "string") textContent = projected;
++                } catch { /* A display extension must not hide a session on failure. */ }
++            }
+             if (!textContent)
+                 continue;
+             allMessages.push(textContent);
+@@ -585,14 +591,14 @@
+ function sortSessionInfos(sessions) {
+     return sessions.sort((a, b) => b.modified.getTime() - a.modified.getTime());
+ }
+-function buildSessionInfosWithConcurrency(files, onLoaded, signal) {
++function buildSessionInfosWithConcurrency(files, onLoaded, signal, summaryTransformers) {
+     return mapWithConcurrency(files, MAX_CONCURRENT_SESSION_INFO_LOADS, async (file, index) => {
+-        const info = await buildSessionInfo(file.path, signal, file.stats);
++        const info = await buildSessionInfo(file.path, signal, file.stats, summaryTransformers);
+         onLoaded(info, index);
+         return info;
+     }, signal);
+ }
+-async function listSessionsFromDir(dir, onProgress, signal) {
++async function listSessionsFromDir(dir, onProgress, signal, summaryTransformers) {
+     signal?.throwIfAborted();
+     if (!existsSync(dir))
+         return [];
+@@ -611,7 +617,7 @@
+                 partialSessions.push(info);
+             const publishPartial = loaded === 1 || loaded % CURRENT_SESSION_LIST_PUBLISH_INTERVAL === 0 || loaded === files.length;
+             onProgress?.(loaded, total, publishPartial ? sortSessionInfos([...partialSessions]) : undefined);
+-        }, signal);
++        }, signal, summaryTransformers);
+         return results.filter((info) => info !== null);
+     }
+     catch {
+@@ -1465,7 +1471,7 @@
+      * @param sessionDir Optional session directory. If omitted, uses default (~/.pi/agent/sessions/<encoded-cwd>/).
+      * @param onProgress Optional callback for progress updates (loaded, total)
+      */
+-    static async list(cwd, sessionDir, onProgress, signal) {
++    static async list(cwd, sessionDir, onProgress, signal, summaryTransformers) {
+         const dir = sessionDir ? normalizePath(sessionDir) : getDefaultSessionDir(cwd);
+         const filterCwd = sessionDir !== undefined && !pathsEqual(dir, getDefaultSessionDirPath(cwd));
+         const resolvedCwd = resolvePath(cwd);
+@@ -1473,10 +1479,10 @@
+         const progress = onProgress
+             ? (loaded, total, partialSessions) => onProgress(loaded, total, partialSessions?.filter(includeSession))
+             : undefined;
+-        const sessions = (await listSessionsFromDir(dir, progress, signal)).filter(includeSession);
++        const sessions = (await listSessionsFromDir(dir, progress, signal, summaryTransformers)).filter(includeSession);
+         return sortSessionInfos(sessions);
+     }
+-    static async listAll(sessionDirOrOnProgress, onProgressOrSignal, signal) {
++    static async listAll(sessionDirOrOnProgress, onProgressOrSignal, signal, summaryTransformers) {
+         const customSessionDir = typeof sessionDirOrOnProgress === "string" ? normalizePath(sessionDirOrOnProgress) : undefined;
+         const progress = typeof sessionDirOrOnProgress === "function"
+             ? sessionDirOrOnProgress
+@@ -1488,7 +1494,7 @@
+             : (onProgressOrSignal ?? signal);
+         abortSignal?.throwIfAborted();
+         if (customSessionDir) {
+-            return sortSessionInfos(await listSessionsFromDir(customSessionDir, progress, abortSignal));
++            return sortSessionInfos(await listSessionsFromDir(customSessionDir, progress, abortSignal, summaryTransformers));
+         }
+         const sessionsDir = getSessionsDir();
+         try {
+@@ -1530,7 +1536,7 @@
+                 const publishPartial = firstCandidateLoaded &&
+                     (index === 0 || loaded % ALL_SESSION_LIST_PUBLISH_INTERVAL === 0 || loaded === totalFiles);
+                 progress?.(loaded, totalFiles, publishPartial ? sortSessionInfos([...partialSessions]) : undefined);
+-            }, abortSignal);
++            }, abortSignal, summaryTransformers);
+             return sortSessionInfos(results.filter((info) => info !== null));
+         }
+         catch {
+diff --git a/dist/main.d.ts b/dist/main.d.ts
+--- a/dist/main.d.ts
++++ b/dist/main.d.ts
+@@ -8,7 +8,7 @@
+ import type { InlineExtension } from "./core/extensions/types.ts";
+ import { SessionManager } from "./core/session-manager.ts";
+ import { SettingsManager } from "./core/settings-manager.ts";
+-export declare function createSessionManager(parsed: Args, cwd: string, sessionDir: string | undefined, settingsManager: SettingsManager): Promise<SessionManager>;
++export declare function createSessionManager(parsed: Args, cwd: string, sessionDir: string | undefined, settingsManager: SettingsManager, summaryTransformers?: readonly import("./core/session-manager.js").SessionSummaryTransformer[]): Promise<SessionManager>;
+ export interface MainOptions {
+     extensionFactories?: InlineExtension[];
+ }
+diff --git a/dist/main.js b/dist/main.js
+--- a/dist/main.js
++++ b/dist/main.js
+@@ -30,6 +30,7 @@
+ import { applyHttpProxySettings, configureHttpDispatcher } from "./core/http-dispatcher.js";
+ import { resolveCliModel, resolveModelScope } from "./core/model-resolver.js";
+ import { ModelRuntime } from "./core/model-runtime.js";
++import { DefaultResourceLoader } from "./core/resource-loader.js";
+ import { restoreStdout, takeOverStdout } from "./core/output-guard.js";
+ import { resolveProjectTrusted } from "./core/project-trust.js";
+ import { formatMissingSessionCwdPrompt, getMissingSessionCwdIssue, getMissingSessionCwdOptions, MissingSessionCwdError, } from "./core/session-cwd.js";
+@@ -327,7 +328,7 @@
+         process.exit(1);
+     }
+ }
+-export async function createSessionManager(parsed, cwd, sessionDir, settingsManager) {
++export async function createSessionManager(parsed, cwd, sessionDir, settingsManager, summaryTransformers = []) {
+     if (parsed.noSession || parsed.help || parsed.listModels !== undefined) {
+         return SessionManager.inMemory(cwd, parsed.sessionId !== undefined ? { id: parsed.sessionId } : undefined);
+     }
+@@ -372,7 +373,7 @@
+     }
+     if (parsed.resume) {
+         try {
+-            const selectedPath = await selectSession((onProgress, signal) => SessionManager.list(cwd, sessionDir, onProgress, signal), (onProgress, signal) => SessionManager.listAll(sessionDir, onProgress, signal), settingsManager);
++            const selectedPath = await selectSession((onProgress, signal) => SessionManager.list(cwd, sessionDir, onProgress, signal, summaryTransformers), (onProgress, signal) => SessionManager.listAll(sessionDir, onProgress, signal, summaryTransformers), settingsManager);
+             if (!selectedPath) {
+                 console.log(chalk.dim("No session selected"));
+                 process.exit(0);
+@@ -600,7 +601,23 @@
+     const sessionDir = (parsed.sessionDir ? normalizePath(parsed.sessionDir) : undefined) ??
+         (envSessionDir ? expandTildePath(envSessionDir) : undefined) ??
+         startupSettingsManager.getSessionDir();
+-    let sessionManager = await createSessionManager(parsed, cwd, sessionDir, startupSettingsManager);
++    // The startup selector runs before any selected-session runtime exists. Load
++    // only startup-cwd resources allowed by explicit or previously saved trust.
++    // No session events or model runtime are started for this display-only pass.
++    let summaryTransformers = [];
++    if (parsed.resume) {
++        const projectTrusted = parsed.projectTrustOverride ?? (!hasTrustRequiringProjectResources(cwd) || new ProjectTrustStore(agentDir).get(cwd) === true);
++        const summaryLoader = new DefaultResourceLoader({
++            cwd, agentDir, settingsManager: SettingsManager.create(cwd, agentDir, { projectTrusted }),
++            additionalExtensionPaths: resolveCliPaths(cwd, parsed.extensions),
++            noExtensions: parsed.noExtensions, disabledBuiltinExtensions: parsed.noMcp ? ["mcp"] : undefined,
++            noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
++            extensionFactories,
++        });
++        await summaryLoader.reload();
++        summaryTransformers = summaryLoader.getExtensions().extensions.flatMap(ext => ext.sessionSummaryTransformer ? [ext.sessionSummaryTransformer] : []);
++    }
++    let sessionManager = await createSessionManager(parsed, cwd, sessionDir, startupSettingsManager, summaryTransformers);
+     const missingSessionCwdIssue = getMissingSessionCwdIssue(sessionManager, cwd);
+     if (missingSessionCwdIssue) {
+         if (appMode === "interactive") {
+diff --git a/dist/modes/interactive/interactive-mode.js b/dist/modes/interactive/interactive-mode.js
+--- a/dist/modes/interactive/interactive-mode.js
++++ b/dist/modes/interactive/interactive-mode.js
+@@ -4898,10 +4898,11 @@
+         });
+     }
+     showSessionSelector() {
++        const summaryTransformers = this.session.extensionRunner.getSessionSummaryTransformers();
+         this.showSelector((done) => {
+-            const selector = new SessionSelectorComponent((onProgress, signal) => SessionManager.list(this.sessionManager.getCwd(), this.sessionManager.getSessionDir(), onProgress, signal), (onProgress, signal) => this.sessionManager.usesDefaultSessionDir()
+-                ? SessionManager.listAll(onProgress, signal)
+-                : SessionManager.listAll(this.sessionManager.getSessionDir(), onProgress, signal), async (sessionPath) => {
++            const selector = new SessionSelectorComponent((onProgress, signal) => SessionManager.list(this.sessionManager.getCwd(), this.sessionManager.getSessionDir(), onProgress, signal, summaryTransformers), (onProgress, signal) => this.sessionManager.usesDefaultSessionDir()
++                ? SessionManager.listAll(undefined, onProgress, signal, summaryTransformers)
++                : SessionManager.listAll(this.sessionManager.getSessionDir(), onProgress, signal, summaryTransformers), async (sessionPath) => {
+                 done();
+                 await this.handleResumeSession(sessionPath);
+             }, () => {
+diff --git a/dist/modes/interactive/tui-renderer.js b/dist/modes/interactive/tui-renderer.js
+--- a/dist/modes/interactive/tui-renderer.js
++++ b/dist/modes/interactive/tui-renderer.js
+@@ -37,6 +37,35 @@
+ export function createInteractiveTuiReference(getTui) {
+     return new Proxy({}, {
+         get: (_target, property) => {
++            if (property === "registerTextRegion") {
++                if (typeof getTui().registerTextRegion !== "function") return undefined;
++                return (component) => {
++                    let owner = getTui();
++                    let handle = owner.registerTextRegion(component);
++                    let disposed = false;
++                    return {
++                        requestRender() {
++                            if (disposed) return;
++                            const current = getTui();
++                            if (current !== owner) {
++                                handle?.dispose();
++                                owner = current;
++                                handle = current.registerTextRegion?.(component);
++                            }
++                            if (handle) handle.requestRender();
++                            else if (!current.stopped) current.requestRender();
++                        },
++                        dispose() {
++                            if (disposed) return;
++                            disposed = true;
++                            handle?.dispose();
++                            component = undefined;
++                            owner = undefined;
++                            handle = undefined;
++                        },
++                    };
++                };
++            }
+             const tui = getTui();
+             const value = Reflect.get(tui, property, tui);
+             if (typeof value !== "function")

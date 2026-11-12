@@ -1,5 +1,12 @@
 # Pi session summary patch
 
+## Optional Pi 1.5.2 host
+
+1.5.2 使用独立固定依赖和 [验证 profile](../.cursor/skills/verify-pi-text-regions/features/pi152.md)。先运行 `node scripts/pi152-patched-verify.mjs prepare`、`build` 和 `types`。显式启动入口为 `node /absolute/pi-ext/scripts/pi152-patched.mjs`，保留调用者 cwd，输出实际包路径、版本、patch 和锁 hash。默认全局 Pi 保持独立。根目录 1.4.0 配置继续作为回归基线。
+
+补丁版开启会话摘要投影与局部刷新。原版 1.5.2 保留扩展功能，列表使用原始协议文本，动态区域使用普通刷新。1.5.2 的 Markdown surfaces、缺失 cwd 的 Continue/Fork/Cancel、OSC133 前缀清除及 Kitty 有界回溯/裁剪沿用上游行为。运行树仅包含五个范围内扩展，不加载 goal、subagent、permissions。
+
+
 ## Scope
 
 仓库为 `@earendil-works/pi-coding-agent@1.4.0` 维护 [会话摘要补丁](../patches/@earendil-works__pi-coding-agent@1.4.0.patch)，由 [pnpm-workspace.yaml](../pnpm-workspace.yaml) 和锁文件固定。它为 Skill Mentions 提供恢复列表显示与检索所需的宿主接口，不改写历史消息或用户设置的会话名称。

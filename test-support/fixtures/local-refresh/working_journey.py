@@ -14,6 +14,9 @@ def run(driver):
     view, settle, capture, events = (driver[name] for name in ["view", "settle", "capture", "events"])
     root, runtime, screen, checks = (driver[name] for name in ["root", "runtime", "screen", "checks"])
 
+    scoped = driver["args"].profile == "pi152"
+    status_label = "Status:" if scoped else "Goal:"
+
     def command(text):
         send("\x15" + text)
         send("\r")
@@ -55,7 +58,7 @@ def run(driver):
     wait(lambda: "Trust project folder?" in view() or bool(events("start")), "working CLI startup")
     if "Trust project folder?" in view():
         send("\x1b[B\x1b[B\r")
-    wait(lambda: bool(events("start")) and "Goal:" in view(), "production footer and goal row loaded")
+    wait(lambda: bool(events("start")) and status_label in view(), "production footer and status row loaded")
     assert not working() and "t/s" not in view(), view()
     send("\x1b[19~")
     wait(lambda: "WORKING INPUT" in view(), "idle input dialog")
@@ -69,7 +72,7 @@ def run(driver):
     wait(working, "agent_start mounts production Working")
     wait(lambda: re.search(r"≈[\d.]+ t/s", view()) is not None, "real received fragments produce estimated rate")
     assert frame()[2] == "5efcff", frame()
-    assert "Goal:" in view()
+    assert status_label in view()
     advances("ten-frame spinner and shimmer during provider streaming")
     capture("streaming")
     send("draft-中文-abc")
@@ -104,7 +107,7 @@ def run(driver):
         assert "Working" in view(), view()
         if width >= 32:
             assert re.search(r"≈[\d.]+ t/s", view()), view()
-            assert "Goal:" in view(), view()
+            assert status_label in view(), view()
         if width < 40:
             assert "esc to interrupt" not in view(), view()
         capture(f"working-width-{width}")
@@ -121,25 +124,33 @@ def run(driver):
     # A real tool approval dialog, actual shell execution, and subsequent response.
     plan("tool")
     command("Run the permission tool")
-    wait(lambda: "Allow Pi to run bash?" in view(), "production permissions gate")
-    advances("Working continues during production permission wait")
-    settle(2.2)
-    assert "-- t/s" in view() and working(), view()
-    capture("permission-expired-rate")
+    if not scoped:
+        wait(lambda: "Allow Pi to run bash?" in view(), "production permissions gate")
+    if not scoped:
+        advances("Working continues during production permission wait")
+        settle(2.2)
+        assert "-- t/s" in view() and working(), view()
+        capture("permission-expired-rate")
     before = len(events("agent_settled"))
-    send("\r")
+    if not scoped:
+        send("\r")
     wait(lambda: bool(events("tool_execution_start")), "approved tool executes through host")
     advances("Working continues during actual shell wait")
+    if scoped:
+        settle(2.2)
+        assert "-- t/s" in view() and working(), view()
+        capture("tool-expired-rate")
     wait(lambda: len(events("agent_settled")) > before, "tool and continuation settle")
     wait(lambda: not working(), "tool completion hides Working")
     assert (runtime / "workspace/tool-proof.txt").read_text() == "TOOL-FINISHED"
     assert "t/s" not in view(), view()
-    checks.append("permission approval preserves real file side effect and footer goal row")
+    checks.append("host tool preserves real file side effect and neutral status row" if scoped else "permission approval preserves real file side effect and footer goal row")
 
     plan("cancel")
     command("Cancel the running tool")
-    wait(lambda: "Allow Pi to run bash?" in view(), "cancel scenario permission gate")
-    send("\r")
+    if not scoped:
+        wait(lambda: "Allow Pi to run bash?" in view(), "cancel scenario permission gate")
+        send("\r")
     wait(lambda: any("CANCEL-TOOL-ENTERED" in json.dumps(event) for event in events("tool_execution_update")), "cancel hits executing shell")
     cancel()
     assert not (runtime / "workspace/should-not-exist.txt").exists()

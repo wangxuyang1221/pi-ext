@@ -1,5 +1,12 @@
 # Pi text region refresh
 
+## Optional Pi 1.5.2 host
+
+1.5.2 使用独立固定依赖和 [验证 profile](../.cursor/skills/verify-pi-text-regions/features/pi152.md)。先运行 `node scripts/pi152-patched-verify.mjs prepare`、`build` 和 `types`。显式启动入口为 `node /absolute/pi-ext/scripts/pi152-patched.mjs`，保留调用者 cwd，输出实际包路径、版本、patch 和锁 hash。默认全局 Pi 保持独立。根目录 1.4.0 配置继续作为回归基线。
+
+补丁版开启会话摘要投影与局部刷新。原版 1.5.2 保留扩展功能，列表使用原始协议文本，动态区域使用普通刷新。1.5.2 的 Markdown surfaces、缺失 cwd 的 Continue/Fork/Cancel、OSC133 前缀清除及 Kitty 有界回溯/裁剪沿用上游行为。运行树仅包含五个范围内扩展，不加载 goal、subagent、permissions。
+
+
 ## Scope
 
 仓库为 Pi 1.4.0 提供可选的 `registerTextRegion` API。普通与全屏模式可复用上一帧的历史与输入内容，只计算请求更新的文本组件，然后沿用宿主的差异输出和光标处理。全屏同步布局叶节点文本及直接所属 ScrollView 的内容，选择、复制和搜索读取同一份最新文本。
