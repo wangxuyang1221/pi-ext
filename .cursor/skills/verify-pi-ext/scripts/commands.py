@@ -25,7 +25,7 @@ recipe = json.loads(Path(recipe_args[0]).read_text()) if recipe_args else {}
 interactive = case.startswith("explore:")
 scripted = case.startswith("journey:")
 custom = interactive or scripted
-extension = case.split(":", 1)[1] if custom else {"metadata": "codex-compact", "metadata-project": "codex-compact", "fast": "openai-fast-mode", "permissions": "permissions"}[case]
+extension = case.split(":", 1)[1] if custom else {"metadata": "codex-compact", "metadata-project": "codex-compact", "fast": "openai-fast-mode"}[case]
 pid, fd, status = None, None, None
 pids, launches = [], []
 raw, actions, snapshots = bytearray(), [], {}
@@ -84,7 +84,7 @@ for name in ["workspace", "sessions", "agent"]:
 settings = {"quietStartup": True, "defaultProjectTrust": "never", "compaction": {"enabled": False}, "retry": {"enabled": False}, "cacheWarming": "off"}
 settings.update(recipe.get("settings", {}))
 (root / "agent/settings.json").write_text(json.dumps(settings))
-env = dict(os.environ, PI_VERIFY_ROOT=str(root), PI_PERMISSIONS_MODE="default", TERM="xterm-256color")
+env = dict(os.environ, PI_VERIFY_ROOT=str(root), TERM="xterm-256color")
 protected_env = {"HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "PI_CODING_AGENT_DIR", "TMPDIR", "TMP", "TEMP", "PI_VERIFY_ROOT", "PI_VERIFY_EVIDENCE", "PI_VERIFY_SCRATCH"}
 assert not any(key in protected_env or key.startswith("XDG_") for key in recipe.get("env", {})), "Recipe env must preserve isolated directories"
 env.update({key: expand(str(value)) for key, value in recipe.get("env", {}).items()})
@@ -351,26 +351,6 @@ try:
             send(("/fast " + command).strip())
             wait(lambda: saved(config).get("enabled") is enabled, f"fast-{command or 'bare'}")
             snapshots[f"config-{command or 'bare'}"] = config.read_text()
-    else:
-        count = lambda: sum(item["type"] == "settled" for item in records())
-        before = count()
-        send("WRITE_PROOF denied")
-        wait(lambda: "Allow Pi to run write?" in view(), "approval-deny")
-        keys(b"\x1b[B\x1b[B\r", "Down Down Enter: Deny")
-        wait(lambda: count() > before, "denied-settled")
-        assert not (root / "workspace/proof.txt").exists(), "Denied write created a file"
-        before = count()
-        send("WRITE_PROOF allowed")
-        wait(lambda: "Allow Pi to run write?" in view(), "approval-allow")
-        keys(b"\r", "Enter: Allow once")
-        wait(lambda: count() > before, "allowed-settled")
-        assert (root / "workspace/proof.txt").read_text() == "approved\n"
-        snapshots["file-after-allow"] = (root / "workspace/proof.txt").read_text()
-        send("/permissions full")
-        wait(lambda: "Enable Full access?" in view(), "full-confirmation")
-        keys(b"\x1b", "Escape: cancel Full access")
-        wait(lambda: "Enable Full access?" not in view(), "full-cancelled")
-        assert "Permissions updated to Full access" not in view(), "Cancellation enabled Full access"
     if not interactive and status is None:
         send("/quit")
         wait(lambda: status is not None, "exited")

@@ -6,10 +6,7 @@
 
 - [Codex compact](../../verify-pi-codex-compact/features/README.md)
 - [Fast Mode](../../verify-pi-openai-fast-mode/features/README.md)
-- [Permissions](../../verify-pi-permissions/features/README.md)
-- [Goal](../../verify-pi-goal/features/README.md)
 - [MCP](../../verify-pi-mcp/features/README.md)
-- [Subagent](../../verify-pi-subagent/features/README.md)
 - [Codex UI](../../verify-pi-codex-ui/features/README.md)
 - [Skill mentions](../../verify-pi-skill-mentions/features/README.md)
 - [Codex search](../../verify-pi-codex-search/features/README.md)

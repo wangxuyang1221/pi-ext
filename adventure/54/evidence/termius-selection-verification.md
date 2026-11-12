@@ -25,7 +25,7 @@ node .cursor/skills/verify-pi-text-regions/scripts/doctor.mjs --project <CzIw6h-
 node .cursor/skills/verify-pi-ext/scripts/verify.mjs doctor
 ```
 
-四个命令均退出0。实际 Node v22.22.2、pnpm 11.9.0、Pi 1.4.0、Python 3.12.13。补丁 regular/fullscreen API 为 true/true，原版为 false/false；旧 skill doctor 的 independentCheckout=true、sharedDependencies=false、lockPresent=false。旧 doctor 的 subagent socket 长度提示针对未运行的 subagent case，不是本轮 tmux 物理路径的探测结果。
+四个命令均退出0。实际 Node v22.22.2、pnpm 11.9.0、Pi 1.4.0、Python 3.12.13。补丁 regular/fullscreen API 为 true/true，原版为 false/false；旧 skill doctor 的 independentCheckout=true、sharedDependencies=false、lockPresent=false。
 
 消费入口从 `.tmp/local-refresh-install-CzIw6h/installation.json` 读取，未重新安装或打包。两个消费者各32个codex-ui JS与当前dist逐字节相同，64项全部匹配。tarball SHA-256为 `03058ebfa8f11a6f2f554cf93c61919eb40bcc6544382cd8b70305daefdedd0d`；全局Pi入口仍为 `f04afd35fb16a3647b49ebb4bb67cbccba10a64fc6b5d1d5dfdd320e4f4ef331`。既有独立索引31份来源全部匹配，接收器及其测试也与主代理审阅版本一致。
 

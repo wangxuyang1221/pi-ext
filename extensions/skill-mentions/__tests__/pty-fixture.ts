@@ -23,7 +23,7 @@ export default function (pi: ExtensionAPI): void {
     return fauxAssistantMessage("Fixture response");
   }));
   pi.registerProvider(faux.provider);
-  pi.on("session_start", (event, ctx) => record("start", { reason: event.reason, mode: ctx.mode, pid: process.pid, tty: process.stdin.isTTY, session: ctx.sessionManager.getSessionFile() }));
+  pi.on("session_start", (event, ctx) => record("start", { reason: event.reason, mode: ctx.mode, cwd: ctx.cwd, pid: process.pid, tty: process.stdin.isTTY, session: ctx.sessionManager.getSessionFile() }));
   pi.on("resources_discover", () => { record("ready", true); });
   pi.on("input", event => { record("input", event); });
   pi.on("message_end", event => { if (event.message.role === "user") record("user", event.message); });

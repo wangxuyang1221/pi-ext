@@ -17,6 +17,8 @@
 
 保留动作、ANSI/单元格、公开事件、真实副作用、退出码、PID/进程组和清理证明。按 feature ID 与入口逐项记录 `passed / failed / unverified`，未执行的入口和未满足的前置条件不能算通过。声明最终完整覆盖时须覆盖下表全部入口和人工边界；生成阶段的单 feature 自证只证明 skill 可用。
 
+1.5.2 的独立宿主、摘要、范围内 Working 和性能使用 [Pi 1.5.2 profile](pi152.md)。
+
 ## Features
 
 | Feature | Entrances | Evidence |

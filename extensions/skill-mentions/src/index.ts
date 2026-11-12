@@ -13,6 +13,9 @@ import { installHistoryEditor } from "./history-editor.js";
 import { decodeSnapshot, encodeSnapshot, isSkillSnapshot, type SkillSnapshot } from "./protocol.js";
 
 export const displayType = "pi-ext/skill-mentions/display-v1";
+interface SessionSummaryCapability {
+  registerSessionSummaryTransformer?(transformer: (text: string, context: { role: "user" | "assistant"; sessionId: string }) => string | undefined): void;
+}
 
 /** Join user text blocks using the same separator as Pi's user display. */
 export function userText(message: UserMessage): string {
@@ -23,7 +26,10 @@ export function userText(message: UserMessage): string {
 /** Register inline skill completion, snapshots, and history rendering. */
 export default function skillMentions(pi: ExtensionAPI, configuration: { preferencePath?: string } = {}): void {
   // Older unpatched hosts retain their original session-list behavior.
-  pi.registerSessionSummaryTransformer?.((text, { role }) => role === "user" ? decodeSnapshot(text)?.task : undefined);
+  const summaries = pi as ExtensionAPI & SessionSummaryCapability;
+  if (typeof summaries.registerSessionSummaryTransformer === "function") {
+    summaries.registerSessionSummaryTransformer((text, { role }) => role === "user" ? decodeSnapshot(text)?.task : undefined);
+  }
   // Pi 0.86 awaits each user start/end pair before consuming the next user.
   let pending: { task: string; snapshot?: SkillSnapshot; reads: Map<string, Promise<string>> } | undefined;
   let context: ExtensionContext | undefined;

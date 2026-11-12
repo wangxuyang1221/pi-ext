@@ -104,7 +104,6 @@ test("footer renders the accepted stable status flow and ignores transient statu
     getExtensionStatuses: () => new Map([
       ["pi-openai-fast-mode", "fast"],
       ["mcp", "\x1b[38;5;196mMCP 2/2 · 14 tools\x1b[39m"],
-      ["permissions", "· full access"],
       ["codex-compact", "Compacting context with Codex…"],
       ["other-extension", "Other status"],
     ]),
@@ -116,7 +115,7 @@ test("footer renders the accepted stable status flow and ignores transient statu
 
   assert.equal(
     plain,
-    "gpt-test medium ⋅ fast ⋅ ~/Code/app ⋅ git:main ⋅ Context 72% left ⋅ full access",
+    "gpt-test medium ⋅ fast ⋅ ~/Code/app ⋅ git:main ⋅ Context 72% left",
   );
   assert.ok(!plain.includes("MCP"));
   assert.ok(!plain.includes("Compacting"));
@@ -125,18 +124,18 @@ test("footer renders the accepted stable status flow and ignores transient statu
   assert.ok(visibleWidth(rendered) <= 160);
 });
 
-test("footer adds a live goal row without changing the existing status line", () => {
+test("footer adds a live status row without changing the existing status line", () => {
   const statuses = new Map<string, string>();
   const footer = new CodexFooter({ cwd: "/project", getModelId: () => "fixture", getThinkingLevel: () => "off", getContextUsage: () => undefined, getBranch: () => null, getExtensionStatuses: () => statuses, getTheme: () => theme });
   const before = footer.render(100);
-  statuses.set("goal", "Goal: paused | 123 tokens | 8s");
+  statuses.set("status", "Status: paused | 123 tokens | 8s");
   const paused = footer.render(100);
   assert.equal(paused[0], before[0]);
-  assert.match(stripTerminalSequences(paused[1] ?? ""), /Goal: paused/);
-  statuses.set("goal", "Goal: complete | 456 tokens | 9s");
-  assert.match(stripTerminalSequences(footer.render(100)[1] ?? ""), /Goal: complete/);
+  assert.match(stripTerminalSequences(paused[1] ?? ""), /Status: paused/);
+  statuses.set("status", "Status: complete | 456 tokens | 9s");
+  assert.match(stripTerminalSequences(footer.render(100)[1] ?? ""), /Status: complete/);
   for (const width of [1, 8, 30, 80]) assert.ok(footer.render(width).every(line => visibleWidth(line) <= width));
-  statuses.delete("goal");
+  statuses.delete("status");
   assert.deepEqual(footer.render(100), before);
 });
 
@@ -151,7 +150,6 @@ test("footer uses Codex CLI colors for model, context, and Fast Mode", () => {
     getBranch: () => "main",
     getExtensionStatuses: () => new Map([
       ["pi-openai-fast-mode", "fast"],
-      ["permissions", "· full access"],
     ]),
     getTheme: () => truecolorTheme,
   });
@@ -172,15 +170,14 @@ test("footer degrades location before stable session facts on narrow terminals",
     getBranch: () => "main",
     getExtensionStatuses: () => new Map([
       ["pi-openai-fast-mode", "fast"],
-      ["permissions", "· full access"],
     ]),
     getTheme: () => theme,
   });
 
   const expected = new Map([
-    [100, "gpt-5.6-sol max ⋅ fast ⋅ ~/Code/t3code/pi-ext ⋅ git:main ⋅ Context 81% left ⋅ full access"],
-    [72, "gpt-5.6-sol max ⋅ fast ⋅ git:main ⋅ Context 81% left ⋅ full access"],
-    [52, "gpt-5.6-sol max ⋅ fast ⋅ 81% left ⋅ full access"],
+    [100, "gpt-5.6-sol max ⋅ fast ⋅ ~/Code/t3code/pi-ext ⋅ git:main ⋅ Context 81% left"],
+    [72, "gpt-5.6-sol max ⋅ fast ⋅ pi-ext ⋅ main ⋅ Context 81% left"],
+    [52, "gpt-5.6-sol max ⋅ fast ⋅ main ⋅ Context 81% left"],
   ]);
   for (const [width, line] of expected) {
     const rendered = footer.render(width)[0] ?? "";
@@ -211,7 +208,6 @@ test("footer caches only allowlisted statuses and painted output", () => {
   const statuses = new Map([
     ["pi-openai-fast-mode", "fast"],
     ["mcp", "\x1b[31mMCP ready\x1b[39m"],
-    ["permissions", "· full access"],
   ]);
   const getContextUsage = vi.fn(() => ({ percent: 28 }));
   const getExtensionStatuses = vi.fn(() => statuses);
@@ -243,20 +239,20 @@ test("footer caches only allowlisted statuses and painted output", () => {
   assert.equal(stripTerminalSequencesMock.mock.calls.length, stripsAfterInitialRender);
   assert.equal(themePaints, paintsAfterInitialRender);
 
-  statuses.set("permissions", "⋅ sandboxed");
-  const changed = stripTerminalSequences(footer.render(120)[0] ?? "");
-  assert.match(changed, /sandboxed/u);
+  statuses.set("status", "Status: updated");
+  const changed = stripTerminalSequences(footer.render(120)[1] ?? "");
+  assert.match(changed, /Status: updated/u);
   assert.equal(
-    stripTerminalSequencesMock.mock.calls.filter(([value]) => value === "⋅ sandboxed").length,
+    stripTerminalSequencesMock.mock.calls.filter(([value]) => value === "Status: updated").length,
     1,
   );
 
-  statuses.delete("permissions");
+  statuses.delete("status");
   footer.render(120);
-  statuses.set("permissions", "⋅ sandboxed");
+  statuses.set("status", "Status: updated");
   footer.render(120);
   assert.equal(
-    stripTerminalSequencesMock.mock.calls.filter(([value]) => value === "⋅ sandboxed").length,
+    stripTerminalSequencesMock.mock.calls.filter(([value]) => value === "Status: updated").length,
     2,
   );
 });

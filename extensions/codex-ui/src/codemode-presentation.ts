@@ -8,8 +8,11 @@ import { ToolRenderCache } from "./render-cache.js";
 import { clean, inline } from "./codemode-data.js";
 import { type CodemodeCall, type CodemodeRow, CodemodeStore } from "./codemode-model.js";
 import { callLabel, duration, type InspectorState, renderCodemodeTree, statusColor, wrapDetail } from "./codemode-view.js";
+import { hostKeybindingHints, type HostKeybindingHints } from "./keybinding-hints.js";
 
 type ToolRenderContext = Parameters<NonNullable<ToolRenderers["renderCall"]>>[2];
+
+const defaultHints = hostKeybindingHints({});
 
 export const themeKey = (theme: Theme): string => (["text", "dim", "accent", "muted", "toolTitle", "success", "warning", "error", "borderMuted"] as const).map(name => theme.fg(name, "x")).join("");
 
@@ -20,13 +23,13 @@ export class CodemodePresentation {
   constructor(readonly store: CodemodeStore, private readonly natives: ReadonlyMap<string, ToolRenderers>) {}
   clear(): void { this.cache.clear(); this.scope = this.cache.scope(); }
   stats() { return this.cache.stats(); }
-  tree(row: CodemodeRow, theme: Theme, width: number, expanded: boolean, cwd: string, expandHint: string): string[] {
+  tree(row: CodemodeRow, theme: Theme, width: number, expanded: boolean, cwd: string, expandHint: string, hints: HostKeybindingHints = defaultHints): string[] {
     // Result cache eviction can make an earlier child's body unavailable without changing its status.
-    return renderCodemodeTree(row, { theme, width, expanded, expandHint, child: (call, available, colors) => this.child(call, available, colors, cwd) });
+    return renderCodemodeTree(row, { theme, width, expanded, expandHint, child: (call, available, colors) => this.child(call, available, colors, cwd, hints) });
   }
-  child(call: CodemodeCall, width: number, theme: Theme, cwd: string): string[] {
+  child(call: CodemodeCall, width: number, theme: Theme, cwd: string, hints: HostKeybindingHints = defaultHints): string[] {
     const captured = this.store.results.get(call.id);
-    const key = ["child", this.scope.identity(call), call.revision, captured?.revision ?? "missing", width, themeKey(theme)].join("\0");
+    const key = ["child", this.scope.identity(call), call.revision, captured?.revision ?? "missing", width, themeKey(theme), this.scope.identity(hints)].join("\0");
     return this.scope.lines(key, () => {
       const heading = theme.fg(statusColor(call.status), `${callLabel(call)} · ${call.status}${call.durationMs === undefined ? "" : ` · ${duration(call.durationMs)}`}`);
       const fallback = () => {
@@ -59,7 +62,7 @@ export class CodemodePresentation {
       if (call.name === "edit" || call.name === "write") {
         const renderer = this.natives.get(call.name);
         if (renderer?.renderCall && renderer.renderResult) {
-          const context: ToolRenderContext = { toolCallId: call.id, args: call.args, state: {}, lastComponent: undefined, cwd, executionStarted: true, argsComplete: true,
+          const context: ToolRenderContext = { ...hints, toolCallId: call.id, args: call.args, state: {}, lastComponent: undefined, cwd, executionStarted: true, argsComplete: true,
             isPartial: call.status === "running", expanded: true, showImages: false, isError: call.status !== "ok" && call.status !== "running", durationMs: call.durationMs, outputPad: 0, invalidate() {} };
           const a = renderer.renderCall(call.args, theme, context);
           const b = renderer.renderResult({ ...result, details: result.details }, { expanded: true, isPartial: context.isPartial }, theme, context);
@@ -69,10 +72,10 @@ export class CodemodePresentation {
       return wrapDetail(fallback(), width);
     });
   }
-  detail(row: CodemodeRow, state: InspectorState, theme: Theme, width: number, cwd: string): string[] {
+  detail(row: CodemodeRow, state: InspectorState, theme: Theme, width: number, cwd: string, hints: HostKeybindingHints = defaultHints): string[] {
     const call = row.calls[state.selected];
     const captured = call && this.store.results.get(call.id);
-    const key = ["inspect", this.scope.identity(row), state.tab, state.tab === "Calls" ? `${call?.id}:${call?.revision}:${captured?.revision}` : row.revision, width, themeKey(theme)].join("\0");
+    const key = ["inspect", this.scope.identity(row), state.tab, state.tab === "Calls" ? `${call?.id}:${call?.revision}:${captured?.revision}` : row.revision, width, themeKey(theme), this.scope.identity(hints)].join("\0");
     return this.scope.lines(key, () => {
       if (state.tab === "Script") return wrapDetail([...(row.code || "Script unavailable").split("\n"), ...(row.code.length >= 65536 ? ["Script preview limited to 64 Ki characters"] : [])], width);
       if (state.tab === "Output") return wrapDetail((row.output || "(No output)").split("\n").concat(row.output.length >= 65536 ? ["Output preview limited to 64 Ki characters"] : [], row.outputPath ? [`Full output: ${row.outputPath}`] : []), width);
@@ -81,7 +84,7 @@ export class CodemodePresentation {
         ...clean(JSON.stringify(call.args, null, 2), 8192).split("\n"), ...(!call.argsComplete ? ["Arguments incomplete or omitted"] : [])];
       const raw = captured ? captured.result.content.flatMap(block => clean(block.text, 32768).split("\n")) : ["Raw result unavailable; history or cache limit"];
       const notice = captured && !captured.complete ? ["Captured result truncated; full child result was not retained"] : [];
-      const diff = captured?.complete && ["edit", "write"].includes(call.name) ? this.child(call, width, theme, cwd) : [];
+      const diff = captured?.complete && ["edit", "write"].includes(call.name) ? this.child(call, width, theme, cwd, hints) : [];
       return [...wrapDetail(head, width), ...diff, ...wrapDetail(["Raw child output", ...raw, ...notice], width)];
     });
   }

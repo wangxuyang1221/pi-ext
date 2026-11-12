@@ -61,7 +61,6 @@ export async function stopRecordedPtyOwners(pids) {
 }
 
 const fixedProof = [
-  { cases: ["goal-footer"], pattern: /^goal-footer-acceptance-[\w-]+\.json$/ },
   { cases: ["codex-ui", "codex-ui-fullscreen"], pattern: /^codemode-production-(regular|fullscreen)\.json$/ },
   { cases: ["thinking"], pattern: /^thinking-production-failed\.ansi$/ },
   { cases: ["tool-status"], pattern: /^tool-status-(smoke-[\w-]+\.json|last\.ansi)$/ },

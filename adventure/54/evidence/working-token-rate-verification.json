@@ -694,8 +694,7 @@
             "gpt-5.4",
             "-e",
             "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/openai-fast-mode/dist/index.js",
-            "-e",
-            "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/permissions/dist/index.js"
+            "-e"
           ],
           "stopped": true,
           "groupStopped": true
@@ -856,8 +855,7 @@
             "gpt-5.4",
             "-e",
             "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/openai-fast-mode/dist/index.js",
-            "-e",
-            "/Users/wangxuyang/Code/t3code/pi-ext/.scratch/worktrees/pi-animation/extensions/permissions/dist/index.js"
+            "-e"
           ],
           "stopped": true,
           "groupStopped": true

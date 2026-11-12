@@ -12,7 +12,7 @@
 
 Doctor 输出保存在 `.tmp/remove-lowpower-doctor.json`。本工作区独立依赖，`sharedDependencies=false`，无验证锁。实际 Node `v22.22.2`、pnpm `11.9.0`、Pi 四包 `1.4.0`、Python `3.12.13`，Conda 环境为 `codex-py312`。
 
-所有 pnpm 调用使用命令级 `pnpm_config_verify_deps_before_run=false`，未安装或修改全局 Pi。Doctor 的 subagent socket 长度提示不适用于本次 codex-ui 验收，本次未运行 subagent/tmux 场景。
+所有 pnpm 调用使用命令级 `pnpm_config_verify_deps_before_run=false`，未安装或修改全局 Pi。
 
 ## Red and green
 

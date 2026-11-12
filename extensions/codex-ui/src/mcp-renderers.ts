@@ -23,6 +23,7 @@ interface McpRowState {
 }
 
 interface RendererContext {
+  keyHint?: (key: "app.tools.expand", description: string) => string;
   state?: McpRowState;
   lastComponent: Component | undefined;
   isPartial: boolean;
@@ -148,7 +149,7 @@ export function renderMcpToolResult(
     context.state.mcpWarning = !pending && presentation.error && Boolean(presentation.hostWarning);
   }
   component.setRenderer((width) => {
-    const lines = renderMcpResultLines(presentation, { ...options, isPartial: pending }, theme, width);
+    const lines = renderMcpResultLines(presentation, { ...options, isPartial: pending }, theme, width, context.keyHint);
     if (!pending && presentation.fullOutputPath) {
       lines.push(truncateToWidth(theme.fg("dim", `${MCP_DETAIL_INDENT}Full output: ${presentation.fullOutputPath}`), width, "…"));
     }
@@ -201,6 +202,7 @@ function renderMcpResultLines(
   options: ResultRenderOptions,
   theme: Theme,
   width: number,
+  hostHint?: RendererContext["keyHint"],
 ): string[] {
   const summaryWidth = getSummaryWidth(width);
   if (options.isPartial) {
@@ -229,7 +231,7 @@ function renderMcpResultLines(
 
   const expandable = presentation.detail.length > 0;
   const expandHint = expandable
-    ? formatExpandHint(options.expanded ? "collapse" : "expand", theme)
+    ? hostHint?.("app.tools.expand", options.expanded ? "collapse" : "expand") ?? formatExpandHint(options.expanded ? "collapse" : "expand", theme)
     : undefined;
   const fields: SummaryField[] = [
     ...(presentation.detail

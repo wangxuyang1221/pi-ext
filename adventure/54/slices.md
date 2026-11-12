@@ -9,7 +9,7 @@ Status：Accepted。用户已认可前三关，并追加开发完成后的验证
 3. codex-ui 正式接入已确认的 Working 与真实估算速率，验收组合后的 CPU 与完整用户流程。
 4. 使用 create-verification-skill 为新增局部刷新能力建立并实跑验证系统。
 5. 使用 maintain-verification-skill 升级现有 verify-pi-codex-ui，覆盖全部 feature。
-6. 独立验证 subagent 调用新旧验证 skill 完成最终验收，修复并重验所有发现的问题。
+6. 独立验证代理 调用新旧验证 skill 完成最终验收，修复并重验所有发现的问题。
 
 前三关开发依次实施，随后依次创建验证 skill、维护现有验证 skill、由独立 subagent 最终验证。所有关卡沿用同一 worktree。编码 worker 固定 gpt-6-astra / high；验证及只读源代码审查 subagent 固定 gpt-6.1-sol / high。发现产品问题先退出 skill 维护阶段，由编码 worker 修复，再由验证 subagent 重验，全部完成后才交付。
 

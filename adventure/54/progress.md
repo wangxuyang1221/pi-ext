@@ -77,8 +77,8 @@
 
 - #63 提交554e6fa，WorkingSession将整项任务与逐响应速率分开，共享32ms调度，agent_settled结束；footer保留goal后续行。增量UTF-16/4估算、20个100ms桶、固定两秒分母，方法边界见[说明](../../docs/codex-working-rate.md)。
 - [详细证据](evidence/working-token-rate.md)、[CPU全部批次](evidence/working-token-rate-cpu.json)、[安装与交互索引](evidence/working-token-rate-verification.json)、[质量工具](evidence/working-token-rate-quality.json)。主代理重算最终8轮58项预算并核对全部源码/补丁哈希与字节等价，全部通过。早期失败阶段保留，不能混为最终数据。
-- 最终check203文件/2941测试，四个实际发布入口各53项PTY；真实权限批准、bash副作用/取消、retry、overflow压缩、dialog/overlay、窄屏、模式/session/reload/quit。原版正常回退。旧CLI两模式各124项、goal-footer四入口、codemode两模式通过。物理像素、系统剪贴板和远程联网未验，#66须按Spec处理边界。
-- 生产CPU增加真实上下文投影成本后暴露全屏失败，最终按分支/模型缓存上下文、独立缓存goal行、减少重复裁剪及同宽字符串校验修复；原版和补丁对比使用相同生产组件。虚拟模型仍实时读上下文，补丁公共契约不变。
+- 最终check203文件/2941测试，四个实际发布入口各53项PTY；真实权限批准、bash副作用/取消、retry、overflow压缩、dialog/overlay、窄屏、模式/session/reload/quit。原版正常回退。物理像素、系统剪贴板和远程联网未验，#66须按Spec处理边界。
+- 生产CPU增加真实上下文投影成本后暴露全屏失败，最终按分支/模型缓存上下文、减少重复裁剪及同宽字符串校验修复；原版和补丁对比使用相同生产组件。虚拟模型仍实时读上下文，补丁公共契约不变。
 - 本地原始记录在.tmp/working-token-rate/，最终发布安装.tmp/local-refresh-install-4tyVm9。67个记录PID退出、无监听，证据保留。质量结果区分等价变异与既有高复杂度/未覆盖分支，不冒称全仓库零问题。
 
 ### Text region verification skill
@@ -91,7 +91,7 @@
 ### Codex-ui verification maintenance
 
 - #65提交5e275638，仅修改目标skill十个文件。完整使用maintain-verification-skill，五组feature各由独立gpt-6.1-sol/high只读审查，维护协调者串行live。新增Working/速率路由、逐进程doctor及6项拒绝/留证测试。主代理已核对diff、源审查、36个ID覆盖表和原始最终帧，验收关闭#65。
-- 旧CLI两模式各124项、headless12场景、codemode两模式、Thinking、goal四入口、tool-status三入口通过。Working仓库补丁两模式与新安装原版发布包两模式各54项通过，最终完整帧均无Working/rate且Goal保留；主代理另测已安装补丁两模式，不将两类四入口混称。
+- 旧CLI两模式各124项、headless12场景、codemode两模式、Thinking、tool-status三入口通过。Working仓库补丁两模式与新安装原版发布包两模式各54项通过，最终完整帧均无Working/rate且Goal保留；主代理另测已安装补丁两模式，不将两类四入口混称。
 - 两处共享驱动漂移由主代理Astra high修复后，维护协调者独立复验：1e91275分别验证静态工具卡和Working动画，0333f31等待settled后的实际隐藏帧再capture。原失败保留，详见[工具卡修复](evidence/tool-status-working-fix.md)和[最终帧修复](evidence/working-final-capture-fix.md)。无产品改动。
 - 完整check204文件/2951测试；新doctor函数CRAP3、函数行覆盖100%、9/9变异killed，dryer无0.8重复。48个记录PID/组无存活或监听，runtime/锁/worker清理，全局Pi入口哈希未变。维护scratch按skill要求不提交。
 - 本地原始证据在.tmp/maintain-codex-ui-65/{coverage.md,coverage.json,source-wave.md,run-notes.md,cleanup-final.json}，包含所有入口和失败/恢复时序；当前安装.tmp/local-refresh-install-ZQW7Cw。#66必须新跑，不以这些历史结果代替独立验证。

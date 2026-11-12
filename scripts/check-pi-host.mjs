@@ -17,7 +17,7 @@ try {
   const { DefaultResourceLoader, SettingsManager } = await import("@earendil-works/pi-coding-agent");
   const { builtInExtensions } = await import(pathToFileURL(join(host.root, "dist/extensions/index.js")).href);
   const manifest = JSON.parse(readFileSync("package.json", "utf8"));
-  assert.equal(manifest.pi.extensions.length, 8, "Published extension set changed");
+  assert.equal(manifest.pi.extensions.length, 5, "Published extension set changed");
   for (const variant of ["source", "dist"]) {
     const paths = manifest.pi.extensions.map(entry => resolve(variant === "source"
       ? entry.replace("/dist/", "/src/").replace(/\.js$/, ".ts") : entry));

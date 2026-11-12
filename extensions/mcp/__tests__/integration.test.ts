@@ -7,20 +7,13 @@ import { LocalHttpMcpFixture } from "./fixtures/http-mcp-fixture.js";
 
 let tempDirectory = "";
 let fixture: LocalHttpMcpFixture | undefined;
-let inheritedPiSubagent: string | undefined;
 
-beforeEach(() => {
-  inheritedPiSubagent = process.env.PI_SUBAGENT;
-  delete process.env.PI_SUBAGENT;
-});
 
 afterEach(async () => {
   await fixture?.close();
   fixture = undefined;
   if (tempDirectory) rmSync(tempDirectory, { recursive: true, force: true });
   tempDirectory = "";
-  if (inheritedPiSubagent === undefined) delete process.env.PI_SUBAGENT;
-  else process.env.PI_SUBAGENT = inheritedPiSubagent;
   vi.restoreAllMocks();
 });
 

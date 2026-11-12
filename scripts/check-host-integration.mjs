@@ -9,42 +9,28 @@ import { stopProcessGroup } from "./codex-compact-quality-process.mjs";
 import { pnpmCommand } from "./pnpm-command.mjs";
 
 const group = process.argv[2];
-assert.ok(["tmux", "accounting", "pty", "benchmark"].includes(group), "Choose tmux, accounting, pty or benchmark");
+assert.ok(["pty", "benchmark"].includes(group), "Choose pty or benchmark");
 assert.notEqual(process.platform, "win32", "Run Unix host acceptance on macOS or Linux; Windows uses pnpm run check");
 assert.ok(process.env.npm_execpath, "Run host acceptance through pnpm");
 const host = inspectPiHost();
 const pnpm = (...args) => pnpmCommand(args);
-const node = file => [process.execPath, file, host.root];
 const python = (file, ...args) => ["conda", "run", "--no-capture-output", "-n", "codex-py312", "python", file, ...args];
 const { directory: root, env: isolatedEnv } = createTestEnvironment(`host-${group}`);
 const env = { ...isolatedEnv, TERM: "xterm-256color", COLORTERM: "truecolor", SHELL: "/bin/sh",
-  PI_SUBAGENT_TEST_CLI: host.cli, PI_MCP_TEST_PI_ROOT: host.root, PI_MCP_TEST_PI_VERSION: host.versions["pi-coding-agent"] };
+   PI_MCP_TEST_PI_ROOT: host.root, PI_MCP_TEST_PI_VERSION: host.versions["pi-coding-agent"] };
 mkdirSync(resolve(".tmp/test-results"), { recursive: true });
 const reports = mkdtempSync(resolve(`.tmp/test-results/host-${group}-`));
-if (group === "tmux") env.PI_SUBAGENT_TRACE_DIR = join(reports, "trace");
 const summary = { group, host, partial: process.argv.includes("--from"), status: "running", prerequisites: {}, commands: [], cleanup: "pending" };
 const save = () => writeFileSync(join(reports, "summary.json"), JSON.stringify(summary, null, 2) + "\n");
 console.log(JSON.stringify({ check: group, reports }));
-const files = ["integration", "isolated-integration", "production-integration", "fast-production"].map(name => `extensions/subagent/__tests__/${name}.test.ts`);
 const commands = {
-  tmux: [
-    { command: pnpm("test", "--suite", "host", ...files), env: { PI_SUBAGENT_ISOLATED_INTEGRATION: "1", PI_FAST_EVIDENCE: join(reports, "fast-source.json") } },
-    { command: pnpm("test", "--suite", "host", ...files), env: { PI_SUBAGENT_ISOLATED_INTEGRATION: "1", PI_SUBAGENT_FIXTURE_DIST: "1", PI_FAST_EVIDENCE: join(reports, "fast-dist.json") } },
-  ],
-  accounting: ["accounting-runtime", "accounting-child-runtime", "provider-runtime", "terminal-runtime"].map(name =>
-    ({ command: node(`extensions/goal/__tests__/${name}.mjs`) })),
   pty: [
-    ...[[], ["--fullscreen"]].map(args => ({ command: python("extensions/permissions/__tests__/dialogs-pty.py", ...args) })),
-    { command: pnpm("run", "goal:footer:check") },
-    ...[[], ["--fullscreen"]].map(args => ({ command: python("extensions/goal/__tests__/tool-ui-driver.py", ...args) })),
+    { command: [process.execPath, ".cursor/skills/verify-pi-openai-fast-mode/scripts/verify.mjs", "full"] },
     { command: python("extensions/mcp/__tests__/resume-ui-host.py", "--live", "--repeat", "1") },
     { command: pnpm("run", "tool-status:check") },
     { command: pnpm("run", "web-search:check") },
-    ...["root", "child"].map(source => ({ command: python("extensions/goal/__tests__/accounting-tui-driver.py", join(root, `accounting-${source}`), host.root),
-      env: { GOAL_USAGE_SOURCE: source } })),
   ],
   benchmark: [
-    { command: [process.execPath, "extensions/goal/__tests__/footer-benchmark.mjs"] },
     { command: [process.execPath, "--expose-gc", "extensions/mcp/__tests__/fixtures/history-benchmark.mjs"] },
     { command: python("extensions/mcp/__tests__/render-input-host.py", "--pi-root", host.root, "--check") },
   ],
@@ -60,8 +46,7 @@ const signal = name => {
 const interrupt = () => signal("SIGINT"), terminate = () => signal("SIGTERM");
 process.on("SIGINT", interrupt); process.on("SIGTERM", terminate);
 try {
-  const prerequisites = group === "tmux" ? [["tmux", "-V"], ["fish", "--version"]]
-    : group === "pty" || group === "benchmark" ? [["conda", "run", "-n", "codex-py312", "python", "-c", "import pyte; import sys; print(sys.version)"]] : [];
+  const prerequisites = group === "pty" || group === "benchmark" ? [["conda", "run", "-n", "codex-py312", "python", "-c", "import pyte; import sys; print(sys.version)"]] : [];
   for (const [command, ...args] of prerequisites) {
     summary.prerequisites[command] = execFileSync(command, args, { env, encoding: "utf8", timeout: 60_000 }).trim();
   }

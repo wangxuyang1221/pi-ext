@@ -76,7 +76,7 @@ const configPath = join(agentDir, "pi-codex-compact.json");
 let interactive;
 try {
   if (tui) {
-    assert.ok(process.stdin.isTTY && process.stdout.isTTY, "Goal acceptance requires a real PTY");
+    assert.ok(process.stdin.isTTY && process.stdout.isTTY, "TUI acceptance requires a real PTY");
     const host = new AgentSessionRuntime(session, { cwd, agentDir, modelRuntime: runtime, settingsManager: settings, resourceLoader: loader, diagnostics: [] },
       async () => { throw new Error("Session replacement is outside this live case"); });
     interactive = new InteractiveMode(host, { migratedProviders: [] });
@@ -86,9 +86,8 @@ try {
   for (let attempt = 0; !session.getActiveToolNames().includes("mcp__acceptance__fact") && attempt < 50; attempt++) await delay(100);
   assert.ok(session.getActiveToolNames().includes("mcp__acceptance__fact"), "Controlled MCP server did not become ready");
   if (stage === "preflight" || stage === "preflight-tui") {
-    for (const name of ["acceptance_empty", "create_goal", "subagent_spawn", "codex_search"]) assert.ok(session.getToolDefinition(name), `Missing ${name}`);
+    for (const name of ["acceptance_empty", "codex_search"]) assert.ok(session.getToolDefinition(name), `Missing ${name}`);
     record({ case: "offline-entry-and-isolation", passed: true });
-    if (tui) for (const name of ["create_goal", "get_goal", "update_goal"]) assert.ok(session.getActiveToolNames().includes(name));
   } else if (stage === "seed") {
     const result = await prompt("Remember the synthetic project marker ORCHID-731 and owner Mira. Call acceptance_empty exactly once, then reply ACK ORCHID-731 Mira. Do not use other tools.");
     assert.ok(result.messages.some(message => message.role === "toolResult" && message.toolName === "acceptance_empty"));
@@ -132,13 +131,6 @@ try {
     await prompt("Reply FAST-OFF without tools.");
     assert.notEqual(requests.at(-1).serviceTier, "priority");
     record({ case: "fast-request-toggle", passed: true });
-  } else if (stage === "goal") {
-    const goal = await prompt("Explicit test instruction: use create_goal to create the objective 'Confirm the synthetic value 17', then use get_goal, then use update_goal with status complete, and finish with GOAL-DONE. The value 17 is already confirmed. Use exactly one tool call per assistant turn and wait for its result before the next call. Do not use other tools or create subagents.");
-    for (const name of ["create_goal", "get_goal", "update_goal"]) assert.ok(goal.messages.some(message => message.role === "toolResult" && message.toolName === name), `Missing ${name}`);
-    const state = await call("get_goal");
-    assert.equal(state.details.goal.status, "complete");
-    assert.ok(state.details.goal.tokensUsed > 0);
-    record({ case: "goal-create-read-complete-accounting", passed: true, tokensUsed: state.details.goal.tokensUsed });
   } else if (stage === "mcp") {
     const mcpName = "mcp__acceptance__fact";
     for (let attempt = 0; !session.getActiveToolNames().includes(mcpName) && attempt < 50; attempt++) await delay(100);
@@ -146,55 +138,17 @@ try {
     assert.match(mcp.text, /MCP-ORCHID-731/);
     assert.ok(mcp.messages.some(message => message.role === "toolResult" && message.toolName === mcpName));
     record({ case: "mcp-real-model-dispatch", passed: true });
-  } else if (stage === "subagent") {
-    const spawned = await prompt("Explicit acceptance instruction: call subagent_spawn once. Give it this exact task: 'Call bash with command printf CHILD-731, then answer CHILD-731. Do not read any files, use other tools, or create subagents.' Set model to openai-codex/gpt-5.6-sol and thinkingLevel to low. After spawning, reply SPAWNED and do not wait, read, or close it yet.");
-    const spawnResult = spawned.messages.find(message => message.role === "toolResult" && message.toolName === "subagent_spawn");
-    assert.ok(spawnResult, "Model did not spawn the acceptance child");
-    const child = JSON.parse(spawnResult.content.find(part => part.type === "text").text).agent;
-    try {
-      let settled;
-      for (let attempt = 0; attempt < 6; attempt++) {
-        const result = await call("subagent_wait", { agentId: child.agentId, afterSettled: child.settledCursor, timeoutMs: 30_000 });
-        settled = JSON.parse(result.content[0].text);
-        if (settled.outcome === "settled") break;
-      }
-      assert.equal(settled?.outcome, "settled", "Child did not settle");
-      const read = await call("subagent_read", { agentId: child.agentId, view: "recent_activity", assistantLimit: 5, toolLimit: 5 });
-      const text = JSON.stringify(read);
-      assert.match(text, /CHILD-731/);
-      assert.match(text, /bash/);
-      assert.ok(resolve(child.sessionFile).startsWith(`${resolve(root)}/`), "Child session escaped the isolated workspace");
-      const childEntries = (await readFile(child.sessionFile, "utf8")).trim().split("\n").map(JSON.parse);
-      assert.ok(childEntries.some(entry => entry.type === "message" && entry.message.role === "toolResult"
-        && entry.message.toolName === "bash" && !entry.message.isError
-        && entry.message.content.some(block => block.type === "text" && block.text.includes("CHILD-731"))), "Child did not execute the expected shell tool");
-      const usage = childEntries.filter(entry => entry.type === "message" && entry.message.role === "assistant")
-        .map(entry => ({ provider: entry.message.provider, model: entry.message.model, usage: entry.message.usage }));
-      assert.ok(usage.length > 0, "No child provider usage was persisted");
-      record({ case: "subagent-real-model-tool-read", passed: true, childUsage: usage });
-    } finally {
-      const closed = await call("subagent_close", { target: child.agentId });
-      assert.equal(closed.details.relationshipRemoved, true);
-    }
   } else if (stage === "search") {
     const search = await call("codex_search", { queries: ["site:nodejs.org Node.js documentation file system readFile"], freshness: "cached", search_context_size: "low" });
     assert.ok(!search.isError, "Search execution failed");
     assert.equal(search.details.failedQueryCount, 0);
     assert.ok(search.details.successes.some(result => result.citations.some(citation => /^https:\/\//.test(citation.url))), "Search returned no public citation");
     record({ case: "search-public-citations", passed: true, result: search.details });
-  } else if (stage === "noncodex" || stage === "noncodex-goal") {
-    if (stage === "noncodex") {
+  } else if (stage === "noncodex") {
     const result = await prompt("Call acceptance_empty exactly once, then reply DEEPSEEK-OK. Do not use other tools.");
     assert.ok(result.messages.some(message => message.role === "toolResult" && message.toolName === "acceptance_empty"));
     assert.match(result.text, /DEEPSEEK-OK/);
     record({ case: "noncodex-tool-continuation", passed: true });
-    }
-    const goal = await prompt("Explicit test instruction: use create_goal to create the objective 'Confirm the synthetic value 23', then use get_goal, then use update_goal with status complete, and finish with GOAL-DONE. The value 23 is already confirmed. Use exactly one tool call per assistant turn and wait for its result before the next call. Do not use other tools or create subagents.");
-    for (const name of ["create_goal", "get_goal", "update_goal"]) assert.ok(goal.messages.some(message => message.role === "toolResult" && message.toolName === name), `Missing ${name}`);
-    const state = await call("get_goal");
-    assert.equal(state.details.goal.status, "complete");
-    assert.ok(state.details.goal.tokensUsed > 0);
-    record({ case: "noncodex-goal-accounting", passed: true, tokensUsed: state.details.goal.tokensUsed });
   } else throw new Error("Unknown acceptance stage");
   assert.equal(errors.length, 0, "Extension runtime errors occurred");
 } catch (error) {

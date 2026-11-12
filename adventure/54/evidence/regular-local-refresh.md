@@ -78,7 +78,7 @@ coding-agent 的稳定 Proxy 在 renderer 替换后重新登记有效句柄；�
 
 `pnpm run check` 已通过，197 文件、2908 测试；构建、全部类型检查、仓库文档/密钥检查、发布边界及 8 扩展 source/dist 加载通过，日志为 `.tmp/local-refresh/check.log`。既有 MCP 命令替换提示仍存在，没有加载错误。依现有 verify-pi-ext / verify-pi-codex-ui skill 运行受影响布局回归，未修改这些 skills：
 
-- Doctor 确认独立 checkout、`sharedDependencies=false`、固定运行版本。tmux socket 长度超限提示仅针对未执行的 subagent 旅程，与本次 CLI/PTY 无关。
+- Doctor 确认独立 checkout、`sharedDependencies=false`、固定运行版本。
 - codemode 真实 PTY：`.tmp/test-results/verify-codex-ui-IUS4zQ/`，passed，cleanup removed，process group stopped。
 - 普通 CLI：`.tmp/test-results/codex-ui-cli-regular-1793243033755561000/`，124 项自动断言通过。
 - 全屏 CLI：`.tmp/test-results/codex-ui-cli-fullscreen-1793243111227133000/`，124 项自动断言通过。

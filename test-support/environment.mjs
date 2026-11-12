@@ -4,14 +4,12 @@ import { join, resolve } from "node:path";
 const allowed = new Set([
   "PATH", "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "LANG", "LC_ALL", "LC_CTYPE", "TZ",
   "TERM", "COLORTERM", "CI", "FORCE_COLOR", "NO_COLOR", "NPM_EXECPATH",
-  "PI_SUBAGENT_ISOLATED_INTEGRATION", "PI_SUBAGENT_FIXTURE_DIST", "PI_SUBAGENT_BENCHMARK",
-  "PI_SUBAGENT_TEST_CLI", "PI_SUBAGENT_TEST_FISH", "PI_FAST_EVIDENCE", "PI_SUBAGENT_TRACE_DIR",
-  "PI_MCP_TEST_PI_ROOT", "PI_MCP_TEST_PI_VERSION", "PI_CODEX_TEST_PI_ROOT", "PI_GOAL_TEST_ENTRY",
+  "PI_MCP_TEST_PI_ROOT", "PI_MCP_TEST_PI_VERSION", "PI_CODEX_TEST_PI_ROOT",
 ]);
 
-export function createTestEnvironment(prefix) {
-  mkdirSync(resolve(".tmp"), { recursive: true });
-  const directory = mkdtempSync(resolve(`.tmp/${prefix}-`));
+export function createTestEnvironment(prefix, root = process.cwd()) {
+  mkdirSync(resolve(root, ".tmp"), { recursive: true });
+  const directory = mkdtempSync(resolve(root, `.tmp/${prefix}-`));
   for (const name of ["home", "agent", "tmp", "cache", "config", "data", "state"]) mkdirSync(join(directory, name));
   const inherited = Object.fromEntries(Object.entries(process.env).filter(([key]) => allowed.has(key.toUpperCase())));
   return { directory, env: {

@@ -12,7 +12,7 @@ import { archiveEvidence, stopRecordedPtyOwners } from "../../verify-pi-ext/scri
 const scripts = dirname(fileURLToPath(import.meta.url));
 const options = process.argv.slice(2);
 const mode = options[0] && !options[0].startsWith("--") ? options.shift() : "full";
-assert.ok(["full", "smoke"].includes(mode), "Usage: verify.mjs [full|smoke] [--timeout-ms <number>] [--python <absolute-path>]");
+assert.ok(["full", "root", "smoke"].includes(mode), "Usage: verify.mjs [full|root|smoke] [--timeout-ms <number>] [--python <absolute-path>]");
 let timeoutMs = 180_000, pythonPath;
 while (options.length) {
   const name = options.shift(), value = options.shift();

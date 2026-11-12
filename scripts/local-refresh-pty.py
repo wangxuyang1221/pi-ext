@@ -27,6 +27,7 @@ parser.add_argument("--mode", choices=["regular", "fullscreen"], default="regula
 parser.add_argument("--original", action="store_true")
 parser.add_argument("--kitty", action="store_true", help="Advertise Kitty image protocol; verify emitted bytes, not physical pixels")
 parser.add_argument("--working", action="store_true", help="Drive production Working and rate with controlled provider events")
+parser.add_argument("--profile", choices=["pi14", "pi152"], default="pi14")
 parser.add_argument("--extension", type=Path, help="Installed codex-ui entry for the working journey")
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
@@ -48,7 +49,7 @@ command_line = [str(args.cli.resolve()), "--no-extensions", "--no-skills", "--no
                 "-e", str(repo / "examples/text-region.ts"), "-e", str(repo / "test-support/fixtures/local-refresh/provider.ts"),
                 "--provider", "faux", "--model", "faux-1", "--tui-mode", args.mode]
 if args.working:
-    env["PI_PERMISSIONS_MODE"] = "default"
+    env["LOCAL_REFRESH_PROFILE"] = args.profile
     (runtime / "agent/themes").mkdir()
     shutil.copyfile(repo / "themes/codex-pi.json", runtime / "agent/themes/codex-pi.json")
     settings = json.loads((runtime / "agent/settings.json").read_text())
@@ -57,7 +58,6 @@ if args.working:
     (root / "plan.json").write_text(json.dumps({"kind": "idle", "id": "initial"}))
     command_line = [str(args.cli.resolve()), "--no-extensions", "--no-skills", "--no-context-files", "--no-prompt-templates",
         "-e", str(args.extension.resolve() if args.extension else repo / "extensions/codex-ui/dist/index.js"),
-        "-e", str(repo / "extensions/permissions/dist/index.js"),
         "-e", str(repo / "test-support/fixtures/local-refresh/working-provider.ts"),
         "--provider", "faux", "--model", "faux-1", "--tui-mode", args.mode]
 initial_workspace_empty = not any((runtime / "workspace").iterdir())
@@ -267,6 +267,29 @@ try:
             capture("selection")
             checks.append("mouse selection highlight remains correct while registered text advances; system clipboard disabled")
             send(f"\x1b[<0;3;{row + 1}M\x1b[<0;3;{row + 1}m")
+        if args.mode == "fullscreen":
+            command("/fixture-document")
+            wait(lambda: "Local document revision 0" in view(), "registered transcript target mounts")
+            command("/fixture-document step")
+            wait(lambda: "Local document revision 1" in view() and "Local document revision 0" not in view(), "delayed local request updates transcript screen")
+            send("\x1b[102;6u")
+            send("Local document revision 1")
+            wait(lambda: "1/1" in view(), "real TTY search finds locally updated transcript text")
+            capture("local-document-search-current")
+            send("\x15Local document revision 0")
+            wait(lambda: "No matches" in view(), "real TTY search drops superseded transcript text")
+            capture("local-document-search-old")
+            send("\x1b")
+            send("\x1b[1;5F")
+            row = next(i for i, line in enumerate(screen.display) if "Local document revision 1" in line)
+            column = screen.display[row].index("Local document revision 1")
+            end = column + len("Local document revision 1")
+            send(f"\x1b[<0;{column + 1};{row + 1}M\x1b[<32;{end + 1};{row + 1}M\x1b[<0;{end + 1};{row + 1}m")
+            selected = "".join(screen.buffer[row][x].data for x in range(screen.columns) if screen.buffer[row][x].reverse).strip()
+            assert selected == "Local document revision 1", selected
+            capture("local-document-selection-current")
+            checks.append("real TTY mouse selection contains latest locally updated transcript text")
+            send(f"\x1b[<0;{column + 1};{row + 1}M\x1b[<0;{column + 1};{row + 1}m")
         command("/fixture-image")
         wait(lambda: bool(events("image")), "real Image widget mounted")
         before = counters(); settle(0.5)

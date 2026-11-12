@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
@@ -11,6 +11,7 @@ const handlers = new Map();
 let child, stopping = false;
 try {
   for (const dir of ['workspace', 'home', 'tmp', 'agent', 'sessions']) await mkdir(join(root, dir));
+  if (process.argv.includes('--custom-keys')) await writeFile(join(root, 'agent/keybindings.json'), JSON.stringify({ 'app.tools.expand': 'f3' }));
   const env = Object.fromEntries(['PATH', 'TERM', 'COLORTERM', 'LANG', 'LC_ALL'].flatMap(key => process.env[key] ? [[key, process.env[key]]] : []));
   Object.assign(env, { HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'), PI_CODING_AGENT_DIR: join(root, 'agent'), PI_CODING_AGENT_SESSION_DIR: join(root, 'sessions'), PI_OFFLINE: '1', PI_SKIP_VERSION_CHECK: '1', PI_TELEMETRY: '0', CODEMODE_UI_ROOT: root });
   for (const signal of ['SIGTERM', 'SIGHUP', 'SIGINT']) {

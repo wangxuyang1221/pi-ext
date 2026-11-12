@@ -1,5 +1,7 @@
 # Final verification
 
+本文为当时的终端与局部刷新历史证据，画面和动作保留原始语义。当前验收入口见 [Testing](../../../docs/testing.md)，历史计数不代表当前产品通过。
+
 ## Result
 
 本轮在指定独立上下文以 gpt-6.1-sol / high 验证，没有委派，也没有修改产品、补丁、测试或共享驱动。全部安全可执行自动入口已实跑。58 个 feature ID 中 53 个通过、0 个失败、5 个仍未验证，整体结果为 `unverified`。未发现需要交 Astra high 修复的产品或共享驱动问题。物理终端、剪贴板、远程请求及精确 Write/Edit await 按键落点仍是最终验收缺口，不能据自动通过关闭 #66。
@@ -58,13 +60,13 @@ pnpm_config_verify_deps_before_run=false node scripts/local-refresh-install.mjs 
 
 六个 Working 入口各 54 项，真实链路从公开 agent_start 进入生产 Working/TokenRate/CodexFooter，经 permissions/input、真实 Bash、retry/自动压缩直到 agent_settled。工具文件实际读回为 TOOL-FINISHED；取消后 should-not-exist.txt 不存在，不能把 Esc 按下当作已经完成取消。idle input 不启动 Working，agent_end/backoff/等待与工具执行不提前隐藏。
 
-32/40/100/12 列、Goal 第二行、草稿中间插入中文/ASCII、光标、overlay/input 焦点、主题、Ctrl+O、双向模式切换、new/reload/quit 均按完整旅程执行。12 次动画采样至少五种 spinner 与两种灰度，accent 为 5efcff。十帧/80ms、两秒反光与共享32ms调度的精确契约由本轮定向测试补证，未把定时器测试写成物理像素证据。
+32/40/100/12 列、历史状态第二行、草稿中间插入中文/ASCII、光标、overlay/input 焦点、主题、Ctrl+O、双向模式切换、new/reload/quit 均按完整旅程执行。12 次动画采样至少五种 spinner 与两种灰度，accent 为 5efcff。十帧/80ms、两秒反光与共享32ms调度的精确契约由本轮定向测试补证，未把定时器测试写成物理像素证据。
 
 示例分别验证 animation/footer 独立及同帧更新、draft-中文-aXbc、七次真实历史增长、高度/主题/resize、挂载替换/释放、模式/new/reload/quit。fullscreen 另实际发送 Ctrl+Home/End、SGR wheel/选择和 Ctrl+Shift+F 搜索 Response 0。Kitty 入口核对 a=T 原始传输字节，普通入口核对 Image 文本降级。宿主 copy callback 最新文本、搜索/布局/光标等价及复杂状态回退由真实 renderer 契约补证；这些不是系统剪贴板和图片像素。
 
 ## Final frames and title intervals
 
-- 0333f31 回归：六份 screens.finished 都是完整 synchronized frame，Working 和速率同时消失，Goal 行保留。另从各自 terminal.ansi 的开头独立重放到 finished.rawBytes，六份文本与光标均与 captured finished 完全一致；结果在 ansi-replay.json。
+- 0333f31 回归：六份 screens.finished 都是完整 synchronized frame，Working 和速率同时消失，历史状态行保留。另从各自 terminal.ansi 的开头独立重放到 finished.rawBytes，六份文本与光标均与 captured finished 完全一致；结果在 ansi-replay.json。
 - 标题独立于 Working 核对。六个入口各取首次 retry、自动 overflow compaction、reload 后 retry，共18个原始 ANSI banner 字节区间，均有多种 OSC spinner 帧，banner 期间无静态标题，任务结束恢复 π 静态标题。区间原始字节位置、标题集合与末帧在 osc-intervals.json；未借 Working 的动画断言证明标题。
 - 1e91275 回归：tool-status 的 regular/fullscreen 共6组 held 状态，各15次采样，静态卡片的文案、行列位置、前景/背景和所有 pyte 样式在实际断言中逐次相同。90帧同时满足至少五种 spinner、两种反光及 accent 5efcff。MCP-only 本来不加载 codex-ui，不要求 Working，但静态卡和黄色标记仍核对。
 - 旧 tool-status JSON 导出行坐标与动画样本，完整单元格相等断言实际运行；其旧 helper 仅保留最后一个 ANSI 流，不能宣称三个入口的全部 ANSI 都已导出。原失败维护目录和 verify-tool-status-SsPXWo 未覆盖。
@@ -76,7 +78,6 @@ pnpm_config_verify_deps_before_run=false node scripts/local-refresh-install.mjs 
 | codex-ui / codex-ui-fullscreen | 真实 QuickJS、本地 stdio MCP、调用树、hiddenfail、inspect、主题、branch/reload/compact/restart | passed |
 | thinking / thinking-pty.py --fullscreen | 真实 TUI 流式思考、Ctrl+T、完成后隐藏选择、resize | passed |
 | tool-status | regular/fullscreen/MCP-only 三入口，均含 restart、完整颜色/Read 分组/展开与静态卡回归 | passed |
-| goal-footer | codex/native × regular/fullscreen，详情快照、恢复/暂停/清空、窄屏、分钟边界、idle输出0字节 | passed |
 | cli.py regular / fullscreen | 各124项，原生设置/fork/resume/tree、Markdown、真实工具/取消、配置快照、缓存、Thinking/OSC | passed |
 | headless.py | print/json与RPC共12场景，4个健康图片/文件结果、8个配置拒绝且无副作用 | passed |
 | codemode-cli.mjs --smoke | 10个真实执行场景，错误后已应用的Edit保留、nested/MCP/hiddenfail、网络调用0 | passed |
@@ -87,7 +88,6 @@ pnpm_config_verify_deps_before_run=false pnpm exec node .cursor/skills/verify-pi
 pnpm_config_verify_deps_before_run=false pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run thinking
 conda run --no-capture-output -n codex-py312 python extensions/codex-ui/__tests__/thinking-pty.py --fullscreen
 pnpm_config_verify_deps_before_run=false pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run tool-status
-pnpm_config_verify_deps_before_run=false pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run goal-footer
 conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/cli.py regular
 conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/cli.py fullscreen
 conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/headless.py
@@ -98,7 +98,6 @@ CLI 两模式共10个进程、headless12个进程，全部22份内部逐进程 d
 
 headless RPC 在 agent_settled 后由 helper 终止空闲客户端，所存子进程退出码可为 -15；外层场景退出0，工具与副作用断言通过。它不表示任务被键盘取消。
 
-来源按实际入口区分：新 Working 与 legacy CLI 加载 codex-ui dist，发布四入口加载安装目录 dist；codemode/Thinking 加载生产 dist；tool-status 将生产 dist 逐文件复制到隔离 runtime；Goal footer-fixture.ts 实际导入生产 source。最终 host:check 另分别加载八扩展的 source 与 dist。所有外部模型/摘要均为明确离线替身，未写成远程联网实测。
 
 ## CPU protocol
 

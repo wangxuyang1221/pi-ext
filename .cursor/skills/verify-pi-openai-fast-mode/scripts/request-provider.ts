@@ -2,7 +2,7 @@ import { appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { zstdDecompressSync } from 'node:zlib';
 import { createProvider } from '@earendil-works/pi-ai';
-import { responseEvents, textStep } from '../../../../extensions/goal/__tests__/budget-fixtures.mjs';
+import { responseEvents, textStep } from '../../../../extensions/openai-fast-mode/__tests__/fixtures/responses.mjs';
 
 // Verification fixture: replace only HTTP transport; keep real CLI and request builders.
 export default async function(pi: any) {

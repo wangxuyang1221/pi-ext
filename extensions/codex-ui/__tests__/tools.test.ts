@@ -226,6 +226,7 @@ test("write and edit show one red failure marker and never render a failed diff"
 });
 
 test("write restores persisted changes with the same settled ANSI layout as edit", () => {
+  initTheme("dark");
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
   const write = registered.find(tool => tool.name === "write")!;

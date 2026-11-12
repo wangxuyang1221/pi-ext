@@ -348,13 +348,13 @@ try:
     stop()
     # Load the actual companion extensions for footer status combinations.
     env['UI_VERIFY_FOOTER']='1'
-    start(['--provider','openai','--model','gpt-5.4','-e',str(REPO/'extensions/openai-fast-mode/dist/index.js'),'-e',str(REPO/'extensions/permissions/dist/index.js')])
+    start(['--provider','openai','--model','gpt-5.4','-e',str(REPO/'extensions/openai-fast-mode/dist/index.js')])
     command('/fast on');settle()
     footer=next((line for line in screen.display if 'Context' in line and 'workspace' in line),'')
-    check('gpt-5.4' in footer and 'fast' in footer and 'full access' in footer,'Footer combines actual model, directory, fast and permissions status')
+    check('gpt-5.4' in footer and 'fast' in footer,'Footer combines actual model, directory, fast status')
     snap('companion footer combined');resize(60);snap('companion footer narrow');resize(140)
-    command('/fast off');settle();command('/permissions default');settle();footer=next((line for line in screen.display if 'Context' in line and 'workspace' in line),'')
-    check('fast' not in footer and 'full access' not in footer,'Footer removes Fast and full access status after disabling them')
+    command('/fast off');settle();footer=next((line for line in screen.display if 'Context' in line and 'workspace' in line),'')
+    check('fast' not in footer,'Footer removes Fast status after disabling it')
     stop();passed=True
 except Exception:
     (EVIDENCE/'failure.txt').write_text(traceback.format_exc())

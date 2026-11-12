@@ -1,0 +1,126 @@
+{
+  "extensions": [
+    "codex-compact",
+    "openai-fast-mode",
+    "mcp",
+    "skill-mentions"
+  ],
+  "cliArgs": [
+    "-e",
+    "builtin:codemode",
+    "--tools",
+    "read,bash,edit,write,codemode",
+    "--approve"
+  ],
+  "seed": [
+    {
+      "path": "agent/keybindings.json",
+      "json": {
+        "app.tools.expand": "f3"
+      }
+    },
+    {
+      "path": "workspace/input.txt",
+      "text": "enabled=false\n"
+    }
+  ],
+  "responses": [
+    {
+      "toolCalls": [
+        {
+          "name": "codemode",
+          "arguments": {
+            "code": "text(await tools.read({path:\"input.txt\"})); text(await tools.bash({command:\"printf CLI-BASH\"})); await tools.edit({path:\"input.txt\",edits:[{oldText:\"false\",newText:\"true\"}]}); await tools.write({path:\"output.txt\",content:\"CLI-CODEMODE\\n\"}); text(\"CLI-CODEMODE-OUTPUT\");"
+          }
+        }
+      ]
+    },
+    {
+      "text": "CLI-CODEMODE-DONE"
+    }
+  ],
+  "actions": [
+    {
+      "send": "Run the nested tool verification"
+    },
+    {
+      "wait": {
+        "eventType": "settled",
+        "eventCount": 1
+      }
+    },
+    {
+      "expect": {
+        "file": "workspace/input.txt",
+        "text": "enabled=true\n"
+      }
+    },
+    {
+      "expect": {
+        "file": "workspace/output.txt",
+        "text": "CLI-CODEMODE\n"
+      }
+    },
+    {
+      "snapshot": "collapsed"
+    },
+    {
+      "bytes": "1b4f52"
+    },
+    {
+      "wait": {
+        "screenIncludes": "CLI-BASH"
+      }
+    },
+    {
+      "snapshot": "expanded"
+    },
+    {
+      "send": "/inspect"
+    },
+    {
+      "wait": {
+        "screenIncludes": "Codemode inspector"
+      }
+    },
+    {
+      "snapshot": "inspector"
+    },
+    {
+      "keys": [
+        "tab"
+      ]
+    },
+    {
+      "wait": {
+        "screenIncludes": "[Script]"
+      }
+    },
+    {
+      "snapshot": "script"
+    },
+    {
+      "keys": [
+        "tab"
+      ]
+    },
+    {
+      "wait": {
+        "screenIncludes": "[Output]"
+      }
+    },
+    {
+      "snapshot": "output"
+    },
+    {
+      "keys": [
+        "escape"
+      ]
+    },
+    {
+      "wait": {
+        "screenExcludes": "Codemode inspector"
+      }
+    }
+  ]
+}

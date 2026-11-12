@@ -355,24 +355,6 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
       }
     };
 
-    if (process.env.PI_SUBAGENT === "1") {
-      void startConnections().catch((error: unknown) => {
-        if (!isCurrent(session)) return;
-        diagnostics.record({
-          level: "error",
-          message: "Background MCP startup failed",
-          error,
-        });
-        session.startupComplete = true;
-        updateFooter(ctx, manager, configResult);
-        if (!session.startupSummarySent) {
-          session.startupSummarySent = true;
-          notifyForMode(ctx, "MCP startup failed", "error");
-        }
-      });
-      return;
-    }
-
     await startConnections();
   });
 

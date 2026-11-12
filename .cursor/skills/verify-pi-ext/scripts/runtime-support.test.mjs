@@ -34,18 +34,18 @@ test("archives ordinary evidence beside a live Unix socket without copying the s
   }
 });
 
-test("archives goal footer, legacy proof and isolated home into each run", () => {
+test("archives tool status, legacy proof and isolated home into each run", () => {
   const context = fixture();
   try {
     const before = snapshotFixtures(context.root);
-    const footer = join(context.root, ".tmp/goal-footer-acceptance-native.json");
+    const footer = join(context.root, ".tmp/tool-status-smoke-regular.json");
     writeFileSync(footer, '{"screen":"first"}');
     writeFileSync(join(context.root, ".tmp/test-results/verify-123-pty-native.json"), '{"passed":true}');
     writeFileSync(join(context.scratch, "home/.pi/pi-codex-search.json"), '{"enabled":false}');
     const first = archiveEvidence({ repo: context.root, ...context, before });
     assert.deepEqual(first.errors, []);
     assert.equal(readFileSync(join(context.evidence, "home/.pi/pi-codex-search.json"), "utf8"), '{"enabled":false}');
-    assert.equal(readFileSync(join(context.evidence, "artifacts/goal-footer-acceptance-native.json"), "utf8"), '{"screen":"first"}');
+    assert.equal(readFileSync(join(context.evidence, "artifacts/tool-status-smoke-regular.json"), "utf8"), '{"screen":"first"}');
     assert.ok(existsSync(join(context.evidence, "artifacts/verify-123-pty-native.json")));
     const secondBefore = snapshotFixtures(context.root);
     writeFileSync(footer, '{"screen":"second, longer"}');
@@ -53,8 +53,8 @@ test("archives goal footer, legacy proof and isolated home into each run", () =>
     mkdirSync(secondEvidence);
     archiveEvidence({ ...context, repo: context.root, evidence: secondEvidence, before: secondBefore });
     rmSync(context.scratch, { recursive: true });
-    assert.equal(readFileSync(join(context.evidence, "artifacts/goal-footer-acceptance-native.json"), "utf8"), '{"screen":"first"}');
-    assert.equal(readFileSync(join(secondEvidence, "artifacts/goal-footer-acceptance-native.json"), "utf8"), '{"screen":"second, longer"}');
+    assert.equal(readFileSync(join(context.evidence, "artifacts/tool-status-smoke-regular.json"), "utf8"), '{"screen":"first"}');
+    assert.equal(readFileSync(join(secondEvidence, "artifacts/tool-status-smoke-regular.json"), "utf8"), '{"screen":"second, longer"}');
   } finally { rmSync(context.root, { recursive: true, force: true }); }
 });
 
@@ -76,19 +76,19 @@ test("ignores unrelated temporary files and never follows symlinks or copies out
   try {
     const before = snapshotFixtures(context.root);
     writeFileSync(join(context.root, ".tmp/unrelated.txt"), "Other task");
-    writeFileSync(join(context.root, ".tmp/goal-footer-acceptance-native.json"), "Other case proof");
+    writeFileSync(join(context.root, ".tmp/tool-status-smoke-regular.json"), "Other case proof");
     const other = join(context.root, ".tmp/test-results/other-task");
     mkdirSync(other);
     writeFileSync(join(other, "private.json"), "Other task proof");
     symlinkSync(context.root, join(context.scratch, "home/recursive"));
     writeFileSync(join(context.evidence, "own.json"), "Already retained");
-    const result = archiveEvidence({ ...context, repo: context.root, before, selected: "permissions",
+    const result = archiveEvidence({ ...context, repo: context.root, before, selected: "metadata",
       reportedEvidence: [context.evidence, join(context.evidence, "own.json"), join(context.root, ".tmp/test-results")] });
     assert.deepEqual(result.errors, []);
     assert.equal(result.skipped.length, 1);
     assert.equal(existsSync(join(context.evidence, "home/recursive")), false);
     assert.equal(existsSync(join(context.evidence, "artifacts/unrelated.txt")), false);
-    assert.equal(existsSync(join(context.evidence, "artifacts/goal-footer-acceptance-native.json")), false);
+    assert.equal(existsSync(join(context.evidence, "artifacts/tool-status-smoke-regular.json")), false);
     assert.equal(existsSync(join(context.evidence, "artifacts/other-task")), false);
     assert.equal(existsSync(join(context.evidence, "artifacts/reported")), false);
   } finally { rmSync(context.root, { recursive: true, force: true }); }
@@ -100,11 +100,11 @@ test("a failed copy still archives sessions and fixed fixture proof", () => {
     writeFileSync(join(context.evidence, "home"), "Conflicting destination");
     const before = snapshotFixtures(context.root);
     writeFileSync(join(context.scratch, "sessions/session.jsonl"), "session proof");
-    writeFileSync(join(context.root, ".tmp/goal-footer-acceptance-native.json"), "footer proof");
+    writeFileSync(join(context.root, ".tmp/tool-status-smoke-regular.json"), "footer proof");
     const result = archiveEvidence({ repo: context.root, ...context, before });
     assert.equal(result.errors.length, 1);
     assert.equal(readFileSync(join(context.evidence, "sessions/session.jsonl"), "utf8"), "session proof");
-    assert.equal(readFileSync(join(context.evidence, "artifacts/goal-footer-acceptance-native.json"), "utf8"), "footer proof");
+    assert.equal(readFileSync(join(context.evidence, "artifacts/tool-status-smoke-regular.json"), "utf8"), "footer proof");
   } finally {
     rmSync(context.root, { recursive: true, force: true });
   }

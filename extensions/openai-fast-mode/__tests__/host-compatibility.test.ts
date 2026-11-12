@@ -6,7 +6,7 @@ import * as adapter from "@earendil-works/pi-ai/api/openai-codex-responses";
 import * as responsesAdapter from "@earendil-works/pi-ai/api/openai-responses";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { expect, test } from "vitest";
-import { offlineCodex, responseEvents, textStep } from "../../goal/__tests__/budget-fixtures.mjs";
+import { offlineCodex, responseEvents, textStep } from "./fixtures/responses.mjs";
 import { createPiFastModeExtension } from "../src/index.js";
 import { getUserConfigPath } from "../src/config.js";
 
@@ -37,7 +37,7 @@ test.each(["gpt-5.4", "gpt-unlisted"])("applies the OpenAI allowlist to the real
     const settingsManager = SettingsManager.inMemory({ retry: { enabled: false }, compaction: { enabled: false } });
     const resourceLoader = new DefaultResourceLoader({ cwd, agentDir, settingsManager, noExtensions: true, noSkills: true,
       noThemes: true, noContextFiles: true, noPromptTemplates: true,
-      extensionFactories: [createPiFastModeExtension({ agentDir, extensionDir: cwd, env: {} })] });
+      extensionFactories: [createPiFastModeExtension({ agentDir, extensionDir: cwd })] });
     await resourceLoader.reload();
     ({ session } = await createAgentSession({ cwd, agentDir, settingsManager, sessionManager: SessionManager.inMemory(cwd),
       resourceLoader, modelRuntime, model, noTools: "all" }));

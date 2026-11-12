@@ -11,7 +11,7 @@ export default defineConfig({
   test: {
     cache: false,
     environment: "node",
-    include: ["extensions/codex-ui/__tests__/{token-rate,token-rate-provider,json-units,working,working-session,context-usage,footer,goal-footer}.test.ts"],
+    include: ["extensions/codex-ui/__tests__/{token-rate,token-rate-provider,json-units,working,working-session,context-usage,footer}.test.ts"],
     testTimeout: 15000,
   },
 });

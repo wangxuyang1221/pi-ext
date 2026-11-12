@@ -36,7 +36,7 @@ pnpm_config_verify_deps_before_run=false pnpm exec node .cursor/skills/verify-pi
 - [Codemode tree and inspector](features/codemode.md)
 - [Execution settings and fail-closed configuration](features/execution.md)
 
-`ui-working`、`ui-receive-rate` 从 layout 路由到 [生产 Working 旅程](../verify-pi-text-regions/features/working.md)，按其 [Launch/Doctor](../verify-pi-text-regions/SKILL.md) 使用新证据目录串行跑 regular/fullscreen。该入口复用 `scripts/local-refresh-pty.py --working`，走公开生产事件、真实权限/工具及组件，不另建 PTY 或设置内部状态。标题仍按 thinking feature 单独验证。原版回退、发布安装、交互和 CPU 矩阵的权威入口也在新 skill；修改相关生产路径时选择对应 feature，不能用旧 CPU 报告代替本次测量。
+`ui-working`、`ui-receive-rate` 从 layout 路由到 [生产 Working 旅程](../verify-pi-text-regions/features/working.md)，按其 [Launch/Doctor](../verify-pi-text-regions/SKILL.md) 使用新证据目录串行跑 regular/fullscreen。该入口复用 `scripts/local-refresh-pty.py --working`，走公开生产事件、真实工具及组件，不另建 PTY 或设置内部状态。标题仍按 thinking feature 单独验证。原版回退、发布安装、交互和 CPU 矩阵的权威入口也在新 skill；修改相关生产路径时选择对应 feature，不能用旧 CPU 报告代替本次测量。
 
 每个 feature 的自动入口只证明文件注明的范围。补充步骤必须逐项执行并记录，不得把全部单元测试通过写成全部用户旅程通过。
 

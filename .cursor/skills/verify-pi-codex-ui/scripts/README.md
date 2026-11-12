@@ -25,7 +25,7 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 | Feature IDs | Required observations |
 | --- | --- |
 | `ui-header`, `ui-composer`, `ui-resize` | 启动 Pi header；输入时逐列检查整行背景；40/80/140 列；真实设置菜单选择 light 与 codex-pi；fork/resume 后再检查背景。保存 pyte 文本与颜色区间、原始 ANSI。 |
-| `ui-status` | 加载生产 fast 与 permissions 扩展，离线支持模型显示目录、模型、fast、full access 组合，关闭 fast 并切回 Default permissions 后对应状态消失。窄屏另存画面。 |
+| `ui-status` | 加载生产 Fast 扩展，离线支持模型显示目录、模型和 fast 组合，关闭 Fast 后对应状态消失。窄屏另存画面。 |
 | `ui-theme` | 原生 `/settings` 落盘主题；`/reload`、`/new`、原生 `/fork` 与 `/resume` 选择器替换后检查 codex-pi 背景。fork 的多行预填须 Ctrl+C 清除。 |
 | `ui-user-markdown`, `ui-reply-markdown` | bracketed paste 输入标题、嵌套列表、表格、代码围栏、引用、链接；核对真正模型请求和持久 session 原文，另检查 TUI 内容。`/copy` 的系统剪贴板部分须按下节人工补验。 |
 | `ui-tool-rendering` | 普通/fullscreen 的真实命令清单保留 `/inspect` 且排除 `/lowpower`；Tab 补全 `/inspec` 成功、`/lowp` 保持原输入。reload/new/fork/resume 后重复检查。始终执行真实 write/edit/bash/codemode，保存完整折叠预览与 Ctrl+O 展开结果，核对文件字节及工具成功结果。 |
@@ -33,7 +33,7 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 | `ui-shell-prefix`, `ui-shell-path`, `ui-project-trust`, `ui-settings-error`, `ui-settings-reload` | shell wrapper 真实输出；未信任项目前缀不生效；可信项目语法错误和不可读文件均阻止 read/bash；修复而未 reload 仍拒绝；reload 后恢复；重启为不信任后再次排除项目前缀。 |
 | `ui-codemode-cache`, `ui-inspect-tabs`, `ui-inspect-scroll`, `ui-codemode-resume` | 真实读取累计超过 4MiB；首项缺失、末项可读；方向键/PgDn/PgUp/Shift+Tab；原生 `/resume`、`/tree` 后发后续模型请求核对已保存结果，并确认 raw cache 不从历史恢复。调用顺序、预览外失败和本地 MCP 仍运行 skill 的 codemode case。 |
 | `ui-thinking-stream`, `ui-thinking-collapse`, `ui-thinking-resume`, `ui-title`, `ui-title-stop` | 实际流式 Thinking、Ctrl+T 隐藏选择、持久重开及后续上下文、原生 `/resume` 恢复取消/错误思考、`/compact` 后保留及开关；流中 OSC 动画、settled/取消后静止。80ms 精度仍由计时器测试验证。 |
-| `ui-working`, `ui-receive-rate` | 复用 [text-regions Working](../../verify-pi-text-regions/features/working.md) 的完整 regular/fullscreen 旅程，覆盖生产事件到组件、真实权限/文件/取消、input/retry/compaction、宽度、goal、new/reload/renderer/quit。先执行其 Launch/Doctor；这些不在旧 cli.py 的断言内。原版/发布/CPU 与物理边界按新 skill 对应 feature 另行验证。 |
+| `ui-working`, `ui-receive-rate` | 复用 [text-regions Working](../../verify-pi-text-regions/features/working.md) 的完整 regular/fullscreen 旅程，覆盖生产事件到组件、真实工具/文件/取消、input/retry/compaction、宽度、状态行、new/reload/renderer/quit。先执行其 Launch/Doctor；这些不在旧 cli.py 的断言内。原版/发布/CPU 与物理边界按新 skill 对应 feature 另行验证。 |
 
 ## Manual boundaries
 

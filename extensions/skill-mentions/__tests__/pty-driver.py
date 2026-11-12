@@ -358,9 +358,8 @@ try:
     editor()
     sources = {item["path"] for item in events("editor")[-1]["commands"] if item["source"] == "extension"}
     if mode.startswith("combined"):
-        for name in ["goal", "mcp", "permissions", "codex-ui", "openai-fast-mode"]:
+        for name in ["codex-compact", "mcp", "codex-ui", "openai-fast-mode"]:
             assert any(f"/{name}/dist/" in path for path in sources), (name, sources)
-        assert any("/subagent/dist/" in tool["path"] for tool in events("editor")[-1]["tools"])
     if additional_extensions:
         assert any(tool["name"] == "codex_search" and "/codex-search/src/" in tool["path"] for tool in events("editor")[-1]["tools"])
         checks.append("unpackaged codex-search source coexists without executing a search or reading daily credentials")
@@ -547,7 +546,7 @@ try:
         result = [message for message in events("request")[-1] if message["role"] == "toolResult"][-1]
         assert text(result) == "Tool literal $alpha", result
         assert "⌘alpha" in view() and editor() == ""
-        checks.append("all eight extensions coexist with a real local stdio MCP call; tool dollars stay literal and no subagent or remote provider runs")
+        checks.append("all five extensions coexist with a real local stdio MCP call; tool dollars stay literal and no remote provider runs")
 
     for char in "$alpha":
         send(char)

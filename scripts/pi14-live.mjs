@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, writeFile, rm, chmod } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
-import { spawn, execFile } from "node:child_process";
+import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { promisify } from "node:util";
 import { inspectPiHost } from "./pi-host.mjs";
 import { stopProcessGroup } from "./codex-compact-quality-process.mjs";
 
@@ -13,8 +12,8 @@ const dryRun = process.argv.includes("--dry-run");
 const option = name => process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
 const continued = option("--continue");
 assert.ok(!(continued && dryRun), "A live round cannot be continued as a dry run");
-const stages = dryRun ? ["preflight", "preflight-tui"] : option("--stages")?.split(",") ?? ["seed", "resume", "fast", "goal", "mcp", "subagent", "search", "noncodex"];
-assert.ok(stages.every(stage => ["preflight", "preflight-tui", "seed", "resume", "auto-switch", "fast", "goal", "mcp", "subagent", "search", "noncodex", "noncodex-goal"].includes(stage)));
+const stages = dryRun ? ["preflight", "preflight-tui"] : option("--stages")?.split(",") ?? ["seed", "resume", "fast", "mcp", "search", "noncodex"];
+assert.ok(stages.every(stage => ["preflight", "preflight-tui", "seed", "resume", "auto-switch", "fast", "mcp", "search", "noncodex"].includes(stage)));
 const host = inspectPiHost();
 assert.equal(host.versions["pi-coding-agent"], "1.4.0");
 const repo = process.cwd();
@@ -32,9 +31,6 @@ const runId = continued ? `continue-${Date.now()}` : "";
 const reportPath = join(root, runId ? `${runId}-summary.json` : "summary.json");
 const agentDir = join(root, "agent");
 const authPath = join(agentDir, "auth.json");
-const socket = join(root, "tmux.sock");
-const quote = text => `'${text.replaceAll("'", `'"'"'`)}'`;
-const run = promisify(execFile);
 let child, stopping = false;
 const summary = { root, host, started: new Date(started).toISOString(), cases: [] };
 const interrupt = () => { stopping = true; if (child?.pid) try { process.kill(-child.pid, "SIGTERM"); } catch {} };
@@ -48,12 +44,7 @@ try {
   const auth = Object.fromEntries(["openai-codex", "deepseek"].filter(name => original[name]).map(name => [name, original[name]]));
   assert.ok(auth["openai-codex"], "Existing Codex authorization is required");
   await writeFile(authPath, JSON.stringify(auth), { mode: 0o600, flag: "wx" });
-  const tmux = (await run("/usr/bin/which", ["tmux"])).stdout.trim();
   const guard = resolve("scripts/pi14-live-network.mjs");
-  const tmuxPath = join(root, "tmux"), piPath = join(root, "pi");
-  await writeFile(tmuxPath, `#!/bin/sh\nexec ${quote(tmux)} -S ${quote(socket)} -f /dev/null "$@"\n`);
-  await writeFile(piPath, `#!/bin/sh\nexport PI14_LIVE_STATE=${quote(statePath)}\nexport NODE_OPTIONS=${quote(`--import ${guard}`)}\nexec ${quote(process.execPath)} ${quote(host.cli)} --no-context-files --no-skills --no-prompt-templates --no-themes --no-approve "$@"\n`);
-  await chmod(tmuxPath, 0o700); await chmod(piPath, 0o700);
   const extensions = JSON.parse(await readFile("package.json", "utf8")).pi.extensions.map(path => resolve(path));
   const settings = { defaultProjectTrust: "never", transport: "sse", cacheWarming: "off", retry: { enabled: false, provider: { maxRetries: 0 } }, compaction: { enabled: false },
     defaultProvider: "openai-codex", defaultModel: "gpt-5.6-sol", defaultThinkingLevel: "low", extensions };
@@ -65,7 +56,6 @@ try {
     HOME: join(root, "home"), TMPDIR: join(root, "tmp"), XDG_CACHE_HOME: join(root, "cache"), XDG_CONFIG_HOME: join(root, "config"),
     XDG_DATA_HOME: join(root, "data"), XDG_STATE_HOME: join(root, "state"), PI_CODING_AGENT_DIR: agentDir,
     PI14_LIVE_STATE: statePath, PI14_LIVE_ROOT: root, PI14_REPO: repo, NODE_OPTIONS: `--import ${guard}`,
-    PI_SUBAGENT_PI_PATH: piPath, PI_SUBAGENT_TMUX_PATH: tmuxPath, PI_PERMISSIONS_MODE: "full-access",
     PI_MCP_CONFIG: join(root, "mcp.json"), PI_TELEMETRY: "0", PI_CODEX_WEB_SEARCH_MODEL: "gpt-5.6-sol", PYTHONDONTWRITEBYTECODE: "1" };
   console.log(JSON.stringify({ root, deadline: new Date(deadline).toISOString(), maxRequests: 40, maxCompactions: 8 }));
   for (const stage of stages) {
@@ -73,7 +63,7 @@ try {
     const stageStarted = Date.now();
     const budgetBefore = JSON.parse(await readFile(statePath, "utf8"));
     const worker = [process.execPath, resolve("scripts/pi14-live-worker.mjs"), stage];
-    const command = ["goal", "noncodex", "noncodex-goal", "preflight-tui"].includes(stage)
+    const command = ["noncodex", "preflight-tui"].includes(stage)
       ? ["conda", "run", "--no-capture-output", "-n", "codex-py312", "python", resolve("scripts/pi14-live-pty.py"), ...worker] : worker;
     child = spawn(command[0], command.slice(1), { env, cwd: repo, detached: true, stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "", stderr = "";
@@ -109,12 +99,8 @@ try {
 } finally {
   interrupt();
   if (child?.pid) await stopProcessGroup(child);
-  const tmuxPath = join(root, "tmux");
-  await run(tmuxPath, ["kill-server"]).catch(() => {});
-  const remaining = await run(tmuxPath, ["list-sessions"]).then(() => true, () => false);
-  assert.equal(remaining, false, "Owned tmux server still running");
   await rm(authPath, { force: true });
-  // Includes any per-child authentication-environment files and refreshed tokens.
+  // Remove copied and refreshed credentials.
   await rm(agentDir, { recursive: true, force: true });
   summary.credentialsRemoved = true;
   summary.budget = await readFile(statePath, "utf8").then(JSON.parse).catch(() => undefined);

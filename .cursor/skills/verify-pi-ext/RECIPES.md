@@ -7,8 +7,8 @@
 从仓库根目录执行：
 
 ```bash
-pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs journey permissions --recipe .cursor/skills/verify-pi-ext/recipes/permissions-resume.json
-pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui permissions --recipe .cursor/skills/verify-pi-ext/recipes/permissions-resume.json
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs journey codex-ui --recipe .cursor/skills/verify-pi-ext/recipes/pi152-codemode.json
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui codex-ui --recipe .cursor/skills/verify-pi-ext/recipes/pi152-codemode.json
 ```
 
 `journey` 自动执行动作并退出；`tui` 执行动作后交给操作员，最终输入 `/quit`。两者成功都要求人工按 feature 条件审查，并写 verdict.md。进程退出码只表示动作及显式断言完成。
