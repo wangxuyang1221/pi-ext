@@ -126,6 +126,7 @@ jobs:
         run: |
           mkdir -p .tmp/test-results
           set -o pipefail
+          conda run -n codex-py312 python -m unittest discover -s .cursor/skills/verify-pi-openai-fast-mode/scripts -p 'test_*.py'
           pnpm run host:${{ matrix.suite }}:check 2>&1 | tee .tmp/test-results/host.log
       - name: Upload host evidence
         if: always()
