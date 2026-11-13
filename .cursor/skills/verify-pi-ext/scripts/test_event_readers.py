@@ -9,6 +9,7 @@ REPO = Path(__file__).resolve().parents[4]
 READERS = [
     ("extensions/skill-mentions/__tests__/resume-summary-driver.py", "events"),
     ("extensions/codex-search/__tests__/production-tui.py", "records"),
+    (".cursor/skills/verify-pi-codex-compact/scripts/compact-pty.py", "events"),
 ]
 
 
@@ -31,7 +32,7 @@ class EventReaders(unittest.TestCase):
                 second = {"type": "settled", "data": "中文"}
                 path = root / "events.jsonl"
                 path.write_bytes(json.dumps(first).encode() + b"\n")
-                expected = [first["data"]] if name == "events" else [first]
+                expected = [first["data"]] if relative.startswith("extensions/skill-mentions/") else [first]
                 encoded = json.dumps(second, ensure_ascii=False).encode() + b"\n"
                 for byte in encoded[:-1]:
                     with path.open("ab") as output:
@@ -39,7 +40,7 @@ class EventReaders(unittest.TestCase):
                     self.assertEqual(read("settled"), expected)
                 with path.open("ab") as output:
                     output.write(b"\n")
-                expected.append(second["data"] if name == "events" else second)
+                expected.append(second["data"] if relative.startswith("extensions/skill-mentions/") else second)
                 self.assertEqual(read("settled"), expected)
                 self.assertEqual(read("other"), [])
 
@@ -49,6 +50,23 @@ class EventReaders(unittest.TestCase):
                 root = Path(directory)
                 (root / "events.jsonl").write_bytes(b'{"type":\n')
                 with self.assertRaises(json.JSONDecodeError):
+                    self.reader(relative, name, root)("settled")
+
+    def test_only_lf_delimits_records(self):
+        for relative, name in READERS:
+            with self.subTest(reader=relative), tempfile.TemporaryDirectory(dir=REPO / ".tmp") as directory:
+                root = Path(directory)
+                event = {"type": "settled", "data": "first\u0085middle\u2028last\u2029"}
+                (root / "events.jsonl").write_bytes((json.dumps(event, ensure_ascii=False) + "\n").encode())
+                expected = event["data"] if relative.startswith("extensions/skill-mentions/") else event
+                self.assertEqual(self.reader(relative, name, root)("settled"), [expected])
+
+    def test_completed_invalid_utf8_still_fails(self):
+        for relative, name in READERS:
+            with self.subTest(reader=relative), tempfile.TemporaryDirectory(dir=REPO / ".tmp") as directory:
+                root = Path(directory)
+                (root / "events.jsonl").write_bytes(b'{"type":"settled","data":"\xff"}\n')
+                with self.assertRaises(UnicodeDecodeError):
                     self.reader(relative, name, root)("settled")
 
 

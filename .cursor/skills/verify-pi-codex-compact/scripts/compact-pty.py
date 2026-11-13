@@ -51,7 +51,9 @@ owned_lock = False
 
 def events(kind):
     path = root / "events.jsonl"
-    return [event for line in path.read_text().splitlines() if (event := json.loads(line))["type"] == kind] if path.exists() else []
+    # A writer may be midway through JSON or UTF-8. LF commits a record;
+    # completed malformed records must still fail rather than hide corruption.
+    return [event for line in path.read_bytes().split(b"\n")[:-1] if (event := json.loads(line.decode("utf-8")))["type"] == kind] if path.exists() else []
 
 
 def view():
