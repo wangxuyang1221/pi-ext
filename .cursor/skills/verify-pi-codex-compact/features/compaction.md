@@ -38,6 +38,6 @@ pnpm test extensions/codex-compact/__tests__/repair-runtime.test.ts extensions/c
 
 ## Gotchas
 
-共享 compact helper 是 SDK 证据，替换模型目录、配置和 HTTP/SSE；专用 PTY 保留生产配置读取、目录解析和 Codex adapter，只替换服务响应。两者均不证明线上认证、服务端接受性或摘要质量。共享 faux TUI 不能验收压缩；在线验收缺少认证和服务使用授权时记为 blocked。focus text 当前不消费。
+共享 compact helper 是 SDK 证据，替换模型目录、配置和 HTTP/SSE；专用 PTY 保留生产配置读取与 Codex adapter，但注册固定 provider、模型列表、窗口和合成凭据，并替换服务响应。它不验证默认模型发现。两者均不证明线上认证、服务端接受性或摘要质量。共享 faux TUI 不能验收压缩；在线验收缺少认证和服务使用授权时记为 blocked。focus text 当前不消费。
 
 验收依据为 [repair-runtime.test.ts](../../../../extensions/codex-compact/__tests__/repair-runtime.test.ts)、[scheduler.test.ts](../../../../extensions/codex-compact/__tests__/scheduler.test.ts)、[presentation.test.ts](../../../../extensions/codex-compact/__tests__/presentation.test.ts)、[remote-boundaries.test.ts](../../../../extensions/codex-compact/__tests__/remote-boundaries.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

@@ -44,6 +44,7 @@ const cases = {
   "search-history": (root, evidence) => python("extensions/codex-search/__tests__/production-tui.py", root, evidence, "history"),
   "search-references": () => ["pnpm", "test", "extensions/codex-search/__tests__/session-scope.test.ts", "extensions/codex-search/__tests__/ref-store.test.ts"],
   "skills-resume": (_root, evidence) => [process.execPath, "extensions/skill-mentions/__tests__/journeys.mjs", "resume", join(evidence, "skill-journeys")],
+  "skills-resume-stock": (_root, evidence) => [process.execPath, "extensions/skill-mentions/__tests__/journeys.mjs", "resume-stock", join(evidence, "skill-journeys")],
   "skills-combination": (_root, evidence) => [process.execPath, "extensions/skill-mentions/__tests__/journeys.mjs", "combination", join(evidence, "skill-journeys")],
   "skills-combination-prebuilt": (_root, evidence) => [process.execPath, "extensions/skill-mentions/__tests__/journeys.mjs", "combination-prebuilt", join(evidence, "skill-journeys")],
   "skills-permission": (_root, evidence) => [process.execPath, "extensions/skill-mentions/__tests__/journeys.mjs", "permission", join(evidence, "skill-journeys")],

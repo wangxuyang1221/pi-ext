@@ -349,7 +349,7 @@
           },
           {
             "id": "ui-theme",
-            "description": "保存主题跨会话替换保持"
+            "description": "已保存的 codex-pi 主题跨会话替换保持"
           },
           {
             "id": "ui-resize",
@@ -362,6 +362,14 @@
           {
             "id": "ui-reply-markdown",
             "description": "回复外层列表不改变模型原文"
+          },
+          {
+            "id": "ui-working",
+            "description": "生产 Working 动画和计时按任务生命周期显示"
+          },
+          {
+            "id": "ui-receive-rate",
+            "description": "footer 显示最近约两秒的估算接收速率"
           }
         ]
       },
@@ -395,7 +403,7 @@
         "behaviors": [
           {
             "id": "ui-tool-rendering",
-            "description": "工具完整显示，命令清单和补全排除已删除命令"
+            "description": "工具使用各自预览与展开规则，命令清单提供 inspect"
           },
           {
             "id": "ui-read-group",
@@ -780,6 +788,19 @@
             "id": "search-fullscreen",
             "description": "fullscreen 恢复路径"
           }
+        ]
+      },
+      {
+        "file": "live.md",
+        "behaviors": [],
+        "references": [
+          "search-responses",
+          "search-standalone",
+          "search-open",
+          "search-click",
+          "search-find",
+          "search-screenshot",
+          "search-lookups"
         ]
       }
     ]

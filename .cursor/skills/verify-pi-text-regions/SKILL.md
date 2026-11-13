@@ -5,7 +5,7 @@ description: "Verify stock and patched Pi 1.5.2 text-region refresh through real
 
 # Verify Pi text regions
 
-先读 [feature map](features/README.md)，选择本次涉及的全部入口。这个 skill 验证 [文本区域能力](../../../docs/pi-text-region-refresh.md) 和 [生产 Working/速率](../../../docs/codex-working-rate.md)，不新增产品 extension。旧 codex-ui 全功能验证由 [verify-pi-codex-ui](../verify-pi-codex-ui/SKILL.md) 负责。
+先读 [feature map](features/README.md)，选择本次涉及的全部入口。这个 skill 验证 [文本区域能力](../../../docs/pi-text-region-refresh.md) 和 [生产 Working/速率](../../../docs/codex-working-rate.md)，不新增产品 extension。codex-ui 的其他功能验证由 [verify-pi-codex-ui](../verify-pi-codex-ui/SKILL.md) 负责。
 
 ## Host profiles
 
@@ -59,11 +59,11 @@ conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/working-regul
 
 ## Evidence
 
-每个入口记录命令、开始/结束时间、外层命令退出码、feature ID、doctor 和 revision。PTY 的 `instance.json` 保存实际命令、PID、runtime 和空目录起点；`actions.json` 保存输入及 ANSI 字节位置，`terminal.ansi` 保存原始输出，`screens.json` 保存单元格状态/光标/颜色及完整帧标记，`events.jsonl` 保存公开会话/工具事件，`summary.json` 保存断言、CLI 退出码和清理状态。`artifacts/` 保留实际 workspace、设置和 session 文件，失败也保留已有结果。
+每个入口记录命令、开始/结束时间、外层命令退出码、feature ID、doctor 和 revision。PTY 的 `instance.json` 保存实际命令、PID、runtime 和空目录起点；`actions.json` 保存输入及 ANSI 字节位置，`terminal.ansi` 保存原始输出，`screens.json` 保存文本、光标、主题 accent 和完整帧标记，`events.jsonl` 保存公开会话/工具事件，`summary.json` 保存断言、CLI 退出码和清理状态。`artifacts/` 保留实际 workspace、设置和 session 文件，失败也保留已有结果。
 
 外部 provider 和摘要通过既有生产接口替换；工具、输入、shell、取消、retry、compaction 和退出均走宿主。检查真实生成文件和取消后缺失的文件，不能只读终态截图。faux 速率证明事件到生产采样/显示的链路，不证明远程网络或模型准确 tokenizer。示例 `101 t/s` 类值是演示值。CPU 数据须新跑，协议和预算见 [performance](features/performance.md)。
 
-物理终端像素、真实拖选、系统剪贴板和图片像素按 [interaction boundaries](features/interactions.md) 独立记录 `passed / failed / unverified`。pyte 和复制 callback 都不等于系统剪贴板。未满足前置条件必须写明缺项、尝试命令和可续验步骤；本关自证不代替 #66。
+物理终端像素、真实拖选、系统剪贴板和图片像素按 [interaction boundaries](features/interactions.md) 独立记录 `passed / failed / unverified`。pyte 和复制 callback 都不等于系统剪贴板。未满足前置条件必须写明缺项、尝试命令和可续验步骤。
 
 ## Cleanup
 
@@ -96,4 +96,4 @@ JS
 - [local-refresh-install.mjs](../../../scripts/local-refresh-install.mjs)：`pnpm_config_verify_deps_before_run=false node scripts/local-refresh-install.mjs --pack`，生成本次安装根和 machine-readable 路径，见 [installation](features/installation.md)。
 - [local-refresh-cpu.mjs](../../../scripts/local-refresh-cpu.mjs)：`node --expose-gc scripts/local-refresh-cpu.mjs --baseline=<original-pi-tui>`，完整参数与批次见 [performance](features/performance.md)。
 
-没有常驻新服务或第二套 PTY。维护入口为 `/maintain-verification-skill`；本场 #65 已安排维护旧 codex-ui skill，#66 再独立验证新旧入口。
+维护入口为 `/maintain-verification-skill`。修改共享 Working 路径时，同时核对 [codex-ui 行为索引](../verify-pi-codex-ui/features/layout.md) 的路由和覆盖边界。

@@ -38,6 +38,6 @@ pnpm test extensions/codex-ui/__tests__/reasoning.test.ts extensions/codex-ui/__
 
 provider 返回思考为固定 fixture。终端标题定时测试是补充，thinking smoke 不证明真实 provider 产生 reasoning。
 
-正式 CLI 的 OSC 断言覆盖流式、settled 和取消；它的 `/compact` 断言检查 Thinking 保留及开关，不证明压缩期间标题动画。Working 旅程的 retry/自动压缩动画断言也不等于标题已测。需要宣称这些标题分支 live 通过时，须在对应事件区间另读原始 OSC 帧，记录动画及结束后静止。
+正式 CLI 冷重开前先展开思考，因此没有证明保持隐藏状态退出后仍隐藏；该分支需另行留证。OSC 断言覆盖流式、settled 和取消；它的 `/compact` 断言检查 Thinking 保留及开关，不证明压缩期间标题动画。Working 旅程的 retry/自动压缩动画断言也不等于标题已测。需要宣称这些标题分支 live 通过时，须在对应事件区间另读原始 OSC 帧，记录动画及结束后静止。
 
-验收依据为 [reasoning.test.ts](../../../../extensions/codex-ui/__tests__/reasoning.test.ts)、[reasoning-inline.test.ts](../../../../extensions/codex-ui/__tests__/reasoning-inline.test.ts)、[terminal-title.test.ts](../../../../extensions/codex-ui/__tests__/terminal-title.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。
+验收依据为 [reasoning.test.ts](../../../../extensions/codex-ui/__tests__/reasoning.test.ts)、[reasoning-inline.test.ts](../../../../extensions/codex-ui/__tests__/reasoning-inline.test.ts)、[terminal-title.test.ts](../../../../extensions/codex-ui/__tests__/terminal-title.test.ts) 和 [仓库说明](../../../../README.md)。失败后先按 [driver 清理说明](../scripts/README.md#evidence-and-cleanup) 检查对应证据和进程，再启动下一次；证据不随 scratch 删除。

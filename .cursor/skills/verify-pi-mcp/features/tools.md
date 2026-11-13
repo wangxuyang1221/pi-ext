@@ -22,6 +22,6 @@ mcp__<server>__<tool>；本地 stdio/Streamable HTTP/SSE。
 
 ## Gotchas
 
-transport helper 是协议补证，不是三种传输都经 TUI。HTTP/SSE 使用临时监听端口，退出必须确认 fixtures 的 server.close 与进程清理。
+共享 `mcp-transports` 是协议补证；`combination` 才将三种传输都经真实 TUI 调用。HTTP/SSE 使用临时监听端口，退出必须确认 fixtures 的 server.close 与进程清理。
 
 验收依据为 [transport-fixtures.test.ts](../../../../extensions/mcp/__tests__/transport-fixtures.test.ts)、[integration.test.ts](../../../../extensions/mcp/__tests__/integration.test.ts)、[schema.test.ts](../../../../extensions/mcp/__tests__/schema.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

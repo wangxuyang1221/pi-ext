@@ -5,7 +5,7 @@ description: "Verify pi-ext codex-search through Source-only Pi codex_search and
 
 # Verify Pi codex-search
 
-先读 [行为索引](features/README.md)，按本次变更选择所有受影响入口。codex-search 不在 package.json 的 pi.extensions 中。使用 -e extensions/codex-search/src/index.ts；不得把八扩展发布包检查当作搜索已打包。
+先读 [行为索引](features/README.md)，按本次变更选择所有受影响入口。codex-search 不在 package.json 的 pi.extensions 中，使用 -e extensions/codex-search/src/index.ts 加载源码。发布包检查不覆盖搜索扩展。
 
 ## Launch
 
@@ -51,3 +51,5 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search-produc
 ## Helpers
 
 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search` 是本 skill 的最小验收。脚本源码与其他 case 见 [共享 helper](../verify-pi-ext/scripts/verify.mjs)。后续使用 `/maintain-verification-skill` 同步行为索引与实现。
+
+已取得账号及用量授权时，可使用本 skill 的 `scripts/live.mjs <新证据目录> --authorized-live`，按 [联网配方](features/live.md#bounded-sdk-driver) 设置共享预算并逐条驱动。它调用真实宿主注册的生产工具，不验证终端显示。预算模块的离线回归入口为 `pnpm exec node --test .cursor/skills/verify-pi-codex-search/scripts/live-network.test.mjs`。

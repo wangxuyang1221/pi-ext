@@ -306,14 +306,14 @@ try:
         assert len(first) == 1
         send("\x1b")
         wait(lambda: len(events("compact-cancelled")) == 1 and "Compacting context..." not in view(), "automatic Escape clears animation")
-        assert checkpoints(session) == first, "Automatic cancel committed a checkpoint"
+        assert [item for item in entries(session) if item.get("type") == "compaction" or item.get("customType") == "openai-codex-native-compaction"] == first, "Automatic cancel committed a checkpoint"
         wait(lambda: len(events("settled")) == 3, "cancelled request settled")
         assert len(events("provider-request")) == 2, "Cancelled input reached provider"
         scenario(holdCompact=False)
         send("Retry automatic compaction\r")
         wait(lambda: len(events("settled")) == 4 and "Codex context compacted (automatic)" in view(), "automatic retry succeeds")
         assert any(item.get("type") == "custom" and item.get("customType") == "openai-codex-native-compaction" for item in entries(session)), "Automatic checkpoint missing"
-        assert "PENDING_AUTOMATIC_INPUT" in json.dumps(events("provider-request")[-1]["data"]), "Cancelled pending input lost on retry"
+        assert json.dumps(events("provider-request")[-1]["data"]).count("PENDING_AUTOMATIC_INPUT") == 1, "Cancelled pending input must occur exactly once on retry"
         configure(autoCompactTokenLimit=700000)
         send("History before service failure\r")
         wait(lambda: len(events("settled")) == 5, "history before failure")

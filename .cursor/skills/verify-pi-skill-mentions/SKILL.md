@@ -20,16 +20,16 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills
 
 这是最小 native 验收，通过本地 pi install 加载当前 dist。完整索引还需顺序执行：
 
-若依赖和 dist 已备好，且本次禁止安装或构建，先读 [loading](features/loading.md)、[history](features/history.md) 和 [integration](features/integration.md)，改用 `run skills-combination-prebuilt` 与 `run skills-resume`。前者直接加载 dist，后者实际从菜单选中旧会话并续问。下面的 `skills-combination`、`skills-unreadable` 和安装验收仍会执行本地安装，不能用“未安装依赖”代替“未执行 pi install”。
+若依赖和 dist 已备好，且本次禁止安装或构建，先读 [loading](features/loading.md)、[history](features/history.md) 和 [integration](features/integration.md)，改用 `run skills-combination-prebuilt` 与 `run skills-resume-stock`。前者直接加载 dist，后者实际从菜单选中旧会话并续问。下面的 `skills-combination`、`skills-unreadable` 和安装验收仍会执行本地安装，不能用“未安装依赖”代替“未执行 pi install”。
 
 ```bash
-pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills-resume
+pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills-resume-stock
 pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills-combination
 pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills-unreadable
 pnpm run skill-mentions:acceptance
 ```
 
-原版 Pi 1.5.2 使用 [独立验证副本](../../../docs/pi152-compatibility.md)，恢复旅程选择 `journeys.mjs resume-stock`。它验收核心恢复和原版摘要降级，不执行要求摘要补丁的增强通过断言。
+根默认的原版 Pi 1.5.2 使用 `skills-resume-stock`，验收核心恢复及原版摘要降级。补丁增强另在 [独立补丁运行树](../verify-pi-text-regions/features/pi152.md) 中运行 `verify.mjs run skills-resume`，检查列表投影与搜索。两个入口均使用共享锁和证据归档。
 
 变更请求快照读取或保存时，再执行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills-mutation`。它在仓库内私有副本编译 baseline、按路径缓存变异和恢复版本，用同一组合旅程验证第二次请求必须读取 V2；生产源码及 dist 保持原样。三个阶段、期望失败位置和源码哈希都必须留证。
 

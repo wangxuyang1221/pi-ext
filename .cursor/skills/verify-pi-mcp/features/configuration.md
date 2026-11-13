@@ -18,6 +18,8 @@
 
 完成 [Launch 与 Doctor](../SKILL.md)，运行 [固定旅程的命令](../journeys.md#commands)，选择 `configuration`。具体动作和通过条件见 [对应旅程](../journeys.md#configuration)。每个 ID 分别记录实际覆盖结果、证据层级和文件路径；需要完整验收时运行固定旅程的全部六条命令及列出的定向协议测试。
 
+`configuration` 对 `mcp-trust` 只覆盖未信任项目拒绝 init 和不执行项目命令；未信任项目仍连接显式/全局配置的分支需要另行留证，不能由后续受信任连接场景推断。
+
 ## Gotchas
 
 /mcp-init 需要受信任项目，已有文件会确认覆盖；模板包含 pnpm dlx，生成文件本身不连接。后续 reload 或新会话启动会读取配置并连接，不能把模板生成当连接成功。helper 的 live 配置是本地 echo；配置不展开环境占位。

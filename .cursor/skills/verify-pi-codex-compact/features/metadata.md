@@ -35,6 +35,6 @@ pnpm test extensions/codex-compact/__tests__/metadata-command.test.ts extensions
 
 ## Gotchas
 
-metadata 与 metadata-project 是未信任和显式信任两个冷启动。后者只信任本次生成的 workspace，不写用户信任设置；没有测试交互 /trust 后重启的流程。若验收 /trust，须用可重开的专用驱动在同一隔离目录完成信任与重启，普通 tui helper 退出后会删除 scratch，不能接着复用。目录 GET 的缓存、未知 hash 与账号隔离由定向测试补充，不能用命令未报错证明联网目录可用。
+metadata 是无项目配置的普通冷启动，metadata-project 则种入项目配置并显式信任本次 workspace，不写用户信任设置。两者没有验证带配置的未信任项目，也没有测试交互 /trust 后重启。若验收这些分支，须在同一隔离目录种入项目配置，分别使用 --no-approve 与信任后重启，并核对有效来源；普通 tui helper 退出后会删除 scratch，不能接着复用。目录 GET 的缓存、未知 hash 与账号隔离由定向测试补充，不能用命令未报错证明联网目录可用。
 
 验收依据为 [metadata-command.test.ts](../../../../extensions/codex-compact/__tests__/metadata-command.test.ts)、[config.test.ts](../../../../extensions/codex-compact/__tests__/config.test.ts)、[model-metadata.test.ts](../../../../extensions/codex-compact/__tests__/model-metadata.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

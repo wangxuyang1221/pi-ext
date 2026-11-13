@@ -7,7 +7,7 @@
 - `ui-header`：启动使用 Pi wordmark。
 - `ui-composer`：输入框保持实色背景和当前主题的文字色，草稿在终端默认前景不同的情况下仍可读。
 - `ui-status`：footer 展示模型、目录、context、fast、中性状态行；运行时右侧速率占位，结束后归还宽度。
-- `ui-theme`：保存主题跨会话替换保持。
+- `ui-theme`：已保存的 codex-pi 主题跨会话替换保持。
 - `ui-resize`：窄屏 resize 不破坏内容。
 - `ui-user-markdown`：用户 Markdown 保留原语义。
 - `ui-reply-markdown`：回复外层列表不改变模型原文。
@@ -18,7 +18,7 @@
 
 启动 TUI；/settings 选择 codex-pi；/new；/resume；/fork；/reload。
 
-提交 prompt 后出现 Working 和速率；权限/input 等待、工具、retry、自动压缩及取消均通过实际宿主进入。
+提交 prompt 后出现 Working 和速率；input 对话框等待、工具、retry、自动压缩及取消均通过实际宿主进入。
 
 ## Driving it with Pi PTY and host fixtures
 
@@ -44,6 +44,6 @@ pnpm test extensions/codex-ui/__tests__/layout.test.ts extensions/codex-ui/__tes
 
 内存 ThemeObject 兜底不持久化。codemode fixture 的整体画面不等于每个用户 Markdown 分支和持久主题均验证。
 
-Working/速率缺少宿主补丁时仍须正常显示，只有局部 CPU 优化不可用；原版及实际发布入口走 [installation](../../verify-pi-text-regions/features/installation.md)。性能范围为动画/footer 的额外刷新，正文持续增量渲染不在本轮优化范围；完整测量按新 skill 的 performance feature。
+Working/速率缺少宿主补丁时仍须正常显示，只有局部 CPU 优化不可用；原版及实际发布入口走 [installation](../../verify-pi-text-regions/features/installation.md)。性能范围为动画/footer 的额外刷新，正文持续增量渲染不在该优化范围；完整测量按文本区域 skill 的 performance feature。
 
-验收依据为 [layout.test.ts](../../../../extensions/codex-ui/__tests__/layout.test.ts)、[theme.test.ts](../../../../extensions/codex-ui/__tests__/theme.test.ts)、[user-markdown.test.ts](../../../../extensions/codex-ui/__tests__/user-markdown.test.ts)、[reply-markdown.test.ts](../../../../extensions/codex-ui/__tests__/reply-markdown.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。
+验收依据为 [layout.test.ts](../../../../extensions/codex-ui/__tests__/layout.test.ts)、[theme.test.ts](../../../../extensions/codex-ui/__tests__/theme.test.ts)、[user-markdown.test.ts](../../../../extensions/codex-ui/__tests__/user-markdown.test.ts)、[reply-markdown.test.ts](../../../../extensions/codex-ui/__tests__/reply-markdown.test.ts) 和 [仓库说明](../../../../README.md)。失败后先按 [driver 清理说明](../scripts/README.md#evidence-and-cleanup) 检查对应证据和进程，再启动下一次；证据不随 scratch 删除。
