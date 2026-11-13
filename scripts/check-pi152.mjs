@@ -23,6 +23,7 @@ const commands = [
   run("node", ".cursor/skills/verify-pi-openai-fast-mode/scripts/verify.mjs", "full"),
   run("pnpm", "run", "web-search:check"),
   verify("search-production"), verify("search-production-fullscreen"),
+  python("-m", "unittest", "discover", "-s", "extensions/mcp/__tests__", "-p", "verification_records_test.py"),
   verify("mcp-combination"), verify("mcp-history"), verify("mcp-recovery"),
   run("node", "extensions/skill-mentions/__tests__/journeys.mjs", profile === "patched" ? "resume" : "resume-stock"),
   run("node", "extensions/skill-mentions/__tests__/journeys.mjs", "combination-prebuilt"),

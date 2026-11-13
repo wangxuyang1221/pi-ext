@@ -2,6 +2,7 @@
 import codecs, errno, fcntl, json, os, pty, select, shutil, signal, socket, struct, subprocess, sys, tempfile, termios, time, traceback
 from pathlib import Path
 import pyte
+from verification_records import read_records
 REPO = Path(__file__).resolve().parents[3]
 BASE = REPO / 'extensions/mcp/__tests__/fixtures/verification'
 NODE = shutil.which('node')
@@ -23,8 +24,7 @@ services = None
 service_ports = []
 
 def records(file='events.jsonl'):
-    p = root / file
-    return [json.loads(line) for line in p.read_text().splitlines()] if p.exists() else []
+    return read_records(root / file)
 
 def check(value, label, **data):
     checks.append({'label': label, 'passed': bool(value), **data})
