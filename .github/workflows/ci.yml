@@ -127,7 +127,7 @@ jobs:
           mkdir -p .tmp/test-results
           set -o pipefail
           conda run -n codex-py312 python -m unittest discover -s .cursor/skills/verify-pi-openai-fast-mode/scripts -p 'test_*.py'
-          node --test .cursor/skills/verify-pi-ext/scripts/runtime-support.test.mjs .cursor/skills/verify-pi-codex-search/scripts/live-network.test.mjs
+          node --test .cursor/skills/verify-pi-ext/scripts/runtime-support.test.mjs .cursor/skills/verify-pi-codex-search/scripts/live-network.test.mjs extensions/mcp/__tests__/fixtures/verification/json-snapshot.test.mjs
           pnpm run build
           conda run -n codex-py312 python -m unittest discover -s .cursor/skills/verify-pi-ext/scripts -p 'test_*.py'
           conda run -n codex-py312 python -m unittest discover -s .cursor/skills/verify-pi-codex-ui/scripts -p 'test_*.py'

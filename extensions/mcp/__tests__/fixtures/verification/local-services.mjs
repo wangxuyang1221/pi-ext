@@ -1,9 +1,10 @@
 import {createServer} from 'node:http';
-import {readFileSync,appendFileSync,writeFileSync} from 'node:fs';
+import {readFileSync,appendFileSync} from 'node:fs';
 import {Server} from '@modelcontextprotocol/sdk/server/index.js';
 import {SSEServerTransport} from '@modelcontextprotocol/sdk/server/sse.js';
 import {CallToolRequestSchema,ListToolsRequestSchema} from '@modelcontextprotocol/sdk/types.js';
 import {LocalHttpMcpFixture} from '../http-mcp-fixture.ts';
+import {writeJsonSnapshot} from './json-snapshot.mjs';
 const root=process.argv[2];
 const log=(type,data={})=>appendFileSync(root+'/server.jsonl',JSON.stringify({at:Date.now(),type,...data})+'\n');
 const http=await LocalHttpMcpFixture.start({toolCallFailures:[{kind:'interrupt'}]});
@@ -42,8 +43,10 @@ const sse=createServer(async(req,res)=>{
 sse.on('connection',s=>{sockets.add(s);s.once('close',()=>sockets.delete(s));});
 await new Promise(r=>sse.listen(0,'127.0.0.1',r));
 const state={pid:process.pid,offline:offline.url,http:http.url,sse:`http://127.0.0.1:${sse.address().port}/sse`};
-writeFileSync(root+'/services.json',JSON.stringify(state));log('ready',state);
-const timer=setInterval(()=>writeFileSync(root+'/http-requests.json',JSON.stringify({requests:http.requests,offline:offline.requests,aborted:http.abortedMethods})),50);
+const publishRequests=()=>writeJsonSnapshot(root+'/http-requests.json',{requests:http.requests,offline:offline.requests,aborted:http.abortedMethods});
+publishRequests();
+writeJsonSnapshot(root+'/services.json',state);log('ready',state);
+const timer=setInterval(publishRequests,50);
 let stopping=false;
-async function stop(){if(stopping)return;stopping=true;clearInterval(timer);await http.close();await offline.close();await Promise.allSettled([...sessions.values()].map(v=>v.server.close()));for(const s of sockets)s.destroy();await new Promise(r=>sse.close(r));await Promise.allSettled(handlers);writeFileSync(root+'/http-requests.json',JSON.stringify({requests:http.requests,offline:offline.requests,aborted:http.abortedMethods}));log('closed',{offlineListening:offline.server.listening,httpListening:http.server.listening,sseListening:sse.listening,sockets:sockets.size});process.exit(0);}
+async function stop(){if(stopping)return;stopping=true;clearInterval(timer);await http.close();await offline.close();await Promise.allSettled([...sessions.values()].map(v=>v.server.close()));for(const s of sockets)s.destroy();await new Promise(r=>sse.close(r));await Promise.allSettled(handlers);publishRequests();log('closed',{offlineListening:offline.server.listening,httpListening:http.server.listening,sseListening:sse.listening,sockets:sockets.size});process.exit(0);}
 process.on('SIGTERM',stop);process.on('SIGINT',stop);
