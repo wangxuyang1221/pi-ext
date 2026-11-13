@@ -156,6 +156,8 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui openai-fast-m
 
 commands.py 由入口传入 case、scratch 和 evidence，负责 PTY 按键与证据；command-provider.ts 由真实 CLI 加载。通过 verify.mjs 运行这些内部驱动，避免缺少隔离环境。
 
+搜索与技能恢复驱动的事件日志读取回归使用 `conda run --no-capture-output -n codex-py312 python -m unittest discover -s .cursor/skills/verify-pi-ext/scripts -p 'test_event_readers.py' -v`。它逐字节追加含中文的事件，要求换行前不消费记录，完整非法 JSON 仍报错；实际旅程另跑 `search-production-fullscreen` 和 `skills-resume-stock`。
+
 ## Maintenance
 
 新增或删除核心行为时，同时更新各扩展 features/README.md、对应 feature 文件和 features.json。使用 `/maintain-verification-skill` 核验文档是否仍与实现一致。变更交付前运行 `pnpm run check`。
