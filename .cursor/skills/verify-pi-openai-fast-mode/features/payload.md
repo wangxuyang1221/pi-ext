@@ -31,7 +31,7 @@ Preconditions:
 | fast-codex | 两个任意 Codex ID 均注入 priority |
 | fast-unmatched | 相似 OpenAI ID、第三方同名 ID 无字段；切回匹配模型恢复 |
 | fast-unsupported | 明确 unsupported 请求失败并提示用户重试；无自动重放；用户重试仅一个标准请求 |
-| fast-error-scope | 被拒模型切走切回、off/on 后仍标准；其他模型和 sibling 仍 priority；普通 400 不禁用；新 session 恢复 priority；配置仍 true |
+| fast-error-scope | 被拒模型切走切回、off/on 后仍标准；其他模型仍 priority；含普通 400 文案的 SSE 错误不禁用；新 session 恢复 priority；配置仍 true |
 
 ```bash
 pnpm test extensions/openai-fast-mode/__tests__/payload-status.test.ts extensions/openai-fast-mode/__tests__/extension.test.ts
@@ -41,6 +41,6 @@ pnpm test extensions/openai-fast-mode/__tests__/payload-status.test.ts extension
 
 ## Gotchas
 
-两个入口均使用真实 request builder，在 fetch 边界记录序列化 payload 并返回固定离线响应。它们证明本地发出的字段与错误处理，不证明远端采用 priority、billing 或性能。定向测试补充 429、网络、普通 400 与暂时不可用错误，认证错误文案未纳入该矩阵；远程错误实测另记层级。
+`full` 使用真实 request builder，在 fetch 边界记录序列化 payload 并返回固定离线响应。上述定向测试直接调用函数或扩展 handler；真实 SDK 补证另见 `host-compatibility.test.ts`。这些证据不证明远端采用 priority、billing 或性能。`full` 的普通 400 场景实际返回 HTTP 200 中的 SSE error，不能当作 HTTP 400 状态处理已验证。独立同时存活会话的拒绝隔离也未由串行冷启动证明。
 
 验收依据为 [payload-status.test.ts](../../../../extensions/openai-fast-mode/__tests__/payload-status.test.ts)、[extension.test.ts](../../../../extensions/openai-fast-mode/__tests__/extension.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

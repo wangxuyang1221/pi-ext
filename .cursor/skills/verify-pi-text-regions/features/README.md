@@ -24,7 +24,7 @@
 | Feature | Entrances | Evidence |
 | --- | --- | --- |
 | [Text region example](regions.md) | 示例命令、普通/全屏、原版回退 | 独立/同时变化、草稿、真实历史、替换与退出 |
-| [Working and lifecycle](working.md) | 提交 prompt、权限批准、Esc、设置页、new/reload | 生产 spinner/rate、文件副作用、retry/compaction/settled |
+| [Working and lifecycle](working.md) | 提交 prompt、输入对话框、Esc、设置页、new/reload | 生产 spinner/rate、文件副作用、retry/compaction/settled |
 | [Interaction boundaries](interactions.md) | overlay、输入、搜索、滚动、选择、图片、物理终端 | 自动资格/回退及独立物理边界 |
 | [Performance](performance.md) | 同一用户动画/内容更新的 CPU 对照 | 三轮全部样本、原生调度、预算与字节/哈希 |
-| [Installation and fallback](installation.md) | 冻结补丁宿主、原版、正式发布安装 | lock、probe、包内容比对、四入口实际 TUI |
+| [Installation and fallback](installation.md) | 冻结补丁宿主、原版、本地 tarball 消费安装 | lock、probe、包内容比对、四入口实际 TUI |

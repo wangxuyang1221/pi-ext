@@ -25,7 +25,7 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search-refere
 
 旅程接着 `/name Audit history A` → `/new` → find A URL 被拒绝且无 HTTP → `/resume` 搜索并选择 A → find 成功 → `/reload` → `/quit` → 新进程 `--session` → click id=8 成功。会话与引用文件保存在 evidence/sessions，模型实际收到的上下文保存在 events.jsonl，不调用 ref-store setter 制造结果。
 
-`search-references` 补充覆盖 B 独立 open、异步会话切换时归属、冷加载、旧无归属文件忽略、损坏与原子保存。它使用夹具 session identity，不能当作原生 `/fork` 或 `/clone` 的验收；这些入口本次仍为 unverified。
+`search-references` 补充覆盖 B 独立 open、异步会话切换时归属、冷加载、旧无归属文件忽略、身份不匹配和原子保存失败。非法 JSON 的读取恢复另由 `codex.test.ts` 补证。它使用夹具 session identity，不能当作原生 `/fork` 或 `/clone` 的验收；这些入口仍需独立验证。
 
 ## Remote boundary
 

@@ -11,6 +11,10 @@
 - [Skill mentions](../../verify-pi-skill-mentions/features/README.md)
 - [Codex search](../../verify-pi-codex-search/features/README.md)
 
+## Host patch verification
+
+- [Text regions](../../verify-pi-text-regions/features/README.md)：独立维护原版/补丁版的区域、Working、安装、性能及人工边界，不属于发布扩展列表。
+
 ## Proof rules
 
 每个子行为分别标记 passed、failed、blocked 或 unverified。真实宿主 smoke、离线定向测试和联网验证各自报告；任一入口缺少前置条件时记录原因，不用另一入口的结果代替。清理后证据仍须存在。

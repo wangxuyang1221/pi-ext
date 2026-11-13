@@ -39,4 +39,4 @@ pnpm test extensions/codex-ui/__tests__/execution-settings.test.ts extensions/co
 
 tool-status 是显示 smoke。print/RPC 和 SDK getExecutionOptions/toolFactories 都需单独证据；不得由 TUI 外观通过推断执行配置正确。
 
-验收依据为 [execution-settings.test.ts](../../../../extensions/codex-ui/__tests__/execution-settings.test.ts)、[tools.test.ts](../../../../extensions/codex-ui/__tests__/tools.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。
+验收依据为 [execution-settings.test.ts](../../../../extensions/codex-ui/__tests__/execution-settings.test.ts)、[tools.test.ts](../../../../extensions/codex-ui/__tests__/tools.test.ts) 和 [仓库说明](../../../../README.md)。失败后先按 [driver 清理说明](../scripts/README.md#evidence-and-cleanup) 检查对应证据和进程，再启动下一次；证据不随 scratch 删除。

@@ -10,7 +10,7 @@
 - `fast-toggle`：toggle 切换。
 - `fast-flag`：启动 --fast 启用并保存。
 - `fast-persist`：重开读取持久开关；旧 root 退出不覆盖另一 root 刚保存的开关。
-- `fast-scope`：全局和项目安装分别定位配置。
+- `fast-scope`：已有项目配置优先，否则按全局或项目安装位置定位配置。
 
 ## How to get to it (user POV)
 
@@ -45,6 +45,6 @@ pnpm test extensions/openai-fast-mode/__tests__/commands.test.ts extensions/open
 
 ## Gotchas
 
-项目分支验证资源位置决定配置路径，不扩张为 registry 安装流程。画面与配置之外，逐项检查 request builder 的字段；footer 不能证明服务质量。
+项目分支验证空配置时由资源位置决定配置路径，不扩张为 registry 安装流程。已有项目配置优先的分支由 config.test.ts 补验，当前 PTY 未覆盖。画面与配置之外，逐项检查 request builder 的字段；footer 不能证明服务质量。
 
 验收依据为 [commands.test.ts](../../../../extensions/openai-fast-mode/__tests__/commands.test.ts)、[config.test.ts](../../../../extensions/openai-fast-mode/__tests__/config.test.ts)、[host-compatibility.test.ts](../../../../extensions/openai-fast-mode/__tests__/host-compatibility.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。

@@ -14,7 +14,7 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 
 两条驱动在每次新 CLI 进程前调用 [health.py](health.py)，保存 `doctor-*.json/.stderr`，对应进程条目的 `doctor` 字段指向它。它复用共享只读 doctor，非零退出、无效输出或验证锁占用时拒绝继续。失败后重新 doctor 并检查该次证据/cleanup，UI 卡住则重启已知状态。所有 pnpm 命令使用 `pnpm_config_verify_deps_before_run=false`，不要并发构建与 PTY。
 
-单独执行 preflight 的命令见 [Helpers](../SKILL.md#helpers)。驱动回归入口为 `conda run --no-capture-output -n codex-py312 python -m unittest discover -s .cursor/skills/verify-pi-codex-ui/scripts -p 'test_*.py' -v`，覆盖 preflight 与 composer 颜色断言。后者只提取真实断言函数并输入 pyte 单元格，证明会拒绝默认、不可见、混合或错误的草稿前景；真实 CLI 旅程仍须单独执行。
+单独执行 preflight 的命令见 [Helpers](../SKILL.md#helpers)。驱动回归入口为 `conda run --no-capture-output -n codex-py312 python -m unittest discover -s .cursor/skills/verify-pi-codex-ui/scripts -p 'test_*.py' -v`，覆盖 preflight、composer 颜色与 Bash 取消就绪断言。颜色回归向真实断言函数输入 pyte 单元格，拒绝默认、不可见、混合或错误的草稿前景；取消回归要求公开 Bash 输出事件，命令参数中的标记不算执行证据。真实 CLI 旅程仍须单独执行。
 
 `headless.py` 分别启动原生 `--print --mode json` 和 `--mode rpc`。RPC 通过客户端消息发起 prompt；它不是给 SDK 设置一个 mode 字段。工具返回的 PNG 字节需解析为 4000×40 或 2000×20，实际 shell 输出必须写入并读回文件。
 
@@ -26,7 +26,7 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 | --- | --- |
 | `ui-header`, `ui-composer`, `ui-resize` | 启动 Pi header；输入时逐列检查整行背景；40/80/140 列；真实设置菜单选择 light 与 codex-pi；fork/resume 后再检查背景。保存 pyte 文本与颜色区间、原始 ANSI。 |
 | `ui-status` | 加载生产 Fast 扩展，离线支持模型显示目录、模型和 fast 组合，关闭 Fast 后对应状态消失。窄屏另存画面。 |
-| `ui-theme` | 原生 `/settings` 落盘主题；`/reload`、`/new`、原生 `/fork` 与 `/resume` 选择器替换后检查 codex-pi 背景。fork 的多行预填须 Ctrl+C 清除。 |
+| `ui-theme` | 原生 `/settings` 落盘主题；`/reload`、`/new` 后检查保存值，原生 `/fork` 与 `/resume` 后另检查 composer 颜色。fork 的多行预填须 Ctrl+C 清除。 |
 | `ui-user-markdown`, `ui-reply-markdown` | bracketed paste 输入标题、嵌套列表、表格、代码围栏、引用、链接；核对真正模型请求和持久 session 原文，另检查 TUI 内容。`/copy` 的系统剪贴板部分须按下节人工补验。 |
 | `ui-tool-rendering` | 普通/fullscreen 的真实命令清单保留 `/inspect` 且排除 `/lowpower`；Tab 补全 `/inspec` 成功、`/lowp` 保持原输入。reload/new/fork/resume 后重复检查。始终执行真实 write/edit/bash/codemode，保存完整折叠预览与 Ctrl+O 展开结果，核对文件字节及工具成功结果。 |
 | `ui-write-added`, `ui-write-edited`, `ui-diff`, `ui-bash-preview`, `ui-expand`, `ui-error`, `ui-interrupted` | 真实新建、覆盖、Edit、大结果 Diff unavailable、控制字符原始字节、长/多行/截断 Bash；真实 Esc 取消独立 Bash，确认延后文件未生成。Write/Edit 使用短时异步文件操作，无可观察的分阶段进度，取消证据见下方文件修改边界。 |
@@ -42,7 +42,7 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 多行选区的真实粘贴先按 [Paste transport](../../verify-pi-text-regions/references/manual-terminal.md#paste-transport) 校准终端通道。选区内容一致和剪贴板原始字节一致分开报告；校准不放宽下方 `/copy` 的逐字节要求。
 
 1. `ui-composer` 的终端像素和拖选。用真实终端启动共享 `tui codex-ui`，输入含中文、ASCII、长行的三行文本。分别在 light/codex-pi、窄屏/宽屏、`/new`/`/fork`/`/resume` 后拖选输入和空白区，检查文字清晰、背景无缺口、光标无残影、选择内容与输入一致。保留当前终端配色以检验草稿是否依赖终端默认前景。pyte 的前景和背景断言只证明 ANSI 单元格语义。
-2. `ui-reply-markdown` 的 `/copy`。在已允许写系统剪贴板的人工终端中，生成上述代表 Markdown，包含首尾空白、尾部 LF 和多段正文；运行 `/copy`，确认成功提示后实际粘贴到本轮文件，与当前分支最近已完成 assistant 的各段正文连接结果逐字节比较。代码围栏、缩进和表格分隔线必须一致，不含 renderer 添加的外层列表；不得先 trim 或规范化换行。补丁/原版、普通/全屏分别留证。自动驱动不会写系统剪贴板。
+2. `ui-reply-markdown` 的 `/copy`。在已允许写系统剪贴板的人工终端中，生成上述代表 Markdown，包含首尾空白、尾部 LF 和多段正文；运行 `/copy`，确认成功提示后实际粘贴到本轮文件，与当前分支最近一条可复制 assistant 的各段正文连接结果逐字节比较。取消后的非空正文也可复制。代码围栏、缩进和表格分隔线必须一致，不含 renderer 添加的外层列表；不得先 trim 或规范化换行。补丁/原版、普通/全屏分别留证。自动驱动不会写系统剪贴板。
 
 ## File mutation cancellation
 
@@ -65,3 +65,5 @@ Write 观察器的 writeFile 回调先取得旧文件 stat/有界快照，再调
 每次运行输出 `.tmp/test-results/codex-ui-<kind>-<mode>-<id>/`。CLI 保存每次进程的 `terminal-N.ansi`、`journey.json`、动作字节、pyte 文本/颜色区间、工具事件、配置/session/工作文件副本。headless 保存原始 JSONL、stderr、工具事件、图片尺寸与文件结果。输出 `passed=true` 仅表示脚本内断言通过。
 
 CLI 的每个 PID 和进程组必须停止，headless 的每个 Popen 必须退出；scratch 必须删除。失败保留原始 failure 和证据，修复后新建一次运行，不覆盖失败记录。这些驱动不启动监听服务；真实本地 MCP 的服务清理由 codemode case 负责。SIGKILL 无法执行 finally，依共享文档检查本次 PID 后处理。
+
+CLI 的清理结果位于 `journey.json`，要求 `scratchRemoved=true` 且每个 `processes[].stopped/groupStopped=true`；headless 使用 `summary.json` 的 `scratchRemoved` 和 `cases[].stopped/groupStopped`。共享 helper 的 `summary.cleanup=removed` 仅适用于经该 helper 启动的 case。

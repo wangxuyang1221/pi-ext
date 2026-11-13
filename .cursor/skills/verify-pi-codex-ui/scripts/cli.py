@@ -40,6 +40,12 @@ def check(condition, message):
     assertions.append({'assertion':message,'passed':bool(condition)})
     if not condition: raise AssertionError(message)
 
+def bash_output_started(events, marker):
+    return any(event['type']=='tool_execution_update' and event['data']['toolName']=='bash'
+               and any(block.get('type')=='text' and marker in block.get('text','')
+                       for block in event['data'].get('partialResult',{}).get('content',[]))
+               for event in events)
+
 def start(extra=None):
     global pid, fd, status, screen, stream, decoder, raw
     preflight = doctor(REPO, EVIDENCE, str(len(processes) + 1))
@@ -240,8 +246,9 @@ try:
     check('truncat' in view().lower() or 'full output' in view().lower(),'Truncated Bash includes output note');keys(b'\x0f','collapse truncated bash')
     # Escape cancellation must stop an independent real Bash before its delayed side effect.
     (ROOT/'plan.json').write_text(json.dumps({'calls':[tool('bash',command='printf BEGIN-CANCEL; sleep 10; printf forbidden > cancelled.txt')]}))
+    event_start=len(records())
     n=sum(e['type']=='agent_settled' for e in records());command('Cancel independent Bash')
-    wait(lambda:'BEGIN-CANCEL' in view(),'real Bash started');keys(b'\x1b','Escape real Bash');wait(lambda:sum(e['type']=='agent_settled' for e in records())>n,'Bash cancelled');settle()
+    wait(lambda:bash_output_started(records()[event_start:],'BEGIN-CANCEL'),'real Bash output started');keys(b'\x1b','Escape real Bash');wait(lambda:sum(e['type']=='agent_settled' for e in records())>n,'Bash cancelled');settle()
     check(not (ROOT/'workspace/cancelled.txt').exists(),'Cancelled Bash has no delayed file side effect')
     aborted=[e['data'] for e in records() if e['type']=='tool_execution_end' and e['data']['toolName']=='bash'][-1]
     check(aborted.get('isError') and 'Command aborted' in json.dumps(aborted['result']['content']),'Independent Bash reports actual abort result')
@@ -278,10 +285,13 @@ try:
     for damaged in ['syntax','permissions']:
         if damaged=='syntax': project.write_text('{broken')
         else: project.write_text('{}');project.chmod(0)
-        reload()
-        result=request('Reject project '+damaged,{'calls':[tool('bash',command='printf forbidden > project-forbidden.txt'),tool('read',path='read.txt')]})
-        check(all(r.get('isError') for r in result[-2:]) and not (ROOT/'workspace/project-forbidden.txt').exists(),'Trusted project '+damaged+' blocks read/bash without file side effect')
-        project.chmod(0o600);project.write_text(json.dumps({'shellCommandPrefix':'export AUDIT_PREFIX=project'}))
+        try:
+            reload()
+            result=request('Reject project '+damaged,{'calls':[tool('bash',command='printf forbidden > project-forbidden.txt'),tool('read',path='read.txt')]})
+            check(all(r.get('isError') for r in result[-2:]) and not (ROOT/'workspace/project-forbidden.txt').exists(),'Trusted project '+damaged+' blocks read/bash without file side effect')
+        finally:
+            project.chmod(0o600)
+        project.write_text(json.dumps({'shellCommandPrefix':'export AUDIT_PREFIX=project'}))
         result=request('Project snapshot stays rejected',{'calls':[tool('read',path='read.txt')]})
         check(result[-1].get('isError'),'Project error remains cached before reload')
         reload();result=request('Project repaired '+damaged,{'calls':calls})

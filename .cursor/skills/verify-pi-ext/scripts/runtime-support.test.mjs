@@ -71,6 +71,32 @@ test("archives explicitly reported proof nested in an existing fixture directory
   } finally { rmSync(context.root, { recursive: true, force: true }); }
 });
 
+test("retains codemode terminal and ownership proof and complete skill journeys across reruns", () => {
+  const context = fixture();
+  try {
+    const before = snapshotFixtures(context.root);
+    const terminal = join(context.root, ".tmp/codemode-production-regular.ansi");
+    writeFileSync(terminal, "first terminal");
+    for (const name of ["codemode-owners-regular.json", "codemode-process-regular.json", "codemode-side-effects-regular-initial.json"]) {
+      writeFileSync(join(context.root, ".tmp", name), '{"retained":true}');
+    }
+    const skill = join(context.root, ".tmp/test-results/verify-123-pty-native");
+    mkdirSync(skill);
+    writeFileSync(join(skill, "terminal.ansi"), "skill terminal");
+    writeFileSync(join(skill, "actions.json"), '["submit"]');
+    const result = archiveEvidence({ repo: context.root, ...context, before });
+    assert.deepEqual(result.errors, []);
+    writeFileSync(terminal, "second terminal");
+    rmSync(skill, { recursive: true });
+    assert.equal(readFileSync(join(context.evidence, "artifacts/codemode-production-regular.ansi"), "utf8"), "first terminal");
+    for (const name of ["codemode-owners-regular.json", "codemode-process-regular.json", "codemode-side-effects-regular-initial.json"]) {
+      assert.ok(existsSync(join(context.evidence, "artifacts", name)), name);
+    }
+    assert.equal(readFileSync(join(context.evidence, "artifacts/verify-123-pty-native/terminal.ansi"), "utf8"), "skill terminal");
+    assert.equal(readFileSync(join(context.evidence, "artifacts/verify-123-pty-native/actions.json"), "utf8"), '["submit"]');
+  } finally { rmSync(context.root, { recursive: true, force: true }); }
+});
+
 test("ignores unrelated temporary files and never follows symlinks or copies output into itself", () => {
   const context = fixture();
   try {

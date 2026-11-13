@@ -61,7 +61,7 @@ export async function stopRecordedPtyOwners(pids) {
 }
 
 const fixedProof = [
-  { cases: ["codex-ui", "codex-ui-fullscreen"], pattern: /^codemode-production-(regular|fullscreen)\.json$/ },
+  { cases: ["codex-ui", "codex-ui-fullscreen"], pattern: /^codemode-(?:production-(?:regular|fullscreen)(?:-custom-keys)?\.(?:json|ansi)|(?:owners|process)-(?:regular|fullscreen)(?:-custom-keys)?\.json|side-effects-(?:regular|fullscreen)(?:-custom-keys)?-(?:initial|resumed)\.json)$/ },
   { cases: ["thinking"], pattern: /^thinking-production-failed\.ansi$/ },
   { cases: ["tool-status"], pattern: /^tool-status-(smoke-[\w-]+\.json|last\.ansi)$/ },
   { cases: ["search"], pattern: /^web-search-production-(regular|fullscreen)-smoke\.json$/ },
@@ -75,7 +75,7 @@ export function fixtureFiles(repo, selected) {
     .filter(item => item.isFile() && fixedProof.some(rule => (!selected || rule.cases.includes(selected)) && rule.pattern.test(item.name)))
     .map(item => join(temporary, item.name));
   if ((!selected || selected === "skills") && existsSync(results)) files.push(...readdirSync(results, { withFileTypes: true })
-    .filter(item => item.isFile() && /^verify-\d+-pty-[\w-]+\.json$/.test(item.name)).map(item => join(results, item.name)));
+    .filter(item => (item.isFile() && /^verify-\d+-pty-[\w-]+\.json$/.test(item.name)) || (item.isDirectory() && /^verify-\d+-pty-[\w-]+$/.test(item.name))).map(item => join(results, item.name)));
   return files;
 }
 

@@ -6,12 +6,12 @@
 
 - `install-patched`：新消费目录冻结安装应用两个 pnpm patches，真实 CLI 可加载。
 - `install-original`：同锁定依赖去掉 patch，能力缺失且正常回退。
-- `install-published`：当前发布包安装后生产入口和构建 JS 字节一致。
+- `install-published`：当前源码经 `pnpm pack` 生成的 tarball 安装后，生产入口和构建 JS 字节一致；不证明 registry 上已有版本。
 - `install-isolation`：全局入口/文件保持原样，consumer 不自动继承 patchedDependencies。
 
 ## How to get to it (user POV)
 
-原版从根锁安装并运行 `node_modules/.bin/pi`；补丁版从独立 fixture 安装并运行 `scripts/pi152-patched.mjs`；外部用户安装 pi-ext 包并加载其 codex-ui。需要补丁的 consumer 自己配置固定 patch，不因安装 pi-ext 自动获得宿主 API。
+原版从根锁安装并运行 `node_modules/.bin/pi`；开发用补丁版先完成 [独立 profile](pi152.md) 的 prepare/build，再使用其启动器。此安装旅程直接运行本次 consumer JSON 中的 CLI，并加载已安装 codex-ui。需要补丁的 consumer 自己配置固定 patch，不因安装 pi-ext 自动获得宿主 API。
 
 ## Driving it with local-refresh-install
 
