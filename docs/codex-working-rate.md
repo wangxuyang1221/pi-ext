@@ -26,7 +26,7 @@ start 事件引用的 partial 可能已经被后续生产者修改，不能把�
 
 Working 与 CodexFooter 通过真实 widget/footer factory 挂载，登记 factory 返回的同一组件。存在可选 `registerTextRegion` 时请求局部刷新，否则调用正常 `requestRender`。原版保留功能，缺少的只有 CPU 优化。目标高度改变、对话框、overlay、搜索、选择及复杂布局按[宿主契约](pi-text-region-refresh.md#contract)回退，状态更新不接管输入焦点。
 
-footer 的上下文比例按只追加的会话分支读取。会话管理器、叶节点、模型或 contextWindow 改变时重新调用宿主统计；其余动画帧复用结果，避免每 32ms 重建未变化的历史投影。追加消息、context edit、分支切换和压缩都会改变该版本。每次 footer 安装单独持有一个结果，没有跨会话缓存。Pi 1.4 的 `pi-virtual` 路由还依赖 live agent messages，因此保持实时 getter；缺少分支版本接口时也正常读取。
+footer 的上下文比例按只追加的会话分支读取。会话管理器、叶节点、模型或 contextWindow 改变时重新调用宿主统计；其余动画帧复用结果，避免每 32ms 重建未变化的历史投影。追加消息、context edit、分支切换和压缩都会改变该版本。每次 footer 安装单独持有一个结果，没有跨会话缓存。`pi-virtual` 路由的实际模型上限还依赖 live agent messages，因此保持实时 getter；缺少分支版本接口时也正常读取。
 
 ## Verification
 
@@ -39,10 +39,10 @@ pnpm test extensions/codex-ui/__tests__/token-rate.test.ts extensions/codex-ui/_
 真实 CLI 使用扩展后的正式 PTY 入口。外部模型和压缩摘要由离线 provider 提供，审批、shell、取消、自动重试/压缩和 session 流程由实际宿主执行：
 
 ```bash
-conda run -n codex-py312 python scripts/local-refresh-pty.py .tmp/working-regular --working --cli node_modules/.bin/pi
-conda run -n codex-py312 python scripts/local-refresh-pty.py .tmp/working-fullscreen --working --mode fullscreen --cli node_modules/.bin/pi
+conda run -n codex-py312 python scripts/local-refresh-pty.py .tmp/working-regular --working --original --cli node_modules/.bin/pi
+conda run -n codex-py312 python scripts/local-refresh-pty.py .tmp/working-fullscreen --working --original --mode fullscreen --cli node_modules/.bin/pi
 ```
 
-可将 `--cli` 指向[干净安装驱动](../scripts/local-refresh-install.mjs)输出的补丁或原版 bin，原版加 `--original`。`--extension` 可指定实际打包安装后的 codex-ui 入口。每次使用新证据目录；驱动记录进程组并清理自己的运行配置，保留 ANSI、操作、事件和屏幕证据。物理像素和系统剪贴板不在该自动驱动覆盖范围。
+可将 `--cli` 指向[干净安装驱动](../scripts/local-refresh-install.mjs)输出的补丁或原版 bin，补丁版移除 `--original`。`--extension` 可指定实际打包安装后的 codex-ui 入口。每次使用新证据目录；驱动记录进程组并清理自己的运行配置，保留 ANSI、操作、事件和屏幕证据。物理像素和系统剪贴板不在该自动驱动覆盖范围。
 
 [CPU 驱动](../scripts/local-refresh-cpu.mjs)使用同一生产 Working、CodexFooter、采样器、受控接收事件和真实历史组件比较正常与局部刷新。默认同步批次隔离渲染成本；`--interval=32` 单独记录宿主原生调度。预算仍为 200/1000 对历史动态帧下降至少 30%，正常更新与未接入路径额外中位数不超过 `max(基线10%, 0.1ms/帧)`。
