@@ -2,6 +2,8 @@
 
 此分支由已有授权账号的操作者手动执行，会使用真实远端服务并可能产生用量。自动本地验收不读取用户凭据、不复制 auth 文件，也不发远端或付费请求。没有执行本节时，以下七个 ID 的远端分支保持 unverified，整体 ID 不能仅凭本地通过改为 passed。
 
+当前适配器只交付文本，尚未实现图像内容协议；截图会明确报未交付图像错误并附服务文本，不能把此错误解释为远端服务必然不支持截图。恢复图像交付需要先取得脱敏的真实响应契约，再实现并验证图像内容。
+
 ## Prepare
 
 由操作者使用已登录的 Pi 环境加载 `-e extensions/codex-search/src/index.ts`。先在 `/codex-search-settings status` 确认 baseUrl 为预期真实服务，使用菜单启用 standalone，记录模型、freshness、context 与时间。保留工具参数和经过脱敏的结果、来源、会话关联；证据中不包含 token、Cookie、Authorization 或账号标识。不要把本地 loopback fixture 配置用于此分支。

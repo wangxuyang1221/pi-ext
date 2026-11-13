@@ -248,12 +248,16 @@ try:
         h.command('/mcp verbose', 'Tools: media, schema, work')
         check(not h.call('mcp__local__echo', {'text': 'AUDIT STDIO'})['isError'], 'stdio success')
         check(any((x['method'] == 'tools/call' and x['params']['arguments']['text'] == 'AUDIT STDIO' for x in records('stdio-requests.jsonl'))), 'stdio server received actual call')
-        valid = {'kind': 'fixed', 'nested': {'choice': 42}, 'extra': {'x': 'ok'}}
-        check(not h.call('mcp__sse__schema', valid)['isError'], 'const nested union and typed additionalProperties accepted')
+        valid = {'kind': 'fixed', 'nested': {'choice': 42}, 'extra': {'x': 'ok'}, 'exclusive': 1.5}
+        check(not h.call('mcp__sse__schema', valid)['isError'], 'const nested union exclusive oneOf and typed additionalProperties accepted')
         for invalid in [{'kind': 'wrong', 'nested': {'choice': 42}}, {'kind': 'fixed', 'nested': {'choice': {}}}, {'kind': 'fixed', 'nested': {'choice': 42}, 'extra': {'x': {}}}, {'kind': 'fixed', 'nested': {'choice': 42}, 'unexpected': 'no'}]:
             before = len([x for x in records('server.jsonl') if x['type'] == 'schema-call'])
             check(h.call('mcp__sse__schema', invalid)['isError'], 'invalid schema refused before server', arguments=invalid)
             check(before == len([x for x in records('server.jsonl') if x['type'] == 'schema-call']), 'invalid schema no side effect')
+        for value in [1, {}, -1.5]:
+            before = len([x for x in records('server.jsonl') if x['type'] == 'schema-call'])
+            check(h.call('mcp__sse__schema', {**valid, 'exclusive': value})['isError'], 'oneOf overlap no-match and sibling constraint refused', input=value)
+            check(before == len([x for x in records('server.jsonl') if x['type'] == 'schema-call']), 'invalid oneOf never reaches server')
         result = h.call('mcp__sse__media', {})
         check(not result['isError'] and any((x['type'] == 'image' for x in result['result']['content'])), 'image result reaches real tool event')
         check('STRUCTURED-RESULT' in json.dumps(result), 'structuredContent reaches real result chain')

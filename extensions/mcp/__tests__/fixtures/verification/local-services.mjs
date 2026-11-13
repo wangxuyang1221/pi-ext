@@ -15,7 +15,7 @@ const sse=createServer(async(req,res)=>{
   if(req.method==='GET'){
    const transport=new SSEServerTransport('/messages',res);
    const server=new Server({name:'audit-sse',version:'1'},{capabilities:{tools:{},logging:{}}});
-   server.setRequestHandler(ListToolsRequestSchema,async()=>({tools:[{name:'schema',inputSchema:{type:'object',properties:{kind:{const:'fixed'},nested:{type:'object',properties:{choice:{anyOf:[{type:'string'},{type:'number'}]}},required:['choice'],additionalProperties:false},extra:{type:'object',additionalProperties:{type:'string'}}},required:['kind','nested'],additionalProperties:false}},{name:'media',inputSchema:{type:'object',properties:{}}},{name:'work',inputSchema:{type:'object',properties:{mode:{type:'string'}},required:['mode']},annotations:{readOnlyHint:true}}]}));
+   server.setRequestHandler(ListToolsRequestSchema,async()=>({tools:[{name:'schema',inputSchema:{type:'object',properties:{kind:{const:'fixed'},exclusive:{type:'number',minimum:0,oneOf:[{type:'number'},{type:'integer'}]},nested:{type:'object',properties:{choice:{anyOf:[{type:'string'},{type:'number'}]}},required:['choice'],additionalProperties:false},extra:{type:'object',additionalProperties:{type:'string'}}},required:['kind','nested'],additionalProperties:false}},{name:'media',inputSchema:{type:'object',properties:{}}},{name:'work',inputSchema:{type:'object',properties:{mode:{type:'string'}},required:['mode']},annotations:{readOnlyHint:true}}]}));
    server.setRequestHandler(CallToolRequestSchema,(request,extra)=>{
     const work=(async()=>{
      if(request.params.name==='schema'){log('schema-call',{arguments:request.params.arguments});return {content:[{type:'text',text:'SCHEMA ACCEPTED'}]};}
