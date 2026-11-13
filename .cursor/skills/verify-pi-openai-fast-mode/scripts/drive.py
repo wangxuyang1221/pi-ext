@@ -14,7 +14,9 @@ current = None
 
 def events():
     p=root/'events.jsonl'
-    return [json.loads(s) for s in p.read_text().splitlines()] if p.exists() else []
+    # Appends can stop inside JSON or UTF-8; only LF commits a complete record.
+    # Completed malformed records still raise so evidence corruption is visible.
+    return [json.loads(s.decode('utf-8')) for s in p.read_bytes().split(b'\n')[:-1]] if p.exists() else []
 
 def enabled(path=config):
     try:

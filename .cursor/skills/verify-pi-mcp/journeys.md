@@ -31,7 +31,7 @@ pnpm test extensions/mcp/__tests__/transport-fixtures.test.ts extensions/mcp/__t
 
 ## Combination
 
-`combination` 按顺序发现 stdio、Streamable HTTP、legacy SSE，通过真实工具执行调用三种传输。schema 包含 const、嵌套 union、禁止额外字段和有类型的 additionalProperties。合法参数成功；无法满足 schema 的参数返回 validation failure，服务端调用计数不增加。宿主允许参数类型 coercion，因此 boolean 可转换成 string 的输入不作为非法例子。media 工具同时返回图片与 structuredContent，核对真实 tool event、session 和可见文本。
+`combination` 按顺序发现 stdio、Streamable HTTP、legacy SSE，通过真实工具执行调用三种传输。schema 包含 const、嵌套 union、排他 oneOf、禁止额外字段和有类型的 additionalProperties。oneOf 的重叠分支、无匹配和违反同层约束输入均被拒绝，并检查服务端调用计数不增加。合法参数成功；无法满足 schema 的参数返回 validation failure，服务端调用计数不增加。宿主允许参数类型 coercion，因此 boolean 可转换成 string 的输入不作为非法例子。media 工具同时返回图片与 structuredContent，核对真实 tool event、session 和可见文本。
 
 HTTP 第一次调用发送后断流，ledger 中只能有一次 tools/call。手动 reconnect 后显式再调用成功。SSE 持续 progress 跨越软截止完成，下一次调用触发硬总截止。再重连，开始长调用后按原生 Escape，服务端必须记录取消；业务错误必须标成失败。
 

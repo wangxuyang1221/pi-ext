@@ -388,6 +388,35 @@ describe("codex helpers", () => {
     assert.deepEqual(result.refIds, { turn0fetch0: "turn0fetch0" });
   });
 
+  it("rejects undelivered screenshots while preserving the request and service diagnostic", async () => {
+    let requestedBody = {} as { commands?: Record<string, unknown> };
+    const transport = createTransport({
+      token: "token",
+      accountId: "account",
+      baseUrl: "https://example.test/backend/codex",
+      fetchImpl: (async (_input: string | URL | Request, init?: RequestInit) => {
+        requestedBody = JSON.parse(String(init?.body));
+        return new Response(JSON.stringify({
+          output: "Screenshot result turn0view0",
+          results: [{ ref_id: "turn0view0", type: "text_result" }],
+        }));
+      }) as typeof fetch,
+    });
+    await assert.rejects(runStandaloneCommands({
+      model: "gpt-test", transport, sessionId: "pi-codex-search",
+      screenshot: [{ refId: "turn0view0", pageno: 0 }], freshness: "live",
+    }), (error: unknown) => {
+      assert.ok(error instanceof CodexError);
+      assert.equal(error.kind, "schema");
+      assert.match(error.message, /Screenshot image delivery is not supported/);
+      assert.match(error.message, /Screenshot result turn0view0/);
+      return true;
+    });
+    assert.deepEqual(requestedBody.commands, {
+      screenshot: [{ ref_id: "turn0view0", pageno: 0 }],
+    });
+  });
+
   it("posts standalone web content and lookup commands one action per request", async () => {
     const cases: Array<{
       options: Partial<StandaloneCommandsOptions>;
@@ -410,13 +439,6 @@ describe("codex helpers", () => {
         options: { click: [{ refId: "https://example.com/docs", id: 7 }] },
         expectedCommands: { click: [{ ref_id: "https://example.com/docs", id: 7 }] },
         expectedCall: { actionType: "click", refId: "https://example.com/docs" },
-      },
-      {
-        options: { screenshot: [{ refId: "https://example.com/docs", pageno: 1 }] },
-        expectedCommands: {
-          screenshot: [{ ref_id: "https://example.com/docs", pageno: 1 }],
-        },
-        expectedCall: { actionType: "screenshot", refId: "https://example.com/docs" },
       },
       {
         options: { finance: [{ ticker: "AMD", type: "equity", market: "USA" }] },

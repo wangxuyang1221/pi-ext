@@ -611,7 +611,14 @@ try:
             ("click", {"url": url, "id": 7}),
             ("screenshot", {"url": url, "pageno": 0}),
         ]:
-            tool("codex_standalone_web", {action: [params]})
+            data = tool("codex_standalone_web", {action: [params]}, action == "screenshot")
+            if action == "screenshot":
+                diagnostic = json.dumps(data)
+                check(
+                    "Screenshot image delivery is not supported" in diagnostic
+                    and "Audit page" in diagnostic,
+                    "Undelivered screenshot is an explicit error with service diagnostic",
+                )
             expected = {key: value for key, value in params.items() if key != "url"}
             expected["ref_id"] = "turn0view0"
             check(

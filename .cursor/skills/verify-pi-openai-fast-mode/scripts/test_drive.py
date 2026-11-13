@@ -9,6 +9,7 @@ from unittest.mock import Mock
 
 DRIVER = Path(__file__).with_name('drive.py')
 TREE = ast.parse(DRIVER.read_text())
+EVENTS = next(node for node in TREE.body if isinstance(node, ast.FunctionDef) and node.name == 'events')
 ENABLED = next(node for node in TREE.body if isinstance(node, ast.FunctionDef) and node.name == 'enabled')
 CLI = next(node for node in TREE.body if isinstance(node, ast.ClassDef) and node.name == 'Cli')
 WAIT = next(node for node in CLI.body if isinstance(node, ast.FunctionDef) and node.name == 'wait')
@@ -71,6 +72,46 @@ class ConfigPollingTests(unittest.TestCase):
         path.read_text.side_effect = PermissionError('denied')
         with self.assertRaises(PermissionError):
             self.enabled(path)
+
+
+class EventPollingTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        self.path = root / 'events.jsonl'
+        scope = dict(json=json, root=root)
+        exec(compile(ast.Module(body=[EVENTS], type_ignores=[]), str(DRIVER), 'exec'), scope)
+        self.events = scope['events']
+
+    def test_missing_file(self):
+        self.assertEqual(self.events(), [])
+
+    def test_partial_records_wait_for_lf(self):
+        first = b'{"type":"ready"}\n'
+        second = '{"text":"中"}'.encode('utf-8')
+        for prefix in [b'', b'{', second[:-3], second]:
+            with self.subTest(prefix=prefix):
+                self.path.write_bytes(first + prefix)
+                self.assertEqual(self.events(), [{'type': 'ready'}])
+        with self.path.open('ab') as stream:
+            stream.write(b'\n')
+        self.assertEqual(self.events(), [{'type': 'ready'}, {'text': '中'}])
+
+    def test_only_lf_delimits_records(self):
+        row = {'text': 'first\u0085middle\u2028last\u2029'}
+        self.path.write_bytes((json.dumps(row, ensure_ascii=False) + '\n').encode('utf-8'))
+        self.assertEqual(self.events(), [row])
+
+    def test_complete_corruption_still_fails(self):
+        for contents in [b'{broken}\n', b'\n', b'{}\n{broken}\n']:
+            with self.subTest(contents=contents):
+                self.path.write_bytes(contents)
+                with self.assertRaises(json.JSONDecodeError):
+                    self.events()
+        self.path.write_bytes(b'{"text":"\xff"}\n')
+        with self.assertRaises(UnicodeDecodeError):
+            self.events()
 
 
 if __name__ == '__main__':

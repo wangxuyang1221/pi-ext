@@ -268,6 +268,14 @@ export async function runStandaloneCommands(
 
   const data = (await response.json()) as StandaloneSearchResponse;
   const text = typeof data.output === "string" ? data.output : "";
+  if (options.screenshot?.length) {
+    // This adapter currently returns text only; an HTTP 200 is not image delivery.
+    throw new CodexError(
+      "schema",
+      "Screenshot image delivery is not supported by this adapter; no image was delivered." +
+        (text ? `\nService response: ${text}` : ""),
+    );
+  }
   const structuredResults = Array.isArray(data.results) ? data.results : undefined;
   const refIds = {
     ...extractRefIds(text),

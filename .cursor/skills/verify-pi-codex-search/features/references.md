@@ -8,7 +8,7 @@
 | `search-click` | click id 与已保存 refId 一起进入请求。 |
 | `search-find` | find pattern 与已保存 refId 一起进入请求。 |
 | `search-reference` | A 中相同 URL 复用引用；真实 /new 后拒绝 A 的 URL，恢复 A 后引用可继续使用。 |
-| `search-screenshot` | pageno=0 与已保存 refId 一起进入请求。 |
+| `search-screenshot` | pageno=0 与已保存 refId 一起进入请求；当前文本输出路径明确报未交付图像错误，保留服务诊断。 |
 | `search-lookups` | finance/weather/sports/time 的参数逐项进入各自 commands。 |
 | `search-single-action` | urls+find 组合和 low context 被拒绝，服务器请求数不增加。 |
 
@@ -21,7 +21,7 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search-produc
 pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run search-references
 ```
 
-生产 TUI 旅程先 open `https://example.test/docs`，随后 find API、click id=7、screenshot pageno=0，断言全部复用 turn0view0。四类 lookup 各发送一次。非法组合与 low 调用必须 isError=true，且 requests.json 中没有对应 HTTP。服务只绑定 127.0.0.1 随机端口，fetch 拒绝其他 origin。
+生产 TUI 旅程先 open `https://example.test/docs`，随后 find API、click id=7、screenshot pageno=0，断言全部复用 turn0view0。截图返回仅有文本时必须 isError=true，并保留服务诊断；不能记为已交付图像。四类 lookup 各发送一次。非法组合与 low 调用必须 isError=true，且 requests.json 中没有对应 HTTP。服务只绑定 127.0.0.1 随机端口，fetch 拒绝其他 origin。
 
 旅程接着 `/name Audit history A` → `/new` → find A URL 被拒绝且无 HTTP → `/resume` 搜索并选择 A → find 成功 → `/reload` → `/quit` → 新进程 `--session` → click id=8 成功。会话与引用文件保存在 evidence/sessions，模型实际收到的上下文保存在 events.jsonl，不调用 ref-store setter 制造结果。
 

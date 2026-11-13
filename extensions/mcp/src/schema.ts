@@ -17,14 +17,10 @@ import type { JsonSchema } from "./types.js";
  * @returns A TypeBox schema instance.
  */
 export function jsonSchemaToTypeBox(schema: JsonSchema): TSchema {
-  // Treat oneOf and anyOf as unions.
-  if (schema.oneOf && schema.oneOf.length > 0) {
-    const variants = schema.oneOf.map((s) => jsonSchemaToTypeBox(s));
-    // TypeBox unions require at least two members.
-    if (variants.length === 1) {
-      return withMeta(variants[0], schema);
-    }
-    return withMeta(Type.Union(variants as [TSchema, TSchema, ...TSchema[]]), schema);
+  // Preserve native exclusive matching and all sibling constraints. A union
+  // would turn oneOf into anyOf and incorrectly accept overlapping branches.
+  if (schema.oneOf) {
+    return Type.Unsafe(schema);
   }
 
   if (schema.anyOf && schema.anyOf.length > 0) {
