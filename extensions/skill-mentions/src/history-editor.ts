@@ -1,5 +1,5 @@
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import type { EditorComponent, TUI } from "@earendil-works/pi-tui";
+import type { ExtensionContext, KeybindingsManager } from "@earendil-works/pi-coding-agent";
+import { getKeybindings, setKeybindings, type EditorComponent, type TUI } from "@earendil-works/pi-tui";
 import { LabelNativeEditor } from "./editor-surface.js";
 import { decodeSnapshot } from "./protocol.js";
 
@@ -7,7 +7,7 @@ type EditorFactory = NonNullable<ReturnType<ExtensionContext["ui"]["getEditorCom
 const adapted = Symbol.for("pi-ext/skill-mentions/history-editor-v1");
 const originalText = (text: string) => decodeSnapshot(text)?.task ?? text;
 
-function wrapEditor(base: EditorComponent): EditorComponent {
+function wrapEditor(base: EditorComponent, keys: KeybindingsManager): EditorComponent {
   if (Reflect.get(base, adapted)) return base;
   const methods = new Map<PropertyKey, { source: Function; bound: Function }>();
   return new Proxy(base, {
@@ -17,9 +17,15 @@ function wrapEditor(base: EditorComponent): EditorComponent {
       if (typeof value !== "function") return value;
       let cached = methods.get(key);
       if (!cached || cached.source !== value) {
-        const bound = key === "setText" || key === "addToHistory"
-          ? (text: string) => value.call(target, originalText(text))
-          : value.bind(target);
+        const bound = (...args: unknown[]) => {
+          const previous = getKeybindings();
+          // Bundled hosts and extension modules can own different TUI singletons.
+          setKeybindings(keys);
+          try {
+            if (key === "setText" || key === "addToHistory") args[0] = originalText(args[0] as string);
+            return value.apply(target, args);
+          } finally { setKeybindings(previous); }
+        };
         cached = { source: value, bound };
         methods.set(key, cached);
       }
@@ -36,7 +42,7 @@ export function installHistoryEditor(ctx: ExtensionContext, restoreHistory = fal
   if (previous && Reflect.get(previous, adapted)) return;
   const factory: EditorFactory = (tui, theme, keys) => {
     const base = previous?.(tui, theme, keys) ?? new LabelNativeEditor(tui, theme, keys);
-    const editor = wrapEditor(decorate?.(base, tui) ?? base);
+    const editor = wrapEditor(decorate?.(base, tui) ?? base, keys);
     // Pi rebuilds the editor on /reload without repopulating its history.
     // Seed from active context only; addToHistory retains the native size limit.
     for (const entry of restoreHistory ? ctx.sessionManager.buildContextEntries() : []) {

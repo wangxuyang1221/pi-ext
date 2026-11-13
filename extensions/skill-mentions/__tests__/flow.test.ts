@@ -167,7 +167,7 @@ it("uses native expanded cards and only transforms strictly recognized user enve
   }
   const renderer = h.session.extensionRunner!.getEntryRenderer(displayType)!;
   const entry = h.sessionManager.getEntries().find(entry => entry.type === "custom" && entry.customType === displayType)!;
-  const component = renderer(entry as any, { expanded: true }, {} as any)!;
+  const component = renderer(entry as any, { expanded: true, keyText: (_id: string) => "", keyHint: (_id: string, label: string) => label }, {} as any)!;
   const expanded = component.render(90).map(stripTerminalSequences).join("\n");
   expect(expanded).toContain("ALPHA_BODY"); expect(expanded).toContain("References are relative to");
   expect(decodeSnapshot(text)?.skills[0].baseDir).toBe(h.skills[0].baseDir);

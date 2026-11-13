@@ -28,7 +28,7 @@ class Cli:
         global current
         self.label=label; self.actions=[]; self.screens={}; self.file_states=[]; self.raw=bytearray(); self.status=None
         self.screen=pyte.Screen(150,50); self.stream=pyte.Stream(self.screen); self.decoder=codecs.getincrementaldecoder('utf-8')('replace')
-        self.args=['node',str(repo/'node_modules/@earendil-works/pi-coding-agent/dist/cli.js'),'--offline','--no-extensions','--no-skills','--no-context-files','--no-prompt-templates','--no-themes','--no-builtin-tools','--session-dir',str(root/'sessions'),'--provider','openai-codex','--model','gpt-7-unlisted','-e',str(entry or repo/'extensions/openai-fast-mode/dist/index.js'),'-e',str(repo/'.cursor/skills/verify-pi-openai-fast-mode/scripts/request-provider.ts'),*extra]
+        self.args=['node',str(repo/'node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js'),'--offline','--no-extensions','--no-skills','--no-context-files','--no-prompt-templates','--no-themes','--no-builtin-tools','--session-dir',str(root/'sessions'),'--provider','openai-codex','--model','gpt-7-unlisted','-e',str(entry or repo/'extensions/openai-fast-mode/dist/index.js'),'-e',str(repo/'.cursor/skills/verify-pi-openai-fast-mode/scripts/request-provider.ts'),*extra]
         env=dict(os.environ,TERM='xterm-256color')
         before=len(events())
         self.pid,self.fd=pty.fork()

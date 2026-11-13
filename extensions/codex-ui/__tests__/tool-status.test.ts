@@ -42,7 +42,7 @@ function tools() {
 function row(tool: ToolDefinition, id = tool.name, initialTheme = theme()) {
   const args = { command: "printf hello", path: "src/目标.ts", content: "hello", edits: [] };
   const ctx = { args, state: {}, toolCallId: id, cwd: "/repo", executionStarted: false,
-    durationMs: undefined, outputPad: 0, argsComplete: true, isPartial: true, isError: false, expanded: false, showImages: false,
+    durationMs: undefined, outputPad: 0, argsComplete: true, keyText: () => "", keyHint: (_id: string, label: string) => label, isPartial: true, isError: false, expanded: false, showImages: false,
     lastComponent: undefined, invalidate: vi.fn(),
   } as ToolRenderContext;
   let currentTheme = initialTheme;

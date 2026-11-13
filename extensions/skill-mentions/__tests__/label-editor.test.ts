@@ -1,3 +1,4 @@
+import { TestKeybindingsManager } from "../../../test-support/keybindings.js";
 import { beforeAll, expect, it, vi } from "vitest";
 import { CustomEditor, initTheme, type KeybindingsManager } from "@earendil-works/pi-coding-agent";
 import { getKeybindings, stripTerminalSequences, visibleWidth, type TUI } from "@earendil-works/pi-tui";
@@ -8,7 +9,7 @@ beforeAll(() => initTheme("dark", false));
 function fixture(names: ReadonlySet<string> = new Set(["alpha", "𠮷"]), icon: () => labels.IconMode = () => "cube") {
   const tui = { terminal: { rows: 40, columns: 80 }, requestRender() {} } as unknown as TUI;
   const same = (value: string) => value;
-  const base = new CustomEditor(tui, { borderColor: same, selectList: { selectedPrefix: same, selectedText: same, description: same, scrollInfo: same, noMatch: same } }, { matches: () => false } as unknown as KeybindingsManager);
+  const base = new CustomEditor(tui, { borderColor: same, selectList: { selectedPrefix: same, selectedText: same, description: same, scrollInfo: same, noMatch: same } }, new TestKeybindingsManager());
   const editor = createLabelEditor(base, { names: () => names, icon, tui });
   return { base, editor };
 }

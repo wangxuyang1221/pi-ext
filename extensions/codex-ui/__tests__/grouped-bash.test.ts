@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { afterEach, test, vi } from "vitest";
 import { initTheme, SessionManager, ToolExecutionComponent, type ExtensionAPI, type ToolDefinition } from "@earendil-works/pi-coding-agent";
-import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
+import { getKeybindings, setKeybindings, stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { registerCodexTools } from "../src/tools.js";
 import { ToolRenderCache } from "../src/render-cache.js";
 import { BashGroups } from "../src/bash-groups.js";
+
+const { KeybindingsManager } = await import("../../../node_modules/@earendil-works/pi-coding-agent/dist/core/keybindings.js");
 
 const plain = (row: ToolExecutionComponent, width = 120) => row.render(width).map(line => stripTerminalSequences(line).trimEnd());
 const call = (id: string, name = "bash") => ({ type: "toolCall", id, name, arguments: { command: `printf ${id}`, path: "README.md" } });
@@ -12,6 +14,10 @@ const message = (content: unknown[]) => ({ role: "assistant", content, stopReaso
 const result = (text: string, isError = false) => ({ content: [{ type: "text" as const, text }], isError });
 function harness(services: Parameters<typeof registerCodexTools>[2] = {}) {
   initTheme("dark", false);
+  const previousKeys = getKeybindings();
+  const hostKeys = new KeybindingsManager();
+  if (services.getKeybindings) vi.spyOn(hostKeys, "getKeys").mockImplementation(action => services.getKeybindings!()?.getKeys(action) ?? []);
+  setKeybindings(hostKeys);
   const tools = new Map<string, ToolDefinition>();
   const handlers = new Map<string, Array<(event: any, ctx: any) => void>>();
   const sessionManager = SessionManager.inMemory(process.cwd());
@@ -33,7 +39,7 @@ function harness(services: Parameters<typeof registerCodexTools>[2] = {}) {
         { requestRender() {} } as never, process.cwd());
       row.setExpanded(expanded); return row;
     },
-    dispose() { emit("session_shutdown"); },
+    dispose() { emit("session_shutdown"); setKeybindings(previousKeys); },
   };
 }
 afterEach(() => vi.useRealTimers());

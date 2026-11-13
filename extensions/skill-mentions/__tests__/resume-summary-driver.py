@@ -35,7 +35,7 @@ env.update(HOME=str(root / "home"), TMPDIR=str(root / "tmp"), XDG_CACHE_HOME=str
 skill = root / "agent/skills/alpha/SKILL.md"
 skill.parent.mkdir(parents=True)
 skill.write_text("---\nname: alpha\ndescription: Summary fixture\n---\nSAVED_SKILL_BODY\n")
-cli = Path(sys.argv[3]).resolve() if len(sys.argv) > 3 else repo / "node_modules/@earendil-works/pi-coding-agent/dist/cli.js"
+cli = Path(sys.argv[3]).resolve() if len(sys.argv) > 3 else repo / "node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js"
 args = (["node", str(cli)] if cli.suffix == ".js" else [str(cli)]) + ["--no-extensions", "--extension", str(Path(__file__).with_name("pty-fixture.ts")),
     "--extension", str(installed / "extensions/skill-mentions/dist/index.js"),
     "--no-context-files", "--no-prompt-templates", "--approve", "--offline", "--no-builtin-tools",

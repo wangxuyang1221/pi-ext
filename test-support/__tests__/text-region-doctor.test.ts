@@ -22,8 +22,8 @@ describe("text region doctor", () => {
     expect(report.ok).toBe(true);
     expect(report.project).toBe(repo);
     expect(report.cli).toBe(resolve("node_modules/.bin/pi"));
-    expect(report.cliVersion).toBe("1.4.0");
-    expect(report.regionApi).toEqual({ regular: true, fullscreen: true });
+    expect(report.cliVersion).toBe("1.5.2");
+    expect(report.regionApi).toEqual({ regular: false, fullscreen: false });
     expect(report.python.pyte).toBe("0.8.2");
     expect(report.python.version).toMatch(/^3\.12\./);
     expect(report.pnpm).toBe("11.9.0");
@@ -35,8 +35,8 @@ describe("text region doctor", () => {
     }
   });
 
-  it("rejects a patched host labelled as original", async () => {
-    await expect(invoke("--original")).rejects.toThrow(/Region API does not match requested host/);
+  it("rejects a stock host labelled as patched", async () => {
+    await expect(invoke("--patched")).rejects.toThrow(/Region API does not match requested host/);
   });
 
   it("rejects a nonexistent project without creating it", async () => {

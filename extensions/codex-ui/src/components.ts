@@ -4,6 +4,8 @@ import {
   type Theme,
 } from "@earendil-works/pi-coding-agent";
 import {
+  getKeybindings,
+  setKeybindings,
   visibleWidth,
   type Component,
   type EditorTheme,
@@ -79,14 +81,16 @@ export class CodexEditor extends CustomEditor {
   constructor(
     tui: TUI,
     editorTheme: EditorTheme,
-    keybindings: KeybindingsManager,
+    private readonly hostKeybindings: KeybindingsManager,
     private readonly getTheme: () => Theme,
     private readonly onCopy?: () => void,
   ) {
-    super(tui, editorTheme, keybindings, { paddingX: 1 });
+    super(tui, editorTheme, hostKeybindings, { paddingX: 1 });
   }
 
   handleInput(data: string): void {
+    const previousKeys = getKeybindings();
+    setKeybindings(this.hostKeybindings);
     const submit = this.onSubmit;
     this.onSubmit = text => {
       if (text === "/copy" && this.onCopy) this.onCopy();
@@ -96,6 +100,7 @@ export class CodexEditor extends CustomEditor {
       super.handleInput(data);
     } finally {
       this.onSubmit = submit;
+      setKeybindings(previousKeys);
     }
   }
 

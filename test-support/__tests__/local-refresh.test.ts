@@ -3,6 +3,12 @@ import { Container, CURSOR_MARKER, TuiMainScreen, TuiAltScreen, VStack, type Com
 
 import { createInteractiveTuiReference } from "../../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/tui-renderer.js";
 
+import type { TextRegionCapability } from "../host-capabilities.js";
+
+const hasRegions = typeof (TuiMainScreen.prototype as TuiMainScreen & TextRegionCapability).registerTextRegion === "function";
+const patchIt = it.skipIf(!hasRegions);
+const patchDescribe = describe.skipIf(!hasRegions);
+
 type Region = { requestRender(): void; dispose(): void };
 type RegionHost = TuiMainScreen & { registerTextRegion(component: Component): Region };
 function fixture(local: boolean) {
@@ -29,7 +35,7 @@ function fixture(local: boolean) {
   };
 }
 const settle = () => new Promise(resolve => setTimeout(resolve, 40));
-describe("text region refresh", () => {
+patchDescribe("text region refresh", () => {
   it("updates independent and merged regions with identical output and cursor", async () => {
     const baseline = fixture(false), local = fixture(true);
     try {
@@ -74,7 +80,7 @@ describe("text region refresh", () => {
   });
 });
 
-describe("text region fallback and ownership", () => {
+patchDescribe("text region fallback and ownership", () => {
   it("keeps overlays and transformed containers on the normal path", async () => {
     const baseline = fixture(false), local = fixture(true);
     try {
@@ -118,7 +124,7 @@ describe("text region fallback and ownership", () => {
   it("moves stable proxy registrations in both directions and warms the current renderer", async () => {
     const f = fixture(false);
     let current: TuiMainScreen | TuiAltScreen = f.tui;
-    const proxy = createInteractiveTuiReference(() => current);
+    const proxy = createInteractiveTuiReference(() => current) as TuiMainScreen & TextRegionCapability;
     const register = proxy.registerTextRegion!;
     const handle = register(f.animation);
     try {
@@ -143,7 +149,7 @@ describe("text region fallback and ownership", () => {
   });
 });
 
-describe("text region retained-frame invalidation", () => {
+patchDescribe("text region retained-frame invalidation", () => {
   it("preserves Unicode and hyperlinks and falls back when a render throws", async () => {
     const baseline = fixture(false), local = fixture(true);
     let fail = false;
@@ -181,7 +187,7 @@ describe("text region retained-frame invalidation", () => {
   });
 });
 
-it("falls back when the retained frame contains an image", async () => {
+patchIt("falls back when the retained frame contains an image", async () => {
   const baseline = fixture(false), local = fixture(true);
   try {
     for (const f of [baseline, local]) {
@@ -202,7 +208,7 @@ function fullscreenFixture(local: boolean, inTranscript = false) {
   const terminal = { columns: 120, rows: 40, start(callback: typeof input) { input = callback; }, write(text: string) { output += text; }, hideCursor() {}, showCursor() {}, stop() {},
     async drainInput() {}, kittyProtocolActive: false, moveBy() {}, clearLine() {}, clearFromCursor() {}, clearScreen() {}, setTitle() {}, setProgress() {}, setProgramStatus() {},
   } satisfies Terminal;
-  const tui = new TuiAltScreen(terminal, true, undefined, { copySelection: async text => { copied.push(text); return true; }, copyOnSelect: false });
+  const tui = new TuiAltScreen(terminal, true, undefined, { copySelection: async text => { copied.push(text); return true; }, copyOnSelect: false }) as TuiAltScreen & TextRegionCapability;
   const calls = { history: 0, editor: 0, animation: 0, footer: 0 };
   const state = { step: 0, rate: 101, height: 1, draft: "draft", color: "", fail: false };
   const history = { invalidate() {}, render() { calls.history++; return Array.from({ length: 80 }, (_, i) => `History ${i}`); } };
@@ -228,7 +234,7 @@ function fullscreenFixture(local: boolean, inTranscript = false) {
   };
 }
 
-describe("fullscreen text regions", () => {
+patchDescribe("fullscreen text regions", () => {
   it("revalidates changed strings after repeated styled multirow updates", async () => {
     const baseline = fullscreenFixture(false), local = fullscreenFixture(true);
     const rows = ["\x1b[36m状态 กำ ຳ\x1b[39m", "Status: stable second row"];
@@ -280,7 +286,7 @@ describe("fullscreen text regions", () => {
   });
 });
 
-it("copies current locally updated scroll text through real mouse input and refreshes search", async () => {
+patchIt("copies current locally updated scroll text through real mouse input and refreshes search", async () => {
   const f = fullscreenFixture(true, true);
   try {
     f.state.step = 1; f.request([0]); await settle();
@@ -312,7 +318,7 @@ it("copies current locally updated scroll text through real mouse input and refr
   } finally { f.dispose(); }
 });
 
-it("preserves hit testing after local frames and changing dock height", async () => {
+patchIt("preserves hit testing after local frames and changing dock height", async () => {
   const f = fullscreenFixture(true);
   const hits: { x: number; y: number; height: number }[] = [];
   Object.assign(f.animation, { handleMouse(event: { x: number; y: number; height: number }) { hits.push({ x: event.x, y: event.y, height: event.height }); return { handled: true }; } });
@@ -326,7 +332,7 @@ it("preserves hit testing after local frames and changing dock height", async ()
   } finally { f.dispose(); }
 });
 
-it("falls back for fullscreen images and transformed components, and releases stopped registrations", async () => {
+patchIt("falls back for fullscreen images and transformed components, and releases stopped registrations", async () => {
   const baseline = fullscreenFixture(false), local = fullscreenFixture(true);
   try {
     for (const f of [baseline, local]) {
@@ -349,7 +355,7 @@ it("falls back for fullscreen images and transformed components, and releases st
   } finally { baseline.dispose(); local.dispose(); }
 });
 
-it("does not commit part of a fullscreen frame when another target throws", async () => {
+patchIt("does not commit part of a fullscreen frame when another target throws", async () => {
   const f = fullscreenFixture(true);
   const flush = () => {
     const renderer = f.tui as unknown as { cancelRenderTimer(): void; renderRequested: boolean; doRender(): void };
@@ -367,7 +373,7 @@ it("does not commit part of a fullscreen frame when another target throws", asyn
   } finally { f.dispose(); }
 });
 
-it("falls back for overlapping registrations and synchronous tree invalidation", async () => {
+patchIt("falls back for overlapping registrations and synchronous tree invalidation", async () => {
   const baseline = fullscreenFixture(false), local = fullscreenFixture(true);
   const parent = local.tui.registerTextRegion!(local.widget);
   try {
@@ -389,7 +395,7 @@ it("falls back for overlapping registrations and synchronous tree invalidation",
   } finally { parent.dispose(); baseline.dispose(); local.dispose(); }
 });
 
-it("resumes local refresh after an empty mouse selection and preserves Unicode links", async () => {
+patchIt("resumes local refresh after an empty mouse selection and preserves Unicode links", async () => {
   const baseline = fullscreenFixture(false), local = fullscreenFixture(true);
   try {
     for (const f of [baseline, local]) {
@@ -408,7 +414,7 @@ it("resumes local refresh after an empty mouse selection and preserves Unicode l
 });
 
 
-it("falls back when layout visibility depends on changing target state", async () => {
+patchIt("falls back when layout visibility depends on changing target state", async () => {
   const baseline = fullscreenFixture(false), local = fullscreenFixture(true);
   try {
     for (const f of [baseline, local]) {
@@ -418,4 +424,20 @@ it("falls back when layout visibility depends on changing target state", async (
     await settle(); expect(local.snapshot()).toEqual(baseline.snapshot());
     expect(local.tui.getScreenLines().some(line => line.includes("Working"))).toBe(false);
   } finally { baseline.dispose(); local.dispose(); }
+});
+
+it.each([false, true])("refreshes production content through normal rendering without region registration (fullscreen=%s)", async fullscreen => {
+  const f = fullscreen ? fullscreenFixture(false) : fixture(false);
+  try {
+    f.clear(); f.state.step++; f.state.rate++; f.state.draft += " new";
+    f.request();
+    await settle();
+    expect(f.calls.history).toBeGreaterThan(0);
+    expect(f.calls.editor).toBeGreaterThan(0);
+    expect(f.calls.animation).toBeGreaterThan(0);
+    expect(f.calls.footer).toBeGreaterThan(0);
+    expect(f.snapshot().output).toContain("Working 1");
+    expect(f.snapshot().output).toContain("102 t/s");
+    expect(f.snapshot().output).toContain("draft new");
+  } finally { f.dispose(); }
 });

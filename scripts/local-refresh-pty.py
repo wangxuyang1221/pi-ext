@@ -27,7 +27,7 @@ parser.add_argument("--mode", choices=["regular", "fullscreen"], default="regula
 parser.add_argument("--original", action="store_true")
 parser.add_argument("--kitty", action="store_true", help="Advertise Kitty image protocol; verify emitted bytes, not physical pixels")
 parser.add_argument("--working", action="store_true", help="Drive production Working and rate with controlled provider events")
-parser.add_argument("--profile", choices=["pi14", "pi152"], default="pi14")
+parser.add_argument("--profile", choices=["pi152"], default="pi152")
 parser.add_argument("--extension", type=Path, help="Installed codex-ui entry for the working journey")
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]

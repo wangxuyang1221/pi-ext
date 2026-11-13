@@ -5,7 +5,7 @@ import pyte
 REPO = Path(__file__).resolve().parents[3]
 BASE = REPO / 'extensions/mcp/__tests__/fixtures/verification'
 NODE = shutil.which('node')
-CLI = REPO / 'node_modules/@earendil-works/pi-coding-agent/dist/cli.js'
+CLI = REPO / 'node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js'
 scene = sys.argv[1] if len(sys.argv) > 1 else ''
 if scene not in ['configuration', 'combination', 'diagnostics', 'reload', 'history']:
     raise SystemExit('Usage: verification-journeys.py configuration|combination|diagnostics|reload|history')

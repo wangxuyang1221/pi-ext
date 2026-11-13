@@ -3,10 +3,10 @@ import { resolve, join } from "node:path";
 import { expect, test, vi } from "vitest";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { budgetFetch } from "../../../scripts/pi14-live-budget.mjs";
+import { budgetFetch } from "../../../scripts/pi152-live-budget.mjs";
 
 test("keeps the network guard installed after real CLI dispatcher setup", async () => {
-  const root = await mkdtemp(resolve(".tmp/pi14-budget-"));
+  const root = await mkdtemp(resolve(".tmp/pi152-budget-"));
   const path = join(root, "state.json");
   await writeFile(path, JSON.stringify({ deadline: Date.now() + 10_000, maxRequests: 1, maxCompactions: 1,
     requests: 0, compactions: 0, auxiliary: 0, allowedOrigins: [], localOrigins: [] }));
@@ -15,15 +15,15 @@ test("keeps the network guard installed after real CLI dispatcher setup", async 
     try { await fetch("data:text/plain,fixture"); console.log("bypassed"); } catch { console.log("blocked"); }
     console.log(typeof WebSocket);`;
   try {
-    const result = await promisify(execFile)(process.execPath, ["--import", resolve("scripts/pi14-live-network.mjs"), "--input-type=module", "-e", script],
-      { env: { PATH: process.env.PATH, HOME: root, TMPDIR: root, PI_CODING_AGENT_DIR: root, PI14_LIVE_STATE: path } });
+    const result = await promisify(execFile)(process.execPath, ["--import", resolve("scripts/pi152-live-network.mjs"), "--input-type=module", "-e", script],
+      { env: { PATH: process.env.PATH, HOME: root, TMPDIR: root, PI_CODING_AGENT_DIR: root, PI152_LIVE_STATE: path } });
     expect(result.stdout.trim().split("\n")).toEqual(["blocked", "undefined"]);
     expect(JSON.parse(await readFile(path, "utf8")).requests).toBe(0);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test("records remote compaction usage without consuming or logging checkpoint content", async () => {
-  const root = await mkdtemp(resolve(".tmp/pi14-budget-"));
+  const root = await mkdtemp(resolve(".tmp/pi152-budget-"));
   const path = join(root, "state.json");
   await writeFile(path, JSON.stringify({ deadline: Date.now() + 10_000, maxRequests: 1, maxCompactions: 1,
     requests: 0, compactions: 0, auxiliary: 0, allowedOrigins: ["https://example.com"], localOrigins: [] }));
@@ -42,7 +42,7 @@ test("records remote compaction usage without consuming or logging checkpoint co
 });
 
 test("counts retries and compression requests before dispatch and rejects excess calls", async () => {
-  const root = await mkdtemp(resolve(".tmp/pi14-budget-"));
+  const root = await mkdtemp(resolve(".tmp/pi152-budget-"));
   const path = join(root, "state.json");
   await writeFile(path, JSON.stringify({ deadline: Date.now() + 10_000, maxRequests: 3, maxCompactions: 1,
     requests: 0, compactions: 0, auxiliary: 0, allowedOrigins: ["https://example.com"], localOrigins: [] }));
@@ -60,11 +60,11 @@ test("counts retries and compression requests before dispatch and rejects excess
 });
 
 test("shares the request limit across processes", async () => {
-  const root = await mkdtemp(resolve(".tmp/pi14-budget-"));
+  const root = await mkdtemp(resolve(".tmp/pi152-budget-"));
   const path = join(root, "state.json");
   await writeFile(path, JSON.stringify({ deadline: Date.now() + 10_000, maxRequests: 3, maxCompactions: 1,
     requests: 0, compactions: 0, auxiliary: 0, allowedOrigins: ["https://example.com"], localOrigins: [] }));
-  const script = `import { budgetFetch } from ${JSON.stringify(new URL("../../../scripts/pi14-live-budget.mjs", import.meta.url).href)};
+  const script = `import { budgetFetch } from ${JSON.stringify(new URL("../../../scripts/pi152-live-budget.mjs", import.meta.url).href)};
     try { await budgetFetch(process.argv[1], async () => new Response())("https://example.com/responses"); console.log("sent"); }
     catch { console.log("blocked"); }`;
   try {
@@ -75,7 +75,7 @@ test("shares the request limit across processes", async () => {
 });
 
 test("aborts an in-flight last allowed request at the deadline and rejects new requests", async () => {
-  const root = await mkdtemp(resolve(".tmp/pi14-budget-"));
+  const root = await mkdtemp(resolve(".tmp/pi152-budget-"));
   const path = join(root, "state.json");
   await writeFile(path, JSON.stringify({ deadline: Date.now() + 100, maxRequests: 1, maxCompactions: 1,
     requests: 0, compactions: 0, auxiliary: 0, allowedOrigins: ["https://example.com"], localOrigins: [] }));

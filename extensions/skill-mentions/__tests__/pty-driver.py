@@ -470,6 +470,7 @@ try:
     assert "⌘alpha" in view(), view()
     send("\x01")
     send("\x1b[B")
+    # Dedicated historyPrevious now browses history from every cursor row.
     send("\x1b[A")
     assert editor() == "abc $alpha tail"
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 50, 120, 0, 0))

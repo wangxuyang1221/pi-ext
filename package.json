@@ -74,7 +74,6 @@
     "host:check": "node ./scripts/check-pi-host.mjs",
     "host:pty:check": "pnpm run build && node ./scripts/check-host-integration.mjs pty",
     "host:benchmark:check": "pnpm run build && node ./scripts/check-host-integration.mjs benchmark",
-    "pi14:live": "node ./scripts/pi14-live.mjs --live",
     "web-search:typecheck": "tsc -p extensions/codex-search/tsconfig.json --noEmit",
     "skill-mentions:acceptance": "node ./extensions/skill-mentions/__tests__/acceptance.mjs",
     "codex-compact:media:generate": "node ./scripts/codex-compact-media.mjs generate",
@@ -90,7 +89,9 @@
     "test:offline": "pnpm test",
     "typecheck:tests": "tsc -p tsconfig.tests.json",
     "repository:check": "node ./scripts/check-repository.mjs",
-    "pi152:verify": "node scripts/pi152-verify.mjs"
+    "pi152:verify": "node scripts/pi152-verify.mjs",
+    "pi152:live": "node ./scripts/pi152-live.mjs --live",
+    "pi152:check": "node scripts/check-pi152.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
@@ -98,15 +99,15 @@
     "zod": "4.4.3"
   },
   "peerDependencies": {
-    "@earendil-works/pi-ai": "1.4.0 || 1.5.2",
-    "@earendil-works/pi-coding-agent": "1.4.0 || 1.5.2",
-    "@earendil-works/pi-tui": "1.4.0 || 1.5.2",
+    "@earendil-works/pi-ai": "1.5.2",
+    "@earendil-works/pi-coding-agent": "1.5.2",
+    "@earendil-works/pi-tui": "1.5.2",
     "typebox": "*"
   },
   "devDependencies": {
-    "@earendil-works/pi-ai": "1.4.0",
-    "@earendil-works/pi-coding-agent": "1.4.0",
-    "@earendil-works/pi-tui": "1.4.0",
+    "@earendil-works/pi-ai": "1.5.2",
+    "@earendil-works/pi-coding-agent": "1.5.2",
+    "@earendil-works/pi-tui": "1.5.2",
     "@secretlint/core": "13.1.0",
     "@secretlint/secretlint-rule-preset-recommend": "13.1.0",
     "@types/node": "22.19.19",

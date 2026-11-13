@@ -61,7 +61,7 @@ console.log(JSON.stringify({ initial: initial.getSessionFile(), target: target.g
     if "--global-host" in sys.argv:
         cli = [shutil.which("pi")]
     else:
-        cli = ["node", str(repo / "node_modules/@earendil-works/pi-coding-agent/dist/cli.js")]
+        cli = ["node", str(repo / "node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js")]
     args = [*cli, "--offline", "--no-approve", "--no-extensions", "--no-context-files", "--no-skills", "--no-prompt-templates",
             "--extension", str(repo / "extensions/codex-search/src/index.ts"), "--extension", str(fixture),
             "--theme", str(repo / "themes/codex-pi.json"), "--use-theme", "codex-pi", "--session", paths["initial"]]

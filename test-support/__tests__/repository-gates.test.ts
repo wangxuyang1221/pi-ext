@@ -272,12 +272,12 @@ test("uses the linked worktree hook and its own index", () => {
   expect(repo.git("status", "--porcelain", "--untracked-files=no")).toBe("");
 });
 
-test.each(["failure", "cancelled", "skipped", "missing"])("rejects a CI job with result %s", status => {
+test.each(["test", "unix-host", "python-and-skills", "pi152-host"].flatMap(name => ["failure", "cancelled", "skipped", "missing"].map(status => [name, status])))("rejects CI job %s with result %s", (name, status) => {
   const needs: Record<string, { result: string }> = {
-    test: { result: "success" }, "unix-host": { result: "success" }, "python-and-skills": { result: "success" },
+    test: { result: "success" }, "unix-host": { result: "success" }, "python-and-skills": { result: "success" }, "pi152-host": { result: "success" },
   };
-  if (status === "missing") delete needs["unix-host"];
-  else needs["unix-host"] = { result: status };
+  if (status === "missing") delete needs[name];
+  else needs[name] = { result: status };
   const result = spawnSync(process.execPath, [join(scripts, "check-ci.mjs")], {
     encoding: "utf8", env: { ...process.env, CI_JOB_RESULTS: JSON.stringify(needs) },
   });
@@ -285,7 +285,7 @@ test.each(["failure", "cancelled", "skipped", "missing"])("rejects a CI job with
 });
 
 test("accepts CI only when every required job succeeds", () => {
-  const results = Object.fromEntries(["test", "unix-host", "python-and-skills"].map(name => [name, { result: "success" }]));
+  const results = Object.fromEntries(["test", "unix-host", "python-and-skills", "pi152-host"].map(name => [name, { result: "success" }]));
   const result = spawnSync(process.execPath, [join(scripts, "check-ci.mjs")], {
     encoding: "utf8", env: { ...process.env, CI_JOB_RESULTS: JSON.stringify(results) },
   });

@@ -1,3 +1,4 @@
+import { TestKeybindingsManager } from "../../../test-support/keybindings.js";
 import assert from "node:assert/strict";
 import { test, vi } from "vitest";
 import { getSelectListTheme, initTheme, type Theme } from "@earendil-works/pi-coding-agent";
@@ -29,7 +30,7 @@ test("composer keeps its body and menu separate during native command completion
   initTheme("dark", false);
   const editor = new CodexEditor(
     { terminal: { rows: 40, columns: 80 }, requestRender() {} } as unknown as TUI,
-    { borderColor: text => text, selectList: getSelectListTheme() }, { matches: () => false } as never, () => theme,
+    { borderColor: text => text, selectList: getSelectListTheme() }, new TestKeybindingsManager(), () => theme,
   );
   const submit = vi.fn();
   editor.onSubmit = submit;
@@ -266,7 +267,7 @@ test("editor paints a flat composer while preserving the cursor marker", () => {
     terminal: { rows: 40, columns: 80 },
     requestRender() {},
   } as unknown as TUI;
-  const keybindings = { matches: () => false };
+  const keybindings = new TestKeybindingsManager();
   const editor = new CodexEditor(
     tui,
     editorTheme,
@@ -307,7 +308,7 @@ test("composer keeps theme text colors after prompt and cursor resets in both pr
   const editor = new CodexEditor(
     { terminal: { rows: 40, columns: 80 }, requestRender() {} } as unknown as TUI,
     { borderColor: (text: string) => text, selectList: {} } as EditorTheme,
-    { matches: () => false } as never,
+    new TestKeybindingsManager(),
     () => current,
   );
   const emptyProjection = editor.renderProjectedLines(40, [" "], [], 0, 0).map(stripTerminalSequences);
@@ -347,4 +348,21 @@ test("composer keeps theme text colors after prompt and cursor resets in both pr
     assert.ok(stripTerminalSequences(frames[1][1]).startsWith("›Draft"));
     assert.ok(stripTerminalSequences(frames[1][2]).startsWith("Wrapped"));
   }
+});
+
+test("composer uses the supplied host bindings and restores the module manager after failure", async () => {
+  const { getKeybindings } = await import("@earendil-works/pi-tui");
+  const previous = getKeybindings();
+  const keys = new TestKeybindingsManager({ "tui.editor.historyPrevious": "ctrl+p" });
+  const editor = new CodexEditor(
+    { terminal: { rows: 40, columns: 80 }, requestRender() {} } as unknown as TUI,
+    { borderColor: text => text, selectList: getSelectListTheme() }, keys, () => theme,
+  );
+  editor.addToHistory("Host history");
+  editor.handleInput("\x10");
+  assert.equal(editor.getText(), "Host history");
+  assert.equal(getKeybindings(), previous);
+  editor.onSubmit = () => { throw new Error("fixture submit failure"); };
+  assert.throws(() => editor.handleInput("\r"), /fixture submit failure/u);
+  assert.equal(getKeybindings(), previous);
 });

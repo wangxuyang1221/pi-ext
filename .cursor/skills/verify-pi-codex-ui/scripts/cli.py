@@ -24,7 +24,7 @@ shutil.copyfile(REPO/'themes/codex-pi.json', ROOT/'agent/themes/codex-pi.json')
 env = {k:v for k,v in os.environ.items() if k in ['PATH', 'LANG', 'LC_ALL', 'TZ']}
 env.update(HOME=str(ROOT/'home'), TMPDIR=str(ROOT/'tmp'), PI_CODING_AGENT_DIR=str(ROOT/'agent'), AUDIT_ROOT=str(ROOT), TERM='xterm-256color', COLORTERM='truecolor', PI_OFFLINE='1', PI_TELEMETRY='0', PI_SKIP_VERSION_CHECK='1', PYTHONDONTWRITEBYTECODE='1')
 for kind in ['CACHE','CONFIG','DATA','STATE']: env['XDG_'+kind+'_HOME'] = str(ROOT/kind.lower())
-cli = ['node', str(REPO/'node_modules/@earendil-works/pi-coding-agent/dist/cli.js'), '--offline', '--no-extensions', '--no-skills', '--no-context-files', '--no-prompt-templates', '--tools', '+codemode', '--session-dir', str(ROOT/'sessions'), '--provider', 'faux', '--model', 'faux-1', '-e', str(REPO/'extensions/codex-ui/dist/index.js'), '-e', str(BASE/'model-provider.ts')]
+cli = ['node', str(REPO/'node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js'), '--offline', '--no-extensions', '--no-skills', '--no-context-files', '--no-prompt-templates', '--tools', '+codemode', '--session-dir', str(ROOT/'sessions'), '--provider', 'faux', '--model', 'faux-1', '-e', str(REPO/'extensions/codex-ui/dist/index.js'), '-e', str(BASE/'model-provider.ts')]
 actions, snapshots, assertions, processes = [], {}, [], []
 pid, fd, status = None, None, None
 raw = bytearray()

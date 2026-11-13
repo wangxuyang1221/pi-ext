@@ -17,15 +17,15 @@
 
 Preconditions:
 
-- 完成 Launch 和 [installation](installation.md)，本次 `INSTALL` 与 `BASELINE_TUI` 来自新安装 JSON。当前 checkout 与安装补丁哈希一致；CPU 候选从当前仓库 node_modules 加载，不是从 `PATCHED_CLI` 加载。
-- doctor 当前仓库及原版均通过。无本任务并行构建/测试/CPU 负载。记录 Node、平台、CPU 型号、revision、dirty diff 和时间。
+- 完成 Launch 和 [installation](installation.md)，本次 `INSTALL` 与 `BASELINE_TUI` 来自新安装 JSON。当前 checkout 与安装补丁哈希一致；CPU 候选从 [独立补丁运行树](pi152.md) 的 node_modules 加载，先完成其 prepare/build/types。
+- 补丁运行树及原版 doctor 均通过。无本任务并行构建/测试/CPU 负载。记录 Node、平台、CPU 型号、revision、dirty diff 和时间。
 
 ```bash
 BASELINE_TUI="$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1])).projects.original.tui)' "$RUN/installation.json")"
 mkdir -p "$RUN/cpu"
 for round in 1 2 3; do
   for mode in regular fullscreen; do
-    if node --expose-gc scripts/local-refresh-cpu.mjs --baseline="$BASELINE_TUI" --mode="$mode" > "$RUN/cpu/$mode-$round.json" 2> "$RUN/cpu/$mode-$round.stderr"; then
+    if node scripts/pi152-patched-verify.mjs run node --expose-gc scripts/local-refresh-cpu.mjs --baseline="$BASELINE_TUI" --mode="$mode" > "$RUN/cpu/$mode-$round.json" 2> "$RUN/cpu/$mode-$round.stderr"; then
       printf '0\n' > "$RUN/cpu/$mode-$round.exit"
     else
       printf '%s\n' "$?" > "$RUN/cpu/$mode-$round.exit"
@@ -33,7 +33,7 @@ for round in 1 2 3; do
   done
 done
 for mode in regular fullscreen; do
-  if node --expose-gc scripts/local-refresh-cpu.mjs --baseline="$BASELINE_TUI" --mode="$mode" --interval=32 --pairs=200,1000 --workloads=animation-and-rate --frames=40 --samples=3 > "$RUN/cpu/$mode-native.json" 2> "$RUN/cpu/$mode-native.stderr"; then
+  if node scripts/pi152-patched-verify.mjs run node --expose-gc scripts/local-refresh-cpu.mjs --baseline="$BASELINE_TUI" --mode="$mode" --interval=32 --pairs=200,1000 --workloads=animation-and-rate --frames=40 --samples=3 > "$RUN/cpu/$mode-native.json" 2> "$RUN/cpu/$mode-native.stderr"; then
     printf '0\n' > "$RUN/cpu/$mode-native.exit"
   else
     printf '%s\n' "$?" > "$RUN/cpu/$mode-native.exit"

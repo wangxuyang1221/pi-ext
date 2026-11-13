@@ -48,7 +48,7 @@ def session(path, cwd, extra_tools=0, history_mib=0):
 def run_case(pi_root, baseline=False, live=False, cold_mode="session", repeat=0, memory=False, extra_tools=0, pi_version=PI_VERSION, history_mib=0):
     package = json.loads((pi_root / "package.json").read_text())
     assert package["version"] == pi_version, package["version"]
-    cli = pi_root / "dist/cli.js"
+    cli = pi_root / "dist/bundle/cli.js"
     (ROOT / ".tmp").mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="mcp-resume-", dir=ROOT / ".tmp") as temporary:
         run = Path(temporary)

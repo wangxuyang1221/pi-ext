@@ -13,5 +13,5 @@ export function inspectPiHost(root = piPackageRoot, expected = expectedPiVersion
     [name, JSON.parse(readFileSync(join(dirname(root), name, "package.json"), "utf8")).version]));
   assert.equal(versions["pi-coding-agent"], expected, "Installed Pi runtime version mismatch");
   assert.equal(new Set(Object.values(versions)).size, 1, "Pi dependency versions differ");
-  return { root, cli: join(root, "dist/cli.js"), node: process.version, versions };
+  return { root, cli: join(root, "dist/bundle/cli.js"), moduleCli: join(root, "dist/cli.js"), node: process.version, versions };
 }

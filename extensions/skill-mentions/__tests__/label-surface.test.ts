@@ -1,3 +1,4 @@
+import { TestKeybindingsManager } from "../../../test-support/keybindings.js";
 import { beforeAll, expect, it } from "vitest";
 import { initTheme, Theme, type KeybindingsManager, type SlashCommandInfo } from "@earendil-works/pi-coding-agent";
 import { CombinedAutocompleteProvider, getKeybindings, stripTerminalSequences, visibleWidth, type TUI, type TuiMouseEvent } from "@earendil-works/pi-tui";
@@ -29,7 +30,7 @@ function fixture(host: string, icon: IconMode, names = ["alpha", "beta"]) {
     toolPendingBg: 238, toolSuccessBg: 238, toolErrorBg: 238,
   }, "256color");
   const editorTheme = { borderColor: same, selectList: { selectedPrefix: same, selectedText: same, description: same, scrollInfo: same, noMatch: same } };
-  const keys = { matches: () => false } as unknown as KeybindingsManager;
+  const keys = new TestKeybindingsManager();
   const base = host === "native" ? new LabelNativeEditor(tui, editorTheme, keys) : new CodexEditor(tui, editorTheme, keys, () => theme);
   const editor = createLabelEditor(base, { names: () => new Set(names), icon: () => icon, tui });
   return { editor, base, tui, terminal };

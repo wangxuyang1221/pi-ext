@@ -1,3 +1,4 @@
+import { TestKeybindingsManager } from "../../../test-support/keybindings.js";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { InMemoryCredentialStore, InMemoryModelsStore, fauxAssistantMessage, fauxProvider, type Message, type UserMessage } from "@earendil-works/pi-ai";
@@ -61,7 +62,7 @@ export async function lifecycleFixture(options: { codex?: "before" | "after"; ex
   // Real editor/transcript methods with inert terminal plumbing. PTY belongs to slice 3.
   const mode: any = Object.create(InteractiveMode.prototype);
   const tui = { terminal: { rows: 40, columns: 100 }, requestRender() {}, setFocus() {}, invalidate() { mode.chatContainer?.invalidate(); } } as unknown as TUI;
-  const keys = { matches: () => false } as unknown as KeybindingsManager;
+  const keys = new TestKeybindingsManager();
   const identity = (text: string) => text;
   const defaultEditor = new CustomEditor(tui, { borderColor: identity, selectList: { selectedPrefix: identity, selectedText: identity, description: identity, scrollInfo: identity, noMatch: identity } }, keys, { embedWorkingStatus: true });
   resource.editors.push(defaultEditor);
@@ -69,7 +70,7 @@ export async function lifecycleFixture(options: { codex?: "before" | "after"; ex
     get session() { return runtime.session; }, get sessionManager() { return runtime.session.sessionManager; }, settingsManager,
     chatContainer: new Container(), pendingTools: new Map(), toolOutputExpanded: false, hideThinkingBlock: false,
     outputPad: 1, ui: tui, keybindings: keys, editor: defaultEditor, defaultEditor,
-    editorContainer: new Container(), statusContainer: new Container(), disposeActiveSelector() {},
+    extensionDialogs: [], editorContainer: new Container(), statusContainer: new Container(), disposeActiveSelector() {},
     footer: { invalidate() {} }, updateEditorBorderColor() {},
     getMarkdownThemeWithSettings: () => getMarkdownTheme(),
     getMarkdownTransformers: () => runtime.session.extensionRunner!.getMarkdownTransformers(),

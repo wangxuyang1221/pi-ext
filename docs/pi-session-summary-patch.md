@@ -2,24 +2,24 @@
 
 ## Optional Pi 1.5.2 host
 
-1.5.2 使用独立固定依赖和 [验证 profile](../.cursor/skills/verify-pi-text-regions/features/pi152.md)。先运行 `node scripts/pi152-patched-verify.mjs prepare`、`build` 和 `types`。显式启动入口为 `node /absolute/pi-ext/scripts/pi152-patched.mjs`，保留调用者 cwd，输出实际包路径、版本、patch 和锁 hash。默认全局 Pi 保持独立。根目录 1.4.0 配置继续作为回归基线。
+1.5.2 使用独立固定依赖和 [验证 profile](../.cursor/skills/verify-pi-text-regions/features/pi152.md)。先运行 `node scripts/pi152-patched-verify.mjs prepare`、`build` 和 `types`。显式启动入口为 `node /absolute/pi-ext/scripts/pi152-patched.mjs`，保留调用者 cwd，输出实际包路径、版本、patch 和锁 hash。默认全局 Pi 保持独立。根默认依赖使用原版 1.5.2，不自动应用补丁。
 
 补丁版开启会话摘要投影与局部刷新。原版 1.5.2 保留扩展功能，列表使用原始协议文本，动态区域使用普通刷新。1.5.2 的 Markdown surfaces、缺失 cwd 的 Continue/Fork/Cancel、OSC133 前缀清除及 Kitty 有界回溯/裁剪沿用上游行为。
 
 
 ## Scope
 
-仓库为 `@earendil-works/pi-coding-agent@1.4.0` 维护 [会话摘要补丁](../patches/@earendil-works__pi-coding-agent@1.4.0.patch)，由 [pnpm-workspace.yaml](../pnpm-workspace.yaml) 和锁文件固定。它为 Skill Mentions 提供恢复列表显示与检索所需的宿主接口，不改写历史消息或用户设置的会话名称。
+仓库为 `@earendil-works/pi-coding-agent@1.5.2` 维护 [会话摘要补丁](../patches/@earendil-works__pi-coding-agent@1.5.2.patch)，由 [独立补丁配置](../test-support/pi152-patched/pnpm-workspace.yaml) 和锁文件固定。它为 Skill Mentions 提供恢复列表显示与检索所需的宿主接口，不改写历史消息或用户设置的会话名称。
 
 Pi 的默认 bin 指向 `dist/bundle/cli.js`。补丁同时让该入口加载已修复的 `dist/cli.js`，避免 `pnpm exec pi` 继续使用未更新的预打包 runtime。只改未打包模块不足以让默认命令生效；发布包专项也通过消费项目的 `node_modules/.bin/pi` 启动。
 
-在仓库执行 `pnpm install --frozen-lockfile --ignore-scripts` 会自动应用补丁。使用 `pnpm exec pi` 启动仓库内宿主，例如构建后运行：
+先执行独立 runtime 的 prepare、build、types，再使用显式补丁启动器：
 
 ```bash
-pnpm exec pi -e ./extensions/skill-mentions/dist/index.js
+node scripts/pi152-patched.mjs
 ```
 
-发布包不包含或自动安装宿主补丁。用户用全局 Pi 加载发布包时，使用的仍是全局宿主。未补丁的 Pi 1.4.0 可继续加载扩展，原有正文、卡片和模型快照功能保留，恢复列表仍可能显示协议正文。外部 pnpm 项目若需要摘要修复，应在自己的根配置中对同一宿主版本登记此 patch 并更新锁文件；仅安装 `pi-ext` 不会传播本仓库的 `patchedDependencies`。
+发布包不包含或自动安装宿主补丁。用户用全局 Pi 加载发布包时，使用的仍是全局宿主。未补丁的 Pi 1.5.2 可继续加载扩展，原有正文、卡片和模型快照功能保留，恢复列表仍可能显示协议正文。外部 pnpm 项目若需要摘要修复，应在自己的根配置中对同一宿主版本登记此 patch 并更新锁文件；仅安装 `pi-ext` 不会传播本仓库的 `patchedDependencies`。
 
 ## Interface and lifecycle
 
@@ -37,17 +37,17 @@ pnpm exec pi -e ./extensions/skill-mentions/dist/index.js
 - [resume-summary-driver.py](../extensions/skill-mentions/__tests__/resume-summary-driver.py) 经真实 CLI 生成 snapshot，验证 `/new` 后两次 `/resume`、冷启动 `--resume`、精确搜索、删除源 skill 后恢复卡片和继续请求。使用新的仓库内证据目录运行：
 
 ```bash
-conda run --no-capture-output -n codex-py312 python extensions/skill-mentions/__tests__/resume-summary-driver.py .tmp/summary-native native
+node scripts/pi152-patched-verify.mjs run conda run --no-capture-output -n codex-py312 python extensions/skill-mentions/__tests__/resume-summary-driver.py .tmp/summary-native native node_modules/.bin/pi .
 ```
 
-将模式替换为 `native-fullscreen`、`codex`、`codex-fullscreen` 并使用不同证据目录，可验收其他终端模式。先执行 `pnpm run build`。
+将模式替换为 `native-fullscreen`、`codex`、`codex-fullscreen` 并使用不同证据目录，可验收其他终端模式。先完成独立补丁树的 prepare/build/types。
 
 发布包消费专项运行 `pnpm run skill-mentions:acceptance --summary native`：实际 prepack、tarball 安装、编译文件字节比对，再在显式配置补丁的消费项目中执行两种选择器旅程。默认不带 `--summary` 的入口仍使用未补丁宿主及原有完整安装验收。
 
-本轮已在干净嵌套项目中用冻结锁文件离线安装，确认自动应用补丁、锁文件字节不变，以及 source/dist 加载成功。另用原始 Pi 1.4.0 验证 source/dist 可加载且无摘要接口。证据见 `.tmp/regression-fixes/patch-compatibility.json`、`frozen-install.log` 和四种模式的 `summary-*` 目录。
+可复跑的双宿主入口为 `pnpm run pi152:check stock` 和 `pnpm run pi152:check patched`，由必需 CI 矩阵执行并上传证据。
 
 ## Maintenance and removal
 
-修改补丁时用 `pnpm patch @earendil-works/pi-coding-agent@1.4.0 --edit-dir .tmp/pi-summary-patch` 提取副本，编辑后用 `pnpm --config.ignore-scripts=true patch-commit .tmp/pi-summary-patch` 生成 patch 和锁文件，再验证冻结安装。流程依据 [pnpm patch](https://pnpm.io/cli/patch) 与 [patch-commit](https://pnpm.io/cli/patch-commit) 文档，并已用 pnpm 11.9.0 实跑。
+在独立补丁运行树中执行 `pnpm patch` 和 `pnpm patch-commit`。将生成的 patch 同步回 `patches/`，将 workspace 映射和锁同步回 `test-support/pi152-patched/`，再从新目录运行完整补丁验收。根依赖树保持原版。
 
-升级宿主时先确认上游是否提供等价接口及两个选择器的注册时序。移除补丁需删除根配置中的对应映射和 patch 文件，更新锁文件，并运行摘要测试、两种恢复入口和 `pnpm run check`。上游接口名称或语义不同则先适配扩展；未适配就移除补丁会恢复原来的列表行为。
+升级宿主时先确认上游是否提供等价接口及两个选择器的注册时序。移除补丁需删除独立配置中的对应映射和 patch 文件，更新锁文件，并运行摘要测试、两种恢复入口和 `pnpm run check`。上游接口名称或语义不同则先适配扩展；未适配就移除补丁会恢复原来的列表行为。

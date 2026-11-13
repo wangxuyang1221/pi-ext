@@ -15,7 +15,7 @@ const env = { ...process.env, TMPDIR: join(root, "tmp") };
 try {
   mkdirSync(join(root, "consumer")); mkdirSync(env.TMPDIR);
   copyFileSync(join(here, "pty-fixture.ts"), join(root, "consumer/pty-fixture.ts"));
-  const cli = join(repo, "node_modules/@earendil-works/pi-coding-agent/dist/cli.js");
+  const cli = join(repo, "node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js");
   const compiled = ["skill-mentions", "codex-ui"].map(name => `extensions/${name}/dist/index.js`);
   for (const path of compiled) assert(existsSync(join(repo, path)), "Build before running spacing acceptance");
   for (const mode of modes) {

@@ -12,13 +12,13 @@ import termios
 import time
 
 node, worker, stage = sys.argv[1:]
-root = Path(os.environ["PI14_LIVE_ROOT"])
+root = Path(os.environ["PI152_LIVE_ROOT"])
 result = root / f"{stage}.worker.jsonl"
 result.unlink(missing_ok=True)
-deadline = json.loads(Path(os.environ["PI14_LIVE_STATE"]).read_text())["deadline"] / 1000
+deadline = json.loads(Path(os.environ["PI152_LIVE_STATE"]).read_text())["deadline"] / 1000
 pid, fd = pty.fork()
 if pid == 0:
-    os.environ["PI14_LIVE_TUI"] = "1"
+    os.environ["PI152_LIVE_TUI"] = "1"
     os.execv(node, [node, worker, stage])
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 50, 120, 0, 0))
 status = None

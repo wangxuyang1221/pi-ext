@@ -1,3 +1,2 @@
-patchedDependencies:
-  '@earendil-works/pi-coding-agent@1.4.0': patches/@earendil-works__pi-coding-agent@1.4.0.patch
-  '@earendil-works/pi-tui@1.4.0': patches/@earendil-works__pi-tui@1.4.0.patch
+packages:
+  - '.'

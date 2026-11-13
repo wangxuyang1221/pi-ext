@@ -15,11 +15,11 @@ assert.ok(!(continued && dryRun), "A live round cannot be continued as a dry run
 const stages = dryRun ? ["preflight", "preflight-tui"] : option("--stages")?.split(",") ?? ["seed", "resume", "fast", "mcp", "search", "noncodex"];
 assert.ok(stages.every(stage => ["preflight", "preflight-tui", "seed", "resume", "auto-switch", "fast", "mcp", "search", "noncodex"].includes(stage)));
 const host = inspectPiHost();
-assert.equal(host.versions["pi-coding-agent"], "1.4.0");
+assert.equal(host.versions["pi-coding-agent"], "1.5.2");
 const repo = process.cwd();
 await mkdir(resolve(".tmp"), { recursive: true });
-const root = continued ? resolve(continued) : await mkdtemp(resolve(".tmp/pi14-live-"));
-assert.ok(root.startsWith(`${resolve(".tmp")}/pi14-live-`), "Continuation must use an isolated live root");
+const root = continued ? resolve(continued) : await mkdtemp(resolve(".tmp/pi152-live-"));
+assert.ok(root.startsWith(`${resolve(".tmp")}/pi152-live-`), "Continuation must use an isolated live root");
 const statePath = join(root, "budget.json");
 const existingBudget = continued ? JSON.parse(await readFile(statePath, "utf8")) : undefined;
 if (existingBudget) {
@@ -39,32 +39,32 @@ try {
   for (const dir of ["agent", "home", "work", "tmp", "cache", "config", "data", "state"]) await mkdir(join(root, dir), { recursive: true });
   if (!continued) await writeFile(statePath, JSON.stringify({ deadline, maxRequests: 40, maxCompactions: 8,
     requests: 0, compactions: 0, auxiliary: 0, allowedOrigins: dryRun ? [] : ["https://chatgpt.com", "https://auth.openai.com", "https://api.deepseek.com"], localOrigins: [] }));
-  const original = dryRun ? { "openai-codex": { type: "oauth", access: `e30.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "offline" } })).toString("base64url")}.offline`, refresh: "pi14-dryrun-refresh", expires: Date.now() + 3_600_000 } }
+  const original = dryRun ? { "openai-codex": { type: "oauth", access: `e30.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "offline" } })).toString("base64url")}.offline`, refresh: "pi152-dryrun-refresh", expires: Date.now() + 3_600_000 } }
     : JSON.parse(await readFile(join(homedir(), ".pi/agent/auth.json"), "utf8"));
   const auth = Object.fromEntries(["openai-codex", "deepseek"].filter(name => original[name]).map(name => [name, original[name]]));
   assert.ok(auth["openai-codex"], "Existing Codex authorization is required");
   await writeFile(authPath, JSON.stringify(auth), { mode: 0o600, flag: "wx" });
-  const guard = resolve("scripts/pi14-live-network.mjs");
+  const guard = resolve("scripts/pi152-live-network.mjs");
   const extensions = JSON.parse(await readFile("package.json", "utf8")).pi.extensions.map(path => resolve(path));
   const settings = { defaultProjectTrust: "never", transport: "sse", cacheWarming: "off", retry: { enabled: false, provider: { maxRetries: 0 } }, compaction: { enabled: false },
     defaultProvider: "openai-codex", defaultModel: "gpt-5.6-sol", defaultThinkingLevel: "low", extensions };
   await writeFile(join(agentDir, "settings.json"), JSON.stringify(settings));
   await writeFile(join(agentDir, "pi-codex-compact.json"), JSON.stringify({ manualProjection: { hiddenTools: [] } }));
   await writeFile(join(root, "mcp.json"), JSON.stringify({ mcpServers: { acceptance: { command: process.execPath,
-    args: [resolve("scripts/pi14-live-mcp.mjs")], retry: { maxAttempts: 1, background: false } } } }));
+    args: [resolve("scripts/pi152-live-mcp.mjs")], retry: { maxAttempts: 1, background: false } } } }));
   const env = { PATH: process.env.PATH, LANG: "en_US.UTF-8", TERM: "xterm-256color", SHELL: "/bin/sh",
     HOME: join(root, "home"), TMPDIR: join(root, "tmp"), XDG_CACHE_HOME: join(root, "cache"), XDG_CONFIG_HOME: join(root, "config"),
     XDG_DATA_HOME: join(root, "data"), XDG_STATE_HOME: join(root, "state"), PI_CODING_AGENT_DIR: agentDir,
-    PI14_LIVE_STATE: statePath, PI14_LIVE_ROOT: root, PI14_REPO: repo, NODE_OPTIONS: `--import ${guard}`,
+    PI152_LIVE_STATE: statePath, PI152_LIVE_ROOT: root, PI152_REPO: repo, NODE_OPTIONS: `--import ${guard}`,
     PI_MCP_CONFIG: join(root, "mcp.json"), PI_TELEMETRY: "0", PI_CODEX_WEB_SEARCH_MODEL: "gpt-5.6-sol", PYTHONDONTWRITEBYTECODE: "1" };
   console.log(JSON.stringify({ root, deadline: new Date(deadline).toISOString(), maxRequests: 40, maxCompactions: 8 }));
   for (const stage of stages) {
     if (stopping || Date.now() >= deadline) break;
     const stageStarted = Date.now();
     const budgetBefore = JSON.parse(await readFile(statePath, "utf8"));
-    const worker = [process.execPath, resolve("scripts/pi14-live-worker.mjs"), stage];
+    const worker = [process.execPath, resolve("scripts/pi152-live-worker.mjs"), stage];
     const command = ["noncodex", "preflight-tui"].includes(stage)
-      ? ["conda", "run", "--no-capture-output", "-n", "codex-py312", "python", resolve("scripts/pi14-live-pty.py"), ...worker] : worker;
+      ? ["conda", "run", "--no-capture-output", "-n", "codex-py312", "python", resolve("scripts/pi152-live-pty.py"), ...worker] : worker;
     child = spawn(command[0], command.slice(1), { env, cwd: repo, detached: true, stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "", stderr = "";
     child.stdout.on("data", data => { stdout += data; });

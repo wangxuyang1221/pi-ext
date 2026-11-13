@@ -13,7 +13,7 @@ assert(["native", "native-fullscreen", "codex", "codex-fullscreen", "combined", 
 let evidence;
 let scratch;
 let python;
-const cli = join(repo, "node_modules/@earendil-works/pi-coding-agent/dist/cli.js");
+const cli = join(repo, "node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js");
 const commands = [];
 const prefix = `skill-${scenario}-${Date.now()}`;
 const sha = content => createHash("sha256").update(content).digest("hex");

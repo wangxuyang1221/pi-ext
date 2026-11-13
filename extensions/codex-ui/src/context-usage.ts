@@ -8,7 +8,7 @@ export function createContextUsageReader(ctx: ContextSource): ExtensionContext["
   let value: ReturnType<ExtensionContext["getContextUsage"]>;
   return () => {
     const manager = ctx.sessionManager, model = ctx.model;
-    // Pi 1.4 virtual limits also depend on live agent messages, beyond the persisted branch.
+    // Virtual model limits also depend on live agent messages, beyond the persisted branch.
     if (!model || model.api === "pi-virtual" || typeof manager.getLeafEntry !== "function") return ctx.getContextUsage();
     const revision = [manager, manager.getLeafEntry(), model, model.contextWindow];
     if (!revision.every((part, index) => part === previous[index])) {

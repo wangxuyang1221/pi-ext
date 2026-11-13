@@ -1,6 +1,8 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, type Component, type TUI } from "@earendil-works/pi-tui";
 
+import type { TextRegionCapability } from "../test-support/host-capabilities.js";
+
 /** Runnable controlled-value example. This does not measure model token throughput. */
 export default function textRegionExample(pi: ExtensionAPI) {
   let cleanup: (() => void) | undefined;
@@ -16,7 +18,7 @@ export default function textRegionExample(pi: ExtensionAPI) {
     let tick: ReturnType<typeof setInterval> | undefined;
     const disposers = new Set<() => void>();
     const requests = new Map<string, () => void>();
-    const create = (tui: TUI, name: string, render: (width: number) => string[]) => {
+    const create = (tui: TUI & TextRegionCapability, name: string, render: (width: number) => string[]) => {
       let disposed = false;
       const component: Component & { dispose(): void } = {
         render, invalidate() {},
@@ -37,7 +39,7 @@ export default function textRegionExample(pi: ExtensionAPI) {
     ctx.ui.setWidget("text-region-example", (tui, theme) => create(tui, "animation", width =>
       Array.from({ length: height }, (_, row) => truncateToWidth(theme.fg("accent", `${["⠋", "⠙", "⠹", "⠸"][step % 4]} Region demo ${step} / ${row + 1}`), width))));
     ctx.ui.setFooter((tui, theme) => create(tui, "footer", width => [truncateToWidth(
-      theme.fg("dim", `Controlled example | ${tui.registerTextRegion ? "region API" : "normal fallback"} | ${rate} t/s`), width)]));
+      theme.fg("dim", `Controlled example | ${(tui as TUI & TextRegionCapability).registerTextRegion ? "region API" : "normal fallback"} | ${rate} t/s`), width)]));
     update = target => {
       if (target !== "footer") { step++; requests.get("animation")?.(); }
       if (target !== "animation") { rate++; requests.get("footer")?.(); }
