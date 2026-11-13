@@ -13,7 +13,7 @@
 
 ## How to get to it (user POV)
 
-codemode 工具；Ctrl+O；/inspect；Tab/Shift+Tab；方向键/翻页。
+codemode 工具；默认 Ctrl+O 展开；/inspect；Tab/Shift+Tab；方向键/翻页。展开键遵循 `app.tools.expand`，fixture 的 `--custom-keys` 使用 F3。
 
 ## Driving it with Pi PTY and host fixtures
 
@@ -37,4 +37,6 @@ pnpm test extensions/codex-ui/__tests__/codemode-integration.test.ts extensions/
 
 另运行 codex-ui-fullscreen。缓存缺失不能当作工具失败或回滚，父脚本完成不能当全部子调用成功。
 
-验收依据为 [codemode-integration.test.ts](../../../../extensions/codex-ui/__tests__/codemode-integration.test.ts)、[codemode-model.test.ts](../../../../extensions/codex-ui/__tests__/codemode-model.test.ts) 和 [仓库说明](../../../../README.md)。失败后先检查 summary 的清理结果，再启动下一次；证据不随 scratch 删除。
+4 MiB 指缓存的记账预算，按捕获字符与元数据开销计算，不等于读取文件的累计字节。nested 场景自动检查工具出现，父子位置和兄弟开始顺序还需审查保存画面及定向模型测试，不能只凭该场景退出成功判定。
+
+验收依据为 [codemode-integration.test.ts](../../../../extensions/codex-ui/__tests__/codemode-integration.test.ts)、[codemode-model.test.ts](../../../../extensions/codex-ui/__tests__/codemode-model.test.ts) 和 [仓库说明](../../../../README.md)。失败后先按 [driver 清理说明](../scripts/README.md#evidence-and-cleanup) 检查对应证据和进程，再启动下一次；证据不随 scratch 删除。

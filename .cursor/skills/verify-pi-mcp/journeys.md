@@ -49,7 +49,7 @@ HTTP 第一次调用发送后断流，ledger 中只能有一次 tools/call。手
 
 ## Diagnostics
 
-`diagnostics` 让真实 SSE server 发送 log notification，data 含合成 Authorization、Cookie、env、URL credentials 和 query token。通过 `/mcp logs sse` 看到该事件，再核对落盘文件；每种合成敏感值都必须在两处消失，保留 `[redacted]`。这些是测试值，不使用真实秘密。
+`diagnostics` 让真实 SSE server 发送 log notification，data 含合成 Authorization、Cookie、env、URL credentials 和 query token。通过 `/mcp logs sse` 看到该事件，再核对落盘文件；自动断言检查当前可见画面与日志文件中没有合成秘密，并要求合并结果出现 `[redacted]`。TUI 会截断长行，不能据此证明每类字段都在画面上显示了脱敏占位。完整验收还须分别审查画面与文件。这些是测试值，不使用真实秘密。
 
 覆盖 `mcp-logs`、`mcp-redaction`。stderr 的分段、长度与脱敏由 combination 和定向 diagnostics 测试补证。
 
@@ -75,4 +75,4 @@ HTTP 第一次调用发送后断流，ledger 中只能有一次 tools/call。手
 
 PTY 命令打印 `.tmp/test-results/mcp-<scene>-<id>/`。其中 `<host>.json` 包含真实 argv、按键、命令、画面和 PID；对应 `.ansi` 保存原始终端输出。`checks.json` 是逐条断言，`files/` 保留配置、session、provider requests、server ledger、HTTP requests 和诊断文件。失败也保存这些文件。
 
-成功必须同时满足 `summary.json` 的 `passed: true`、`alive: []`、`scratchRemoved: true` 和每个端口的 `refused: true`。服务关闭事件还记录 listening=false、socket 数量；协议命令的 summary 逐场景记录关闭与端口拒绝连接。SIGTERM/SIGINT 走 driver finally，按失败保存证据并清理；强杀不构成清理通过。只操作本次记录的 PID、端口和 scratch。
+成功必须同时满足 `summary.json` 的 `passed: true`、`alive: []`、`scratchRemoved: true` 和每个端口的 `refused: true`。服务关闭事件还记录 listening=false、socket 数量；需审查这些事件，端口不可连接本身不证明执行了正常关闭。协议命令的 summary 逐场景记录关闭与端口拒绝连接。Python PTY driver 处理 SIGTERM/SIGINT 并执行 finally；`recovery.mjs` 没有对应信号处理器，中断后需按记录 PID 和端口单独核验，不能保证其 finally 留证。只操作本次记录的 PID、端口和 scratch。

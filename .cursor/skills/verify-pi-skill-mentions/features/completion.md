@@ -21,6 +21,7 @@ Preconditions:
 
 - 已完成 [Launch 与 Doctor](../SKILL.md)，没有其他运行占用验证锁。
 - skills helper 通过本地 pi install 加载当前 checkout 的 dist，不做 pnpm 发布包安装；发布 tarball 另跑 skill-mentions:acceptance。
+- 人工 `tui skill-mentions` 仅启用 skill 发现。先在本次隔离 agentDir 中创建 research 等种子并 `/reload`，或通过共享 recipe 的 `seed` 准备；裸入口没有自动验收所用的 skills。
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run skills`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui skill-mentions`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。

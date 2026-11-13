@@ -19,7 +19,7 @@
 
 ## Required entry points
 
-命令缩写 `skills`、`skills-resume`、`skills-combination` 指 [Launch](../SKILL.md#launch) 中的共享 case。每个 ID 均独立记录状态；同一行列出的其他 ID 通过，不能补足未执行的分支。
+命令缩写 `skills`、`skills-resume-stock`、`skills-resume`、`skills-combination` 指 [Launch](../SKILL.md#launch) 中的共享 case。每个 ID 均独立记录状态；同一行列出的其他 ID 通过，不能补足未执行的分支。
 
 | Behavior IDs | Required evidence |
 | --- | --- |
@@ -32,5 +32,5 @@
 | `skill-mouse` | 发布包 native-fullscreen/combined-fullscreen 的真实 SGR 点击和原文插入断言 |
 | `skill-history-source`, `skill-external-editor`, `skill-followup`, `skill-reload`, `skill-equal-task` | `skills`；`skills-combination` 补充外部编辑、reload 和源文件变更的连续操作 |
 | `skill-steer` | `skills-combination` 的 Enter 队列、消费时 V3 和独立 requestId |
-| `skill-resume` | `skills-resume` 四模式的两次进程内选择、首次冷选择、session 身份、历史字节、卡片和续问上下文 |
+| `skill-resume` | 原版 `skills-resume-stock`、补丁版 `skills-resume` 四模式的两次进程内选择、首次冷选择、session 身份、历史字节、卡片和续问上下文 |
 | `skill-native`, `skill-codex`, `skill-combined`, `skill-fullscreen`, `skill-package` | 默认发布包五模式，全部 dist 比对、安装入口导入、消费锁冻结且字节不变；组合含本地 MCP 工具结果 |

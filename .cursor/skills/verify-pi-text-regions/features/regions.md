@@ -11,7 +11,7 @@
 
 ## How to get to it (user POV)
 
-在独立 Pi 中加载 `examples/text-region.ts`，普通和全屏均可。输入 `/region-demo pause` 暂停自动推进，然后用 `/region-demo animation`、`footer`、`both` 控制两区。`start` 恢复自动动画，`height` 切换行数，`stop` 移除。输入 prompt 生成历史，`/settings` 的 `TUI mode` 切换 renderer，`/new` 新会话，`/fixture-reload` 在验证夹具中调用实际 reload，`/quit` 退出。示例不是生产 Working 入口。
+在独立 Pi 中加载 `examples/text-region.ts`，普通和全屏均可。输入 `/region-demo pause` 暂停自动推进，然后用 `/region-demo animation`、`footer`、`both` 控制两区。`start` 重新挂载并将动画、速率、高度重置为 `0 / 101 / 1`，随后自动推进；`height` 切换行数，`stop` 移除。输入 prompt 生成历史，`/settings` 的 `TUI mode` 切换 renderer，`/new` 新会话，`/fixture-reload` 在验证夹具中调用实际 reload，`/quit` 退出。示例不是生产 Working 入口。
 
 ## Driving it with local-refresh-pty
 

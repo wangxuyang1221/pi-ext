@@ -5,7 +5,7 @@ description: "Verify all pi-ext extensions through the real Pi CLI, PTY and loca
 
 # Verify Pi extensions
 
-先读取 [共享运行说明](README.md)，再选择对应扩展的行为索引。覆盖五个发布扩展和源码形式的 codex-search。
+先读取 [共享运行说明](README.md)，再选择对应行为索引。覆盖五个发布扩展、源码形式的 codex-search，以及独立的文本区域宿主补丁验证。
 
 ## Launch
 
@@ -29,11 +29,12 @@ pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run metadata
 - [verify-pi-codex-compact](../verify-pi-codex-compact/SKILL.md)：4 组核心行为。
 - [verify-pi-openai-fast-mode](../verify-pi-openai-fast-mode/SKILL.md)：2 组核心行为。
 - [verify-pi-mcp](../verify-pi-mcp/SKILL.md)：5 组核心行为。
-- [verify-pi-codex-ui](../verify-pi-codex-ui/SKILL.md)：6 组核心行为。
+- [verify-pi-codex-ui](../verify-pi-codex-ui/SKILL.md)：5 组核心行为。
 - [verify-pi-skill-mentions](../verify-pi-skill-mentions/SKILL.md)：5 组核心行为。
-- [verify-pi-codex-search](../verify-pi-codex-search/SKILL.md)：4 组核心行为。
+- [verify-pi-codex-search](../verify-pi-codex-search/SKILL.md)：4 组本地行为及独立联网验收。
+- [verify-pi-text-regions](../verify-pi-text-regions/SKILL.md)：原版/补丁版安装、区域交互、Working、性能及物理终端边界；使用该 skill 自己的 Launch/Doctor。
 
-覆盖清单见 [机器可读索引](features.json)。每条子行为分别记录状态；一次 smoke 仅证明该旅程。
+六个扩展的覆盖清单见 [机器可读索引](features.json)，文本区域补丁见其独立 feature map。`references` 表示复用已有 ID 的验收分支，不重复定义行为。每条子行为分别记录状态；一次 smoke 仅证明该旅程。
 
 ## Evidence
 

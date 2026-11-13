@@ -14,7 +14,13 @@
 
 ## How to get to it (user POV)
 
-同一请求 $alpha $beta $alpha；$research，继续；/skill:alpha。
+分别提交以下三个请求：
+
+```text
+$alpha $beta $alpha
+$research，继续
+/skill:alpha
+```
 
 ## Driving it with Pi PTY and host fixtures
 

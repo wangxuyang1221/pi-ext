@@ -24,7 +24,7 @@ export default function (pi: any) {
     pi.setActiveTools([...new Set([...pi.getActiveTools(), 'codemode'])]);
     record('commands', pi.getCommands());
   });
-  for (const type of ['resources_discover', 'session_start', 'agent_start', 'tool_execution_end', 'agent_settled']) {
+  for (const type of ['resources_discover', 'session_start', 'agent_start', 'tool_execution_update', 'tool_execution_end', 'agent_settled']) {
     pi.on(type, event => record(type, event));
   }
   pi.on('session_before_compact', (event, ctx) => {
