@@ -44,6 +44,7 @@
     "extensions/skill-mentions/dist",
     "themes/codex-pi.json",
     "README.md",
+    "README.en.md",
     "LICENSE"
   ],
   "pi": {
