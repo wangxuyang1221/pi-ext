@@ -12,6 +12,7 @@ export function verifyPi152({ patched = false } = {}) {
   const runtime = resolvePi152Runtime(repo, process.env.PI152_RUNTIME ?? (patched ? ".tmp/pi152-patches/runtime" : ".tmp/pi152-adaptation/runtime"));
   const fixture = join(repo, patched ? "test-support/pi152-patched" : "test-support/pi152");
   const extensions = ["codex-ui", "codex-compact", "openai-fast-mode", "mcp", "skill-mentions"];
+  const sourceExtensions = [...extensions, "codex-search"];
   const [operation = "prepare", ...args] = process.argv.slice(2);
   const hash = file => createHash("sha256").update(readFileSync(file)).digest("hex");
 
@@ -31,7 +32,7 @@ export function verifyPi152({ patched = false } = {}) {
       for (const file of files) {
         if (file.includes("/") && !["extensions", "scripts", "test-support", ".cursor", "docs", "examples", "themes"].includes(file.split("/")[0])) continue;
         if (["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"].includes(file) || file.startsWith("patches/")) continue;
-        if (file.startsWith("extensions/") && !extensions.includes(file.split("/")[1])) continue;
+        if (file.startsWith("extensions/") && !sourceExtensions.includes(file.split("/")[1])) continue;
         const target = join(runtime, file);
         mkdirSync(dirname(target), { recursive: true });
         cpSync(join(repo, file), target);
@@ -54,7 +55,7 @@ export function verifyPi152({ patched = false } = {}) {
       const result = spawnSync("pnpm", ["install", "--frozen-lockfile", "--ignore-scripts", ...(patched ? [] : ["--ignore-workspace"]), "--registry=https://registry.npmjs.org", "--store-dir", join(repo, ".tmp/pi152-package-store"), ...(!freshInstall ? ["--force"] : [])], { cwd: runtime, stdio: "inherit", env });
       assert.equal(result.status, 0, "Frozen fixture installation failed");
       assert.equal(hash(join(runtime, "pnpm-lock.yaml")), hash(join(fixture, "pnpm-lock.yaml")), "Frozen install changed fixture lock");
-      const sourceHashes = Object.fromEntries(files.filter(file => (file.startsWith("extensions/") && extensions.includes(file.split("/")[1]) && file.includes("/src/")) || file === "themes/codex-pi.json").map(file => {
+      const sourceHashes = Object.fromEntries(files.filter(file => (file.startsWith("extensions/") && sourceExtensions.includes(file.split("/")[1]) && file.includes("/src/")) || file === "themes/codex-pi.json").map(file => {
         assert.equal(hash(join(repo, file)), hash(join(runtime, file)), "Source copy mismatch");
         return [file, hash(join(runtime, file))];
       }));
@@ -71,7 +72,7 @@ export function verifyPi152({ patched = false } = {}) {
     else if (operation === "types" || operation === "build") {
       inspect();
       let failed = false;
-      for (const name of extensions) {
+      for (const name of operation === "types" ? sourceExtensions : extensions) {
         const result = spawnSync("pnpm", ["exec", "tsc", "-p", `extensions/${name}/tsconfig.json`, ...(operation === "types" ? ["--noEmit"] : [])], { cwd: runtime, stdio: "inherit", env });
         console.log(`${name}: exit ${result.status}`);
         failed ||= result.status !== 0;

@@ -17,7 +17,11 @@ def events():
     return [json.loads(s) for s in p.read_text().splitlines()] if p.exists() else []
 
 def enabled(path=config):
-    return json.loads(path.read_text()).get('enabled') if path.exists() else None
+    try:
+        return json.loads(path.read_text()).get('enabled')
+    except (FileNotFoundError, json.JSONDecodeError):
+        # The writer truncates before writing; only a complete Boolean satisfies wait().
+        return None
 
 class Cli:
     def __init__(self,label,extra=[],entry=None):
