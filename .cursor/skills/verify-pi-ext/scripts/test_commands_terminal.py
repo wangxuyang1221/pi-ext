@@ -117,7 +117,8 @@ class InteractiveTerminalTests(unittest.TestCase):
             recipe = root / 'recipe.json'
             settings = {'rows': 30, 'columns': 60, 'cliArgs': ['--tui-mode', mode]}
             if fail_ready:
-                settings.update(ready={'eventType': 'never-ready'}, timeoutSeconds=1)
+                # Exercise readiness failure after real host startup, not a startup speed limit.
+                settings.update(ready={'eventType': 'never-ready'}, timeoutSeconds=10)
             recipe.write_text(json.dumps(settings))
             env = dict(PATH=os.environ['PATH'], LANG='en_US.UTF-8', TERM='xterm-256color',
                        HOME=str(scratch / 'home'), PI_CODING_AGENT_DIR=str(scratch / 'agent'),
