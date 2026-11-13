@@ -22,6 +22,7 @@ const commands = [
   run("pnpm", "test", "test-support/__tests__/local-refresh.test.ts", "test-support/__tests__/pi152-upstream.test.ts", "extensions/skill-mentions/__tests__/session-summary.test.ts", "extensions/openai-fast-mode/__tests__/host-compatibility.test.ts", "extensions/mcp/__tests__/history-host.test.ts", "extensions/codex-compact/__tests__/resume-runtime.test.ts", "extensions/codex-compact/__tests__/repair-runtime.test.ts"),
   run("node", ".cursor/skills/verify-pi-openai-fast-mode/scripts/verify.mjs", "full"),
   run("pnpm", "run", "web-search:check"),
+  python("-m", "unittest", "discover", "-s", ".cursor/skills/verify-pi-ext/scripts", "-p", "test_event_readers.py"),
   verify("search-production"), verify("search-production-fullscreen"),
   python("-m", "unittest", "discover", "-s", "extensions/mcp/__tests__", "-p", "verification_records_test.py"),
   verify("mcp-combination"), verify("mcp-history"), verify("mcp-recovery"),

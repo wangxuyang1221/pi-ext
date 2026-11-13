@@ -326,7 +326,7 @@ class Cli:
 def records(kind=None):
     path = root / "events.jsonl"
     items = (
-        [json.loads(x) for x in path.read_text().splitlines()] if path.exists() else []
+        [json.loads(x) for x in path.read_bytes().split(b"\n")[:-1]] if path.exists() else []
     )
     return [x for x in items if kind is None or x["type"] == kind]
 

@@ -53,7 +53,7 @@ def events(kind):
     path = root / "events.jsonl"
     if not path.exists():
         return []
-    return [event["data"] for line in path.read_text().splitlines() if (event := json.loads(line))["type"] == kind]
+    return [event["data"] for line in path.read_bytes().split(b"\n")[:-1] if (event := json.loads(line))["type"] == kind]
 
 
 def view():
