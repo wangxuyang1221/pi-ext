@@ -1,6 +1,6 @@
 ---
 name: verify-pi-text-regions
-description: "Verify Pi 1.4.0 and isolated 1.5.2 text-region refresh through real regular/fullscreen TUI journeys. Use for region API, Working/footer lifecycle, fallback, CPU budget, or patched/original installation changes."
+description: "Verify stock and patched Pi 1.5.2 text-region refresh through real regular/fullscreen TUI journeys. Use for region API, Working/footer lifecycle, fallback, CPU budget, or patched/original installation changes."
 ---
 
 # Verify Pi text regions
@@ -9,7 +9,7 @@ description: "Verify Pi 1.4.0 and isolated 1.5.2 text-region refresh through rea
 
 ## Host profiles
 
-1.5.2 迁移、独立安装、摘要或 Working 验证先执行 [Pi 1.5.2 profile](features/pi152.md)。以下原有命令保留 1.4.0 的 基线覆盖。两个 profile 的证据分别记录。
+1.5.2 迁移、独立安装、摘要或 Working 验证先执行 [Pi 1.5.2 profile](features/pi152.md)。根默认命令验证原版降级，增强能力在独立补丁树验证。
 
 ## Launch
 
@@ -43,7 +43,7 @@ Drive 的证据子目录必须尚不存在。PTY 驱动从空的 `runtime/home`�
 node .cursor/skills/verify-pi-text-regions/scripts/doctor.mjs
 ```
 
-要求退出码 0、`ok=true`、实际 Pi 1.4.0、符合 package.json 的 Node/pnpm、Python/pyte、构建文件，以及 `regionApi.regular/fullscreen=true`。`--original` 要求两项均为 false，不接受混用。输出实际 CLI 路径及哈希、已解析包目录、extension 路径及哈希、revision 和 patch/lock 哈希。doctor 不安装、不构建、不创建运行数据，不读取远程凭据；它证明入口和前置条件，不证明应用已 ready 或 dist 与源码同步，后者靠 Launch 的成功构建及安装字节比对。
+要求退出码 0、`ok=true`、实际 Pi 1.5.2、符合 package.json 的 Node/pnpm、Python/pyte、构建文件，以及 原版 `regionApi.regular/fullscreen=false`，补丁版加 `--patched` 要求两项为 true。`--original` 显式核对原版，不接受混用。输出实际 CLI 路径及哈希、已解析包目录、extension 路径及哈希、revision 和 patch/lock 哈希。doctor 不安装、不构建、不创建运行数据，不读取远程凭据；它证明入口和前置条件，不证明应用已 ready 或 dist 与源码同步，后者靠 Launch 的成功构建及安装字节比对。
 
 短命 PTY 的存活身份来自该次 `instance.json` 和 `events.jsonl` 中的 PID/session；结合 `ps -p <pid> -o pid=,pgid=,command=` 查实际进程。运行中还没有 `summary.json` 是正常的。不要接管其他任务的 PTY，也不要以相同版本号判断它属于自己。
 
@@ -52,7 +52,7 @@ node .cursor/skills/verify-pi-text-regions/scripts/doctor.mjs
 最小完整自证选生产 Working 旅程，含真实工具、shell 文件、取消、retry、compaction、模式切换、new/reload/quit：
 
 ```bash
-conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/working-regular" --working --cli "$PWD/node_modules/.bin/pi" > "$RUN/working-regular.log" 2>&1
+conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/working-regular" --working --cli "$PWD/node_modules/.bin/pi" --original > "$RUN/working-regular.log" 2>&1
 ```
 
 按 [Working and lifecycle](features/working.md) 核对动作及副作用后执行 Cleanup。其他入口按 feature 文件运行。所有 PTY 证据目录用独立名字；失败重跑加新后缀，保留失败原件。不要在失败后只执行下一步并报告整组成功。

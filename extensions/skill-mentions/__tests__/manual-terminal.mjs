@@ -24,7 +24,7 @@ try {
   const env = Object.fromEntries(["PATH", "LANG", "LC_ALL", "TERM", "TERM_PROGRAM", "COLORTERM"].flatMap(key => process.env[key] ? [[key, process.env[key]]] : []));
   Object.assign(env, { HOME: join(root, "home"), TMPDIR: join(root, "tmp"), XDG_CACHE_HOME: join(root, "cache"), PI_CODING_AGENT_DIR: join(root, "agent"), SKILL_PTY_ROOT: root, PI_OFFLINE: "1", PI_TELEMETRY: "0", PI_SKIP_VERSION_CHECK: "1", PI_HARDWARE_CURSOR: "1" });
   const extensions = host === "codex" ? ["codex-ui", "skill-mentions"] : ["skill-mentions"];
-  const args = [join(repo, "node_modules/@earendil-works/pi-coding-agent/dist/cli.js"),
+  const args = [join(repo, "node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js"),
     "--offline", "--no-extensions", "--no-context-files", "--no-prompt-templates", "--no-skills", "--no-builtin-tools", "--no-approve",
     "--skill", join(root, "alpha.md"), "-e", join(here, "pty-fixture.ts"),
     ...extensions.flatMap(name => ["-e", join(repo, `extensions/${name}/dist/index.js`)]),

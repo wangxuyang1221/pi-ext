@@ -2,7 +2,9 @@ import { appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Image, matchesKey, type TextRegionHandle, type TUI } from "@earendil-works/pi-tui";
+import { Image, matchesKey, type TUI } from "@earendil-works/pi-tui";
+
+import type { TextRegionCapability, TextRegionHandle } from "../../host-capabilities.js";
 
 export default function (pi: ExtensionAPI) {
   const root = process.env.LOCAL_REFRESH_EVIDENCE!;
@@ -25,7 +27,7 @@ export default function (pi: ExtensionAPI) {
     ctx.ui.setWidget("document-region-access", tui => {
       documentHandle?.dispose();
       documentTui = tui;
-      documentHandle = tui.registerTextRegion?.(documentComponent);
+      documentHandle = (tui as TUI & TextRegionCapability).registerTextRegion?.(documentComponent);
       return { invalidate() {}, render: () => [], dispose() { documentHandle?.dispose(); } };
     });
     pi.sendMessage({ customType: "local-refresh-document", content: "Local document", display: true });

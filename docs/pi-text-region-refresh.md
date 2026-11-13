@@ -2,16 +2,16 @@
 
 ## Optional Pi 1.5.2 host
 
-1.5.2 使用独立固定依赖和 [验证 profile](../.cursor/skills/verify-pi-text-regions/features/pi152.md)。先运行 `node scripts/pi152-patched-verify.mjs prepare`、`build` 和 `types`。显式启动入口为 `node /absolute/pi-ext/scripts/pi152-patched.mjs`，保留调用者 cwd，输出实际包路径、版本、patch 和锁 hash。默认全局 Pi 保持独立。根目录 1.4.0 配置继续作为回归基线。
+1.5.2 使用独立固定依赖和 [验证 profile](../.cursor/skills/verify-pi-text-regions/features/pi152.md)。先运行 `node scripts/pi152-patched-verify.mjs prepare`、`build` 和 `types`。显式启动入口为 `node /absolute/pi-ext/scripts/pi152-patched.mjs`，保留调用者 cwd，输出实际包路径、版本、patch 和锁 hash。默认全局 Pi 保持独立。根默认依赖使用原版 1.5.2，不自动应用补丁。
 
 补丁版开启会话摘要投影与局部刷新。原版 1.5.2 保留扩展功能，列表使用原始协议文本，动态区域使用普通刷新。1.5.2 的 Markdown surfaces、缺失 cwd 的 Continue/Fork/Cancel、OSC133 前缀清除及 Kitty 有界回溯/裁剪沿用上游行为。
 
 
 ## Scope
 
-仓库为 Pi 1.4.0 提供可选的 `registerTextRegion` API。普通与全屏模式可复用上一帧的历史与输入内容，只计算请求更新的文本组件，然后沿用宿主的差异输出和光标处理。全屏同步布局叶节点文本及直接所属 ScrollView 的内容，选择、复制和搜索读取同一份最新文本。
+仓库为 Pi 1.5.2 提供可选的 `registerTextRegion` API。普通与全屏模式可复用上一帧的历史与输入内容，只计算请求更新的文本组件，然后沿用宿主的差异输出和光标处理。全屏同步布局叶节点文本及直接所属 ScrollView 的内容，选择、复制和搜索读取同一份最新文本。
 
-补丁由 [pnpm-workspace.yaml](../pnpm-workspace.yaml)、[锁文件](../pnpm-lock.yaml) 和 [pi-tui patch](../patches/@earendil-works__pi-tui@1.4.0.patch) 固定。[coding-agent patch](../patches/@earendil-works__pi-coding-agent@1.4.0.patch) 保留会话摘要能力，并让稳定 TUI 引用在 renderer 切换后重新登记区域。仓库 bin 继续通过原有摘要补丁加载未打包 runtime，见 [宿主入口说明](pi-session-summary-patch.md)。
+补丁由 [独立补丁配置](../test-support/pi152-patched/pnpm-workspace.yaml)、[独立锁文件](../test-support/pi152-patched/pnpm-lock.yaml) 和 [pi-tui patch](../patches/@earendil-works__pi-tui@1.5.2.patch) 固定。[coding-agent patch](../patches/@earendil-works__pi-coding-agent@1.5.2.patch) 保留会话摘要能力，并让稳定 TUI 引用在 renderer 切换后重新登记区域。独立补丁树的 bin 通过摘要补丁加载未打包 runtime，见 [宿主入口说明](pi-session-summary-patch.md)。
 
 API 本身不采集 token。codex-ui 已通过该 API 接入生产 Working 和真实事件驱动的估算速率，见 [Working 与速率](codex-working-rate.md)。独立示例中的速率仍是受控演示值。
 
@@ -45,7 +45,7 @@ interface TUI {
 
 ```bash
 pnpm install --frozen-lockfile --ignore-scripts
-pnpm exec pi --tui-mode regular -e ./examples/text-region.ts
+node scripts/pi152-patched.mjs --tui-mode regular -e "$PWD/examples/text-region.ts"
 ```
 
 输入 `/region-demo pause` 保留当前内容并暂停自动推进；随后使用 `animation`、`footer`、`both` 单独或同时更新。`height` 在一行和两行间切换，`stop` 移除演示，`start` 重新挂载并开始自动推进。
@@ -70,10 +70,10 @@ const dispose = () => handle?.dispose();
 [契约测试](../test-support/__tests__/local-refresh.test.ts) 使用真实 renderer，比较终端输出、保留行和光标。运行：
 
 ```bash
-pnpm test test-support/__tests__/local-refresh.test.ts
+node scripts/pi152-patched-verify.mjs run pnpm test test-support/__tests__/local-refresh.test.ts
 ```
 
-[安装驱动](../scripts/local-refresh-install.mjs) 在仓库 `.tmp` 内创建补丁版和原版消费目录。两者使用仓库锁定的相同依赖版本，原版只移除 patch 映射；安装使用 `--frozen-lockfile --ignore-scripts --offline`，校验锁文件未变化及能力探测结果。pnpm 11 因忽略构建脚本产生的占位配置只存在于临时消费目录，不执行依赖脚本。驱动打印目录及 CLI 路径，保留日志用于后续 PTY 和 CPU 验证。
+[安装驱动](../scripts/local-refresh-install.mjs) 在仓库 `.tmp` 内创建补丁版和原版消费目录。两者分别复制 `test-support/pi152-patched` 与 `test-support/pi152` 的固定清单和锁；安装使用 `--frozen-lockfile --ignore-scripts --offline`，校验锁文件未变化及能力探测结果。pnpm 11 因忽略构建脚本产生的占位配置只存在于临时消费目录，不执行依赖脚本。驱动打印目录及 CLI 路径，保留日志用于后续 PTY 和 CPU 验证。
 
 ```bash
 pnpm exec node scripts/local-refresh-install.mjs
@@ -82,9 +82,9 @@ pnpm exec node scripts/local-refresh-install.mjs
 [PTY 驱动](../scripts/local-refresh-pty.py) 启动指定的真实 CLI bin，加载示例与[离线 provider](../test-support/fixtures/local-refresh/provider.ts)。用户输入、设置页、会话、扩展加载与两个 renderer 都使用生产路径；只有外部模型服务由宿主 faux provider 替代。每次使用新的证据目录：
 
 ```bash
-conda run -n codex-py312 python scripts/local-refresh-pty.py .tmp/local-refresh-regular --cli node_modules/.bin/pi
-conda run -n codex-py312 python scripts/local-refresh-pty.py .tmp/local-refresh-fullscreen --cli node_modules/.bin/pi --mode fullscreen
-conda run -n codex-py312 python scripts/local-refresh-pty.py .tmp/local-refresh-kitty --cli node_modules/.bin/pi --mode fullscreen --kitty
+conda run -n codex-py312 python scripts/local-refresh-pty.py --original .tmp/local-refresh-regular --cli node_modules/.bin/pi
+conda run -n codex-py312 python scripts/local-refresh-pty.py --original .tmp/local-refresh-fullscreen --cli node_modules/.bin/pi --mode fullscreen
+conda run -n codex-py312 python scripts/local-refresh-pty.py --original .tmp/local-refresh-kitty --cli node_modules/.bin/pi --mode fullscreen --kitty
 ```
 
 将 `--cli` 换成安装驱动返回的补丁版或原版 bin 即可检查实际消费入口；原版另加 `--original`。驱动通过键盘修改设置页，读取落盘设置核实模式切换；pyte 扩展模拟主屏与备用屏保存恢复。退出后检查本次进程组已空、删除本次运行配置，保留 ANSI、screen、操作和生命周期日志。它不启动网络服务。
@@ -98,8 +98,8 @@ conda run -n codex-py312 python scripts/local-refresh-pty.py .tmp/local-refresh-
 CPU 夹具读取构建后的 CodexFooter，先运行 `pnpm run build:codex-ui`。将安装驱动返回的原版 pi-tui 目录传入：
 
 ```bash
-pnpm exec node --expose-gc scripts/local-refresh-cpu.mjs --baseline=.tmp/INSTALL_ROOT/original/node_modules/@earendil-works/pi-tui
-pnpm exec node --expose-gc scripts/local-refresh-cpu.mjs --mode=fullscreen --baseline=.tmp/INSTALL_ROOT/original/node_modules/@earendil-works/pi-tui
+node scripts/pi152-patched-verify.mjs run node --expose-gc scripts/local-refresh-cpu.mjs --baseline=.tmp/INSTALL_ROOT/original/node_modules/@earendil-works/pi-tui
+node scripts/pi152-patched-verify.mjs run node --expose-gc scripts/local-refresh-cpu.mjs --mode=fullscreen --baseline=.tmp/INSTALL_ROOT/original/node_modules/@earendil-works/pi-tui
 ```
 
 默认同步执行已排队的帧，用于隔离 renderer CPU；不把 `renderNow()` 冒充局部刷新。加入 `--interval=32 --pairs=200,1000 --workloads=animation-and-rate --frames=40 --samples=3` 可复验真实调度器的 32ms 节奏。两条路径的内容、帧数、节奏和主题相同；本工具不测终端模拟器自身 CPU，也不调用外部模型。

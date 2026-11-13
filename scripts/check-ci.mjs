@@ -1,6 +1,6 @@
 try {
   const results = JSON.parse(process.env.CI_JOB_RESULTS ?? "null");
-  const required = ["test", "unix-host", "python-and-skills"];
+  const required = ["test", "unix-host", "python-and-skills", "pi152-host"];
   if (!results || required.some(name => results[name]?.result !== "success") ||
     Object.values(results).some(job => job?.result !== "success")) {
     throw new Error("Every required CI job must succeed; failed, cancelled, skipped, or missing jobs block this check.");

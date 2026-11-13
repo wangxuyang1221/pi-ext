@@ -6,10 +6,10 @@ import { setTimeout as delay } from "node:timers/promises";
 import { AgentSessionRuntime, InteractiveMode, ModelRuntime, SessionManager, SettingsManager, DefaultResourceLoader, createAgentSession } from "@earendil-works/pi-coding-agent";
 import { InMemoryModelsStore } from "@earendil-works/pi-ai";
 import { findNativeCheckpoint, modelKey } from "../extensions/codex-compact/dist/native-compaction.js";
-import { drainBudgetObservations } from "./pi14-live-budget.mjs";
+import { drainBudgetObservations } from "./pi152-live-budget.mjs";
 
-const stage = process.argv[2], root = process.env.PI14_LIVE_ROOT, repo = process.env.PI14_REPO;
-assert.ok(root && repo && process.env.PI14_LIVE_STATE, "Run through pi14-live.mjs");
+const stage = process.argv[2], root = process.env.PI152_LIVE_ROOT, repo = process.env.PI152_REPO;
+assert.ok(root && repo && process.env.PI152_LIVE_STATE, "Run through pi152-live.mjs");
 const agentDir = join(root, "agent"), cwd = join(root, "work");
 const runtime = await ModelRuntime.create({ authPath: join(agentDir, "auth.json"), modelsPath: null,
   modelsStore: new InMemoryModelsStore(), allowModelNetwork: false, refreshOnCreate: false });
@@ -26,7 +26,7 @@ const settings = SettingsManager.inMemory({ transport: "sse", retry: { enabled: 
 const manifest = JSON.parse(await readFile(join(repo, "package.json"), "utf8"));
 let context;
 const requests = [], errors = [], events = [];
-const tui = process.env.PI14_LIVE_TUI === "1";
+const tui = process.env.PI152_LIVE_TUI === "1";
 const record = value => {
   const text = JSON.stringify({ stage, provider: model.provider, model: model.id, ...value });
   if (tui) appendFileSync(join(root, `${stage}.worker.jsonl`), `${text}\n`);

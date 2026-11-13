@@ -80,7 +80,7 @@ jobs:
   check:
     name: Check
     if: ${{ always() }}
-    needs: [test, unix-host, python-and-skills]
+    needs: [test, unix-host, python-and-skills, pi152-host]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -168,6 +168,48 @@ jobs:
         with:
           name: python-and-skills
           path: .tmp/test-results/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
+
+  pi152-host:
+    name: Pi 1.5.2 / ${{ matrix.profile }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [stock, patched]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/setup@v1
+        with:
+          runtime: node@22.19.0
+          cache: true
+          install: false
+      - uses: conda-incubator/setup-miniconda@v4
+        with:
+          miniforge-version: latest
+          activate-environment: codex-py312
+          python-version: '3.12'
+      - name: Install dependencies and terminal emulator
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          conda run -n codex-py312 python -m pip install pyte==0.8.2
+      - name: Verify independent host and user journeys
+        shell: bash
+        run: |
+          mkdir -p .tmp/test-results
+          set -o pipefail
+          pnpm run pi152:check ${{ matrix.profile }} 2>&1 | tee .tmp/test-results/pi152.log
+      - name: Upload host identity and acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pi152-${{ matrix.profile }}
+          path: |
+            .tmp/test-results/
+            !.tmp/test-results/**/node_modules/**
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 7

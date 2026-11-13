@@ -21,8 +21,8 @@ Preconditions:
 - [Launch/Doctor](../SKILL.md) 完成。`working-provider.ts` 只替代远程模型和摘要，shell、AgentSession 均真实。
 
 ```bash
-conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/working-regular" --working --cli "$PWD/node_modules/.bin/pi"
-conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/working-fullscreen" --working --mode fullscreen --cli "$PWD/node_modules/.bin/pi"
+conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/working-regular" --working --cli "$PWD/node_modules/.bin/pi" --original
+conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/working-fullscreen" --working --mode fullscreen --cli "$PWD/node_modules/.bin/pi" --original
 ```
 
 - **Submit and edit.** 旅程先打开 idle input，确认不启动 Working，再提交 `Generate visible thinking and text`。公开 provider 事件进入生产采样，屏幕有 `≈`，spinner accent 为 `5efcff`，12 次取样至少五种帧与两种文字灰度。草稿中间插入 `X` 后 editor 事件准确。32/40/100 列保留速率与计时，12 列安全裁剪；小于 40 列没有中断提示。

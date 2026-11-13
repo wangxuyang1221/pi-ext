@@ -41,6 +41,7 @@ export function verifyPi152({ patched = false } = {}) {
       pkg.files = JSON.parse(readFileSync(join(repo, "package.json"))).files.filter(file => !file.startsWith("extensions/") || extensions.includes(file.split("/")[1]));
       pkg.pi = { extensions: extensions.map(name => `./extensions/${name}/dist/index.js`), themes: ["./themes/codex-pi.json"] };
       pkg.scripts = {
+        ...JSON.parse(readFileSync(join(repo, "package.json"))).scripts,
         "build:codex-ui": "tsc -p extensions/codex-ui/tsconfig.json",
         build: extensions.map(name => `tsc -p ./extensions/${name}/tsconfig.json${name === "codex-compact" ? " && node ./scripts/codex-compact-media.mjs copy" : ""}`).join(" && "),
         test: "pnpm run build:codex-ui && node scripts/test.mjs",
@@ -89,7 +90,7 @@ export function verifyPi152({ patched = false } = {}) {
       process.exitCode = result.status ?? 1;
     } else if (operation === "doctor") {
       inspect();
-      const result = spawnSync(process.execPath, [join(repo, ".cursor/skills/verify-pi-text-regions/scripts/doctor.mjs"), "--profile", "pi152", "--project", runtime, "--extension", join(runtime, "extensions/codex-ui/dist/index.js"), ...(!patched ? ["--original"] : [])], { cwd: runtime, stdio: "inherit", env });
+      const result = spawnSync(process.execPath, [join(repo, ".cursor/skills/verify-pi-text-regions/scripts/doctor.mjs"), "--profile", "pi152", "--project", runtime, "--extension", join(runtime, "extensions/codex-ui/dist/index.js"), ...(patched ? ["--patched"] : ["--original"])], { cwd: runtime, stdio: "inherit", env });
       process.exitCode = result.status ?? 1;
     } else throw new Error(`Unknown operation: ${operation}`);
   } finally { rmSync(isolated.directory, { recursive: true, force: true }); }

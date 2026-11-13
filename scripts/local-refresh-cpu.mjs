@@ -17,8 +17,8 @@ import { createContextUsageReader } from "../extensions/codex-ui/dist/context-us
 // Compare installed production components. Synchronous batches isolate renderer CPU;
 // --interval=32 additionally drives the native scheduler at the production cadence.
 const option = (name, fallback) => process.argv.find(arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3) ?? fallback;
-const profile = option("profile", "pi14");
-assert.ok(["pi14", "pi152"].includes(profile));
+const profile = option("profile", "pi152");
+assert.ok(["pi152"].includes(profile));
 const baselinePath = option("baseline");
 const startedAt = new Date().toISOString();
 assert.ok(baselinePath, "Pass --baseline=<pristine pi-tui package directory>");
@@ -147,7 +147,7 @@ async function createFixture(implementation, historyPairs) {
 
 const hash = path => createHash("sha256").update(readFileSync(path)).digest("hex");
 const version = JSON.parse(readFileSync(resolve("node_modules/@earendil-works/pi-tui/package.json"))).version;
-assert.equal(version, profile === "pi152" ? "1.5.2" : "1.4.0");
+assert.equal(version, "1.5.2");
 const identities = root => Object.fromEntries(["pi-coding-agent", "pi-ai", "pi-agent-core", "pi-tui"].map(name => {
   const path = realpathSync(resolve(root, name));
   const pkg = JSON.parse(readFileSync(resolve(path, "package.json")));

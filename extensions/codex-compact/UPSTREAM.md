@@ -8,7 +8,7 @@
 
 ## Pi compatibility
 
-当前依赖固定为 Pi `1.4.0`。`src/pi-responses.ts` 通过公开 exports 加载 Responses 工具转换函数；声明转换复用 `getResponsesToolSupport()`、`resolveTranscriptTools()` 和 `convertResponsesTools()`。保留逐消息转换，用于记录输出 item 对应的原始消息及 checkpoint 边界。
+当前依赖固定为 Pi `1.5.2`。`src/pi-responses.ts` 通过公开 exports 加载 Responses 工具转换函数；声明转换复用 `getResponsesToolSupport()`、`resolveTranscriptTools()` 和 `convertResponsesTools()`。保留逐消息转换，用于记录输出 item 对应的原始消息及 checkpoint 边界。
 
 请求投影校验比较完整 input、instructions 和 tools。支持普通投影，以及能由实际 payload 唯一证明的 hidden/forced 投影；工具移除或重声明后无法证明的隐藏策略、任意 context hook 和后续 handler 改写不属于隐式支持范围。provider 请求之外发起压缩时，使用仍有效的观察快照或 README 中的 `manualProjection` 配置。
 

@@ -1,6 +1,6 @@
 # Installation and fallback
 
-用户可显式选择仓库固定 Pi 1.4.0 补丁宿主，也可在未补丁宿主加载正式包。原版保留 Working、速率和交互，缺少的仅是局部 CPU 优化；全局 Pi 独立。
+用户可显式选择仓库固定 Pi 1.5.2 补丁宿主，也可在未补丁宿主加载正式包。原版保留 Working、速率和交互，缺少的仅是局部 CPU 优化；全局 Pi 独立。
 
 ## Sub-features
 
@@ -11,7 +11,7 @@
 
 ## How to get to it (user POV)
 
-仓库用户从锁文件及 pnpm-workspace.yaml 安装，显式运行 `node_modules/.bin/pi`；外部用户安装 pi-ext 包并加载其 codex-ui。需要补丁的 consumer 自己配置固定 patch，不因安装 pi-ext 自动获得宿主 API。
+原版从根锁安装并运行 `node_modules/.bin/pi`；补丁版从独立 fixture 安装并运行 `scripts/pi152-patched.mjs`；外部用户安装 pi-ext 包并加载其 codex-ui。需要补丁的 consumer 自己配置固定 patch，不因安装 pi-ext 自动获得宿主 API。
 
 ## Driving it with local-refresh-install
 
@@ -25,11 +25,11 @@ pnpm_config_verify_deps_before_run=false node scripts/local-refresh-install.mjs 
 INSTALL="$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1])).root)' "$RUN/installation.json")"
 PATCHED_CLI="$INSTALL/patched/node_modules/.bin/pi"
 ORIGINAL_CLI="$INSTALL/original/node_modules/.bin/pi"
-node .cursor/skills/verify-pi-text-regions/scripts/doctor.mjs --project "$INSTALL/patched" --extension "$INSTALL/patched/node_modules/pi-ext/extensions/codex-ui/dist/index.js" > "$RUN/doctor-patched.json"
+node .cursor/skills/verify-pi-text-regions/scripts/doctor.mjs --patched --project "$INSTALL/patched" --extension "$INSTALL/patched/node_modules/pi-ext/extensions/codex-ui/dist/index.js" > "$RUN/doctor-patched.json"
 node .cursor/skills/verify-pi-text-regions/scripts/doctor.mjs --project "$INSTALL/original" --original --extension "$INSTALL/original/node_modules/pi-ext/extensions/codex-ui/dist/index.js" > "$RUN/doctor-original.json"
 ```
 
-- **Install and inspect.** helper 创建新的 `.tmp/local-refresh-install-*`，复制清单/锁/patch，分别 `--frozen-lockfile --ignore-scripts --offline`。原版只去 patch 映射，依赖版本相同。核对两个 `lockUnchanged=true`、probe true/false；`--pack` 真实打包，再安装 tarball、再次冻结、逐字节比对七个生产 JS，要求 `publishedFilesMatch` 与 `publishedFrozenLockUnchanged`。保存 tarball SHA-256、安装日志、所有退出码。
+- **Install and inspect.** helper 创建新的 `.tmp/local-refresh-install-*`，复制清单/锁/patch，分别 `--frozen-lockfile --ignore-scripts --offline`。两者使用各自的固定 fixture 锁，Pi 版本相同。核对两个 `lockUnchanged=true`、probe true/false；`--pack` 真实打包，再安装 tarball、再次冻结、逐字节比对七个生产 JS，要求 `publishedFilesMatch` 与 `publishedFrozenLockUnchanged`。保存 tarball SHA-256、安装日志、所有退出码。
 - **Drive installed production.** 顺序跑四个入口，每次保留 stdout/stderr 和退出码，任何失败先 doctor 再 Cleanup：
 
 ```bash

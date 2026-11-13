@@ -1,0 +1,11 @@
+ts	phase	decision	why	evidence	result
+2026-11-13T00:35:00Z	frame	默认开发环境使用原版 Pi 1.5.2，补丁版保留独立依赖树	默认检查必须验证原版宿主正常使用，补丁只提供可选增强	package.json; scripts/pi152-support.mjs; AGENTS.md	open
+2026-11-13T00:35:00Z	baseline	沿用 PR 70 合并前同树的完整检查及两种 1.5.2 宿主验证作为迁移前基线	已实跑的源码树与 a5bfa03 完全一致；新迁移仍须重新完成全部适用检查	https://github.com/wangxuyang1221/pi-ext/pull/70; .tmp/pr70-review-c88f2f7/.tmp/review-summary.json	VERIFIED
+2026-11-13T00:45:22.864Z	frame	更正前两行的时间字段：初始记录使用手填时间，准确写入时间未采集	审计时间必须区别于估计值；前两行的技术决定和基线证据保持有效	.audit/pi152-baseline.tsv:2	前两行 ts 不作精确时间证据
+2026-11-13T00:51:04.158Z	implementation	根依赖使用精确原版 1.5.2；可选补丁沿用独立 fixture	只承诺实测宿主；默认 bin 必须与正式 driver 一致	package.json; scripts/pi-host.mjs; scripts/check-pi152.mjs	已更新锁并冻结安装；原版聚焦 17 通过、21 补丁契约分流
+2026-11-13T00:51:52.553Z	verification	补丁内部契约按能力分流；原版保留摘要与刷新真实断言	原版是必需支持宿主，不能因缺增强 API 整组跳过	test-support/__tests__/local-refresh.test.ts; extensions/skill-mentions/__tests__/session-summary.test.ts; test-support/__tests__/pi152-upstream.test.ts	聚焦通过；两种独立宿主正式旅程入口已接必需 CI
+2026-11-13T00:56:53.069Z	experiment	正式驱动统一包 bin 后修复编辑器快捷键跨模块状态	原版 bundle 与扩展模块拥有不同 TUI 单例，Ctrl+P 历史恢复失败	.tmp/pi152-stock-check.log; extensions/skill-mentions/src/history-editor.ts; extensions/codex-ui/src/components.ts	同步使用当前宿主 keys 并 finally 恢复；保留原有自定义快捷键断言
+2026-11-13T01:05:59.858Z	experiment	修正包验收中的光标移动按键，保留独立自定义历史断言	1.5.2 专用 historyPrevious 从任意行浏览历史，不能当作 cursorUp	extensions/skill-mentions/__tests__/pty-driver.py:474; .tmp/pi152-skill-install.log	旧期望因真实快捷键开始生效而失败；改用 Up 验证光标移动，Ctrl+P 历史恢复保持原断言
+2026-11-13T01:08:17.030Z	verification	独立原版及补丁版全链通过，追加资源审计	两种能力配置均须执行真实 CLI/PTY，不能以编译代替	.tmp/test-results/pi152-stock-x7AhyP/summary.json; .tmp/test-results/pi152-patched-JE0pHi/summary.json; scripts/check-pi152.mjs; .github/workflows/ci.yml	原版 21 步加 Kitty 补证、补丁版 22 步通过；已核查 150 PID、33 端口无残留，全局 Pi 入口哈希不变
+2026-11-13T01:12:03.834Z	verification	最终冻结安装和完整默认检查通过	最终源码、测试和发布清单必须在原版默认树共同通过	scripts/check-pi152.mjs; .github/workflows/ci.yml; .tmp/pi152-final-check.log; .tmp/pi152-final-frozen.log	145 文件、2373 用例通过；21 补丁专属契约能力分流；两种独立树各 186 源码及主题 hash 与当前工作区一致
+2026-11-13T01:19:12.366Z	completion	本地验收完成；保留真实 Actions 为父代理发布后必需门禁	本地结果不能冒充 Linux/macOS 远端执行结果	scripts/check-pi152.mjs; .github/workflows/ci.yml; scripts/check-ci.mjs; .tmp/pi152-skill-install2.log; .tmp/pi152-skill-summary-install.log	完整 check、默认 PTY、双宿主全链、五模式发布安装、补丁摘要消费、冻结安装、Python 5+24 测试通过；195 PID、33 端口无残留，全局入口未变

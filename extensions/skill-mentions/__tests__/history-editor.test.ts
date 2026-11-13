@@ -1,3 +1,4 @@
+import { TestKeybindingsManager } from "../../../test-support/keybindings.js";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { CustomEditor, initTheme, InteractiveMode, type KeybindingsManager, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { CombinedAutocompleteProvider, Container, stripTerminalSequences, type EditorComponent, type TUI } from "@earendil-works/pi-tui";
@@ -15,8 +16,7 @@ afterEach(() => { for (const editor of editors.splice(0)) editor.setText(""); })
 
 function fixture(kind: "native" | "codex", order: "before" | "after" = "before", reason = "reload") {
   const tui = { terminal: { rows: 40, columns: 100 }, requestRender() {}, setFocus() {} } as unknown as TUI;
-  const appKeys: Record<string, string> = { "app.interrupt": "\x1b", "app.exit": "\x04", "app.clipboard.pasteImage": "\x16", "app.model.cycleForward": "\x10" };
-  const keys = { matches: (data: string, action: string) => appKeys[action] === data } as KeybindingsManager;
+  const keys = new TestKeybindingsManager();
   const identity = (text: string) => text;
   const defaultEditor = new CustomEditor(tui, { borderColor: identity, selectList: { selectedPrefix: identity, selectedText: identity, description: identity, scrollInfo: identity, noMatch: identity } }, keys, { embedWorkingStatus: true });
   editors.push(defaultEditor);
@@ -28,7 +28,7 @@ function fixture(kind: "native" | "codex", order: "before" | "after" = "before",
   defaultEditor.onAction("app.model.cycleForward", cycled);
   const mode: any = Object.create(InteractiveMode.prototype);
   Object.assign(mode, { ui: tui, keybindings: keys, editor: defaultEditor, defaultEditor,
-    editorContainer: new Container(), statusContainer: new Container(), disposeActiveSelector() {},
+    extensionDialogs: [], editorContainer: new Container(), statusContainer: new Container(), disposeActiveSelector() {},
     autocompleteProvider: new CombinedAutocompleteProvider([{ name: "help" }], process.cwd()),
   });
   const handlers = new Map<string, (event: any, ctx: ExtensionContext) => any>();
@@ -54,7 +54,7 @@ function fixture(kind: "native" | "codex", order: "before" | "after" = "before",
   if (order === "after") installCodex();
   mode.editor.setText(envelope);
   handlers.get("resources_discover")?.({ reason }, ctx);
-  return { mode, ui, ctx, handlers, submitted, changed, escaped, shortcut, exited, pasted, cycled, get base() { return base; } };
+  return { mode, ui, ctx, handlers, keys, submitted, changed, escaped, shortcut, exited, pasted, cycled, get base() { return base; } };
 }
 
 it.each(["native", "codex"] as const)("%s seeds original history when reload replaces the editor without populating history", kind => {
@@ -122,4 +122,18 @@ it.each(["native", "codex"] as const)("%s preserves ordinary JSON, native slash 
   editor.handleInput("\r"); expect(h.submitted).toHaveBeenLastCalledWith("Use $alpha");
   editor.setText(""); editor.handleInput("/"); await new Promise(resolve => setTimeout(resolve, 80));
   editor.handleInput("\t"); expect(editor.getText()).toBe("/help ");
+});
+
+it.each(["native", "codex"] as const)("%s uses the active host's history binding without retaining its global state", async kind => {
+  const { getKeybindings } = await import("@earendil-works/pi-tui");
+  const previous = getKeybindings();
+  const h = fixture(kind);
+  h.keys.setUserBindings({ "tui.editor.historyPrevious": "ctrl+p" });
+  h.mode.editor.setText("");
+  h.mode.editor.handleInput("\x10");
+  expect(h.mode.editor.getText()).toBe(task);
+  expect(getKeybindings()).toBe(previous);
+  h.mode.editor.onSubmit = () => { throw new Error("fixture submit failure"); };
+  expect(() => h.mode.editor.handleInput("\r")).toThrow("fixture submit failure");
+  expect(getKeybindings()).toBe(previous);
 });

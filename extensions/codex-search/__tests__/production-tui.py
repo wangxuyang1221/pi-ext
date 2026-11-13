@@ -215,7 +215,7 @@ class Cli:
         env.update(overrides)
         args = [
             "node",
-            str(repo / "node_modules/@earendil-works/pi-coding-agent/dist/cli.js"),
+            str(repo / "node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js"),
             "--offline",
             "--no-extensions",
             "--no-context-files",

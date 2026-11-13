@@ -311,9 +311,9 @@ it("discards unfinished starts on agent end and ignores late reads after reload"
   const runner = h.session.extensionRunner!;
   await runner.emit({ type: "message_start", message: { role: "user", content: "$alpha", timestamp: 1 } });
   const display = h.displays()[0];
-  expect(runner.getEntryRenderer(displayType)!(display, { expanded: false }, {} as any)).toBeDefined();
+  expect(runner.getEntryRenderer(displayType)!(display, { expanded: false, keyText: (_id: string) => "", keyHint: (_id: string, label: string) => label }, {} as any)).toBeDefined();
   await runner.emit({ type: "agent_end", messages: [] });
-  expect(runner.getEntryRenderer(displayType)!(display, { expanded: false }, {} as any)).toBeUndefined();
+  expect(runner.getEntryRenderer(displayType)!(display, { expanded: false, keyText: (_id: string) => "", keyHint: (_id: string, label: string) => label }, {} as any)).toBeUndefined();
   expect(await runner.emitMessageEnd({ type: "message_end", message: { role: "user", content: "$alpha", timestamp: 1 } })).toBeUndefined();
   const entered = deferred(), release = deferred();
   const read = vi.mocked(fs.readFile), original = (await vi.importActual<typeof fs>("node:fs/promises")).readFile;

@@ -20,7 +20,7 @@ async function inspectHost(project, original, profile) {
   const agent = realpathSync(join(packages, "pi-coding-agent"));
   const tui = realpathSync(join(packages, "pi-tui"));
   const versions = Object.fromEntries(["pi-coding-agent", "pi-tui", "pi-ai", "pi-agent-core"].map(name => [name, json(join(dirname(agent), name, "package.json")).version]));
-  assert.ok(Object.values(versions).every(version => version === (profile === "pi152" ? "1.5.2" : "1.4.0")), "Unexpected fixed Pi version");
+  assert.ok(Object.values(versions).every(version => version === "1.5.2"), "Unexpected fixed Pi version");
   const cliVersion = run(cli, ["--version"], project);
   assert.equal(cliVersion, versions["pi-coding-agent"], "CLI version differs from installed package");
   const host = await import(pathToFileURL(join(tui, "dist/index.js")).href);
@@ -36,8 +36,9 @@ export function checkNodeVersion(version) {
 }
 
 export async function doctor(args = process.argv.slice(2)) {
-  const { values } = parseArgs({ args, options: { profile: { type: "string", default: "pi140" }, project: { type: "string", default: repo }, original: { type: "boolean", default: false }, extension: { type: "string", default: join(repo, "extensions/codex-ui/dist/index.js") } } });
-  assert.ok(["pi140", "pi152"].includes(values.profile), "Unknown host profile");
+  const { values } = parseArgs({ args, options: { profile: { type: "string", default: "pi152" }, project: { type: "string", default: repo }, original: { type: "boolean" }, patched: { type: "boolean" }, extension: { type: "string", default: join(repo, "extensions/codex-ui/dist/index.js") } } });
+  assert.ok(["pi152"].includes(values.profile), "Unknown host profile");
+  assert.ok(!(values.original && values.patched), "Choose original or patched");
   const project = realpathSync(resolve(values.project));
   const extension = realpathSync(resolve(values.extension));
   const manifest = json(join(repo, "package.json"));
@@ -47,9 +48,9 @@ export async function doctor(args = process.argv.slice(2)) {
   const python = JSON.parse(run("conda", ["run", "-n", "codex-py312", "python", "-c", 'import sys,json,importlib.metadata; print(json.dumps({"version":sys.version.split()[0],"executable":sys.executable,"pyte":importlib.metadata.version("pyte")}))'], repo));
   assert.match(python.version, /^3\.12\./, "Expected Python 3.12");
   assert.equal(python.pyte, "0.8.2", "Expected pyte 0.8.2");
-  const sources = Object.fromEntries(["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", `patches/@earendil-works__pi-tui@${values.profile === "pi152" ? "1.5.2" : "1.4.0"}.patch`, `patches/@earendil-works__pi-coding-agent@${values.profile === "pi152" ? "1.5.2" : "1.4.0"}.patch`].map(path => [path, hash(join(repo, path))]));
+  const sources = Object.fromEntries(["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", `patches/@earendil-works__pi-tui@1.5.2.patch`, `patches/@earendil-works__pi-coding-agent@1.5.2.patch`].filter(path => existsSync(join(repo, path))).map(path => [path, hash(join(repo, path))]));
   for (const path of ["examples/text-region.ts", "test-support/fixtures/local-refresh/provider.ts", "test-support/fixtures/local-refresh/working-provider.ts", "test-support/fixtures/local-refresh/working_journey.py", "scripts/local-refresh-pty.py"]) accessSync(join(repo, path), constants.R_OK);
-  return { ok: true, repo, project, revision: run("git", ["rev-parse", "HEAD"], repo), node: process.version, pnpm, python, extension, extensionSha256: hash(extension), sources, ...await inspectHost(project, values.original, values.profile), auth: "Offline faux provider; no remote credentials needed", instance: "Short-lived PTY; ready and PID recorded by the drive", servicesStarted: [] };
+  return { ok: true, repo, project, revision: run("git", ["rev-parse", "HEAD"], repo), node: process.version, pnpm, python, extension, extensionSha256: hash(extension), sources, ...await inspectHost(project, values.original ?? !values.patched, values.profile), auth: "Offline faux provider; no remote credentials needed", instance: "Short-lived PTY; ready and PID recorded by the drive", servicesStarted: [] };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

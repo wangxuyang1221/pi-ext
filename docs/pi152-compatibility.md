@@ -2,11 +2,11 @@
 
 ## Scope
 
-原版 Pi `1.5.2` 的兼容范围是 `codex-ui`、`codex-compact`、`openai-fast-mode`、`mcp`、`skill-mentions` 和 `themes/codex-pi.json`。根开发环境仍固定在 `1.4.0`，保留现有可选补丁。包仍发布五个扩展入口。使用 `pi config` 选择上述五个扩展，或逐个用 `-e` 加载构建入口。
+原版 Pi `1.5.2` 的兼容范围是 `codex-ui`、`codex-compact`、`openai-fast-mode`、`mcp`、`skill-mentions` 和 `themes/codex-pi.json`。根默认开发环境使用原版 `1.5.2`；可选补丁使用独立依赖树。包仍发布五个扩展入口。使用 `pi config` 选择上述五个扩展，或逐个用 `-e` 加载构建入口。
 
 `codex-search` 另以独立源码入口进行类型和宿主加载检查，不进入发布包、构建入口或自动加载清单。该检查不代替搜索服务和完整终端旅程验收。
 
-三个 Pi peer 依赖接受 `1.4.0 || 1.5.2`。支持范围和验收层级以上述入口为准；不要将根开发依赖整体升级后套用旧补丁。
+三个 Pi peer 依赖精确声明 `1.5.2`。本项目只承诺实测版本，不以 `>=1.5.2` 或跨 minor 的范围承诺未来宿主；升级前须完成原版及补丁版验收。Pi 1.4.0 不再受支持。
 
 ## Stock behavior
 
@@ -18,7 +18,9 @@
 | openai-fast-mode | 根会话开关、请求 priority 字段、明确拒绝后的普通重试和持久化 | 现有模型名单保持不变；本地请求证据不证明服务端采用 priority、速度或计费 |
 | mcp | 本插件配置、本地协议、工具调用和历史恢复 | 替代内置 MCP；其他扩展通过宿主 MCP registry 注册的 server 仍不由本插件连接 |
 
-codemode 的嵌套工具优先使用父 renderer 提供的 `keyText/keyHint`。独立 inspector 使用宿主交给自定义 UI 的 keybindings；旧宿主也使用该实例的 keybindings；reload 后配置晚于历史行到达时，下一次绘制会更新提示及其缓存，避免读取另一份宿主的全局快捷键状态。
+自定义编辑器在同步调用期间使用宿主传入的快捷键实例，并在返回或抛错后恢复模块原状态；原版 bundle 与扩展各自加载 TUI 模块时，历史快捷键和编辑操作仍使用当前宿主配置。
+
+codemode 的嵌套工具优先使用父 renderer 提供的 `keyText/keyHint`。独立 inspector 使用宿主交给自定义 UI 的 keybindings；reload 后配置晚于历史行到达时，下一次绘制会更新提示及其缓存，避免读取另一份宿主的全局快捷键状态。
 
 ## Isolated verification
 
@@ -57,8 +59,16 @@ pnpm run pi152:verify run conda run --no-capture-output -n codex-py312 python ex
 pnpm run pi152:verify run conda run --no-capture-output -n codex-py312 python extensions/mcp/__tests__/verification-journeys.py history
 ```
 
-`resume-stock` 保留原有四种编辑器/终端组合及真实菜单、会话身份、历史字节和后续请求检查，另断言原版封套显示和技能正文搜索降级。要求摘要补丁的 `resume` 入口继续用于根补丁基线。Fast 的 `root` 模式覆盖根会话完整请求旅程及项目配置及同一根会话冷恢复。
+`resume-stock` 保留原有四种编辑器/终端组合及真实菜单、会话身份、历史字节和后续请求检查，另断言原版封套显示和技能正文搜索降级。要求摘要补丁的 `resume` 入口用于独立补丁树。Fast 的 `root` 模式覆盖根会话完整请求旅程及项目配置及同一根会话冷恢复。
 
 `pi152-codemode.json` 使用真实 CLI 同时加载五扩展和内置 codemode，执行嵌套 read/bash/edit/write、核对文件字节，再以 F3 展开并打开 inspector 三个 tab。复制 recipe 到验证副本的 `.tmp`，在 `cliArgs` 加入 `--tui-mode`、`fullscreen` 即可复验全屏入口；recipe 路径由验证副本解析。共享 `journey` 结束后仍须审查 `journey.json` 和画面，并记录 verdict。
 
-驱动输出的 `.tmp` 路径位于验证副本内。命令退出码、逐项断言、ANSI、session、PID 和本地服务端口清理都需保留；缺分支时仍按 feature 标为 unverified。线上模型服务、真实服务端 priority、系统剪贴板和物理终端外观需单独验收。根仓库最终仍运行 `pnpm run check`，其结果只代表原有开发基线及既有回归范围。
+驱动输出的 `.tmp` 路径位于验证副本内。命令退出码、逐项断言、ANSI、session、PID 和本地服务端口清理都需保留；缺分支时仍按 feature 标为 unverified。线上模型服务、真实服务端 priority、系统剪贴板和物理终端外观需单独验收。根仓库最终仍运行 `pnpm run check`，其结果覆盖默认原版 1.5.2 开发环境。
+
+## Required host checks
+
+`pnpm run pi152:check stock` 和 `pnpm run pi152:check patched` 是 CI 与本地共用的完整宿主入口。每次创建新 runtime，按 prepare → build → types → load 顺序验证，不复用旧源码或日志。之后串行执行真实 SDK 回归、Fast 完整请求旅程、搜索和冷恢复、本地 MCP 组合/历史/恢复、四模式技能 resume、技能组合、compact 组合及模型导航、codemode、普通/全屏文本区域与 Working。任一命令失败、超时或进程组清理未确认都会失败，日志写入 `.tmp/test-results/pi152-<profile>-*`。
+
+原版运行普通刷新断言与原始摘要显示/搜索断言；只跳过确实调用可选区域 API 的补丁内部契约，补丁矩阵执行这些增强契约。上游 OSC133 与 Kitty 契约在两种宿主均执行。生产组件继续按能力检测降级，不按版本字符串分流。
+
+正式 CLI/PTY 驱动使用包声明的 `dist/bundle/cli.js`，独立加载检查使用模块入口。补丁的 bin 转发使默认命令进入修复后的模块树；原版使用官方 bundle。仅验证 `dist/cli.js` 不能证明用户默认命令正常。

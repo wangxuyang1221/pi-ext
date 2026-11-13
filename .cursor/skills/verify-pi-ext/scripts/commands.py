@@ -88,7 +88,7 @@ env = dict(os.environ, PI_VERIFY_ROOT=str(root), TERM="xterm-256color")
 protected_env = {"HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "PI_CODING_AGENT_DIR", "TMPDIR", "TMP", "TEMP", "PI_VERIFY_ROOT", "PI_VERIFY_EVIDENCE", "PI_VERIFY_SCRATCH"}
 assert not any(key in protected_env or key.startswith("XDG_") for key in recipe.get("env", {})), "Recipe env must preserve isolated directories"
 env.update({key: expand(str(value)) for key, value in recipe.get("env", {}).items()})
-args = ["node", str(repo / "node_modules/@earendil-works/pi-coding-agent/dist/cli.js"),
+args = ["node", str(repo / "node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js"),
         "--offline", "--no-extensions", "--no-skills", "--no-context-files", "--no-prompt-templates", "--no-themes",
         "--session-dir", str(root / "sessions"), "--provider", recipe.get("providerName", "faux"), "--model", recipe.get("model", "faux-1")]
 for entry in [extension, *recipe.get("extensions", [])]:

@@ -934,7 +934,7 @@ describe("Codex compaction history", () => {
 		}));
 
 		expect(result.usage).toMatchObject({ input: 60, output: 20, cacheRead: 30, cacheWrite: 10, totalTokens: 120 });
-		expect(result.usage?.cost).toEqual(expectedCost);
+		expect(result.usage?.cost).toEqual({ ...expectedCost, totalFromProvider: false });
 	});
 
 	test("preserves nested SSE error details", async () => {

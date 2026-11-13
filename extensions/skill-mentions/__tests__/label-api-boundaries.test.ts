@@ -1,3 +1,4 @@
+import { TestKeybindingsManager } from "../../../test-support/keybindings.js";
 import { afterEach, beforeAll, expect, it } from "vitest";
 import { CustomEditor, initTheme, type KeybindingsManager, type Theme } from "@earendil-works/pi-coding-agent";
 import { type TUI } from "@earendil-works/pi-tui";
@@ -16,7 +17,7 @@ afterEach(async () => {
 function editorFixture(kind: "native" | "codex") {
   const identity = (text: string) => text;
   const tui = { terminal: { rows: 40, columns: 100 }, requestRender() {} } as unknown as TUI;
-  const keys = { matches: () => false } as unknown as KeybindingsManager;
+  const keys = new TestKeybindingsManager();
   const theme = { borderColor: identity, selectList: { selectedPrefix: identity, selectedText: identity, description: identity, scrollInfo: identity, noMatch: identity } };
   const editor = kind === "native" ? new CustomEditor(tui, theme, keys) : new CodexEditor(tui, theme, keys, () => ({ fg: (_key: string, text: string) => text, getBgAnsi: () => "", getFgAnsi: () => "" }) as unknown as Theme);
   editors.push(editor);

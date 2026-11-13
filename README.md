@@ -12,7 +12,7 @@
 
 - 支持 Linux 和 macOS；原生 Windows 不在支持与 CI 验证范围内。
 - Node.js 22.19 或更高版本
-- 根开发环境固定 Pi `1.4.0`；五个扩展及主题另支持原版 `1.5.2`，范围、降级和隔离验证见 [Pi compatibility](docs/pi152-compatibility.md)。
+- 最低支持版本与默认开发环境固定为原版 Pi `1.5.2`，可选补丁使用独立依赖树，范围、降级和隔离验证见 [Pi compatibility](docs/pi152-compatibility.md)。
 - 支持 24-bit color 的终端可获得最接近设计稿的颜色效果
 
 CI 在 Linux 和 macOS 上执行完整检查，并在 Linux 上运行 PTY 和 skill 安装验收。运行入口是各扩展 `dist/` 目录中的 ESM 文件，Pi 启动时不需要转译 TypeScript 源码。
@@ -96,7 +96,7 @@ Codex encrypted compaction item.
 
 当前 V2 路径不消费 `/compact focus text` 的 focus text，也不执行分段压缩。
 
-Pi 1.4.0 的初始和增量 `additional_tools`、工具移除与重声明提示、纯空白工具输出、active projection、pending tool calls 期间的 system 顺序，以及 function/grammar item ID 规则已对齐。待发送的真实 user entry 与随后 custom context 按来源一起保留；已经执行过的历史仍受 retention 预算约束。新 checkpoint 保存可选的 `preservedInputSources`，不以文本相同合并两次提交。请求开始时固定历史、工具、提示词和模型；远程等待期间这些信息变化会取消提交，并保留旧 checkpoint。
+Pi 1.5.2 的初始和增量 `additional_tools`、工具移除与重声明提示、纯空白工具输出、active projection、pending tool calls 期间的 system 顺序，以及 function/grammar item ID 规则已对齐。待发送的真实 user entry 与随后 custom context 按来源一起保留；已经执行过的历史仍受 retention 预算约束。新 checkpoint 保存可选的 `preservedInputSources`，不以文本相同合并两次提交。请求开始时固定历史、工具、提示词和模型；远程等待期间这些信息变化会取消提交，并保留旧 checkpoint。
 
 恢复 encrypted checkpoint 后会重新声明边界处仍可用的工具，随后应用后续工具更新。服务端压缩不保留可执行工具声明；该恢复避免压缩后模型失去工具，同时继续遵守隐藏与移除规则。
 
@@ -180,7 +180,7 @@ Write diff 采集限制为旧、新文本各 1 MiB，合计 4000 行，保存的
 
 ### Codemode call tree
 
-Pi 1.4.0 的 codemode 使用调用树显示。收起时预览前 5 项并标出剩余数量，按 `app.tools.expand` 的实际绑定展开，默认 `Ctrl+O`。兄弟调用按开始顺序排列，多层调用保留父子归属。Read/Bash 沿用现有正文布局，Edit/Write 在捕获数据足够时显示原有 diff；未知工具和模型辅助调用使用通用摘要。
+Pi 1.5.2 的 codemode 使用调用树显示。收起时预览前 5 项并标出剩余数量，按 `app.tools.expand` 的实际绑定展开，默认 `Ctrl+O`。兄弟调用按开始顺序排列，多层调用保留父子归属。Read/Bash 沿用现有正文布局，Edit/Write 在捕获数据足够时显示原有 diff；未知工具和模型辅助调用使用通用摘要。
 
 父脚本完成不表示所有子调用成功。被脚本捕获的失败仍显示警告，第 5 项以后的失败也不会被隐藏。中断、超时和缺失状态分别说明；状态未知不推断为成功，也不暗示此前文件修改已经回滚。`Output to model` 显示脚本返回给模型的内容，子工具原始结果另行展示。
 
@@ -266,7 +266,7 @@ pi-codex() {
 
 Bash、Read、MCP 的正常正文统一使用 `text`，在 codex-pi 主题中为原 Bash 的亮灰 `#d6d6d6`。目录、行号、连接线与截断提示仍弱化，文件名强调色及 diff 增删色不变。未全局修改 `toolOutput`，默认工具卡片和 MCP 连接状态保留原有配色。
 
-`read`、`edit`、`write`、`bash` 使用 Pi 1.4.0 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。每个已执行调用显示一条 `$ Bash(command)`，`Bash` 文字仍与 `Read`、`Edited` 对齐。尚未执行的 pending 调用暂不显示，错误或完成结果不会被隐藏。内部仍按同一 assistant 消息中的连续 Bash 维护归属，不跨 text、thinking、其他工具、缺失组件或消息合并；重复 ID 的额外组件独立显示。发现重复时，已绑定的旧成员保持原位，尚未绑定该 ID 的组件不再接管 candidate，因而缺失组件不能成为后来组件搬移旧命令的入口。取消旧统计标题、命令树和耗时列。长命令默认按当前宽度单行省略，展开保留完整命令及逻辑换行。
+`read`、`edit`、`write`、`bash` 使用 Pi 1.5.2 的官方 tool definitions 执行。`edit` 优先根据真实 `EditToolDetails.patch` 还原 old/new 行号与 hunk，并绘制整行 added/removed 背景、独立 sign 和 syntax-highlighted content；sign 与源码之间保留一个空格。本地 `write` 通过公开 operations 在原文件队列内采集变化，执行成功后才生成并保存 patch，不改写模型可见的原工具结果。注入的自定义 Write factory 仍按原契约委托执行，不擅自探测本地文件。Bash 使用 `renderShell: "self"`。每个已执行调用显示一条 `$ Bash(command)`，`Bash` 文字仍与 `Read`、`Edited` 对齐。尚未执行的 pending 调用暂不显示，错误或完成结果不会被隐藏。内部仍按同一 assistant 消息中的连续 Bash 维护归属，不跨 text、thinking、其他工具、缺失组件或消息合并；重复 ID 的额外组件独立显示。发现重复时，已绑定的旧成员保持原位，尚未绑定该 ID 的组件不再接管 candidate，因而缺失组件不能成为后来组件搬移旧命令的入口。取消旧统计标题、命令树和耗时列。长命令默认按当前宽度单行省略，展开保留完整命令及逻辑换行。
 
 默认预览前三个终端显示行，超出时显示精确的 `… +N lines` 和实际展开绑定。正常正文使用 `text` 色，输出前缀灰色，失败正文红色；已核验的取消与超时使用警告色。无输出时分别显示 `Running…`、`(No content)` 或 `Command failed`。只在宿主明确标记失败且尾部诊断匹配时，才把退出码、取消或超时诊断提到预览首行，不根据日志中的 `Error` 判断失败。
 
@@ -319,7 +319,7 @@ pnpm run check
 
 `check` 包含五个发布扩展及 codex-search 的类型检查、测试类型检查、离线测试、构建、包校验和源码/dist 宿主加载。codex-search 在仓库内维护，但不在当前发布和自动加载清单中。
 
-测试命令、Unix 宿主验收、环境隔离和 CI 覆盖统一见 [Testing](docs/testing.md)。`pnpm run pi14:live` 是单独的联网入口，会产生真实服务端用量，不属于默认检查。
+测试命令、Unix 宿主验收、环境隔离和 CI 覆盖统一见 [Testing](docs/testing.md)。`pnpm run pi152:live` 是单独的联网入口，会产生真实服务端用量，不属于默认检查。
 
 本地验证后可打包安装：
 

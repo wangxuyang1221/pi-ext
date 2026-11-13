@@ -17,14 +17,14 @@
 
 Preconditions:
 
-- [Launch/Doctor](../SKILL.md) 通过；RUN 为本次目录。CLI 默认仓库 bin，安装入口按 [installation](installation.md) 替换。
+- [Launch/Doctor](../SKILL.md) 通过；RUN 为本次目录。根 bin 为原版，增强旅程按 [1.5.2 profile](pi152.md) 在补丁树执行，并省略 `--original`。安装入口按 [installation](installation.md) 替换。
 
-- **Start both modes.** 顺序执行 `conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/regions-regular" --cli "$PWD/node_modules/.bin/pi"` 和 `conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/regions-fullscreen" --cli "$PWD/node_modules/.bin/pi" --mode fullscreen`。ready 同时出现 `Region demo`、`Controlled example` 和 `region API`，80ms 动画与 footer 前进。
+- **Start both modes.** 顺序执行 `conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/regions-regular" --cli "$PWD/node_modules/.bin/pi" --original` 和 `conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/regions-fullscreen" --cli "$PWD/node_modules/.bin/pi" --original --mode fullscreen`。ready 同时出现 `Region demo`、`Controlled example` 和 `normal fallback`，80ms 动画与 footer 前进。
 - **Drive independent updates.** 驱动发送 pause→animation→footer→both。核对 `actions.json` 的顺序与 `summary.checks` 的 independent/same-frame 断言；动画只加一、footer 只加一、both 同时加一。
 - **Edit and grow history.** 输入 `draft-中文-abc`、左移两格、插入 `X`。公开 editor 事件应为 `draft-中文-aXbc`。随后真实提交七次 prompt，`Response 0` 到 `Response 6` 形成超过视口的历史，screens 保留草稿/光标/历史结果。
 - **Change and dispose.** 同一旅程执行 height、resize、theme、`/settings` 双向切换、stop/start、`/new`、reload 和 `/quit`。核对设置副本 `tuiMode`、start/shutdown 事件、移除后无旧行、重新挂载继续推进；CLI 退出码 0 且进程组空。
 - **Prove fallback.** 按 installation 获得新原版 CLI，上述两命令换成 `--cli "$ORIGINAL_CLI" --original` 并使用新的目录。挂载处显示 `normal fallback`；保留相同动作结果，不能推断原版也有局部优化。
-- **Supplement mechanism contracts.** `pnpm_config_verify_deps_before_run=false pnpm test test-support/__tests__/local-refresh.test.ts` 核对正常请求优先、同帧合并、失效句柄、异常帧和真实布局输出/光标等价；这些内部契约是用户旅程补证。
+- **Supplement mechanism contracts.** `node scripts/pi152-patched-verify.mjs run pnpm test test-support/__tests__/local-refresh.test.ts` 核对正常请求优先、同帧合并、失效句柄、异常帧和真实布局输出/光标等价；这些内部契约是用户旅程补证。
 
 ## Gotchas
 

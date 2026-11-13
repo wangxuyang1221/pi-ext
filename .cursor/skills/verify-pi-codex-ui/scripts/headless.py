@@ -37,7 +37,7 @@ try:
             env={k:v for k,v in os.environ.items() if k in ['PATH','LANG','LC_ALL','TZ']}
             env.update(HOME=str(root/'home'),TMPDIR=str(root/'tmp'),PI_CODING_AGENT_DIR=str(root/'agent'),AUDIT_ROOT=str(root),PI_OFFLINE='1',PI_TELEMETRY='0',PI_SKIP_VERSION_CHECK='1')
             for kind in ['CACHE','CONFIG','DATA','STATE']:env['XDG_'+kind+'_HOME']=str(root/kind.lower())
-            args=['node',str(REPO/'node_modules/@earendil-works/pi-coding-agent/dist/cli.js'),'--offline','--no-extensions','--no-skills','--no-context-files','--no-prompt-templates','--no-themes','--session-dir',str(root/'sessions'),'--provider','faux','--model','faux-1','-e',str(REPO/'extensions/codex-ui/dist/index.js'),'-e',str(BASE/'model-provider.ts'),'--mode','json' if mode=='print' else 'rpc']
+            args=['node',str(REPO/'node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js'),'--offline','--no-extensions','--no-skills','--no-context-files','--no-prompt-templates','--no-themes','--session-dir',str(root/'sessions'),'--provider','faux','--model','faux-1','-e',str(REPO/'extensions/codex-ui/dist/index.js'),'-e',str(BASE/'model-provider.ts'),'--mode','json' if mode=='print' else 'rpc']
             if mode=='print':args+=['--print','Execute audit tools']
             if scenario.startswith('project-'): args+=['--approve']
             log=(EVIDENCE/(label+'.jsonl')).open('wb');err=(EVIDENCE/(label+'.stderr')).open('wb')

@@ -4,8 +4,10 @@ import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { ScrollView, TuiMainScreen, TuiAltScreen, type Terminal } from "@earendil-works/pi-tui";
 
+import type { TextRegionCapability } from "../host-capabilities.js";
+
 const version = JSON.parse(readFileSync(resolve("node_modules/@earendil-works/pi-tui/package.json"), "utf8")).version;
-describe.skipIf(version !== "1.5.2")("Pi 1.5.2 upstream rendering contracts", () => {
+describe("Pi 1.5.2 upstream rendering contracts", () => {
   it.each([["regular", TuiMainScreen], ["fullscreen", TuiAltScreen]] as const)("strips prompt zones without ending program status in %s", (_mode, Host) => {
     let output = "", value = "first";
     const terminal = { columns: 60, rows: 12, write(text: string) { output += text; }, hideCursor() {}, showCursor() {}, stop() {} } as unknown as Terminal;
@@ -13,7 +15,8 @@ describe.skipIf(version !== "1.5.2")("Pi 1.5.2 upstream rendering contracts", ()
     const component = { invalidate() {}, render: () => [`\x1b]133;A\x07\x1b]133;B\x1b\\\x1b]7501;S=working\x07${value}`] };
     host.addChild(component);
     if (host instanceof TuiAltScreen) Object.assign(host, { altScreenActive: true });
-    const handle = host.registerTextRegion!(component);
+    expect(version).toBe("1.5.2");
+    const handle = (host as typeof host & TextRegionCapability).registerTextRegion?.(component) ?? { requestRender: () => host.requestRender(), dispose() {} };
     try {
       for (const next of ["first", "second", "x"]) {
         value = next; output = "";

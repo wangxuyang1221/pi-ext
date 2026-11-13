@@ -21,15 +21,12 @@ if (tarball) {
 }
 for (const kind of ["patched", "original"]) {
   const cwd = join(root, kind); mkdirSync(cwd);
+  const fixture = join(repo, kind === "patched" ? "test-support/pi152-patched" : "test-support/pi152");
+  for (const name of ["package.json", "pnpm-lock.yaml"]) copyFileSync(join(fixture, name), join(cwd, name));
   if (kind === "patched") {
-    for (const name of ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"]) copyFileSync(join(repo, name), join(cwd, name));
+    copyFileSync(join(fixture, "pnpm-workspace.yaml"), join(cwd, "pnpm-workspace.yaml"));
     cpSync(join(repo, "patches"), join(cwd, "patches"), { recursive: true });
-  } else {
-    copyFileSync(join(repo, "package.json"), join(cwd, "package.json"));
-    const lock = readFileSync(join(repo, "pnpm-lock.yaml"), "utf8").replace(/patchedDependencies:\n(?:  .*\n)+\n/, "").replace(/\(patch_hash=[a-f0-9]+\)/g, "");
-    writeFileSync(join(cwd, "pnpm-lock.yaml"), lock);
-    writeFileSync(join(cwd, "pnpm-workspace.yaml"), "packages:\n  - '.'\n");
-  }
+  } else writeFileSync(join(cwd, "pnpm-workspace.yaml"), "packages:\n  - '.'\n");
   if (tarball) {
     const manifest = JSON.parse(readFileSync(join(cwd, "package.json"), "utf8"));
     manifest.name = `local-refresh-${kind}-consumer`;

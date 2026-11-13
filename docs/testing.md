@@ -4,9 +4,9 @@
 
 ## Setup
 
-使用 Node.js 22.19+ 和 `package.json` 中指定的 pnpm 版本。Pi 相关依赖固定为 1.4.0，真实宿主检查使用仓库安装的 CLI，不使用全局 `pi`。
+使用 Node.js 22.19+ 和 `package.json` 中指定的 pnpm 版本。Pi 相关依赖固定为原版 1.5.2，真实宿主检查使用仓库安装的 CLI，不使用全局 `pi`。
 
-仓库通过 pnpm 自动应用 [Pi 会话摘要补丁](pi-session-summary-patch.md)。冻结安装必须包含根目录的 pnpm-workspace.yaml、patches 和锁文件；发布包的外部宿主不会自动继承这份补丁。
+根依赖树不配置宿主补丁。可选的 [Pi 会话摘要补丁](pi-session-summary-patch.md) 和文本区域补丁由 `test-support/pi152-patched` 的独立清单、workspace 和锁文件固定，使用独立启动入口。
 
 ```bash
 node --version
@@ -19,7 +19,7 @@ pnpm run check
 
 `check` 依次校验脚本入口与本地文档链接、扫描工作区密钥，再执行构建、扩展类型检查、搜索扩展类型检查、所有 TS 测试及夹具类型检查、离线测试、发布包检查和五个扩展的源码及 dist 加载检查。测试夹具引用了 `dist/` 中的模块，因此必须先构建，确保全新检出也能通过检查。`dist/` 由构建生成，不要手动修改。
 
-`tsconfig.tests.json` 检查 `extensions/**/__tests__/**/*.ts` 和 `test-support/**/*.ts`，包含独立运行的宿主夹具。它同时读取被测试引用的 JavaScript 类型，但不对整个 JavaScript 脚本库启用 `checkJs`。Vitest 执行通过不能替代这一类型检查。
+`tsconfig.tests.json` 检查 `extensions/**/__tests__/**/*.ts` 和 `test-support/**/*.ts`，包含独立运行的宿主夹具。测试配置关闭 declaration/declarationMap，避免只做 noEmit 检查时要求为宿主的间接类型生成声明名。它同时读取被测试引用的 JavaScript 类型，但不对整个 JavaScript 脚本库启用 `checkJs`。Vitest 执行通过不能替代这一类型检查。
 
 ## Commit gates
 
@@ -102,7 +102,7 @@ pnpm run host:pty:check --from tool-status:check
 
 其他 fixture 应尽量使用真实的宿主接口和明确的类型。异构工具注册表可保留泛型；需要检查工具结果时先断言内容或 details 的实际形状。只有测试故意输入非法数据时才局部绕过输入类型，并注明原因，不关闭整个测试文件的类型检查。
 
-默认测试使用合成 provider，不发送付费模型请求。`pnpm run pi14:live` 是单独的联网验收，会产生真实服务端用量，不属于 `check` 或默认 CI。
+默认测试使用合成 provider，不发送付费模型请求。`pnpm run pi152:live` 是单独的联网验收，会产生真实服务端用量，不属于 `check` 或默认 CI。
 
 ## Evidence and cleanup
 
@@ -123,7 +123,7 @@ PTY 子会话和本地协议 server 仍由夹具负责清理。操作系统强�
 
 `.github/workflows/ci.yml` 在 Linux 和 macOS 上先检查提交快照，再运行完整的 `check`。空白检查比较 PR 基准或 push 的前一提交；手动触发和新分支 push 比较 HEAD 的父提交，无父提交时比较空树。密钥、路径和引用检查始终覆盖完整快照。
 
-Ubuntu 另跑 PTY job 和 Python 评分与 skill 安装 job。另有固定名称的 `Check` 汇总 job，使用 `always()`，只有所有必需 job 成功时才通过；失败、取消、跳过或缺失都不能视为通过。增加执行 job 时，同步更新 workflow 的 `needs` 和 `scripts/check-ci.mjs` 的必需 job 名称。每个 job 有超时，同一分支的新运行会取消旧运行；执行 job 失败时仍上传日志，保留 7 天。性能基准与联网验收不进入默认 CI。
+Ubuntu 另以 `pi152-host` 矩阵运行 `pnpm run pi152:check stock` 与 `pnpm run pi152:check patched`，从新目录安装并验证两种宿主的身份、构建、类型、加载、适用回归和真实 CLI/PTY 旅程。证据包含独立 runtime 内的日志，上传时排除 node_modules。另跑 PTY job 和 Python 评分与 skill 安装 job。另有固定名称的 `Check` 汇总 job，使用 `always()`，只有所有必需 job 成功时才通过；失败、取消、跳过或缺失都不能视为通过。增加执行 job 时，同步更新 workflow 的 `needs` 和 `scripts/check-ci.mjs` 的必需 job 名称。每个 job 有超时，同一分支的新运行会取消旧运行；执行 job 失败时仍上传日志，保留 7 天。性能基准与联网验收不进入默认 CI。
 
 CI 配置与本机验证是两类证据。本机通过不代表另一平台已实跑；合并前查看远端对应 job 的结果。
 

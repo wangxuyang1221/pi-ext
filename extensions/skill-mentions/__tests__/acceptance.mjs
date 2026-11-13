@@ -34,7 +34,7 @@ try {
   // A nested workspace prevents pnpm from treating this fixture as the repository root.
   writeFileSync(join(consumer, "pnpm-workspace.yaml"), "packages:\n  - '.'\n");
   if (summaryOnly) {
-    copyFileSync(join(repo, "pnpm-workspace.yaml"), join(consumer, "pnpm-workspace.yaml"));
+    copyFileSync(join(repo, "test-support/pi152-patched/pnpm-workspace.yaml"), join(consumer, "pnpm-workspace.yaml"));
     cpSync(join(repo, "patches"), join(consumer, "patches"), { recursive: true });
   }
   // Resolve this generated consumer once, then prove installation consumes its exact lock.
@@ -53,7 +53,7 @@ try {
   run(process.execPath, ["--input-type=module", "-e", `for (const path of ${JSON.stringify(packaged.pi.extensions)}) { const m = await import(new URL(path, ${JSON.stringify(`file://${installed}/`)})); if (typeof m.default !== 'function') throw new Error(path); }`], { cwd: consumer, env });
   copyFileSync(join(here, "pty-fixture.ts"), join(consumer, "pty-fixture.ts"));
   const hostRoot = realpathSync(join(consumer, "node_modules/@earendil-works/pi-coding-agent"));
-  const cli = summaryOnly ? join(consumer, "node_modules/.bin/pi") : join(hostRoot, "dist/cli.js");
+  const cli = summaryOnly ? join(consumer, "node_modules/.bin/pi") : join(hostRoot, "dist/bundle/cli.js");
   const requestedModes = args.filter(arg => arg !== prefixArgument && arg !== "--summary");
   const modes = requestedModes.length ? requestedModes : ["native", "native-fullscreen", "codex", "combined", "combined-fullscreen"];
   assert(modes.every(mode => ["native", "native-fullscreen", "codex", "codex-fullscreen", "combined", "combined-fullscreen", "combined-search", "combined-search-fullscreen"].includes(mode)));
