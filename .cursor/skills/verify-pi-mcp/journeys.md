@@ -4,7 +4,7 @@
 
 ## Commands
 
-从仓库根目录运行所需场景。完整 MCP 验收逐条运行全部六个命令。
+从仓库根目录运行所需场景。完整 MCP 验收逐条运行全部七个命令。
 
 ```bash
 conda run --no-capture-output -n codex-py312 python extensions/mcp/__tests__/verification-journeys.py configuration
@@ -13,12 +13,13 @@ conda run --no-capture-output -n codex-py312 python extensions/mcp/__tests__/ver
 conda run --no-capture-output -n codex-py312 python extensions/mcp/__tests__/verification-journeys.py diagnostics
 conda run --no-capture-output -n codex-py312 python extensions/mcp/__tests__/verification-journeys.py history
 pnpm exec node extensions/mcp/__tests__/fixtures/verification/recovery.mjs
+pnpm exec node extensions/mcp/__tests__/fixtures/verification/native-coexistence.mjs
 ```
 
 前五条是 CLI/PTY、文件/session 和真实本地协议证据。`recovery.mjs` 是生产 manager 加真实 HTTP 协议证据，使用真实时钟和 sleep，只固定 jitter 的随机输入。它不证明 TUI 呈现。progress 的 silent、unknown、stopped 分支仍需下面的真实 SSE 协议测试。
 
 ```bash
-pnpm test extensions/mcp/__tests__/transport-fixtures.test.ts extensions/mcp/__tests__/progress-transport.test.ts extensions/mcp/__tests__/schema.test.ts extensions/mcp/__tests__/diagnostics.test.ts extensions/mcp/__tests__/history-tool.test.ts
+pnpm test extensions/mcp/__tests__/transport-fixtures.test.ts extensions/mcp/__tests__/progress-transport.test.ts extensions/mcp/__tests__/schema.test.ts extensions/mcp/__tests__/diagnostics.test.ts extensions/mcp/__tests__/history-renderers.test.ts
 ```
 
 ## Configuration
@@ -76,3 +77,12 @@ HTTP 第一次调用发送后断流，ledger 中只能有一次 tools/call。手
 PTY 命令打印 `.tmp/test-results/mcp-<scene>-<id>/`。其中 `<host>.json` 包含真实 argv、按键、命令、画面和 PID；对应 `.ansi` 保存原始终端输出。`checks.json` 是逐条断言，`files/` 保留配置、session、provider requests、server ledger、HTTP requests 和诊断文件。失败也保存这些文件。
 
 成功必须同时满足 `summary.json` 的 `passed: true`、`alive: []`、`scratchRemoved: true` 和每个端口的 `refused: true`。服务关闭事件还记录 listening=false、socket 数量；需审查这些事件，端口不可连接本身不证明执行了正常关闭。协议命令的 summary 逐场景记录关闭与端口拒绝连接。Python PTY driver 处理 SIGTERM/SIGINT 并执行 finally；`recovery.mjs` 没有对应信号处理器，中断后需按记录 PID 和端口单独核验，不能保证其 finally 留证。只操作本次记录的 PID、端口和 scratch。
+
+
+## Native MCP coexistence
+
+`native-coexistence.mjs` 使用当前依赖树的真实 Pi SDK、内置 native MCP extension 和本地 in-memory MCP transport。先通过真实 `tool_search` 激活 deferred 工具，再实际执行原生工具，记录 success/error 返回；unfinished 分支只记录未完成调用。由 fixture 写入相应 loadout/调用记录，隔离磁盘会话持久化后重新打开，加载 pi-ext MCP，检查 deferred 工具仍 active 且能实际执行。随后执行 `AgentSession.reload()`，再次检查 active 和真实协议调用。恢复与 reload 本身不得重放旧调用。
+
+该入口覆盖 `mcp-native-coexistence`，保留三类 session JSONL、宿主真实入口及版本、连接/调用计数、清理结果。它验证 SDK 会话恢复和 reload，不证明 CLI 菜单、PTY 呈现、远程网络或真实模型行为；这些边界不能用 SDK 通过替代。继续执行 `history` 与 `reload` 的现有 CLI/PTY 旅程。
+
+原版和补丁版在各自独立 checkout/依赖树运行此命令，核对 summary 的 `host.entry`，不能用同一依赖树冒充两种宿主。成功要求三种历史的 resume/reload 均通过，`scratchRemoved: true`、`openTransports: 0`、`pendingTimers: 0`。本入口不启动子进程、不监听端口；清理真实 PTY 子进程与端口仍由对应旅程负责。

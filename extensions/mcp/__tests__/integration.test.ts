@@ -125,6 +125,7 @@ function createPiHarness() {
       handlers.set(event, [...(handlers.get(event) ?? []), handler]);
     }),
     registerCommand: vi.fn((name: string, definition: unknown) => commands.set(name, definition)),
+    registerToolRenderer: vi.fn(),
     registerTool: vi.fn((definition: any) => tools.set(definition.name, definition)),
     registerEntryRenderer: vi.fn(),
     appendEntry: vi.fn(),
