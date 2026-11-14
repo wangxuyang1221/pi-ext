@@ -322,7 +322,11 @@
           },
           {
             "id": "mcp-history-only",
-            "description": "display-only 定义不能执行"
+            "description": "display-only renderer 不注册可执行工具"
+          },
+          {
+            "id": "mcp-native-coexistence",
+            "description": "原生 deferred MCP 工具经 resume 与 reload 后仍可调用"
           }
         ]
       }

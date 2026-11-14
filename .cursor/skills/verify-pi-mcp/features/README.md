@@ -15,4 +15,4 @@
 - [Tool discovery, calls and results](tools.md)：包含 `mcp-stdio`, `mcp-http`, `mcp-sse`, `mcp-schema`, `mcp-progress`, `mcp-cancel`, `mcp-error`.
 - [Deadlines, retry and tool replay](reconnect.md)：包含 `mcp-reconnect`, `mcp-reload`, `mcp-offline`, `mcp-retry`, `mcp-deadline`, `mcp-replay`.
 - [Status controls and diagnostics](status.md)：包含 `mcp-inventory`, `mcp-verbose`, `mcp-logs`, `mcp-redaction`, `mcp-bounded-log`.
-- [History rendering and safe resume](history.md)：包含 `mcp-live-history`, `mcp-offline-history`, `mcp-cold-resume`, `mcp-import`, `mcp-tree`, `mcp-reload-history`, `mcp-history-only`.
+- [History rendering and safe resume](history.md)：包含 `mcp-live-history`, `mcp-offline-history`, `mcp-cold-resume`, `mcp-import`, `mcp-tree`, `mcp-reload-history`, `mcp-history-only`, `mcp-native-coexistence`.

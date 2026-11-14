@@ -31,7 +31,7 @@ import {
 } from "./renderers.js";
 import { collectHistoryIdentities, readHistoryIdentities, type HistoryIdentity } from "./history.js";
 import { HistoryHandoff } from "./history-handoff.js";
-import { historyTool } from "./history-tool.js";
+import { historyRenderers } from "./history-renderers.js";
 import { jsonSchemaToTypeBox } from "./schema.js";
 import { inventoryComponent, inventoryServer, type McpInventory } from "./status-ui.js";
 import { McpStartup } from "./startup-ui.js";
@@ -120,7 +120,13 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
   const manager = new Manager({ diagnostics });
   const registeredTools = new Map<string, RegisteredTool>();
   const availableTools = new Map<string, McpTool>();
-  const historyNames = new Set<string>();
+  const history = new Map<string, ReturnType<typeof historyRenderers>>();
+  pi.registerToolRenderer((name, next) => {
+    const renderer = history.get(name);
+    // Real tools own their presentation; generic fallback resolvers must not
+    // hide the offline history card when no executable definition exists.
+    return renderer && !pi.getAllTools().some((tool) => tool.name === name) ? renderer : next();
+  });
   const handoff = new HistoryHandoff(getAgentDir());
   let historyFailure = false;
   const historyError = (error: unknown, ctx?: ExtensionContext): void => {
@@ -130,9 +136,7 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
   };
   const registerHistory = (identities: readonly HistoryIdentity[]): void => {
     for (const identity of identities) {
-      if (registeredTools.has(identity.fullName) || historyNames.has(identity.fullName)) continue;
-      pi.registerTool(historyTool(identity));
-      historyNames.add(identity.fullName);
+      if (!history.has(identity.fullName)) history.set(identity.fullName, historyRenderers(identity));
     }
   };
   // Factory registration must not call bound session actions or start connections.
@@ -150,7 +154,7 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
     const current = pi.getActiveTools();
     // Observe user choices before our own removals or host registration refreshes.
     if (observeChoices) rememberActiveChoices();
-    const next = current.filter((name) => !(historyNames.has(name) || registeredTools.has(name))
+    const next = current.filter((name) => !registeredTools.has(name)
       || (online.has(name) && activationChoices.get(name) !== false));
     for (const name of online) {
       if (!onlineNames.has(name) && activationChoices.get(name) !== false && !next.includes(name)) next.push(name);
@@ -247,8 +251,7 @@ export default function registerMcpExtension(pi: ExtensionAPI): void {
     }
   };
 
-  // The host restores recorded tools before this event, even for offline history
-  // definitions. Reconcile the restored loadout without rescanning the session.
+  // Reconcile restored executable tools without changing display-only history.
   pi.on("session_tree", () => reconcileActive());
 
   pi.on("session_start", async (_event, ctx) => {

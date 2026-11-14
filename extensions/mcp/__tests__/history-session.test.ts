@@ -28,12 +28,13 @@ test.each([false, true])("keeps offline history tools inactive after tree restor
   const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network forbidden"));
   try {
     await session.bindExtensions({});
-    expect(session.getAllTools().map(tool => tool.name)).toContain(name);
+    expect(session.getAllTools().map(tool => tool.name)).not.toContain(name);
     expect(session.getActiveToolNames()).not.toContain(name);
     for (const target of [early, late, early]) {
       await session.navigateTree(target, { summarize: false });
       expect(session.getActiveToolNames()).not.toContain(name);
-      expect(session.getToolDefinition(name)).toBeDefined();
+      expect(session.getToolDefinition(name)).toBeUndefined();
+      expect(session.extensionRunner?.resolveToolRenderers(name, () => undefined)?.renderShell).toBe("self");
     }
     expect(fetch).not.toHaveBeenCalled();
   } finally {

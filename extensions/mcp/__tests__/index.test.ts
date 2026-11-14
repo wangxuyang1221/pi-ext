@@ -137,11 +137,14 @@ vi.mock("../src/client.js", () => {
 import registerMcpExtension from "../src/index.js";
 
 interface PiMock {
+  getAllTools(): any[];
   getActiveTools(): string[];
   setActiveTools(names: string[]): void;
   on: ReturnType<typeof vi.fn>;
   registerCommand: ReturnType<typeof vi.fn>;
   registerTool: ReturnType<typeof vi.fn>;
+  registerToolRenderer: ReturnType<typeof vi.fn>;
+  renderers: Array<(name: string, next: () => any) => any>;
   registerEntryRenderer: ReturnType<typeof vi.fn>;
   appendEntry: ReturnType<typeof vi.fn>;
   handlers: Map<string, Array<(...args: any[]) => unknown>>;
@@ -157,8 +160,11 @@ function createPiMock(): PiMock {
   let active = ["read", "other-extension"];
   const pi: PiMock = {
     getActiveTools: () => [...active],
+    getAllTools: () => [...tools.values()],
     setActiveTools: (names) => { active = [...names]; },
     handlers,
+    registerToolRenderer: vi.fn((resolver) => pi.renderers.push(resolver)),
+    renderers: [],
     commands,
     tools,
     on: vi.fn((event: string, handler: (...args: any[]) => unknown) => {
@@ -344,7 +350,7 @@ describe("MCP Pi integration", () => {
     mocks.managerInstances.length = 0;
   });
 
-  it("bootstraps cold history before connections and replaces it with current live definitions", async () => {
+  it("bootstraps cold renderers without tools and prefers current live definitions", async () => {
     mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult({ docs: { command: "docs-mcp" } }));
     const pending = deferred<any>();
     mocks.connectServerImpl.mockImplementation(() => pending.promise);
@@ -354,11 +360,11 @@ describe("MCP Pi integration", () => {
     registerMcpExtension(pi as never);
     const starting = pi.emit("session_start", {}, ctx);
     await flushPromises();
-    const placeholder = pi.tools.get("mcp__docs__query");
+    const placeholder = pi.renderers[0]("mcp__docs__query", () => undefined);
+    expect(pi.tools.has("mcp__docs__query")).toBe(false);
     expect(placeholder?.renderShell).toBe("self");
     expect(pi.getActiveTools()).toEqual(["read", "other-extension"]);
-    pi.setActiveTools([...pi.getActiveTools(), "mcp__docs__query"]);
-    await expect(placeholder.execute("id", {})).rejects.toThrow("history-only");
+    expect(placeholder).not.toHaveProperty("execute");
     expect(manager().callTool).not.toHaveBeenCalled();
     pending.resolve(makeState("docs"));
     await starting;
@@ -369,8 +375,25 @@ describe("MCP Pi integration", () => {
     expect(pi.getActiveTools()).toEqual(["read", "other-extension", "mcp__docs__query"]);
     manager().emit({ type: "state", serverName: "docs", state: makeState("docs", { connected: false, status: "offline" }), source: "background" });
     expect(pi.getActiveTools()).toEqual(["read", "other-extension"]);
-    await expect(placeholder.execute("id", {})).rejects.toThrow("history-only");
+    expect(placeholder).not.toHaveProperty("execute");
     expect(manager().callTool).not.toHaveBeenCalled();
+    await pi.emit("session_shutdown", { reason: "quit" }, ctx);
+  });
+
+  it("leaves foreign active tools untouched when their names occur in history", async () => {
+    mocks.loadMcpConfigResult.mockReturnValue(makeConfigResult());
+    const pi = createPiMock();
+    const ctx = createContext();
+    const name = "mcp__native__search";
+    ctx.sessionManager.getEntries.mockReturnValue([{ type: "message", message: { role: "assistant", content: [{ type: "toolCall", name }] } }]);
+    pi.setActiveTools(["read", name]);
+    registerMcpExtension(pi as never);
+    await pi.emit("session_start", {}, ctx);
+    await pi.emit("session_tree", {}, ctx);
+    expect(pi.getActiveTools()).toEqual(["read", name]);
+    expect(pi.registerTool).not.toHaveBeenCalled();
+    expect(pi.registerToolRenderer).toHaveBeenCalledOnce();
+    expect(pi.renderers[0]("unknown", () => undefined)).toBeUndefined();
     await pi.emit("session_shutdown", { reason: "quit" }, ctx);
   });
 
@@ -450,7 +473,9 @@ describe("MCP Pi integration", () => {
     await pi.emit("session_shutdown", { reason, targetSessionFile: path }, ctx);
     const next = createPiMock();
     registerMcpExtension(next as never);
-    expect([...next.tools.keys()]).toEqual(reason === "resume" ? ["mcp__target__tool"] : reason === "new" || reason === "quit" ? [] : ["mcp__old__tool"]);
+    expect([...next.tools.keys()]).toEqual([]);
+    const names = ["mcp__target__tool", "mcp__old__tool"].filter((name) => next.renderers[0](name, () => undefined));
+    expect(names).toEqual(reason === "resume" ? ["mcp__target__tool"] : reason === "new" || reason === "quit" ? [] : ["mcp__old__tool"]);
     expect(mocks.loadMcpConfigResult).toHaveBeenCalledTimes(1);
     expect(manager().connectServer).not.toHaveBeenCalled();
     const directory = join(historyAgentDir, "mcp-history");
@@ -483,7 +508,7 @@ describe("MCP Pi integration", () => {
     const next = createPiMock();
     next.getActiveTools = () => { throw new Error("Factory actions are unavailable"); };
     registerMcpExtension(next as never);
-    expect(next.tools.get("mcp__offline__old-tool")?.renderShell).toBe("self");
+    expect(next.renderers[0]("mcp__offline__old-tool", () => undefined)?.renderShell).toBe("self");
     expect(manager().connectServer).not.toHaveBeenCalled();
   });
 

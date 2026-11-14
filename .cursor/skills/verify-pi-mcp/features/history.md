@@ -10,7 +10,8 @@
 - `mcp-import`：导入历史后识别工具身份。
 - `mcp-tree`：树导航只展示当前分支。
 - `mcp-reload-history`：reload 不重执行旧工具。
-- `mcp-history-only`：display-only 定义不能执行。
+- `mcp-history-only`：display-only renderer 不注册可执行工具。
+- `mcp-native-coexistence`：native deferred 工具的 success/error/unfinished 历史恢复与 reload 不受 pi-ext 历史渲染干扰。
 
 ## How to get to it (user POV)
 
@@ -18,8 +19,10 @@
 
 ## Driving it with Pi PTY and host fixtures
 
-完成 [Launch 与 Doctor](../SKILL.md)，运行 [固定旅程的命令](../journeys.md#commands)，选择 `history 与 combination`。具体动作和通过条件见 [对应旅程](../journeys.md#native-history)。每个 ID 分别记录实际覆盖结果、证据层级和文件路径；需要完整验收时运行固定旅程的全部六条命令及列出的定向协议测试。
+完成 [Launch 与 Doctor](../SKILL.md)，运行 [固定旅程的命令](../journeys.md#commands)，选择 `history 与 combination`。具体动作和通过条件见 [对应旅程](../journeys.md#native-history)。每个 ID 分别记录实际覆盖结果、证据层级和文件路径；需要完整验收时运行固定旅程的全部七条命令及列出的定向协议测试。
 
 ## Gotchas
 
 CLI `--resume` 与进程内 `/resume` 是两个入口，固定 history 旅程均实际选择会话。`/tree` 通过搜索、Enter 和 No summary 完成导航，并检查后续请求只含所选分支。旧 resume-ui-host 的 fixture wrapper 可用于定位 SDK 边界，不作为原生菜单验收证据。展开、会话身份、后续请求或清理缺失时保持 unverified。
+
+原生 MCP 共存另运行 [Native MCP coexistence](../journeys.md#native-mcp-coexistence)。该 SDK 入口不代替本文件列出的原生 CLI/PTY 菜单验收。
