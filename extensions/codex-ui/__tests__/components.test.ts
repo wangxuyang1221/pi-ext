@@ -84,14 +84,57 @@ test("header uses Pi branding and live session facts without fabricated badges",
   });
 
   const lines = header.render(56);
-  const plain = lines.map(stripTerminalSequences).join("\n");
+  const plain = lines.map(stripTerminalSequences);
 
-  assert.match(plain, /pi v0\.84\.3 · Codex profile/u);
-  assert.match(plain, /gpt-test · high/u);
-  assert.match(plain, /~\/Code\/app/u);
-  assert.ok(!plain.includes("fast"));
-  assert.ok(!plain.includes("weekly"));
+  assert.deepEqual(plain, [
+    "╭────────────────────────────────────────────────╮",
+    "│ pi v0.84.3 · Codex profile                     │",
+    "│                                                │",
+    "│ model:     gpt-test high      /model to change │",
+    "│ directory: ~/Code/app                          │",
+    "╰────────────────────────────────────────────────╯",
+    "",
+  ]);
+  assert.ok(lines[3]!.includes(theme.bold("gpt-test")));
+  assert.ok(lines[3]!.includes(theme.fg("dim", "model:     ")));
+  assert.ok(!plain.join("\n").includes("fast"));
+  assert.ok(!plain.join("\n").includes("weekly"));
   assert.ok(lines.every((line) => visibleWidth(line) <= 56));
+});
+
+test("header elides the middle of a long directory and keeps its most specific tail", () => {
+  const header = (cwd: string) => new CodexHeader({
+    version: "0.84.3", cwd, home: "/Users/pi",
+    getModelId: () => "gpt-test", getThinkingLevel: () => "high", getTheme: () => theme,
+  });
+  const long = header("/Users/pi/Code/t3code/pi-ext/.tmp/wt-codex-ui-polish/prototypes/workspace");
+  const directory = (width: number) => stripTerminalSequences(long.render(width)[4]!);
+  assert.equal(directory(120), "│ directory: ~/Code/t3code/pi-ext/.tmp/wt-codex-ui-polish/prototypes/workspace │");
+  assert.equal(directory(64), "│ directory: ~/…/.tmp/wt-codex-ui-polish/prototypes/workspace │");
+  assert.equal(directory(40), `│ ${"directory: ~/…/prototypes/workspace".padEnd(36)} │`);
+  assert.equal(stripTerminalSequences(long.render(40)[3]!), `│ ${"model:     gpt-test high".padEnd(36)} │`);
+  for (let width = 12; width <= 120; width++) {
+    const lines = long.render(width);
+    assert.ok(lines.every(line => visibleWidth(line) <= width), `width ${width}`);
+    if (width >= 28) assert.match(stripTerminalSequences(lines[4]!), /directory: ~\/(?:…\/)?(?:.+\/)?workspace +│$/u, `width ${width}`);
+  }
+});
+
+test("header path elision keeps the end of a single long segment by display width", () => {
+  const header = (cwd: string) => new CodexHeader({
+    version: "0.84.3", cwd, home: "/Users/pi",
+    getModelId: () => "gpt-test", getThinkingLevel: () => "high", getTheme: () => theme,
+  });
+  const cjk = header(`/Users/pi/项目/${"很长的目录名字".repeat(6)}尾`);
+  const emoji = header(`/x/${"a🙂".repeat(40)}`);
+  for (let width = 12; width <= 120; width++) {
+    for (const lines of [cjk.render(width), emoji.render(width)]) {
+      assert.ok(lines.every(line => visibleWidth(line) <= width), `width ${width}`);
+    }
+    if (width >= 28) assert.match(stripTerminalSequences(cjk.render(width)[4]!), /尾 +│$/u, `width ${width}`);
+    assert.doesNotMatch(emoji.render(width)[4]!, /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/u, `width ${width}`);
+  }
+  assert.equal(stripTerminalSequences(cjk.render(60)[4]!), `│ directory: …${"很长的目录名字".repeat(3).slice(-22)}尾 │`);
 });
 
 test("footer renders the accepted stable status flow and ignores transient statuses", () => {
@@ -116,12 +159,11 @@ test("footer renders the accepted stable status flow and ignores transient statu
 
   assert.equal(
     plain,
-    "gpt-test medium ⋅ fast ⋅ ~/Code/app ⋅ git:main ⋅ Context 72% left",
+    "gpt-test medium · fast · ~/Code/app · git:main · Context 72% left",
   );
   assert.ok(!plain.includes("MCP"));
   assert.ok(!plain.includes("Compacting"));
   assert.ok(!plain.includes("Other status"));
-  assert.ok(!plain.includes("·"));
   assert.ok(visibleWidth(rendered) <= 160);
 });
 
@@ -176,9 +218,9 @@ test("footer degrades location before stable session facts on narrow terminals",
   });
 
   const expected = new Map([
-    [100, "gpt-5.6-sol max ⋅ fast ⋅ ~/Code/t3code/pi-ext ⋅ git:main ⋅ Context 81% left"],
-    [72, "gpt-5.6-sol max ⋅ fast ⋅ pi-ext ⋅ main ⋅ Context 81% left"],
-    [52, "gpt-5.6-sol max ⋅ fast ⋅ main ⋅ Context 81% left"],
+    [100, "gpt-5.6-sol max · fast · ~/Code/t3code/pi-ext · git:main · Context 81% left"],
+    [72, "gpt-5.6-sol max · fast · pi-ext · main · Context 81% left"],
+    [52, "gpt-5.6-sol max · fast · main · Context 81% left"],
   ]);
   for (const [width, line] of expected) {
     const rendered = footer.render(width)[0] ?? "";
@@ -192,7 +234,7 @@ test("footer skips equal-width variants before dropping a short project branch",
     const footer = new CodexFooter({ cwd, getModelId: () => "gpt", getThinkingLevel: () => "off",
       getContextUsage: () => undefined, getBranch: () => "feature/a-very-long-branch-name",
       getExtensionStatuses: () => new Map(), getTheme: () => theme });
-    assert.equal(stripTerminalSequences(footer.render(34)[0]!).trim(), "gpt off ⋅ feature/a-very-long-b…");
+    assert.equal(stripTerminalSequences(footer.render(34)[0]!).trim(), "gpt off · feature/a-very-long-b…");
     for (const width of [0, 1, 2, 8, 16, 34, 80]) assert(footer.render(width).every(line => visibleWidth(line) <= width));
   }
 });
@@ -256,6 +298,29 @@ test("footer caches only allowlisted statuses and painted output", () => {
     stripTerminalSequencesMock.mock.calls.filter(([value]) => value === "Status: updated").length,
     2,
   );
+});
+
+test("empty composer shows a dim command hint on its bottom padding row only when wide and idle", async () => {
+  const editor = new CodexEditor(
+    { terminal: { rows: 40, columns: 80 }, requestRender() {} } as unknown as TUI,
+    { borderColor: text => text, selectList: getSelectListTheme() }, new TestKeybindingsManager(), () => theme,
+  );
+  const hinted = (width: number) => `${" ".repeat(width - 16)}/ for commands  `;
+  for (const width of [48, 80]) {
+    const lines = editor.render(width);
+    assert.equal(stripTerminalSequences(lines.at(-1)!), hinted(width));
+    assert.ok(lines.at(-1)!.includes(theme.fg("dim", "/ for commands")));
+    assert.equal(visibleWidth(lines.at(-1)!), width);
+    assert.equal(stripTerminalSequences(editor.renderProjectedLines(width, [" "], [], 0, 0)[2]!), hinted(width));
+  }
+  assert.equal(stripTerminalSequences(editor.render(47).at(-1)!), " ".repeat(47));
+  assert.equal(stripTerminalSequences(editor.renderProjectedLines(47, [" "], [], 0, 0)[2]!), " ".repeat(47));
+  const projected = editor.renderProjectedLines(80, [" "], ["→ copy"], 0, 0).map(stripTerminalSequences);
+  assert.equal(projected[2], " ".repeat(80));
+  assert.ok(!projected.join("").includes("for commands"));
+  editor.setText("ship it");
+  assert.equal(stripTerminalSequences(editor.render(80).at(-1)!), " ".repeat(80));
+  assert.equal(stripTerminalSequences(editor.renderProjectedLines(80, [" ship it"], [], 0, 0)[2]!), " ".repeat(80));
 });
 
 test("editor paints a flat composer while preserving the cursor marker", () => {

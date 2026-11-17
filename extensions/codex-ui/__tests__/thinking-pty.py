@@ -16,6 +16,13 @@ import pyte
 
 here = Path(__file__).resolve().parent
 repo = here.parent.parent.parent
+REPO_ROOT = repo
+
+def tone(name):
+    """Expected cell color for a codex-pi theme token, so palette changes do not desync PTY checks."""
+    theme = json.loads((REPO_ROOT / "themes" / "codex-pi.json").read_text())
+    value = theme["colors"].get(name, name)
+    return theme["vars"].get(value, value).lstrip("#").lower()
 pid, fd = pty.fork()
 if pid == 0:
     os.chdir(repo)
@@ -77,7 +84,7 @@ def assert_native_italic(text):
         if text in line:
             cell = screen.buffer[y][line.index(text)]
             assert cell.italics, "The production renderer must retain native italics"
-            assert cell.fg == "85858a", cell.fg
+            assert cell.fg == tone("thinkingText"), cell.fg
             return
     raise AssertionError(f"Missing body: {text}\n{view()}")
 
@@ -87,7 +94,7 @@ try:
     settle()
     assert "Extension issues" not in view()
     assert view().count("│ Thinking") == 1, view()
-    assert "Read display.ts" in view(), view()
+    assert "Read src/display.ts" in view(), view()
     assert "- The complete thinking text" in view(), "The production reply transformer must remain installed"
     assert_native_italic("The request is")
     os.write(fd, b"\x14")

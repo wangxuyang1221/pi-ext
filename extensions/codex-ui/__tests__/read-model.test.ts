@@ -24,7 +24,10 @@ function harness() {
   return { emit, sessionManager, cache,
     declare(ids: string[]) { emit("message_start", { message: message([]) }); emit("message_update", { message: message(ids.map(id => call(id))) }); },
     end(id: string, data = result(`content ${id}`)) { emit("tool_execution_end", { toolName: "read", toolCallId: id, result: data, isError: data.isError }); return data; },
-    row(id: string) { return new ToolExecutionComponent("read", id, { path: `${id}.ts` }, { showImages: false }, tools.get("read"), { requestRender() {} } as never, process.cwd()); },
+    row(id: string) {
+      const row = new ToolExecutionComponent("read", id, { path: `${id}.ts` }, { showImages: false }, tools.get("read"), { requestRender() {} } as never, process.cwd());
+      row.setExpanded(true); return row;
+    },
     close() { emit("session_shutdown"); },
   };
 }

@@ -54,11 +54,10 @@ test("real limited Read excludes continuation notices from source counts and pre
     assert.match(actual.content[0]!.type === "text" ? actual.content[0]!.text : "", /Use offset=4/u);
     const row = h.row("limited", args); row.setArgsComplete();
     row.updateResult({ ...actual, isError: false });
-    const text = plain(row);
-    assert.match(text, /L2–3 · 2 lines/u);
-    assert.match(text, /2  two\n.*3  three/u);
-    assert.doesNotMatch(text, /4  \[|4  $/mu);
-    assert.match(text, /3 more lines in file.*offset=4/u);
+    assert.equal(plain(row), "\n@ Read sample.txt · L2–3 · 2 lines");
+    row.setExpanded(true);
+    assert.equal(plain(row), ["", "@ Read sample.txt · L2–3 · 2 lines", "  └ 2  two", "    3  three",
+      "    [3 more lines in file. Use offset=4 to continue.]"].join("\n"));
   } finally { h.dispose(); rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -72,15 +71,17 @@ test("real truncation reports only returned source lines and preserves oversized
       const args = { path: name! };
       const actual = await h.tools.get("read")!.execute(name!, args, undefined, undefined, { cwd: dir } as never);
       const row = h.row(name!, args); row.updateResult({ ...actual, isError: false });
+      assert.equal(plain(row), `\n@ Read ${name} · ${name === "many.txt" ? 2000 : 0} lines · truncated`);
+      row.setExpanded(true);
       const text = plain(row);
       if (name === "many.txt") {
-        assert.match(text, /2000 lines · truncated/u);
-        assert.match(text, /1997 more lines/u);
+        assert.match(text, /^ {4}40  line$/mu);
+        assert.match(text, /^ {4}… \+1960 lines$/mu);
         assert.match(text, /offset=2001/u);
       } else {
         assert.match(text, /0 lines · truncated/u);
         assert.match(text, /exceeds 50\.0KB limit/u);
-        assert.doesNotMatch(text, /│\s+1/u);
+        assert.doesNotMatch(text, /└ +1 /u);
       }
     }
   } finally { h.dispose(); rmSync(dir, { recursive: true, force: true }); }
@@ -106,11 +107,11 @@ test("text, thinking, other tools, missing rows and assistant boundaries break R
       h.declare([call("a"), separator, call("b")]);
       const a = h.row("a"); const b = h.row("b");
       a.updateResult(h.publish("a", result("alpha"))); b.updateResult(h.publish("b", result("beta")));
-      assert.match(plain(a), /Read a.ts/u); assert.match(plain(b), /Read b.ts/u);
+      assert.match(plain(a), /Read src\/a\.ts/u); assert.match(plain(b), /Read src\/b\.ts/u);
       assert.doesNotMatch(plain(a), /files/u);
       h.declare([call("c")]); const c = h.row("c");
       c.updateResult(h.publish("c", result("gamma")));
-      assert.match(plain(c), /Read c.ts/u);
+      assert.match(plain(c), /Read src\/c\.ts/u);
     } finally { h.dispose(); }
   }
 });
@@ -129,11 +130,12 @@ test("streaming membership and repeated file ranges retain separate members with
     assert.equal(text.split("same.ts").length - 1, 2);
     assert.match(text, /L1–2 · 2 lines/u); assert.match(text, /L20–20 · 1 line/u);
     h.emit("message_update", { message: message([call("a"), { type: "text", text: "barrier" }, call("b")]) });
+    a.setExpanded(true); b.setExpanded(true);
     assert.doesNotMatch(plain(a), /files|twenty/u); assert.match(plain(b), /twenty/u);
     const orphan = h.row("orphan"); assert.match(plain(orphan), /orphan.ts/u);
     // Another view of one source occurrence is not a duplicated source call.
-    const replacement = h.row("a"); assert.match(plain(replacement), /Read same.ts/u);
-    assert.match(plain(replacement), /first/u);
+    const replacement = h.row("a"); assert.match(plain(replacement), /Read src\/same\.ts/u);
+    replacement.setExpanded(true); assert.match(plain(replacement), /└ 1  first/u);
   } finally { h.dispose(); }
 });
 
@@ -178,13 +180,13 @@ test("unchanged content reuses extraction and counts across redraw, resize, them
     a.updateResult(h.publish("a", result("alpha\n".repeat(2000)))); b.updateResult(h.publish("b", result("beta\n".repeat(1000))));
     plain(a);
     const first = computes.filter(key => key.startsWith("read-source"));
-    assert.equal(first.length, 6);
-    assert(!first.some(key => key.endsWith("prefix\0true")));
+    assert.equal(first.length, 4);
+    assert(!first.some(key => key.includes("\0prefix\0")));
     for (const width of [120, 120, 30, 80, 120]) { a.invalidate(); plain(a, width); }
     initTheme("light", false); a.invalidate(); plain(a);
     assert.deepEqual(computes.filter(key => key.startsWith("read-source")), first);
     c.updateResult(h.publish("c", result("changed"))); plain(a);
-    assert.equal(computes.filter(key => key.startsWith("read-source")).length, first.length + 3);
+    assert.equal(computes.filter(key => key.startsWith("read-source")).length, first.length + 2);
     a.setExpanded(true); b.setExpanded(true); assert.match(plain(a), /40  alpha/u);
     a.setExpanded(false); b.setExpanded(false); assert.doesNotMatch(plain(a), /40  alpha/u);
     const stats = cache.stats();
@@ -193,7 +195,7 @@ test("unchanged content reuses extraction and counts across redraw, resize, them
   } finally { h.dispose(); initTheme("dark", false); }
 });
 
-test("long previews stay within three screen rows and full paths survive narrow expansion", () => {
+test("long Reads stay on one heading row, keep the filename at narrow widths and expand within the width", () => {
   const h = harness();
   try {
     const path = "directory/".repeat(10) + "中文.ts";
@@ -201,15 +203,21 @@ test("long previews stay within three screen rows and full paths survive narrow 
     row.updateResult(result(("中文👩‍💻é\t\x1b[31m".repeat(200) + "\n").repeat(5)));
     for (const width of [1, 2, 3, 4, 8, 16, 30, 80, 120, 160]) {
       const lines = row.render(width);
-      assert.equal(lines.length, 6);
+      assert.equal(lines.length, 2);
       assert(lines.every(line => visibleWidth(line) <= width));
     }
     assert.deepEqual(row.render(0), []);
+    assert.equal(plain(row, 30), "\n@ Read dire…/中文.ts · 5 lines");
+    assert.equal(plain(row, 80), `\n@ Read ${"directory/".repeat(5)}dire…/中文.ts · 5 lines`);
+    assert.equal(plain(row, 160), `\n@ Read ${path} · 5 lines`);
     row.setExpanded(true);
-    const expanded = plain(row, 30);
-    const pathLines = expanded.split("\n").slice(2, 2 + Math.ceil(visibleWidth(path) / 26));
-    assert.equal(pathLines.map(line => line.slice(4)).join(""), path);
-    row.setExpanded(false); assert.equal(row.render(30).length, 6);
+    for (const width of [16, 30, 80]) {
+      const lines = row.render(width);
+      assert.equal(lines.length, 7);
+      assert(lines.every(line => visibleWidth(line) <= width));
+      assert.deepEqual(lines.slice(2).map(line => stripTerminalSequences(line).slice(0, 7)), ["  └ 1  ", "    2  ", "    3  ", "    4  ", "    5  "]);
+    }
+    row.setExpanded(false); assert.equal(row.render(30).length, 2);
   } finally { h.dispose(); }
 });
 
@@ -218,8 +226,9 @@ test("limited Read preserves selected blank lines and empty files do not invent 
   try {
     const row = h.row("blank", { path: "blank.txt", limit: 2 });
     row.updateResult(result("one\n\n\n[3 more lines in file. Use offset=3 to continue.]"));
-    assert.match(plain(row), /1  one\n.*│\s+2\n/u);
-    assert.doesNotMatch(plain(row), /1 more lines/u);
+    assert.equal(plain(row), "\n@ Read blank.txt · L1–2 · 2 lines");
+    row.setExpanded(true);
+    assert.equal(plain(row), ["", "@ Read blank.txt · L1–2 · 2 lines", "  └ 1  one", "    2", "    [3 more lines in file. Use offset=3 to continue.]"].join("\n"));
     const empty = h.row("empty"); empty.updateResult(result(""));
     assert.match(plain(empty), /0 lines/u); assert.equal(empty.render(120).length, 2);
     empty.updateResult(result("Operation aborted", true));
@@ -237,15 +246,11 @@ test("consecutive Read calls share one row and keep source order under out-of-or
     rows[2]!.updateResult(h.publish("c", result("c-first\nc-second\nc-third\nc-fourth")));
     rows[0]!.updateResult(h.publish("a", result("a-first")));
     rows[1]!.updateResult(h.publish("b", result("Permission denied\nstack", true)));
-    const text = plain(rows[0]!);
-    assert.match(text, /Read 3 files/u);
-    assert(text.indexOf("a.ts") < text.indexOf("b.ts"));
-    assert(text.indexOf("b.ts") < text.indexOf("c.ts"));
-    assert.match(text, /a-first/u);
-    assert.match(text, /Permission denied/u);
-    assert.match(text, /c-third/u);
-    assert.doesNotMatch(text, /c-fourth|stack/u);
-    assert.match(text, /1 more lines/u);
+    assert.equal(plain(rows[0]!), ["", "▸ Read 3 files", "  @ src/a.ts · 1 line", "  @ src/b.ts · Failed", "    └ Permission denied",
+      "  @ src/c.ts · 4 lines"].join("\n"));
+    rows[0]!.setExpanded(true);
+    assert.equal(plain(rows[0]!), ["", "▾ Read 3 files", "  @ src/a.ts · 1 line", "    └ 1  a-first", "  @ src/b.ts · Failed",
+      "    └ Permission denied", "  @ src/c.ts · 4 lines", "    └ 1  c-first", "      2  c-second", "      3  c-third", "      4  c-fourth"].join("\n"));
     assert.equal(rows[1]!.render(120).length, 0);
     assert.equal(rows[2]!.render(120).length, 0);
   } finally { h.dispose(); }

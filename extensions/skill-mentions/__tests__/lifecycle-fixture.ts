@@ -81,7 +81,7 @@ export async function lifecycleFixture(options: { codex?: "before" | "after"; ex
     notify(message: string, type?: string) { notifications.push({ message, type }); },
     getEditorText: () => mode.editor.getExpandedText?.() ?? mode.editor.getText(),
     setEditorText: (text: string) => mode.editor.setText(text),
-    theme: { fg: (_key: string, text: string) => text, getBgAnsi: () => "", getFgAnsi: () => "" },
+    theme: { fg: (_key: string, text: string) => text, bold: (text: string) => text, getBgAnsi: () => "", getFgAnsi: () => "" },
     getEditorComponent: () => mode.editorComponentFactory,
     setEditorComponent: (factory: any) => { mode.setCustomEditorComponent(factory); resource.editors.push(mode.editor); },
     addAutocompleteProvider: (wrapper: (provider: any) => any) => { wrappers.push(wrapper); mode.autocompleteProvider = wrappers.reduce((p, wrap) => wrap(p), new CombinedAutocompleteProvider([{ name: "help" }], cwd)); mode.editor.setAutocompleteProvider(mode.autocompleteProvider); },

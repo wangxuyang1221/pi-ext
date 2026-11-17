@@ -70,8 +70,10 @@ function row(tool: ToolDefinition, id = tool.name, initialTheme = theme()) {
 
 afterEach(() => vi.useRealTimers());
 
-test("uses bright body text without brightening metadata or unrelated theme roles", () => {
+test("uses one body color per tool without recoloring metadata or unrelated theme roles", () => {
+  const roles = { bash: ["toolOutput", "text"], read: ["toolOutput", "text"], mcp: ["text", "toolOutput"] } as const;
   for (const tool of tools().registered.filter(tool => ["bash", "read", "mcp"].includes(tool.name))) {
+    const [bodyRole, otherRole] = roles[tool.name as keyof typeof roles];
     const item = row(tool);
     item.ctx.executionStarted = true;
     item.result("hello\nsecond\nthird\nfourth\nfifth\nsixth");
@@ -81,10 +83,11 @@ test("uses bright body text without brightening metadata or unrelated theme role
         item.ctx.expanded = expanded;
         const lines = item.paint();
         const body = lines.slice(1).filter(line => /^(?:\s*[│⎿└]?\s*)(?:\d+\s+)?(?:hello|second|third|fourth|fifth|sixth)/u.test(stripTerminalSequences(line)));
-        expect(body.length).toBeGreaterThan(0);
-        expect(body.every(line => line.includes(palette.fg("text", "").split("m")[0] + "m"))).toBe(true);
-        expect(body.join("\n")).not.toContain(palette.fg("toolOutput", "").split("m")[0] + "m");
-        if (tool.name === "read") expect(lines.join("\n")).toContain(palette.fg("dim", "  src/"));
+        if (tool.name === "read" && !expanded) expect(lines).toHaveLength(1);
+        else expect(body.length).toBeGreaterThan(0);
+        expect(body.every(line => line.includes(palette.fg(bodyRole, "").split("m")[0] + "m"))).toBe(true);
+        expect(body.join("\n")).not.toContain(palette.fg(otherRole, "").split("m")[0] + "m");
+        if (tool.name === "read") expect(lines[0]).toContain(palette.fg("dim", "src/") + palette.fg("accent", "目标.ts"));
         if (tool.name === "mcp" && !expanded) {
           expect(lines[1]).toContain(palette.fg("dim", "  └ "));
           expect(lines.at(-1)).toContain(palette.fg("dim", "..."));
@@ -103,8 +106,14 @@ test("recognizes native abort diagnostics without treating arbitrary error prose
     const output = item.result(interrupted, true);
     expect(output[0]).toContain(palette.fg("warning", glyph(tool.name)));
     item.ctx.expanded = true;
-    expect(item.paint().join("\n")).toContain(tool.name === "bash" ? "Command aborted" : "Operation aborted");
-    if (tool.name === "bash") expect(item.result("partial output\n\nCommand timed out after 0.1 seconds", true)[0]).toContain(palette.fg("warning", "$"));
+    const expanded = item.paint().map(line => stripTerminalSequences(line)).join("\n");
+    if (tool.name === "bash") {
+      expect(expanded).toBe("$ Bash(printf hello) · interrupted\n  └ partial output");
+      const timedOut = item.result("partial output\n\nCommand timed out after 0.1 seconds", true);
+      expect(timedOut[0]).toContain(palette.fg("warning", "$"));
+      expect(timedOut[0]).toContain(palette.fg("dim", " · ") + palette.fg("warning", "timed out"));
+      expect(timedOut.map(line => stripTerminalSequences(line)).join("\n")).not.toContain("Command timed out");
+    } else expect(expanded).toContain("Operation aborted");
     for (const ordinary of ["Operation aborted while parsing a log", "Command aborted\n\nCommand exited with code 1", "request timeout configuration is invalid"]) {
       expect(item.result(ordinary, true)[0]).toContain(palette.fg("error", glyph(tool.name)));
     }
@@ -206,21 +215,22 @@ test("preserves native abort and Bash timeout diagnostics through serialization"
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });
 
-test("uses yellow static markers from argument generation through execution without refresh timers", () => {
+test("uses static accent markers from argument generation through execution without refresh timers", () => {
   vi.useFakeTimers();
   const palette = theme();
   for (const tool of tools().registered) {
+    const [pendingTone, runningTone] = tool.name === "mcp" ? ["warning", "warning"] as const : ["accent", "accent"] as const;
     const item = row(tool);
     for (const argsComplete of [false, true]) {
       item.ctx.argsComplete = argsComplete;
       const pending = item.paint();
       if (tool.name === "bash") expect(pending).toEqual([]);
-      else expect(pending[0]).toContain(palette.fg("warning", glyph(tool.name)) + " ");
+      else expect(pending[0]).toContain(palette.fg(pendingTone, glyph(tool.name)) + " ");
       vi.advanceTimersByTime(30_000);
       expect(item.paint()).toEqual(pending);
     }
     item.ctx.executionStarted = true;
-    expect(item.paint()[0]).toContain(palette.fg("warning", glyph(tool.name)) + " ");
+    expect(item.paint()[0]).toContain(palette.fg(runningTone, glyph(tool.name)) + " ");
     expect(item.result("hello")[0]).toContain(palette.fg("muted", glyph(tool.name)) + " ");
     expect(item.result("Permission denied", true)[0]).toContain(palette.fg("error", glyph(tool.name)) + " ");
     expect(visibleWidth(glyph(tool.name))).toBe(1);

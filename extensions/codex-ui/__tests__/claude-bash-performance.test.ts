@@ -42,7 +42,8 @@ for (const size of [1, 3, 10]) for (const kind of ["lines", "token"]) {
       assert.deepEqual(reads, previousReads);
       assert.equal(vi.mocked(wrapTextWithAnsi).mock.calls.length, 0);
       assert.equal(vi.mocked(stripTerminalSequences).mock.calls.length, 0);
-      assert.equal(fg.mock.calls.filter(([color, text]) => color === "text" && text.startsWith("member-")).length, 0);
+      assert.equal(fg.mock.calls.filter(([color, text]) => color === "toolOutput" && text.startsWith("member-")).length, 0);
+      assert.equal(cache.stats().layouts.misses, previousStats.layouts.misses);
       assert.equal(cache.stats().counts.misses, previousStats.counts.misses);
       samples.push({ expanded, warmMs: +warmMs.toFixed(2), stable10Ms: +stableMs.toFixed(2), reads: [...reads], ...cache.stats() });
     }
@@ -55,7 +56,7 @@ for (const size of [1, 3, 10]) for (const kind of ["lines", "token"]) {
     assert.deepEqual(reads, previousReads);
     assert(collapsed.some(line => line.includes("changed")));
     assert(vi.mocked(wrapTextWithAnsi).mock.calls.every(([line]) => !line.startsWith("member-")));
-    assert(fg.mock.calls.filter(([color, text]) => color === "text").every(([, text]) => !text.startsWith("member-")));
+    assert(fg.mock.calls.filter(([color, text]) => color === "toolOutput").every(([, text]) => !text.startsWith("member-")));
     assert(cache.stats().layouts.chargedBytes <= 16 * 1024 * 1024);
     assert(cache.stats().counts.chargedBytes <= 2 * 1024 * 1024);
     console.log(JSON.stringify({ benchmark: "claude-bash-cache", size, kind, samples }));
@@ -75,10 +76,15 @@ test("collapsed snapshots coalesce and content replacement or final clearing inv
   assert.equal(reads, 0);
   assert(renderBashGroup(group, false, theme, 120, "").some(line => line.includes("snapshot-19")));
   assert.equal(reads, 1);
-  for (const output of ["one\ntwo\nthree\nfour", "prefix\ntwo\nthree\nfour\nfive", "prefix\nchanged-tail", "replaced", ""]) {
+  for (const [output, preview] of [
+    ["one\ntwo\nthree\nfour\nfive\nsix", ["  └ one", "    two", "    … +2 lines", "    five", "    six"]],
+    ["prefix\ntwo\nthree\nfour\nfive\nsix\nseven", ["  └ prefix", "    two", "    … +3 lines", "    six", "    seven"]],
+    ["prefix\nchanged-tail", ["  └ prefix", "    changed-tail"]],
+    ["replaced", ["  └ replaced"]],
+    ["", ["  └ (no output)"]],
+  ] as const) {
     member.content = [{ type: "text", text: output }]; member.outputRevision++;
     if (!output) member.status = "completed";
-    const lines = renderBashGroup(group, false, theme, 120, "").map(stripTerminalSequences);
-    assert.equal(lines.at(-1), output.includes("five") ? "     … +2 lines" : output.includes("four") ? "     … +1 lines" : output.includes("changed-tail") ? "     changed-tail" : output ? "  ⎿  replaced" : "  ⎿  (No content)");
+    assert.deepEqual(renderBashGroup(group, false, theme, 120, "").map(stripTerminalSequences).slice(1), preview);
   }
 });

@@ -19,40 +19,57 @@ function fixture(status: BashStatus = "completed", command = "git status --short
   return group;
 }
 
-test("Claude Bash shows one bracketed command and a text-colored capture with dim prefixes", () => {
+test("Bash shows one bracketed command and an output-colored capture hanging from a dim elbow", () => {
   const theme = getThemeByName("dark");
   const lines = renderBashGroup(fixture(), false, theme, 180, "ctrl+shift+o/alt+o");
-  assert.deepEqual(lines.map(stripTerminalSequences), ["$ Bash(git status --short)", "  ⎿  output", "     ", "     last"]);
+  assert.deepEqual(lines.map(stripTerminalSequences), ["$ Bash(git status --short)", "  └ output", "    ", "    last"]);
   assert.equal(lines[0], theme.fg("muted", "$") + " " + theme.bold("Bash") + "(git status --short)");
-  assert.equal(lines[1], theme.fg("dim", "  ⎿  ") + theme.fg("text", "output"));
+  assert.equal(lines[1], theme.fg("dim", "  └ ") + theme.fg("toolOutput", "output"));
 });
 
-test("preview keeps the first three visual lines and reports an exact remainder with the active binding", () => {
+test("collapsed preview shows the first and last two visual lines around an exact remainder with the active binding", () => {
   const theme = getThemeByName("dark");
-  for (const count of [0, 1, 3, 4, 25]) {
+  const numbered = (count: number) => Array.from({ length: count }, (_, i) => `line-${i}`);
+  for (const count of [0, 1, 3, 4, 5, 6, 25]) {
     const group = fixture();
-    group.members[0]!.content = [{ type: "text", text: Array.from({ length: count }, (_, i) => `line-${i}`).join("\n") }];
+    group.members[0]!.content = [{ type: "text", text: numbered(count).join("\n") }];
     const lines = renderBashGroup(group, false, theme, 80, "ctrl+x/alt+o").map(stripTerminalSequences);
-    assert.deepEqual(lines.slice(1, 1 + Math.min(count, 3)), Array.from({ length: Math.min(count, 3) }, (_, i) => `${i ? "     " : "  ⎿  "}line-${i}`));
-    if (count > 3) assert.equal(lines.at(-1), `     … +${count - 3} lines (ctrl+x/alt+o to expand)`);
-    assert.equal(lines.length, 1 + Math.max(1, Math.min(count, 3)) + (count > 3 ? 1 : 0));
+    const shown = count === 0 ? ["(no output)"] : count <= 5 ? numbered(count)
+      : ["line-0", "line-1", `… +${count - 4} lines (ctrl+x/alt+o to expand)`, `line-${count - 2}`, `line-${count - 1}`];
+    assert.deepEqual(lines.slice(1), shown.map((line, i) => `${i ? "    " : "  └ "}${line}`));
     const expanded = renderBashGroup(group, true, theme, 80, "ctrl+x/alt+o").map(stripTerminalSequences);
-    assert.equal(expanded.length, Math.max(1, count) + 1);
+    assert.deepEqual(expanded.slice(1), (count ? numbered(count) : ["(no output)"]).map((line, i) => `${i ? "    " : "  └ "}${line}`));
   }
   const group = fixture();
-  group.members[0]!.content = [{ type: "text", text: "x".repeat(50) }];
-  const lines = renderBashGroup(group, false, theme, 15, "").map(stripTerminalSequences);
-  assert.equal(lines.at(-1), "     … +2 lines");
+  group.members[0]!.content = [{ type: "text", text: "x".repeat(70) }];
+  assert.deepEqual(renderBashGroup(group, false, theme, 15, "").map(stripTerminalSequences).slice(1),
+    ["  └ " + "x".repeat(11), "    " + "x".repeat(11), "    … +3 lines", "    " + "x".repeat(11), "    xxxx"]);
+  group.members[0]!.content = [{ type: "text", text: "head\n\nmid-0\nmid-1\nmid-2\n\ntail" }];
+  group.members[0]!.outputRevision++;
+  assert.deepEqual(renderBashGroup(group, false, theme, 80, "").map(stripTerminalSequences).slice(1),
+    ["  └ head", "    … +5 lines", "    tail"]);
+});
+
+test("Bash output drops shared indentation and edge blanks and keeps one blank row per run in both views", () => {
+  const theme = getThemeByName("dark");
+  const group = fixture();
+  group.members[0]!.content = [{ type: "text", text: "\n\n    ok 1\n      detail\n\n\n\n    ok 2\n\n" }];
+  for (const expanded of [false, true]) {
+    assert.deepEqual(renderBashGroup(group, expanded, theme, 80, "ctrl+o").map(line => stripTerminalSequences(line).trimEnd()).slice(1),
+      ["  └ ok 1", "      detail", "", "    ok 2"]);
+  }
 });
 
 test("pending calls stay hidden and live or empty results have explicit content", () => {
   const theme = getThemeByName("dark");
   const pending = fixture("pending");
   assert.deepEqual(renderBashGroup(pending, false, theme, 80, "ctrl+o"), []);
-  for (const [status, expected] of [["running", "Running…"], ["completed", "(No content)"], ["failed", "Command failed"]] as const) {
+  for (const [status, title, expected] of [["running", "", "Running…"], ["completed", "", "(no output)"], ["failed", " · failed", "(no output)"]] as const) {
     const group = fixture(status);
     group.members[0]!.content = [];
-    assert.equal(stripTerminalSequences(renderBashGroup(group, false, theme, 80, "ctrl+o")[1]!), `  ⎿  ${expected}`);
+    const lines = renderBashGroup(group, false, theme, 80, "ctrl+o");
+    assert.deepEqual(lines.map(stripTerminalSequences), [`$ Bash(git status --short)${title}`, `  └ ${expected}`]);
+    assert.equal(lines[1], theme.fg("dim", "  └ ") + theme.fg("dim", expected));
   }
 });
 
@@ -76,29 +93,38 @@ test("long commands use a single ellipsis and expand without losing text at narr
   }
 });
 
-test("verified host diagnostics lead collapsed errors without changing the expanded capture", () => {
+test("verified host diagnostics become the title status and leave the output in both views", () => {
   const theme = getThemeByName("dark");
-  for (const [suffix, diagnostic, color] of [
-    ["Command exited with code 7", "Error: Exit code 7", "error"],
-    ["Command aborted", "Interrupted", "warning"],
-    ["Command timed out after 0.1 seconds", "Error: Command timed out after 0.1 seconds", "warning"],
+  for (const [suffix, label, color] of [
+    ["Command exited with code 7", "exit 7", "error"],
+    ["Command aborted", "interrupted", "warning"],
+    ["Command timed out after 0.1 seconds", "timed out", "warning"],
   ] as const) {
     const group = fixture("failed");
-    const original = `first\nsecond\nthird\nfourth\n\n${suffix}`;
-    group.members[0]!.content = [{ type: "text", text: original }];
-    const collapsed = renderBashGroup(group, false, theme, 100, "ctrl+o");
-    assert.equal(collapsed[1], theme.fg("dim", "  ⎿  ") + theme.fg(color, diagnostic));
-    assert.equal(stripTerminalSequences(collapsed[0]!).startsWith("$ Bash("), true);
-    const expanded = renderBashGroup(group, true, theme, 100, "ctrl+o").slice(1).map(line => stripTerminalSequences(line).slice(5)).join("\n");
-    assert.equal(expanded, original);
+    group.members[0]!.content = [{ type: "text", text: `first\nsecond\nthird\nfourth\n\n${suffix}` }];
+    for (const expanded of [false, true]) {
+      const lines = renderBashGroup(group, expanded, theme, 100, "ctrl+o");
+      assert.deepEqual(lines.map(stripTerminalSequences),
+        [`$ Bash(git status --short) · ${label}`, "  └ first", "    second", "    third", "    fourth"]);
+      assert.equal(lines[0], theme.fg(color, "$") + " " + theme.bold("Bash") + "(git status --short)" + theme.fg("dim", " · ") + theme.fg(color, label));
+      assert.equal(lines[1], theme.fg("dim", "  └ ") + theme.fg("toolOutput", "first"));
+    }
+    assert.equal(stripTerminalSequences(renderBashGroup(group, false, theme, 23, "")[0]!), "$ Bash(git status --s…)");
   }
+  const long = fixture("failed", "x".repeat(65));
+  long.members[0]!.content = [{ type: "text", text: "out\n\nCommand exited with code 2" }];
+  assert.deepEqual(renderBashGroup(long, true, theme, 40, "").map(stripTerminalSequences).slice(0, 3),
+    ["$ Bash(" + "x".repeat(33), "  " + "x".repeat(32) + ")", "   · exit 2"]);
   const success = fixture("completed");
   success.members[0]!.content = [{ type: "text", text: "Error: harmless\n\nCommand exited with code 7" }];
-  assert(renderBashGroup(success, false, theme, 100, "")[0]!.includes(theme.fg("muted", "$")));
-  assert.doesNotMatch(renderBashGroup(success, false, theme, 100, "").join("\n"), /Error: Exit code/u);
+  const succeeded = renderBashGroup(success, false, theme, 100, "");
+  assert(succeeded[0]!.includes(theme.fg("muted", "$")));
+  assert.deepEqual(succeeded.map(line => stripTerminalSequences(line).trimEnd()),
+    ["$ Bash(git status --short)", "  └ Error: harmless", "", "    Command exited with code 7"]);
   const unknown = fixture("failed");
   unknown.members[0]!.content = [{ type: "text", text: "Permission denied" }];
-  assert.equal(stripTerminalSequences(renderBashGroup(unknown, false, theme, 100, "")[1]!), "  ⎿  Permission denied");
+  assert.deepEqual(renderBashGroup(unknown, false, theme, 100, "").map(stripTerminalSequences),
+    ["$ Bash(git status --short) · failed", "  └ Permission denied"]);
 });
 
 test("truncation remains visible from structured details or the host error footer without reading files", () => {
@@ -113,38 +139,55 @@ test("truncation remains visible from structured details or the host error foote
   }
 });
 
-test("the host empty-success sentinel uses the selected no-content wording", () => {
-  const group = fixture();
-  group.members[0]!.content = [{ type: "text", text: "(no output)" }];
-  assert.equal(stripTerminalSequences(renderBashGroup(group, false, getThemeByName("dark"), 80, "")[1]!), "  ⎿  (No content)");
+test("collapsed truncated captures keep real output in the tail and show the footer only as a warning", () => {
+  const theme = getThemeByName("dark");
+  const output = Array.from({ length: 10 }, (_, index) => `l${index}`).join("\n");
+  const footer = "[Showing lines 1-10 of 3000. Full output: /tmp/o.log]";
+  const failed = fixture("failed", "make test");
+  failed.members[0]!.content = [{ type: "text", text: `${output}\n\n${footer}\n\nCommand exited with code 1` }];
+  const succeeded = fixture("completed", "make test");
+  succeeded.members[0]!.content = [{ type: "text", text: `${output}\n\n${footer}` }];
+  succeeded.members[0]!.details = { truncation: { truncated: true }, fullOutputPath: "/tmp/o.log" } as never;
+  for (const [group, title] of [[failed, "$ Bash(make test) · exit 1"], [succeeded, "$ Bash(make test)"]] as const) {
+    assert.deepEqual(renderBashGroup(group, false, theme, 120, "").map(stripTerminalSequences),
+      [title, "  └ l0", "    l1", "    … +6 lines", "    l8", "    l9", "    Truncated capture · /tmp/o.log"]);
+  }
 });
 
-test("warmed captures do not repeat styling and collapsed captures style only three lines", () => {
+test("the host empty-success sentinel uses the selected no-output wording", () => {
+  const group = fixture();
+  group.members[0]!.content = [{ type: "text", text: "(no output)" }];
+  const theme = getThemeByName("dark");
+  assert.equal(renderBashGroup(group, false, theme, 80, "")[1], theme.fg("dim", "  └ ") + theme.fg("dim", "(no output)"));
+});
+
+test("warmed captures do not repeat styling and collapsed captures style only the four preview lines", () => {
   const base = getThemeByName("dark");
   const fg = vi.fn(base.fg.bind(base));
   const theme = Object.assign(Object.create(base), { fg }) as Theme;
   const group = fixture();
   group.members[0]!.content = [{ type: "text", text: Array.from({ length: 1800 }, (_, i) => `output ${i}`).join("\n") }];
   renderBashGroup(group, false, theme, 120, "ctrl+o");
-  assert.equal(fg.mock.calls.filter(([color, text]) => color === "text" && text.startsWith("output")).length, 3);
+  assert.equal(fg.mock.calls.filter(([color, text]) => color === "toolOutput" && text.startsWith("output")).length, 4);
   for (const expanded of [false, true]) {
     renderBashGroup(group, expanded, theme, 120, "ctrl+o");
     fg.mockClear();
     for (let i = 0; i < 10; i++) renderBashGroup(group, expanded, theme, 120, "ctrl+o");
-    assert.equal(fg.mock.calls.filter(([color, text]) => color === "text" && text.startsWith("output")).length, 0);
+    assert.equal(fg.mock.calls.filter(([color, text]) => color === "toolOutput" && text.startsWith("output")).length, 0);
   }
 });
 
-test("unchanged capture counts survive completion and theme changes", () => {
+test("unchanged captures survive completion without recomputing any layout", () => {
   const group = fixture("running");
   const cache = new ToolRenderCache();
   group.members[0]!.cache = cache.scope();
-  group.members[0]!.content = [{ type: "text", text: "one\ntwo\nthree\nfour" }];
-  renderBashGroup(group, false, getThemeByName("dark"), 100, "ctrl+o");
-  const misses = cache.stats().counts.misses;
+  group.members[0]!.content = [{ type: "text", text: Array.from({ length: 12 }, (_, i) => `line ${i}`).join("\n") }];
+  for (const expanded of [false, true]) renderBashGroup(group, expanded, getThemeByName("dark"), 100, "ctrl+o");
+  const before = cache.stats();
   group.members[0]!.status = "completed";
-  renderBashGroup(group, false, getThemeByName("light"), 100, "ctrl+o");
-  assert.equal(cache.stats().counts.misses, misses);
+  for (const expanded of [false, true]) renderBashGroup(group, expanded, getThemeByName("dark"), 100, "ctrl+o");
+  assert.equal(cache.stats().layouts.misses, before.layouts.misses);
+  assert.equal(cache.stats().counts.misses, before.counts.misses);
 });
 
 test("theme changes restyle the preview without rereading the capture", () => {
@@ -156,14 +199,14 @@ test("theme changes restyle the preview without rereading the capture", () => {
     const collapsed = renderBashGroup(group, false, theme, 180, "ctrl+x");
     assert.equal(reads, 1);
     assert(collapsed[0]!.includes(theme.fg("muted", "$")));
-    assert.equal(collapsed[1], theme.fg("dim", "  ⎿  ") + theme.fg("text", "output"));
+    assert.equal(collapsed[1], theme.fg("dim", "  └ ") + theme.fg("toolOutput", "output"));
   }
   renderBashGroup(group, true, themes[0]!, 180, "ctrl+x");
   const warmedReads = reads;
   for (const theme of themes) {
     const expanded = renderBashGroup(group, true, theme, 180, "ctrl+x");
     assert(expanded[0]!.includes(theme.fg("muted", "$")));
-    assert.equal(expanded[1], theme.fg("dim", "  ⎿  ") + theme.fg("text", "output"));
+    assert.equal(expanded[1], theme.fg("dim", "  └ ") + theme.fg("toolOutput", "output"));
     assert.equal(reads, warmedReads);
   }
 });

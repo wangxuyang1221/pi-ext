@@ -4,7 +4,7 @@ export const TOOL_STATUS_GLYPH = "~";
 export type ToolFailureStatus = "failed" | "interrupted" | "timed_out";
 export type ToolStatus = "pending" | "running" | "completed" | ToolFailureStatus;
 
-const COLORS = { pending: "warning", running: "warning", completed: "success", failed: "error", interrupted: "warning", timed_out: "warning" } as const;
+const COLORS = { pending: "accent", running: "accent", completed: "success", failed: "error", interrupted: "warning", timed_out: "warning" } as const;
 
 type Content = readonly { type: string; text?: string }[];
 

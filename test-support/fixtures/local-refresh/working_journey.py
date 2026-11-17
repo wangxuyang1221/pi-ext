@@ -7,6 +7,16 @@ import signal
 import struct
 import termios
 import time
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+def tone(name):
+    """Expected cell color for a codex-pi theme token, so palette changes do not desync PTY checks."""
+    theme = json.loads((REPO_ROOT / "themes" / "codex-pi.json").read_text())
+    value = theme["colors"].get(name, name)
+    return theme["vars"].get(value, value).lstrip("#").lower()
 
 
 def run(driver):
@@ -70,7 +80,7 @@ def run(driver):
     command("Generate visible thinking and text")
     wait(working, "agent_start mounts production Working")
     wait(lambda: re.search(r"≈[\d.]+ t/s", view()) is not None, "real received fragments produce estimated rate")
-    assert frame()[2] == "5efcff", frame()
+    assert frame()[2] == tone("accent"), frame()
     assert status_label in view()
     advances("ten-frame spinner and shimmer during provider streaming")
     capture("streaming")
