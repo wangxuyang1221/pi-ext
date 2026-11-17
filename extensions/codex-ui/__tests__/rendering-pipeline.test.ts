@@ -147,14 +147,14 @@ test("expanded running state settles after an empty final result without resetti
     pipeline.row.updateResult({ content: [], isError: false });
     const final = plain();
     assert.match(final, /Bash\(printf sample\)/u);
-    assert.match(final, /\(No content\)/u);
+    assert.match(final, /\(no output\)/u);
     pipeline.row.updateResult({ content: [{ type: "text", text: "one\ntwo\nthree\nfour" }], isError: false });
     assert.match(plain(), /four/u);
     pipeline.row.updateResult({ content: [], isError: false });
     vi.advanceTimersByTime(5000);
     assert.equal(plain(), final);
     pipeline.row.setExpanded(false);
-    assert.match(plain(), /\(No content\)/u);
+    assert.match(plain(), /\(no output\)/u);
     assert.equal(pipeline.row.render(120).length, 3);
     assert.match(plain(), /\$ Bash\(/u);
   } finally { pipeline.dispose(); }

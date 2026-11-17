@@ -31,6 +31,11 @@ export interface CodexHeaderOptions {
   getTheme: () => Theme;
 }
 
+const MAX_CARD_WIDTH = 84;
+const CARD_CHROME = "│  │".length;
+const LABEL_WIDTH = "directory: ".length;
+const MIN_CARD_INNER = 46;
+
 export class CodexHeader implements Component {
   constructor(private readonly options: CodexHeaderOptions) {}
 
@@ -39,36 +44,38 @@ export class CodexHeader implements Component {
     if (safeWidth === 0) return [];
 
     const theme = this.options.getTheme();
-    const brand = `${theme.bold(theme.fg("accent", "pi"))}${theme.fg("dim", ` v${this.options.version} · Codex profile`)}`;
+    const brand = `${theme.bold(theme.fg("accent", "pi"))}${theme.fg("dim", ` v${this.options.version} · `)}${theme.fg("muted", "Codex profile")}`;
     if (safeWidth < 12) {
       return [fitToWidth(brand, safeWidth)];
     }
 
-    const frameWidth = Math.min(safeWidth, 84);
-    const innerWidth = frameWidth - 2;
     const border = (text: string) => theme.fg("borderMuted", text);
-    const frameLine = (content: string) => (
-      `${border("│")}${fitToWidth(content, innerWidth, { pad: true })}${border("│")}`
-    );
-
     const modelId = this.options.getModelId() ?? "No model";
     const thinking = this.options.getThinkingLevel();
-    let modelLine = `${theme.fg("dim", "model: ")}${theme.bold(modelId)}${theme.fg("muted", ` · ${thinking}`)}`;
+    const label = (text: string) => theme.fg("dim", text.padEnd(LABEL_WIDTH));
+    const model = `${label("model:")}${theme.bold(modelId)} ${theme.fg("muted", thinking)}`;
     const modelHint = `${theme.fg("accent", "/model")} ${theme.fg("dim", "to change")}`;
-    if (visibleWidth(modelLine) + visibleWidth(modelHint) + 2 <= innerWidth) {
-      modelLine += `${" ".repeat(innerWidth - visibleWidth(modelLine) - visibleWidth(modelHint))}${modelHint}`;
-    }
-
     const directory = formatHomePath(this.options.cwd, this.options.home);
-    const directoryLine = `${theme.fg("dim", "directory: ")}${theme.bold(directory)}`;
+    const maxInner = Math.min(safeWidth, MAX_CARD_WIDTH) - CARD_CHROME;
+    const pathRoom = maxInner - LABEL_WIDTH;
+    const directoryLine = `${label("directory:")}${theme.bold(middleEllipsis(directory, pathRoom))}`;
+    const hinted = visibleWidth(model) + 3 + visibleWidth(modelHint);
+    const innerWidth = Math.min(maxInner, Math.max(visibleWidth(brand), hinted, visibleWidth(directoryLine), MIN_CARD_INNER));
+    const modelLine = hinted <= innerWidth
+      ? model + " ".repeat(innerWidth - visibleWidth(model) - visibleWidth(modelHint)) + modelHint
+      : model;
+    const frameLine = (content: string) => (
+      `${border("│")} ${fitToWidth(content, innerWidth, { pad: true, ellipsis: "…" })} ${border("│")}`
+    );
 
     return [
-      border(`┌${"─".repeat(innerWidth)}┐`),
+      border(`╭${"─".repeat(innerWidth + 2)}╮`),
       frameLine(brand),
       frameLine(""),
       frameLine(modelLine),
       frameLine(directoryLine),
-      border(`└${"─".repeat(innerWidth)}┘`),
+      border(`╰${"─".repeat(innerWidth + 2)}╯`),
+      "",
     ];
   }
 
@@ -113,7 +120,7 @@ export class CodexEditor extends CustomEditor {
     if (body.length) body[0] = addPrompt(body[0], theme, this.getText().length === 0);
     const background = theme.getBgAnsi("selectedBg");
     const foreground = theme.getFgAnsi("text");
-    return [" ".repeat(safeWidth), ...body, " ".repeat(safeWidth), ...menu]
+    return [" ".repeat(safeWidth), ...body, emptyHint(safeWidth, theme, this.getText().length === 0 && menu.length === 0), ...menu]
       .map(line => paintBackground(paintForeground(line, foreground), safeWidth, background));
   }
 
@@ -144,7 +151,7 @@ export class CodexEditor extends CustomEditor {
     const output = [...lines];
     // Native Editor always supplies two borders and at least one body row.
     output[0] = " ".repeat(safeWidth);
-    output[bottomBorderIndex] = " ".repeat(safeWidth);
+    output[bottomBorderIndex] = emptyHint(safeWidth, theme, this.getText().length === 0 && menuHeight === 0);
     output[1] = addPrompt(output[1], theme, this.getText().length === 0);
 
     const background = theme.getBgAnsi("selectedBg");
@@ -153,8 +160,25 @@ export class CodexEditor extends CustomEditor {
   }
 }
 
+function middleEllipsis(path: string, width: number): string {
+  if (visibleWidth(path) <= width || width < 8) return path;
+  const parts = path.split("/");
+  let tail = parts.pop() ?? "";
+  const head = parts.shift() ?? "";
+  while (parts.length && visibleWidth(`${head}/…/${parts.at(-1)}/${tail}`) <= width) tail = `${parts.pop()}/${tail}`;
+  const joined = `${head}/…/${tail}`;
+  return visibleWidth(joined) <= width ? joined : `…${tail.slice(-(width - 1))}`;
+}
+
+const EMPTY_HINT = "/ for commands";
+
+function emptyHint(width: number, theme: Theme, show: boolean): string {
+  if (!show || width < 48) return " ".repeat(width);
+  return " ".repeat(width - EMPTY_HINT.length - 2) + theme.fg("dim", EMPTY_HINT) + "  ";
+}
+
 function addPrompt(line: string, theme: Theme, showPlaceholder: boolean): string {
-  const prompt = theme.fg("muted", "›");
+  const prompt = theme.bold(theme.fg("accent", "›"));
   let prompted = line.startsWith(" ")
     ? `${prompt}${line.slice(1)}`
     : `${prompt}${line}`;

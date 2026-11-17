@@ -15,6 +15,14 @@ import { copyLastReply } from "./reply-copy.js";
 
 export const CODEX_THEME_NAME = "codex-pi";
 
+const BLOCK_START = /^(?:\s*$| {4}|\t| {0,3}(?:[#>|<]|```|~~~|[-*+](?:\s|$)|\d{1,9}[.)](?:\s|$)|(?:[-*_]\s*){3,}$|=+\s*$|-+\s*$))/u;
+const UNDERLINE = /^ {0,3}(?:=+\s*|[-:|\s]*-[-:|\s]*)$/u;
+
+/** A hard break only joins paragraph text; before a block, Markdown shows the backslash literally. */
+function continuesParagraph([first = "", second = ""]: readonly string[]): boolean {
+  return !BLOCK_START.test(first) && !UNDERLINE.test(second);
+}
+
 function hideInlineWorkingRow(ui: ExtensionUIContext): void {
   ui.setWorkingVisible(false);
 }
@@ -48,9 +56,10 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
   pi.registerMarkdownTransformer((markdown, context) => {
     if (context.messageType === "assistant-thinking") {
       // Keep the entire thinking run in one native blockquote, including blank lines.
-      return markdown.trim()
-        ? "> **Thinking**\n>\n" + markdown.split(/\r?\n/u).map(line => line ? `> ${line}` : ">").join("\n")
-        : markdown;
+      if (!markdown.trim()) return markdown;
+      const lines = markdown.split(/\r?\n/u);
+      const title = continuesParagraph(lines) ? "> **Thinking**\\\n" : "> **Thinking**\n>\n";
+      return title + lines.map(line => line ? `> ${line}` : ">").join("\n");
     }
     if (context.messageType === "assistant") {
       // Display-only outer list: let native Markdown align wrapped lines and blocks.

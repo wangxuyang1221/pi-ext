@@ -53,7 +53,7 @@ for (const change of ["append", "replace-tail", "replace-prefix", "replace-all",
       const rendered = text(a);
       for (const line of output.split("\n")) if (line) assert.ok(rendered.includes(line));
       assert.equal(reads, previous);
-      if (!output) assert.ok(rendered.includes("(No content)"));
+      if (!output) assert.ok(rendered.includes("(no output)"));
     } finally { h.dispose(); }
   });
 }

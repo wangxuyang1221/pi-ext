@@ -30,11 +30,17 @@ status = None
 output = bytearray()
 screens = {}
 held_frames = {}
-success_color = '85858a'
+theme = json.loads((repo / 'themes' / 'codex-pi.json').read_text())
+def tone(name):
+    value = theme['colors'].get(name, name)
+    value = theme['vars'].get(value, value)
+    return value.lstrip('#').lower()
+success_color = tone('muted')
 mcp_only = '--mcp-only' in sys.argv
 target = 'mcp' if mcp_only else 'all'
 call_count = 1 if mcp_only else 5
 checking_markers = True
+running_colors = [tone('warning')] if mcp_only else [tone('accent')] * 4 + [tone('warning')]
 
 def view():
     return '\n'.join((line.rstrip() for line in screen.display))
@@ -52,7 +58,7 @@ def pump():
         output.extend(data)
         stream.feed(decoder.decode(data))
         if checking_markers:
-            assert '77777d' not in marker_colors(), f'Visible tool markers must not turn gray, including argument generation\n{view()}'
+            assert tone('dim') not in marker_colors(), f'Visible tool markers must not turn gray, including argument generation\n{view()}'
     if status is None:
         done, value = os.waitpid(pid, os.WNOHANG)
         if done:
@@ -102,15 +108,17 @@ try:
     colors = marker_colors()
     assert len(colors) >= call_count, colors
     assert colors[-call_count:] == [success_color] * call_count, colors
-    for content in ['Found 2 results'] if mcp_only else ['Test Files', 'export const status', 'Found 2 results']:
-        assert color_at(content) == 'd6d6d6', (content, color_at(content))
+    assert color_at('Found 2 results') == tone('text'), color_at('Found 2 results')
     if not mcp_only:
-        assert color_at('1 more lines') == '77777d'
-        assert color_at('│   1', 4) == '77777d'
-    assert color_at('└ Found') == '77777d'
+        assert color_at('Test Files') == tone('toolOutput'), color_at('Test Files')
+        assert 'export const status' not in view(), view()
+    assert color_at('└ Found') == tone('dim')
     os.write(fd, b'\x0f')
     settle()
-    assert color_at('Found 2 results') == 'd6d6d6'
+    assert color_at('Found 2 results') == tone('text')
+    if not mcp_only:
+        assert color_at('export const status') == tone('toolOutput'), color_at('export const status')
+        assert color_at('└ 1') == tone('dim')
     os.write(fd, b'\x0f')
     settle()
     for outcome in ['error', 'interrupted', 'timeout']:
@@ -119,14 +127,14 @@ try:
         settle()
         screens[f'running-{outcome}'] = view()
         colors = marker_colors()
-        assert len(colors) >= call_count and colors[-call_count:] == ['ffe66d'] * call_count, colors
+        assert len(colors) >= call_count and colors[-call_count:] == running_colors, colors
         if mcp_only:
             # This entry intentionally does not load codex-ui or its Working widget.
             row = next(y for y in reversed(range(screen.lines)) if '⌁ Calling fixture / search' in screen.display[y])
             frozen = tuple(screen.buffer[row][col] for col in range(screen.columns))
             settle(1.1)
             assert tuple(screen.buffer[row][col] for col in range(screen.columns)) == frozen
-            assert marker_colors()[-call_count:] == ['ffe66d'] * call_count
+            assert marker_colors()[-call_count:] == running_colors
         else:
             frozen, initial_animation = held_frame(screen, f'Fixture: {target} / hold')
             animations = [initial_animation]
@@ -134,21 +142,21 @@ try:
                 settle(0.08)
                 cards, animation = held_frame(screen, f'Fixture: {target} / hold')
                 assert cards == frozen, 'Held tool text, positions and cell styles must remain static'
-                assert marker_colors()[-call_count:] == ['ffe66d'] * call_count
+                assert marker_colors()[-call_count:] == running_colors
                 animations.append(animation)
             assert len({frame[0] for frame in animations}) >= 5, 'Working spinner must keep advancing'
             assert len({frame[1] for frame in animations}) >= 2, 'Working shimmer must keep advancing'
-            assert all(frame[2] == '5efcff' for frame in animations), 'Working spinner must retain its accent'
+            assert all(frame[2] == tone('accent') for frame in animations), 'Working spinner must retain its accent'
             held_frames[outcome] = {'staticRows': [row for row, _cells in frozen], 'animations': animations}
         command(f'/finish {outcome}')
         wait(lambda: 'Fixture finished.' in view().split(f'Fixture: {target} / hold')[-1], f'finish {outcome}')
         settle()
         screens[outcome] = view()
         colors = marker_colors()
-        expected = 'ff6b6b' if outcome == 'error' else 'ffe66d'
+        expected = tone('error') if outcome == 'error' else tone('warning')
         expected_colors = [expected] * call_count
         if outcome == 'timeout' and not mcp_only:
-            expected_colors = ['ffe66d', 'ff6b6b', 'ff6b6b', 'ff6b6b', 'ffe66d']
+            expected_colors = [tone('warning'), tone('error'), tone('error'), tone('error'), tone('warning')]
         assert len(colors) >= call_count and colors[-call_count:] == expected_colors, colors
     for width in [80, 40, 120]:
         fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 60, width, 0, 0))
@@ -178,7 +186,7 @@ try:
                 screens['batch-read-running'] = view()
             wait(lambda: 'Playback frame finished.' in view().split(label)[-1], f'batch {tool} finishes')
             colors = marker_colors()[-3:]
-            assert colors == [success_color, 'ff6b6b', 'ffe66d'], (tool, colors, view())
+            assert colors == [success_color, tone('error'), tone('warning')], (tool, colors, view())
             screens[f'batch-{tool}'] = view()
         wait(lambda: 'Playback complete.' in view(), 'batch playlist finishes')
         settle()
@@ -191,7 +199,7 @@ try:
             screen.resize(60, width)
             settle(0.6)
             assert '▾ Read 3 files' in view(), view()
-            assert marker_colors()[-3:] == [success_color, 'ff6b6b', 'ffe66d']
+            assert marker_colors()[-3:] == [success_color, tone('error'), tone('warning')]
             screens[f'batch-width-{width}'] = view()
         os.write(fd, b'\x0f')
         settle()
@@ -205,7 +213,7 @@ try:
     command(f'/batch {history_tool} mixed')
     wait(lambda: 'Fixture finished.' in view().split(f'Batch fixture: {history_tool} / mixed')[-1], 'production history fixture')
     settle()
-    expected = [success_color, 'ff6b6b', 'ffe66d']
+    expected = [success_color, tone('error'), tone('warning')]
     assert marker_colors()[-3:] == expected
     command('/fixture-theme light')
     wait(lambda: marker_colors()[-3:] != expected, 'theme change repaints group colors')

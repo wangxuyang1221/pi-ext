@@ -58,14 +58,22 @@ function prefixes(member: ReadMember, text: string, expanded: boolean, lineCount
     return lines;
   });
 }
-function withMetadata(left: string, right: string, width: number): string {
+function headingWidth(right: string, width: number): number {
   const available = width - visibleWidth(right);
-  return available >= 16 ? fitToWidth(left, available, { ellipsis: "…" }) + right
-    : fitToWidth(left, width, { ellipsis: "…" });
+  return available >= 16 ? available : width;
+}
+function withMetadata(left: string, right: string, width: number): string {
+  const available = headingWidth(right, width);
+  return fitToWidth(left, available, { ellipsis: "…" }) + (available < width ? right : "");
+}
+function fitDirectory(dir: string, room: number): string {
+  if (dir === "./") return "";
+  if (visibleWidth(dir) <= room) return dir;
+  return room >= 2 ? `${fitToWidth(dir, room - 1, { ellipsis: "…" })}/` : "";
 }
 function renderMember(member: ReadMember, expanded: boolean, grouped: boolean, theme: Theme, width: number): string[] {
   const cache = member.cache;
-  const colors = (["accent", "toolTitle", "text", "dim", "borderMuted", "success", "warning", "error"] as const)
+  const colors = (["accent", "toolTitle", "text", "dim", "toolOutput", "success", "warning", "error"] as const)
     .map(color => theme.fg(color, "x")).join("\0");
   const key = ["read-layout", cache.identity(member), member.revision, member.path, member.fullPath, member.offset, member.limit,
     member.status, width, expanded, grouped, colors].join("\0");
@@ -87,21 +95,21 @@ function renderMember(member: ReadMember, expanded: boolean, grouped: boolean, t
     }
     if (!pending && member.details?.truncation?.truncated) meta += " · truncated";
     const mark = toolStatusMarker(theme, status, "@");
-    const heading = `${mark} ${grouped ? "" : theme.fg("toolTitle", theme.bold("Read")) + " "}${theme.fg("accent", filename)}${theme.fg("dim", `  ${dir}`)}`;
-    const lines = [withMetadata(heading, theme.fg(failed ? failureColor : "dim", ` · ${meta}`), width)];
-    if (expanded) {
-      for (const line of wrapTextWithAnsi(clean(member.fullPath || member.path), Math.max(1, width - 4))) {
-        lines.push(fitToWidth(theme.fg("dim", `  │ ${line}`), width));
-      }
-    }
-    if (failed) lines.push(fitToWidth(theme.fg(failureColor, `  × ${clean(text.slice(0, text.indexOf("\n") < 0 ? text.length : text.indexOf("\n"))) || "Read failed"}`), width));
-    else if (!pending && lineCount > 0) {
+    const title = `${mark} ${grouped ? "" : theme.fg("toolTitle", theme.bold("Read")) + " "}`;
+    const metadata = theme.fg(failed ? failureColor : "dim", ` · ${meta}`);
+    const room = headingWidth(metadata, width) - visibleWidth(title) - visibleWidth(filename);
+    const shownDir = fitDirectory(dir, room);
+    const lines = [withMetadata(`${title}${shownDir ? theme.fg("dim", shownDir) : ""}${theme.fg("accent", filename)}`, metadata, width)];
+    const gutter = "    ";
+    if (failed) lines.push(fitToWidth(theme.fg("dim", "  └ ") + theme.fg(failureColor, clean(text.slice(0, text.indexOf("\n") < 0 ? text.length : text.indexOf("\n"))) || "Read failed"), width));
+    else if (expanded && !pending && lineCount > 0) {
       const shown = prefixes(member, text, expanded, lineCount);
-      shown.forEach((line, index) => lines.push(fitToWidth(theme.fg("borderMuted", "  │ ")
-        + theme.fg("dim", `${String((member.offset ?? 1) + index).padStart(3)}  `) + theme.fg("text", line), width, { ellipsis: "…" })));
-      if (lineCount > shown.length) lines.push(fitToWidth(theme.fg("dim", `  └ … ${lineCount - shown.length} more lines`), width));
+      const numberWidth = String((member.offset ?? 1) + shown.length - 1).length;
+      shown.forEach((line, index) => lines.push(fitToWidth(theme.fg("dim", `${index ? gutter : "  └ "}${String((member.offset ?? 1) + index).padStart(numberWidth)}  `)
+        + theme.fg("toolOutput", line), width, { ellipsis: "…" })));
+      if (lineCount > shown.length) lines.push(fitToWidth(theme.fg("dim", `${gutter}… +${lineCount - shown.length} lines`), width));
     }
-    if (notice) lines.push(fitToWidth(theme.fg("dim", `  ${clean(notice)}`), width, { ellipsis: "…" }));
+    if (notice && expanded) lines.push(fitToWidth(theme.fg("dim", `${gutter}${clean(notice)}`), width, { ellipsis: "…" }));
     return lines;
   });
 }
@@ -112,7 +120,7 @@ export function renderReadGroup(member: ReadMember, expanded: boolean, theme: Th
   if (!width || member.group.members[0] !== member) return [];
   const grouped = member.group.members.length > 1;
   const inset = grouped && width > 2 ? "  " : "";
-  const lines = grouped ? [fitToWidth(theme.fg("toolTitle", theme.bold(`${expanded ? "▾" : "▸"} Read ${member.group.members.length} files`)), width)] : [];
+  const lines = grouped ? [fitToWidth(`${theme.fg("dim", expanded ? "▾" : "▸")} ${theme.fg("toolTitle", theme.bold("Read"))} ${theme.fg("muted", `${member.group.members.length} files`)}`, width)] : [];
   for (const item of member.group.members) {
     for (const line of renderMember(item, expanded, grouped, theme, width - inset.length)) lines.push(inset + line);
   }

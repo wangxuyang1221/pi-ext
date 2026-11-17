@@ -9,7 +9,7 @@ import { reasoningMessage, reasoningPipeline } from "./fixtures/reasoning-pipeli
 // Native blockquote reference, independent of production registration and its source formatting.
 const quoteReference: MarkdownTransformer = (text, context) =>
   context.messageType === "assistant-thinking" && text.trim()
-    ? "> **Thinking**\n>\n> " + text.replace(/\r?\n/gu, "\n> ") : text;
+    ? (/^[->]/u.test(text) ? "> **Thinking**\n>\n> " : "> **Thinking**\\\n> ") + text.replace(/\r?\n/gu, "\n> ") : text;
 
 test("thinking grows inline and retains its contents through tool finalization", async () => {
   const pipeline = await reasoningPipeline(codexUi, process.cwd(), 0, false, 0);
@@ -114,6 +114,26 @@ test("thinking uses native blockquote wrapping, padding and visibility for all p
       }
     } finally { await pipeline.dispose(); }
   }
+});
+
+test("thinking title sits directly above paragraph text and never shows a hard-break backslash before a block", async () => {
+  const pipeline = await reasoningPipeline(codexUi, process.cwd(), 0, false, 0);
+  try {
+    await pipeline.begin();
+    const rows = (text: string) => {
+      pipeline.assistant.updateContent(reasoningMessage(text), false);
+      return pipeline.assistant.render(60).map(line => stripTerminalSequences(line).trimEnd()).filter(line => line.startsWith("│"));
+    };
+    assert.deepEqual(rows("**Plan**\n\nRead the file."), ["│ Thinking", "│ Plan", "│", "│ Read the file."]);
+    assert.deepEqual(rows("Plain body."), ["│ Thinking", "│ Plain body."]);
+    for (const [text, first] of [["- item", "│ - item"], ["1. step", "│ 1. step"], ["# Heading", "│ Heading"], ["> nested", "│ │ nested"],
+      ["```ts\nconst n = 1;\n```", "│ ```ts"], ["Title\n---", "│ Title"]] as const) {
+      const visible = rows(text);
+      assert.deepEqual(visible.slice(0, 2), ["│ Thinking", "│"], text);
+      assert.ok(visible.slice(2).some(line => line.startsWith(first)), `${text}: ${visible.join(" / ")}`);
+      assert.ok(visible.every(line => !line.includes("\\")), text);
+    }
+  } finally { await pipeline.dispose(); }
 });
 
 test("partial Markdown, completion and history replay preserve every thinking block", async () => {
