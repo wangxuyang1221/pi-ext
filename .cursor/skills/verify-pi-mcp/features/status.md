@@ -4,6 +4,7 @@
 
 ## Sub-features
 
+- `mcp-startup-ui`：启动显示连接进度；Escape 取消未就绪连接，失败时报告状态，取消后可重连。
 - `mcp-inventory`：状态清单持久显示 server 状态。
 - `mcp-verbose`：verbose 展示工具列表。
 - `mcp-logs`：查看近期诊断。
@@ -12,11 +13,11 @@
 
 ## How to get to it (user POV)
 
-/mcp；/mcp status；/mcp verbose；/mcp logs。
+配置 MCP server 后启动 Pi；/mcp；/mcp status；/mcp verbose；/mcp logs。
 
 ## Driving it with Pi PTY and host fixtures
 
-完成 [Launch 与 Doctor](../SKILL.md)，运行 [固定旅程的命令](../journeys.md#commands)，选择 `diagnostics 与 combination`。具体动作和通过条件见 [对应旅程](../journeys.md#diagnostics)。每个 ID 分别记录实际覆盖结果、证据层级和文件路径；需要完整验收时运行固定旅程的全部六条命令及列出的定向协议测试。
+完成 [Launch 与 Doctor](../SKILL.md)，运行 [固定旅程的命令](../journeys.md#commands)，选择 `diagnostics 与 combination`。具体动作和通过条件见 [对应旅程](../journeys.md#diagnostics)。每个 ID 分别记录实际覆盖结果、证据层级和文件路径；需要完整验收时运行固定旅程的全部命令（含原生 MCP 共存）及列出的定向协议测试。启动进度、取消和重连另跑 [启动界面补验](../journeys.md#startup-ui-source-smoke)。
 
 ## Gotchas
 

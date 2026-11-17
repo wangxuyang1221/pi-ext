@@ -91,7 +91,7 @@ JS
 
 ## Helpers
 
-- [doctor.mjs](scripts/doctor.mjs)：`node .cursor/skills/verify-pi-text-regions/scripts/doctor.mjs [--project <consumer-root>] [--original] [--extension <installed-index.js>]`，只读；带可执行权限，也可直接调用。
+- [doctor.mjs](scripts/doctor.mjs)：`node .cursor/skills/verify-pi-text-regions/scripts/doctor.mjs [--project <consumer-root>] [--original | --patched] [--extension <installed-index.js>]`，只读；带可执行权限，也可直接调用。
 - [local-refresh-pty.py](../../../scripts/local-refresh-pty.py)：`conda run -n codex-py312 python scripts/local-refresh-pty.py <new-evidence-dir> --cli <bin> [--mode regular|fullscreen] [--original] [--kitty] [--working] [--extension <index.js>]`。复用现有 PTY；Python 直接执行的 shebang 也固定 Conda 环境。
 - [local-refresh-install.mjs](../../../scripts/local-refresh-install.mjs)：`pnpm_config_verify_deps_before_run=false node scripts/local-refresh-install.mjs --pack`，生成本次安装根和 machine-readable 路径，见 [installation](features/installation.md)。
 - [local-refresh-cpu.mjs](../../../scripts/local-refresh-cpu.mjs)：`node --expose-gc scripts/local-refresh-cpu.mjs --baseline=<original-pi-tui>`，完整参数与批次见 [performance](features/performance.md)。
