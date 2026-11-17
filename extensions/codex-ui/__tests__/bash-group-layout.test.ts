@@ -139,6 +139,21 @@ test("truncation remains visible from structured details or the host error foote
   }
 });
 
+test("collapsed truncated captures keep real output in the tail and show the footer only as a warning", () => {
+  const theme = getThemeByName("dark");
+  const output = Array.from({ length: 10 }, (_, index) => `l${index}`).join("\n");
+  const footer = "[Showing lines 1-10 of 3000. Full output: /tmp/o.log]";
+  const failed = fixture("failed", "make test");
+  failed.members[0]!.content = [{ type: "text", text: `${output}\n\n${footer}\n\nCommand exited with code 1` }];
+  const succeeded = fixture("completed", "make test");
+  succeeded.members[0]!.content = [{ type: "text", text: `${output}\n\n${footer}` }];
+  succeeded.members[0]!.details = { truncation: { truncated: true }, fullOutputPath: "/tmp/o.log" } as never;
+  for (const [group, title] of [[failed, "$ Bash(make test) · exit 1"], [succeeded, "$ Bash(make test)"]] as const) {
+    assert.deepEqual(renderBashGroup(group, false, theme, 120, "").map(stripTerminalSequences),
+      [title, "  └ l0", "    l1", "    … +6 lines", "    l8", "    l9", "    Truncated capture · /tmp/o.log"]);
+  }
+});
+
 test("the host empty-success sentinel uses the selected no-output wording", () => {
   const group = fixture();
   group.members[0]!.content = [{ type: "text", text: "(no output)" }];

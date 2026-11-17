@@ -167,7 +167,16 @@ function middleEllipsis(path: string, width: number): string {
   const head = parts.shift() ?? "";
   while (parts.length && visibleWidth(`${head}/…/${parts.at(-1)}/${tail}`) <= width) tail = `${parts.pop()}/${tail}`;
   const joined = `${head}/…/${tail}`;
-  return visibleWidth(joined) <= width ? joined : `…${tail.slice(-(width - 1))}`;
+  return visibleWidth(joined) <= width ? joined : `…${keepEnd(tail, width - 1)}`;
+}
+
+function keepEnd(text: string, width: number): string {
+  const graphemes = Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text), part => part.segment);
+  let kept = "";
+  for (let index = graphemes.length - 1; index >= 0 && visibleWidth(graphemes[index] + kept) <= width; index--) {
+    kept = graphemes[index] + kept;
+  }
+  return kept;
 }
 
 const EMPTY_HINT = "/ for commands";

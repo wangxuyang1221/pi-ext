@@ -120,6 +120,23 @@ test("header elides the middle of a long directory and keeps its most specific t
   }
 });
 
+test("header path elision keeps the end of a single long segment by display width", () => {
+  const header = (cwd: string) => new CodexHeader({
+    version: "0.84.3", cwd, home: "/Users/pi",
+    getModelId: () => "gpt-test", getThinkingLevel: () => "high", getTheme: () => theme,
+  });
+  const cjk = header(`/Users/pi/项目/${"很长的目录名字".repeat(6)}尾`);
+  const emoji = header(`/x/${"a🙂".repeat(40)}`);
+  for (let width = 12; width <= 120; width++) {
+    for (const lines of [cjk.render(width), emoji.render(width)]) {
+      assert.ok(lines.every(line => visibleWidth(line) <= width), `width ${width}`);
+    }
+    if (width >= 28) assert.match(stripTerminalSequences(cjk.render(width)[4]!), /尾 +│$/u, `width ${width}`);
+    assert.doesNotMatch(emoji.render(width)[4]!, /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/u, `width ${width}`);
+  }
+  assert.equal(stripTerminalSequences(cjk.render(60)[4]!), `│ directory: …${"很长的目录名字".repeat(3).slice(-22)}尾 │`);
+});
+
 test("footer renders the accepted stable status flow and ignores transient statuses", () => {
   const footer = new CodexFooter({
     cwd: "/Users/pi/Code/app",

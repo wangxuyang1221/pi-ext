@@ -32,13 +32,14 @@ function diagnostic(member: BashMember): { text: string; warning: boolean } | un
   const exit = /^Command exited with code (-?[1-9]\d*)$/u.exec(last);
   return exit ? { text: `Error: Exit code ${exit[1]}`, warning: false } : undefined;
 }
+const TRUNCATION_FOOTER = /^\[Showing (?:lines \d+-\d+ of \d+(?: \([^\n]* limit\))?|last [^\n]+ of line \d+ \(line is [^\n]+\))\. Full output: ([^\n]+)\]$/u;
 function truncationWarning(member: BashMember): string | undefined {
   if (member.details?.truncation?.truncated) return `Truncated capture · ${member.details.fullOutputPath ? clean(member.details.fullOutputPath) : "full output unavailable"}`;
   if (member.status !== "failed") return undefined;
   // Failed execution loses details in the host. Only accept its final truncation footer.
   const source = physical(member);
   const footer = source.at(diagnostic(member) ? -3 : -1) ?? "";
-  const match = /^\[Showing (?:lines \d+-\d+ of \d+(?: \([^\n]* limit\))?|last [^\n]+ of line \d+ \(line is [^\n]+\))\. Full output: ([^\n]+)\]$/u.exec(footer);
+  const match = TRUNCATION_FOOTER.exec(footer);
   return match ? `Truncated capture · ${match[1]}` : undefined;
 }
 function captureVariant(member: BashMember): "diagnostic" | "empty-sentinel" | "raw" {
@@ -68,8 +69,10 @@ function capture(member: BashMember): string[] {
   const source = physical(member);
   const variant = captureVariant(member);
   if (variant === "empty-sentinel") return [];
-  const body = variant === "diagnostic" ? withoutDiagnosticTail(source) : source;
-  return dedent(collapseBlankRuns(trimBlankEdges(body)));
+  const body = trimBlankEdges(variant === "diagnostic" ? withoutDiagnosticTail(source) : source);
+  // The warning row already shows the host's truncation footer, so the preview tail keeps real output.
+  const output = truncationWarning(member) && TRUNCATION_FOOTER.test(body.at(-1) ?? "") ? trimBlankEdges(body.slice(0, -1)) : body;
+  return dedent(collapseBlankRuns(output));
 }
 type BodyRow = { text: string; color: "toolOutput" | "dim" };
 function bodyRows(visual: readonly string[], expanded: boolean, status: BashMember["status"], toggleKeys: string): BodyRow[] {

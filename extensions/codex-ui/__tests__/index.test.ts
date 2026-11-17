@@ -51,7 +51,7 @@ test("markdown transformer quotes all thinking during streaming and replay", () 
     ["First\r\n\r\nLast", true], ["  indented\n\nend\n", true], ["*emphasis* first", true],
     ["> Nested quote\n\n| Key | Value |\n| --- | --- |\n| a | b |", false], ["- item\n\nbody", false], ["1. step\n2. step", false],
     ["# Heading\n\nbody", false], ["```ts\nconst n = 1;\n```", false], ["Key | Value\n--- | ---\na | b", false],
-    ["Title\n---\nbody", false], ["---\nbody", false], ["    code\n\nbody", false], ["\nAfter a blank line", false],
+    ["Title\n---\nbody", false], ["Plan the fix\nthen verify\n---\nbody", false], ["Plan\nthen\n===", false], ["Plan\n\n---", true], ["---\nbody", false], ["    code\n\nbody", false], ["\nAfter a blank line", false],
     ["", false], [" \n\t ", false]] as const) {
     for (const isStreaming of [true, false]) {
       for (const availableWidth of [0, 1, 10, 80, 120]) {

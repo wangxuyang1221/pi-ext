@@ -18,9 +18,17 @@ export const CODEX_THEME_NAME = "codex-pi";
 const BLOCK_START = /^(?:\s*$| {4}|\t| {0,3}(?:[#>|<]|```|~~~|[-*+](?:\s|$)|\d{1,9}[.)](?:\s|$)|(?:[-*_]\s*){3,}$|=+\s*$|-+\s*$))/u;
 const UNDERLINE = /^ {0,3}(?:=+\s*|[-:|\s]*-[-:|\s]*)$/u;
 
-/** A hard break only joins paragraph text; before a block, Markdown shows the backslash literally. */
-function continuesParagraph([first = "", second = ""]: readonly string[]): boolean {
-  return !BLOCK_START.test(first) && !UNDERLINE.test(second);
+/**
+ * A hard break only joins paragraph text; before a block, Markdown shows the backslash literally.
+ * A setext underline anywhere in the joined paragraph would turn the title into a heading.
+ */
+function continuesParagraph(lines: readonly string[]): boolean {
+  if (BLOCK_START.test(lines[0] ?? "")) return false;
+  for (const line of lines.slice(1)) {
+    if (!line.trim()) return true;
+    if (UNDERLINE.test(line)) return false;
+  }
+  return true;
 }
 
 function hideInlineWorkingRow(ui: ExtensionUIContext): void {
