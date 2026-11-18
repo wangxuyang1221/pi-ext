@@ -24,6 +24,24 @@ const config: FastModeConfig = cloneConfig({
   ],
 });
 
+describe("Pi 1.5.2 default Sol model", () => {
+  it.each(["openai", "openai-codex"])("applies priority and status only when enabled for %s", (provider) => {
+    const current = cloneConfig();
+    const model = { provider, id: "gpt-6.1-sol" };
+    const payload = { model: model.id };
+
+    expect(getFastModePayload(current, model, payload)).toBeUndefined();
+    expect(getStatusText(current, model)).toBeUndefined();
+
+    current.enabled = true;
+    expect(getFastModePayload(current, model, payload)).toEqual({
+      ...payload,
+      service_tier: "priority",
+    });
+    expect(getStatusText(current, model)).toBe("fast");
+  });
+});
+
 describe("model matching", () => {
   it("matches exact provider/model pairs", () => {
     expect(
