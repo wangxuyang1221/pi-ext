@@ -53,11 +53,11 @@ Write/Edit 包含异步文件操作。宿主 Write 使用 `fs/promises` 执行 m
 
 - 在开始某个步骤前观察到 signal 已取消时，工具拒绝继续该步骤；宿主会停止尚未开始或在检查点观察到取消的后续调用。已经并行启动的调用各自处理同一个 signal，不保证它们都没有文件副作用。
 - 已经提交的文件系统调用没有接收 signal，工具会等待它结束，再返回 `Operation aborted`。同文件修改队列在操作结束前保持占用。取消不回滚已经写入的内容，也不把之前成功完成的 Write/Edit 改成未执行。
-- codex-ui 将确切的原生 `Operation aborted` 结果显示为 Interrupted，不把普通错误文本误判为取消。Write 观察器只有在宿主 execute 成功返回后才生成成功 diff；取消后可能保留已写字节而没有成功 diff。
+- codex-ui 将确切的原生 `Operation aborted` 结果显示为警告色中断标记，标题为 `Write failed`/`Edit failed`，正文为 `Operation aborted`，不把普通错误文本误判为取消。Write 观察器只有在宿主 execute 成功返回后才生成成功 diff；取消后可能保留已写字节而没有成功 diff。
 
 Write 观察器的 writeFile 回调先取得旧文件 stat/有界快照，再调用实际 writeFile；这个回调内部没有额外的 signal 检查，宿主在整个回调返回后才再次检查。因而快照阶段触发取消也可能仍写入新字节。这正是现有受控晚取消测试实际覆盖的情况。
 
-证据分开记录：真实 CLI 的独立 Bash 已证明 Esc 传播、Interrupted、实际 abort 结果及延后文件未生成。`write-execution.test.ts` 的预先取消用例证明拒绝且不生成成功 patch；其受控晚取消用例实际写入 `new` 后拒绝、保留字节且不生成成功 patch，下一次写入以这些现存字节为基线。`tool-status.test.ts` 包含 Read/Edit/Write/Bash 的真实预先取消及序列化后黄色中断渲染。测试源码位置为执行边界证据，只有本次确实运行过的测试才能写入通过记录。
+证据分开记录：真实 CLI 的独立 Bash 已证明 Esc 传播、标题后缀 `· interrupted`、实际 abort 结果及延后文件未生成。`write-execution.test.ts` 的预先取消用例证明拒绝且不生成成功 patch；其受控晚取消用例实际写入 `new` 后拒绝、保留字节且不生成成功 patch，下一次写入以这些现存字节为基线。`tool-status.test.ts` 包含 Read/Edit/Write/Bash 的真实预先取消及序列化后黄色中断渲染。测试源码位置为执行边界证据，只有本次确实运行过的测试才能写入通过记录。
 
 本次没有证明“真实 Esc 恰在 Write/Edit 的某次 await 期间到达”。需要这一端到端断言时，`ui-interrupted` 保留该分支 unverified，写明缺少可观察、可控制的取消阶段。源码依据是宿主 `core/tools/write.js`、`edit.js`、`file-mutation-queue.js`，以及插件 [write-changes.ts](../../../../extensions/codex-ui/src/write-changes.ts)、[tool-status.ts](../../../../extensions/codex-ui/src/tool-status.ts)；调度器的串行中止和并行 signal 检查属于宿主职责。
 

@@ -7,6 +7,10 @@ from health import doctor
 
 BASE = Path(__file__).resolve().parent
 REPO = BASE.parents[3]
+def tone(name):
+    theme = json.loads((REPO / 'themes/codex-pi.json').read_text()); value = theme['colors'][name]
+    return theme['vars'].get(value, value).lstrip('#').lower()
+CODEX_BG, CODEX_FG = tone('selectedBg'), tone('text')
 MODE = sys.argv[1] if len(sys.argv) > 1 else 'regular'
 EVIDENCE = REPO / '.tmp/test-results' / ('codex-ui-cli-' + MODE + '-' + str(time.time_ns()))
 EVIDENCE.mkdir(parents=True)
@@ -113,18 +117,18 @@ def reload():
     wait(lambda:sum(e['type']=='session_start' for e in records())>n,'reloaded'); settle()
 def save_settings(value):
     (ROOT/'agent/settings.json').write_text(json.dumps(value)); actions.append({'settingsSeed':value})
-def composer(label,expected_bg='484848'):
+def composer(label,expected_bg=CODEX_BG):
     keys(b'\x15COMPOSER-INPUT',label+' input'); settle()
     row=next(y for y,line in enumerate(screen.display) if 'COMPOSER-INPUT' in line)
     colors={screen.buffer[row][x].bg for x in range(screen.columns)}
     check(len(colors)==1 and 'default' not in colors,label+' paints the complete composer row')
     check(all({screen.buffer[y][x].bg for x in range(screen.columns)}==colors for y in [row-1,row+1]),label+' paints the blank padding rows')
     if expected_bg:check(colors=={expected_bg},label+' uses the selected theme background')
-    else:check(colors!={'484848'},label+' changes composer background from codex-pi')
+    else:check(colors!={CODEX_BG},label+' changes composer background from codex-pi')
     start=screen.display[row].index('COMPOSER-INPUT')
     foregrounds={screen.buffer[row][x].fg for x in range(start,start+len('COMPOSER-INPUT'))}
     check(len(foregrounds)==1 and 'default' not in foregrounds and foregrounds!=colors,label+' paints readable draft text with the selected theme')
-    if expected_bg=='484848':check(foregrounds=={'d6d6d6'},label+' uses the codex-pi text color')
+    if expected_bg==CODEX_BG:check(foregrounds=={CODEX_FG},label+' uses the codex-pi text color')
     snap(label); keys(b'\x15',label+' clear')
 def resize(width):
     fcntl.ioctl(fd,termios.TIOCSWINSZ,struct.pack('HHHH',60,width,0,0));screen.resize(60,width);os.kill(pid,signal.SIGWINCH);settle()
@@ -252,7 +256,7 @@ try:
     check(not (ROOT/'workspace/cancelled.txt').exists(),'Cancelled Bash has no delayed file side effect')
     aborted=[e['data'] for e in records() if e['type']=='tool_execution_end' and e['data']['toolName']=='bash'][-1]
     check(aborted.get('isError') and 'Command aborted' in json.dumps(aborted['result']['content']),'Independent Bash reports actual abort result')
-    check('Interrupted' in view() or 'Command aborted' in view(),'Cancellation has an explicit terminal result');snap('independent interruption')
+    check('cancelled.txt) · interrupted' in view(),'Cancellation shows the interrupted Bash title');snap('independent interruption')
     command('/new'); settle(1);command_availability('new session')
     check(json.loads((ROOT/'agent/settings.json').read_text())['theme']=='codex-pi','Saved theme remains after reload/new')
     # Prefix, shell and untrusted project configuration through real model tool execution.

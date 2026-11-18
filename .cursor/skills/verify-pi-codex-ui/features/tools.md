@@ -5,14 +5,14 @@
 ## Sub-features
 
 - `ui-tool-rendering`：工具使用各自的预览与展开规则，命令清单和补全提供 `/inspect`。
-- `ui-read-group`：连续 Read 分组预览。
+- `ui-read-group`：连续 Read 分组显示，折叠时以文件标题代替文件内容，展开显示带行号的内容。分组和折叠细则见 [grouped-read.test.ts](../../../../extensions/codex-ui/__tests__/grouped-read.test.ts)。
 - `ui-bash-preview`：Bash 显示短命令和输出。
 - `ui-expand`：默认 Ctrl+O 展开已捕获内容；Read 展开最多 40 行，Bash 无法恢复宿主未捕获的输出。
 - `ui-write-added`：新建 Write 显示 Added。
 - `ui-write-edited`：覆盖 Write 显示 Edited。
 - `ui-diff`：diff 展示行号与限制。
-- `ui-error`：失败标题与正文正确。
-- `ui-interrupted`：可靠中断用中断状态。
+- `ui-error`：Bash 失败状态写在标题后缀（如 `· exit 1`），正文使用主题 `toolOutput` 颜色；Edit/Write 失败标题为 `Edit failed`/`Write failed`，正文为首行错误。
+- `ui-interrupted`：可靠中断用警告色中断状态：Bash 标题后缀为 `· interrupted` 或 `· timed out`；Edit/Write 显示警告色标记和 `Operation aborted`。
 
 ## How to get to it (user POV)
 
@@ -41,7 +41,7 @@ pnpm test extensions/codex-ui/__tests__/write-execution.test.ts extensions/codex
 
 固定工具播放用于显示，不证明 write 实际落盘。超过 diff 限制应显示 Diff unavailable；不能伪造行数。
 
-Read 折叠时每个文件只显示一行标题，展开后显示带行号的内容；Bash 折叠显示开头和结尾各 2 行；diff 折叠最多 12 行。CLI 会保存长命令、diff 与展开画面，部分行号、折叠边界及命令省略仍需审查这些画面；脚本退出码不能代替逐项显示判定。Bash 取消等待本次 `tool_execution_update.partialResult` 中的输出标记，命令参数或标题中的同名文字不算开始输出。
+Read 折叠时不显示文件内容；Bash 折叠时保留输出开头和结尾的少量行，中间以 `… +N lines` 省略，短输出完整显示，具体行数规则见 [bash-group-layout.test.ts](../../../../extensions/codex-ui/__tests__/bash-group-layout.test.ts)；纯新增 diff 使用绿色 `│` 竖线而不是整行底色；diff 折叠最多 12 行。CLI 会保存长命令、diff 与展开画面，部分行号、折叠边界及命令省略仍需审查这些画面；脚本退出码不能代替逐项显示判定。Bash 取消等待本次 `tool_execution_update.partialResult` 中的输出标记，命令参数或标题中的同名文字不算开始输出。
 
 工具卡片的静态状态标记与 Working 动画属于不同区域。held 工具期间分别核对卡片文案/颜色稳定和 Working 持续推进；整张屏幕不变不是工具状态的通过条件。
 
