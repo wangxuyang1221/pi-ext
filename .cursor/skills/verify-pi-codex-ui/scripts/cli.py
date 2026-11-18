@@ -3,6 +3,7 @@
 import codecs, errno, fcntl, json, os, pty, re, select, shutil, signal, struct, subprocess, sys, tempfile, termios, time, traceback
 from pathlib import Path
 import pyte
+from event_records import read_records
 from health import doctor
 
 BASE = Path(__file__).resolve().parent
@@ -36,9 +37,8 @@ def interrupt_owned_driver(signum, _frame):
     raise KeyboardInterrupt('Owned driver interrupted by signal '+str(signum))
 for owned_signal in [signal.SIGTERM,signal.SIGHUP]:signal.signal(owned_signal,interrupt_owned_driver)
 
-def records():
-    p = ROOT/'events.jsonl'
-    return [json.loads(s) for s in p.read_text().splitlines()] if p.exists() else []
+def records(*, final=False):
+    return read_records(ROOT/'events.jsonl', final=final)
 
 def check(condition, message):
     assertions.append({'assertion':message,'passed':bool(condition)})
@@ -390,8 +390,15 @@ finally:
         processes[-1]['groupStopped']=group_stopped
     for name in ['agent','sessions','workspace']:
         shutil.copytree(ROOT/name,EVIDENCE/name)
-    (EVIDENCE/'events.json').write_text(json.dumps(records(),ensure_ascii=False,indent=2))
     cleanup_safe=all(p.get('stopped') and p.get('groupStopped') for p in processes)
+    try:
+        (EVIDENCE/'events.json').write_text(json.dumps(records(final=cleanup_safe),ensure_ascii=False,indent=2))
+    except ValueError:
+        passed=False
+        shutil.copyfile(ROOT/'events.jsonl', EVIDENCE/'events.jsonl')
+        archive_failure=traceback.format_exc()
+        (EVIDENCE/'event-archive-failure.txt').write_text(archive_failure)
+        print(archive_failure)
     if cleanup_safe:shutil.rmtree(ROOT)
     else:passed=False
     summary={'passed':passed,'mode':MODE,'scratch':str(ROOT),'scratchRemoved':not ROOT.exists(),'processes':processes,'actions':actions,'assertions':assertions,'screens':snapshots,'layer':'native CLI/PTy; offline model boundary; real tools/files/session'}
