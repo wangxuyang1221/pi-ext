@@ -31,6 +31,9 @@ parser.add_argument("--profile", choices=["pi152"], default="pi152")
 parser.add_argument("--extension", type=Path, help="Installed codex-ui entry for the working journey")
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(repo / "test-support/fixtures/local-refresh"))
+from pty_observations import records
+
 root = args.evidence.resolve()
 assert root.is_relative_to(repo / ".tmp") and not root.exists(), "Use a new worktree .tmp evidence directory"
 root.mkdir(parents=True)
@@ -102,7 +105,7 @@ screens = {}
 
 def events(kind):
     path = root / "events.jsonl"
-    return [v["data"] for line in path.read_text().splitlines() if line and (v := json.loads(line))["type"] == kind] if path.exists() else []
+    return [record["data"] for record in records(path) if record["type"] == kind]
 
 def view():
     return "\n".join(line.rstrip() for line in screen.display)
@@ -186,7 +189,6 @@ signal.signal(signal.SIGINT, terminate)
 passed = False
 try:
     if args.working:
-        sys.path.insert(0, str(repo / "test-support/fixtures/local-refresh"))
         from working_journey import run
         run(globals())
     else:
@@ -384,10 +386,20 @@ finally:
     artifacts.mkdir()
     for name in ["workspace", "agent"]:
         shutil.copytree(runtime / name, artifacts / name)
+    event_archive_error = None
     if not survivors:
+        try:
+            records(root / "events.jsonl", final=True)
+        except ValueError as error:
+            passed = False
+            event_archive_error = str(error)
         shutil.rmtree(runtime)
     result = {"passed": passed, "pid": pid, "exitCode": os.waitstatus_to_exitcode(status), "mode": args.mode, "original": args.original, "kitty": args.kitty, "working": args.working,
               "cli": str(args.cli), "checks": checks, "cleanup": {"processGroupEmpty": not survivors, "survivors": survivors, "runtimeRemoved": not runtime.exists(), "servicesStarted": []}}
+    if event_archive_error is not None:
+        result["eventArchiveError"] = event_archive_error
     (root / "summary.json").write_text(json.dumps(result, indent=2))
     print(json.dumps(result, indent=2))
     assert not survivors
+if event_archive_error is not None:
+    raise ValueError(event_archive_error)
