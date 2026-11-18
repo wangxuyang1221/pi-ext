@@ -6,7 +6,7 @@
 
 - `ui-header`：启动显示圆角 header：`pi vX · Codex profile`，`model:` 与 `directory:` 标签对齐，路径过长时省略中段。
 - `ui-composer`：输入框保持实色背景和当前主题的文字色，草稿在终端默认前景不同的情况下仍可读。空草稿显示强调色 `›` 和占位文字；宽度不小于 48 列时底部留白行右侧显示 `/ for commands`，输入文字或打开菜单后隐藏。
-- `ui-status`：footer 以 ` · ` 分隔展示模型与思考等级、fast、目录与 git 分支、context，以及中性状态行；运行时右侧速率占位，结束后归还宽度。
+- `ui-status`：footer 首行以 ` · ` 分隔展示模型与思考等级、fast、目录与 git 分支、context，中性状态行另起一行；运行时右侧速率占位，结束后归还宽度。
 - `ui-theme`：已保存的 codex-pi 主题跨会话替换保持。
 - `ui-resize`：窄屏 resize 不破坏内容。
 - `ui-user-markdown`：用户 Markdown 保留原语义。

@@ -4,7 +4,7 @@
 
 ## Sub-features
 
-- `ui-thinking-stream`：流式思考完整显示。正文以段落开头时 `Thinking` 标题与正文首行相邻；以列表、标题、代码块等块开头时保留一行空引用行。
+- `ui-thinking-stream`：流式思考完整显示。正文首行是普通段落时 `Thinking` 标题与正文首行相邻；首行像 Markdown 块起始（列表、`#`、代码块、表格、Setext 下划线等）时保留一行空引用行。该判断按文本规则进行，以 `#tag` 开头的段落也会留空行。
 - `ui-thinking-collapse`：Ctrl+T 保留隐藏选择。
 - `ui-thinking-resume`：恢复仍采用相同思考规则。
 - `ui-title`：窗口标题展示运行动画。
