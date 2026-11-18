@@ -16,13 +16,14 @@ pnpm exec node .cursor/skills/verify-pi-openai-fast-mode/scripts/verify.mjs full
 
 wrapper 用 `createTestEnvironment` 创建仓库 `.tmp` 内的 HOME、agent、sessions 和 workspace。settings 关闭 retry、compaction 与 cache warming。生产 Fast dist 和 `request-provider.ts` 通过显式 `-e` 加载，关闭其他扩展和用户资源。
 
-provider 注册七个精确匹配的 OpenAI 模型、相似但不匹配 ID、两个任意 Codex ID，以及第三方同名模型。它调用安装的真实 OpenAI/Codex adapter，仅用固定 SSE 响应替换 fetch。`reject-fast` 返回明确 unsupported 错误，`ambiguous-error` 返回普通 HTTP 400 文案，其他输入返回固定文本。所有请求在序列化后记录，零真实模型凭据、零远端服务调用。
+provider 注册与默认名单精确匹配的 OpenAI 模型（含 Pi 1.5.2 默认的 `gpt-6.1-sol`）、相似但不匹配 ID、任意 Codex ID 和 Codex 默认的 `gpt-6.1-sol`，以及第三方同名模型。它调用安装的真实 OpenAI/Codex adapter，仅用固定 SSE 响应替换 fetch。`reject-fast` 返回明确 unsupported 错误，`ambiguous-error` 返回普通 HTTP 400 文案，其他输入返回固定文本。所有请求在序列化后记录，零真实模型凭据、零远端服务调用。
 
 ## Actions and assertions
 
 | Run | Actions | Required observation |
 | --- | --- | --- |
 | root | 空配置加 `--fast`，逐次 `/model provider/id` 并发送消息 | 配置为 true；全部精确 OpenAI 名单及任意 Codex 模型为 priority，相似 ID 和其他 provider 无字段 |
+| root Sol default | 分别选择 `openai/gpt-6.1-sol` 与 `openai-codex/gpt-6.1-sol`，打开及关闭 Fast 后各发一条消息 | 打开时真实序列化为 priority，且状态栏显示 `fast`；关闭时字段与状态均不出现 |
 | root rejection | `reject-fast`，用户重试，off/on，再切其他模型和切回 | 失败通知明确要求重试；每次输入仅一个请求；原模型停用 priority，其他模型继续；普通 400 不停用；off/on 不清除原模型拒绝 |
 | root-restarted | `/quit` 后使用同一 agent 配置启动新 session，发消息，再保存 off | 新进程恢复 priority，随后配置为 false |
 | root-restarted-off | 再次冷启动并发送消息 | 保留 false，请求无 priority |
