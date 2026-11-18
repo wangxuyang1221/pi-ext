@@ -52,7 +52,7 @@ type FooterItemState = {
 };
 
 const FAST_STATUS_KEY = "pi-openai-fast-mode";
-const ITEM_SEPARATOR = " ⋅ ";
+const ITEM_SEPARATOR = " · ";
 const SIDE_PADDING = 1;
 const ANSI_FOREGROUND_RESET = "\x1b[39m";
 

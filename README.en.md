@@ -79,7 +79,7 @@ pnpm run build
 `codex-ui` keeps Pi branding and adds a solid-background editor with compact tool output. The status bar shows the model, thinking level, Fast Mode, working directory, Git branch, and remaining context percentage.
 
 - Thinking appears in its original message position under a `Thinking` heading and inside a blockquote. `Ctrl+T` keeps Pi's visibility toggle.
-- Consecutive Read calls group by file, with a three-line preview per file. Bash shows the command and its first three output lines. Expand it in place to see captured output.
+- Consecutive Read calls group by file, one row per file when collapsed and numbered content when expanded. Bash shows the command with the first and last two output lines, and puts failure, timeout or interrupt status in the title. Expand it in place to see captured output.
 - Edit and Write show diffs. Tool titles use colors for running, successful, failed, and recognized cancelled or timed-out calls.
 - During a task, a Working animation and elapsed time appear above the editor. The status bar shows an estimated receive rate. See the [Working and rate notes](docs/codex-working-rate.md) for how it is calculated.
 - codemode shows nested calls. `/inspect` has Calls, Script, and Output tabs for child results and parent script output. After a restart, only host-persisted information can be restored. Missing details are marked explicitly.

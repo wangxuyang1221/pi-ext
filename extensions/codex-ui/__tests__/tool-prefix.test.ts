@@ -5,9 +5,9 @@ import { renderMcpToolCall, renderMcpToolResult } from "../../mcp/src/renderers.
 
 const theme = { fg: (tone: string, text: string) => `<${tone}>${text}</${tone}>`, bold: (text: string) => text } as Theme;
 
-test("uses category glyphs with muted success and unchanged warning or error states", () => {
+test("uses category glyphs with accent pending and running, muted success and warning or error failures", () => {
   for (const glyph of ["$", "@", "~"]) {
-    for (const [status, tone] of Object.entries({ pending: "warning", running: "warning", completed: "muted", failed: "error", interrupted: "warning", timed_out: "warning" })) {
+    for (const [status, tone] of Object.entries({ pending: "accent", running: "accent", completed: "muted", failed: "error", interrupted: "warning", timed_out: "warning" })) {
       expect(toolStatusMarker(theme, status as ToolStatus, glyph)).toBe(`<${tone}>${glyph}</${tone}>`);
     }
   }

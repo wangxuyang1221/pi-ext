@@ -15,6 +15,13 @@ import time
 import pyte
 here = Path(__file__).resolve().parent
 repo = here.parents[4]
+REPO_ROOT = repo
+
+def tone(name):
+    """Expected cell color for a codex-pi theme token, so palette changes do not desync PTY checks."""
+    theme = json.loads((REPO_ROOT / 'themes' / 'codex-pi.json').read_text())
+    value = theme['colors'].get(name, name)
+    return theme['vars'].get(value, value).lstrip('#').lower()
 before = set((repo / '.tmp').glob('web-search-*'))
 pid, fd = pty.fork()
 if pid == 0:
@@ -71,19 +78,19 @@ def search_colors():
 try:
     wait(lambda: '2/5 queries completed' in view(), 'streaming progress')
     screens['running'] = view()
-    assert search_colors()[-1] == 'ffe66d', search_colors()
+    assert search_colors()[-1] == tone('warning'), search_colors()
     wait(lambda: 'Playback complete.' in view(), 'initial success')
     settle()
     assert 'Extension issues' not in view(), view()
     assert '17 sources · 5 queries' in view(), view()
-    assert search_colors()[-1] == '85858a', search_colors()
+    assert search_colors()[-1] == tone('muted'), search_colors()
     screens['success'] = view()
     os.write(fd, b'\x0f')
     wait(lambda: 'https://example.com/research/17' in view(), 'native expansion')
     screens['expanded'] = view()
     os.write(fd, b'\x0f')
     settle()
-    for outcome, expected, color in [('partial', '4/5 succeeded · 1 failed', 'ffe66d'), ('timeout', 'Request timed out', 'ffe66d'), ('error', 'Search service unavailable', 'ff6b6b')]:
+    for outcome, expected, color in [('partial', '4/5 succeeded · 1 failed', tone('warning')), ('timeout', 'Request timed out', tone('warning')), ('error', 'Search service unavailable', tone('error'))]:
         command('/hold')
         wait(lambda: '0/5 queries completed' in view(), 'held search')
         command(f'/finish {outcome}')
@@ -96,7 +103,7 @@ try:
             wait(lambda: 'Reloaded' in view(), 'reload production renderer')
             settle()
             assert 'Web search timed out' in view(), view()
-            assert search_colors()[-1] == 'ffe66d', search_colors()
+            assert search_colors()[-1] == tone('warning'), search_colors()
             screens['reloaded-timeout'] = view()
     command('/play batch')
     wait(lambda: '1/2 succeeded · 1 failed' in view(), 'adjacent batch')
@@ -129,12 +136,12 @@ try:
         command('/hold')
         wait(lambda: '0/5 queries completed' in view(), 'hold before persisted timeout')
         command('/finish timeout')
-        wait(lambda: 'Web search timed out' in view() and search_colors()[-1] == 'ffe66d', 'persist timeout')
+        wait(lambda: 'Web search timed out' in view() and search_colors()[-1] == tone('warning'), 'persist timeout')
         settle(1)
         command('/quit')
         wait(lambda: 'Restored search history.' in view(), 'restart with persisted session')
         assert 'Web search timed out' in view(), view()
-        assert search_colors()[-1] == 'ffe66d', search_colors()
+        assert search_colors()[-1] == tone('warning'), search_colors()
         screens['restarted-timeout'] = view()
     command('/quit')
     wait(lambda: status is not None, 'clean exit')

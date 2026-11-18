@@ -45,10 +45,14 @@ test("markdown transformer quotes all thinking during streaming and replay", () 
 
   const thinking = "**First title**\n\nFirst body.\n\n**Last title**\n\nLast body.";
   assert.equal(transform(thinking, { messageType: "assistant-thinking", isStreaming: true, availableWidth: 80 }),
-    "> **Thinking**\n>\n> **First title**\n>\n> First body.\n>\n> **Last title**\n>\n> Last body.");
-  for (const text of [thinking, "Plain reasoning without a title", "**Incomplete title", "", " \n\t ",
-    "检查 [link](https://example.com) `code`\n\n- item\n\n```ts\nconst n = 1;\n```", "Body. ".repeat(2000),
-    "First\r\n\r\nLast", "> Nested quote\n\n| Key | Value |\n| --- | --- |\n| a | b |", "  indented\n\nend\n"]) {
+    "> **Thinking**\\\n> **First title**\n>\n> First body.\n>\n> **Last title**\n>\n> Last body.");
+  for (const [text, joined] of [[thinking, true], ["Plain reasoning without a title", true], ["**Incomplete title", true],
+    ["检查 [link](https://example.com) `code`\n\n- item\n\n```ts\nconst n = 1;\n```", true], ["Body. ".repeat(2000), true],
+    ["First\r\n\r\nLast", true], ["  indented\n\nend\n", true], ["*emphasis* first", true],
+    ["> Nested quote\n\n| Key | Value |\n| --- | --- |\n| a | b |", false], ["- item\n\nbody", false], ["1. step\n2. step", false],
+    ["# Heading\n\nbody", false], ["```ts\nconst n = 1;\n```", false], ["Key | Value\n--- | ---\na | b", false],
+    ["Title\n---\nbody", false], ["Plan the fix\nthen verify\n---\nbody", false], ["Plan\nthen\n===", false], ["Plan\n\n---", true], ["---\nbody", false], ["    code\n\nbody", false], ["\nAfter a blank line", false],
+    ["", false], [" \n\t ", false]] as const) {
     for (const isStreaming of [true, false]) {
       for (const availableWidth of [0, 1, 10, 80, 120]) {
         const result = transform(text, { messageType: "assistant-thinking", isStreaming, availableWidth });
@@ -56,9 +60,11 @@ test("markdown transformer quotes all thinking during streaming and replay", () 
           assert.equal(result, text);
         } else {
           const lines = result.split("\n");
-          assert.deepEqual(lines.slice(0, 2), ["> **Thinking**", ">"]);
-          assert.ok(lines.slice(2).every(line => line === ">" || line.startsWith("> ")));
-          assert.equal(lines.slice(2).map(line => line === ">" ? "" : line.slice(2)).join("\n"), text.replace(/\r\n/gu, "\n"));
+          const title = joined ? ["> **Thinking**\\"] : ["> **Thinking**", ">"];
+          assert.deepEqual(lines.slice(0, title.length), title, JSON.stringify(text.slice(0, 20)));
+          const body = lines.slice(title.length);
+          assert.ok(body.every(line => line === ">" || line.startsWith("> ")));
+          assert.equal(body.map(line => line === ">" ? "" : line.slice(2)).join("\n"), text.replace(/\r\n/gu, "\n"));
         }
       }
     }
@@ -247,13 +253,13 @@ test("session UI installs only in TUI mode", async () => {
   };
   const bashCall = bash.renderCall(bashContext.args, profileTheme, bashContext as never);
   const bashResult = bash.renderResult(
-    { content: [{ type: "text", text: "hello\nsecond\nthird\nfourth" }], details: undefined },
+    { content: [{ type: "text", text: "hello\nsecond\nthird\nfourth\nfifth\nsixth" }], details: undefined },
     { expanded: false, isPartial: false },
     profileTheme,
     bashContext as never,
   );
   assert.deepEqual(bashResult.render(80), []);
-  assert.match(bashCall.render(80).map(stripTerminalSequences).join("\n"), /ctrl\+shift\+o to expand/u);
+  assert.match(bashCall.render(80).map(stripTerminalSequences).join("\n"), /… \+2 lines \(ctrl\+shift\+o to expand\)/u);
 
   const headerFactory = calls.find((call) => call.name === "header")?.value as (() => {
     render(width: number): string[];

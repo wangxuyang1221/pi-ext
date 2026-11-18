@@ -41,7 +41,7 @@ pnpm test extensions/codex-ui/__tests__/write-execution.test.ts extensions/codex
 
 固定工具播放用于显示，不证明 write 实际落盘。超过 diff 限制应显示 Diff unavailable；不能伪造行数。
 
-Read 折叠预览最多 3 行，diff 折叠最多 12 行。CLI 会保存长命令、diff 与展开画面，部分行号、折叠边界及命令省略仍需审查这些画面；脚本退出码不能代替逐项显示判定。Bash 取消等待本次 `tool_execution_update.partialResult` 中的输出标记，命令参数或标题中的同名文字不算开始输出。
+Read 折叠时每个文件只显示一行标题，展开后显示带行号的内容；Bash 折叠显示开头和结尾各 2 行；diff 折叠最多 12 行。CLI 会保存长命令、diff 与展开画面，部分行号、折叠边界及命令省略仍需审查这些画面；脚本退出码不能代替逐项显示判定。Bash 取消等待本次 `tool_execution_update.partialResult` 中的输出标记，命令参数或标题中的同名文字不算开始输出。
 
 工具卡片的静态状态标记与 Working 动画属于不同区域。held 工具期间分别核对卡片文案/颜色稳定和 Working 持续推进；整张屏幕不变不是工具状态的通过条件。
 

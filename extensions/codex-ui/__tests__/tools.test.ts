@@ -191,9 +191,8 @@ test("write and edit keep partial output static and private even when expanded",
     const result = tool.renderResult!({ content: [], details }, { expanded: true, isPartial: true }, theme, context as never);
     const verb = name === "write" ? "Writing" : "Editing";
     assert.equal(stripTerminalSequences(call.render(92)[0]!), `~ ${verb} src/components/中文.ts`);
-    assert.ok(call.render(92)[0]!.includes(theme.fg("warning", "~")));
-    assert.ok(call.render(92)[0]!.includes(theme.fg("dim", "src/components/")));
-    assert.ok(call.render(92)[0]!.includes(theme.fg("text", theme.bold("中文.ts"))));
+    assert.ok(call.render(92)[0]!.includes(theme.fg("accent", "~")));
+    assert.ok(call.render(92)[0]!.includes(theme.fg("dim", "src/components/") + theme.fg("accent", "中文.ts")));
     for (const width of [1, 8, 16, 24, 40, 60, 92, 160]) {
       assert.ok(call.render(width).every(line => visibleWidth(line) <= width));
       assert.deepEqual(result.render(width), []);
@@ -242,7 +241,8 @@ test("write restores persisted changes with the same settled ANSI layout as edit
     const editCall = edit.renderCall!(editContext.args, theme, editContext as never);
     const editBody = edit.renderResult!({ content: [], details: { diff: "", patch } }, { expanded: false, isPartial: false }, theme, editContext as never);
     assert.equal(stripTerminalSequences(call.render(92)[0]!), `~ ${action} src/app.ts (+1 -1)`);
-    assert.ok(call.render(92)[0]!.startsWith("\x1b[4m" + theme.fg("muted", "~")));
+    assert.equal(call.render(92)[0]!, `${theme.fg("muted", "~")} ${theme.bold(action)} ${theme.fg("dim", "src/")}${theme.fg("accent", "app.ts")} `
+      + `${theme.fg("dim", "(")}${theme.fg("success", "+1")} ${theme.fg("error", "-1")}${theme.fg("dim", ")")}`);
     for (const width of [1, 8, 16, 24, 40, 60, 92, 160]) {
       assert.deepEqual(body.render(width), editBody.render(width));
     }
@@ -391,9 +391,32 @@ test("display diff renderer separates signs, highlights content, and fills chang
   assert.equal(visibleWidth(lines[2] ?? ""), 24);
   assert.ok((lines[1] ?? "").startsWith("\x1b[48;5;52m"));
   assert.ok((lines[2] ?? "").startsWith("\x1b[48;5;22m"));
-  assert.ok((lines[1] ?? "").includes("\x1b[31m-\x1b[39m \x1b[2m"));
-  assert.ok((lines[2] ?? "").includes("\x1b[32m+\x1b[39m "));
+  assert.ok((lines[1] ?? "").includes(theme.fg("error", "-") + " \x1b[2m"));
+  assert.ok((lines[2] ?? "").includes(theme.fg("success", "+") + " "));
   assert.ok((lines[0] ?? "").includes("\x1b[38;5;189m"));
+});
+
+test("display diff renderer marks a pure addition with a green rule instead of a filled background", () => {
+  const lines = renderDisplayDiff(parseDisplayDiff("+1 first\n+2 second"), theme, 24, "fixture.unknown");
+  assert.deepEqual(lines.map(line => stripTerminalSequences(line).trimEnd()), ["    1 │ first", "    2 │ second"]);
+  for (const line of lines) {
+    assert.ok(line.includes(theme.fg("success", "│") + " "));
+    assert.ok(!line.includes(theme.getBgAnsi("toolSuccessBg")));
+    assert.ok(visibleWidth(line) <= 24);
+  }
+  const mixed = renderDisplayDiff(parseDisplayDiff("-1 old\n+1 new"), theme, 24, "fixture.unknown");
+  assert.ok(mixed[1]!.startsWith(theme.getBgAnsi("toolSuccessBg")));
+  assert.ok(mixed[1]!.includes(theme.fg("success", "+") + " "));
+});
+
+test("display diff renderer ends clipped code with an ellipsis and leaves fitting rows intact", () => {
+  for (const diff of [" 1 " + "x".repeat(40), "-1 " + "x".repeat(40), "+1 " + "x".repeat(40) + "\n-2 y"]) {
+    const line = renderDisplayDiff(parseDisplayDiff(diff), theme, 24, "fixture.unknown")[0]!;
+    assert.equal(visibleWidth(line), 24);
+    assert.equal(stripTerminalSequences(line), `    1 ${diff[0] === " " ? " " : diff[0]} ${"x".repeat(15)}…`);
+  }
+  assert.equal(stripTerminalSequences(renderDisplayDiff(parseDisplayDiff(" 1 " + "x".repeat(16)), theme, 24, "fixture.unknown")[0]!),
+    `    1   ${"x".repeat(16)}`);
 });
 
 test("mutation diff highlighting bounds long lines without discarding the remaining text", () => {
@@ -528,7 +551,7 @@ test("tool overrides retain metadata and delegate execution using context cwd", 
   assert.equal(delegated.at(-1)?.context, context);
 });
 
-test("read renderer combines the success marker, filename, range and preview in the call row", () => {
+test("read renderer shows the success marker, dim directory, accent filename and range on one collapsed row", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
   const read = registered.find((tool) => tool.name === "read");
@@ -544,7 +567,7 @@ test("read renderer combines the success marker, filename, range and preview in 
   );
   assert.equal(
     stripTerminalSequences(call.render(80).join("\n")),
-    "@ Read app.ts  src/ · Reading…",
+    "@ Read src/app.ts · Reading…",
   );
 
   const result = read.renderResult(
@@ -555,14 +578,14 @@ test("read renderer combines the success marker, filename, range and preview in 
   );
 
   const settledTitleAnsi = call.render(80).join("\n");
-  assert.equal(stripTerminalSequences(settledTitleAnsi),
-    "@ Read app.ts  src/ · L4–5 · 2 lines\n  │   4  alpha\n  │   5  beta");
+  assert.equal(stripTerminalSequences(settledTitleAnsi), "@ Read src/app.ts · L4–5 · 2 lines");
   assert.ok(settledTitleAnsi.includes(theme.fg("muted", "@")));
-  assert.ok(settledTitleAnsi.includes(theme.fg("accent", "app.ts")));
-  assert.ok(settledTitleAnsi.includes(theme.fg("dim", "  src/")));
+  assert.ok(settledTitleAnsi.includes(theme.fg("dim", "src/") + theme.fg("accent", "app.ts")));
   assert.ok(settledTitleAnsi.includes(theme.bold("Read")));
   assert.ok(!settledTitleAnsi.includes(theme.bold("app.ts")));
   assert.deepEqual(result.render(80), []);
+  const expanded = read.renderCall(args, theme, createRenderContext({ args, state, expanded: true }) as never);
+  assert.equal(stripTerminalSequences(expanded.render(80).join("\n")), "@ Read src/app.ts · L4–5 · 2 lines\n  └ 4  alpha\n    5  beta");
 
   const write = registered.find((tool) => tool.name === "write");
   assert.ok(write?.renderCall);
@@ -596,20 +619,20 @@ test("read renderer preserves summary variants", () => {
 
   assert.equal(stripTerminalSequences(renderSummary([
     { type: "text" as const, text: "only" },
-  ])), "@ Read fixture.txt  ./ · 1 line");
+  ])), "@ Read fixture.txt · 1 line");
 
   const truncated = renderSummary(
     [{ type: "text" as const, text: "one\ntwo" }],
     { truncation: { truncated: true } },
   );
-  assert.equal(stripTerminalSequences(truncated), "@ Read fixture.txt  ./ · 2 lines · truncated");
+  assert.equal(stripTerminalSequences(truncated), "@ Read fixture.txt · 2 lines · truncated");
   assert.ok(truncated.includes(theme.fg("dim", " · 2 lines · truncated")));
 
   const image = renderSummary([
     { type: "text" as const, text: "Read image file [image/png]" },
     { type: "image", data: "base64", mimeType: "image/png" },
   ]);
-  assert.equal(stripTerminalSequences(image), "@ Read fixture.txt  ./ · Image loaded");
+  assert.equal(stripTerminalSequences(image), "@ Read fixture.txt · Image loaded");
   assert.ok(image.includes(theme.fg("dim", " · Image loaded")));
 });
 
@@ -635,7 +658,7 @@ test("read renderer shows pending and failed states without false success or pre
     theme,
     createRenderContext({ args, state, isPartial: true }) as never,
   );
-  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "@ Read app.ts  src/ · Reading…\n  │ src/app.ts");
+  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "@ Read src/app.ts · Reading…");
   assert.deepEqual(partial.render(80), []);
 
   const error = read.renderResult(
@@ -644,7 +667,8 @@ test("read renderer shows pending and failed states without false success or pre
     theme,
     createRenderContext({ args, state, isError: true }) as never,
   );
-  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "@ Read app.ts  src/ · Failed\n  │ src/app.ts\n  × Permission denied");
+  assert.equal(stripTerminalSequences(call.render(80).join("\n")), "@ Read src/app.ts · Failed\n  └ Permission denied");
+  assert.ok(call.render(80)[1]!.includes(theme.fg("error", "Permission denied")));
   assert.deepEqual(error.render(80), []);
 });
 
@@ -671,12 +695,12 @@ test("read renderer preserves expanded output and fits narrow widths", () => {
   );
 
   const lines = call.render(80).map((line) => stripTerminalSequences(line));
-  assert.equal(lines.length, 43);
-  assert.match(lines[0]!, /42 lines$/u);
-  assert.equal(lines[1], "  │ a/very/long/path/to/a/fixture.txt");
-  assert.equal(lines[2], "  │   1  line 1");
-  assert.equal(lines[41], "  │  40  line 40");
-  assert.equal(lines[42], "  └ … 2 more lines");
+  assert.equal(lines.length, 42);
+  assert.equal(lines[0], "@ Read a/very/long/path/to/a/fixture.txt · 42 lines");
+  assert.equal(lines[1], "  └  1  line 1");
+  assert.equal(lines[9], "     9  line 9");
+  assert.equal(lines[40], "    40  line 40");
+  assert.equal(lines[41], "    … +2 lines");
   assert.deepEqual(result.render(80), []);
 
   for (const width of [1, 2, 8, 20]) {
@@ -774,12 +798,10 @@ test("edit renderer refreshes its title and renders the patch with Codex styling
   const plainDiff = diffLines.map((line) => stripTerminalSequences(line).trimEnd());
 
   assert.equal(title, "~ Edited src/app.ts (+2 -1)");
-  assert.ok(titleAnsi.startsWith("\x1b[4m"));
-  assert.ok(titleAnsi.endsWith("\x1b[24m"));
+  assert.ok(!titleAnsi.includes("\x1b[4m"));
   assert.ok(diffLines.every(line => !line.includes("\x1b[4m")));
-  assert.ok(titleAnsi.includes("\x1b[32m+2\x1b[39m"));
-  assert.ok(titleAnsi.includes("\x1b[31m-1\x1b[39m"));
-  assert.ok(!titleAnsi.includes("\x1b[38;5;81msrc/app.ts"));
+  assert.ok(titleAnsi.includes(theme.fg("dim", "src/") + theme.fg("accent", "app.ts")));
+  assert.ok(titleAnsi.includes(`${theme.fg("dim", "(")}${theme.fg("success", "+2")} ${theme.fg("error", "-1")}${theme.fg("dim", ")")}`));
   assert.deepEqual(plainDiff, [
     "    1   before",
     "    2 - old",
@@ -789,7 +811,7 @@ test("edit renderer refreshes its title and renders the patch with Codex styling
   assert.ok(diffLines.every((line) => visibleWidth(line) <= 40));
 });
 
-test("edit underlines only nonempty settled diff titles and fits narrow widths", () => {
+test("edit titles are never underlined and fit narrow widths", () => {
   const registered: ToolDefinition[] = [];
   registerToolsForTest(registered);
   const edit = registered.find(tool => tool.name === "edit");
@@ -808,8 +830,9 @@ test("edit underlines only nonempty settled diff titles and fits narrow widths",
       assert.ok(titleLines.every(line => visibleWidth(line) <= width));
       assert.ok(result.render(width).every(line => visibleWidth(line) <= width));
     }
-    assert.ok(call.render(120)[0]?.startsWith("\x1b[4m"));
-    assert.match(stripTerminalSequences(result.render(80)[0] ?? ""), /1 \+ const value/u);
+    assert.ok(!call.render(120).join("\n").includes("\x1b[4m"));
+    assert.match(stripTerminalSequences(call.render(120)[0] ?? ""), /Edited src\/中文目录\/long-renderer-name\.ts \(\+1\)$/u);
+    assert.match(stripTerminalSequences(result.render(80)[0] ?? ""), /1 │ const value/u);
   }
 
   for (const [isPartial, isError, details] of [
@@ -824,13 +847,14 @@ test("edit underlines only nonempty settled diff titles and fits narrow widths",
   }
 });
 
-test("collapsed edit diff shows a compact footer immediately after twelve rows", () => {
-  for (const [totalLines, hiddenLabel] of [
-    [13, "1 more lines"],
-    [14, "2 more lines"],
+test("collapsed edit diff shows a compact footer with the active binding immediately after twelve rows", () => {
+  for (const [totalLines, keys, hiddenLabel] of [
+    [13, [], "+1 lines"],
+    [14, [], "+2 lines"],
+    [14, ["ctrl+o"], "+2 lines (ctrl+o to expand)"],
   ] as const) {
     const registered: ToolDefinition[] = [];
-    registerToolsForTest(registered);
+    registerToolsForTest(registered, undefined, { getKeybindings: () => ({ getKeys: () => [...keys] }) });
     const edit = registered.find((tool) => tool.name === "edit");
     assert.ok(edit?.renderResult);
 
@@ -859,9 +883,9 @@ test("collapsed edit diff shows a compact footer immediately after twelve rows",
 
     assert.equal(lines.length, 13);
     assert.match(stripTerminalSequences(lines.at(-2) ?? ""), /line 12/u);
-    assert.equal(plainFooter, `  │     … ${hiddenLabel}`);
+    assert.equal(plainFooter, `    … ${hiddenLabel}`);
     assert.ok(visibleWidth(footer) < 48);
-    assert.equal(footer, theme.fg("dim", `  │     … ${hiddenLabel}`));
+    assert.equal(footer, theme.fg("dim", `    … ${hiddenLabel}`));
 
     const narrowFooter = component.render(10).at(-1) ?? "";
     assert.equal(visibleWidth(narrowFooter), 10);

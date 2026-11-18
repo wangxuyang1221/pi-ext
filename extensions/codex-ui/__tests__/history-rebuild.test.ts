@@ -55,7 +55,7 @@ test.each(["unchanged", "replacement", "in-place"])("Read groups survive rebuild
     Object.defineProperties(mode, Object.getOwnPropertyDescriptors({
       session, settingsManager, sessionManager, chatContainer: new Container(), pendingTools: new Map(),
       ui: { requestRender() {} }, getRegisteredToolDefinition: (name: string) => session.getToolDefinition(name),
-      addMessageToChat() {}, showStatus() {}, hideThinkingBlock: false, toolOutputExpanded: false,
+      addMessageToChat() {}, showStatus() {}, hideThinkingBlock: false, toolOutputExpanded: true,
     }));
     const plain = () => mode.chatContainer.render(100).map(stripTerminalSequences).join("\n");
     mode.rebuildChatFromMessages();
@@ -80,7 +80,7 @@ test.each(["unchanged", "replacement", "in-place"])("Read groups survive rebuild
       if (event.type === "tool_execution_end" && event.toolName === "read") {
         const row = new ToolExecutionComponent("read", event.toolCallId, { path: `${event.toolCallId}.ts` }, { showImages: false },
           session.getToolDefinition("read"), { requestRender() {} } as never, cwd);
-        row.updateResult({ ...event.result, isError: event.isError });
+        row.setExpanded(true); row.updateResult({ ...event.result, isError: event.isError });
         liveRows.set(event.toolCallId, row);
         executionPaints.set(event.toolCallId, paintLive());
       } else if (event.type === "message_end" && event.message.role === "toolResult") {

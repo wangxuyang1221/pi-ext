@@ -16,7 +16,8 @@ test("working keeps ten 80ms frames, a fixed label, shimmer and elapsed time unt
   for (let i = 0; i < 10; i++) {
     now = i * 80;
     const line = working.render(100)[0]!;
-    assert.match(stripTerminalSequences(line), /Working \(0s • esc to interrupt\)/u);
+    assert.match(stripTerminalSequences(line), /Working \(0s · esc to interrupt\)/u);
+    assert.ok(line.includes(theme.fg("dim", "(0s · ") + theme.fg("muted", "esc") + theme.fg("dim", " to interrupt)")));
     frames.push(stripTerminalSequences(line).trim()[0]!);
   }
   assert.equal(frames.join(""), "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏");
@@ -63,7 +64,7 @@ test("accepted shimmer palette and time boundaries remain stable over long tasks
   const activity = new WorkingActivity(() => now); activity.start();
   const working = new Working(activity, () => theme);
   for (const [time, label] of [[59000, "59s"], [60000, "1m 00s"], [3599000, "59m 59s"], [3600000, "1h 00m 00s"], [3661000, "1h 01m 01s"]] as const) {
-    now = time; assert.ok(stripTerminalSequences(working.render(120)[0]!).includes(`(${label} • esc to interrupt)`));
+    now = time; assert.ok(stripTerminalSequences(working.render(120)[0]!).includes(`(${label} · esc to interrupt)`));
   }
   now = 0; const first = working.render(100)[0]!;
   assert.match(first, /38;2;128;128;128mW/u);

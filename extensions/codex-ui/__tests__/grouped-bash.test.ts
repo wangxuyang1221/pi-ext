@@ -48,16 +48,16 @@ test("Bash preview hints follow injected bindings and disappear on expansion", (
   let keys: import("@earendil-works/pi-tui").KeyId[] = ["ctrl+shift+o"];
   const h = harness({ getKeybindings: () => ({ getKeys: () => keys }) });
   try {
-    const a = h.row("a"); a.updateResult(result("body\nsecond\nthird\nfourth"));
-    assert.match(plain(a).at(-1)!, /… \+1 lines \(ctrl\+shift\+o to expand\)$/u);
-    assert.doesNotMatch(plain(a).at(-1)!, /expand.*expand/u);
+    const a = h.row("a"); a.updateResult(result("body\nsecond\nthird\nfourth\nfifth\nsixth"));
+    assert.equal(plain(a).at(-3), "    … +2 lines (ctrl+shift+o to expand)");
+    assert.deepEqual(plain(a).slice(-2), ["    fifth", "    sixth"]);
     a.setExpanded(true);
     assert.doesNotMatch(plain(a).join("\n"), /to expand|collapse/u);
-    assert(plain(a).includes("     fourth"));
+    assert(plain(a).includes("    fourth"));
     a.setExpanded(false); keys = ["ctrl+x", "ctrl+y"]; a.invalidate();
-    assert.match(plain(a).at(-1)!, /ctrl\+x\/ctrl\+y to expand/u);
+    assert.equal(plain(a).at(-3), "    … +2 lines (ctrl+x/ctrl+y to expand)");
     keys = []; a.invalidate();
-    assert.equal(plain(a).at(-1), "     … +1 lines");
+    assert.equal(plain(a).at(-3), "    … +2 lines");
   } finally { h.dispose(); }
 });
 
@@ -233,18 +233,16 @@ test("streaming membership and arguments refresh the first row without losing un
   } finally { h.dispose(); }
 });
 
-test("all-success collapse keeps commands visible and expansion preserves raw blank lines", () => {
+test("all-success groups keep every command visible and show interior blank lines in both views", () => {
   const h = harness();
   try {
     h.declare([call("a"), call("b")]); const a = h.row("a"); const b = h.row("b");
     a.updateResult(result("first\n\nthird\n")); b.updateResult(result(""));
+    const expected = ["", "$ Bash(printf a)", "  └ first", "", "    third", "", "$ Bash(printf b)", "  └ (no output)"];
     const collapsed = plain(a);
-    for (const text of ["printf a", "printf b", "first", "third", "… +1 lines"]) assert(collapsed.join("\n").includes(text));
+    assert.deepEqual(collapsed, expected);
     [a, b].forEach(row => row.setExpanded(true));
-    const lines = plain(a);
-    assert.deepEqual(lines.slice(2, 6), ["  ⎿  first", "", "     third", ""]);
-    assert.equal(lines[6], "");
-    assert.equal(lines.at(-1), "  ⎿  (No content)");
+    assert.deepEqual(plain(a), expected);
     [a, b].forEach(row => row.setExpanded(false));
     assert.deepEqual(plain(a), collapsed);
   } finally { h.dispose(); }

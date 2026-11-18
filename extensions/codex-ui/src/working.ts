@@ -27,8 +27,12 @@ export class Working implements Component {
     if (!this.activity.active || safeWidth === 0) return [];
     const elapsed = this.activity.elapsed(), theme = this.getTheme();
     const spinner = theme.fg("accent", FRAMES[Math.floor(elapsed / 80) % FRAMES.length]!);
-    const timing = `(${elapsedLabel(elapsed)}${safeWidth >= 40 ? " • esc to interrupt" : ""})`;
-    const line = ` ${spinner} ${shimmer(elapsed)} ${theme.fg("dim", timing)}`;
+    const hint = safeWidth >= 40;
+    const timing = `(${elapsedLabel(elapsed)}${hint ? " · esc to interrupt" : ""})`;
+    const styled = hint
+      ? theme.fg("dim", `(${elapsedLabel(elapsed)} · `) + theme.fg("muted", "esc") + theme.fg("dim", " to interrupt)")
+      : theme.fg("dim", timing);
+    const line = ` ${spinner} ${shimmer(elapsed)} ${styled}`;
     // The fixed prefix and timing use single-cell glyphs; only narrow layouts need clipping.
     return [11 + timing.length <= safeWidth ? line : fitToWidth(line, safeWidth)];
   }

@@ -43,8 +43,6 @@ const DIFF_INDENT = "    ";
 const ANSI_DEFAULT_FOREGROUND = "\x1b[39m";
 const ANSI_DIM = "\x1b[2m";
 const ANSI_INTENSITY_RESET = "\x1b[22m";
-const ANSI_NAMED_GREEN = "\x1b[32m";
-const ANSI_NAMED_RED = "\x1b[31m";
 
 export interface CodexToolFactories {
   read: typeof createReadToolDefinition;
@@ -236,7 +234,7 @@ export function registerCodexTools(
       const state = context.state as unknown as CodexEditState;
       const path = state.path ?? formatToolPath(context.args.path, context.cwd);
       return renderMutationResult(state, result, result.details, options, path, "Edited", "edit",
-        theme, context, renderCache);
+        theme, context, renderCache, formatExpandKeys(services, context));
     },
   };
   pi.registerTool(editTool);
@@ -274,7 +272,7 @@ export function registerCodexTools(
         state.metrics = undefined;
         return renderMutationResult(state, result, change, options,
           formatToolPath(context.args.path, context.cwd), change.action ?? "Write", "write",
-          theme, context, renderCache);
+          theme, context, renderCache, formatExpandKeys(services, context));
       }
       state.settledTitle = undefined;
       if (state.status === "success") {
@@ -307,7 +305,7 @@ export function registerCodexTools(
       bashGroups.updateCall(member, context, component);
       component.setRenderer((width) => member.group.members[0] === member
         ? renderBashGroup(member.group, context.expanded, theme, width,
-          formatBashExpandKeys(services, context))
+          formatExpandKeys(services, context))
         : [], { linesAlreadyFit: true });
       return component;
     },
@@ -406,6 +404,7 @@ export function renderDisplayDiff(
   if (safeWidth === 0) return [];
 
   const lineNumberWidth = getDisplayLineNumberWidth(lines);
+  const pureAddition = lines.every(line => line.kind === "added" || line.kind === "hunk");
   const language = getLanguageFromPath(path);
   const codeForeground = theme.getFgAnsi("toolDiffContext");
 
@@ -419,9 +418,9 @@ export function renderDisplayDiff(
       : String(line.lineNumber).padStart(lineNumberWidth);
     const gutter = `${ANSI_DIM}${ANSI_DEFAULT_FOREGROUND}${lineNumber}${ANSI_INTENSITY_RESET}`;
     const sign = line.kind === "added"
-      ? namedGreen("+")
+      ? theme.fg("success", pureAddition ? "│" : "+")
       : line.kind === "removed"
-        ? namedRed("-")
+        ? theme.fg("error", "-")
         : " ";
     const highlighted = highlightedLines?.[index] ?? line.highlightedText ?? (language
       ? highlightDiffLine(line.text, language)
@@ -430,9 +429,9 @@ export function renderDisplayDiff(
     const code = line.kind === "removed"
       ? `${ANSI_DIM}${codeWithDefault}${ANSI_INTENSITY_RESET}`
       : codeWithDefault;
-    const content = `${DIFF_INDENT}${gutter} ${sign} ${code}`;
+    const content = fitToWidth(`${DIFF_INDENT}${gutter} ${sign} ${code}`, safeWidth, { ellipsis: "…" });
 
-    if (line.kind === "added") {
+    if (line.kind === "added" && !pureAddition) {
       return paintBackground(content, safeWidth, theme.getBgAnsi("toolSuccessBg"));
     }
     if (line.kind === "removed") {
@@ -491,6 +490,7 @@ function renderMutationResult(
   theme: Theme,
   context: { isError: boolean; lastComponent?: Component },
   renderCache: ToolRenderCache,
+  expandKeys: string,
 ): ResponsiveLinesComponent {
   const setTitle = (title: string | undefined) => {
     if (state.settledTitle !== title) {
@@ -516,15 +516,14 @@ function renderMutationResult(
   if (diff) {
     const stats = state.preparedStats ?? countDiffStats(diff);
     state.preparedStats = stats;
-    title = formatEditTitle(action, path, theme, `(${namedGreen(`+${stats.added}`)} ${namedRed(`-${stats.removed}`)})`);
-    if (diff.length > 0) title = theme.underline(title);
+    title = formatEditTitle(action, path, theme, formatDiffStats(stats, theme));
   }
   setTitle(title);
   if (tool === "write" && !diff) {
     return updateComponent(context.lastComponent, (width) => [fitToWidth(theme.fg("dim", "  Diff unavailable"), width)]);
   }
   return updateComponent(context.lastComponent, (width) => getEditResultLayout(
-    state, result, diff, options, path, theme, false, width,
+    state, result, diff, options, path, theme, false, width, expandKeys,
   ));
 }
 
@@ -544,11 +543,17 @@ function formatPendingMutationTitle(action: string, path: string, theme: Theme, 
   const directory = dirname(path) === "." ? "" : `${dirname(path)}/`;
   const room = width - visibleWidth(prefix);
   const available = room - visibleWidth(filename);
-  const name = theme.fg("text", theme.bold(filename));
+  const name = theme.fg("accent", filename);
   const pathText = available < 2 ? fitToWidth(name, Math.max(0, room))
     : theme.fg("dim", visibleWidth(directory) <= available ? directory
       : `${fitToWidth(directory, available - 1)}/`) + name;
   return fitToWidth(prefix + pathText, width);
+}
+
+function formatTitlePath(path: string, theme: Theme): string {
+  if (!path) return "(unknown path)";
+  const directory = dirname(path) === "." ? "" : `${dirname(path)}/`;
+  return theme.fg("dim", directory) + theme.fg("accent", basename(path));
 }
 
 function formatMutationFailureTitle(action: string, path: string, theme: Theme, status: ToolFailureStatus = "failed"): string {
@@ -564,7 +569,7 @@ function formatEditTitle(
   const parts = [
     toolStatusMarker(theme, "completed"),
     theme.bold(action),
-    path || "(unknown path)",
+    formatTitlePath(path, theme),
   ];
   if (suffix) parts.push(suffix);
   return parts.join(" ");
@@ -614,12 +619,13 @@ function getEditResultLayout(
   theme: Theme,
   isError: boolean,
   width: number,
+  expandKeys: string,
 ): string[] {
   const cache = state.cache!;
   const syntaxFingerprint = getEditSyntaxFingerprint(theme);
   const key = ["edit-layout", cache.identity(diffLines ?? result.content), width, options.expanded,
-    options.isPartial, isError, path, cache.identity(theme), getEditResultThemeFingerprint(theme), syntaxFingerprint].join("\0");
-  return cache.lines(key, () => renderEditResult(result, diffLines, options, path, theme, isError, width, cache, syntaxFingerprint));
+    options.isPartial, isError, path, cache.identity(theme), getEditResultThemeFingerprint(theme), syntaxFingerprint, expandKeys].join("\0");
+  return cache.lines(key, () => renderEditResult(result, diffLines, options, path, theme, isError, width, cache, syntaxFingerprint, expandKeys));
 }
 
 function renderEditResult(
@@ -632,6 +638,7 @@ function renderEditResult(
   width: number,
   cache: RenderCacheScope,
   syntaxFingerprint: string,
+  expandKeys: string,
 ): string[] {
   if (options.isPartial) {
     return [fitToWidth(theme.fg("warning", "  … Editing"), width)];
@@ -654,16 +661,21 @@ function renderEditResult(
   const lines = renderDisplayDiff(visible, theme, width, path, highlighted);
   const remaining = diffLines.length - visible.length;
   if (remaining > 0) {
-    lines.push(renderDiffTruncationFooter(remaining, theme, width));
+    lines.push(renderDiffTruncationFooter(remaining, theme, width, expandKeys));
   }
   return lines;
 }
 
-function renderDiffTruncationFooter(remaining: number, theme: Theme, width: number): string {
-  return fitToWidth(theme.fg("dim", `  │     … ${remaining} more lines`), width);
+function renderDiffTruncationFooter(remaining: number, theme: Theme, width: number, expandKeys: string): string {
+  return fitToWidth(theme.fg("dim", `${DIFF_INDENT}… +${remaining} lines${expandKeys ? ` (${expandKeys} to expand)` : ""}`), width);
 }
 
-function formatBashExpandKeys(services: CodexToolRenderServices, context: object): string {
+function formatDiffStats(stats: { added: number; removed: number }, theme: Theme): string {
+  const parts = [stats.added ? theme.fg("success", `+${stats.added}`) : "", stats.removed ? theme.fg("error", `-${stats.removed}`) : ""].filter(Boolean);
+  return parts.length ? `${theme.fg("dim", "(")}${parts.join(" ")}${theme.fg("dim", ")")}` : "";
+}
+
+function formatExpandKeys(services: CodexToolRenderServices, context: object): string {
   const hints = context as { keyText?: typeof keyText };
   if (hints.keyText) return hints.keyText("app.tools.expand");
   const bindings = services.getKeybindings?.();
@@ -705,14 +717,6 @@ function getPreparedEditDiff(
   state.preparedDiff = prepared;
   state.preparedStats = countDiffStats(prepared);
   return prepared;
-}
-
-function namedGreen(text: string): string {
-  return `${ANSI_NAMED_GREEN}${text}${ANSI_DEFAULT_FOREGROUND}`;
-}
-
-function namedRed(text: string): string {
-  return `${ANSI_NAMED_RED}${text}${ANSI_DEFAULT_FOREGROUND}`;
 }
 
 function countDiffStats(lines: readonly DisplayDiffLine[]): { added: number; removed: number } {
