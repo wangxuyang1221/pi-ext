@@ -4,7 +4,7 @@
 
 ## Sub-features
 
-- `ui-thinking-stream`：流式思考完整显示。正文首行是普通段落时 `Thinking` 标题与正文首行相邻；首行像 Markdown 块起始（列表、`#`、代码块、表格、Setext 下划线等）时保留一行空引用行。该判断按文本规则进行，以 `#tag` 开头的段落也会留空行。
+- `ui-thinking-stream`：流式思考完整显示。`Thinking` 标题后是否保留空引用行由文本规则判断：普通段落开头通常紧接标题，列表、标题、代码块等块开头保留空行。规则与例外见 [reasoning-inline.test.ts](../../../../extensions/codex-ui/__tests__/reasoning-inline.test.ts)。
 - `ui-thinking-collapse`：Ctrl+T 保留隐藏选择。
 - `ui-thinking-resume`：恢复仍采用相同思考规则。
 - `ui-title`：窗口标题展示运行动画。

@@ -415,7 +415,7 @@
           },
           {
             "id": "ui-read-group",
-            "description": "连续 Read 折叠为每文件一行标题"
+            "description": "连续 Read 分组，折叠时隐藏内容"
           },
           {
             "id": "ui-bash-preview",
