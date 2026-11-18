@@ -345,7 +345,7 @@
         "behaviors": [
           {
             "id": "ui-header",
-            "description": "启动使用 Pi wordmark"
+            "description": "启动显示圆角 header 与模型、目录"
           },
           {
             "id": "ui-composer",
@@ -353,7 +353,7 @@
           },
           {
             "id": "ui-status",
-            "description": "footer 展示模型与目录状态"
+            "description": "footer 展示模型、目录与上下文状态"
           },
           {
             "id": "ui-theme",
@@ -415,7 +415,7 @@
           },
           {
             "id": "ui-read-group",
-            "description": "连续 Read 分组预览"
+            "description": "连续 Read 合并为每文件一行标题"
           },
           {
             "id": "ui-bash-preview",
@@ -439,11 +439,11 @@
           },
           {
             "id": "ui-error",
-            "description": "失败标题与正文正确"
+            "description": "失败状态写入标题，正文保留输出"
           },
           {
             "id": "ui-interrupted",
-            "description": "可靠中断用中断状态"
+            "description": "中断与超时用警告色状态"
           }
         ]
       },
