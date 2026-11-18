@@ -8,6 +8,9 @@ import struct
 import termios
 import time
 from pathlib import Path
+from wcwidth import wcswidth
+
+from pty_observations import presented_cursor_frame
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -84,14 +87,28 @@ def run(driver):
     assert status_label in view()
     advances("ten-frame spinner and shimmer during provider streaming")
     capture("streaming")
-    send("draft-中文-abc")
+    draft = "draft-中文-abc"
+    send(draft)
     send("\x1b[D\x1b[D")
-    cursor = (screen.cursor.x, screen.cursor.y)
+
+    def cursor_frame():
+        return presented_cursor_frame(driver["raw"], fullscreen=driver["args"].mode == "fullscreen")
+
+    wait(lambda: cursor_frame() is not None, "cursor restore after Left keys", seconds=2)
+    before_frame = cursor_frame()
+    cursor_x = screen.cursor.x
+    draft_row = screen.display[screen.cursor.y]
+    assert draft in draft_row, view()
+    prefix = draft_row[:draft_row.index(draft)] + draft[:-2]
+    assert cursor_x == wcswidth(prefix), view()
+
     settle(0.6)
-    assert screen.cursor.x == cursor[0] and "draft-中文-abc" in screen.display[screen.cursor.y], view()
+    wait(lambda: (frame := cursor_frame()) is not None and frame > before_frame,
+         "cursor restore after a newer frame", seconds=2)
+    assert working() and screen.cursor.x == cursor_x and draft in screen.display[screen.cursor.y], view()
     send("X\x1b[17~")
     assert events("editor")[-1] == "draft-中文-aXbc", events("editor")
-    checks.append("draft and hardware cursor retained during real streaming and animation")
+    checks.append("draft and hardware cursor retained across presented frames during streaming")
     send("\x1b[18~")
     wait(lambda: "WORKING OVERLAY" in view(), "real overlay owns focus")
     settle(0.7)
