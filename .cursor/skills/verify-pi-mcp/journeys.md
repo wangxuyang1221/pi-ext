@@ -1,6 +1,6 @@
 # MCP acceptance journeys
 
-这些入口使用仓库安装的真实 Pi CLI、生产 `extensions/mcp/dist/index.js`、原生终端和本地 MCP 服务。只在 provider 边界生成固定响应。运行前完成 [共享准备与隔离检查](../verify-pi-ext/README.md)，确认构建对应当前源码。所有 scratch、HOME、配置和 session 都位于仓库 `.tmp/`，不会读取用户凭据。各场景独立创建环境，不占共享 helper 的验证锁。
+下列七个固定入口覆盖生产 CLI、manager 和 SDK。前五个入口使用仓库安装的 Pi CLI、生产 `extensions/mcp/dist/index.js`、原生终端和本地 MCP 服务，只在 provider 边界生成固定响应。运行前完成 [共享准备与隔离检查](../verify-pi-ext/README.md)，确认构建对应当前源码。所有 scratch、HOME、配置和 session 都位于仓库 `.tmp/`，不会读取用户凭据。各场景独立创建环境，不占共享 helper 的验证锁。
 
 ## Commands
 
@@ -16,7 +16,7 @@ pnpm exec node extensions/mcp/__tests__/fixtures/verification/recovery.mjs
 pnpm exec node extensions/mcp/__tests__/fixtures/verification/native-coexistence.mjs
 ```
 
-前五条是 CLI/PTY、文件/session 和真实本地协议证据。`recovery.mjs` 是生产 manager 加真实 HTTP 协议证据，使用真实时钟和 sleep，只固定 jitter 的随机输入。它不证明 TUI 呈现。progress 的 silent、unknown、stopped 分支仍需下面的真实 SSE 协议测试。
+前五条是 CLI/PTY、文件/session 和真实本地协议证据。`recovery.mjs` 是生产 manager 加真实 HTTP 协议证据，使用真实时钟和 sleep，只固定 jitter 的随机输入。它不证明 TUI 呈现。`native-coexistence.mjs` 用真实 Pi SDK 和本地 MCP 协议验证恢复及 reload，不证明 CLI 菜单行为。progress 的 silent、unknown、stopped 分支仍需下面的真实 SSE 协议测试。
 
 ```bash
 pnpm test extensions/mcp/__tests__/transport-fixtures.test.ts extensions/mcp/__tests__/progress-transport.test.ts extensions/mcp/__tests__/schema.test.ts extensions/mcp/__tests__/diagnostics.test.ts extensions/mcp/__tests__/history-renderers.test.ts
@@ -71,6 +71,18 @@ HTTP 第一次调用发送后断流，ledger 中只能有一次 tools/call。手
 总截止场景在每次 initialize 和 tools/list 前各延迟 100 ms，第一次 list 返回 503，重试后第二次 list 挂起。整个 connect 使用同一个 1500 ms 预算，必须在期限附近失败并取消挂起 list，不能为每个阶段重置预算。
 
 覆盖 `mcp-offline`、`mcp-retry`、`mcp-deadline`。
+
+## Startup UI source smoke
+
+完成 Launch/Doctor 后，在原版和补丁版的独立树分别运行。这个补验显式加载 MCP 与 codex-ui 的源码入口，在真实 CLI/PTY 中用本地 stdio 服务驱动。它补足七个固定命令之外的启动界面覆盖，不是 dist 或打包验证。
+
+```bash
+mkdir -p .tmp
+MCP_STARTUP_LOG="$(mktemp "$PWD/.tmp/mcp-startup-source-XXXXXX")"
+conda run --no-capture-output -n codex-py312 python extensions/mcp/__tests__/ui-host-smoke.py > "$MCP_STARTUP_LOG" 2>&1
+```
+
+覆盖 `mcp-startup-ui`：单服务进度、多服务计数、连接失败提示、Escape 取消后用 `/mcp reconnect` 恢复；也核对启动结束后进度提示消失。要求五条场景记录（默认主题四条，light 一条）、退出码 0，驱动断言仅允许本次宿主及其记录的子进程全部退出后返回成功。保留 Doctor、命令、退出码及日志；失败时保留错误，不把源码 smoke 通过写成发布包或物理终端验证。
 
 ## Evidence and cleanup
 

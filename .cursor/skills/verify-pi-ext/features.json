@@ -272,6 +272,10 @@
         "file": "status.md",
         "behaviors": [
           {
+            "id": "mcp-startup-ui",
+            "description": "启动显示连接进度，可取消、报告失败并重连"
+          },
+          {
             "id": "mcp-inventory",
             "description": "状态清单持久显示 server 状态"
           },

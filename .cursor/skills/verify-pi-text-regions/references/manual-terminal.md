@@ -4,41 +4,54 @@
 
 ## Isolated launch
 
-先执行主 skill 的 Launch/Doctor，恢复本次 RUN。以下创建本次专用目录，不复用用户配置。普通模式先运行，结束清理后用新的 `manual-fullscreen` 重复。
+先执行主 skill 的 Launch，恢复本次 RUN。从当前 checkout 根目录开始，按 [Pi 1.5.2 profile](../features/pi152.md#prepare-and-identity) 分别准备并构建原版和补丁版独立运行树。以下每次只选择一个刚通过 Doctor 的宿主；使用同一棵树的 CLI、示例、夹具和构建产物，不使用全局 Pi。未实际运行的宿主或物理终端分支仍记为 `unverified`。
 
 ```bash
-MANUAL="$RUN/manual-regular"
-export MANUAL
-mkdir -p "$MANUAL/runtime/home" "$MANUAL/runtime/agent" "$MANUAL/runtime/workspace" "$MANUAL/runtime/tmp" "$MANUAL/artifacts"
-node --input-type=module - <<'JS'
+HOST_KIND=patched                 # 原版改为 original
+HOST_ROOT=/absolute/path/to/this-run/host-tree
+MODE=regular                     # 全屏改为 fullscreen
+JOURNEY=regions                  # 生产 Working 改为 working
+DOCTOR=.cursor/skills/verify-pi-text-regions/scripts/doctor.mjs
+unset PI_CLI
+MANUAL="$(mktemp -d "${RUN:?先恢复本次 RUN 的绝对路径}/manual-$JOURNEY-$HOST_KIND-$MODE-XXXXXX")" &&
+  export MANUAL &&
+  mkdir -p "$MANUAL/runtime/"{home,agent,workspace,tmp,cache,config,data,state,pnpm} "$MANUAL/artifacts" &&
+  node --input-type=module - <<'JS' &&
 import { writeFileSync } from 'node:fs';
 writeFileSync(`${process.env.MANUAL}/runtime/agent/settings.json`, JSON.stringify({quietStartup:true, fullscreenCopyOnSelect:false, cacheWarming:'off', compaction:{enabled:false}, retry:{enabled:false}}));
 JS
-REPO="$PWD"
-export REPO
+  REPO="$(cd "$HOST_ROOT" && pwd -P)" &&
+  env -i PATH="$PATH" HOME="$MANUAL/runtime/home" TMPDIR="$MANUAL/runtime/tmp" \
+    XDG_CACHE_HOME="$MANUAL/runtime/cache" XDG_CONFIG_HOME="$MANUAL/runtime/config" \
+    XDG_DATA_HOME="$MANUAL/runtime/data" XDG_STATE_HOME="$MANUAL/runtime/state" \
+    PNPM_HOME="$MANUAL/runtime/pnpm" node "$DOCTOR" "--$HOST_KIND" --project "$REPO" \
+    --extension "$REPO/extensions/codex-ui/dist/index.js" > "$MANUAL/doctor.json" &&
+  PI_CLI="$(node -e 'const p=require(process.argv[1]); if(!p.ok || !p.cli) process.exit(1); console.log(p.cli)' "$MANUAL/doctor.json")" &&
+  test -x "$PI_CLI" && export REPO PI_CLI MODE
 ```
 
-在可交互的真实终端窗口执行下列命令。记录该窗口，不用后台管道代替物理终端。`sh` 记录自身 PID 后 exec 实际 CLI；它可能共享终端 shell 的进程组，人工清理只能针对这个已核实的 PID，不能 kill 整个终端进程组。
+以上命令成功后，选择与 JOURNEY 对应的一段，在可交互的真实终端窗口执行。记录该窗口，不用后台管道代替物理终端。`sh` 记录自身 PID 后 exec 实际 CLI；它可能共享终端 shell 的进程组，人工清理只能针对这个已核实的 PID，不能 kill 整个终端进程组。
 
 ```bash
-(cd "$MANUAL/runtime/workspace" && env -i PATH="$PATH" LANG="${LANG:-en_US.UTF-8}" TERM="${TERM:-xterm-256color}" COLORTERM=truecolor HOME="$MANUAL/runtime/home" TMPDIR="$MANUAL/runtime/tmp" PI_CODING_AGENT_DIR="$MANUAL/runtime/agent" PI_OFFLINE=1 PI_SKIP_VERSION_CHECK=1 PI_TELEMETRY=0 LOCAL_REFRESH_EVIDENCE="$MANUAL" MANUAL="$MANUAL" REPO="$REPO" sh -c 'echo $$ > "$MANUAL/pid"; exec "$REPO/node_modules/.bin/pi" --no-extensions --no-skills --no-prompt-templates --no-themes -e "$REPO/examples/text-region.ts" -e "$REPO/test-support/fixtures/local-refresh/provider.ts" --provider faux --model faux-1 --tui-mode regular')
+(test -x "${PI_CLI:-}" && cd "$MANUAL/runtime/workspace" && env -i PATH="$PATH" LANG="${LANG:-en_US.UTF-8}" TERM="${TERM:-xterm-256color}" TERM_PROGRAM="${TERM_PROGRAM:-}" COLORTERM=truecolor HOME="$MANUAL/runtime/home" TMPDIR="$MANUAL/runtime/tmp" XDG_CACHE_HOME="$MANUAL/runtime/cache" XDG_CONFIG_HOME="$MANUAL/runtime/config" XDG_DATA_HOME="$MANUAL/runtime/data" XDG_STATE_HOME="$MANUAL/runtime/state" PI_CODING_AGENT_DIR="$MANUAL/runtime/agent" PI_OFFLINE=1 PI_SKIP_VERSION_CHECK=1 PI_TELEMETRY=0 LOCAL_REFRESH_EVIDENCE="$MANUAL" MANUAL="$MANUAL" REPO="$REPO" PI_CLI="$PI_CLI" MODE="$MODE" sh -c 'echo $$ > "$MANUAL/pid"; exec "$PI_CLI" --no-extensions --no-skills --no-context-files --no-prompt-templates --no-themes -e "$REPO/examples/text-region.ts" -e "$REPO/test-support/fixtures/local-refresh/provider.ts" --provider faux --model faux-1 --tui-mode "$MODE"')
 ```
 
-全屏把最后 `regular` 改为 `fullscreen`；两次分别记录准确命令和退出码。图片验收在实际支持 Kitty 的终端，显式保留其已知 `TERM_PROGRAM`，不要在不支持的终端假装支持。原版改成本次安装所得 ORIGINAL_CLI，记录 `normal fallback`。生产 Working 的物理外观另用新的 `MANUAL="$RUN/manual-working-regular"`，重跑上方 mkdir 与 settings 初始化，然后执行下面准备命令。
+每个宿主和模式都用新的 MANUAL 目录，分别记录 Doctor、准确命令和退出码。原版记录 `normal fallback`，不能作为补丁能力的证据。图片验收在实际支持 Kitty 的终端，显式保留其已知 `TERM_PROGRAM`，不要在不支持的终端假装支持。生产 Working 的物理外观将 JOURNEY 设置为 working 重新初始化唯一目录和 Doctor，然后在同一 shell 执行以下准备及启动命令。
 
 ```bash
-mkdir -p "$MANUAL/runtime/agent/themes"
-cp themes/codex-pi.json "$MANUAL/runtime/agent/themes/codex-pi.json"
-node --input-type=module - <<'JS'
+test -n "${MANUAL:-}" && test -x "${PI_CLI:-}" &&
+  mkdir -p "$MANUAL/runtime/agent/themes" &&
+  cp "$REPO/themes/codex-pi.json" "$MANUAL/runtime/agent/themes/codex-pi.json" &&
+  node --input-type=module - <<'JS' &&
 import {readFileSync,writeFileSync} from 'node:fs';
 const file=`${process.env.MANUAL}/runtime/agent/settings.json`;
 writeFileSync(file,JSON.stringify({...JSON.parse(readFileSync(file)),theme:'codex-pi'}));
 writeFileSync(`${process.env.MANUAL}/plan.json`,JSON.stringify({kind:'stream',id:'manual-stream'}));
 JS
-(cd "$MANUAL/runtime/workspace" && env -i PATH="$PATH" LANG="${LANG:-en_US.UTF-8}" TERM="${TERM:-xterm-256color}" COLORTERM=truecolor HOME="$MANUAL/runtime/home" TMPDIR="$MANUAL/runtime/tmp" PI_CODING_AGENT_DIR="$MANUAL/runtime/agent" PI_OFFLINE=1 PI_SKIP_VERSION_CHECK=1 PI_TELEMETRY=0 LOCAL_REFRESH_EVIDENCE="$MANUAL" MANUAL="$MANUAL" REPO="$REPO" sh -c 'echo $$ > "$MANUAL/pid"; exec "$REPO/node_modules/.bin/pi" --no-extensions --no-skills --no-context-files --no-prompt-templates -e "$REPO/extensions/codex-ui/dist/index.js" -e "$REPO/test-support/fixtures/local-refresh/working-provider.ts" --provider faux --model faux-1 --tui-mode regular')
+(test -x "${PI_CLI:-}" && cd "$MANUAL/runtime/workspace" && env -i PATH="$PATH" LANG="${LANG:-en_US.UTF-8}" TERM="${TERM:-xterm-256color}" TERM_PROGRAM="${TERM_PROGRAM:-}" COLORTERM=truecolor HOME="$MANUAL/runtime/home" TMPDIR="$MANUAL/runtime/tmp" XDG_CACHE_HOME="$MANUAL/runtime/cache" XDG_CONFIG_HOME="$MANUAL/runtime/config" XDG_DATA_HOME="$MANUAL/runtime/data" XDG_STATE_HOME="$MANUAL/runtime/state" PI_CODING_AGENT_DIR="$MANUAL/runtime/agent" PI_OFFLINE=1 PI_SKIP_VERSION_CHECK=1 PI_TELEMETRY=0 LOCAL_REFRESH_EVIDENCE="$MANUAL" MANUAL="$MANUAL" REPO="$REPO" PI_CLI="$PI_CLI" MODE="$MODE" sh -c 'echo $$ > "$MANUAL/pid"; exec "$PI_CLI" --no-extensions --no-skills --no-context-files --no-prompt-templates -e "$REPO/extensions/codex-ui/dist/index.js" -e "$REPO/test-support/fixtures/local-refresh/working-provider.ts" --provider faux --model faux-1 --tui-mode "$MODE"')
 ```
 
-提交 `Generate visible thinking and text`，观察生产 spinner/反光/计时/速率与 状态行，再 Esc 等待真正结束、`/quit`。全屏另用新目录，将最后模式改成 fullscreen。此处只验证物理显示，完整工具/retry/compaction 仍走 Working 自动旅程。
+提交 `Generate visible thinking and text`，观察生产 spinner/反光/计时/速率与 状态行，再 Esc 等待真正结束、`/quit`。全屏另用新目录，将 MODE 改成 fullscreen。此处只验证物理显示，完整工具/retry/compaction 仍走 Working 自动旅程。
 
 ## Actions and evidence
 

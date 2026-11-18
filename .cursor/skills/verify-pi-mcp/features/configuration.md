@@ -16,7 +16,7 @@
 
 ## Driving it with Pi PTY and host fixtures
 
-完成 [Launch 与 Doctor](../SKILL.md)，运行 [固定旅程的命令](../journeys.md#commands)，选择 `configuration`。具体动作和通过条件见 [对应旅程](../journeys.md#configuration)。每个 ID 分别记录实际覆盖结果、证据层级和文件路径；需要完整验收时运行固定旅程的全部六条命令及列出的定向协议测试。
+完成 [Launch 与 Doctor](../SKILL.md)，运行 [固定旅程的命令](../journeys.md#commands)，选择 `configuration`。具体动作和通过条件见 [对应旅程](../journeys.md#configuration)。每个 ID 分别记录实际覆盖结果、证据层级和文件路径；需要完整验收时运行固定旅程的全部命令（含原生 MCP 共存）及列出的定向协议测试。
 
 `configuration` 对 `mcp-trust` 只覆盖未信任项目拒绝 init 和不执行项目命令；未信任项目仍连接显式/全局配置的分支需要另行留证，不能由后续受信任连接场景推断。
 

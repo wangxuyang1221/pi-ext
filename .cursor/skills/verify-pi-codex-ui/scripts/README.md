@@ -24,7 +24,8 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 
 | Feature IDs | Required observations |
 | --- | --- |
-| `ui-header`, `ui-composer`, `ui-resize` | 启动 Pi header；输入时逐列检查整行背景；40/80/140 列；真实设置菜单选择 light 与 codex-pi；fork/resume 后再检查背景。保存 pyte 文本与颜色区间、原始 ANSI。 |
+| `ui-header` | 从启动快照人工核对 Pi 标识、实际版本、模型和目录；PTY 驱动保存画面但不直接断言 header。组件断言见 [components.test.ts](../../../../extensions/codex-ui/__tests__/components.test.ts)。 |
+| `ui-composer`, `ui-resize` | 输入时逐列检查整行背景；40/80/140 列；真实设置菜单选择 light 与 codex-pi；fork/resume 后再检查背景。保存 pyte 文本与颜色区间、原始 ANSI。 |
 | `ui-status` | 加载生产 Fast 扩展，离线支持模型显示目录、模型和 fast 组合，关闭 Fast 后对应状态消失。窄屏另存画面。 |
 | `ui-theme` | 原生 `/settings` 落盘主题；`/reload`、`/new` 后检查保存值，原生 `/fork` 与 `/resume` 后另检查 composer 颜色。fork 的多行预填须 Ctrl+C 清除。 |
 | `ui-user-markdown`, `ui-reply-markdown` | bracketed paste 输入标题、嵌套列表、表格、代码围栏、引用、链接；核对真正模型请求和持久 session 原文，另检查 TUI 内容。`/copy` 的系统剪贴板部分须按下节人工补验。 |
