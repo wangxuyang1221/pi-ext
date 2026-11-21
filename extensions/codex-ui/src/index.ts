@@ -5,6 +5,7 @@ import {
   type ExtensionContext,
   type ExtensionUIContext,
   type KeybindingsManager,
+  type Theme,
 } from "@earendil-works/pi-coding-agent";
 
 import { CodexEditor, CodexFooter, CodexHeader } from "./components.js";
@@ -16,6 +17,25 @@ import { createContextUsageReader } from "./context-usage.js";
 import { copyLastReply } from "./reply-copy.js";
 
 export const CODEX_THEME_NAME = "codex-pi";
+
+function applyProfileTheme(ctx: ExtensionContext, notifyUnavailable: boolean): boolean {
+  if (ctx.ui.theme.name === CODEX_THEME_NAME) return true;
+  const profileTheme = ctx.ui.getTheme(CODEX_THEME_NAME);
+  if (!profileTheme) {
+    if (notifyUnavailable) {
+      ctx.ui.notify(`Codex profile theme unavailable: ${CODEX_THEME_NAME}`, "warning");
+    }
+    return false;
+  }
+  const themeResult = ctx.ui.setTheme(profileTheme);
+  if (!themeResult.success) {
+    if (notifyUnavailable) {
+      ctx.ui.notify(`Codex profile theme unavailable: ${themeResult.error ?? "unknown error"}`, "warning");
+    }
+    return false;
+  }
+  return true;
+}
 
 const BLOCK_START = /^(?:\s*$| {4}|\t| {0,3}(?:[#>|<]|```|~~~|[-*+](?:\s|$)|\d{1,9}[.)](?:\s|$)|(?:[-*_]\s*){3,}$|=+\s*$|-+\s*$))/u;
 const UNDERLINE = /^ {0,3}(?:=+\s*|[-:|\s]*-[-:|\s]*)$/u;
@@ -99,19 +119,78 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
     return markdown;
   });
 
-  pi.on("session_start", (_event, ctx) => {
+  // Pi 1.5.2 calls setRegisteredThemes() and then themeController.applyFromSettings()
+  // after session_start and all resources_discover handlers on resume/new/fork/reload,
+  // resetting in-memory extension themes back to settings. Detecting the host theme
+  // registry refresh distinguishes host applyFromSettings() from earlier sibling theme
+  // overrides and unrelated invalidations without fixed timeouts or editor coupling.
+  let pendingThemeRestore: {
+    ctx: ExtensionContext;
+    sessionToken: number;
+    registeredBefore: Theme;
+    disarmHandle?: ReturnType<typeof setImmediate>;
+  } | undefined;
+  let sessionToken = 0;
+
+  const clearPendingThemeRestore = (): void => {
+    if (pendingThemeRestore?.disarmHandle !== undefined) {
+      clearImmediate(pendingThemeRestore.disarmHandle);
+    }
+    pendingThemeRestore = undefined;
+  };
+
+  const hasHostRefreshedThemes = (pending: NonNullable<typeof pendingThemeRestore>): boolean => (
+    pending.ctx.ui.getTheme(CODEX_THEME_NAME) !== pending.registeredBefore
+  );
+
+  const schedulePostRebindDisarm = (targetToken: number): void => {
+    const pending = pendingThemeRestore;
+    if (
+      !pending
+      || pending.sessionToken !== targetToken
+      || sessionToken !== targetToken
+      || pending.disarmHandle !== undefined
+      || !hasHostRefreshedThemes(pending)
+    ) {
+      return;
+    }
+    if (pending.ctx.ui.theme.name !== CODEX_THEME_NAME) {
+      clearPendingThemeRestore();
+      return;
+    }
+    pending.disarmHandle = setImmediate(() => {
+      if (pendingThemeRestore?.sessionToken === targetToken) {
+        clearPendingThemeRestore();
+      }
+    });
+    pending.disarmHandle.unref?.();
+  };
+
+  pi.on("session_shutdown", () => {
+    sessionToken++;
+    clearPendingThemeRestore();
+  });
+
+  pi.on("session_start", (event, ctx) => {
+    clearPendingThemeRestore();
+    sessionToken++;
     if (ctx.mode !== "tui") return;
 
+    const currentSessionToken = sessionToken;
     currentModelId = ctx.model?.id;
-    if (ctx.ui.theme.name !== CODEX_THEME_NAME) {
-      const profileTheme = ctx.ui.getTheme(CODEX_THEME_NAME);
-      if (!profileTheme) {
-        ctx.ui.notify(`Codex profile theme unavailable: ${CODEX_THEME_NAME}`, "warning");
-      } else {
-        const themeResult = ctx.ui.setTheme(profileTheme);
-        if (!themeResult.success) {
-          ctx.ui.notify(`Codex profile theme unavailable: ${themeResult.error ?? "unknown error"}`, "warning");
-        }
+    const themeApplied = applyProfileTheme(ctx, true);
+    if (event.reason !== "startup" && themeApplied) {
+      const registeredBefore = ctx.ui.getTheme(CODEX_THEME_NAME);
+      if (registeredBefore && ctx.ui.getTheme(CODEX_THEME_NAME) === registeredBefore) {
+        pendingThemeRestore = {
+          ctx,
+          sessionToken: currentSessionToken,
+          registeredBefore,
+        };
+        ctx.ui.addAutocompleteProvider?.((provider) => {
+          schedulePostRebindDisarm(currentSessionToken);
+          return provider;
+        });
       }
     }
 
@@ -150,7 +229,42 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
         footer.invalidate();
         tui.requestRender();
       }));
-      return working ? working.bind(footer, tui) : footer;
+      const trackedFooter = {
+        render: (width: number) => footer.render(width),
+        invalidate: () => {
+          footer.invalidate();
+          const pending = pendingThemeRestore;
+          if (
+            !pending
+            || pending.sessionToken !== currentSessionToken
+            || sessionToken !== currentSessionToken
+          ) {
+            return;
+          }
+          const refreshed = hasHostRefreshedThemes(pending);
+          if (!refreshed) {
+            if (pending.ctx.ui.theme.name !== CODEX_THEME_NAME) {
+              clearPendingThemeRestore();
+            }
+            return;
+          }
+          const targetCtx = pending.ctx;
+          clearPendingThemeRestore();
+          if (targetCtx.ui.theme.name === CODEX_THEME_NAME) return;
+          queueMicrotask(() => {
+            if (sessionToken !== currentSessionToken) return;
+            applyProfileTheme(targetCtx, false);
+          });
+        },
+        dispose: () => {
+          if (sessionToken === currentSessionToken) {
+            sessionToken++;
+            clearPendingThemeRestore();
+          }
+          footer.dispose();
+        },
+      };
+      return working ? working.bind(trackedFooter, tui) : trackedFooter;
     });
 
     installTitleSpinner(ctx);

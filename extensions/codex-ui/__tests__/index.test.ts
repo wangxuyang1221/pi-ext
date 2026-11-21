@@ -416,3 +416,223 @@ test("history rebuild shares one context entry scan across tools and codemode an
   assert.deepEqual(row2.render(80), []);
   emit("session_shutdown");
 });
+
+function createThemeLifecycleHarness(initialThemeName: string) {
+  const handlers = new Map<string, Array<(...args: any[]) => unknown>>();
+  const pi = {
+    registerTool() {},
+    registerToolRenderer() {},
+    registerCommand() {},
+    registerMarkdownTransformer() {},
+    getThinkingLevel: () => "high",
+    getSessionName: () => undefined,
+    on(event: string, handler: (...args: any[]) => unknown) {
+      const list = handlers.get(event) ?? [];
+      list.push(handler);
+      handlers.set(event, list);
+    },
+  } as unknown as ExtensionAPI;
+  codexUiExtension(pi);
+
+  let registeredProfileTheme = createTheme(CODEX_THEME_NAME);
+  let activeTheme = initialThemeName === CODEX_THEME_NAME ? registeredProfileTheme : createTheme(initialThemeName);
+  const setThemeCalls: Theme[] = [];
+  const autocompleteWrappers: Array<(provider: Record<string, unknown>) => Record<string, unknown>> = [];
+  let mountedFooter: { render(width: number): string[]; invalidate(): void; dispose?(): void } | undefined;
+
+  const setupAutocompleteProvider = () => {
+    let provider: Record<string, unknown> = {};
+    for (const wrap of autocompleteWrappers) {
+      provider = wrap(provider);
+    }
+  };
+
+  const ui = {
+    get theme() { return activeTheme; },
+    setStatus() {},
+    getTheme(name: string) { return name === CODEX_THEME_NAME ? registeredProfileTheme : undefined; },
+    setTheme(value: Theme) {
+      setThemeCalls.push(value);
+      activeTheme = value;
+      return { success: true };
+    },
+    setHeader() {},
+    setEditorComponent() {},
+    addAutocompleteProvider(wrap: (provider: Record<string, unknown>) => Record<string, unknown>) {
+      autocompleteWrappers.push(wrap);
+      setupAutocompleteProvider();
+    },
+    setFooter(factory: (tui: never, theme: Theme, footerData: never) => {
+      render(width: number): string[];
+      invalidate(): void;
+      dispose?(): void;
+    }) {
+      mountedFooter = factory(
+        { requestRender() {} } as never,
+        activeTheme,
+        {
+          getGitBranch: () => null,
+          getExtensionStatuses: () => new Map(),
+          onBranchChange: () => () => {},
+        } as never,
+      );
+    },
+    setTitle() {},
+    setWorkingVisible() {},
+    setWorkingIndicator() {},
+    setWidget() {},
+    notify() {},
+  };
+
+  const ctx = {
+    mode: "tui",
+    cwd: "/repo/app",
+    model: { id: "gpt-test" },
+    sessionManager: SessionManager.inMemory("/repo/app"),
+    getContextUsage: () => undefined,
+    isIdle: () => true,
+    ui,
+  };
+
+  const emit = (type: string, event: Record<string, unknown> = {}) => {
+    const payload = { type, ...event };
+    for (const handler of handlers.get(type) ?? []) handler(payload, ctx);
+  };
+
+  const refreshRegisteredThemes = () => {
+    registeredProfileTheme = createTheme(CODEX_THEME_NAME);
+    return registeredProfileTheme;
+  };
+
+  return {
+    get profileTheme() { return registeredProfileTheme; },
+    setThemeCalls,
+    get activeTheme() { return activeTheme; },
+    set activeTheme(theme: Theme) { activeTheme = theme; },
+    get footer() { return mountedFooter; },
+    setupAutocompleteProvider,
+    refreshRegisteredThemes,
+    emit,
+  };
+}
+
+test("restores codex-pi theme once after host post-rebind reset on resume, new, fork, and reload", async () => {
+  for (const reason of ["resume", "new", "fork", "reload"] as const) {
+    const harness = createThemeLifecycleHarness(CODEX_THEME_NAME);
+    harness.emit("session_start", { reason });
+    assert.equal(harness.setThemeCalls.length, 0, `${reason}: active codex-pi should not be re-set during session_start`);
+
+    // Unrelated invalidation and sibling autocomplete registration during discovery must not disarm restore.
+    harness.footer?.invalidate();
+    harness.setupAutocompleteProvider();
+
+    // Simulate Pi 1.5.2 setRegisteredThemes() -> setupAutocompleteProvider() / applyFromSettings().
+    const freshProfileTheme = harness.refreshRegisteredThemes();
+    if (reason !== "reload") {
+      harness.setupAutocompleteProvider();
+      await Promise.resolve();
+    }
+    harness.activeTheme = createTheme("dark");
+    harness.footer?.invalidate();
+    harness.footer?.invalidate();
+    if (reason === "reload") {
+      harness.setupAutocompleteProvider();
+    }
+    await Promise.resolve();
+
+    assert.equal(harness.activeTheme, freshProfileTheme, `${reason}: codex-pi should be restored after host reset`);
+    assert.equal(harness.setThemeCalls.length, 1, `${reason}: restore should apply profile theme once`);
+
+    // A later manual theme change must not be hijacked back to codex-pi.
+    const manualLight = createTheme("light");
+    harness.activeTheme = manualLight;
+    harness.footer?.invalidate();
+    await Promise.resolve();
+
+    assert.equal(harness.activeTheme, manualLight, `${reason}: manual theme switch must persist`);
+    assert.equal(harness.setThemeCalls.length, 1);
+
+    harness.emit("session_shutdown");
+  }
+});
+
+test("restores codex-pi theme after delayed discovery with sibling autocomplete and unrelated invalidations", async () => {
+  const harness = createThemeLifecycleHarness(CODEX_THEME_NAME);
+  harness.emit("session_start", { reason: "resume" });
+
+  // Simulate another extension registering autocomplete + an unrelated invalidation before an async discovery I/O turn.
+  harness.setupAutocompleteProvider();
+  harness.footer?.invalidate();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+
+  const freshProfileTheme = harness.refreshRegisteredThemes();
+  harness.setupAutocompleteProvider();
+  await Promise.resolve();
+  harness.activeTheme = createTheme("dark");
+  harness.footer?.invalidate();
+  await Promise.resolve();
+
+  assert.equal(harness.activeTheme, freshProfileTheme);
+  assert.equal(harness.setThemeCalls.length, 1);
+  harness.emit("session_shutdown");
+});
+
+test("skips post-rebind theme restore on startup, sibling overrides, matching settings theme, and shutdown", async () => {
+  const manualLight = createTheme("light");
+  const darkTheme = createTheme("dark");
+
+  // Startup does not arm post-rebind restore.
+  const startup = createThemeLifecycleHarness("dark");
+  startup.emit("session_start", { reason: "startup" });
+  assert.equal(startup.setThemeCalls.length, 1);
+  startup.refreshRegisteredThemes();
+  startup.activeTheme = manualLight;
+  startup.footer?.invalidate();
+  await Promise.resolve();
+  assert.equal(startup.activeTheme, manualLight);
+  startup.emit("session_shutdown");
+
+  // A sibling extension overriding the theme during session_start or resources_discover (before setRegisteredThemes) disarms restore.
+  const sibling = createThemeLifecycleHarness(CODEX_THEME_NAME);
+  sibling.emit("session_start", { reason: "resume" });
+  sibling.activeTheme = manualLight;
+  sibling.footer?.invalidate();
+  await Promise.resolve();
+  assert.equal(sibling.activeTheme, manualLight);
+  assert.equal(sibling.setThemeCalls.length, 0);
+  sibling.refreshRegisteredThemes();
+  sibling.setupAutocompleteProvider();
+  sibling.activeTheme = darkTheme;
+  sibling.footer?.invalidate();
+  await Promise.resolve();
+  assert.equal(sibling.activeTheme, darkTheme);
+  assert.equal(sibling.setThemeCalls.length, 0);
+  sibling.emit("session_shutdown");
+
+  // Matching settings theme (codex-pi) disarms synchronously during applyFromSettings() so
+  // even a withSession() callback in the very next microtask (before setImmediate) persists.
+  const matching = createThemeLifecycleHarness(CODEX_THEME_NAME);
+  matching.emit("session_start", { reason: "new" });
+  matching.refreshRegisteredThemes();
+  matching.setupAutocompleteProvider();
+  matching.footer?.invalidate();
+  await Promise.resolve();
+  matching.activeTheme = manualLight;
+  matching.footer?.invalidate();
+  await Promise.resolve();
+  assert.equal(matching.activeTheme, manualLight);
+  assert.equal(matching.setThemeCalls.length, 0);
+  matching.emit("session_shutdown");
+
+  // session_shutdown cancels any scheduled restore microtask.
+  const shutdown = createThemeLifecycleHarness(CODEX_THEME_NAME);
+  shutdown.emit("session_start", { reason: "resume" });
+  shutdown.refreshRegisteredThemes();
+  shutdown.setupAutocompleteProvider();
+  shutdown.activeTheme = darkTheme;
+  shutdown.footer?.invalidate();
+  shutdown.emit("session_shutdown");
+  await Promise.resolve();
+  assert.equal(shutdown.activeTheme, darkTheme);
+  assert.equal(shutdown.setThemeCalls.length, 0);
+});
