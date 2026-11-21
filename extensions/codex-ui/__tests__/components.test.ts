@@ -431,3 +431,155 @@ test("composer uses the supplied host bindings and restores the module manager a
   assert.throws(() => editor.handleInput("\r"), /fixture submit failure/u);
   assert.equal(getKeybindings(), previous);
 });
+
+test("header caches rendered output per width, theme, model and thinking level until invalidated", () => {
+  let model = "gpt-test";
+  let thinking = "high";
+  let fgCalls = 0;
+  const countingTheme = {
+    ...theme,
+    fg(name: string, text: string) {
+      fgCalls++;
+      return theme.fg(name as never, text);
+    },
+  } as Theme;
+  const header = new CodexHeader({
+    version: "1.5.2",
+    cwd: "/Users/pi/Code/app",
+    home: "/Users/pi",
+    getModelId: () => model,
+    getThinkingLevel: () => thinking,
+    getTheme: () => countingTheme,
+  });
+  const first = header.render(80);
+  const afterFirst = fgCalls;
+  assert.equal(header.render(80), first);
+  assert.equal(fgCalls, afterFirst);
+  model = "gpt-next";
+  const second = header.render(80);
+  assert.notEqual(second, first);
+  assert.ok(fgCalls > afterFirst);
+  const afterSecond = fgCalls;
+  header.invalidate();
+  header.render(80);
+  assert.ok(fgCalls > afterSecond);
+});
+
+test("composer preserves scroll position during completion, avoids wide double-render, and treats newline drafts as non-empty", async () => {
+  initTheme("dark", false);
+  const { Editor } = await import("@earendil-works/pi-tui");
+  const editor = new CodexEditor(
+    { terminal: { rows: 10, columns: 40 }, requestRender() {} } as unknown as TUI,
+    { borderColor: text => text, selectList: getSelectListTheme() },
+    new TestKeybindingsManager(),
+    () => theme,
+  );
+  // Single newline ["", ""] is not an empty draft, and render does not copy lines via getLines()/getText().
+  editor.setText("\n");
+  const getLinesSpy = vi.spyOn(editor, "getLines");
+  const getTextSpy = vi.spyOn(editor, "getText");
+  try {
+    const newlineLines = editor.render(80).map(stripTerminalSequences);
+    assert.ok(!newlineLines.join("\n").includes("Ask Pi to do anything"));
+    assert.ok(!newlineLines.at(-1)!.includes("/ for commands"));
+    const projectedNewline = editor.renderProjectedLines(80, [" "], [], 0, 0).map(stripTerminalSequences);
+    assert.ok(!projectedNewline.join("\n").includes("Ask Pi to do anything"));
+    assert.equal(getLinesSpy.mock.calls.length, 0);
+    assert.equal(getTextSpy.mock.calls.length, 0);
+  } finally {
+    getLinesSpy.mockRestore();
+    getTextSpy.mockRestore();
+  }
+
+  // Re-entrant chained onChange listeners keep native receiver binding and accurate empty-draft state.
+  let receiver: unknown;
+  const seenChanges: string[] = [];
+  editor.onChange = function (this: unknown, value: string) {
+    receiver = this;
+    seenChanges.push(value);
+  };
+  const previousChange = editor.onChange;
+  editor.onChange = function (this: unknown, value: string) {
+    if (value === "") editor.setText("replacement");
+    previousChange?.call(this, value);
+  };
+  editor.setText("seed");
+  editor.setText("");
+  assert.equal(receiver, editor);
+  assert.deepEqual(seenChanges, ["seed", "replacement", ""]);
+  const replacedFrame = editor.render(80).map(stripTerminalSequences);
+  assert.ok(!replacedFrame.join("\n").includes("Ask Pi to do anything"));
+  assert.ok(!editor.renderProjectedLines(80, [" replacement"], [], 0, 0).map(stripTerminalSequences).join("\n").includes("Ask Pi to do anything"));
+  editor.onChange = undefined;
+
+  // Long wrapped line scrolled up: opening autocomplete must render once and preserve the viewport scroll offset.
+  editor.setAutocompleteProvider({
+    async getSuggestions() {
+      return {
+        prefix: "",
+        items: [
+          { value: "copy", label: "copy", description: "Copy reply" },
+          { value: "compact", label: "compact", description: "Compact context" },
+        ],
+      };
+    },
+    applyCompletion: (lines, cursorLine, cursorCol) => ({ lines, cursorLine, cursorCol }),
+  });
+  editor.setText("0123456789".repeat(14));
+  editor.render(12);
+  editor.handleInput("\x1b[A");
+  editor.handleInput("\x1b[A");
+  const beforeScroll = editor.render(12).map(stripTerminalSequences)[1];
+  editor.handleInput("\t");
+  await vi.waitFor(() => assert.ok(editor.isShowingAutocomplete()));
+  const baseRender = vi.spyOn(Editor.prototype, "render");
+  try {
+    const frame = editor.render(12).map(stripTerminalSequences);
+    assert.equal(baseRender.mock.calls.length, 1, "autocomplete frame must only call super.render once");
+    assert.equal(frame[1], beforeScroll, "autocomplete must not reset wrapped scroll offset");
+    const surface = editor.renderSourceSurface(12);
+    assert.equal(surface.nativeBodyRows, 5);
+    assert.ok(surface.menu.length >= 1);
+  } finally {
+    baseRender.mockRestore();
+  }
+});
+
+test("composer keeps empty-draft placeholder accurate after rebound slash completion and without native isEditorEmpty", async () => {
+  initTheme("dark", false);
+  const reboundEditor = new CodexEditor(
+    { terminal: { rows: 10, columns: 40 }, requestRender() {} } as unknown as TUI,
+    { borderColor: text => text, selectList: getSelectListTheme() },
+    new TestKeybindingsManager({ "tui.select.confirm": "f2" }),
+    () => theme,
+  );
+  let changeCalls = 0;
+  reboundEditor.onChange = () => { changeCalls++; };
+  reboundEditor.setAutocompleteProvider({
+    async getSuggestions() {
+      return {
+        prefix: "/co",
+        items: [{ value: "clear", label: "clear", description: "Clear draft" }],
+      };
+    },
+    applyCompletion: () => ({ lines: [""], cursorLine: 0, cursorCol: 0 }),
+  });
+  reboundEditor.setText("/co");
+  reboundEditor.handleInput("\t");
+  await vi.waitFor(() => assert.ok(reboundEditor.isShowingAutocomplete()));
+  const beforeConfirm = changeCalls;
+  reboundEditor.handleInput("\x1bOQ");
+  assert.equal(changeCalls, beforeConfirm, "rebound slash completion does not emit onChange when clearing draft");
+  assert.equal(reboundEditor.getText(), "");
+  const emptyFrame = reboundEditor.render(80).map(stripTerminalSequences);
+  assert.ok(emptyFrame.join("\n").includes("Ask Pi to do anything"));
+  assert.ok(emptyFrame.at(-1)!.includes("/ for commands"));
+  const projectedEmpty = reboundEditor.renderProjectedLines(80, [" "], [], 0, 0).map(stripTerminalSequences);
+  assert.ok(projectedEmpty.join("\n").includes("Ask Pi to do anything"));
+
+  // Capability fallback when a host lacks isEditorEmpty().
+  Object.defineProperty(reboundEditor, "isEditorEmpty", { configurable: true, value: undefined });
+  assert.ok(reboundEditor.render(80).map(stripTerminalSequences).join("\n").includes("Ask Pi to do anything"));
+  reboundEditor.setText("hello");
+  assert.ok(!reboundEditor.render(80).map(stripTerminalSequences).join("\n").includes("Ask Pi to do anything"));
+});

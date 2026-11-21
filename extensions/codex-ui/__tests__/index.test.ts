@@ -324,3 +324,95 @@ test("session UI preserves an active Codex theme without replacing it", async ()
 
   assert.deepEqual(themeCalls, []);
 });
+
+test("history rebuild shares one context entry scan across tools and codemode and skips pure text deltas", async () => {
+  const handlers = new Map<string, Array<(...args: any[]) => unknown>>();
+  const tools = new Map<string, ToolDefinition>();
+  const pi = {
+    registerTool(tool: ToolDefinition) { tools.set(tool.name, tool); },
+    registerToolRenderer() {},
+    registerCommand() {},
+    registerMarkdownTransformer() {},
+    getThinkingLevel: () => "high",
+    getSessionName: () => undefined,
+    on(event: string, handler: (...args: any[]) => unknown) {
+      const list = handlers.get(event) ?? [];
+      list.push(handler);
+      handlers.set(event, list);
+    },
+  } as unknown as ExtensionAPI;
+  codexUiExtension(pi);
+
+  const sessionManager = SessionManager.inMemory("/repo/app");
+  const scan = vi.spyOn(sessionManager, "buildContextEntries");
+  const theme = createTheme();
+  const ctx = {
+    mode: "tui",
+    cwd: "/repo/app",
+    model: { id: "gpt-test" },
+    sessionManager,
+    getContextUsage: () => undefined,
+    isIdle: () => true,
+    ui: {
+      theme,
+      setStatus() {},
+      getTheme: () => theme,
+      setTheme: () => ({ success: true }),
+      setHeader() {},
+      setEditorComponent() {},
+      setFooter() {},
+      setTitle() {},
+      setWorkingVisible() {},
+      setWorkingIndicator() {},
+      setWidget() {},
+      notify() {},
+    },
+  };
+  const emit = (type: string, event: Record<string, unknown> = {}) => {
+    const payload = { type, ...event };
+    for (const handler of handlers.get(type) ?? []) handler(payload, ctx);
+  };
+  emit("session_start", { reason: "startup" });
+  assert.equal(scan.mock.calls.length, 1, "session_start should call buildContextEntries once across Bash, Read, and Codemode");
+  emit("session_tree");
+  assert.equal(scan.mock.calls.length, 2, "session_tree should call buildContextEntries once");
+  emit("session_compact");
+  assert.equal(scan.mock.calls.length, 3, "session_compact should call buildContextEntries once");
+
+  // Pure text_delta on an unchanged content array short-circuits discovery without breaking later toolcall grouping.
+  let blockReads = 0;
+  const textBlock = { get type() { blockReads++; return "text"; }, text: "hi" };
+  const content: Array<Record<string, unknown>> = [textBlock];
+  const msg = { role: "assistant", content };
+  emit("message_start", { message: msg });
+  const readsAfterStart = blockReads;
+  assert.ok(readsAfterStart > 0);
+  textBlock.text = "hi there";
+  emit("message_update", {
+    message: msg,
+    assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: " there", partial: msg },
+  });
+  // Only the single contentIndex guard checks block.type; neither BashGroups nor ReadGroups scans the content array.
+  assert.equal(blockReads - readsAfterStart, 1, "text_delta should skip full BashGroups/ReadGroups scans");
+
+  const bash1 = { type: "toolCall", id: "b1", name: "bash", arguments: { command: "echo 1" } };
+  const bash2 = { type: "toolCall", id: "b2", name: "bash", arguments: { command: "echo 2" } };
+  content.push(bash1, bash2);
+  emit("message_update", {
+    message: msg,
+    assistantMessageEvent: { type: "toolcall_start", contentIndex: 1, partial: msg },
+  });
+  const bashTool = tools.get("bash")!;
+  const mkCtx = (id: string, command: string) => ({
+    args: { command }, state: {}, lastComponent: undefined, cwd: "/repo/app",
+    executionStarted: true, argsComplete: true, isPartial: false, expanded: false,
+    showImages: false, isError: false, toolCallId: id, invalidate() {},
+  });
+  const row1 = bashTool.renderCall!({ command: "echo 1" } as never, theme, mkCtx("b1", "echo 1") as never);
+  const row2 = bashTool.renderCall!({ command: "echo 2" } as never, theme, mkCtx("b2", "echo 2") as never);
+  const out1 = stripTerminalSequences(row1.render(80).join("\n"));
+  assert.match(out1, /echo 1/u);
+  assert.match(out1, /echo 2/u);
+  assert.deepEqual(row2.render(80), []);
+  emit("session_shutdown");
+});

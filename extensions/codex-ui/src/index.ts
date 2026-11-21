@@ -1,6 +1,8 @@
 import {
   VERSION,
+  sessionEntryToContextMessages,
   type ExtensionAPI,
+  type ExtensionContext,
   type ExtensionUIContext,
   type KeybindingsManager,
 } from "@earendil-works/pi-coding-agent";
@@ -46,14 +48,35 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
   const installTitleSpinner = registerTerminalTitleSpinner(pi);
   const installWorking = registerWorking(pi);
 
+  const contextSnapshots = new WeakMap<object, { manager: unknown; messages: Array<{ role: string; content?: unknown; toolCallId?: string; toolName?: string; isError?: boolean }> }>();
+  const readContextMessages = (event: unknown, ctx: ExtensionContext) => {
+    const manager = ctx.sessionManager;
+    if (event && typeof event === "object") {
+      const cached = contextSnapshots.get(event);
+      if (cached && cached.manager === manager) return cached.messages;
+    }
+    const messages: Array<{ role: string; content?: unknown; toolCallId?: string; toolName?: string; isError?: boolean }> = [];
+    for (const entry of manager.buildContextEntries()) {
+      for (const message of sessionEntryToContextMessages(entry)) {
+        messages.push(message as unknown as { role: string; content?: unknown; toolCallId?: string; toolName?: string; isError?: boolean });
+      }
+    }
+    if (event && typeof event === "object") {
+      contextSnapshots.set(event, { manager, messages });
+    }
+    return messages;
+  };
+
   const nativeRenderers = registerCodexTools(pi, options.toolFactories, {
     getExecutionOptions: options.getExecutionOptions,
     getKeybindings: () => currentKeybindings,
+    readContextMessages,
   });
 
   registerCodemodeUi(pi, {
     nativeRenderers,
     getKeybindings: () => currentKeybindings,
+    readContextMessages,
   });
 
   let currentModelId: string | undefined;

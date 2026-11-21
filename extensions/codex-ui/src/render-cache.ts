@@ -9,10 +9,18 @@ class BudgetCache<T> {
   private misses = 0;
   private evictions = 0;
 
-  constructor(private readonly limitBytes: number, private readonly sizeOf: (value: T) => number) {
+  constructor(
+    private readonly limitBytes: number,
+    private readonly sizeOf: (value: T) => number,
+    private readonly onRemove?: (key: string) => void,
+  ) {
     if (!Number.isFinite(limitBytes) || limitBytes < 0) {
       throw new RangeError("Render cache budget must be finite and non-negative");
     }
+  }
+
+  has(key: string): boolean {
+    return this.entries.has(key);
   }
 
   memo(key: string, compute: (previous?: T) => T, usable: (value: T) => boolean = () => true): T {
@@ -36,10 +44,19 @@ class BudgetCache<T> {
       this.chargedBytes -= this.entries.get(oldest)!.bytes;
       this.entries.delete(oldest);
       this.evictions++;
+      this.onRemove?.(oldest);
     }
     this.entries.set(key, { value, bytes });
     this.chargedBytes += bytes;
     return value;
+  }
+
+  delete(key: string): void {
+    const cached = this.entries.get(key);
+    if (!cached) return;
+    this.entries.delete(key);
+    this.chargedBytes -= cached.bytes;
+    this.onRemove?.(key);
   }
 
   clear(): void {
@@ -63,6 +80,8 @@ export interface RenderCacheScope {
   readonly active: boolean;
   identity(source: object): number;
   lines(key: string, compute: () => string[]): string[];
+  /** Retain variants for one active revision per slot and evict superseded revisions immediately. */
+  linesForRevision?(slot: string, revision: number, key: string, compute: () => string[]): string[];
   prefix(key: string, length: number, compute: (index: number) => string): string[];
   count(key: string, compute: () => number): number;
 }
@@ -71,13 +90,29 @@ export interface RenderCacheScope {
 export class ToolRenderCache {
   private readonly layouts: BudgetCache<string[]>;
   private readonly counts: BudgetCache<number>;
+  private readonly revisionSlots = new Map<string, { revision: number; keys: Set<string> }>();
+  private readonly keyToSlot = new Map<string, string>();
   private generation = 0;
   private identities = new WeakMap<object, number>();
   private nextIdentity = 0;
 
   constructor(options: { layoutBytes?: number; countBytes?: number } = {}) {
-    this.layouts = new BudgetCache<string[]>(options.layoutBytes ?? 16 * 1024 * 1024, lineBytes);
+    this.layouts = new BudgetCache<string[]>(
+      options.layoutBytes ?? 16 * 1024 * 1024,
+      lineBytes,
+      (key) => this.untrackSlotKey(key),
+    );
     this.counts = new BudgetCache<number>(options.countBytes ?? 2 * 1024 * 1024, () => 8);
+  }
+
+  private untrackSlotKey(key: string): void {
+    const slot = this.keyToSlot.get(key);
+    if (slot === undefined) return;
+    this.keyToSlot.delete(key);
+    const tracked = this.revisionSlots.get(slot);
+    if (!tracked) return;
+    tracked.keys.delete(key);
+    if (tracked.keys.size === 0) this.revisionSlots.delete(slot);
   }
 
   scope(): RenderCacheScope {
@@ -91,6 +126,26 @@ export class ToolRenderCache {
         return id;
       },
       lines: (key, compute) => generation === this.generation ? this.layouts.memo(key, compute) : compute(),
+      linesForRevision: (slot, revision, key, compute) => {
+        if (generation !== this.generation) return compute();
+        const existing = this.revisionSlots.get(slot);
+        if (existing && existing.revision !== revision) {
+          for (const staleKey of [...existing.keys]) this.layouts.delete(staleKey);
+          this.revisionSlots.delete(slot);
+        }
+        const value = this.layouts.memo(key, compute);
+        if (generation === this.generation && this.layouts.has(key)) {
+          if (this.keyToSlot.get(key) !== slot) this.untrackSlotKey(key);
+          let tracked = this.revisionSlots.get(slot);
+          if (!tracked) {
+            tracked = { revision, keys: new Set() };
+            this.revisionSlots.set(slot, tracked);
+          }
+          tracked.keys.add(key);
+          this.keyToSlot.set(key, slot);
+        }
+        return value;
+      },
       count: (key, compute) => generation === this.generation ? this.counts.memo(key, compute) : compute(),
       prefix: (key, length, compute) => {
         const grow = (previous?: string[]) => Array.from({ length }, (_, index) => previous?.[index] ?? compute(index));
@@ -102,11 +157,17 @@ export class ToolRenderCache {
   clear(): void {
     this.generation++;
     this.identities = new WeakMap();
+    this.revisionSlots.clear();
+    this.keyToSlot.clear();
     this.layouts.clear();
     this.counts.clear();
   }
 
   stats() {
-    return { layouts: this.layouts.stats(), counts: this.counts.stats() };
+    return {
+      layouts: this.layouts.stats(),
+      counts: this.counts.stats(),
+      revisionSlots: this.revisionSlots.size,
+    };
   }
 }

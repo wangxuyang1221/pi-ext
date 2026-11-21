@@ -35,8 +35,18 @@ const MAX_CARD_WIDTH = 84;
 const CARD_CHROME = "│  │".length;
 const LABEL_WIDTH = "directory: ".length;
 const MIN_CARD_INNER = 46;
+const GRAPHEME_SEGMENTER = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+const BOTTOM_BORDER_SENTINEL = "\x1b_pi:codex-editor-bottom-border\x07";
 
 export class CodexHeader implements Component {
+  private cached: {
+    width: number;
+    theme: Theme;
+    modelId: string;
+    thinking: string;
+    lines: string[];
+  } | undefined;
+
   constructor(private readonly options: CodexHeaderOptions) {}
 
   render(width: number): string[] {
@@ -44,14 +54,27 @@ export class CodexHeader implements Component {
     if (safeWidth === 0) return [];
 
     const theme = this.options.getTheme();
+    const modelId = this.options.getModelId() ?? "No model";
+    const thinking = this.options.getThinkingLevel();
+    const cached = this.cached;
+    if (
+      cached
+      && cached.width === safeWidth
+      && cached.theme === theme
+      && cached.modelId === modelId
+      && cached.thinking === thinking
+    ) {
+      return cached.lines;
+    }
+
     const brand = `${theme.bold(theme.fg("accent", "pi"))}${theme.fg("dim", ` v${this.options.version} · `)}${theme.fg("muted", "Codex profile")}`;
     if (safeWidth < 12) {
-      return [fitToWidth(brand, safeWidth)];
+      const lines = [fitToWidth(brand, safeWidth)];
+      this.cached = { width: safeWidth, theme, modelId, thinking, lines };
+      return lines;
     }
 
     const border = (text: string) => theme.fg("borderMuted", text);
-    const modelId = this.options.getModelId() ?? "No model";
-    const thinking = this.options.getThinkingLevel();
     const label = (text: string) => theme.fg("dim", text.padEnd(LABEL_WIDTH));
     const model = `${label("model:")}${theme.bold(modelId)} ${theme.fg("muted", thinking)}`;
     const modelHint = `${theme.fg("accent", "/model")} ${theme.fg("dim", "to change")}`;
@@ -68,7 +91,7 @@ export class CodexHeader implements Component {
       `${border("│")} ${fitToWidth(content, innerWidth, { pad: true, ellipsis: "…" })} ${border("│")}`
     );
 
-    return [
+    const lines = [
       border(`╭${"─".repeat(innerWidth + 2)}╮`),
       frameLine(brand),
       frameLine(""),
@@ -77,14 +100,26 @@ export class CodexHeader implements Component {
       border(`╰${"─".repeat(innerWidth + 2)}╯`),
       "",
     ];
+    this.cached = { width: safeWidth, theme, modelId, thinking, lines };
+    return lines;
   }
 
-  invalidate(): void {}
+  invalidate(): void {
+    this.cached = undefined;
+  }
 }
 
 const PLACEHOLDER = "Ask Pi to do anything";
 
 export class CodexEditor extends CustomEditor {
+  private capturingBottomBorder = false;
+  private paintedCache: {
+    width: number;
+    foreground: string;
+    background: string;
+    lines: Map<string, string>;
+  } | undefined;
+
   constructor(
     tui: TUI,
     editorTheme: EditorTheme,
@@ -93,6 +128,44 @@ export class CodexEditor extends CustomEditor {
     private readonly onCopy?: () => void,
   ) {
     super(tui, editorTheme, hostKeybindings, { paddingX: 1 });
+  }
+
+  private isEmptyDraft(): boolean {
+    const nativeIsEmpty = (this as unknown as { isEditorEmpty?: () => boolean }).isEditorEmpty;
+    return typeof nativeIsEmpty === "function" ? nativeIsEmpty.call(this) : this.getText() === "";
+  }
+
+  override invalidate(): void {
+    this.paintedCache = undefined;
+    super.invalidate();
+  }
+
+  protected override renderBottomBorder(width: number, hiddenLineCount: number): string {
+    if (this.capturingBottomBorder) return BOTTOM_BORDER_SENTINEL;
+    return super.renderBottomBorder(width, hiddenLineCount);
+  }
+
+  private paintFrame(lines: readonly string[], width: number, theme: Theme): string[] {
+    const background = theme.getBgAnsi("selectedBg");
+    const foreground = theme.getFgAnsi("text");
+    const previous = this.paintedCache;
+    const reusable = previous
+      && previous.width === width
+      && previous.foreground === foreground
+      && previous.background === background
+      ? previous.lines
+      : undefined;
+    const next = new Map<string, string>();
+    const painted = lines.map((line) => {
+      let result = reusable?.get(line) ?? next.get(line);
+      if (result === undefined) {
+        result = paintBackground(paintForeground(line, foreground), width, background);
+      }
+      next.set(line, result);
+      return result;
+    });
+    this.paintedCache = { width, foreground, background, lines: next };
+    return painted;
   }
 
   handleInput(data: string): void {
@@ -116,47 +189,53 @@ export class CodexEditor extends CustomEditor {
     const safeWidth = normalizeWidth(width);
     if (safeWidth === 0) return [];
     const theme = this.getTheme();
+    const empty = this.isEmptyDraft();
     const body = [...content];
-    if (body.length) body[0] = addPrompt(body[0], theme, this.getText().length === 0);
-    const background = theme.getBgAnsi("selectedBg");
-    const foreground = theme.getFgAnsi("text");
-    return [" ".repeat(safeWidth), ...body, emptyHint(safeWidth, theme, this.getText().length === 0 && menu.length === 0), ...menu]
-      .map(line => paintBackground(paintForeground(line, foreground), safeWidth, background));
+    if (body.length) body[0] = addPrompt(body[0], theme, empty);
+    return this.paintFrame(
+      [" ".repeat(safeWidth), ...body, emptyHint(safeWidth, theme, empty && menu.length === 0), ...menu],
+      safeWidth,
+      theme,
+    );
   }
 
-  private sourceFrame(width: number): { lines: string[]; menuHeight: number } {
-    let menuHeight = 0;
-    if (this.isShowingAutocomplete()) {
-      const wide = this.getLines().reduce((size, line) => Math.max(size, visibleWidth(line)), width) + 2 * this.getPaddingX() + 1;
-      const unwrapped = super.render(wide);
-      const bodyRows = Math.min(this.getLines().length, Math.max(5, Math.floor(this.tui.terminal.rows * 0.3)));
-      menuHeight = unwrapped.length - bodyRows - 2;
+  private sourceFrame(width: number): { lines: string[]; bottomBorderIndex: number; menuHeight: number } {
+    this.capturingBottomBorder = true;
+    let lines: string[];
+    try {
+      lines = super.render(width);
+    } finally {
+      this.capturingBottomBorder = false;
     }
-    return { lines: super.render(width), menuHeight };
+    const markerIndex = lines.lastIndexOf(BOTTOM_BORDER_SENTINEL);
+    const bottomBorderIndex = markerIndex >= 0 ? markerIndex : lines.length - 1;
+    const menuHeight = Math.max(0, lines.length - 1 - bottomBorderIndex);
+    return { lines, bottomBorderIndex, menuHeight };
   }
 
   /** Expose source/menu geometry for composed public editor projections. */
   renderSourceSurface(width: number): { nativeBodyRows: number; menu: string[] } {
-    const { lines, menuHeight } = this.sourceFrame(width);
-    return { nativeBodyRows: lines.length - menuHeight - 2, menu: menuHeight ? lines.slice(-menuHeight) : [] };
+    const { lines, bottomBorderIndex, menuHeight } = this.sourceFrame(width);
+    return {
+      nativeBodyRows: Math.max(0, bottomBorderIndex - 1),
+      menu: menuHeight ? lines.slice(bottomBorderIndex + 1) : [],
+    };
   }
 
   render(width: number): string[] {
     const safeWidth = normalizeWidth(width);
     if (safeWidth === 0) return [];
 
-    const { lines, menuHeight } = this.sourceFrame(safeWidth);
+    const { lines, bottomBorderIndex, menuHeight } = this.sourceFrame(safeWidth);
     const theme = this.getTheme();
-    const bottomBorderIndex = lines.length - menuHeight - 1;
+    const empty = this.isEmptyDraft();
     const output = [...lines];
     // Native Editor always supplies two borders and at least one body row.
     output[0] = " ".repeat(safeWidth);
-    output[bottomBorderIndex] = emptyHint(safeWidth, theme, this.getText().length === 0 && menuHeight === 0);
-    output[1] = addPrompt(output[1], theme, this.getText().length === 0);
+    output[bottomBorderIndex] = emptyHint(safeWidth, theme, empty && menuHeight === 0);
+    output[1] = addPrompt(output[1], theme, empty);
 
-    const background = theme.getBgAnsi("selectedBg");
-    const foreground = theme.getFgAnsi("text");
-    return output.map((line) => paintBackground(paintForeground(line, foreground), safeWidth, background));
+    return this.paintFrame(output, safeWidth, theme);
   }
 }
 
@@ -171,12 +250,17 @@ function middleEllipsis(path: string, width: number): string {
 }
 
 function keepEnd(text: string, width: number): string {
-  const graphemes = Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text), part => part.segment);
-  let kept = "";
-  for (let index = graphemes.length - 1; index >= 0 && visibleWidth(graphemes[index] + kept) <= width; index--) {
-    kept = graphemes[index] + kept;
+  const graphemes = Array.from(GRAPHEME_SEGMENTER.segment(text), part => part.segment);
+  const kept: string[] = [];
+  let used = 0;
+  for (let index = graphemes.length - 1; index >= 0; index--) {
+    const segment = graphemes[index]!;
+    const segmentWidth = visibleWidth(segment);
+    if (used + segmentWidth > width) break;
+    kept.push(segment);
+    used += segmentWidth;
   }
-  return kept;
+  return kept.reverse().join("");
 }
 
 const EMPTY_HINT = "/ for commands";

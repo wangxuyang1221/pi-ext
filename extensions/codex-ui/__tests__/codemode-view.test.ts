@@ -84,3 +84,30 @@ test("hot child and inspector renders reuse preparation and observe cache evicti
   assert.match(presentation.child(row.calls[0], 80, theme, "/repo").join("\n"), /Raw result unavailable/);
   assert.ok(presentation.stats().layouts.chargedBytes <= presentation.stats().layouts.limitBytes);
 });
+
+test("expanded tree reuses cached output and invalidates on result eviction, width, cwd, hints, and diff colors", () => {
+  const store = fixture();
+  const presentation = new CodemodePresentation(store, new Map());
+  const row = store.get("p")!;
+  let diffBg = "\x1b[48;5;22m";
+  const diffTheme = {
+    ...theme,
+    getFgAnsi: () => "\x1b[38;5;250m",
+    getBgAnsi: (name: string) => name === "toolSuccessBg" ? diffBg : "\x1b[48;5;52m",
+  } as unknown as Theme;
+  const first = presentation.tree(row, diffTheme, 120, true, "/repo-a", "ctrl+o");
+  const hitsBefore = presentation.stats().layouts.hits;
+  assert.equal(presentation.tree(row, diffTheme, 120, true, "/repo-a", "ctrl+o"), first);
+  assert.equal(presentation.stats().layouts.hits, hitsBefore + 1);
+  // Width, cwd, expandHint, and diff background changes must miss the tree cache.
+  assert.notEqual(presentation.tree(row, diffTheme, 100, true, "/repo-a", "ctrl+o"), first);
+  assert.notEqual(presentation.tree(row, diffTheme, 120, true, "/repo-b", "ctrl+o"), first);
+  diffBg = "\x1b[48;5;28m";
+  assert.notEqual(presentation.tree(row, diffTheme, 120, true, "/repo-a", "ctrl+o"), first);
+  // Evicting results from another row or clearing ResultCache must invalidate cached expanded trees.
+  const beforeEvict = presentation.tree(row, diffTheme, 120, true, "/repo-a", "ctrl+o");
+  store.results.delete(row.calls[0]!.id);
+  const afterEvict = presentation.tree(row, diffTheme, 120, true, "/repo-a", "ctrl+o");
+  assert.notEqual(afterEvict, beforeEvict);
+  assert.match(afterEvict.join("\n"), /Raw result unavailable/);
+});

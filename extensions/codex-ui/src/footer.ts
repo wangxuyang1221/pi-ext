@@ -77,7 +77,14 @@ export class CodexFooter implements Component {
     lines: string[];
   } | undefined;
 
-  private combined: { base: string[]; key: string; theme: Theme; lines: string[] } | undefined;
+  private combined: {
+    base: string[];
+    width: number;
+    status: string | undefined;
+    rate: string | undefined;
+    theme: Theme;
+    lines: string[];
+  } | undefined;
 
   constructor(private readonly options: CodexFooterOptions) {}
 
@@ -96,19 +103,29 @@ export class CodexFooter implements Component {
     const base = this.renderBase(remaining, statuses);
     const theme = this.options.getTheme();
     const status = this.readStatus(statuses, "status");
-    const statusLines = status ? [status] : [];
-    const key = JSON.stringify([safeWidth, statusLines, rate]);
-    const cached = this.reuseCombined(base, key, theme);
+    const cached = this.reuseCombined(base, safeWidth, status, rate, theme);
     if (cached) return cached;
     const lines = composeFooter(base, safeWidth, remaining, suffix, theme);
-    lines.push(...statusLines.map(text => fitToWidth(theme.fg("muted", ` ${text}`), safeWidth)));
-    this.combined = { base, key, theme, lines };
+    if (status) lines.push(fitToWidth(theme.fg("muted", ` ${status}`), safeWidth));
+    this.combined = { base, width: safeWidth, status, rate, theme, lines };
     return lines;
   }
 
-  private reuseCombined(base: string[], key: string, theme: Theme): string[] | undefined {
+  private reuseCombined(
+    base: string[],
+    width: number,
+    status: string | undefined,
+    rate: string | undefined,
+    theme: Theme,
+  ): string[] | undefined {
     const cached = this.combined;
-    return cached?.base === base && cached.key === key && cached.theme === theme ? cached.lines : undefined;
+    return cached?.base === base
+      && cached.width === width
+      && cached.status === status
+      && cached.rate === rate
+      && cached.theme === theme
+      ? cached.lines
+      : undefined;
   }
 
   private renderBase(width: number, statuses: ReadonlyMap<string, string>): string[] {

@@ -20,6 +20,14 @@ export class WorkingActivity {
   label(): string | undefined { return this.active ? this.rate.label() : undefined; }
 }
 
+/** Discrete visual state key covering every time-dependent element of Working. */
+export function workingFrameKey(elapsed: number): string {
+  const spinner = Math.floor(elapsed / 80) % FRAMES.length;
+  const sweep = Math.floor(elapsed % 2000 / 2000 * 27);
+  const seconds = Math.floor(elapsed / 1000);
+  return `${spinner}:${sweep}:${seconds}`;
+}
+
 export class Working implements Component {
   constructor(private readonly activity: WorkingActivity, private readonly getTheme: () => Theme) {}
   render(width: number): string[] {

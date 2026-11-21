@@ -29,7 +29,7 @@ import {
   fitToWidth,
   formatHomePath,
   normalizeWidth,
-  paintBackground,
+  paintFittedBackground,
   paintForeground,
 } from "./layout.js";
 import { ResponsiveLinesComponent } from "./responsive-lines.js";
@@ -55,6 +55,7 @@ export interface CodexToolRenderServices {
   getExecutionOptions?: (ctx: ExtensionContext) => CodexExecutionOptions;
   getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
   renderCache?: ToolRenderCache;
+  readContextMessages?: (event: unknown, ctx: ExtensionContext) => Iterable<{ role: string; content?: unknown; toolCallId?: string; toolName?: string; isError?: boolean }>;
 }
 
 export interface DisplayDiffLine {
@@ -128,20 +129,50 @@ export function registerCodexTools(
     renderCache.clear();
     bashGroups.reset();
     readGroups.reset();
+    lastMessageContent = undefined;
+    lastContentLength = -1;
   };
-  const rebuildGroups = (_event: unknown, ctx: ExtensionContext) => {
+  const readSnapshot = (event: unknown, ctx: ExtensionContext) => (
+    services.readContextMessages ? [...services.readContextMessages(event, ctx)] : undefined
+  );
+  const rebuildGroups = (event: unknown, ctx: ExtensionContext) => {
     resetRendering();
-    bashGroups.reset(ctx);
-    readGroups.reset(ctx);
+    const messages = ctx?.mode === "tui" ? readSnapshot(event, ctx) : undefined;
+    bashGroups.reset(ctx, false, messages);
+    readGroups.reset(ctx, false, messages);
   };
   let firstSessionStart = true;
+  let lastMessageContent: unknown[] | undefined;
+  let lastContentLength = -1;
+  const isSafeNonToolDelta = (event: { message: { role: string; content?: unknown }; assistantMessageEvent?: { type?: string; contentIndex?: number } }): boolean => {
+    const sub = event.assistantMessageEvent;
+    if (!sub || event.message.role !== "assistant" || !Array.isArray(event.message.content)) return false;
+    if (
+      sub.type !== "text_start"
+      && sub.type !== "text_delta"
+      && sub.type !== "text_end"
+      && sub.type !== "thinking_start"
+      && sub.type !== "thinking_delta"
+      && sub.type !== "thinking_end"
+    ) {
+      return false;
+    }
+    if (event.message.content !== lastMessageContent || event.message.content.length !== lastContentLength) return false;
+    const index = sub.contentIndex;
+    if (typeof index !== "number") return false;
+    const block = event.message.content[index] as { type?: unknown } | undefined;
+    return block !== undefined && block.type !== "toolCall";
+  };
   pi.on("session_start", (event, ctx) => {
     executionSettings.clear();
     // Reload builds the new instance's history rows before emitting session_start.
     // Keep those fresh scopes and discover their ownership without reviving old instances.
     if (firstSessionStart) {
-      bashGroups.reset(ctx, true);
-      readGroups.reset(ctx, true);
+      const messages = ctx?.mode === "tui" ? readSnapshot(event, ctx) : undefined;
+      bashGroups.reset(ctx, true, messages);
+      readGroups.reset(ctx, true, messages);
+      lastMessageContent = undefined;
+      lastContentLength = -1;
     } else rebuildGroups(event, ctx);
     firstSessionStart = false;
   });
@@ -152,18 +183,25 @@ export function registerCodexTools(
     if (ctx?.mode === "tui") {
       bashGroups.discover(event.message, true);
       readGroups.discover(event.message, true);
+      lastMessageContent = event.message.role === "assistant" && Array.isArray(event.message.content) ? event.message.content : undefined;
+      lastContentLength = lastMessageContent?.length ?? -1;
     }
   });
   pi.on("message_update", (event, ctx) => {
     if (ctx?.mode === "tui") {
+      if (isSafeNonToolDelta(event)) return;
       bashGroups.discover(event.message);
       readGroups.discover(event.message);
+      lastMessageContent = event.message.role === "assistant" && Array.isArray(event.message.content) ? event.message.content : undefined;
+      lastContentLength = lastMessageContent?.length ?? -1;
     }
   });
   pi.on("message_end", (event, ctx) => {
     if (ctx?.mode === "tui") {
       bashGroups.discover(event.message);
       readGroups.discover(event.message);
+      lastMessageContent = undefined;
+      lastContentLength = -1;
       if (event.message.role === "toolResult" && event.message.toolName === "read") {
         readGroups.result(event.message.toolCallId, event.message, "message", event.message.isError);
       }
@@ -429,15 +467,19 @@ export function renderDisplayDiff(
     const code = line.kind === "removed"
       ? `${ANSI_DIM}${codeWithDefault}${ANSI_INTENSITY_RESET}`
       : codeWithDefault;
-    const content = fitToWidth(`${DIFF_INDENT}${gutter} ${sign} ${code}`, safeWidth, { ellipsis: "…" });
+    const needsBackground = (line.kind === "added" && !pureAddition) || line.kind === "removed";
+    const content = fitToWidth(`${DIFF_INDENT}${gutter} ${sign} ${code}`, safeWidth, {
+      ellipsis: "…",
+      pad: needsBackground,
+    });
 
     if (line.kind === "added" && !pureAddition) {
-      return paintBackground(content, safeWidth, theme.getBgAnsi("toolSuccessBg"));
+      return paintFittedBackground(content, theme.getBgAnsi("toolSuccessBg"));
     }
     if (line.kind === "removed") {
-      return paintBackground(content, safeWidth, theme.getBgAnsi("toolErrorBg"), ANSI_DIM);
+      return paintFittedBackground(content, theme.getBgAnsi("toolErrorBg"), ANSI_DIM);
     }
-    return fitToWidth(content, safeWidth);
+    return content;
   });
 }
 

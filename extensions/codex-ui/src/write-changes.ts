@@ -102,7 +102,10 @@ export function createObservedWriteDefinition(cwd: string): ToolDefinition<Write
         try {
           if (oldContent !== undefined && writtenContent !== undefined && !writtenContent.includes("\0")
             && countLines(oldContent) + countLines(writtenContent) <= MAX_INPUT_LINES) {
-            const encodedContent = Buffer.from(writtenContent, "utf8").toString("utf8");
+            const wellFormed = (writtenContent as string & { toWellFormed?: () => string }).toWellFormed;
+            const encodedContent = typeof wellFormed === "function"
+              ? wellFormed.call(writtenContent)
+              : Buffer.from(writtenContent, "utf8").toString("utf8");
             const patch = generateUnifiedPatch(displayPath, oldContent, encodedContent);
             if (patch.length <= MAX_PATCH_BYTES && Buffer.byteLength(patch, "utf8") <= MAX_PATCH_BYTES) change.patch = patch;
           }

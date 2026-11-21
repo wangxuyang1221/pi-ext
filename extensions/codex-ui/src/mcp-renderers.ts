@@ -46,7 +46,9 @@ interface ResultContent {
 interface ResultPresentation {
   detail: string;
   preview: string;
-  expandedDetail: string;
+  expandedDetail?: string;
+  expandedJson?: unknown;
+  expandedSafeLines?: string[];
   error: boolean;
   hostWarning?: "Interrupted" | "Timed out";
   fullOutputPath?: string;
@@ -72,6 +74,7 @@ const SENSITIVE_ARGUMENT_KEY = /api[-_]?key|access[-_]?token|authorization|passw
 class ResponsiveLinesComponent implements Component {
   private renderer: (width: number) => string[] = () => [];
   private state?: McpRowState;
+  private linesAlreadyFit = false;
   private layout?: { width: number; status: McpRowState["mcpStatus"]; warning: boolean | undefined; lines: string[] };
   // One bounded, unthemed result per host row. No width history or global cache.
   private prepared?: { content: unknown; structured: unknown; outputPath: unknown; hasDetails: boolean; presentation: ResultPresentation };
@@ -89,9 +92,10 @@ class ResponsiveLinesComponent implements Component {
     return this.prepared.presentation;
   }
 
-  setRenderer(renderer: (width: number) => string[], state?: McpRowState): void {
+  setRenderer(renderer: (width: number) => string[], state?: McpRowState, linesAlreadyFit = false): void {
     this.renderer = renderer;
     this.state = state;
+    this.linesAlreadyFit = linesAlreadyFit;
     this.invalidate();
   }
 
@@ -104,8 +108,8 @@ class ResponsiveLinesComponent implements Component {
     if (this.layout?.width === safeWidth && this.layout.status === status && this.layout.warning === warning) {
       return this.layout.lines;
     }
-    const lines = safeWidth === 0 ? []
-      : this.renderer(safeWidth).map((line) => truncateToWidth(line, safeWidth, ""));
+    const raw = safeWidth === 0 ? [] : this.renderer(safeWidth);
+    const lines = this.linesAlreadyFit ? raw : raw.map((line) => truncateToWidth(line, safeWidth, ""));
     this.layout = { width: safeWidth, status, warning, lines };
     return lines;
   }
@@ -154,7 +158,7 @@ export function renderMcpToolResult(
       lines.push(truncateToWidth(theme.fg("dim", `${MCP_DETAIL_INDENT}Full output: ${presentation.fullOutputPath}`), width, "…"));
     }
     return lines;
-  });
+  }, undefined, true);
   return component;
 }
 
@@ -224,8 +228,12 @@ function renderMcpResultLines(
     return lines.map((line, index) => {
       const tail = truncated && index === lines.length - 1;
       const body = tail ? truncateToWidth(line, Math.max(0, contentWidth - 3), "") : line;
-      return theme.fg("dim", indent && index === 0 ? MCP_RESULT_BRANCH : indent)
-        + theme.fg("text", body) + (tail ? theme.fg("dim", "...") : "");
+      return truncateToWidth(
+        theme.fg("dim", indent && index === 0 ? MCP_RESULT_BRANCH : indent)
+          + theme.fg("text", body) + (tail ? theme.fg("dim", "...") : ""),
+        width,
+        "",
+      );
     });
   }
 
@@ -304,6 +312,23 @@ function formatResultSummary(
   );
 }
 
+function getExpandedSafeLines(presentation: ResultPresentation): readonly string[] {
+  if (presentation.expandedSafeLines) return presentation.expandedSafeLines;
+  let source = presentation.expandedDetail;
+  if (source === undefined) {
+    try {
+      source = sanitizeDiagnosticText(JSON.stringify(presentation.expandedJson, null, 2), DEFAULT_MAX_BYTES);
+    } catch {
+      source = presentation.detail;
+    }
+    presentation.expandedDetail = source;
+    presentation.expandedJson = undefined;
+  }
+  // Preserve per-line sanitization parity with non-idempotent redaction patterns and reuse across resizes.
+  presentation.expandedSafeLines = source.split("\n").map((line) => sanitizeDiagnosticText(line, DEFAULT_MAX_BYTES));
+  return presentation.expandedSafeLines;
+}
+
 function renderExpandedDetail(
   presentation: ResultPresentation,
   theme: Theme,
@@ -314,12 +339,11 @@ function renderExpandedDetail(
     : "";
   const contentWidth = Math.max(1, width - visibleWidth(indent));
   const color: ThemeColor = presentation.error ? presentation.hostWarning ? "warning" : "error" : "text";
-  const sourceLines = presentation.expandedDetail.split("\n");
+  const safeLines = getExpandedSafeLines(presentation);
   const output: string[] = [];
   let displayTruncated = false;
 
-  outer: for (const sourceLine of sourceLines) {
-    const safeLine = sanitizeDiagnosticText(sourceLine, DEFAULT_MAX_BYTES);
+  outer: for (const safeLine of safeLines) {
     const wrapped = safeLine.length === 0
       ? [""]
       : wrapTextWithAnsi(theme.fg(color, safeLine), contentWidth);
@@ -375,17 +399,21 @@ function prepareResultPresentation(result: unknown, contextIsError: boolean, nam
   const json = !hasImage && parsed !== undefined;
 
   let preview = hasImage && !hasText ? "Image" : detail;
-  let expandedDetail = preview;
+  let expandedDetail: string | undefined = preview;
+  let expandedJson: unknown;
   if (json) {
     try {
-      preview = sanitizeDiagnosticText(compactJson(parsed), DEFAULT_MAX_BYTES);
-      expandedDetail = sanitizeDiagnosticText(JSON.stringify(parsed, null, 2), DEFAULT_MAX_BYTES);
+      const serialized = JSON.stringify(parsed);
+      if (serialized === undefined) throw new TypeError("Unserializable JSON");
+      preview = sanitizeDiagnosticText(compactJsonString(serialized), DEFAULT_MAX_BYTES);
+      expandedDetail = undefined;
+      expandedJson = parsed;
     } catch {
       preview = detail;
       expandedDetail = detail;
     }
   }
-  return { detail, preview, expandedDetail, error: contextIsError || record?.isError === true || details?.isError === true,
+  return { detail, preview, expandedDetail, expandedJson, error: contextIsError || record?.isError === true || details?.isError === true,
     fullOutputPath: typeof details?.fullOutputPath === "string" ? sanitizeDiagnosticText(details.fullOutputPath) : undefined,
     hostWarning: isHostErrorDetails(record?.details) && content.length === 1 && textParts.length === 1
       ? hostWarningLabel(textParts[0]!, names) : undefined };
@@ -430,9 +458,9 @@ function hostWarningLabel(text: string, names: McpToolNames | undefined): Result
   return undefined;
 }
 
-function compactJson(value: unknown): string {
+function compactJsonString(serialized: string): string {
   // Match complete JSON strings before punctuation so escapes and string contents stay intact.
-  return safeJson(value).replace(/"(?:[^"\\]|\\.)*"|[:,]/gu, token => token === ":" || token === "," ? `${token} ` : token);
+  return serialized.replace(/"(?:[^"\\]|\\.)*"|[:,]/gu, token => token === ":" || token === "," ? `${token} ` : token);
 }
 
 function formatMcpToolArguments(args: unknown): string {

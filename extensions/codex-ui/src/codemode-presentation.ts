@@ -14,7 +14,15 @@ type ToolRenderContext = Parameters<NonNullable<ToolRenderers["renderCall"]>>[2]
 
 const defaultHints = hostKeybindingHints({});
 
-export const themeKey = (theme: Theme): string => (["text", "dim", "accent", "muted", "toolTitle", "success", "warning", "error", "borderMuted"] as const).map(name => theme.fg(name, "x")).join("");
+export const themeKey = (theme: Theme): string => {
+  const fg = (["text", "dim", "accent", "muted", "toolTitle", "toolOutput", "success", "warning", "error", "borderMuted"] as const)
+    .map(name => theme.fg(name, "x")).join("");
+  const diffFg = typeof theme.getFgAnsi === "function" ? theme.getFgAnsi("toolDiffContext") : "";
+  const diffBg = typeof theme.getBgAnsi === "function"
+    ? `${theme.getBgAnsi("toolSuccessBg")}\0${theme.getBgAnsi("toolErrorBg")}`
+    : "";
+  return `${fg}\0${diffFg}\0${diffBg}`;
+};
 
 /** Bounded derived strings only: native components never retain nested execution results. */
 export class CodemodePresentation {
@@ -25,7 +33,26 @@ export class CodemodePresentation {
   stats() { return this.cache.stats(); }
   tree(row: CodemodeRow, theme: Theme, width: number, expanded: boolean, cwd: string, expandHint: string, hints: HostKeybindingHints = defaultHints): string[] {
     // Result cache eviction can make an earlier child's body unavailable without changing its status.
-    return renderCodemodeTree(row, { theme, width, expanded, expandHint, child: (call, available, colors) => this.child(call, available, colors, cwd, hints) });
+    const key = [
+      "tree",
+      this.scope.identity(row),
+      row.generation,
+      row.revision,
+      expanded ? this.store.results.version : 0,
+      width,
+      expanded,
+      cwd,
+      expandHint,
+      themeKey(theme),
+      this.scope.identity(hints),
+    ].join("\0");
+    return this.scope.lines(key, () => renderCodemodeTree(row, {
+      theme,
+      width,
+      expanded,
+      expandHint,
+      child: (call, available, colors) => this.child(call, available, colors, cwd, hints),
+    }));
   }
   child(call: CodemodeCall, width: number, theme: Theme, cwd: string, hints: HostKeybindingHints = defaultHints): string[] {
     const captured = this.store.results.get(call.id);
