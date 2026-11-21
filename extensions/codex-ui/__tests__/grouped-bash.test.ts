@@ -382,3 +382,44 @@ test("derived layouts obey the shared budget and clear on branch navigation", ()
     h.emit("session_tree"); assert.equal(cache.stats().layouts.chargedBytes, 0);
   } finally { h.dispose(); }
 });
+
+test("binding consecutive Bash rows avoids quadratic host invalidations and preserves out-of-order merges", () => {
+  const groups = new BashGroups(new ToolRenderCache());
+  const count = 200;
+  const blocks = Array.from({ length: count }, (_, i) => call(`seq-${i}`));
+  groups.discover(message(blocks), true);
+  let hostInvalidations = 0;
+  const bound = blocks.map((block) => {
+    const state = {};
+    const ctx = {
+      toolCallId: block.id,
+      args: block.arguments,
+      state,
+      isError: false,
+      isPartial: true,
+      executionStarted: false,
+      invalidate() { hostInvalidations++; },
+    } as never;
+    const member = groups.bind(ctx);
+    groups.updateCall(member, ctx, { render: () => [], invalidate() {} });
+    return member;
+  });
+  assert.equal(hostInvalidations, 0, "sequential bind and updateCall must not cascade synchronous host invalidations");
+  assert.equal(bound[0]!.group.members.length, count);
+  assert.ok(bound.every((member) => member.group === bound[0]!.group));
+
+  // Verify out-of-order bridge merge (left + right + middle) and group splitting.
+  const bridge = new BashGroups(new ToolRenderCache());
+  bridge.discover(message([call("x0"), call("x1"), call("x2")]), true);
+  const m0 = bridge.bind({ toolCallId: "x0", state: {} } as never);
+  const m2 = bridge.bind({ toolCallId: "x2", state: {} } as never);
+  assert.notEqual(m0.group, m2.group);
+  const m1 = bridge.bind({ toolCallId: "x1", state: {} } as never);
+  assert.equal(m0.group, m1.group);
+  assert.equal(m1.group, m2.group);
+  assert.deepEqual(m0.group.members.map((m) => m.id), ["x0", "x1", "x2"]);
+  bridge.discover(message([call("x0"), { type: "text", text: "split" }, call("x1"), call("x2")]));
+  assert.deepEqual(m0.group.members.map((m) => m.id), ["x0"]);
+  assert.deepEqual(m1.group.members.map((m) => m.id), ["x1", "x2"]);
+  assert.equal(m1.group, m2.group);
+});

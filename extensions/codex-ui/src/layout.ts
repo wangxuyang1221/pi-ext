@@ -38,6 +38,18 @@ export function fitToWidth(
   return truncateToWidth(text, safeWidth, options.ellipsis ?? "", options.pad ?? false);
 }
 
+export function paintFittedBackground(
+  fittedLine: string,
+  backgroundAnsi: string,
+  modifierAfterReset = "",
+): string {
+  const backgroundSafe = fittedLine.replace(
+    FULL_SGR_RESET,
+    (reset) => `${reset}${backgroundAnsi}${modifierAfterReset}`,
+  );
+  return `${backgroundAnsi}${backgroundSafe}${BACKGROUND_RESET}`;
+}
+
 export function paintBackground(
   line: string,
   width: number,
@@ -48,11 +60,7 @@ export function paintBackground(
   if (safeWidth === 0) return "";
 
   const fitted = fitToWidth(line, safeWidth, { pad: true });
-  const backgroundSafe = fitted.replace(
-    FULL_SGR_RESET,
-    (reset) => `${reset}${backgroundAnsi}${modifierAfterReset}`,
-  );
-  return `${backgroundAnsi}${backgroundSafe}${BACKGROUND_RESET}`;
+  return paintFittedBackground(fitted, backgroundAnsi, modifierAfterReset);
 }
 
 /** Set a default text color while preserving nested colors and cursor attributes. */

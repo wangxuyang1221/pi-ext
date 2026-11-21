@@ -473,4 +473,38 @@ describe("MCP tool renderers", () => {
     expect(output).not.toContain("Completed");
     expect(output).toContain('"rows": [');
   });
+
+  it("defers pretty JSON formatting until expanded, preserves non-idempotent sanitization, and truncates expanded rows once", () => {
+    const stringifySpy = vi.spyOn(JSON, "stringify");
+    try {
+      const payload = JSON.stringify({
+        marker: "__PI_MCP_HTTP_OBSERVA__PI_MCP_HTTP_OBSERVATION_1__TION_2__",
+        items: Array.from({ length: 20 }, (_, i) => ({ id: i, text: `row-${i}` })),
+      });
+      stringifySpy.mockClear();
+      const context = { state: {}, isError: false, isPartial: false, lastComponent: undefined };
+      const collapsed = renderMcpToolResult(
+        { content: [{ type: "text", text: payload }], details: { ok: true } },
+        { expanded: false, isPartial: false },
+        createTheme(),
+        context,
+      );
+      collapsed.render(100);
+      expect(stringifySpy.mock.calls.some(([, , space]) => space === 2)).toBe(false);
+
+      truncateSpy.mockClear();
+      const expanded = renderMcpToolResult(
+        { content: [{ type: "text", text: payload }], details: { ok: true } },
+        { expanded: true, isPartial: false },
+        createTheme(),
+        { ...context, lastComponent: collapsed },
+      );
+      const lines = expanded.render(100);
+      expect(lines.join("\n")).not.toContain("__PI_MCP_HTTP_OBSERVATION_2__");
+      // Each rendered detail line is truncated once inside renderExpandedDetail without an outer second pass.
+      expect(truncateSpy.mock.calls.length).toBe(lines.length);
+    } finally {
+      stringifySpy.mockRestore();
+    }
+  });
 });

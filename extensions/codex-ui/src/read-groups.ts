@@ -44,18 +44,23 @@ export class ReadGroups {
   constructor(private readonly cache: ToolRenderCache,
     private readonly formatPath: (path: string, cwd: string) => string = path => path) {}
 
-  reset(ctx?: ExtensionContext, preserveBound = false): void {
+  reset(ctx?: ExtensionContext, preserveBound = false, messages?: Iterable<SourceMessage & { toolCallId?: string; toolName?: string; isError?: boolean }>): void {
     if (!preserveBound) { this.generation++; this.bound.clear(); }
     this.records.clear(); this.occurrences.clear(); this.candidates.clear(); this.membership.clear(); this.dirtyGroups.clear();
     this.activeCounts.clear(); this.activeKeys = []; this.nextKey = 0;
     if (ctx?.mode !== "tui") return;
     this.cwd = ctx.cwd ?? ctx.sessionManager.getCwd();
-    for (const entry of ctx.sessionManager.buildContextEntries()) {
-      for (const message of sessionEntryToContextMessages(entry)) {
-        if (message.role === "assistant") this.discover(message, true);
-        else if (message.role === "toolResult" && message.toolName === "read") {
-          this.result(message.toolCallId, message, "message", message.isError);
-        }
+    const visit = (message: SourceMessage & { toolCallId?: string; toolName?: string; isError?: boolean }) => {
+      if (message.role === "assistant") this.discover(message, true);
+      else if (message.role === "toolResult" && message.toolName === "read" && typeof message.toolCallId === "string") {
+        this.result(message.toolCallId, message as unknown as ReadResult, "message", Boolean(message.isError));
+      }
+    };
+    if (messages) {
+      for (const message of messages) visit(message);
+    } else {
+      for (const entry of ctx.sessionManager.buildContextEntries()) {
+        for (const message of sessionEntryToContextMessages(entry)) visit(message);
       }
     }
     this.activeCounts = new Map(); this.activeKeys = [];

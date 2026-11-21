@@ -79,3 +79,30 @@ test("visual counts charge source keys and preserve zero without retaining overs
   scope.count("late", compute);
   assert.equal(cache.stats().counts.entries, 0);
 });
+
+test("revision-scoped layout entries evict superseded revisions without displacing unrelated entries", () => {
+  const cache = new ToolRenderCache({ layoutBytes: 4000 });
+  const stable = cache.scope();
+  const streaming = cache.scope();
+  let stableComputes = 0;
+  stable.lines("stable-edit", () => { stableComputes++; return ["keep me".repeat(20)]; });
+  for (let rev = 0; rev < 30; rev++) {
+    streaming.linesForRevision!("bash-output\0row-1", rev, `k\0${rev}\0w120`, () => [`line-${rev}`.repeat(20)]);
+    streaming.linesForRevision!("bash-output\0row-1", rev, `k\0${rev}\0w80`, () => [`line-${rev}`.repeat(20)]);
+  }
+  // Only the stable entry plus the latest revision's two width variants remain charged.
+  assert.equal(cache.stats().layouts.entries, 3);
+  assert.equal(cache.stats().layouts.evictions, 0);
+  stable.lines("stable-edit", () => { stableComputes++; return ["recomputed"]; });
+  assert.equal(stableComputes, 1);
+
+  // Ephemeral slots (such as fresh child render members) are cleaned up on LRU eviction and budget rejection.
+  const bounded = new ToolRenderCache({ layoutBytes: 1200 });
+  const scope = bounded.scope();
+  for (let i = 0; i < 400; i++) {
+    scope.linesForRevision!(`ephemeral-${i}`, 0, `ephemeral-key-${i}`, () => [`payload-${i}`.repeat(10)]);
+  }
+  scope.linesForRevision!("oversized", 0, "oversized-key", () => ["x".repeat(2000)]);
+  assert.ok(bounded.stats().revisionSlots <= bounded.stats().layouts.entries);
+  assert.ok(bounded.stats().revisionSlots < 20, `expected bounded revisionSlots, got ${bounded.stats().revisionSlots}`);
+});

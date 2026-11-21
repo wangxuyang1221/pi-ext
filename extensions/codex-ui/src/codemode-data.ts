@@ -49,6 +49,7 @@ export interface ResultCapture { result: CapturedResult; complete: boolean; byte
 export class ResultCache {
   private entries = new Map<string, ResultCapture>();
   bytes = 0;
+  version = 0;
   private revision = 0;
   constructor(readonly budget = 4 * 1024 * 1024, readonly perResult = 64 * 1024) {}
   set(id: string, input: unknown): void {
@@ -66,10 +67,11 @@ export class ResultCache {
     if (entry.bytes > this.budget) return;
     while (this.bytes + entry.bytes > this.budget && this.entries.size) this.delete(this.entries.keys().next().value!);
     this.entries.set(id, entry); this.bytes += entry.bytes;
+    this.version++;
   }
   get(id: string): ResultCapture | undefined { return this.entries.get(id); }
-  delete(id: string): void { const entry = this.entries.get(id); if (entry) { this.bytes -= entry.bytes; this.entries.delete(id); } }
-  clear(): void { this.entries.clear(); this.bytes = 0; }
+  delete(id: string): void { const entry = this.entries.get(id); if (entry) { this.bytes -= entry.bytes; this.entries.delete(id); this.version++; } }
+  clear(): void { if (this.entries.size) this.version++; this.entries.clear(); this.bytes = 0; }
   get size(): number { return this.entries.size; }
 }
 

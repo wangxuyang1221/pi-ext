@@ -14,6 +14,7 @@ interface RowState { codemodeView?: RowView }
 export interface CodemodeServices {
   nativeRenderers: ReadonlyMap<string, ToolRenderers>;
   getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
+  readContextMessages?: (event: unknown, ctx: ExtensionContext) => Iterable<unknown>;
 }
 
 /** Display-only integration. Never registers, wraps or executes a tool. */
@@ -27,13 +28,17 @@ export function registerCodemodeUi(pi: ExtensionAPI, services: CodemodeServices)
     if (row) { invalidators.get(row.id)?.(); if (row.evicted) invalidators.delete(row.id); }
     else for (const invalidate of invalidators.values()) invalidate();
   });
-  const rebuild = (_event: unknown, ctx: ExtensionContext) => {
+  const rebuild = (event: unknown, ctx: ExtensionContext) => {
     if (ctx.mode !== "tui") return;
     presentation.clear();
-    function* messages() {
-      for (const entry of ctx.sessionManager.buildContextEntries()) yield* sessionEntryToContextMessages(entry);
+    if (services.readContextMessages) {
+      store.rebuild(services.readContextMessages(event, ctx));
+    } else {
+      function* messages() {
+        for (const entry of ctx.sessionManager.buildContextEntries()) yield* sessionEntryToContextMessages(entry);
+      }
+      store.rebuild(messages());
     }
-    store.rebuild(messages());
     invalidators.clear();
   };
   pi.on("session_start", rebuild);

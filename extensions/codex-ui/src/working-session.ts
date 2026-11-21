@@ -1,10 +1,17 @@
 import type { ExtensionAPI, ExtensionContext, MessageStartEvent, MessageUpdateEvent, MessageEndEvent } from "@earendil-works/pi-coding-agent";
 import type { Component, TUI } from "@earendil-works/pi-tui";
-import { Working, WorkingActivity } from "./working.js";
+import { Working, WorkingActivity, workingFrameKey } from "./working.js";
 
 type DisposableComponent = Component & { dispose?(): void };
+type BindingKind = "working" | "rate";
 interface TextRegionCapability {
   registerTextRegion?(component: Component): { requestRender(): void; dispose(): void };
+}
+interface BindingEntry {
+  kind: BindingKind;
+  tui: TUI;
+  local: boolean;
+  refresh: (normal: boolean) => void;
 }
 const WIDGET_KEY = "codex-ui-working";
 
@@ -14,11 +21,13 @@ export class WorkingSession {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private generation = 0;
   private disposed = false;
-  private readonly bindings = new Map<() => void, (normal: boolean) => void>();
+  private lastWorkingKey: string | undefined;
+  private lastRateLabel: string | undefined;
+  private readonly bindings = new Map<() => void, BindingEntry>();
 
   constructor(private readonly ctx: ExtensionContext) {}
 
-  bind(component: DisposableComponent, tui: TUI): DisposableComponent {
+  bind(component: DisposableComponent, tui: TUI, kind: BindingKind = "rate"): DisposableComponent {
     let released = false;
     const wrapper = {
       render: (width: number) => component.render(width),
@@ -30,9 +39,14 @@ export class WorkingSession {
     };
     const regions = tui as TUI & TextRegionCapability;
     const handle = typeof regions.registerTextRegion === "function" ? regions.registerTextRegion(wrapper) : undefined;
-    this.bindings.set(wrapper.dispose, normal => {
-      if (normal || !handle) tui.requestRender();
-      else handle.requestRender();
+    this.bindings.set(wrapper.dispose, {
+      kind,
+      tui,
+      local: Boolean(handle),
+      refresh: normal => {
+        if (normal || !handle) tui.requestRender();
+        else handle.requestRender();
+      },
     });
     if (this.disposed) wrapper.dispose();
     return wrapper;
@@ -41,7 +55,9 @@ export class WorkingSession {
   start(): void {
     if (this.disposed || this.activity.active) return;
     this.activity.start();
-    this.ctx.ui.setWidget(WIDGET_KEY, tui => this.bind(new Working(this.activity, () => this.ctx.ui.theme), tui));
+    this.lastWorkingKey = workingFrameKey(this.activity.elapsed());
+    this.lastRateLabel = this.activity.label();
+    this.ctx.ui.setWidget(WIDGET_KEY, tui => this.bind(new Working(this.activity, () => this.ctx.ui.theme), tui, "working"));
     this.refresh(true);
     this.schedule(this.generation);
   }
@@ -51,6 +67,8 @@ export class WorkingSession {
     clearTimeout(this.timer); this.timer = undefined;
     const wasActive = this.activity.active;
     this.activity.stop();
+    this.lastWorkingKey = undefined;
+    this.lastRateLabel = undefined;
     if (wasActive) { this.ctx.ui.setWidget(WIDGET_KEY, undefined); this.refresh(true); }
   }
 
@@ -71,12 +89,33 @@ export class WorkingSession {
     if (this.activity.active && event.message.role === "assistant") this.activity.rate.finish(event.message);
   }
 
-  private refresh(normal: boolean): void { for (const refresh of this.bindings.values()) refresh(normal); }
+  private refresh(normal: boolean): void { for (const entry of this.bindings.values()) entry.refresh(normal); }
+
+  private tick(): void {
+    const workingKey = workingFrameKey(this.activity.elapsed());
+    const rateLabel = this.activity.label();
+    const workingChanged = workingKey !== this.lastWorkingKey;
+    const rateChanged = rateLabel !== this.lastRateLabel;
+    if (!workingChanged && !rateChanged) return;
+    this.lastWorkingKey = workingKey;
+    this.lastRateLabel = rateLabel;
+    const requestedFull = new Set<TUI>();
+    for (const entry of this.bindings.values()) {
+      const changed = entry.kind === "working" ? workingChanged : rateChanged;
+      if (!changed) continue;
+      if (entry.local) {
+        entry.refresh(false);
+      } else if (!requestedFull.has(entry.tui)) {
+        requestedFull.add(entry.tui);
+        entry.refresh(false);
+      }
+    }
+  }
 
   private schedule(generation: number): void {
     this.timer = setTimeout(() => {
       if (generation !== this.generation) return;
-      this.refresh(false);
+      this.tick();
       this.schedule(generation);
     }, 32);
   }

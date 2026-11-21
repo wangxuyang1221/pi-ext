@@ -39,7 +39,7 @@ test("real extension lifecycle keeps working through ends and dialogs, then rele
   vi.advanceTimersByTime(1000);
   assert.equal(h.session.activity.active, true);
   assert.equal(h.session.activity.elapsed(), 2000);
-  assert.ok(h.counters().region >= 60);
+  assert.ok(h.counters().region >= 30 && h.counters().region < 60, `expected dirty-checked region refreshes, got ${h.counters().region}`);
   const beforeStop = h.counters().normal;
   h.emit("agent_settled");
   assert.equal(h.counters().normal, beforeStop + 1);
@@ -73,7 +73,8 @@ test("response events feed the production sampler, while reinstall and fallback 
   h.emit("message_start", { message: { role: "toolResult", content: [] } });
   assert.deepEqual(h.footer.render(100), ["≈10 t/s"]);
   vi.advanceTimersByTime(2100); assert.deepEqual(h.footer.render(100), ["-- t/s"]);
-  assert.ok(h.counters().normal > 60); assert.equal(h.counters().region, 0);
+  assert.ok(h.counters().normal >= 30 && h.counters().normal < 60, `expected dirty-checked normal refreshes, got ${h.counters().normal}`);
+  assert.equal(h.counters().region, 0);
   h.install(h.ctx);
   assert.equal(vi.getTimerCount(), 0); assert.equal(h.widget(), undefined);
   h.emit("message_update", { message: partial, assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: "x".repeat(800), partial } });
@@ -94,4 +95,51 @@ test("headless installation, busy reinstallation and disposed bindings do not le
   component.dispose?.();
   assert.equal(released, 1);
   busy.start(); assert.equal(vi.getTimerCount(), 0);
+});
+
+test("32ms ticks skip unchanged frames and only refresh footer regions when rate label changes", () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  const handlers = new Map<string, (event: any, ctx: ExtensionContext) => void>();
+  const pi = { on(type: string, handler: (event: any, ctx: ExtensionContext) => void) { handlers.set(type, handler); } } as unknown as ExtensionAPI;
+  const install = registerWorking(pi);
+  let workingRenders = 0;
+  let footerRenders = 0;
+  let widget: (Component & { dispose?(): void }) | undefined;
+  let footerComponent: Component | undefined;
+  const tui = {
+    requestRender() {},
+    registerTextRegion(component: Component) {
+      return {
+        requestRender() {
+          if (component === footerComponent) footerRenders++;
+          else workingRenders++;
+        },
+        dispose() {},
+      };
+    },
+  } as unknown as TUI;
+  const ui = createTestUi({
+    setWidget(_key, factory) {
+      widget?.dispose?.();
+      widget = typeof factory === "function" ? factory(tui, ui.theme) : undefined;
+    },
+  });
+  const ctx = { mode: "tui", ui, isIdle: () => true } as ExtensionContext;
+  const emit = (type: string, event = {}) => handlers.get(type)?.(event, ctx);
+  const session = install(ctx)!;
+  footerComponent = session.bind({ render: () => [session.activity.label() ?? "idle"], invalidate() {} }, tui);
+  emit("agent_start");
+  vi.advanceTimersByTime(2000);
+  // Silent run: footer rate stays "-- t/s" so footer receives zero tick renders while working skips redundant ticks.
+  assert.equal(footerRenders, 0);
+  assert.ok(workingRenders >= 30 && workingRenders <= 45, `unexpected workingRenders=${workingRenders}`);
+  const partial = fauxAssistantMessage("abcdefgh".repeat(10));
+  emit("message_start", { message: partial });
+  emit("message_update", { message: partial, assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: "abcdefgh", partial } });
+  vi.advanceTimersByTime(64);
+  assert.ok(footerRenders >= 1, "rate change should refresh footer region");
+  const afterDelta = footerRenders;
+  vi.advanceTimersByTime(2100);
+  assert.ok(footerRenders > afterDelta, "rate decay back to -- t/s should refresh footer region");
+  emit("session_shutdown");
 });

@@ -22,7 +22,7 @@ export interface BashGroup {
   members: BashMember[];
 }
 export interface BashGroupRowState { bashMember?: BashMember }
-interface Candidate { ids: string[] }
+interface Candidate { ids: string[]; positions: Map<string, number> }
 interface SourceMessage { role: string; content?: unknown }
 
 /** Session-local ownership. Only bound rows may hide behind another row. */
@@ -36,7 +36,7 @@ export class BashGroups {
 
   constructor(private readonly cache: ToolRenderCache) {}
 
-  reset(ctx?: ExtensionContext, preserveBound = false): void {
+  reset(ctx?: ExtensionContext, preserveBound = false, messages?: Iterable<SourceMessage>): void {
     if (!preserveBound) {
       for (const member of this.members.values()) {
         member.invalidate = undefined;
@@ -45,9 +45,15 @@ export class BashGroups {
     }
     this.candidates.clear(); this.membership.clear(); this.ambiguousIds.clear(); this.activeCandidates = [];
     if (ctx?.mode !== "tui") return;
-    for (const entry of ctx.sessionManager.buildContextEntries()) {
-      for (const message of sessionEntryToContextMessages(entry)) {
+    if (messages) {
+      for (const message of messages) {
         if (message.role === "assistant") this.discover(message, true);
+      }
+    } else {
+      for (const entry of ctx.sessionManager.buildContextEntries()) {
+        for (const message of sessionEntryToContextMessages(entry)) {
+          if (message.role === "assistant") this.discover(message, true);
+        }
       }
     }
     this.activeCandidates = [];
@@ -85,7 +91,7 @@ export class BashGroups {
       for (const memberId of previous?.ids ?? []) {
         this.membership.delete(memberId);
         const member = this.members.get(memberId);
-        if (member) this.assign([member]);
+        if (member) this.assign([member], true);
       }
       this.candidates.delete(id);
     }
@@ -97,11 +103,13 @@ export class BashGroups {
       for (const id of previous?.ids ?? []) if (!retained.has(id)) {
         this.membership.delete(id);
         const member = this.members.get(id);
-        if (member) this.assign([member]);
+        if (member) this.assign([member], true);
       }
-      this.candidates.set(key, { ids });
+      const positions = new Map<string, number>();
+      for (let index = 0; index < ids.length; index++) positions.set(ids[index]!, index);
+      this.candidates.set(key, { ids, positions });
       for (const id of ids) this.membership.set(id, key);
-      this.reflow(key);
+      this.reflow(key, true);
     }
     this.activeCandidates = [...nextKeys];
   }
@@ -115,10 +123,11 @@ export class BashGroups {
     };
     state.bashMember = member;
     // Duplicate IDs have ambiguous ownership. Keep the extra component independent.
-    if (!this.ambiguousIds.has(member.id) && !this.members.has(member.id)) this.members.set(member.id, member);
-    this.assign([member]);
-    const candidate = this.membership.get(member.id);
-    if (candidate && this.members.get(member.id) === member) this.reflow(candidate);
+    const tracked = !this.ambiguousIds.has(member.id) && !this.members.has(member.id);
+    if (tracked) this.members.set(member.id, member);
+    member.group = { members: [member] };
+    const candidateKey = tracked ? this.membership.get(member.id) : undefined;
+    if (candidateKey) this.attach(member, candidateKey);
     return member;
   }
 
@@ -147,9 +156,43 @@ export class BashGroups {
     if (changed) this.changed(member);
   }
 
-  private reflow(key: string): void {
+  /** Incrementally merge a newly bound member with its immediate bound neighbors in the candidate run. */
+  private attach(member: BashMember, key: string): void {
+    const candidate = this.candidates.get(key);
+    const pos = candidate?.positions.get(member.id);
+    if (!candidate || pos === undefined) return;
+    const leftId = pos > 0 ? candidate.ids[pos - 1] : undefined;
+    const rightId = pos + 1 < candidate.ids.length ? candidate.ids[pos + 1] : undefined;
+    const left = leftId !== undefined && this.membership.get(leftId) === key ? this.members.get(leftId) : undefined;
+    const right = rightId !== undefined && this.membership.get(rightId) === key ? this.members.get(rightId) : undefined;
+    if (left && !right) {
+      // Common sequential binding fast path: append in O(1) without rescanning or cascading host invalidations.
+      left.group.members.push(member);
+      member.group = left.group;
+      left.group.members[0]?.component?.invalidate();
+      return;
+    }
+    if (left && right) {
+      const target = left.group;
+      const merged = right.group.members;
+      target.members.push(member, ...merged);
+      member.group = target;
+      for (const item of merged) item.group = target;
+      target.members[0]?.component?.invalidate();
+      right.component?.invalidate();
+      return;
+    }
+    if (right) {
+      const merged = [member, ...right.group.members];
+      const group: BashGroup = { members: merged };
+      for (const item of merged) item.group = group;
+      right.component?.invalidate();
+    }
+  }
+
+  private reflow(key: string, notifyHost: boolean): void {
     let segment: BashMember[] = [];
-    const flush = () => { if (segment.length) this.assign(segment); segment = []; };
+    const flush = () => { if (segment.length) this.assign(segment, notifyHost); segment = []; };
     const seen = new Set<string>();
     for (const id of this.candidates.get(key)?.ids ?? []) {
       // Extra rows with ambiguous IDs bind independently. Never reuse the first
@@ -163,16 +206,30 @@ export class BashGroups {
     flush();
   }
 
-  private assign(members: BashMember[]): void {
+  private assign(members: BashMember[], notifyHost: boolean): void {
+    const previous = members[0]?.group;
+    if (previous?.members.length === members.length && previous.members.every((member, index) => member === members[index])) {
+      return;
+    }
+    const formerOwners = new Set<BashMember>();
+    for (const member of members) {
+      const owner = member.group?.members[0];
+      if (owner) formerOwners.add(owner);
+    }
     const group: BashGroup = { members };
     for (const member of members) member.group = group;
-    for (const member of members) this.notify(member);
+    const owner = members[0];
+    if (owner) formerOwners.add(owner);
+    // Only invalidate/notify rows whose visible ownership or owned group changed, never unchanged followers.
+    for (const affected of formerOwners) {
+      affected.component?.invalidate();
+      if (notifyHost) this.notify(affected);
+    }
   }
 
   private changed(member: BashMember): void {
     const owner = member.group.members[0]!;
     owner.component?.invalidate();
-    if (owner !== member) this.notify(owner);
   }
 
   private notify(member: BashMember): void {

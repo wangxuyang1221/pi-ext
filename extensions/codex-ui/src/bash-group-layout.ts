@@ -11,9 +11,17 @@ function clean(text: string): string {
     .replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f\ud800-\udfff\u202a-\u202e\u2066-\u2069\ufff9-\ufffb]/gu, "")
     .replace(/\t/gu, "  ");
 }
+function cachedLines(member: BashMember, slotKind: "command" | "output", revision: number, key: string, compute: () => string[]): string[] {
+  const cache = member.cache;
+  if (cache.linesForRevision) {
+    return cache.linesForRevision(`bash-${slotKind}\0${cache.identity(member)}`, revision, key, compute);
+  }
+  return cache.lines(key, compute);
+}
 function physical(member: BashMember): string[] {
   const cache = member.cache;
-  return cache.lines(`group-clean\0${cache.identity(member)}\0${member.outputRevision}`, () => {
+  const key = `group-clean\0${cache.identity(member)}\0${member.outputRevision}`;
+  return cachedLines(member, "output", member.outputRevision, key, () => {
     const text = (member.content ?? []).flatMap(block => {
       if (block.type !== "text") return [];
       const text = block.text;
@@ -104,7 +112,7 @@ function commandLines(member: BashMember, expanded: boolean, theme: Theme, width
   const continuation = width >= 8 ? "  " : "";
   const cache = member.cache;
   const key = ["group-command", cache.identity(member), member.commandRevision, expanded, width, suffix].join("\0");
-  const commands = cache.lines(key, () => {
+  const commands = cachedLines(member, "command", member.commandRevision, key, () => {
     const command = clean(member.command) || "…";
     if (!expanded) return [fitToWidth(command.replace(/\n/gu, " "), Math.max(0, width - visibleWidth(prefix) - visibleWidth(suffix) - 1), { ellipsis: "…" }) + ")" + suffix];
     const [head = "", ...tail] = (command + ")").split("\n");
@@ -130,10 +138,10 @@ export function renderBashGroup(group: BashGroup, expanded: boolean, theme: Them
     const indent = width >= 6 ? "    " : "";
     const contentWidth = Math.max(1, width - indent.length);
     const key = ["group-output", cache.identity(member), member.outputRevision, captureVariant(member), contentWidth].join("\0");
-    const visual = cache.lines(key, () => capture(member).flatMap(line => wrapTextWithAnsi(line, contentWidth)));
+    const visual = cachedLines(member, "output", member.outputRevision, key, () => capture(member).flatMap(line => wrapTextWithAnsi(line, contentWidth)));
     const fingerprint = theme.fg("dim", "x") + theme.fg("toolOutput", "x");
     const styledKey = [key, "styled", expanded, width, toggleKeys, fingerprint, visual.length ? "" : member.status].join("\0");
-    const styled = cache.lines(styledKey, () => bodyRows(visual, expanded, member.status, toggleKeys).map(({ text, color }, index) =>
+    const styled = cachedLines(member, "output", member.outputRevision, styledKey, () => bodyRows(visual, expanded, member.status, toggleKeys).map(({ text, color }, index) =>
       theme.fg("dim", indent ? (index ? indent : "  └ ") : "") + theme.fg(color, fitToWidth(text, contentWidth, { ellipsis: "…" }))));
     for (const line of styled) lines.push(line);
     const warning = truncationWarning(member);
