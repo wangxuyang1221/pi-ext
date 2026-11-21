@@ -100,7 +100,7 @@ pnpm run build
 
 ### Fast Mode
 
-Fast Mode 默认关闭。启用后，扩展为所有 `openai-codex` 模型和[内置名单](extensions/openai-fast-mode/src/config.ts)中的 `openai` 模型注入 `service_tier: "priority"`。名单随扩展维护，加载时会同步。
+Fast Mode 默认关闭。启用后，扩展为所有 `openai-codex` 模型和[内置名单](extensions/openai-fast-mode/src/config.ts)中的 `openai` 模型注入 `service_tier: "priority"`。名单随扩展维护，加载时会同步。Pi 1.5.2 的默认模型 `openai/gpt-6.1-sol` 已列入名单；Fast Mode 不请求 `ultrafast`。
 
 ```text
 /fast on

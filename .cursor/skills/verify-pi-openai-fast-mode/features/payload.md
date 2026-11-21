@@ -27,8 +27,8 @@ Preconditions:
 
 | ID | Required observation |
 | --- | --- |
-| fast-openai | 七个当前默认名单逐次通过真实 `/model` 选择并发送 priority 请求 |
-| fast-codex | 两个任意 Codex ID 均注入 priority |
+| fast-openai | 用真实 `/model` 逐次选择默认名单模型并发送 priority 请求；`gpt-6.1-sol` 另核对启用和关闭时的字段与状态栏 |
+| fast-codex | 任意 Codex ID 均注入 priority；`gpt-6.1-sol` 另核对启用和关闭时的字段与状态栏 |
 | fast-unmatched | 相似 OpenAI ID、第三方同名 ID 无字段；切回匹配模型恢复 |
 | fast-unsupported | 明确 unsupported 请求失败并提示用户重试；无自动重放；用户重试仅一个标准请求 |
 | fast-error-scope | 被拒模型切走切回、off/on 后仍标准；其他模型仍 priority；含普通 400 文案的 SSE 错误不禁用；新 session 恢复 priority；配置仍 true |

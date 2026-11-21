@@ -112,6 +112,23 @@ try:
     if mode=='smoke':
         cli.close()
     else:
+        sol_id='gpt-6.1-sol'
+        for provider in ('openai','openai-codex'):
+            cli.model(provider,sol_id)
+            for configured in (True,False):
+                cli.fast(configured)
+                label='sol-'+provider+('-on' if configured else '-off')
+                row=cli.request(label,'priority' if configured else None,provider,sol_id)
+                assert ('service_tier' in row['payload']) is configured
+                cli.wait(lambda:('('+provider+') '+sol_id) in cli.view() and 'audit-reply:'+label in cli.view(),'literal-footer-ready-'+label)
+                until=time.monotonic()+.5
+                while time.monotonic()<until: cli.pump()
+                screen=cli.view()
+                footer='fast' in [line.strip() for line in screen.splitlines()]
+                cli.screens['literal-footer-'+label]=screen
+                checks.append(dict(label='literal-footer-'+label,provider=provider,id=sol_id,configured=configured,expectedFast=configured,actualFast=footer))
+                assert footer is configured, f'{label}: expected footer {configured}, got {footer}\n{screen}'
+        cli.fast(True)
         for provider,id,tier in [('openai',id,'priority') for id in ['gpt-5.4','gpt-5.5','gpt-5.6','gpt-5.6-sol','gpt-5.6-terra','gpt-5.6-luna','gpt-6-astra']]+[('openai','gpt-6-astra-unknown',None),('audit-other','gpt-6-astra',None),('openai-codex','gpt-6-sol','priority')]:
             cli.model(provider,id); cli.request('model-'+provider+'-'+id,tier,provider,id)
         cli.model('openai-codex','gpt-7-unlisted')

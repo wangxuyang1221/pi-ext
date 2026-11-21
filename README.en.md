@@ -100,7 +100,7 @@ Submitted references appear as native Pi skill cards, with a snapshot of the ski
 
 ### Fast Mode
 
-Fast Mode is off by default. When enabled, it injects `service_tier: "priority"` for every `openai-codex` model and for `openai` models in the [built-in list](extensions/openai-fast-mode/src/config.ts). The extension maintains and synchronizes that list on load.
+Fast Mode is off by default. When enabled, it injects `service_tier: "priority"` for every `openai-codex` model and for `openai` models in the [built-in list](extensions/openai-fast-mode/src/config.ts). The extension maintains and synchronizes that list on load. The list includes Pi 1.5.2’s default `openai/gpt-6.1-sol`. Fast Mode does not request `ultrafast`.
 
 ```text
 /fast on

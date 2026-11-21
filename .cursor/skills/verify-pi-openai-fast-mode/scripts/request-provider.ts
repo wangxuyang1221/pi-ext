@@ -12,7 +12,7 @@ export default async function(pi: any) {
   const key = `offline.${Buffer.from(JSON.stringify({'https://api.openai.com/auth': {chatgpt_account_id: 'fixture'}})).toString('base64url')}.fixture`;
   for (const provider of ['openai', 'openai-codex', 'audit-other']) {
     const adapter = provider === 'openai-codex' ? codex : openai;
-    const ids = provider === 'openai' ? ['gpt-5.4', 'gpt-5.5', 'gpt-5.6', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-6-astra', 'gpt-6-astra-unknown'] : provider === 'openai-codex' ? ['gpt-7-unlisted', 'gpt-6-sol'] : ['gpt-6-astra'];
+    const ids = provider === 'openai' ? ['gpt-5.4', 'gpt-5.5', 'gpt-5.6', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-6-astra', 'gpt-6-astra-unknown', 'gpt-6.1-sol'] : provider === 'openai-codex' ? ['gpt-7-unlisted', 'gpt-6-sol', 'gpt-6.1-sol'] : ['gpt-6-astra'];
     const models = ids.map(id => ({id, name:id, provider, api:provider === 'openai-codex' ? 'openai-codex-responses' : 'openai-responses', baseUrl:'https://offline.invalid/v1', reasoning:true, input:['text'], cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:128000,maxTokens:4096}));
     const stream = (model: any, context: any, options: any) => {
       const user = context.messages.filter((m:any) => m.role === 'user').at(-1);
