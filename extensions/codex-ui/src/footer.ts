@@ -104,11 +104,11 @@ export class CodexFooter implements Component {
     const theme = this.options.getTheme();
     const status = this.readStatus(statuses, "status");
     const cached = this.reuseCombined(base, safeWidth, status, rate, theme);
-    if (cached) return cached;
+    if (cached) return cached.slice();
     const lines = composeFooter(base, safeWidth, remaining, suffix, theme);
     if (status) lines.push(fitToWidth(theme.fg("muted", ` ${status}`), safeWidth));
     this.combined = { base, width: safeWidth, status, rate, theme, lines };
-    return lines;
+    return lines.slice();
   }
 
   private reuseCombined(

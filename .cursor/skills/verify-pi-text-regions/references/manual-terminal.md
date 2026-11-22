@@ -51,7 +51,7 @@ JS
 (test -x "${PI_CLI:-}" && cd "$MANUAL/runtime/workspace" && env -i PATH="$PATH" LANG="${LANG:-en_US.UTF-8}" TERM="${TERM:-xterm-256color}" TERM_PROGRAM="${TERM_PROGRAM:-}" COLORTERM=truecolor HOME="$MANUAL/runtime/home" TMPDIR="$MANUAL/runtime/tmp" XDG_CACHE_HOME="$MANUAL/runtime/cache" XDG_CONFIG_HOME="$MANUAL/runtime/config" XDG_DATA_HOME="$MANUAL/runtime/data" XDG_STATE_HOME="$MANUAL/runtime/state" PI_CODING_AGENT_DIR="$MANUAL/runtime/agent" PI_OFFLINE=1 PI_SKIP_VERSION_CHECK=1 PI_TELEMETRY=0 LOCAL_REFRESH_EVIDENCE="$MANUAL" MANUAL="$MANUAL" REPO="$REPO" PI_CLI="$PI_CLI" MODE="$MODE" sh -c 'echo $$ > "$MANUAL/pid"; exec "$PI_CLI" --no-extensions --no-skills --no-context-files --no-prompt-templates -e "$REPO/extensions/codex-ui/dist/index.js" -e "$REPO/test-support/fixtures/local-refresh/working-provider.ts" --provider faux --model faux-1 --tui-mode "$MODE"')
 ```
 
-提交 `Generate visible thinking and text`，观察生产 spinner/反光/计时/速率与 状态行，再 Esc 等待真正结束、`/quit`。全屏另用新目录，将 MODE 改成 fullscreen。此处只验证物理显示，完整工具/retry/compaction 仍走 Working 自动旅程。
+提交 `Generate visible thinking and text`，观察生产 spinner/静态粗体 `Working`/计时/速率与状态行，再 Esc 等待真正结束、`/quit`。全屏另用新目录，将 MODE 改成 fullscreen。此处只验证物理显示，完整工具/retry/compaction 仍走 Working 自动旅程。
 
 ## Actions and evidence
 

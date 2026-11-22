@@ -4,6 +4,7 @@ import { fitToWidth, normalizeWidth } from "./layout.js";
 import { TokenRate } from "./token-rate.js";
 
 const FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
+export const WORKING_FRAME_MS = 80;
 
 /** Keep task lifetime independent of the current model response. */
 export class WorkingActivity {
@@ -22,10 +23,9 @@ export class WorkingActivity {
 
 /** Discrete visual state key covering every time-dependent element of Working. */
 export function workingFrameKey(elapsed: number): string {
-  const spinner = Math.floor(elapsed / 80) % FRAMES.length;
-  const sweep = Math.floor(elapsed % 2000 / 2000 * 27);
+  const spinner = Math.floor(elapsed / WORKING_FRAME_MS) % FRAMES.length;
   const seconds = Math.floor(elapsed / 1000);
-  return `${spinner}:${sweep}:${seconds}`;
+  return `${spinner}:${seconds}`;
 }
 
 export class Working implements Component {
@@ -34,29 +34,18 @@ export class Working implements Component {
     const safeWidth = normalizeWidth(width);
     if (!this.activity.active || safeWidth === 0) return [];
     const elapsed = this.activity.elapsed(), theme = this.getTheme();
-    const spinner = theme.fg("accent", FRAMES[Math.floor(elapsed / 80) % FRAMES.length]!);
+    const spinner = theme.fg("accent", FRAMES[Math.floor(elapsed / WORKING_FRAME_MS) % FRAMES.length]!);
     const hint = safeWidth >= 40;
     const timing = `(${elapsedLabel(elapsed)}${hint ? " · esc to interrupt" : ""})`;
     const styled = hint
       ? theme.fg("dim", `(${elapsedLabel(elapsed)} · `) + theme.fg("muted", "esc") + theme.fg("dim", " to interrupt)")
       : theme.fg("dim", timing);
-    const line = ` ${spinner} ${shimmer(elapsed)} ${styled}`;
+    const label = theme.bold(theme.fg("text", "Working"));
+    const line = ` ${spinner} ${label} ${styled}`;
     // The fixed prefix and timing use single-cell glyphs; only narrow layouts need clipping.
     return [11 + timing.length <= safeWidth ? line : fitToWidth(line, safeWidth)];
   }
   invalidate(): void {}
-}
-
-// Adapted from OpenAI Codex rust-v0.97.0 tui/src/shimmer.rs, Apache-2.0.
-// Preserve the prototype's 2s sweep, 10-cell padding, cosine band and gray palette.
-function shimmer(elapsed: number): string {
-  const position = Math.floor(elapsed % 2000 / 2000 * 27);
-  return [..."Working"].map((char, index) => {
-    const distance = Math.abs(index + 10 - position);
-    const intensity = distance <= 5 ? 0.5 * (1 + Math.cos(Math.PI * distance / 5)) : 0;
-    const gray = Math.trunc(255 * intensity * 0.9 + 128 * (1 - intensity * 0.9));
-    return `\x1b[1;38;2;${gray};${gray};${gray}m${char}\x1b[22;39m`;
-  }).join("");
 }
 
 function elapsedLabel(elapsed: number): string {

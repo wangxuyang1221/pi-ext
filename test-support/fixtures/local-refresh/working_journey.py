@@ -44,10 +44,15 @@ def run(driver):
             match = re.search(r"([⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]) Working", line)
             if match:
                 start = match.start()
-                return (match[1], tuple(screen.buffer[row][x].fg for x in range(start + 2, start + 9)), screen.buffer[row][start].fg)
+                return (
+                    match[1],
+                    tuple(screen.buffer[row][x].fg for x in range(start + 2, start + 9)),
+                    screen.buffer[row][start].fg,
+                    tuple(screen.buffer[row][x].bold for x in range(start + 2, start + 9)),
+                )
         return None
 
-    def advances(label):
+    def advances(label, expect_codex_theme=True):
         first = frame()
         assert first is not None, view()
         samples = []
@@ -57,7 +62,20 @@ def run(driver):
             if value:
                 samples.append(value)
         assert len({sample[0] for sample in samples}) >= 5, samples
-        assert len({sample[1] for sample in samples}) >= 2, samples
+        label_colors = {sample[1] for sample in samples}
+        assert len(label_colors) == 1, samples
+        steady_label = next(iter(label_colors))
+        assert len(set(steady_label)) == 1 and steady_label[0] != "default", samples
+        assert all(sample[3] == (True,) * 7 for sample in samples), samples
+        spinner_colors = {sample[2] for sample in samples}
+        assert len(spinner_colors) == 1, samples
+        steady_spinner = next(iter(spinner_colors))
+        if expect_codex_theme:
+            assert steady_label[0] == tone("text"), samples
+            assert steady_spinner == tone("accent"), samples
+        else:
+            assert steady_label[0] != tone("text"), samples
+            assert steady_spinner != tone("accent"), samples
         checks.append(label)
         driver["screens"][label] = {"text": view(), "frames": samples}
 
@@ -85,7 +103,7 @@ def run(driver):
     wait(lambda: re.search(r"≈[\d.]+ t/s", view()) is not None, "real received fragments produce estimated rate")
     assert frame()[2] == tone("accent"), frame()
     assert status_label in view()
-    advances("ten-frame spinner and shimmer during provider streaming")
+    advances("ten-frame spinner and steady bold Working label during provider streaming")
     capture("streaming")
     draft = "draft-中文-abc"
     send(draft)
@@ -141,7 +159,7 @@ def run(driver):
     send("\x1b[20~")
     wait(lambda: bool(events("theme")), "theme changes through public UI")
     assert events("theme")[-1]["success"]
-    advances("animation continues after theme invalidation")
+    advances("animation continues after theme invalidation", expect_codex_theme=False)
     send("\x1b[20~")
     send("\x0f")
     checks.append("native tool expansion key remains usable during animation")

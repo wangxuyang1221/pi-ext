@@ -102,7 +102,7 @@ node scripts/pi152-patched-verify.mjs run node --expose-gc scripts/local-refresh
 node scripts/pi152-patched-verify.mjs run node --expose-gc scripts/local-refresh-cpu.mjs --mode=fullscreen --baseline=.tmp/INSTALL_ROOT/original/node_modules/@earendil-works/pi-tui
 ```
 
-默认同步执行已排队的帧，用于隔离 renderer CPU；不把 `renderNow()` 冒充局部刷新。加入 `--interval=32 --pairs=200,1000 --workloads=animation-and-rate --frames=40 --samples=3` 可复验真实调度器的 32ms 节奏。两条路径的内容、帧数、节奏和主题相同；本工具不测终端模拟器自身 CPU，也不调用外部模型。
+默认同步执行已排队的帧，用于隔离 renderer CPU；不把 `renderNow()` 冒充局部刷新。加入 `--interval=80 --pairs=200,1000 --workloads=animation-and-rate --frames=40 --samples=3` 可按 80ms 间隔驱动宿主渲染与原生 timer（生产 `WorkingSession` 的相位对齐、跨边界补唤醒与 footer 脏检查由 [working-session.test.ts](../extensions/codex-ui/__tests__/working-session.test.ts) 验证）。两条路径的内容、帧数、节奏和主题相同；本工具不测终端模拟器自身 CPU，也不调用外部模型。
 
 200/1000 对历史动态帧中位数须至少下降 30%。0/200/1000 的正常更新和未注册 API 路径，额外中位数须不超过 `max(原版 10%, 0.1ms/帧)`。超出预算时进程退出码为 1。应单独运行 CPU 测量，保留所有批次，报告噪声及绝对值，不只选择最佳批次。
 

@@ -37,22 +37,6 @@ function applyProfileTheme(ctx: ExtensionContext, notifyUnavailable: boolean): b
   return true;
 }
 
-const BLOCK_START = /^(?:\s*$| {4}|\t| {0,3}(?:[#>|<]|```|~~~|[-*+](?:\s|$)|\d{1,9}[.)](?:\s|$)|(?:[-*_]\s*){3,}$|=+\s*$|-+\s*$))/u;
-const UNDERLINE = /^ {0,3}(?:=+\s*|[-:|\s]*-[-:|\s]*)$/u;
-
-/**
- * A hard break only joins paragraph text; before a block, Markdown shows the backslash literally.
- * A setext underline anywhere in the joined paragraph would turn the title into a heading.
- */
-function continuesParagraph(lines: readonly string[]): boolean {
-  if (BLOCK_START.test(lines[0] ?? "")) return false;
-  for (const line of lines.slice(1)) {
-    if (!line.trim()) return true;
-    if (UNDERLINE.test(line)) return false;
-  }
-  return true;
-}
-
 function hideInlineWorkingRow(ui: ExtensionUIContext): void {
   ui.setWorkingVisible(false);
 }
@@ -106,15 +90,8 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
 
   pi.registerMarkdownTransformer((markdown, context) => {
     if (context.messageType === "assistant-thinking") {
-      // Keep the entire thinking run in one native blockquote, including blank lines.
-      if (!markdown.trim()) return markdown;
-      const lines = markdown.split(/\r?\n/u);
-      const title = continuesParagraph(lines) ? "> **Thinking**\\\n" : "> **Thinking**\n>\n";
-      return title + lines.map(line => line ? `> ${line}` : ">").join("\n");
-    }
-    if (context.messageType === "assistant") {
-      // Display-only outer list: let native Markdown align wrapped lines and blocks.
-      return markdown.trim() ? `- ${markdown.replace(/\r?\n/gu, "\n  ")}` : markdown;
+      // Prepend a standalone Thinking blockquote header so body blocks keep native top-level caching.
+      return markdown.trim() ? `> **Thinking**\n\n${markdown}` : markdown;
     }
     return markdown;
   });

@@ -6,10 +6,10 @@ import { Container, stripTerminalSequences } from "@earendil-works/pi-tui";
 import codexUi from "../src/index.js";
 import { reasoningMessage, reasoningPipeline } from "./fixtures/reasoning-pipeline.js";
 
-// Native blockquote reference, independent of production registration and its source formatting.
+// Header-only Thinking blockquote reference, independent of production registration.
 const quoteReference: MarkdownTransformer = (text, context) =>
   context.messageType === "assistant-thinking" && text.trim()
-    ? (/^[->]/u.test(text) ? "> **Thinking**\n>\n> " : "> **Thinking**\\\n> ") + text.replace(/\r?\n/gu, "\n> ") : text;
+    ? `> **Thinking**\n\n${text}` : text;
 
 test("thinking grows inline and retains its contents through tool finalization", async () => {
   const pipeline = await reasoningPipeline(codexUi, process.cwd(), 0, false, 0);
@@ -104,7 +104,9 @@ test("thinking uses native blockquote wrapping, padding and visibility for all p
                 } else {
                   assert.ok(lines.length > 1, "Long reasoning must wrap instead of truncating to one line");
                   assert.match(lines[0]!, /│ Thinking/u);
-                  assert.equal(lines.slice(1).map(line => line.trim().replace(/^│\s?/u, "")).filter(Boolean).join(" "), text);
+                  assert.ok(lines.slice(1).every(line => !line.trimStart().startsWith("│")),
+                    "Unquoted thinking body must not carry blockquote borders");
+                  assert.equal(lines.slice(1).map(line => line.trim()).filter(Boolean).join(" "), text);
                 }
               }
             }
@@ -116,23 +118,95 @@ test("thinking uses native blockquote wrapping, padding and visibility for all p
   }
 });
 
-test("thinking title sits directly above paragraph text and never shows a hard-break backslash before a block", async () => {
+test("thinking header is separated by a blank line and leaves body blocks unquoted without backslashes", async () => {
   const pipeline = await reasoningPipeline(codexUi, process.cwd(), 0, false, 0);
   try {
     await pipeline.begin();
     const rows = (text: string) => {
       pipeline.assistant.updateContent(reasoningMessage(text), false);
-      return pipeline.assistant.render(60).map(line => stripTerminalSequences(line).trimEnd()).filter(line => line.startsWith("│"));
+      const rendered = pipeline.assistant.render(60).map(line => stripTerminalSequences(line).trimEnd());
+      const start = rendered.findIndex(line => line.startsWith("│ Thinking"));
+      return start >= 0 ? rendered.slice(start) : rendered;
     };
-    assert.deepEqual(rows("**Plan**\n\nRead the file."), ["│ Thinking", "│ Plan", "│", "│ Read the file."]);
-    assert.deepEqual(rows("Plain body."), ["│ Thinking", "│ Plain body."]);
-    for (const [text, first] of [["- item", "│ - item"], ["1. step", "│ 1. step"], ["# Heading", "│ Heading"], ["> nested", "│ │ nested"],
-      ["```ts\nconst n = 1;\n```", "│ ```ts"], ["Title\n---", "│ Title"]] as const) {
+    assert.deepEqual(rows("**Plan**\n\nRead the file."), ["│ Thinking", "", "Plan", "", "Read the file."]);
+    assert.deepEqual(rows("Plain body."), ["│ Thinking", "", "Plain body."]);
+    for (const [text, first] of [["- item", "- item"], ["1. step", "1. step"], ["# Heading", "Heading"], ["> nested", "│ nested"],
+      ["```ts\nconst n = 1;\n```", "```ts"], ["Title\n---", "Title"], ["\nAfter a blank line", "After a blank line"]] as const) {
       const visible = rows(text);
-      assert.deepEqual(visible.slice(0, 2), ["│ Thinking", "│"], text);
+      assert.deepEqual(visible.slice(0, 2), ["│ Thinking", ""], text);
       assert.ok(visible.slice(2).some(line => line.startsWith(first)), `${text}: ${visible.join(" / ")}`);
       assert.ok(visible.every(line => !line.includes("\\")), text);
+      if (text !== "> nested") {
+        assert.ok(visible.slice(2).every(line => !line.startsWith("│")), `${text}: ${visible.join(" / ")}`);
+      }
     }
+  } finally { await pipeline.dispose(); }
+});
+
+test("left-clicking an unquoted thinking body collapses only that thinking run across streaming updates", async () => {
+  const pipeline = await reasoningPipeline(codexUi, process.cwd(), 0, false, 0);
+  try {
+    await pipeline.begin();
+    const initial = {
+      ...reasoningMessage(),
+      content: [
+        { type: "thinking" as const, thinking: "Thinking A body stays expanded." },
+        { type: "text" as const, text: "Intermediate reply text." },
+        { type: "thinking" as const, thinking: "Thinking B body target." },
+      ],
+    };
+    pipeline.assistant.updateContent(initial, true);
+    const rendered = pipeline.assistant.render(80).map(stripTerminalSequences);
+    const replyY = rendered.findIndex(line => line.includes("Intermediate reply text."));
+    const targetY = rendered.findIndex(line => line.includes("Thinking B body target."));
+    assert.ok(replyY >= 0, `expected reply row in:\n${rendered.join("\n")}`);
+    assert.ok(targetY > replyY, `expected Thinking B body row after reply in:\n${rendered.join("\n")}`);
+
+    const replyClick = pipeline.assistant.handleMouse({
+      type: "click",
+      button: "left",
+      x: 4,
+      y: replyY,
+      screenX: 4,
+      screenY: replyY,
+      width: 80,
+      height: rendered.length,
+      shift: false,
+      ctrl: false,
+      alt: false,
+    });
+    assert.equal(replyClick, undefined);
+
+    const clickResult = pipeline.assistant.handleMouse({
+      type: "click",
+      button: "left",
+      x: 4,
+      y: targetY,
+      screenX: 4,
+      screenY: targetY,
+      width: 80,
+      height: rendered.length,
+      shift: false,
+      ctrl: false,
+      alt: false,
+    });
+    assert.equal(clickResult?.handled, true);
+
+    const streamed = {
+      ...initial,
+      content: [
+        initial.content[0]!,
+        initial.content[1]!,
+        { type: "thinking" as const, thinking: "Thinking B body target.\n\nMore streamed detail for B." },
+      ],
+    };
+    pipeline.assistant.updateContent(streamed, true);
+    const visible = pipeline.assistant.render(80).map(stripTerminalSequences).join("\n");
+    assert.match(visible, /Thinking A body stays expanded\./u);
+    assert.match(visible, /Intermediate reply text\./u);
+    assert.match(visible, /Thinking\.\.\./u);
+    assert.ok(!visible.includes("Thinking B body target."));
+    assert.ok(!visible.includes("More streamed detail for B."));
   } finally { await pipeline.dispose(); }
 });
 

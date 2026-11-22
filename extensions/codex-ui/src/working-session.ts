@@ -1,6 +1,6 @@
 import type { ExtensionAPI, ExtensionContext, MessageStartEvent, MessageUpdateEvent, MessageEndEvent } from "@earendil-works/pi-coding-agent";
 import type { Component, TUI } from "@earendil-works/pi-tui";
-import { Working, WorkingActivity, workingFrameKey } from "./working.js";
+import { WORKING_FRAME_MS, Working, WorkingActivity, workingFrameKey } from "./working.js";
 
 type DisposableComponent = Component & { dispose?(): void };
 type BindingKind = "working" | "rate";
@@ -15,7 +15,7 @@ interface BindingEntry {
 }
 const WIDGET_KEY = "codex-ui-working";
 
-/** Own both dynamic regions and their single 32ms animation clock for this session. */
+/** Own both dynamic regions and their single 80ms phase-aligned animation clock for this session. */
 export class WorkingSession {
   readonly activity = new WorkingActivity();
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -55,11 +55,12 @@ export class WorkingSession {
   start(): void {
     if (this.disposed || this.activity.active) return;
     this.activity.start();
-    this.lastWorkingKey = workingFrameKey(this.activity.elapsed());
+    const startedElapsed = this.activity.elapsed();
+    this.lastWorkingKey = workingFrameKey(startedElapsed);
     this.lastRateLabel = this.activity.label();
     this.ctx.ui.setWidget(WIDGET_KEY, tui => this.bind(new Working(this.activity, () => this.ctx.ui.theme), tui, "working"));
     this.refresh(true);
-    this.schedule(this.generation);
+    this.schedule(this.generation, startedElapsed);
   }
 
   stop(): void {
@@ -91,12 +92,13 @@ export class WorkingSession {
 
   private refresh(normal: boolean): void { for (const entry of this.bindings.values()) entry.refresh(normal); }
 
-  private tick(): void {
-    const workingKey = workingFrameKey(this.activity.elapsed());
+  private tick(): number {
+    const elapsed = this.activity.elapsed();
+    const workingKey = workingFrameKey(elapsed);
     const rateLabel = this.activity.label();
     const workingChanged = workingKey !== this.lastWorkingKey;
     const rateChanged = rateLabel !== this.lastRateLabel;
-    if (!workingChanged && !rateChanged) return;
+    if (!workingChanged && !rateChanged) return elapsed;
     this.lastWorkingKey = workingKey;
     this.lastRateLabel = rateLabel;
     const requestedFull = new Set<TUI>();
@@ -110,14 +112,17 @@ export class WorkingSession {
         entry.refresh(false);
       }
     }
+    return elapsed;
   }
 
-  private schedule(generation: number): void {
+  private schedule(generation: number, observedElapsed = this.activity.elapsed()): void {
+    const nextBoundary = (Math.floor(observedElapsed / WORKING_FRAME_MS) + 1) * WORKING_FRAME_MS;
+    const delay = Math.max(1, Math.ceil(nextBoundary - this.activity.elapsed()));
     this.timer = setTimeout(() => {
       if (generation !== this.generation) return;
-      this.tick();
-      this.schedule(generation);
-    }, 32);
+      const observed = this.tick();
+      this.schedule(generation, observed);
+    }, delay);
   }
 }
 

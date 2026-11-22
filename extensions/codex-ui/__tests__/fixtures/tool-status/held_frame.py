@@ -15,5 +15,6 @@ def held_frame(screen, heading):
                   for row in range(start, end))
     col = match.start()
     animation = (match[1], tuple(screen.buffer[end][x].fg for x in range(col + 2, col + 9)),
-                 screen.buffer[end][col].fg)
+                 screen.buffer[end][col].fg,
+                 tuple(screen.buffer[end][x].bold for x in range(col + 2, col + 9)))
     return cards, animation

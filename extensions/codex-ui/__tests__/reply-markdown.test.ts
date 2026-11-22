@@ -36,20 +36,19 @@ const fixture = [
 
 const plain = (row: AssistantMessageComponent, width = 60) => row.render(width).map(stripTerminalSequences);
 
-test("assistant transform adds one outer list without dropping whitespace or existing lists", () => {
+test("assistant transform leaves reply markdown unchanged without adding an outer list", () => {
   const transform = transformers()[0]!;
   for (const isStreaming of [false, true]) {
     const context = { messageType: "assistant" as const, isStreaming, availableWidth: 60 };
     for (const empty of ["", " ", "\n\t\r\n"]) assert.equal(transform(empty, context), empty);
     for (const source of [fixture, "## First heading\n\nBody", "- Existing list", "\n\nLeading blanks\n", "First\r\n\r\nNext"]) {
-      const expected = "- " + source.split(/\r?\n/u).join("\n  ");
-      assert.equal(transform(source, context), expected);
-      assert.equal(transform(source, context), expected, "Repeated rendering starts from input, not prior output");
+      assert.equal(transform(source, context), source);
+      assert.equal(transform(source, context), source, "Repeated rendering preserves source markdown");
     }
   }
 });
 
-test("native assistant layout wraps and indents blocks without changing output padding", () => {
+test("native assistant layout wraps blocks directly at output padding without outer list indentation", () => {
   initTheme("dark", false);
   for (const outputPad of [0, 1]) {
     const row = new AssistantMessageComponent(message(fixture), false, undefined, "Thinking...", outputPad, transformers());
@@ -57,19 +56,19 @@ test("native assistant layout wraps and indents blocks without changing output p
       const rendered = row.render(width);
       assert(rendered.every(line => visibleWidth(line) <= width));
       const lines = rendered.map(stripTerminalSequences).filter(line => line.trim());
-      assert(lines[0]!.startsWith(" ".repeat(outputPad) + "- This long reply"));
-      assert(lines.slice(1).every(line => line.startsWith(" ".repeat(outputPad + 2))));
+      assert(lines[0]!.startsWith(" ".repeat(outputPad) + "This long reply"));
+      assert(!lines[0]!.startsWith(" ".repeat(outputPad) + "- "));
       assert(lines.some(line => line.trim() === "Heading"));
-      assert(lines.some(line => line.includes("Existing item")));
+      assert(lines.some(line => line.startsWith(" ".repeat(outputPad) + "- Existing item")));
       assert(lines.some(line => line.includes("Nested item")));
       assert(lines.join("").replace(/\s/gu, "").includes("constready=true;"), "Code content survives native wrapping");
       assert(lines.some(line => line.includes("Key")));
-      assert.equal(lines.filter(line => line.startsWith(" ".repeat(outputPad) + "- ")).length, 1);
+      assert.equal(lines.filter(line => line.startsWith(" ".repeat(outputPad) + "- ")).length, 1, "Only authored top-level list items keep a bullet");
     }
   }
 });
 
-test("streamed partial Markdown and restored messages produce the same list layout", () => {
+test("streamed partial Markdown and restored messages produce the same native layout", () => {
   initTheme("dark", false);
   const transforms = transformers();
   const row = new AssistantMessageComponent(undefined, false, undefined, "Thinking...", 0, transforms);
@@ -88,7 +87,7 @@ test("streamed partial Markdown and restored messages produce the same list layo
   }
 });
 
-test("reply markers, thinking quotes and native failure labels stay separate", () => {
+test("reply blocks, thinking header and native failure labels stay separate", () => {
   initTheme("dark", false);
   for (const stopReason of ["stop", "aborted", "error", "length"] as const) {
     const snapshot = { ...message("First block"), stopReason, errorMessage: "Fixture error" };
@@ -98,11 +97,12 @@ test("reply markers, thinking quotes and native failure labels stay separate", (
     const row = new AssistantMessageComponent(snapshot, false, undefined, "Thinking...", 0, transformers());
     const lines = plain(row).filter(line => line.trim());
     assert.equal(lines[0]!.trimEnd(), "│ Thinking");
-    assert.ok(lines.some(line => line.trimEnd() === "│ Reviewing layout"));
-    assert.ok(lines.some(line => line.trimEnd() === "│ Keep the reasoning body."));
-    assert.equal(lines.filter(line => line.startsWith("- ")).length, 2);
-    assert(lines.some(line => line.trimEnd() === "- First block"));
-    assert(lines.some(line => line.trimEnd() === "- Second block"));
+    assert.ok(lines.some(line => line.trimEnd() === "Reviewing layout"));
+    assert.ok(lines.some(line => line.trimEnd() === "Keep the reasoning body."));
+    assert.ok(!lines.slice(1).some(line => line.startsWith("│")));
+    assert.equal(lines.filter(line => line.startsWith("- ")).length, 0);
+    assert(lines.some(line => line.trimEnd() === "First block"));
+    assert(lines.some(line => line.trimEnd() === "Second block"));
     if (stopReason === "aborted") assert(lines.some(line => line.startsWith("Fixture error")));
     if (stopReason === "error") assert(lines.some(line => line.startsWith("Error: Fixture error")));
     if (stopReason === "length") assert(lines.some(line => line.startsWith("Response was truncated")));
@@ -123,7 +123,8 @@ test("rendering leaves session and model text untouched", () => {
   const before = JSON.stringify(manager.getEntries());
   const contextBefore = convertToLlm(manager.buildSessionContext().messages);
   const row = new AssistantMessageComponent(snapshot, false, undefined, "Thinking...", 0, transformers());
-  assert(plain(row).some(line => line.startsWith("- This long reply")), "Screen selection includes rendered list markers");
+  assert(plain(row).some(line => line.startsWith("This long reply")), "Rendered reply omits synthetic outer list markers");
+  assert(!plain(row).some(line => line.startsWith("- This long reply")));
   assert.equal(JSON.stringify(manager.getEntries()), before);
   assert.deepEqual(convertToLlm(manager.buildSessionContext().messages), contextBefore);
 });

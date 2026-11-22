@@ -2,26 +2,30 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { getThemeByName } from "../../../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js";
-import { Working, WorkingActivity } from "../src/working.js";
+import { WORKING_FRAME_MS, Working, WorkingActivity, workingFrameKey } from "../src/working.js";
 import { CodexFooter } from "../src/footer.js";
 
 const theme = getThemeByName("dark")!;
-test("working keeps ten 80ms frames, a fixed label, shimmer and elapsed time until settlement", () => {
+test("working keeps ten 80ms frames, a static bold label and elapsed time until settlement", () => {
   let now = 0;
   const activity = new WorkingActivity(() => now);
   const working = new Working(activity, () => theme);
   assert.deepEqual(working.render(100), []);
   activity.start();
+  const expectedLabel = theme.bold(theme.fg("text", "Working"));
   const frames: string[] = [];
   for (let i = 0; i < 10; i++) {
-    now = i * 80;
+    now = i * WORKING_FRAME_MS;
     const line = working.render(100)[0]!;
+    assert.ok(line.includes(expectedLabel));
     assert.match(stripTerminalSequences(line), /Working \(0s · esc to interrupt\)/u);
     assert.ok(line.includes(theme.fg("dim", "(0s · ") + theme.fg("muted", "esc") + theme.fg("dim", " to interrupt)")));
     frames.push(stripTerminalSequences(line).trim()[0]!);
   }
   assert.equal(frames.join(""), "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏");
-  const before = working.render(100)[0]; now = 960;
+  now = 0;
+  const before = working.render(100)[0];
+  now = WORKING_FRAME_MS;
   assert.notEqual(working.render(100)[0], before);
   now = 65_000; activity.start();
   assert.match(stripTerminalSequences(working.render(32)[0]!), /Working \(1m 05s\)/u);
@@ -59,19 +63,28 @@ test("rate occupies the first footer row while the status row retains its full w
   rate = undefined; assert.deepEqual(footer.render(100), before);
 });
 
-test("accepted shimmer palette and time boundaries remain stable over long tasks", () => {
+test("static bold label, workingFrameKey and time boundaries remain stable over long tasks", () => {
   let now = 0;
   const activity = new WorkingActivity(() => now); activity.start();
   const working = new Working(activity, () => theme);
   for (const [time, label] of [[59000, "59s"], [60000, "1m 00s"], [3599000, "59m 59s"], [3600000, "1h 00m 00s"], [3661000, "1h 01m 01s"]] as const) {
     now = time; assert.ok(stripTerminalSequences(working.render(120)[0]!).includes(`(${label} · esc to interrupt)`));
   }
-  now = 0; const first = working.render(100)[0]!;
-  assert.match(first, /38;2;128;128;128mW/u);
-  now = 1000;
-  assert.match(working.render(100)[0]!, /38;2;242;242;242mk/u);
-  assert.match(working.render(100)[0]!, /38;2;231;231;231mr/u);
-  now = 2000; assert.match(working.render(100)[0]!, /38;2;128;128;128mW/u);
+  const expectedLabel = theme.bold(theme.fg("text", "Working"));
+  const labelSegment = (line: string) => {
+    const start = line.indexOf(expectedLabel);
+    assert.ok(start >= 0, `expected static bold theme text label in ${JSON.stringify(line)}`);
+    return line.slice(start, start + expectedLabel.length);
+  };
+  now = 0; const firstLabel = labelSegment(working.render(100)[0]!);
+  now = 1000; assert.equal(labelSegment(working.render(100)[0]!), firstLabel);
+  now = 2000; assert.equal(labelSegment(working.render(100)[0]!), firstLabel);
+  assert.equal(WORKING_FRAME_MS, 80);
+  assert.equal(workingFrameKey(0), "0:0");
+  assert.equal(workingFrameKey(79.9), "0:0");
+  assert.equal(workingFrameKey(80), "1:0");
+  assert.equal(workingFrameKey(999), "2:0");
+  assert.equal(workingFrameKey(1000), "2:1");
   assert.deepEqual(working.render(0), []);
   assert.deepEqual(working.render(Number.NaN), []);
   now = -1; assert.equal(activity.elapsed(), 0);

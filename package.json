@@ -38,8 +38,6 @@
     "extensions/openai-fast-mode/LICENSE",
     "extensions/openai-fast-mode/UPSTREAM.md",
     "extensions/codex-ui/dist",
-    "extensions/codex-ui/CODEX-LICENSE",
-    "extensions/codex-ui/NOTICE",
     "extensions/mcp/dist",
     "extensions/skill-mentions/dist",
     "themes/codex-pi.json",

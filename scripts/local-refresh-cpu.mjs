@@ -15,7 +15,8 @@ import { CodexFooter } from "../extensions/codex-ui/dist/footer.js";
 import { createContextUsageReader } from "../extensions/codex-ui/dist/context-usage.js";
 
 // Compare installed production components. Synchronous batches isolate renderer CPU;
-// --interval=32 additionally drives the native scheduler at the production cadence.
+// --interval=80 additionally drives the host's native render timer at an 80ms interval.
+const ANIMATION_STEP_MS = 80;
 const option = (name, fallback) => process.argv.find(arg => arg.startsWith(`--${name}=`))?.slice(name.length + 3) ?? fallback;
 const profile = option("profile", "pi152");
 assert.ok(["pi152"].includes(profile));
@@ -81,7 +82,7 @@ async function createFixture(implementation, historyPairs) {
   await loader.reload();
   const { session } = await Agent.createAgentSession({ cwd: scratch, agentDir: resolve(scratch, "agent"), modelRuntime,
     model: faux.getModel(), sessionManager: manager, resourceLoader: loader, settingsManager, tools: [] });
-  const activity = new WorkingActivity(() => step * 32); activity.start();
+  const activity = new WorkingActivity(() => step * ANIMATION_STEP_MS); activity.start();
   const animation = new Working(activity, () => theme);
   const argumentText = JSON.stringify({ command: "echo received tool arguments 中文; ".repeat(16) });
   const responseMessage = () => ({ ...message(""), content: [
@@ -202,7 +203,7 @@ for (const historyPairs of historySizes) for (const workload of workloads) {
     results.push({ passed, tolerance, historyPairs, workload, framesPerSample: frames, repetitions, baselineCpuMsPerFrame: baseline, regionCpuMsPerFrame: region, regionReductionPercent: (baseline - region) / baseline * 100, samples });
   } finally { for (const f of Object.values(fixtures)) f.dispose(); }
 }
-console.log(JSON.stringify({ pid: process.pid, startedAt, finishedAt: new Date().toISOString(), node: process.version, mode, profile, hosts, baselineLockSha256, pi: version, theme: "codex-pi/truecolor", columns: 120, rows: 40, animationStepMs: 32, intervalMs: interval,
+console.log(JSON.stringify({ pid: process.pid, startedAt, finishedAt: new Date().toISOString(), node: process.version, mode, profile, hosts, baselineLockSha256, pi: version, theme: "codex-pi/truecolor", columns: 120, rows: 40, animationStepMs: ANIMATION_STEP_MS, intervalMs: interval,
   metric: "Process user+system CPU per frame; median of rotating repeated batches", baselinePath, baselineAgentPath,
   sources,
   limitations: ["Production Working, CodexFooter, real AgentSession context usage and TokenRate with controlled provider event deltas; external model not called", "In-memory terminal; terminal emulator CPU excluded", "Synchronous mode flushes the real queued frame; interval mode uses the native timer"], results }, null, 2));
