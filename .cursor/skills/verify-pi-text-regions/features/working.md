@@ -1,10 +1,10 @@
 # Working and lifecycle
 
-用户提交任务后，在输入框上方看到青色 spinner、Working 反光及计时，footer 右侧显示最近约两秒的估算接收速率。工具、等待、retry 和 compaction 期间保持动画，宿主真正 settled 后隐藏。
+用户提交任务后，在输入框上方看到青色 spinner、静态粗体 `Working` 文本及计时，footer 右侧显示最近约两秒的估算接收速率。工具、等待、retry 和 compaction 期间保持动画，宿主真正 settled 后隐藏。
 
 ## Sub-features
 
-- `working-stream`：生产事件驱动 spinner、反光、计时和 `≈… t/s`；无新片段过期到 `-- t/s`。
+- `working-stream`：生产事件驱动 80ms spinner、静态粗体 `Working`、计时和 `≈… t/s`；无新片段过期到 `-- t/s`。
 - `working-tool`：工具/输入等待不结束任务，执行真实 shell，中性状态行保持。
 - `working-cancel`：Esc 实际取消工具，settled 后清除动态 UI，不产生迟到文件。
 - `working-recovery`：429 retry、overflow 自动压缩、最终错误各按宿主边界结束。
@@ -25,7 +25,7 @@ conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/working-regul
 conda run -n codex-py312 python scripts/local-refresh-pty.py "$RUN/working-fullscreen" --working --mode fullscreen --cli "$PWD/node_modules/.bin/pi" --original
 ```
 
-- **Submit and edit.** 旅程先打开 idle input，确认不启动 Working，再提交 `Generate visible thinking and text`。公开 provider 事件进入生产采样，屏幕有 `≈`，spinner 颜色为 codex-pi 主题的 accent，12 次取样至少五种帧与两种文字灰度。草稿中间插入 `X` 后 editor 事件准确。32/40/100 列保留速率与计时，12 列安全裁剪；小于 40 列没有中断提示。
+- **Submit and edit.** 旅程先打开 idle input，确认不启动 Working，再提交 `Generate visible thinking and text`。公开 provider 事件进入生产采样，屏幕有 `≈`，spinner 颜色为 codex-pi 主题的 accent，12 次取样至少五种帧且 `Working` 保持稳定的粗体主题 `text` 前景色（切到 `light` 主题后颜色随主题同步变更）。草稿中间插入 `X` 后 editor 事件准确。32/40/100 列保留速率与计时，12 列安全裁剪；小于 40 列没有中断提示。
 - **Tool wait.** 提交 `Run the shell tool`，2.2 秒无新输出后显示 `-- t/s` 且动画继续。真实 shell 写 `tool-proof.txt`，`artifacts/workspace/tool-proof.txt` 必须为 `TOOL-FINISHED`。结合 tool_execution 公开事件核对执行。
 - **Cancel executing work.** 提交 `Cancel the running tool`，先观察 `CANCEL-TOOL-ENTERED` 的 tool_execution_update，再发送 Esc。`agent_settled` 之后 Working/rate 消失；`artifacts/workspace/should-not-exist.txt` 不存在，summary 记录取消断言。不能把按键本身当终止。
 - **Recover through host.** 429 第一次响应触发真实 retry，第二次请求 attempt=2；overflow 事件为 `reason=overflow, willRetry=true`，存在 session_compact。等待期间动画继续，最终 settled 后隐藏。非 retry 错误也结束动态 UI。

@@ -267,18 +267,23 @@ test("footer caches only allowlisted statuses and painted output", () => {
 
   stripTerminalSequencesMock.mockClear();
   const initial = footer.render(120);
+  const expected = [...initial];
   const stripsAfterInitialRender = stripTerminalSequencesMock.mock.calls.length;
   const paintsAfterInitialRender = themePaints;
+  initial[0] = `${initial[0]}\x1b[0m`;
   const repeated = footer.render(120);
 
-  assert.deepEqual(repeated, initial);
-  assert.equal(getContextUsage.mock.calls.length, 2);
-  assert.equal(getExtensionStatuses.mock.calls.length, 2);
+  assert.deepEqual(repeated, expected);
+  assert.notEqual(repeated, initial);
+  repeated[0] = `${repeated[0]}\x1b[0m`;
+  assert.deepEqual(footer.render(120), expected);
+  assert.equal(getContextUsage.mock.calls.length, 3);
+  assert.equal(getExtensionStatuses.mock.calls.length, 3);
   assert.equal(stripTerminalSequencesMock.mock.calls.length, stripsAfterInitialRender);
   assert.equal(themePaints, paintsAfterInitialRender);
 
   statuses.set("mcp", "\x1b[31mMCP reconnecting\x1b[39m");
-  assert.deepEqual(footer.render(120), initial);
+  assert.deepEqual(footer.render(120), expected);
   assert.equal(stripTerminalSequencesMock.mock.calls.length, stripsAfterInitialRender);
   assert.equal(themePaints, paintsAfterInitialRender);
 

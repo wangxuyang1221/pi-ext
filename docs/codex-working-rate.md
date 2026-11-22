@@ -2,7 +2,7 @@
 
 ## User behavior
 
-codex-ui 在输入框上方显示青色十帧转圈、固定的 Working 文字反光和计时。转圈每 80ms 一帧，反光每两秒循环；两者与 footer 共用一个 32ms 调度器。`codex-pi` 主题的 accent 为 `#7fd4e6`。32、40、100 列保留计时与 footer 右侧速率；小于 40 列省略中断提示，更窄时按显示列截断。
+codex-ui 在输入框上方显示青色十帧转圈、静态粗体 `Working` 文本和计时。转圈每 80ms 一帧，并与 footer 速率轮询共用一个 80ms 相位对齐调度器（在 100ms 采样桶基础上按 80ms 节拍检查速率变化）。`codex-pi` 主题的 accent 为 `#7fd4e6`，`Working` 文本使用主题 `text` 前景色加粗。32、40、100 列保留计时与 footer 右侧速率；小于 40 列省略中断提示，更窄时按显示列截断。
 
 任务从 `agent_start` 持续到 `agent_settled`。工具执行、自动重试、自动压缩以及工具和输入对话框等待期间继续动画。按下 Esc 后，宿主完成取消才隐藏；`agent_end` 不停止动画。idle 时打开对话框不会启动它。结束后速率也隐藏，footer 恢复可用宽度，中性状态后续行保持原有宽度。原生 Working 行继续隐藏，标题动画保持原有行为。
 
@@ -26,7 +26,7 @@ start 事件引用的 partial 可能已经被后续生产者修改，不能把�
 
 Working 与 CodexFooter 通过真实 widget/footer factory 挂载，登记 factory 返回的同一组件。存在可选 `registerTextRegion` 时请求局部刷新，否则调用正常 `requestRender`。原版保留功能，缺少的只有 CPU 优化。目标高度改变、对话框、overlay、搜索、选择及复杂布局按[宿主契约](pi-text-region-refresh.md#contract)回退，状态更新不接管输入焦点。
 
-footer 的上下文比例按只追加的会话分支读取。会话管理器、叶节点、模型或 contextWindow 改变时重新调用宿主统计；其余动画帧复用结果，避免每 32ms 重建未变化的历史投影。追加消息、context edit、分支切换和压缩都会改变该版本。每次 footer 安装单独持有一个结果，没有跨会话缓存。`pi-virtual` 路由的实际模型上限还依赖 live agent messages，因此保持实时 getter；缺少分支版本接口时也正常读取。
+footer 的上下文比例按只追加的会话分支读取。会话管理器、叶节点、模型或 contextWindow 改变时重新调用宿主统计；其余动画帧复用结果，避免每 80ms 重建未变化的历史投影。追加消息、context edit、分支切换和压缩都会改变该版本。每次 footer 安装单独持有一个结果，没有跨会话缓存。`pi-virtual` 路由的实际模型上限还依赖 live agent messages，因此保持实时 getter；缺少分支版本接口时也正常读取。
 
 ## Verification
 
@@ -45,4 +45,4 @@ conda run -n codex-py312 python scripts/local-refresh-pty.py .tmp/working-fullsc
 
 可将 `--cli` 指向[干净安装驱动](../scripts/local-refresh-install.mjs)输出的补丁或原版 bin，补丁版移除 `--original`。`--extension` 可指定实际打包安装后的 codex-ui 入口。每次使用新证据目录；驱动记录进程组并清理自己的运行配置，保留 ANSI、操作、事件和屏幕证据。物理像素和系统剪贴板不在该自动驱动覆盖范围。
 
-[CPU 驱动](../scripts/local-refresh-cpu.mjs)使用同一生产 Working、CodexFooter、采样器、受控接收事件和真实历史组件比较正常与局部刷新。默认同步批次隔离渲染成本；`--interval=32` 单独记录宿主原生调度。预算仍为 200/1000 对历史动态帧下降至少 30%，正常更新与未接入路径额外中位数不超过 `max(基线10%, 0.1ms/帧)`。
+[CPU 驱动](../scripts/local-refresh-cpu.mjs)使用同一生产 Working、CodexFooter、采样器、受控接收事件和真实历史组件比较正常与局部刷新。默认同步批次隔离渲染成本；`--interval=80` 单独记录宿主原生调度。预算仍为 200/1000 对历史动态帧下降至少 30%，正常更新与未接入路径额外中位数不超过 `max(基线10%, 0.1ms/帧)`。

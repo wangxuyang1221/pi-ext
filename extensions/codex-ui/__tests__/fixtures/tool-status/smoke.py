@@ -145,8 +145,9 @@ try:
                 assert marker_colors()[-call_count:] == running_colors
                 animations.append(animation)
             assert len({frame[0] for frame in animations}) >= 5, 'Working spinner must keep advancing'
-            assert len({frame[1] for frame in animations}) >= 2, 'Working shimmer must keep advancing'
+            assert all(frame[1] == (tone('text'),) * 7 for frame in animations), 'Working label must retain steady text color'
             assert all(frame[2] == tone('accent') for frame in animations), 'Working spinner must retain its accent'
+            assert all(frame[3] == (True,) * 7 for frame in animations), 'Working label must remain bold'
             held_frames[outcome] = {'staticRows': [row for row, _cells in frozen], 'animations': animations}
         command(f'/finish {outcome}')
         wait(lambda: 'Fixture finished.' in view().split(f'Fixture: {target} / hold')[-1], f'finish {outcome}')

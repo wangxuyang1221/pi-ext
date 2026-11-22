@@ -39,7 +39,7 @@ test("real extension lifecycle keeps working through ends and dialogs, then rele
   vi.advanceTimersByTime(1000);
   assert.equal(h.session.activity.active, true);
   assert.equal(h.session.activity.elapsed(), 2000);
-  assert.ok(h.counters().region >= 30 && h.counters().region < 60, `expected dirty-checked region refreshes, got ${h.counters().region}`);
+  assert.equal(h.counters().region, 25, "expected exact 25 phase-aligned 80ms region refreshes over (0, 2000ms]");
   const beforeStop = h.counters().normal;
   h.emit("agent_settled");
   assert.equal(h.counters().normal, beforeStop + 1);
@@ -73,7 +73,7 @@ test("response events feed the production sampler, while reinstall and fallback 
   h.emit("message_start", { message: { role: "toolResult", content: [] } });
   assert.deepEqual(h.footer.render(100), ["≈10 t/s"]);
   vi.advanceTimersByTime(2100); assert.deepEqual(h.footer.render(100), ["-- t/s"]);
-  assert.ok(h.counters().normal >= 30 && h.counters().normal < 60, `expected dirty-checked normal refreshes, got ${h.counters().normal}`);
+  assert.equal(h.counters().normal, 28, "expected 2 mount refreshes + 26 deduplicated 80ms ticks over (0, 2100ms]");
   assert.equal(h.counters().region, 0);
   h.install(h.ctx);
   assert.equal(vi.getTimerCount(), 0); assert.equal(h.widget(), undefined);
@@ -97,7 +97,7 @@ test("headless installation, busy reinstallation and disposed bindings do not le
   busy.start(); assert.equal(vi.getTimerCount(), 0);
 });
 
-test("32ms ticks skip unchanged frames and only refresh footer regions when rate label changes", () => {
+test("80ms ticks skip unchanged frames and only refresh footer regions when rate label changes", () => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
   const handlers = new Map<string, (event: any, ctx: ExtensionContext) => void>();
   const pi = { on(type: string, handler: (event: any, ctx: ExtensionContext) => void) { handlers.set(type, handler); } } as unknown as ExtensionAPI;
@@ -130,16 +130,60 @@ test("32ms ticks skip unchanged frames and only refresh footer regions when rate
   footerComponent = session.bind({ render: () => [session.activity.label() ?? "idle"], invalidate() {} }, tui);
   emit("agent_start");
   vi.advanceTimersByTime(2000);
-  // Silent run: footer rate stays "-- t/s" so footer receives zero tick renders while working skips redundant ticks.
+  // Silent run: footer rate stays "-- t/s" so footer receives zero tick renders while working fires 25 80ms ticks.
   assert.equal(footerRenders, 0);
-  assert.ok(workingRenders >= 30 && workingRenders <= 45, `unexpected workingRenders=${workingRenders}`);
+  assert.equal(workingRenders, 25, `expected 25 working renders over 2000ms, got ${workingRenders}`);
   const partial = fauxAssistantMessage("abcdefgh".repeat(10));
   emit("message_start", { message: partial });
   emit("message_update", { message: partial, assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: "abcdefgh", partial } });
-  vi.advanceTimersByTime(64);
-  assert.ok(footerRenders >= 1, "rate change should refresh footer region");
+  vi.advanceTimersByTime(80);
+  assert.ok(footerRenders >= 1, "rate change should refresh footer region on next 80ms tick");
   const afterDelta = footerRenders;
   vi.advanceTimersByTime(2100);
   assert.ok(footerRenders > afterDelta, "rate decay back to -- t/s should refresh footer region");
   emit("session_shutdown");
+});
+
+test("phase-aligned 80ms scheduling handles early wake, cross-boundary dual reads, late wake and slow start", () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  const timers = vi.spyOn(globalThis, "setTimeout");
+
+  // (a)-(c): spy on elapsed() after start() so mount calls do not consume the queue.
+  const h = harness();
+  h.emit("agent_start");
+  assert.equal(timers.mock.calls.at(-1)![1], 80, "initial start at elapsed=0 schedules 80ms");
+
+  const elapsedSpy = vi.spyOn(h.session.activity, "elapsed");
+
+  // (a) Early wake at 79.5ms (both tick and schedule read 79.5ms): skips redundant render and retries in 1ms.
+  elapsedSpy.mockReturnValueOnce(79.5).mockReturnValueOnce(79.5);
+  const beforeEarly = h.counters().region;
+  (timers.mock.calls.at(-1)![0] as () => void)();
+  assert.equal(h.counters().region, beforeEarly, "early wake at 79.5ms must not double-render frame 0");
+  assert.equal(timers.mock.calls.at(-1)![1], 1, "early wake at 79.5ms must schedule 1ms to hit 80ms boundary");
+
+  // (b) Cross-boundary dual read: tick reads 79.9ms (frame 0), schedule reads 80.1ms -> still retries in 1ms, never 80ms.
+  elapsedSpy.mockReturnValueOnce(79.9).mockReturnValueOnce(80.1);
+  (timers.mock.calls.at(-1)![0] as () => void)();
+  assert.equal(h.counters().region, beforeEarly, "79.9ms observation still sees frame 0");
+  assert.equal(timers.mock.calls.at(-1)![1], 1, "cross-boundary 79.9 -> 80.1ms must schedule 1ms, not skip frame 1");
+
+  // Next retry at 81.1ms renders frame 1 and aligns to 160ms (delay = 79ms).
+  elapsedSpy.mockReturnValueOnce(81.1).mockReturnValueOnce(81.1);
+  (timers.mock.calls.at(-1)![0] as () => void)();
+  assert.equal(h.counters().region, beforeEarly + 1, "retry after cross-boundary wake must render frame 1");
+  assert.equal(timers.mock.calls.at(-1)![1], 79, "81.1ms wake aligns next tick to 160ms boundary (79ms)");
+
+  // (c) Late wake at 82ms -> schedules 78ms to prevent cumulative drift.
+  elapsedSpy.mockReturnValueOnce(82).mockReturnValueOnce(82);
+  (timers.mock.calls.at(-1)![0] as () => void)();
+  assert.equal(timers.mock.calls.at(-1)![1], 78, "late wake at 82ms aligns next tick to 160ms boundary (78ms)");
+  h.emit("session_shutdown");
+
+  // (d) start() straddling the 80ms boundary (observed 0ms at start, 80.1ms after synchronous widget mount/refresh).
+  const slow = harness();
+  vi.spyOn(slow.session.activity, "elapsed").mockReturnValueOnce(0).mockReturnValueOnce(80.1);
+  slow.emit("agent_start");
+  assert.equal(timers.mock.calls.at(-1)![1], 1, "start() crossing 80ms boundary must schedule 1ms, not defer frame 1 to 160ms");
+  slow.emit("session_shutdown");
 });

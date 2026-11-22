@@ -8,18 +8,19 @@ class HeldFrameTest(unittest.TestCase):
     def setUp(self):
         self.screen = pyte.Screen(80, 12)
         self.stream = pyte.Stream(self.screen)
-        self.stream.feed('Fixture: all / hold\r\n\x1b[38;2;255;230;109m$ Bash(command)\x1b[0m\r\n  Running…\r\n\x1b[38;2;94;252;255m ⠋ \x1b[38;2;128;128;128mWorking (1s)\x1b[0m\r\n> draft\r\n≈10 t/s')
+        self.stream.feed('Fixture: all / hold\r\n\x1b[38;2;255;230;109m$ Bash(command)\x1b[0m\r\n  Running…\r\n\x1b[38;2;94;252;255m ⠋ \x1b[1;38;2;212;212;216mWorking\x1b[22;39m (1s)\x1b[0m\r\n> draft\r\n≈10 t/s')
 
     def test_animation_and_footer_changes_leave_tool_cells_identical(self):
         before = held_frame(self.screen, 'Fixture: all / hold')
-        self.assertEqual(before[1], ('⠋', ('808080',) * 7, '5efcff'))
+        self.assertEqual(before[1], ('⠋', ('d4d4d8',) * 7, '5efcff', (True,) * 7))
         self.assertEqual([row for row, _cells in before[0]], [0, 1, 2])
-        self.stream.feed('\x1b[4;2H⠙\x1b[4;4H\x1b[38;2;200;200;200mWorking\x1b[6;1H≈20 t/s')
+        self.stream.feed('\x1b[4;2H⠙\x1b[6;1H≈20 t/s')
         after = held_frame(self.screen, 'Fixture: all / hold')
         self.assertEqual(before[0], after[0])
         self.assertNotEqual(before[1][0], after[1][0])
-        self.assertNotEqual(before[1][1], after[1][1])
+        self.assertEqual(before[1][1], after[1][1])
         self.assertEqual(before[1][2], '5efcff')
+        self.assertEqual(after[1][3], (True,) * 7)
 
     def test_tool_text_color_and_position_changes_are_observable(self):
         before = held_frame(self.screen, 'Fixture: all / hold')[0]

@@ -3,12 +3,13 @@ import { test, vi } from "vitest";
 import {
   AssistantMessageComponent,
   SessionManager,
+  getMarkdownTheme,
   initTheme,
   type ExtensionAPI,
   type Theme,
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
-import { stripTerminalSequences } from "@earendil-works/pi-tui";
+import { Markdown, stripTerminalSequences } from "@earendil-works/pi-tui";
 
 import codexUiExtension, { CODEX_THEME_NAME } from "../src/index.js";
 
@@ -23,7 +24,7 @@ function createTheme(name = CODEX_THEME_NAME): Theme {
   } as unknown as Theme;
 }
 
-test("markdown transformer quotes all thinking during streaming and replay", () => {
+test("markdown transformer prepends a Thinking heading without wrapping assistant replies or thinking bodies", () => {
   const transformers: Array<(markdown: string, context: Record<string, unknown>) => string> = [];
   const pi = {
     registerTool() {},
@@ -41,30 +42,46 @@ test("markdown transformer quotes all thinking during streaming and replay", () 
   assert.ok(transform);
   assert.equal(transform("hello", { messageType: "user" }), "hello");
   assert.equal(transform("› hello", { messageType: "user" }), "› hello");
-  assert.equal(transform("hello", { messageType: "assistant" }), "- hello");
+  assert.equal(transform("hello", { messageType: "assistant" }), "hello");
+  assert.equal(transform("## Heading\n\n- item", { messageType: "assistant" }), "## Heading\n\n- item");
 
   const thinking = "**First title**\n\nFirst body.\n\n**Last title**\n\nLast body.";
-  assert.equal(transform(thinking, { messageType: "assistant-thinking", isStreaming: true, availableWidth: 80 }),
-    "> **Thinking**\\\n> **First title**\n>\n> First body.\n>\n> **Last title**\n>\n> Last body.");
-  for (const [text, joined] of [[thinking, true], ["Plain reasoning without a title", true], ["**Incomplete title", true],
-    ["检查 [link](https://example.com) `code`\n\n- item\n\n```ts\nconst n = 1;\n```", true], ["Body. ".repeat(2000), true],
-    ["First\r\n\r\nLast", true], ["  indented\n\nend\n", true], ["*emphasis* first", true],
-    ["> Nested quote\n\n| Key | Value |\n| --- | --- |\n| a | b |", false], ["- item\n\nbody", false], ["1. step\n2. step", false],
-    ["# Heading\n\nbody", false], ["```ts\nconst n = 1;\n```", false], ["Key | Value\n--- | ---\na | b", false],
-    ["Title\n---\nbody", false], ["Plan the fix\nthen verify\n---\nbody", false], ["Plan\nthen\n===", false], ["Plan\n\n---", true], ["---\nbody", false], ["    code\n\nbody", false], ["\nAfter a blank line", false],
-    ["", false], [" \n\t ", false]] as const) {
+  assert.equal(
+    transform(thinking, { messageType: "assistant-thinking", isStreaming: true, availableWidth: 80 }),
+    `> **Thinking**\n\n${thinking}`,
+  );
+  for (const text of [
+    thinking,
+    "Plain reasoning without a title",
+    "**Incomplete title",
+    "检查 [link](https://example.com) `code`\n\n- item\n\n```ts\nconst n = 1;\n```",
+    "Body. ".repeat(2000),
+    "First\r\n\r\nLast",
+    "  indented\n\nend\n",
+    "*emphasis* first",
+    "> Nested quote\n\n| Key | Value |\n| --- | --- |\n| a | b |",
+    "- item\n\nbody",
+    "1. step\n2. step",
+    "# Heading\n\nbody",
+    "```ts\nconst n = 1;\n```",
+    "Key | Value\n--- | ---\na | b",
+    "Title\n---\nbody",
+    "Plan the fix\nthen verify\n---\nbody",
+    "Plan\nthen\n===",
+    "Plan\n\n---",
+    "---\nbody",
+    "    code\n\nbody",
+    "\nAfter a blank line",
+    "",
+    " \n\t ",
+  ]) {
     for (const isStreaming of [true, false]) {
       for (const availableWidth of [0, 1, 10, 80, 120]) {
         const result = transform(text, { messageType: "assistant-thinking", isStreaming, availableWidth });
         if (!text.trim()) {
           assert.equal(result, text);
         } else {
-          const lines = result.split("\n");
-          const title = joined ? ["> **Thinking**\\"] : ["> **Thinking**", ">"];
-          assert.deepEqual(lines.slice(0, title.length), title, JSON.stringify(text.slice(0, 20)));
-          const body = lines.slice(title.length);
-          assert.ok(body.every(line => line === ">" || line.startsWith("> ")));
-          assert.equal(body.map(line => line === ">" ? "" : line.slice(2)).join("\n"), text.replace(/\r\n/gu, "\n"));
+          assert.equal(result, `> **Thinking**\n\n${text}`);
         }
       }
     }
@@ -76,9 +93,106 @@ test("markdown transformer quotes all thinking during streaming and replay", () 
   } as never;
   const component = new AssistantMessageComponent(message, false, undefined, "Thinking...", 1, [transform as never]);
   const rendered = stripTerminalSequences(component.render(80).join("\n"));
-  assert.match(rendered, /│ Thinking/u);
+  const nonEmpty = rendered.split("\n").map(line => line.trimEnd()).filter(line => line.trim());
+  assert.equal(nonEmpty[0]?.trim(), "│ Thinking");
+  assert.ok(nonEmpty.slice(1).every(line => !line.trimStart().startsWith("│")));
   assert.match(rendered, /First body\./u);
   assert.match(rendered, /Last body\./u);
+});
+
+test("streaming replies and thinking reuse completed top-level Markdown blocks and code highlighting", () => {
+  const transformers: Array<(markdown: string, context: Record<string, unknown>) => string> = [];
+  codexUiExtension({
+    registerTool() {},
+    registerCommand() {},
+    registerMarkdownTransformer(transformer: (markdown: string, context: Record<string, unknown>) => string) {
+      transformers.push(transformer);
+    },
+    on() {},
+  } as unknown as ExtensionAPI);
+
+  initTheme("dark", false);
+  const baseMdTheme = getMarkdownTheme();
+
+  const makeMsg = (kind: "text" | "thinking", value: string) => ({
+    role: "assistant",
+    content: [kind === "text" ? { type: "text", text: value } : { type: "thinking", thinking: value }],
+    stopReason: "stop",
+    timestamp: 1,
+  }) as never;
+
+  // (a) Blank-line-separated completed fenced code block: highlightCode runs once across 5 trailing deltas.
+  for (const kind of ["text", "thinking"] as const) {
+    let highlightCalls = 0;
+    const mdTheme = {
+      ...baseMdTheme,
+      highlightCode(code: string, lang?: string) {
+        highlightCalls++;
+        return baseMdTheme.highlightCode ? baseMdTheme.highlightCode(code, lang) : code.split("\n");
+      },
+    };
+    const renderBlockSpy = vi.spyOn(Markdown.prototype as unknown as { renderBlock: (...args: unknown[]) => void }, "renderBlock");
+    try {
+      const comp = new AssistantMessageComponent(undefined, false, mdTheme, "Thinking...", 1, transformers as never);
+      const prefix = "Intro paragraph.\n\n```ts\nconst answer = 42;\n```\n\n";
+      comp.updateContent(makeMsg(kind, `${prefix}Tail 0`), true);
+      comp.render(80);
+      assert.equal(highlightCalls, 1, `${kind}: initial render highlights completed code block once`);
+
+      renderBlockSpy.mockClear();
+      for (let i = 1; i <= 5; i++) {
+        comp.updateContent(makeMsg(kind, `${prefix}Tail ${i}`), true);
+        comp.render(80);
+      }
+      assert.equal(highlightCalls, 1, `${kind}: completed code block must not re-highlight on trailing deltas`);
+      const nonSpaceBlocks = renderBlockSpy.mock.calls
+        .map(([, token]) => (token as { type?: string; raw?: string }))
+        .filter(token => token.type !== "space");
+      assert.equal(nonSpaceBlocks.length, 5, `${kind}: only the mutated trailing block re-renders per delta`);
+      assert.ok(nonSpaceBlocks.every(token => token.type === "paragraph" && token.raw?.startsWith("Tail ")));
+    } finally {
+      renderBlockSpy.mockRestore();
+    }
+  }
+
+  // (b) Single-newline transition after closing fence matches Native Pi step-by-step ([1, 1, 0]).
+  for (const kind of ["text", "thinking"] as const) {
+    const measureSteps = (activeTransformers: typeof transformers) => {
+      let calls = 0;
+      const mdTheme = {
+        ...baseMdTheme,
+        highlightCode(code: string, lang?: string) {
+          calls++;
+          return baseMdTheme.highlightCode ? baseMdTheme.highlightCode(code, lang) : code.split("\n");
+        },
+      };
+      const comp = new AssistantMessageComponent(undefined, false, mdTheme, "Thinking...", 1, activeTransformers as never);
+      const counts: number[] = [];
+      for (const body of [
+        "```ts\nconst x = 1;\n```\n",
+        "```ts\nconst x = 1;\n```\n\na",
+        "```ts\nconst x = 1;\n```\n\nab",
+      ]) {
+        const before = calls;
+        comp.updateContent(makeMsg(kind, body), true);
+        comp.render(80);
+        counts.push(calls - before);
+      }
+      return counts;
+    };
+    assert.deepEqual(measureSteps(transformers), measureSteps([]), `${kind}: single-newline fence transition matches native Pi`);
+  }
+
+  // (c) Trailing reference-style link definition disables block reuse and resolves the earlier link.
+  for (const kind of ["text", "thinking"] as const) {
+    const comp = new AssistantMessageComponent(undefined, false, baseMdTheme, "Thinking...", 1, transformers as never);
+    comp.updateContent(makeMsg(kind, "See [Pi Docs][pi]\n\n```ts\nconst ok = true;\n```"), true);
+    comp.render(80);
+    comp.updateContent(makeMsg(kind, "See [Pi Docs][pi]\n\n```ts\nconst ok = true;\n```\n\n[pi]: https://pi.dev"), false);
+    const rendered = stripTerminalSequences(comp.render(80).join("\n"));
+    assert.match(rendered, /Pi Docs/u);
+    assert.match(rendered, /https:\/\/pi\.dev/u);
+  }
 });
 
 test("does not register the removed lowpower command or argument completion", () => {

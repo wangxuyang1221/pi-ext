@@ -369,7 +369,7 @@
           },
           {
             "id": "ui-reply-markdown",
-            "description": "回复外层列表不改变模型原文"
+            "description": "回复沿用原生 Markdown 顶层块排版且不改变模型原文"
           },
           {
             "id": "ui-working",
