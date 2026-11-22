@@ -113,9 +113,9 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		const config = loadConfig(ctx.cwd ?? "", ctx.isProjectTrusted?.() ?? false);
 		return metadataStore.resolve({ ctx, model, clientVersion: config.metadataClientVersion ?? DEFAULT_METADATA_CLIENT_VERSION, signal });
 	};
-	const basePayloadBySession = new Map<string, JsonObject>();
+	const acceptedBaseBySession = new Map<string, { payload: JsonObject; sourcePrompt: string }>();
 	const usageBySession = new Map<string, WindowUsageAccounting>();
-	const requestFingerprint = (ctx: ExtensionContext): string => {
+	const requestFingerprint = (ctx: ExtensionContext, payload?: JsonObject): string => {
 		const checkpoint = findNativeCheckpoint(ctx.sessionManager.getBranch() as SessionEntry[], ctx.model && modelKey(ctx.model));
 		return accountingFingerprint({
 			model: ctx.model && modelKey(ctx.model),
@@ -123,10 +123,9 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 			system: ctx.getSystemPrompt(),
 			tools: pi.getAllTools(),
 			activeTools: pi.getActiveTools(),
-			payload: basePayloadBySession.get(ctx.sessionManager.getSessionId()),
+			payload,
 		});
 	};
-	const baseSystemPromptBySession = new Map<string, string>();
 	const turnStateBySession = new Map<string, { value?: string }>();
 	const currentTurnState = (sessionId: string) => {
 		let turn = turnStateBySession.get(sessionId);
@@ -242,8 +241,9 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 	const createCheckpoint = (params: Pick<NativeCheckpointRequest, "ctx" | "model" | "input" | "basePayload" | "signal" | "protectedInput" | "replayContextWindow" | "projectReplay"> & { compactionHashes: CompactionHashSnapshot }) => {
 		const lifecycleGenerationAtStart = lifecycleGeneration;
 		const sessionId = params.ctx.sessionManager.getSessionId();
-		let basePayload = params.basePayload ?? basePayloadBySession.get(sessionId);
-		if (!params.basePayload && basePayload && baseSystemPromptBySession.get(sessionId) !== params.ctx.getSystemPrompt()) {
+		const acceptedBase = acceptedBaseBySession.get(sessionId);
+		let basePayload = params.basePayload ?? acceptedBase?.payload;
+		if (!params.basePayload && basePayload && acceptedBase?.sourcePrompt !== params.ctx.getSystemPrompt()) {
 			// Cached request transformations remain valid only while their source prompt is unchanged.
 			basePayload = { ...basePayload, instructions: params.ctx.getSystemPrompt() };
 		}
@@ -280,11 +280,11 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 				"compaction_skipped",
 			);
 		},
-		shouldAutoCompact: ({ ctx, model, input, reason }) => {
+		shouldAutoCompact: ({ ctx, model, input, reason, basePayload }) => {
 			const config = loadConfig(ctx.cwd, ctx.isProjectTrusted());
 			// Fall back locally unless a successful observed request covers this exact history.
 			const supportsStrictMode = (model.compat as { supportsStrictMode?: boolean } | undefined)?.supportsStrictMode !== false;
-			const observedPayload = basePayloadBySession.get(ctx.sessionManager.getSessionId());
+			const observedPayload = basePayload ?? acceptedBaseBySession.get(ctx.sessionManager.getSessionId())?.payload;
 			const estimatedStablePrefixTokens = approximateTokenCount(observedPayload ? {
 				instructions: observedPayload.instructions,
 				tools: observedPayload.tools,
@@ -295,7 +295,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 			const branch = ctx.sessionManager.getBranch() as SessionEntry[];
 			const lastAssistant = branch.findLast((entry) => entry.type === "message" && entry.message.role === "assistant");
 			const accounted = usageBySession.get(ctx.sessionManager.getSessionId())?.estimate(
-				requestFingerprint(ctx), input,
+				requestFingerprint(ctx, observedPayload), input,
 				lastAssistant?.type === "message" ? lastAssistant.message : undefined,
 				approximateResponseItemTokens,
 			);
@@ -339,9 +339,8 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		}
 		activePiCompactionSessions.clear();
 		pendingPiCompactionBySession.clear();
-		basePayloadBySession.clear();
+		acceptedBaseBySession.clear();
 		usageBySession.clear();
-		baseSystemPromptBySession.clear();
 		turnStateBySession.clear();
 	};
 	pi.on("session_start", clearTransient);
@@ -423,8 +422,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		const sessionId = ctx.sessionManager.getSessionId();
 		const requestInput = Array.isArray(event.payload.input) ? event.payload.input : undefined;
 		const basePayload = stripInputFromPayload(event.payload);
-		basePayloadBySession.set(sessionId, basePayload);
-		baseSystemPromptBySession.set(sessionId, ctx.getSystemPrompt());
+		const sourcePrompt = ctx.getSystemPrompt();
 		const lifecycleGenerationAtStart = lifecycleGeneration;
 		const requestSignal = ctx.signal;
 		const controller = new AbortController();
@@ -437,11 +435,13 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 		});
 		try {
 			const input = await coordinator.prepareRequest(model, operationContext, requestInput, basePayload);
-			if (lifecycleGeneration !== lifecycleGenerationAtStart || requestSignal?.aborted) return undefined;
+			if (lifecycleGeneration !== lifecycleGenerationAtStart || operationContext.signal?.aborted
+				|| ctx.sessionManager.getSessionId() !== sessionId) return undefined;
 			const payload = input ? { ...stripInputFromPayload(event.payload), input } : event.payload;
 			const accounting = usageBySession.get(sessionId) ?? new WindowUsageAccounting();
 			usageBySession.set(sessionId, accounting);
-			accounting.observeRequest(requestFingerprint(ctx), Array.isArray(payload.input) ? payload.input : []);
+			accounting.observeRequest(requestFingerprint(ctx, basePayload), Array.isArray(payload.input) ? payload.input : []);
+			acceptedBaseBySession.set(sessionId, { payload: basePayload, sourcePrompt });
 			return payload;
 		} catch (error) {
 			if (lifecycleGeneration !== lifecycleGenerationAtStart || requestSignal?.aborted) return undefined;
@@ -502,7 +502,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI): void {
 						ctx,
 						excludeLastAssistantError,
 						operationSignal,
-						basePayloadBySession.get(sessionId),
+						acceptedBaseBySession.get(sessionId)?.payload,
 					);
 					input = plan.input;
 					if (lifecycleGeneration !== lifecycleGenerationAtStart) return { cancel: true };

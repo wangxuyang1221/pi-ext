@@ -21,7 +21,7 @@ import pyte
 
 repo = Path(__file__).resolve().parents[4]
 case = sys.argv[2] if len(sys.argv) > 2 else "combination"
-assert case in {"combination", "automatic", "threshold", "overflow", "repeated-overflow", "navigation", "model-boundaries", "model-boundaries-tools", "stale", "stale-session", "stale-tree", "stale-tools", "legacy-provable", "legacy-truncated", "usage-invalid", "usage-failed", "usage-source"}, "Unknown case"
+assert case in {"rejected-base", "combination", "automatic", "threshold", "overflow", "repeated-overflow", "navigation", "model-boundaries", "model-boundaries-tools", "stale", "stale-session", "stale-tree", "stale-tools", "legacy-provable", "legacy-truncated", "usage-invalid", "usage-failed", "usage-source"}, "Unknown case"
 evidence = Path(sys.argv[1]).resolve()
 assert evidence.is_relative_to(repo / ".tmp"), "Evidence must stay under repository .tmp"
 evidence.mkdir(parents=True, exist_ok=False)
@@ -370,6 +370,35 @@ try:
         latest = events("provider-request")[-1]["data"]["input"]
         assert "BRANCH_AFTER_NAVIGATION" in json.dumps(latest)
         assert "Continue on fixture-noncodex" not in json.dumps(latest), "Tree selected old descendant"
+        stop()
+    elif case == "rejected-base":
+        start()
+        wait(lambda: len(events("ready")) == 1, "ready")
+        send("/fixture-history\r")
+        wait(lambda: len(events("settled")) == 1, "first settled")
+        send("/compact\r")
+        wait(lambda: len(events("compacted")) == 1, "first checkpoint")
+        session = Path(events("start")[0]["data"]["session"])
+        send("Ordinary request establishing the last valid base\r")
+        wait(lambda: len(events("settled")) == 2, "validated base")
+        accepted = events("provider-request")[-1]["data"]["text"]["verbosity"]
+        assert accepted == "low"
+        original = checkpoints(session)
+        current = len(events("provider-request"))
+        scenario(prefixMismatch=True, rejectedBaseVerbosity="high")
+        send("Deliberately rejected base with changed verbosity\r")
+        wait(lambda: len(events("settled")) == 3 and "code=history_prefix_mismatch" in view(), "rejected")
+        assert events("prefix-mismatch-injected")[-1]["data"]["projectedVerbosity"] == "high"
+        assert len(events("provider-request")) == current and len(events("compact-request")) == 1
+        assert checkpoints(session) == original
+        assert len([x for x in entries(session) if x.get("customType") == "openai-codex-failed-request"]) == 1
+        scenario(prefixMismatch=False, rejectedBaseVerbosity=None)
+        send("/compact\r")
+        wait(lambda: len(events("compact-request")) == 2, "eligible compaction")
+        actual = events("compact-request")[-1]["data"]["text"]["verbosity"]
+        assert actual == accepted, f"Rejected request changed manual compaction verbosity: {accepted} -> {actual}"
+        wait(lambda: len(events("compacted")) == 2, "second checkpoint")
+        assert len(checkpoints(session)) == 2 and checkpoints(session)[0] == original[0]
         stop()
     elif case.startswith("model-boundaries"):
         scenario(emptyTools=case == "model-boundaries")

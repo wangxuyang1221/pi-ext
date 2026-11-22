@@ -85,10 +85,13 @@ export default function (pi) {
             });
           }
           let projected = payload;
-          if (scenario().prefixMismatch) {
+          const { prefixMismatch, rejectedBaseVerbosity } = scenario();
+          if (prefixMismatch) {
             // Model an incompatible adapter/extension projection before production validation.
             projected = { ...payload, input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "INCOMPATIBLE_HISTORY_PREFIX" }] }, payload.input.at(-1)] };
-            record("prefix-mismatch-injected", { model: model.id, originalInput: payload.input, projectedInput: projected.input });
+            if (rejectedBaseVerbosity) projected.text = { ...payload.text, verbosity: rejectedBaseVerbosity };
+            record("prefix-mismatch-injected", { model: model.id, originalInput: payload.input, projectedInput: projected.input,
+              projectedVerbosity: projected.text?.verbosity });
           }
           return await options?.onPayload?.(projected, selected) ?? projected;
         },

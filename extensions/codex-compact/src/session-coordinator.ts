@@ -73,6 +73,7 @@ export type SessionCoordinatorDeps = {
 		ctx: ExtensionContext;
 		model: Model<any>;
 		input: ResponseItem[];
+		basePayload?: JsonObject;
 		reason?: "automatic" | "downshift";
 	}) => boolean;
 	runCompaction?: <T>(
@@ -847,7 +848,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 			const currentRequest = resolveRequest(ctx, snapshot, requestInput, previousModel ?? model, model, systemPromptItems(ctx, model), continuity, operationSignal);
 			const input = [...historyForRequest(snapshot, model, currentRequest, { excludeLastAssistantError }),
 				...(currentRequest ? currentRequest.suffix ?? [currentRequest.item] : [])];
-			if (deps.shouldAutoCompact?.({ ctx, model, input, reason: "downshift" }) !== true) return;
+			if (deps.shouldAutoCompact?.({ ctx, model, input, basePayload, reason: "downshift" }) !== true) return;
 			if (!continuity || !claimLocalCapacityAttempt(continuity)) return;
 		}
 		const startGeneration = generation;
@@ -1082,7 +1083,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 		}
 		if (pending && pending.targetModelKey === modelKey(model)) {
 			const shouldRun = pending.reason === "hash"
-				|| deps.shouldAutoCompact?.({ ctx, model, input: [...currentHistoryInput, ...tail], reason: pending.reason }) === true;
+				|| deps.shouldAutoCompact?.({ ctx, model, input: [...currentHistoryInput, ...tail], basePayload, reason: pending.reason }) === true;
 			if (!shouldRun || (pending.reason === "downshift" && !claimLocalCapacityAttempt(continuity))) {
 				pendingBySession.delete(sessionId);
 			} else {
@@ -1143,7 +1144,7 @@ export function createSessionCoordinator(deps: SessionCoordinatorDeps) {
 					currentHistory.length > 0
 					&&
 					(transitionCompactionCompleted || capacityRepair || hasBranchTailAfterCheckpoint(branch, automaticSnapshot.checkpoint(model), automaticExcludeId))
-					&& deps.shouldAutoCompact?.({ ctx, model, input: completeInput })
+					&& deps.shouldAutoCompact?.({ ctx, model, input: completeInput, basePayload })
 					&& claimLocalCapacityAttempt(continuity)
 				) {
 					const startGeneration = generation;

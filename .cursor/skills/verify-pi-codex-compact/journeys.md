@@ -20,6 +20,7 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 | `navigation` | 逐次打开 `/model` 选择器并搜索同 hash、不同 hash、较小窗口、非 Codex 模型；每次选择后发送新输入并核对实际请求。再通过 `/tree` 搜索根消息、选择 No summary，后续请求不含原分支的后代消息 | `compact-model-switch`, `compact-tree` |
 | `model-boundaries` | 长文本 checkpoint 后经 `/model` 选择12000窗口的同 hash模型，原重放估算超过11400有效窗口，生产重新压缩后实际请求满足预算、pending恰好一次。再选不同 hash模型，注入错误请求前缀；真实TUI显示 history_prefix_mismatch、零服务请求且 checkpoint 不变，恢复投影后继续成功 | `compact-model-switch` 的容量转换和前缀拒绝 |
 | `model-boundaries-tools` | 上述旅程保留活跃 fixture_read；最终完整请求包含重新附加的工具声明且满足11400预算，pending完整。压缩预算使用实际目标模型投影，不通过删除声明降低估算 | `compact-model-switch`, `compact-retention` 的工具声明预算组合 |
+| `rejected-base` | 普通请求使用 low；注入不兼容历史和 high 后，请求在发送前被拒绝，原 checkpoint 不变并留下失败记录；下一次手动压缩仍使用 low，并生成第二个 checkpoint | `compact-manual` 的请求配置隔离 |
 | `stale` | 已有 checkpoint 的模型转换请求等待服务时，再打开 `/model` 选择原模型；旧 transport 收到 abort、indicator 消失、checkpoint 不变，新模型仍能继续对话 | `compact-stale` 的模型变化分支 |
 | `stale-session` | 模型转换等待时输入 `/new`，旧 transport 收到 abort，原会话 checkpoint 不变，新会话完成后续对话 | `compact-stale` 的会话变化分支 |
 | `stale-tree` | 模型转换等待时打开 `/tree` 搜索旧根消息，选择 No summary；旧 transport 收到 abort，旧 checkpoint 不变，新分支完成后续请求 | `compact-stale` 的分支变化分支 |
