@@ -1,11 +1,1 @@
 * text=auto eol=lf
-
-# Preserve PTY control bytes and screen padding without text normalization.
-adventure/evidence/slice-3-tui-*/terminal.ansi binary
-
-# Preserve hashed media inputs and bundled license bytes.
-extensions/codex-compact/src/media/** -text
-extensions/codex-compact/dist/media/** -text
-
-# Unified diff represents a blank context line with one space.
-patches/*.patch whitespace=-blank-at-eol

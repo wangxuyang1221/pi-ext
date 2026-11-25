@@ -1,13 +1,3 @@
 import { rm } from "node:fs/promises";
 
-const outputDirectories = [
-  new URL("../extensions/codex-compact/dist/", import.meta.url),
-  new URL("../extensions/openai-fast-mode/dist/", import.meta.url),
-  new URL("../extensions/codex-ui/dist/", import.meta.url),
-  new URL("../extensions/mcp/dist/", import.meta.url),
-  new URL("../extensions/skill-mentions/dist/", import.meta.url),
-];
-
-await Promise.all(
-  outputDirectories.map((directory) => rm(directory, { recursive: true, force: true })),
-);
+await rm(new URL("../extensions/codex-ui/dist/", import.meta.url), { recursive: true, force: true });

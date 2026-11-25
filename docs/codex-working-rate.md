@@ -22,9 +22,9 @@ start 事件引用的 partial 可能已经被后续生产者修改，不能把�
 
 保存 20 个时间桶、当前响应各内容块的数字计数及增量 JSON 状态，不保存文本片段或历史消息副本。一次 final 遍历本响应的内容块；delta 和动画帧不重扫完整响应。响应结束清空块状态，身份集合使用弱引用，不延长消息寿命。session replacement、reload、shutdown 释放旧调度器和所有区域句柄，过期调度回调检查 generation 后退出。
 
-## Rendering and fallback
+## Rendering
 
-Working 与 CodexFooter 通过真实 widget/footer factory 挂载，登记 factory 返回的同一组件。存在可选 `registerTextRegion` 时请求局部刷新，否则调用正常 `requestRender`。原版保留功能，缺少的只有 CPU 优化。目标高度改变、对话框、overlay、搜索、选择及复杂布局按[宿主契约](pi-text-region-refresh.md#contract)回退，状态更新不接管输入焦点。
+Working 与 CodexFooter 通过 widget 和 footer factory 挂载。动画帧或速率标签变化时，同一个 TUI 只请求一次刷新。
 
 footer 的上下文比例按只追加的会话分支读取。会话管理器、叶节点、模型或 contextWindow 改变时重新调用宿主统计；其余动画帧复用结果，避免每 80ms 重建未变化的历史投影。追加消息、context edit、分支切换和压缩都会改变该版本。每次 footer 安装单独持有一个结果，没有跨会话缓存。`pi-virtual` 路由的实际模型上限还依赖 live agent messages，因此保持实时 getter；缺少分支版本接口时也正常读取。
 
@@ -36,13 +36,4 @@ footer 的上下文比例按只追加的会话分支读取。会话管理器、�
 pnpm test extensions/codex-ui/__tests__/token-rate.test.ts extensions/codex-ui/__tests__/token-rate-provider.test.ts extensions/codex-ui/__tests__/json-units.test.ts extensions/codex-ui/__tests__/working.test.ts extensions/codex-ui/__tests__/working-session.test.ts
 ```
 
-真实 CLI 使用扩展后的正式 PTY 入口。外部模型和压缩摘要由离线 provider 提供，审批、shell、取消、自动重试/压缩和 session 流程由实际宿主执行：
-
-```bash
-conda run -n codex-py312 python scripts/local-refresh-pty.py .tmp/working-regular --working --original --cli node_modules/.bin/pi
-conda run -n codex-py312 python scripts/local-refresh-pty.py .tmp/working-fullscreen --working --original --mode fullscreen --cli node_modules/.bin/pi
-```
-
-可将 `--cli` 指向[干净安装驱动](../scripts/local-refresh-install.mjs)输出的补丁或原版 bin，补丁版移除 `--original`。`--extension` 可指定实际打包安装后的 codex-ui 入口。每次使用新证据目录；驱动记录进程组并清理自己的运行配置，保留 ANSI、操作、事件和屏幕证据。物理像素和系统剪贴板不在该自动驱动覆盖范围。
-
-[CPU 驱动](../scripts/local-refresh-cpu.mjs)使用同一生产 Working、CodexFooter、采样器、受控接收事件和真实历史组件比较正常与局部刷新。默认同步批次隔离渲染成本；`--interval=80` 单独记录宿主原生调度。预算仍为 200/1000 对历史动态帧下降至少 30%，正常更新与未接入路径额外中位数不超过 `max(基线10%, 0.1ms/帧)`。
+普通与全屏终端的真实工具、取消、重试和会话切换验收见 [Working 旅程](../.cursor/skills/verify-pi-codex-ui/features/working.md)。

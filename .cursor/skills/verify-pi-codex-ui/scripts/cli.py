@@ -190,6 +190,8 @@ try:
         control_case();stop();passed=True
         raise SystemExit(0)
     command_availability('startup')
+    footer = next((line for line in screen.display if 'Context' in line and 'workspace' in line), '')
+    check('faux-1' in footer, 'Footer displays the active model, directory and context')
     composer('startup')
     for width in [40,80,140]:
         resize(width);composer('width-'+str(width))
@@ -359,16 +361,6 @@ try:
     command('/compact');wait(lambda:'Compacted' in view() or 'compacted' in view(),'native compaction');settle()
     check('COMPACTION-THINKING-LAST' in view(),'Compaction keeps recent full thinking')
     keys(b'\x14','hide thinking after compaction');settle();check('COMPACTION-THINKING-LAST' not in view(),'Thinking toggle works after compaction');keys(b'\x14','expand thinking after compaction');settle()
-    stop()
-    # Load the actual companion extensions for footer status combinations.
-    env['UI_VERIFY_FOOTER']='1'
-    start(['--provider','openai','--model','gpt-5.4','-e',str(REPO/'extensions/openai-fast-mode/dist/index.js')])
-    command('/fast on');settle()
-    footer=next((line for line in screen.display if 'Context' in line and 'workspace' in line),'')
-    check('gpt-5.4' in footer and 'fast' in footer,'Footer combines actual model, directory, fast status')
-    snap('companion footer combined');resize(60);snap('companion footer narrow');resize(140)
-    command('/fast off');settle();footer=next((line for line in screen.display if 'Context' in line and 'workspace' in line),'')
-    check('fast' not in footer,'Footer removes Fast status after disabling it')
     stop();passed=True
 except Exception:
     (EVIDENCE/'failure.txt').write_text(traceback.format_exc())

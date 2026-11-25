@@ -36,11 +36,10 @@ def tone(name):
     value = theme['vars'].get(value, value)
     return value.lstrip('#').lower()
 success_color = tone('muted')
-mcp_only = '--mcp-only' in sys.argv
-target = 'mcp' if mcp_only else 'all'
-call_count = 1 if mcp_only else 5
+target = 'all'
+call_count = 4
 checking_markers = True
-running_colors = [tone('warning')] if mcp_only else [tone('accent')] * 4 + [tone('warning')]
+running_colors = [tone('accent')] * call_count
 
 def view():
     return '\n'.join((line.rstrip() for line in screen.display))
@@ -91,7 +90,7 @@ def color_at(text, offset=0):
 def marker_colors():
     colors = []
     for y, line in enumerate(screen.display):
-        prefixes = ('$ Bash', '@ ', '~ Writing', '~ Editing', '~ Write', '~ Edit', '~ Added', '⌁ Call')
+        prefixes = ('$ Bash', '@ ', '~ Writing', '~ Editing', '~ Write', '~ Edit', '~ Added')
         stripped = line.lstrip()
         if stripped.startswith('├─ '):
             stripped = stripped[3:]
@@ -108,47 +107,34 @@ try:
     colors = marker_colors()
     assert len(colors) >= call_count, colors
     assert colors[-call_count:] == [success_color] * call_count, colors
-    assert color_at('Found 2 results') == tone('text'), color_at('Found 2 results')
-    if not mcp_only:
-        assert color_at('Test Files') == tone('toolOutput'), color_at('Test Files')
-        assert 'export const status' not in view(), view()
-    assert color_at('└ Found') == tone('dim')
+    assert color_at('Test Files') == tone('toolOutput'), color_at('Test Files')
+    assert 'export const status' not in view(), view()
     os.write(fd, b'\x0f')
     settle()
-    assert color_at('Found 2 results') == tone('text')
-    if not mcp_only:
-        assert color_at('export const status') == tone('toolOutput'), color_at('export const status')
-        assert color_at('└ 1') == tone('dim')
+    assert color_at('export const status') == tone('toolOutput'), color_at('export const status')
+    assert color_at('└ 1') == tone('dim')
     os.write(fd, b'\x0f')
     settle()
     for outcome in ['error', 'interrupted', 'timeout']:
         command(f'/demo {target} hold')
-        wait(lambda: 'Calling fixture / search' in view() and (mcp_only or 'Reading…' in view()), 'held tools')
+        wait(lambda: 'Reading…' in view() and marker_colors()[-call_count:] == running_colors, 'held tools')
         settle()
         screens[f'running-{outcome}'] = view()
         colors = marker_colors()
         assert len(colors) >= call_count and colors[-call_count:] == running_colors, colors
-        if mcp_only:
-            # This entry intentionally does not load codex-ui or its Working widget.
-            row = next(y for y in reversed(range(screen.lines)) if '⌁ Calling fixture / search' in screen.display[y])
-            frozen = tuple(screen.buffer[row][col] for col in range(screen.columns))
-            settle(1.1)
-            assert tuple(screen.buffer[row][col] for col in range(screen.columns)) == frozen
+        frozen, initial_animation = held_frame(screen, f'Fixture: {target} / hold')
+        animations = [initial_animation]
+        for _ in range(14):
+            settle(0.08)
+            cards, animation = held_frame(screen, f'Fixture: {target} / hold')
+            assert cards == frozen, 'Held tool text, positions and cell styles must remain static'
             assert marker_colors()[-call_count:] == running_colors
-        else:
-            frozen, initial_animation = held_frame(screen, f'Fixture: {target} / hold')
-            animations = [initial_animation]
-            for _ in range(14):
-                settle(0.08)
-                cards, animation = held_frame(screen, f'Fixture: {target} / hold')
-                assert cards == frozen, 'Held tool text, positions and cell styles must remain static'
-                assert marker_colors()[-call_count:] == running_colors
-                animations.append(animation)
-            assert len({frame[0] for frame in animations}) >= 5, 'Working spinner must keep advancing'
-            assert all(frame[1] == (tone('text'),) * 7 for frame in animations), 'Working label must retain steady text color'
-            assert all(frame[2] == tone('accent') for frame in animations), 'Working spinner must retain its accent'
-            assert all(frame[3] == (True,) * 7 for frame in animations), 'Working label must remain bold'
-            held_frames[outcome] = {'staticRows': [row for row, _cells in frozen], 'animations': animations}
+            animations.append(animation)
+        assert len({frame[0] for frame in animations}) >= 5, 'Working spinner must keep advancing'
+        assert all(frame[1] == (tone('text'),) * 7 for frame in animations), 'Working label must retain steady text color'
+        assert all(frame[2] == tone('accent') for frame in animations), 'Working spinner must retain its accent'
+        assert all(frame[3] == (True,) * 7 for frame in animations), 'Working label must remain bold'
+        held_frames[outcome] = {'staticRows': [row for row, _cells in frozen], 'animations': animations}
         command(f'/finish {outcome}')
         wait(lambda: 'Fixture finished.' in view().split(f'Fixture: {target} / hold')[-1], f'finish {outcome}')
         settle()
@@ -156,8 +142,8 @@ try:
         colors = marker_colors()
         expected = tone('error') if outcome == 'error' else tone('warning')
         expected_colors = [expected] * call_count
-        if outcome == 'timeout' and not mcp_only:
-            expected_colors = [tone('warning'), tone('error'), tone('error'), tone('error'), tone('warning')]
+        if outcome == 'timeout':
+            expected_colors = [tone('warning'), tone('error'), tone('error'), tone('error')]
         assert len(colors) >= call_count and colors[-call_count:] == expected_colors, colors
     for width in [80, 40, 120]:
         fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 60, width, 0, 0))
@@ -177,9 +163,9 @@ try:
         wait(lambda: '(2/4 tests)' in view(), 'streaming Bash result')
         wait(lambda: 'Playback complete.' in view(), 'playback finishes')
         settle()
-        assert marker_colors()[-5:] == [success_color] * 5
+        assert marker_colors()[-call_count:] == [success_color] * call_count
         command('/play batch')
-        for tool in ['read', 'bash', 'edit', 'write', 'mcp']:
+        for tool in ['read', 'bash', 'edit', 'write']:
             label = f'Batch playback: {tool} / mixed'
             wait(lambda: label in view(), f'batch {tool} starts')
             if tool == 'read':
@@ -210,7 +196,7 @@ try:
         wait(lambda: 'Playback stopped.' in view(), 'stop playback')
         settle(1)
         screens['play-stopped'] = view()
-    history_tool = 'mcp' if mcp_only else 'read'
+    history_tool = 'read'
     command(f'/batch {history_tool} mixed')
     wait(lambda: 'Fixture finished.' in view().split(f'Batch fixture: {history_tool} / mixed')[-1], 'production history fixture')
     settle()
@@ -225,14 +211,14 @@ try:
     wait(lambda: 'Reloaded' in view(), 'reload production renderers')
     settle()
     assert marker_colors()[-3:] == expected, view()
-    assert ('Timed out' if mcp_only else 'Operation aborted') in view(), view()
+    assert 'Operation aborted' in view(), view()
     screens['restored-history'] = view()
     if '--restart' in sys.argv:
         command('/quit')
         wait(lambda: 'Restored fixture history.' in view(), 'restart with persisted history')
         settle()
         assert marker_colors()[-3:] == expected, view()
-        assert ('Timed out' if mcp_only else 'Operation aborted') in view(), view()
+        assert 'Operation aborted' in view(), view()
         screens['restarted-history'] = view()
     command('/quit')
     wait(lambda: status is not None, 'shutdown')

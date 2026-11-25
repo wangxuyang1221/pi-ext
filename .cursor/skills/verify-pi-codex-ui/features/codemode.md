@@ -22,8 +22,8 @@ Preconditions:
 - 已完成 [Launch 与 Doctor](../SKILL.md)，没有其他运行占用验证锁。
 - 普通 TUI 与 fullscreen 是不同入口。renderer 固定帧不能替代真实工具执行的文件副作用核验。
 
-1. 运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs run codex-ui`。保存返回的 evidence 路径并核对退出码。
-2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-ext/scripts/verify.mjs tui codex-ui`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
+1. 运行 `pnpm exec node .cursor/skills/verify-pi-codex-ui/scripts/verify.mjs run codex-ui`。保存返回的 evidence 路径并核对退出码。
+2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-codex-ui/scripts/verify.mjs tui codex-ui`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
 3. 真实 QuickJS 与本地 MCP 执行后，检查 Script completed 和 1 failed、Output to model 与子结果分离。默认 many 的 24 个调用全部成功。预览外失败使用 codemode fixture 的 hiddenfail；缓存、真实方向键/PgDn/PgUp/Shift+Tab、原生 `/resume` 与 `/tree` 使用 [正式 CLI 旅程](../scripts/README.md#run) 的 `cli.py regular/fullscreen`，核对超过 4MiB 后旧项 Raw result unavailable、末项仍可查看，并在恢复/导航后发送模型请求验证保存上下文。fixture 的公开 navigateTree API 证据和原生选择器证据分别记录。步骤 1 只走默认 Ctrl+O；F3 展开须另行运行 `conda run --no-capture-output -n codex-py312 python extensions/codex-ui/__tests__/codemode-pty.py --custom-keys`（fullscreen 加 `--fullscreen`）。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 

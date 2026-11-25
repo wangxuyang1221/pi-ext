@@ -8,7 +8,7 @@ export default function (pi: any) {
   createCodemodeExtension({ models: false })(pi);
   const root = process.env.AUDIT_ROOT!;
   const record = (type: string, data: unknown) => appendFileSync(join(root, 'events.jsonl'), JSON.stringify({ type, data }) + '\n');
-  const faux = fauxProvider({ api: 'verification-faux', ...(process.env.UI_VERIFY_FOOTER === '1' ? { provider: 'openai', models: [{ id: 'gpt-5.4', reasoning: true }] } : {}), tokensPerSecond: 400, tokenSize: { min: 12, max: 12 } });
+  const faux = fauxProvider({ api: 'verification-faux', tokensPerSecond: 400, tokenSize: { min: 12, max: 12 } });
   faux.setResponses(Array.from({ length: 500 }, () => async context => {
     record('request', context.messages);
     const last = context.messages.at(-1);

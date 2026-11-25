@@ -12,9 +12,6 @@ __pycache__/
 .cache/
 .pnpm-store/
 *.log
-/adventure/evidence/**/*.json
-/adventure/evidence/**/*.jsonl
-/adventure/evidence/**/*.ansi
 .tmp/
 /.pi/
 handoff/

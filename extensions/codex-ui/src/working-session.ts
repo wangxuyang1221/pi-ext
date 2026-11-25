@@ -3,19 +3,9 @@ import type { Component, TUI } from "@earendil-works/pi-tui";
 import { WORKING_FRAME_MS, Working, WorkingActivity, workingFrameKey } from "./working.js";
 
 type DisposableComponent = Component & { dispose?(): void };
-type BindingKind = "working" | "rate";
-interface TextRegionCapability {
-  registerTextRegion?(component: Component): { requestRender(): void; dispose(): void };
-}
-interface BindingEntry {
-  kind: BindingKind;
-  tui: TUI;
-  local: boolean;
-  refresh: (normal: boolean) => void;
-}
 const WIDGET_KEY = "codex-ui-working";
 
-/** Own both dynamic regions and their single 80ms phase-aligned animation clock for this session. */
+/** Own both dynamic components and their single 80ms phase-aligned animation clock for this session. */
 export class WorkingSession {
   readonly activity = new WorkingActivity();
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -23,31 +13,21 @@ export class WorkingSession {
   private disposed = false;
   private lastWorkingKey: string | undefined;
   private lastRateLabel: string | undefined;
-  private readonly bindings = new Map<() => void, BindingEntry>();
+  private readonly bindings = new Map<() => void, TUI>();
 
   constructor(private readonly ctx: ExtensionContext) {}
 
-  bind(component: DisposableComponent, tui: TUI, kind: BindingKind = "rate"): DisposableComponent {
+  bind(component: DisposableComponent, tui: TUI): DisposableComponent {
     let released = false;
     const wrapper = {
       render: (width: number) => component.render(width),
       invalidate: () => component.invalidate(),
       dispose: () => {
         if (released) return;
-        released = true; handle?.dispose(); this.bindings.delete(wrapper.dispose); component.dispose?.();
+        released = true; this.bindings.delete(wrapper.dispose); component.dispose?.();
       },
     };
-    const regions = tui as TUI & TextRegionCapability;
-    const handle = typeof regions.registerTextRegion === "function" ? regions.registerTextRegion(wrapper) : undefined;
-    this.bindings.set(wrapper.dispose, {
-      kind,
-      tui,
-      local: Boolean(handle),
-      refresh: normal => {
-        if (normal || !handle) tui.requestRender();
-        else handle.requestRender();
-      },
-    });
+    this.bindings.set(wrapper.dispose, tui);
     if (this.disposed) wrapper.dispose();
     return wrapper;
   }
@@ -58,8 +38,8 @@ export class WorkingSession {
     const startedElapsed = this.activity.elapsed();
     this.lastWorkingKey = workingFrameKey(startedElapsed);
     this.lastRateLabel = this.activity.label();
-    this.ctx.ui.setWidget(WIDGET_KEY, tui => this.bind(new Working(this.activity, () => this.ctx.ui.theme), tui, "working"));
-    this.refresh(true);
+    this.ctx.ui.setWidget(WIDGET_KEY, tui => this.bind(new Working(this.activity, () => this.ctx.ui.theme), tui));
+    this.refresh();
     this.schedule(this.generation, startedElapsed);
   }
 
@@ -70,7 +50,7 @@ export class WorkingSession {
     this.activity.stop();
     this.lastWorkingKey = undefined;
     this.lastRateLabel = undefined;
-    if (wasActive) { this.ctx.ui.setWidget(WIDGET_KEY, undefined); this.refresh(true); }
+    if (wasActive) { this.ctx.ui.setWidget(WIDGET_KEY, undefined); this.refresh(); }
   }
 
   dispose(): void {
@@ -90,7 +70,9 @@ export class WorkingSession {
     if (this.activity.active && event.message.role === "assistant") this.activity.rate.finish(event.message);
   }
 
-  private refresh(normal: boolean): void { for (const entry of this.bindings.values()) entry.refresh(normal); }
+  private refresh(): void {
+    for (const tui of new Set(this.bindings.values())) tui.requestRender();
+  }
 
   private tick(): number {
     const elapsed = this.activity.elapsed();
@@ -101,17 +83,7 @@ export class WorkingSession {
     if (!workingChanged && !rateChanged) return elapsed;
     this.lastWorkingKey = workingKey;
     this.lastRateLabel = rateLabel;
-    const requestedFull = new Set<TUI>();
-    for (const entry of this.bindings.values()) {
-      const changed = entry.kind === "working" ? workingChanged : rateChanged;
-      if (!changed) continue;
-      if (entry.local) {
-        entry.refresh(false);
-      } else if (!requestedFull.has(entry.tui)) {
-        requestedFull.add(entry.tui);
-        entry.refresh(false);
-      }
-    }
+    this.refresh();
     return elapsed;
   }
 

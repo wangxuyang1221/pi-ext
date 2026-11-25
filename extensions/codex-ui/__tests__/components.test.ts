@@ -146,9 +146,7 @@ test("footer renders the accepted stable status flow and ignores transient statu
     getContextUsage: () => ({ percent: 28 }),
     getBranch: () => "main",
     getExtensionStatuses: () => new Map([
-      ["pi-openai-fast-mode", "fast"],
       ["mcp", "\x1b[38;5;196mMCP 2/2 · 14 tools\x1b[39m"],
-      ["codex-compact", "Compacting context with Codex…"],
       ["other-extension", "Other status"],
     ]),
     getTheme: () => theme,
@@ -159,10 +157,9 @@ test("footer renders the accepted stable status flow and ignores transient statu
 
   assert.equal(
     plain,
-    "gpt-test medium · fast · ~/Code/app · git:main · Context 72% left",
+    "gpt-test medium · ~/Code/app · git:main · Context 72% left",
   );
   assert.ok(!plain.includes("MCP"));
-  assert.ok(!plain.includes("Compacting"));
   assert.ok(!plain.includes("Other status"));
   assert.ok(visibleWidth(rendered) <= 160);
 });
@@ -182,7 +179,7 @@ test("footer adds a live status row without changing the existing status line", 
   assert.deepEqual(footer.render(100), before);
 });
 
-test("footer uses Codex CLI colors for model, context, and Fast Mode", () => {
+test("footer uses Codex CLI colors for model and context", () => {
   const truecolorTheme = createTheme("truecolor");
   const footer = new CodexFooter({
     cwd: "/Users/pi/Code/app",
@@ -191,16 +188,13 @@ test("footer uses Codex CLI colors for model, context, and Fast Mode", () => {
     getThinkingLevel: () => "max",
     getContextUsage: () => ({ percent: 19 }),
     getBranch: () => "main",
-    getExtensionStatuses: () => new Map([
-      ["pi-openai-fast-mode", "fast"],
-    ]),
+    getExtensionStatuses: () => new Map(),
     getTheme: () => truecolorTheme,
   });
 
   const rendered = footer.render(120)[0] ?? "";
   assert.ok(rendered.includes("\x1b[38;2;246;226;183mgpt-test max\x1b[39m"));
   assert.ok(rendered.includes("\x1b[38;2;242;181;144mContext 81% left\x1b[39m"));
-  assert.ok(rendered.includes("\x1b[38;2;200;169;238mfast\x1b[39m"));
 });
 
 test("footer degrades location before stable session facts on narrow terminals", () => {
@@ -211,16 +205,14 @@ test("footer degrades location before stable session facts on narrow terminals",
     getThinkingLevel: () => "max",
     getContextUsage: () => ({ percent: 19 }),
     getBranch: () => "main",
-    getExtensionStatuses: () => new Map([
-      ["pi-openai-fast-mode", "fast"],
-    ]),
+    getExtensionStatuses: () => new Map(),
     getTheme: () => theme,
   });
 
   const expected = new Map([
-    [100, "gpt-5.6-sol max · fast · ~/Code/t3code/pi-ext · git:main · Context 81% left"],
-    [72, "gpt-5.6-sol max · fast · pi-ext · main · Context 81% left"],
-    [52, "gpt-5.6-sol max · fast · main · Context 81% left"],
+    [100, "gpt-5.6-sol max · ~/Code/t3code/pi-ext · git:main · Context 81% left"],
+    [65, "gpt-5.6-sol max · pi-ext · main · Context 81% left"],
+    [45, "gpt-5.6-sol max · main · Context 81% left"],
   ]);
   for (const [width, line] of expected) {
     const rendered = footer.render(width)[0] ?? "";
@@ -249,7 +241,6 @@ test("footer caches only allowlisted statuses and painted output", () => {
     },
   } as Theme;
   const statuses = new Map([
-    ["pi-openai-fast-mode", "fast"],
     ["mcp", "\x1b[31mMCP ready\x1b[39m"],
   ]);
   const getContextUsage = vi.fn(() => ({ percent: 28 }));
@@ -316,16 +307,10 @@ test("empty composer shows a dim command hint on its bottom padding row only whe
     assert.equal(stripTerminalSequences(lines.at(-1)!), hinted(width));
     assert.ok(lines.at(-1)!.includes(theme.fg("dim", "/ for commands")));
     assert.equal(visibleWidth(lines.at(-1)!), width);
-    assert.equal(stripTerminalSequences(editor.renderProjectedLines(width, [" "], [], 0, 0)[2]!), hinted(width));
   }
   assert.equal(stripTerminalSequences(editor.render(47).at(-1)!), " ".repeat(47));
-  assert.equal(stripTerminalSequences(editor.renderProjectedLines(47, [" "], [], 0, 0)[2]!), " ".repeat(47));
-  const projected = editor.renderProjectedLines(80, [" "], ["→ copy"], 0, 0).map(stripTerminalSequences);
-  assert.equal(projected[2], " ".repeat(80));
-  assert.ok(!projected.join("").includes("for commands"));
   editor.setText("ship it");
   assert.equal(stripTerminalSequences(editor.render(80).at(-1)!), " ".repeat(80));
-  assert.equal(stripTerminalSequences(editor.renderProjectedLines(80, [" ship it"], [], 0, 0)[2]!), " ".repeat(80));
 });
 
 test("editor paints a flat composer while preserving the cursor marker", () => {
@@ -373,7 +358,7 @@ function foregroundAt(line: string, text: string): string {
   return color;
 }
 
-test("composer keeps theme text colors after prompt and cursor resets in both projections", () => {
+test("composer keeps theme text colors after prompt and cursor resets", () => {
   let current = createTheme();
   const editor = new CodexEditor(
     { terminal: { rows: 40, columns: 80 }, requestRender() {} } as unknown as TUI,
@@ -381,14 +366,9 @@ test("composer keeps theme text colors after prompt and cursor resets in both pr
     new TestKeybindingsManager(),
     () => current,
   );
-  const emptyProjection = editor.renderProjectedLines(40, [" "], [], 0, 0).map(stripTerminalSequences);
-  assert.ok(emptyProjection[1].startsWith("›"));
-  assert.ok(emptyProjection[1].includes("Ask Pi to do anything"));
-  assert.deepEqual(editor.renderProjectedLines(40, [], [], 0, 0).map(stripTerminalSequences), [" ".repeat(40), " ".repeat(40)]);
   editor.setText("Draft");
   editor.focused = true;
   assert.deepEqual(editor.render(0), []);
-  assert.deepEqual(editor.renderProjectedLines(0, [" Draft"], [], 0, 0), []);
   for (const width of [1, 2, 4, 32]) {
     const lines = editor.render(width);
     assert.ok(lines.length >= 3);
@@ -399,24 +379,11 @@ test("composer keeps theme text colors after prompt and cursor resets in both pr
   for (const color of [81, 16]) {
     current = createTheme();
     current.getFgAnsi = () => `\x1b[38;5;${color}m`;
-    const frames = [
-      editor.render(40),
-      editor.renderProjectedLines(40, [" Draft", "\x1b[0mWrapped", "\x1b[mReset"],
-        ["\x1b[38;5;196mMenu\x1b[22;39m Detail"], 0, 0),
-    ];
-    for (const [index, frame] of frames.entries()) {
-      for (const word of index === 0 ? ["Draft"] : ["Draft", "Wrapped", "Reset", "Detail"]) {
-        const line = frame.find(value => value.includes(word));
-        assert.ok(line, word);
-        assert.equal(foregroundAt(line, word), `38;5;${color}`, word);
-      }
-      assert.ok(frame.every(line => visibleWidth(line) === 40));
-      assert.equal(foregroundAt(frame.join("") + "Outside", "Outside"), "default");
-    }
-    const menu = frames[1].find(line => line.includes("Menu"))!;
-    assert.equal(foregroundAt(menu, "Menu"), "38;5;196");
-    assert.ok(stripTerminalSequences(frames[1][1]).startsWith("›Draft"));
-    assert.ok(stripTerminalSequences(frames[1][2]).startsWith("Wrapped"));
+    const frame = editor.render(40);
+    assert.equal(foregroundAt(frame[1]!, "Draft"), `38;5;${color}`);
+    assert.ok(frame.every(line => visibleWidth(line) === 40));
+    assert.equal(foregroundAt(frame.join("") + "Outside", "Outside"), "default");
+
   }
 });
 
@@ -487,8 +454,6 @@ test("composer preserves scroll position during completion, avoids wide double-r
     const newlineLines = editor.render(80).map(stripTerminalSequences);
     assert.ok(!newlineLines.join("\n").includes("Ask Pi to do anything"));
     assert.ok(!newlineLines.at(-1)!.includes("/ for commands"));
-    const projectedNewline = editor.renderProjectedLines(80, [" "], [], 0, 0).map(stripTerminalSequences);
-    assert.ok(!projectedNewline.join("\n").includes("Ask Pi to do anything"));
     assert.equal(getLinesSpy.mock.calls.length, 0);
     assert.equal(getTextSpy.mock.calls.length, 0);
   } finally {
@@ -514,7 +479,6 @@ test("composer preserves scroll position during completion, avoids wide double-r
   assert.deepEqual(seenChanges, ["seed", "replacement", ""]);
   const replacedFrame = editor.render(80).map(stripTerminalSequences);
   assert.ok(!replacedFrame.join("\n").includes("Ask Pi to do anything"));
-  assert.ok(!editor.renderProjectedLines(80, [" replacement"], [], 0, 0).map(stripTerminalSequences).join("\n").includes("Ask Pi to do anything"));
   editor.onChange = undefined;
 
   // Long wrapped line scrolled up: opening autocomplete must render once and preserve the viewport scroll offset.
@@ -542,9 +506,6 @@ test("composer preserves scroll position during completion, avoids wide double-r
     const frame = editor.render(12).map(stripTerminalSequences);
     assert.equal(baseRender.mock.calls.length, 1, "autocomplete frame must only call super.render once");
     assert.equal(frame[1], beforeScroll, "autocomplete must not reset wrapped scroll offset");
-    const surface = editor.renderSourceSurface(12);
-    assert.equal(surface.nativeBodyRows, 5);
-    assert.ok(surface.menu.length >= 1);
   } finally {
     baseRender.mockRestore();
   }
@@ -579,8 +540,6 @@ test("composer keeps empty-draft placeholder accurate after rebound slash comple
   const emptyFrame = reboundEditor.render(80).map(stripTerminalSequences);
   assert.ok(emptyFrame.join("\n").includes("Ask Pi to do anything"));
   assert.ok(emptyFrame.at(-1)!.includes("/ for commands"));
-  const projectedEmpty = reboundEditor.renderProjectedLines(80, [" "], [], 0, 0).map(stripTerminalSequences);
-  assert.ok(projectedEmpty.join("\n").includes("Ask Pi to do anything"));
 
   // Capability fallback when a host lacks isEditorEmpty().
   Object.defineProperty(reboundEditor, "isEditorEmpty", { configurable: true, value: undefined });

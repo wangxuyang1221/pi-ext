@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { afterEach, test, vi } from "vitest";
-import { readFileSync } from "node:fs";
 import { createExtensionRuntime, ExtensionRunner, SessionManager, type ExtensionAPI, type ExtensionContext, type Extension } from "@earendil-works/pi-coding-agent";
 import { registerTerminalTitleSpinner, TerminalTitleSpinner } from "../src/terminal-title.js";
 
@@ -24,9 +23,8 @@ function harness(mode = "tui") {
 }
 afterEach(() => vi.useRealTimers());
 
-test("manifest order starts the title before a blocking compaction handler and stops on every outcome", async () => {
+test("the extension starts the title before a blocking compaction handler and stops on every outcome", async () => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
-  const manifest = JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8"));
   for (const outcome of ["success", "cancel", "throw", "shutdown"] as const) {
     const h = harness(); h.install();
     let release!: () => void, entered!: () => void;
@@ -37,9 +35,7 @@ test("manifest order starts the title before a blocking compaction handler and s
       if (outcome === "throw") throw new Error("Fixture failure");
       return outcome === "success" ? { compaction: { summary: "Fixture" } } : { cancel: true };
     }]]]) };
-    const extensions = manifest.pi.extensions.map((path: string) => ({ path,
-      handlers: path.includes("codex-ui/") ? h.handlers : path.includes("codex-compact/") ? compact.handlers : new Map(),
-    })) as Extension[];
+    const extensions = [{ path: "codex-ui", handlers: h.handlers }, { path: "fixture", handlers: compact.handlers }] as Extension[];
     const runner = new ExtensionRunner(extensions, createExtensionRuntime(), process.cwd(), SessionManager.inMemory(), {} as never);
     const pending = runner.emit({ type: "session_before_compact" } as never);
     try {

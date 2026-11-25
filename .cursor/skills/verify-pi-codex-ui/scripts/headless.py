@@ -2,6 +2,7 @@
 """Exercise CLI print/json and RPC, not SDK mode flags."""
 import json, os, select, shutil, signal, struct, subprocess, tempfile, time, traceback, zlib, base64
 from pathlib import Path
+from event_records import read_records
 from health import doctor
 BASE=Path(__file__).resolve().parent
 REPO=BASE.parents[3]
@@ -50,14 +51,14 @@ try:
                     deadline=time.monotonic()+30
                     while time.monotonic()<deadline:
                         path=root/'events.jsonl'
-                        if path.exists() and any(json.loads(s)['type']=='agent_settled' for s in path.read_text().splitlines()): break
+                        if any(event['type']=='agent_settled' for event in read_records(path)): break
                         if p.poll() is not None:break
                         time.sleep(.1)
                     else:raise AssertionError('RPC did not settle')
                 else:
                     p.stdin.close()
                     assert p.wait(timeout=30)==0,'print CLI failed'
-                events=[json.loads(s) for s in (root/'events.jsonl').read_text().splitlines()]
+                events=read_records(root/'events.jsonl', final=mode=='print')
                 tools=[e['data'] for e in events if e['type']=='tool_execution_end']
                 assert len(tools)==2,'Both real tools must execute through the host'
                 if scenario!='healthy':

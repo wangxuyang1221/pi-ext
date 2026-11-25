@@ -6,7 +6,7 @@ import subprocess
 
 
 def doctor(repo, evidence, label):
-    command = ["node", str(repo / ".cursor/skills/verify-pi-ext/scripts/verify.mjs"), "doctor"]
+    command = ["node", str(repo / ".cursor/skills/verify-pi-codex-ui/scripts/verify.mjs"), "doctor"]
     result = subprocess.run(command, cwd=repo, env={**os.environ, "pnpm_config_verify_deps_before_run": "false"}, capture_output=True, text=True)
     name = f"doctor-{label}.json"
     (evidence / name).write_text(result.stdout)
