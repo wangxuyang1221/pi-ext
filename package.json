@@ -8,12 +8,12 @@
   "author": "Wang Xuyang",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/wangxuyang1221/pi-ext.git"
+    "url": "git+https://github.com/wangxuyang1221/pi-theme.git"
   },
   "bugs": {
-    "url": "https://github.com/wangxuyang1221/pi-ext/issues"
+    "url": "https://github.com/wangxuyang1221/pi-theme/issues"
   },
-  "homepage": "https://github.com/wangxuyang1221/pi-ext#readme",
+  "homepage": "https://github.com/wangxuyang1221/pi-theme#readme",
   "keywords": [
     "pi-package",
     "pi-extension",

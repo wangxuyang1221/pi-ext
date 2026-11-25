@@ -1,4 +1,4 @@
-# pi-ext
+# pi-theme
 
 [简体中文](README.md) | English
 
@@ -16,8 +16,8 @@ A Codex-style terminal interface and the `codex-pi` theme for [Pi Coding Agent](
 Install the requirements above, then clone, build, and install the local package. The repository does not commit `dist/`, so use this source build procedure.
 
 ```bash
-git clone https://github.com/wangxuyang1221/pi-ext.git
-cd pi-ext
+git clone https://github.com/wangxuyang1221/pi-theme.git
+cd pi-theme
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm run hooks:install
 pnpm run hooks:check
