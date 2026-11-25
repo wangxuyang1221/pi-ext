@@ -1,4 +1,4 @@
-# pi-ext
+# pi-theme
 
 简体中文 | [English](README.en.md)
 
@@ -16,8 +16,8 @@
 先安装上述运行环境，再克隆、构建并安装本地 package。仓库不提交 `dist/`，请使用以下源码构建流程。
 
 ```bash
-git clone https://github.com/wangxuyang1221/pi-ext.git
-cd pi-ext
+git clone https://github.com/wangxuyang1221/pi-theme.git
+cd pi-theme
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm run hooks:install
 pnpm run hooks:check
