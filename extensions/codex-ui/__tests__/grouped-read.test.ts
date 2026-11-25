@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { test } from "vitest";
-import { initTheme, SessionManager, ToolExecutionComponent, type ExtensionAPI, type ToolDefinition } from "@earendil-works/pi-coding-agent";
+import { initTheme, SessionManager, ToolExecutionComponent, type ExtensionAPI, type Theme, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { registerCodexTools } from "../src/tools.js";
 import { ToolRenderCache } from "../src/render-cache.js";
+
+const themeModule = await import(
+  pathToFileURL(resolve("node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js")).href
+) as { getThemeByName: (name: string) => Theme };
 
 const plain = (row: ToolExecutionComponent, width = 120) => row.render(width).map(line => stripTerminalSequences(line).trimEnd()).join("\n");
 const call = (id: string, args = { path: `src/${id}.ts` }, name = "read") => ({ type: "toolCall", id, name, arguments: args });
@@ -97,6 +102,51 @@ test("image results keep their own host row so attachments remain next to their 
     assert.match(plain(image), /image.ts.*Image loaded/u);
     assert.match(plain(a), /a.ts/u); assert.doesNotMatch(plain(a), /image.ts|c.ts/u);
     assert.match(plain(c), /c.ts/u);
+  } finally { h.dispose(); }
+});
+
+test("image reads show non-vision model warnings when collapsed and expanded", () => {
+  const h = harness();
+  try {
+    const row = h.row("photo", { path: "photo.png" });
+    row.updateResult({
+      content: [
+        { type: "text", text: "Read image file [image/png]" },
+        { type: "image", data: "", mimeType: "image/png" },
+      ],
+      details: { imageUnsupportedByModel: "gpt-text-only" },
+      isError: false,
+    });
+    assert.equal(plain(row), [
+      "",
+      "@ Read photo.png · Image loaded",
+      "  └ [gpt-text-only does not support images; it saw a placeholder instead]",
+    ].join("\n"));
+    row.setExpanded(true);
+    assert.equal(plain(row), [
+      "",
+      "@ Read photo.png · Image loaded",
+      "  └ 1  Read image file [image/png]",
+      "    [gpt-text-only does not support images; it saw a placeholder instead]",
+    ].join("\n"));
+    for (const width of [16, 30, 40, 80]) {
+      const lines = row.render(width);
+      assert.ok(lines.every(line => visibleWidth(line) <= width));
+    }
+    for (const expanded of [false, true]) {
+      row.setExpanded(expanded);
+      const wrapped = row.render(40);
+      assert.ok(wrapped.every(line => visibleWidth(line) <= 40));
+      const normalized = wrapped.map(line => stripTerminalSequences(line).trim()).join(" ").replace(/\s+/gu, " ");
+      assert.match(normalized, /\[gpt-text-only does not support images; it saw a placeholder instead\]/u);
+      const warningRows = wrapped.slice(expanded ? 3 : 2);
+      const darkTheme = themeModule.getThemeByName("dark");
+      assert.ok(warningRows.length >= 2);
+      for (const line of warningRows) {
+        const text = stripTerminalSequences(line).replace(/^(?: {2}└ | {4})/u, "").trimEnd();
+        assert.ok(text.length > 0 && line.includes(darkTheme.fg("warning", text)));
+      }
+    }
   } finally { h.dispose(); }
 });
 

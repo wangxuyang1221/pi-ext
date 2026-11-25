@@ -1,6 +1,6 @@
 #!/usr/bin/env -S conda run --no-capture-output -n codex-py312 python
 """Real CLI/PTy acceptance. Substitute the model boundary; keep tools and storage real."""
-import codecs, errno, fcntl, json, os, pty, re, select, shutil, signal, struct, subprocess, sys, tempfile, termios, time, traceback
+import base64, codecs, errno, fcntl, json, os, pty, re, select, shutil, signal, struct, subprocess, sys, tempfile, termios, time, traceback
 from pathlib import Path
 import pyte
 from event_records import read_records
@@ -13,12 +13,15 @@ def tone(name):
     return theme['vars'].get(value, value).lstrip('#').lower()
 CODEX_BG, CODEX_FG = tone('selectedBg'), tone('text')
 MODE = sys.argv[1] if len(sys.argv) > 1 else 'regular'
-EVIDENCE = REPO / '.tmp/test-results' / ('codex-ui-cli-' + MODE + '-' + str(time.time_ns()))
+PI_COMPAT = '--pi-compat' in sys.argv
+EVIDENCE = REPO / '.tmp/test-results' / ('codex-ui-cli-' + MODE + ('-pi-compat' if PI_COMPAT else '') + '-' + str(time.time_ns()))
 EVIDENCE.mkdir(parents=True)
 ROOT = Path(tempfile.mkdtemp(prefix='scratch-', dir=EVIDENCE))
 for name in ['home', 'agent', 'workspace', 'sessions', 'tmp', 'cache', 'config', 'data', 'state']:
     (ROOT / name).mkdir()
 settings = dict(quietStartup=True, defaultProjectTrust='never', theme='codex-pi', compaction={'enabled': False,'keepRecentTokens':128}, retry={'enabled': False}, cacheWarming='off')
+if PI_COMPAT:
+    settings['fullscreenScrollbar'] = 'always'
 (ROOT/'agent/themes').mkdir()
 shutil.copyfile(REPO/'themes/codex-pi.json', ROOT/'agent/themes/codex-pi.json')
 (ROOT/'agent/settings.json').write_text(json.dumps(settings))
@@ -29,7 +32,10 @@ shutil.copyfile(REPO/'themes/codex-pi.json', ROOT/'agent/themes/codex-pi.json')
 env = {k:v for k,v in os.environ.items() if k in ['PATH', 'LANG', 'LC_ALL', 'TZ']}
 env.update(HOME=str(ROOT/'home'), TMPDIR=str(ROOT/'tmp'), PI_CODING_AGENT_DIR=str(ROOT/'agent'), AUDIT_ROOT=str(ROOT), TERM='xterm-256color', COLORTERM='truecolor', PI_OFFLINE='1', PI_TELEMETRY='0', PI_SKIP_VERSION_CHECK='1', PYTHONDONTWRITEBYTECODE='1')
 for kind in ['CACHE','CONFIG','DATA','STATE']: env['XDG_'+kind+'_HOME'] = str(ROOT/kind.lower())
-cli = ['node', str(REPO/'node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js'), '--offline', '--no-extensions', '--no-skills', '--no-context-files', '--no-prompt-templates', '--tools', '+codemode', '--session-dir', str(ROOT/'sessions'), '--provider', 'faux', '--model', 'faux-1', '-e', str(REPO/'extensions/codex-ui/dist/index.js'), '-e', str(BASE/'model-provider.ts')]
+model = 'faux-text-only' if PI_COMPAT else 'faux-1'
+if PI_COMPAT:
+    env['AUDIT_TEXT_ONLY'] = '1'
+cli = ['node', str(REPO/'node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js'), '--offline', '--no-extensions', '--no-skills', '--no-context-files', '--no-prompt-templates', '--tools', '+codemode', '--session-dir', str(ROOT/'sessions'), '--provider', 'faux', '--model', model, '-e', str(REPO/'extensions/codex-ui/dist/index.js'), '-e', str(BASE/'model-provider.ts')]
 actions, snapshots, assertions, processes = [], {}, [], []
 pid, fd, status = None, None, None
 raw = bytearray()
@@ -169,6 +175,43 @@ def control_case():
     check('CONTROL-FIRSTCONTROL-LAST' in view(),'Real diff displays text surrounding source terminal controls')
     check(all(b'source-must-not-set-title' not in title for title in titles(raw[offset:])),'Source OSC cannot change the terminal title')
     snap('sanitized control diff');keys(b'\x0f','collapse control character diff');settle()
+def pi_compat_case():
+    # A 1×1 red PNG with no fixture file to stage.
+    image = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC')
+    (ROOT/'workspace/pixel.png').write_bytes(image)
+    result = request('Read image with a text-only model', {'calls': [tool('read', path='pixel.png')]})[-1]
+    check(result['toolName'] == 'read' and not result['isError']
+          and (result['result'].get('details') or {}).get('imageUnsupportedByModel') == model,
+          'Real Read identifies the text-only model in its result')
+    warning = f'[{model} does not support images; it saw a placeholder instead]'
+    check(warning in view() and 'Read image file [image/png]' not in view(), 'Collapsed Read displays the image warning')
+    snap('Read image collapsed')
+    keys(b'\x0f', 'expand Read'); settle()
+    check(warning in view() and 'Read image file [image/png]' in view(), 'Expanded Read retains the warning and shows the result')
+    snap('Read image expanded')
+
+    def check_syntax(marker, verb):
+        source = f'const {marker} = 101;'
+        row = next((y for y, line in enumerate(screen.display) if source in line), None)
+        check(row is not None, f'{verb} displays the TypeScript diff line')
+        offset = screen.display[row].index(source)
+        check(screen.buffer[row][offset].fg == tone('syntaxKeyword'), f'{verb} uses the theme syntax keyword color')
+        check(screen.buffer[row][offset + len('const ')].fg == CODEX_FG, f'{verb} uses theme text for an unscoped token')
+
+    request('Write TypeScript fixture', {'calls': [tool('write', path='probe.ts', content='const unscopedWrite = 101;\n')]})
+    check_syntax('unscopedWrite', 'Write')
+    request('Edit TypeScript fixture', {'calls': [tool('edit', path='probe.ts', edits=[{'oldText': 'unscopedWrite', 'newText': 'unscopedEdit'}])]})
+    check_syntax('unscopedEdit', 'Edit')
+    check((ROOT/'workspace/probe.ts').read_text() == 'const unscopedEdit = 101;\n', 'Write and Edit save the expected TypeScript bytes')
+
+    if MODE == 'fullscreen':
+        request('Overflow the fullscreen viewport', {'reply': '\n\n'.join(f'Scrollbar line {i}' for i in range(100))})
+        edge = [screen.buffer[y][screen.columns - 1] for y in range(screen.lines)]
+        track_colors = {cell.fg for cell in edge if cell.data == '│'}
+        thumb_colors = {cell.fg for cell in edge if cell.data in ('┃', '█')}
+        check(track_colors == {'2c2c31'}, 'Fullscreen scrollbar track uses the codex-pi user background color')
+        check(thumb_colors == {'6c6c74'}, 'Fullscreen scrollbar thumb uses the brighter codex-pi dim color')
+
 def stop():
     global fd
     if status is None:
@@ -188,6 +231,9 @@ try:
     start()
     if '--controls' in sys.argv:
         control_case();stop();passed=True
+        raise SystemExit(0)
+    if PI_COMPAT:
+        pi_compat_case(); stop(); passed=True
         raise SystemExit(0)
     command_availability('startup')
     footer = next((line for line in screen.display if 'Context' in line and 'workspace' in line), '')

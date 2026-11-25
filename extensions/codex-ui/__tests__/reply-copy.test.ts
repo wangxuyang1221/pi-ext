@@ -77,21 +77,33 @@ test("copy follows branch and context edits and never leaks a previous session",
   assert.deepEqual(fixture.notify.mock.calls.at(-1), ["No agent messages to copy yet.", "error"]);
 });
 
-test("copy skips empty aborted replies but never substitutes older text for a tool-only reply", async () => {
+test("copy skips non-stop replies without text but never substitutes older text for a normal stop reply", async () => {
   const fixture = await setup();
   fixture.manager.appendMessage(reply("Keep\n"));
-  fixture.manager.appendMessage({ ...reply(""), stopReason: "aborted", content: [] });
-  fixture.editor.setText("/copy"); fixture.editor.handleInput("\r");
-  await vi.waitFor(() => assert.deepEqual(copy.mock.calls, [["Keep\n"]]));
+  let expectedCopies = 0;
+  for (const skipped of [
+    { ...reply(""), stopReason: "aborted" as const, content: [] },
+    { ...reply(""), stopReason: "aborted" as const, content: [{ type: "thinking" as const, thinking: "Interrupted" }] },
+    { ...reply(""), stopReason: "toolUse" as const, content: [{ type: "toolCall" as const, id: "t1", name: "read", arguments: {} }] },
+    { ...reply(""), stopReason: "error" as const, content: [] },
+    { ...reply(""), stopReason: "error" as const, content: [{ type: "text" as const, text: " \n\t" }] },
+  ]) {
+    fixture.manager.appendMessage(skipped);
+    expectedCopies++;
+    fixture.editor.setText("/copy"); fixture.editor.handleInput("\r");
+    await vi.waitFor(() => assert.equal(copy.mock.calls.length, expectedCopies));
+    assert.deepEqual(copy.mock.calls.at(-1), ["Keep\n"]);
+  }
   for (const content of [[], [{ type: "thinking" as const, thinking: "Only thinking" }], [{ type: "text" as const, text: " \n\t" }]]) {
     fixture.manager.appendMessage({ ...reply(""), content });
     fixture.editor.setText("/copy"); fixture.editor.handleInput("\r");
-    assert.equal(copy.mock.calls.length, 1);
+    assert.equal(copy.mock.calls.length, expectedCopies);
     assert.deepEqual(fixture.notify.mock.calls.at(-1), ["No agent messages to copy yet.", "error"]);
   }
   fixture.manager.appendMessage({ ...reply("Partial\n"), stopReason: "aborted" });
   fixture.editor.setText("/copy"); fixture.editor.handleInput("\r");
-  await vi.waitFor(() => assert.deepEqual(copy.mock.calls.at(-1), ["Partial\n"]));
+  await vi.waitFor(() => assert.equal(copy.mock.calls.length, expectedCopies + 1));
+  assert.deepEqual(copy.mock.calls.at(-1), ["Partial\n"]);
 });
 
 test("copy reports clipboard failures and suppresses stale completion after session replacement", async () => {

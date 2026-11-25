@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { test } from "vitest";
+import type { Theme } from "@earendil-works/pi-coding-agent";
+
+const themeModule = await import(
+  pathToFileURL(resolve("node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js")).href
+) as { loadThemeFromPath: (path: string, mode?: "truecolor" | "256color") => Theme };
 
 const REQUIRED_COLORS = [
   "accent",
@@ -64,10 +71,14 @@ test("package publishes the complete codex-pi theme and compiled extension", asy
     await readFile(new URL("../../../package.json", import.meta.url), "utf8"),
   );
 
+  assert.equal(theme.$schema, "https://pi.dev/schemas/theme.schema.json");
   assert.equal(theme.name, "codex-pi");
+  assert.equal(theme.appearance, "dark");
   for (const token of REQUIRED_COLORS) {
     assert.ok(Object.hasOwn(theme.colors, token), `Missing theme token: ${token}`);
   }
+  assert.equal(theme.colors.scrollbarTrack, "userBg");
+  assert.equal(theme.colors.scrollbarThumb, "dim");
   assert.equal(theme.colors.userMessageBg, "userBg");
   assert.equal(theme.colors.selectedBg, "composerBg");
   assert.equal(theme.colors.accent, "cyan");
@@ -107,4 +118,9 @@ test("package publishes the complete codex-pi theme and compiled extension", asy
   assert.ok(packageJson.pi.themes.includes("./themes/codex-pi.json"));
   assert.ok(packageJson.files.includes("extensions/codex-ui/dist"));
   assert.ok(packageJson.files.includes("themes/codex-pi.json"));
+
+  const loaded = themeModule.loadThemeFromPath(resolve("themes/codex-pi.json"), "truecolor");
+  assert.equal(loaded.name, "codex-pi");
+  assert.equal(loaded.appearance, "dark");
+  assert.notEqual(loaded.getFgAnsi("scrollbarTrack"), loaded.getFgAnsi("scrollbarThumb"));
 });

@@ -88,6 +88,12 @@ function renderMember(member: ReadMember, expanded: boolean, grouped: boolean, t
     const [text = "", notice = "", sourceCount] = pending ? [] : source(member);
     const lineCount = pending ? 0 : sourceCount === undefined ? count(member, text) : Number(sourceCount);
     const image = member.content?.some(block => block.type === "image");
+    const unsupportedModel = !pending && !failed && typeof member.details?.imageUnsupportedByModel === "string"
+      ? clean(member.details.imageUnsupportedByModel).replace(/\n/gu, " ").trim()
+      : "";
+    const imageWarning = unsupportedModel
+      ? `[${unsupportedModel} does not support images; it saw a placeholder instead]`
+      : "";
     let meta = pending ? "Reading…" : status === "interrupted" ? "Interrupted" : failed ? "Failed" : image ? "Image loaded"
       : `${lineCount} ${lineCount === 1 ? "line" : "lines"}`;
     if (!pending && !failed && !image && lineCount && (member.offset !== undefined || member.limit !== undefined)) {
@@ -110,6 +116,14 @@ function renderMember(member: ReadMember, expanded: boolean, grouped: boolean, t
       if (lineCount > shown.length) lines.push(fitToWidth(theme.fg("dim", `${gutter}… +${lineCount - shown.length} lines`), width));
     }
     if (notice && expanded) lines.push(fitToWidth(theme.fg("dim", `${gutter}${clean(notice)}`), width, { ellipsis: "…" }));
+    if (imageWarning) {
+      const indent = width >= 6 ? gutter : "";
+      const contentWidth = Math.max(1, width - indent.length);
+      const firstPrefix = indent ? (lines.length > 1 ? gutter : "  └ ") : "";
+      wrapTextWithAnsi(imageWarning, contentWidth).forEach((line, index) => {
+        lines.push(fitToWidth(theme.fg("dim", index ? indent : firstPrefix) + theme.fg("warning", line), width));
+      });
+    }
     return lines;
   });
 }

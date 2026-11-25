@@ -20,6 +20,18 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 
 只补验控制字符 diff 时，可运行 `cli.py regular --controls` 和 `cli.py fullscreen --controls`。该聚焦路径实际覆盖已有 CRLF 文件、展开 diff，并检查源文件中的清屏和 OSC 标题指令没有执行；它不能代替完整 CLI 旅程。
 
+## Pi compatibility
+
+串行运行以下入口。PTY 使用只接收文本的离线模型，触发真实图片 Read 并核对 `imageUnsupportedByModel` 和 Ctrl+O 前后的提示。两种 TUI 均执行 TypeScript Edit/Write 并断言已分类关键字与无分类字元的实际 ANSI 前景。全屏旅程将 `fullscreenScrollbar` 设为 `always`，填满聊天区后，分别核对最右列的 track 和 thumb 颜色。
+
+```bash
+conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/cli.py regular --pi-compat
+conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/cli.py fullscreen --pi-compat
+pnpm test extensions/codex-ui/__tests__/reply-copy.test.ts extensions/codex-ui/__tests__/theme.test.ts extensions/codex-ui/__tests__/tools.test.ts
+```
+
+定向测试核对编辑器 `/copy` 跳过无正文的取消、工具或错误 turn，以及正常 `stop` 的无正文通知。测试替换了剪贴板写入，因此系统粘贴仍按 [Manual boundaries](#manual-boundaries) 验收。主题测试检查 schema URL、显式 `dark` 和宿主加载结果。工具测试检查 `text` 色变化后，已有 diff 缓存与冷渲染一致。
+
 ## CLI coverage
 
 | Feature IDs | Required observations |

@@ -416,7 +416,7 @@ test("header caches rendered output per width, theme, model and thinking level u
     },
   } as Theme;
   const header = new CodexHeader({
-    version: "1.5.2",
+    version: "1.6.0",
     cwd: "/Users/pi/Code/app",
     home: "/Users/pi",
     getModelId: () => model,

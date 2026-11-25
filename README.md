@@ -8,7 +8,7 @@
 
 - Linux 或 macOS。原生 Windows 不在支持范围内。
 - Node.js `>=22.19.0`，pnpm `11.9.0`。
-- Pi `1.5.2`。开发依赖与 peer dependencies 均固定为此版本，其他版本需另行验证。
+- Pi `1.6.0`。开发依赖与 peer dependencies 均固定为此版本，其他版本需另行验证。
 - 建议使用支持 24-bit color 的终端。
 
 ## Install

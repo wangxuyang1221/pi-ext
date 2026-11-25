@@ -36,6 +36,7 @@ pnpm exec node .cursor/skills/verify-pi-codex-ui/scripts/verify.mjs run tool-sta
 ```
 
 - [CLI 和 headless 旅程](scripts/README.md#run)验证真实编辑、配置拒绝与恢复、会话切换、模型上下文、缓存压力，以及 print/RPC 的文件与图片副作用。
+- [Pi compatibility 旅程](scripts/README.md#pi-compatibility)验证 Pi 1.6 起支持的非视觉模型图片提示、diff 文字色、全屏滚动条配色与 `/copy` 回退规则。
 - [Working 旅程](features/working.md)通过普通和全屏 CLI 驱动真实工具、取消、输入等待、重试及自动压缩，核对 spinner 和 footer 速率。
 - [JSON recipe](RECIPES.md)提供 F3 展开、原生 codemode 工具、文件写入和 inspector 标签页的独立旅程。交互补验使用 `pnpm exec node .cursor/skills/verify-pi-codex-ui/scripts/verify.mjs tui codex-ui`，退出输入 `/quit`。
 
