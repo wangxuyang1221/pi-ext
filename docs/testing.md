@@ -1,25 +1,17 @@
 # Testing
 
-本文说明开发时选择哪组测试、各组覆盖什么，以及如何判断结果和清理是否完整。日常修改运行 `pnpm run check`；涉及终端交互时，再运行对应的 Unix 验收入口。
-
 ## Setup
 
-使用 Node.js 22.19+ 和 `package.json` 中指定的 pnpm 版本。Pi 相关依赖固定为原版 1.5.2，真实宿主检查使用仓库安装的 CLI，不使用全局 `pi`。
-
-根依赖树不配置宿主补丁。可选的 [Pi 会话摘要补丁](pi-session-summary-patch.md) 和文本区域补丁由 `test-support/pi152-patched` 的独立清单、workspace 和锁文件固定，使用独立启动入口。
+使用 `package.json` 指定的 Node 和 pnpm 版本。宿主测试使用仓库锁定的原版 Pi。
 
 ```bash
-node --version
-pnpm --version
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm run hooks:install
 pnpm run hooks:check
 pnpm run check
 ```
 
-`check` 依次校验脚本入口与本地文档链接、扫描工作区密钥，再执行构建、扩展类型检查、搜索扩展类型检查、所有 TS 测试及夹具类型检查、离线测试、发布包检查和五个扩展的源码及 dist 加载检查。测试夹具引用了 `dist/` 中的模块，因此必须先构建，确保全新检出也能通过检查。`dist/` 由构建生成，不要手动修改。
-
-`tsconfig.tests.json` 检查 `extensions/**/__tests__/**/*.ts` 和 `test-support/**/*.ts`，包含独立运行的宿主夹具。测试配置关闭 declaration/declarationMap，避免只做 noEmit 检查时要求为宿主的间接类型生成声明名。它同时读取被测试引用的 JavaScript 类型，但不对整个 JavaScript 脚本库启用 `checkJs`。Vitest 执行通过不能替代这一类型检查。
+`check` 校验脚本与文档链接、密钥、编译产物、源码和夹具类型、离线测试与发布清单，并分别用宿主加载源码和 dist 入口。全新检出时先构建，再单独执行 `typecheck:tests` 或 `host:check`。
 
 ## Commit gates
 
@@ -38,7 +30,7 @@ pnpm run check
 
 所有扫描离线运行，输出路径、规则、行列和命中内容的 SHA-256，不输出凭据值。扫描器缺失、规则配置损坏或内容读取失败均阻止通过。规则只能识别已覆盖的凭据特征，不能保证发现任意短密码、个人数据、编码或拆分后的秘密；二进制仅检查其中可直接识别的文本，不解压归档或识别图片、音频。扫描通过不表示这些内容已完成人工审查。
 
-误报例外维护在 [secret-exceptions.json](../config/secret-exceptions.json)，必须同时匹配具体路径、规则、message ID 和命中内容哈希，并记录原因。现有例外仅用于合成 Basic Auth 测试。新增误报先核实来源，再添加最小范围例外；不要添加整个目录的豁免。真实凭据应移出文件并撤销或轮换，历史扫描的命中不能靠删除当前文件解决。
+误报例外维护在 [secret-exceptions.json](../config/secret-exceptions.json)，必须同时匹配具体路径、规则、message ID 和命中内容哈希，并记录原因。现有条目供历史扫描识别旧提交中的合成 Basic Auth 测试数据。新增误报先核实来源，再添加最小范围例外；不要添加整个目录的豁免。真实凭据应移出文件并撤销或轮换，历史扫描的命中不能靠删除当前文件解决。
 
 门禁自身的验证通过真实临时 Git 仓库运行，包括拒绝提交、部分暂存、首次提交、改名与删除、worktree、安装冲突、脱敏和 CI 失败汇总：
 
@@ -48,108 +40,26 @@ pnpm test test-support/__tests__/repository-gates.test.ts
 
 Git 允许用户跳过本地 hooks；CI 会独立执行暂存快照检查。只有远端分支保护将汇总 `Check` 设为必需检查后，才能强制阻止失败合并。仓库中的 workflow 文件本身不会启用远端保护，配置前需确认账号套餐和管理权限。
 
-## Test groups
+## Focused runs
 
-| Command | Coverage | Prerequisites |
-| --- | --- | --- |
-| `pnpm test` 或 `pnpm run test:offline` | 单元测试、离线协议测试、合成 provider、部分真实 Pi SDK 会话 | Node、pnpm |
-| `pnpm run typecheck:tests` | 所有 TS 测试、TS 夹具和共享 helper 的静态类型 | 先运行 `pnpm run build` |
-| `pnpm run host:check` | 五个扩展的源码与 dist 加载、固定宿主版本 | 先运行 `pnpm run build` |
-| `pnpm run host:pty:check` | Fast 根会话、MCP 恢复、工具状态和搜索界面 | macOS 或 Linux、Conda 环境 `codex-py312`、Python 3.12、pyte 0.8.2 |
-| `pnpm run host:benchmark:check` | MCP history 和输入响应性能检查 | 同 PTY；单独运行，避免其他测试争用 CPU |
-| `pnpm run codex-compact:quality:check` | Python 评分、统计和证据校验的离线单元测试 | `codex-py312`、`scripts/codex-compact-quality-requirements.txt` |
-| `pnpm run skill-mentions:acceptance` | 实际打包、安装、编译文件比对、所有入口导入及安装后的真实 CLI PTY | macOS 或 Linux、Conda、pyte；安装阶段可能访问包注册表 |
+`pnpm test` 使用隔离的 HOME、Pi 配置和临时目录。通过该入口执行 Vitest，例：
 
-Unix 的 `host:*:check` 集成入口先重新构建，再串行执行组内命令。不要同时运行多个会清理 `dist/` 的命令。
+```bash
+pnpm test extensions/codex-ui/__tests__/components.test.ts
+pnpm test extensions/codex-ui/__tests__/working-session.test.ts
+```
 
-安装 Python 依赖：
+## Terminal acceptance
+
+Linux 和 macOS 的终端旅程使用 Python 3.12 及 pyte。
 
 ```bash
 conda create -n codex-py312 python=3.12
-conda run -n codex-py312 python -m pip install pyte==0.8.2 -r scripts/codex-compact-quality-requirements.txt
+conda run -n codex-py312 python -m pip install pyte==0.8.2
 ```
 
-Conda 环境已存在时跳过创建。普通离线测试只需 Node 和 pnpm。
-
-## Focused runs
-
-所有 Vitest 调用都通过隔离入口。直接执行 `pnpm exec vitest` 会被仓库配置拒绝。
-
-```bash
-pnpm test extensions/openai-fast-mode/__tests__/host-compatibility.test.ts
-pnpm test extensions/mcp/__tests__/index.test.ts
-```
-
-`offline` 是默认 Vitest project，所有调用经隔离 wrapper。缺少验收必需工具应失败，不能通过跳过用例得到绿色结果。
-
-
-故障排查时可从组内某个命令继续：
-
-```bash
-pnpm run build
-pnpm run host:pty:check --from tool-status:check
-```
-
-`--from` 会在 `summary.json` 中记录 `partial`，这不是整组验收通过的证据。
-
-## Isolation and shared fixtures
-
-`scripts/test.mjs` 与 Unix 宿主入口共用 `test-support/environment.mjs`。每次运行在仓库 `.tmp/` 下创建 HOME、agentDir、临时目录和 XDG 目录，只继承白名单中的系统变量与离线验收开关。AWS、OpenAI、Google 等外部凭据和用户 Pi 配置不会自动透传。
-
-`test-support/pi-ui.ts` 提供完整的 `ExtensionUIContext`。测试只覆盖自己需要观察的回调；未声明的交互操作抛错，避免假 UI 静默吞掉新行为。`test-support/files.ts` 用独占临时文件加 rename 写入 JSON，读取方只会看到完整快照。对应测试覆盖并发读写及写入失败后保留原文件。
-
-`test-support/wait.ts` 给整个就绪探测设置期限，探测 Promise 本身停滞时也会超时并取消其 signal。它用于协议与 wrapper 夹具。
-
-其他 fixture 应尽量使用真实的宿主接口和明确的类型。异构工具注册表可保留泛型；需要检查工具结果时先断言内容或 details 的实际形状。只有测试故意输入非法数据时才局部绕过输入类型，并注明原因，不关闭整个测试文件的类型检查。
-
-默认测试使用合成 provider，不发送付费模型请求。`pnpm run pi152:live` 是单独的联网验收，会产生真实服务端用量，不属于 `check` 或默认 CI。
-
-## Evidence and cleanup
-
-Unix 宿主入口在 `.tmp/test-results/host-<group>-<id>/` 保存：
-
-- `summary.json`：实际 Node/Pi 版本、前置工具版本、每条命令的退出码、完成状态和清理结果。
-- `<index>.log`：该命令完整的 stdout 与 stderr，包含夹具输出的版本、协议断言及清理证据。
-
-入口为每条命令设置 10 分钟上限，组内不自动重试。普通 Vitest wrapper 与 Unix 宿主入口拥有各自的进程组，正常退出或可处理的取消后检查进程停止，再删除隔离目录；无法确认清理时保留目录并失败。
-
-PTY 子会话和本地协议 server 仍由夹具负责清理。操作系统强杀、CI 强制终止或脱离进程组的进程不在 wrapper 的完整回收保证内。排查失败时查看夹具记录的 PID、socket 和端口，只清理该次运行明确拥有的资源，不使用全局 `killall` 。
-
-单独的 skill 安装验收把合成证据保存在 `.tmp/test-results/skill-install-*`，入口会自动创建目录；CI 使用 `ci-skill-install-*` 前缀。日志、临时目录和测试夹具不进入发布包。缺少前置条件、跳过、部分续跑、取消或未验证清理都不能记录为完整通过。
+`pnpm run tool-status:check` 在普通与全屏终端验证 Read、Bash、Edit 和 Write；`pnpm run codemode:check` 验证嵌套调用检查面板。两条命令均会构建扩展，须串行运行。Working、编辑器、Thinking、print 和 RPC 的入口及证据位置见[验收指引](../.cursor/skills/verify-pi-codex-ui/SKILL.md)。
 
 ## CI
 
-支持范围为 Linux 和 macOS；原生 Windows 不受支持。部分运行与验收逻辑依赖 Unix 文件权限、进程组和 shell，不能用 Windows 测试启动成功来证明兼容性。仓库中保留的 Windows Job Object wrapper 也不构成平台支持承诺。
-
-`.github/workflows/ci.yml` 在 Linux 和 macOS 上先检查提交快照，再运行完整的 `check`。空白检查比较 PR 基准或 push 的前一提交；手动触发和新分支 push 比较 HEAD 的父提交，无父提交时比较空树。密钥、路径和引用检查始终覆盖完整快照。
-
-Ubuntu 另以 `pi152-host` 矩阵运行 `pnpm run pi152:check stock` 与 `pnpm run pi152:check patched`，从新目录安装并验证两种宿主的身份、构建、类型、加载、适用回归和真实 CLI/PTY 旅程。证据包含独立 runtime 内的日志，上传时排除 node_modules。另跑 PTY job 和 Python 评分与 skill 安装 job。另有固定名称的 `Check` 汇总 job，使用 `always()`，只有所有必需 job 成功时才通过；失败、取消、跳过或缺失都不能视为通过。增加执行 job 时，同步更新 workflow 的 `needs` 和 `scripts/check-ci.mjs` 的必需 job 名称。每个 job 有超时，同一分支的新运行会取消旧运行；执行 job 失败时仍上传日志，保留 7 天。性能基准与联网验收不进入默认 CI。
-
-CI 配置与本机验证是两类证据。本机通过不代表另一平台已实跑；合并前查看远端对应 job 的结果。
-
-## Maintained acceptance fixtures
-
-各扩展的用户行为验证见 [Pi extension verification skill](../.cursor/skills/verify-pi-ext/SKILL.md)。该入口索引六个扩展的核心行为，提供隔离 CLI/PTY 驱动、证据保存和清理规则；包含未随包发布的 `codex-search`。每个行为单独记录实际覆盖状态，不能用一次 smoke 代替完整索引。
-
-工具状态 PTY 驱动维护在 `extensions/codex-ui/__tests__/fixtures/tool-status/`；搜索驱动维护在 `extensions/codex-search/__tests__/fixtures/search-ui/`。它们加载当前生产 renderer，模型响应和外部工具结果使用离线 fixture。`tool-status:check` 和 `web-search:check` 是对应入口，均由 Unix PTY 组调用。
-
-`pnpm run codemode:check` 覆盖生产调用树、真实 QuickJS、本地 MCP、普通与全屏 PTY，以及缓存预算和性能；不依赖视觉原型。
-
-文本区域刷新宿主补丁另有[契约、干净安装、真实 CLI/PTY 与 CPU 入口](pi-text-region-refresh.md#verification)。示例及离线 provider 的类型也纳入 `typecheck:tests`。按 [verify-pi-text-regions](../.cursor/skills/verify-pi-text-regions/SKILL.md) 从空目录驱动用户旅程，并分别记录自动与物理终端边界。
-
-## Archived quality evidence
-
-质量评分函数及离线测试仍在维护。重建已有证据报告时必须显式给出输入和输出，输出父目录必须已存在且位于仓库内：
-
-```bash
-pnpm run codex-compact:quality:report --evidence .tmp/evidence.json .tmp/report.json
-pnpm run codex-compact:quality:report --chain-evidence .tmp/chain-evidence.json .tmp/chain-report.json
-```
-
-这些命令不发模型请求；证据必须符合对应格式，已有且内容不同的输出会被拒绝。报告保留其原有版本和实验边界，不能作为当前宿主的新验收结果。
-
-固定 Codex 版本的参考程序、参考向量和媒体重建脚本继续保留。版本值表示算法或语料的来源，不应批量替换成当前 Pi 版本。
-
-## Reference
-
-测试分组、独立宿主验收与共享 fixture 的组织方式参考 [t3code 的固定版本](https://github.com/pingdotgg/t3code/tree/1702d55214bdbae12278462e572b35e7c0eb4a46)。本仓库保留 pnpm、Vitest 3 和现有单包结构，没有引入 Vite+、monorepo 或远程缓存。
+CI 在 Linux 和 macOS 上执行基础检查及打包检查。Linux 还运行终端验收。汇总检查 `Check` 要求两类任务全部通过。

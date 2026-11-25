@@ -44,7 +44,7 @@ test("rate occupies the first footer row while the status row retains its full w
   let rate: string | undefined;
   const footer = new CodexFooter({ cwd: "/workspace/pi-ext", getModelId: () => "gpt-test", getThinkingLevel: () => "high",
     getContextUsage: () => ({ percent: 12 }), getBranch: () => "main", getTheme: () => theme,
-    getExtensionStatuses: () => new Map([["status", "Status: active | long status with useful details"], ["pi-openai-fast-mode", "fast"]]),
+    getExtensionStatuses: () => new Map([["status", "Status: active | long status with useful details"]]),
     getRate: () => rate,
   });
   const before = footer.render(100);
@@ -53,7 +53,7 @@ test("rate occupies the first footer row while the status row retains its full w
   assert.equal(active.length, 2);
   assert.equal(active[1], before[1]);
   assert.match(stripTerminalSequences(active[0]!), /≈1008 t\/s\s*$/u);
-  assert.match(stripTerminalSequences(active[0]!), /fast/u);
+  assert.match(stripTerminalSequences(active[0]!), /gpt-test high/u);
   for (let width = 1; width <= 100; width++) {
     const lines = footer.render(width);
     assert.equal(lines.length, 2);

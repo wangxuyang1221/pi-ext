@@ -17,7 +17,7 @@ try {
   const { DefaultResourceLoader, SettingsManager } = await import("@earendil-works/pi-coding-agent");
   const { builtInExtensions } = await import(pathToFileURL(join(host.root, "dist/extensions/index.js")).href);
   const manifest = JSON.parse(readFileSync("package.json", "utf8"));
-  assert.equal(manifest.pi.extensions.length, 5, "Published extension set changed");
+  assert.equal(manifest.pi.extensions.length, 1, "Published extension set changed");
   for (const variant of ["source", "dist"]) {
     const paths = manifest.pi.extensions.map(entry => resolve(variant === "source"
       ? entry.replace("/dist/", "/src/").replace(/\.js$/, ".ts") : entry));
@@ -30,14 +30,11 @@ try {
     const result = loader.getExtensions();
     assert.deepEqual(result.errors, []);
     for (const entry of paths) assert.equal(result.extensions.filter(extension => extension.path === entry).length, 1);
-    assert.equal(result.extensions.length, paths.length + 2);
-    assert.equal(result.extensions.filter(extension => extension.path === "builtin:mcp").length, 0);
-    assert.equal(result.extensions.filter(extension => extension.path === "builtin:codemode").length, 1);
-    assert.equal(result.extensions.filter(extension => extension.path === "builtin:tool-search").length, 1);
-    const warnings = result.warnings.filter(warning => warning.path === "builtin:mcp");
-    assert.equal(warnings.length, 1, "Expected repository MCP to replace builtin MCP");
-    console.log(JSON.stringify({ ...host, variant, extensions: paths.length, loadErrors: 0,
-      replacementWarnings: warnings.map(warning => warning.warning) }));
+    for (const name of ["builtin:mcp", "builtin:codemode", "builtin:tool-search"]) {
+      assert.equal(result.extensions.filter(extension => extension.path === name).length, 1);
+    }
+    assert.deepEqual(result.warnings, []);
+    console.log(JSON.stringify({ ...host, variant, extensions: paths.length, loadErrors: 0 }));
   }
 } finally {
   for (const key of Object.keys(process.env)) if (!(key in inherited)) delete process.env[key];

@@ -1,10 +1,10 @@
 {
   "name": "pi-ext",
   "version": "0.1.0",
-  "description": "Codex compaction, Fast Mode, UI, MCP, and skill mentions extensions for Pi Coding Agent",
+  "description": "Codex-style terminal UI and theme for Pi Coding Agent",
   "type": "module",
   "packageManager": "pnpm@11.9.0",
-  "license": "(MIT AND Apache-2.0 AND MPL-2.0 AND Unicode-3.0)",
+  "license": "MIT",
   "author": "Wang Xuyang",
   "repository": {
     "type": "git",
@@ -18,10 +18,6 @@
     "pi-package",
     "pi-extension",
     "codex",
-    "compaction",
-    "openai",
-    "fast-mode",
-    "mcp",
     "tui",
     "theme"
   ],
@@ -29,17 +25,7 @@
     "node": ">=22.19.0"
   },
   "files": [
-    "extensions/codex-compact/dist",
-    "extensions/codex-compact/LICENSE",
-    "extensions/codex-compact/CODEX-LICENSE",
-    "extensions/codex-compact/NOTICE",
-    "extensions/codex-compact/UPSTREAM.md",
-    "extensions/openai-fast-mode/dist",
-    "extensions/openai-fast-mode/LICENSE",
-    "extensions/openai-fast-mode/UPSTREAM.md",
     "extensions/codex-ui/dist",
-    "extensions/mcp/dist",
-    "extensions/skill-mentions/dist",
     "themes/codex-pi.json",
     "README.md",
     "README.en.md",
@@ -47,11 +33,7 @@
   ],
   "pi": {
     "extensions": [
-      "./extensions/codex-ui/dist/index.js",
-      "./extensions/codex-compact/dist/index.js",
-      "./extensions/openai-fast-mode/dist/index.js",
-      "./extensions/mcp/dist/index.js",
-      "./extensions/skill-mentions/dist/index.js"
+      "./extensions/codex-ui/dist/index.js"
     ],
     "themes": [
       "./themes/codex-pi.json"
@@ -59,11 +41,11 @@
   },
   "scripts": {
     "clean": "node ./scripts/clean.mjs",
-    "build": "pnpm run clean && tsc -p ./extensions/codex-compact/tsconfig.json && node ./scripts/codex-compact-media.mjs copy && tsc -p ./extensions/openai-fast-mode/tsconfig.json && tsc -p ./extensions/codex-ui/tsconfig.json && tsc -p ./extensions/mcp/tsconfig.json && tsc -p ./extensions/skill-mentions/tsconfig.json",
+    "build": "pnpm run clean && pnpm run build:codex-ui",
     "build:codex-ui": "tsc -p ./extensions/codex-ui/tsconfig.json",
-    "typecheck": "tsc -p ./extensions/codex-compact/tsconfig.json --noEmit && tsc -p ./extensions/openai-fast-mode/tsconfig.json --noEmit && pnpm run build:codex-ui && tsc -p ./extensions/mcp/tsconfig.json --noEmit && tsc -p ./extensions/skill-mentions/tsconfig.json --noEmit",
+    "typecheck": "tsc -p ./extensions/codex-ui/tsconfig.json --noEmit",
     "test": "pnpm run build:codex-ui && node ./scripts/test.mjs",
-    "check": "pnpm run repository:check && pnpm run secrets:check && pnpm run build && pnpm run typecheck && pnpm run web-search:typecheck && pnpm run typecheck:tests && pnpm test && pnpm run package:check && pnpm run host:check",
+    "check": "pnpm run repository:check && pnpm run secrets:check && pnpm run build && pnpm run typecheck && pnpm run typecheck:tests && pnpm test && pnpm run package:check && pnpm run host:check",
     "check:staged": "node ./scripts/check-commit.mjs",
     "secrets:check": "node ./scripts/check-secrets.mjs",
     "secrets:history": "node ./scripts/check-secrets.mjs --history",
@@ -71,39 +53,20 @@
     "hooks:check": "node ./scripts/hooks.mjs check",
     "package:check": "node ./scripts/check-package.mjs",
     "host:check": "node ./scripts/check-pi-host.mjs",
-    "host:pty:check": "pnpm run build && node ./scripts/check-host-integration.mjs pty",
-    "host:benchmark:check": "pnpm run build && node ./scripts/check-host-integration.mjs benchmark",
-    "web-search:typecheck": "tsc -p extensions/codex-search/tsconfig.json --noEmit",
-    "skill-mentions:acceptance": "node ./extensions/skill-mentions/__tests__/acceptance.mjs",
-    "codex-compact:media:generate": "node ./scripts/codex-compact-media.mjs generate",
-    "codex-compact:media:verify": "node ./scripts/codex-compact-media.mjs verify",
-    "codex-compact:quality:report": "node ./scripts/codex-compact-quality-development-report.mjs",
-    "codex-compact:quality:check": "PYTHONDONTWRITEBYTECODE=1 conda run -n codex-py312 python -m unittest discover -s extensions/codex-compact/__tests__ -p 'quality_*_test.py'",
-    "codex-compact:quality:environment": "PYTHONDONTWRITEBYTECODE=1 conda run --no-capture-output -n codex-py312 python ./scripts/codex_compact_quality_environment.py",
-    "web-search:check": "pnpm run web-search:typecheck && pnpm test extensions/codex-search/__tests__ && conda run -n codex-py312 python extensions/codex-search/__tests__/fixtures/search-ui/smoke.py --restart && conda run -n codex-py312 python extensions/codex-search/__tests__/fixtures/search-ui/smoke.py --fullscreen --restart && pnpm run web-search:resume:check",
-    "web-search:resume:check": "conda run -n codex-py312 python extensions/codex-search/__tests__/resume-tui.py && conda run -n codex-py312 python extensions/codex-search/__tests__/resume-tui.py --fullscreen && conda run -n codex-py312 python extensions/codex-search/__tests__/resume-tui.py --disabled",
     "codemode:check": "pnpm run build:codex-ui && pnpm test extensions/codex-ui/__tests__/codemode*.test.ts && node extensions/codex-ui/__tests__/fixtures/codemode-cli.mjs --smoke && node extensions/codex-ui/__tests__/fixtures/codemode-benchmark.mjs && conda run -n codex-py312 python extensions/codex-ui/__tests__/codemode-pty.py && conda run -n codex-py312 python extensions/codex-ui/__tests__/codemode-pty.py --fullscreen",
-    "tool-status:check": "pnpm run build && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --play --restart && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --play --fullscreen --restart && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --mcp-only --restart",
+    "tool-status:check": "pnpm run build && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --play --restart && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --play --fullscreen --restart",
     "prepack": "pnpm run build",
     "test:offline": "pnpm test",
     "typecheck:tests": "tsc -p tsconfig.tests.json",
-    "repository:check": "node ./scripts/check-repository.mjs",
-    "pi152:verify": "node scripts/pi152-verify.mjs",
-    "pi152:live": "node ./scripts/pi152-live.mjs --live",
-    "pi152:check": "node scripts/check-pi152.mjs"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "1.29.0",
-    "jsonc-parser": "^3.3.1",
-    "zod": "4.4.3"
+    "repository:check": "node ./scripts/check-repository.mjs"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "1.5.2",
     "@earendil-works/pi-coding-agent": "1.5.2",
-    "@earendil-works/pi-tui": "1.5.2",
-    "typebox": "*"
+    "@earendil-works/pi-tui": "1.5.2"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
     "@earendil-works/pi-ai": "1.5.2",
     "@earendil-works/pi-coding-agent": "1.5.2",
     "@earendil-works/pi-tui": "1.5.2",
@@ -112,7 +75,6 @@
     "@types/node": "22.19.19",
     "@vitest/coverage-v8": "3.2.4",
     "ignore": "7.0.14",
-    "typebox": "1.3.7",
     "typescript": "5.9.3",
     "vitest": "3.2.4"
   }

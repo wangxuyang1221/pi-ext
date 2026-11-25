@@ -21,7 +21,7 @@ export function checkRepository(files) {
   let documents = 0;
   for (const [file, entry] of files) {
     if (entry.mode === "120000") continue;
-    if (!file.endsWith(".md") || file.includes("/media/third-party/") || file.includes("/media/license-overrides/")) continue;
+    if (!file.endsWith(".md")) continue;
     documents++;
     const source = entry.content.toString("utf8");
     for (const match of source.matchAll(/\]\(([^\s)]+)(?:\s+[^)]*)?\)/g)) {

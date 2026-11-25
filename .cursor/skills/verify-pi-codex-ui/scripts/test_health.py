@@ -15,7 +15,7 @@ class DoctorTest(unittest.TestCase):
         with patch("health.subprocess.run", return_value=result) as run:
             name = doctor(root, root, "test")
             command = run.call_args
-            self.assertEqual(command.args[0], ["node", str(root / ".cursor/skills/verify-pi-ext/scripts/verify.mjs"), "doctor"])
+            self.assertEqual(command.args[0], ["node", str(root / ".cursor/skills/verify-pi-codex-ui/scripts/verify.mjs"), "doctor"])
             self.assertEqual(command.kwargs["cwd"], root)
             self.assertEqual(command.kwargs["env"]["pnpm_config_verify_deps_before_run"], "false")
             self.assertTrue(command.kwargs["capture_output"])
@@ -23,7 +23,9 @@ class DoctorTest(unittest.TestCase):
             return name
 
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[4] / ".tmp")
+        scratch = Path(__file__).resolve().parents[4] / ".tmp"
+        scratch.mkdir(exist_ok=True)
+        self.temp = tempfile.TemporaryDirectory(dir=scratch)
         self.addCleanup(self.temp.cleanup)
 
     def test_success_retains_the_real_doctor_result(self):

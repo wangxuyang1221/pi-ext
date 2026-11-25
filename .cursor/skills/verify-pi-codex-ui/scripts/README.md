@@ -26,7 +26,7 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 | --- | --- |
 | `ui-header` | 从启动快照人工核对 Pi 标识、实际版本、模型和目录；PTY 驱动保存画面但不直接断言 header。组件断言见 [components.test.ts](../../../../extensions/codex-ui/__tests__/components.test.ts)。 |
 | `ui-composer`, `ui-resize` | 输入时逐列检查整行背景；40/80/140 列；真实设置菜单选择 light 与 codex-pi；fork/resume 后再检查背景。保存 pyte 文本与颜色区间、原始 ANSI。 |
-| `ui-status` | 加载生产 Fast 扩展，离线支持模型显示目录、模型和 fast 组合，关闭 Fast 后对应状态消失。窄屏另存画面。 |
+| `ui-status` | 在真实启动画面核对当前模型、工作目录和 context。不同宽度保存 TUI 画面。 |
 | `ui-theme` | 原生 `/settings` 落盘主题；`/reload`、`/new` 后检查保存值，原生 `/fork` 与 `/resume` 后另检查 composer 颜色。fork 的多行预填须 Ctrl+C 清除。 |
 | `ui-user-markdown`, `ui-reply-markdown` | bracketed paste 输入标题、嵌套列表、表格、代码围栏、引用、链接；核对真正模型请求和持久 session 原文，另检查 TUI 内容。`/copy` 的系统剪贴板部分须按下节人工补验。 |
 | `ui-tool-rendering` | 普通/fullscreen 的真实命令清单保留 `/inspect` 且排除 `/lowpower`；Tab 补全 `/inspec` 成功、`/lowp` 保持原输入。reload/new/fork/resume 后重复检查。始终执行真实 write/edit/bash/codemode，保存完整折叠预览与 Ctrl+O 展开结果，核对文件字节及工具成功结果。 |
@@ -34,16 +34,16 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 | `ui-shell-prefix`, `ui-shell-path`, `ui-project-trust`, `ui-settings-error`, `ui-settings-reload` | shell wrapper 真实输出；未信任项目前缀不生效；可信项目语法错误和不可读文件均阻止 read/bash；修复而未 reload 仍拒绝；reload 后恢复；重启为不信任后再次排除项目前缀。 |
 | `ui-codemode-cache`, `ui-inspect-tabs`, `ui-inspect-scroll`, `ui-codemode-resume` | 真实读取累计超过 4MiB；首项缺失、末项可读；方向键/PgDn/PgUp/Shift+Tab；原生 `/resume`、`/tree` 后发后续模型请求核对已保存结果，并确认 raw cache 不从历史恢复。调用顺序、预览外失败和本地 MCP 仍运行 skill 的 codemode case。 |
 | `ui-thinking-stream`, `ui-thinking-collapse`, `ui-thinking-resume`, `ui-title`, `ui-title-stop` | 实际流式 Thinking、Ctrl+T 隐藏选择、持久重开及后续上下文、原生 `/resume` 恢复取消/错误思考、`/compact` 后保留及开关；流中 OSC 动画、settled/取消后静止。80ms 精度仍由计时器测试验证。 |
-| `ui-working`, `ui-receive-rate` | 复用 [text-regions Working](../../verify-pi-text-regions/features/working.md) 的完整 regular/fullscreen 旅程，覆盖生产事件到组件、真实工具/文件/取消、input/retry/compaction、宽度、状态行、new/reload/renderer/quit。先执行其 Launch/Doctor；这些不在旧 cli.py 的断言内。原版/发布/CPU 与物理边界按新 skill 对应 feature 另行验证。 |
+| `ui-working`, `ui-receive-rate` | 运行 [Working 旅程](../features/working.md) 的 regular/fullscreen 入口，核对公开事件、工具文件、取消、input/retry/compaction、宽度、状态行、new/reload/quit。 |
 
 ## Manual boundaries
 
 以下部分不能凭 pyte 或文件断言标为通过。执行人必须保存动作、画面和结果；缺少该证据时，对应 ID 保留 `unverified`，同时记录自动通过部分。
 
-多行选区的真实粘贴先按 [Paste transport](../../verify-pi-text-regions/references/manual-terminal.md#paste-transport) 校准终端通道。选区内容一致和剪贴板原始字节一致分开报告；校准不放宽下方 `/copy` 的逐字节要求。
+多行选区的真实粘贴先按 [Paste transport](#paste-transport) 校准终端通道。选区内容一致和剪贴板原始字节一致分开报告；校准不放宽下方 `/copy` 的逐字节要求。
 
 1. `ui-composer` 的终端像素和拖选。用真实终端启动共享 `tui codex-ui`，输入含中文、ASCII、长行的三行文本。分别在 light/codex-pi、窄屏/宽屏、`/new`/`/fork`/`/resume` 后拖选输入和空白区，检查文字清晰、背景无缺口、光标无残影、选择内容与输入一致。保留当前终端配色以检验草稿是否依赖终端默认前景。pyte 的前景和背景断言只证明 ANSI 单元格语义。
-2. `ui-reply-markdown` 的 `/copy`。在已允许写系统剪贴板的人工终端中，生成上述代表 Markdown，包含首尾空白、尾部 LF 和多段正文；运行 `/copy`，确认成功提示后实际粘贴到本轮文件，与当前分支最近一条可复制 assistant 的各段正文连接结果逐字节比较。取消后的非空正文也可复制。代码围栏、缩进和表格分隔线必须一致；不得先 trim 或规范化换行。补丁/原版、普通/全屏分别留证。自动驱动不会写系统剪贴板。
+2. `ui-reply-markdown` 的 `/copy`。在已允许写系统剪贴板的人工终端中，生成上述代表 Markdown，包含首尾空白、尾部 LF 和多段正文；运行 `/copy`，确认成功提示后实际粘贴到本轮文件，与当前分支最近一条可复制 assistant 的各段正文连接结果逐字节比较。取消后的非空正文也可复制。代码围栏、缩进和表格分隔线必须一致；不得先 trim 或规范化换行。普通与全屏分别留证。自动驱动不会写系统剪贴板。
 
 ## File mutation cancellation
 
@@ -65,6 +65,15 @@ Write 观察器的 writeFile 回调先取得旧文件 stat/有界快照，再调
 
 每次运行输出 `.tmp/test-results/codex-ui-<kind>-<mode>-<id>/`。CLI 保存每次进程的 `terminal-N.ansi`、`journey.json`、动作字节、pyte 文本/颜色区间、工具事件、配置/session/工作文件副本。headless 保存原始 JSONL、stderr、工具事件、图片尺寸与文件结果。输出 `passed=true` 仅表示脚本内断言通过。
 
-CLI 的每个 PID 和进程组必须停止，headless 的每个 Popen 必须退出；scratch 必须删除。失败保留原始 failure 和证据，修复后新建一次运行，不覆盖失败记录。这些驱动不启动监听服务；真实本地 MCP 的服务清理由 codemode case 负责。SIGKILL 无法执行 finally，依共享文档检查本次 PID 后处理。
+CLI 的每个 PID 和进程组必须停止，headless 的每个 Popen 必须退出；scratch 必须删除。失败保留原始 failure 和证据，修复后新建一次运行，不覆盖失败记录。这些驱动不启动监听服务；真实本地 MCP 的服务清理由 codemode case 负责。SIGKILL 无法执行 finally，按 [Cleanup](../SKILL.md#cleanup) 核对本次 PID。
 
 CLI 的清理结果位于 `journey.json`，要求 `scratchRemoved=true` 且每个 `processes[].stopped/groupStopped=true`；headless 使用 `summary.json` 的 `scratchRemoved` 和 `cases[].stopped/groupStopped`。共享 helper 的 `summary.cleanup=removed` 仅适用于经该 helper 启动的 case。
+
+## Paste transport
+
+终端可能把剪贴板中的 LF 转成输入字节 CR；canonical 模式的 ICRNL 又可能将 CR 转回 LF。raw 接收器与普通文本接收器的结果因此不能直接互换。多行选择失败时，先区分复制内容和粘贴传输，不从未知实际内容反推预期。
+
+1. 获得样本覆盖授权后，先独立写入一段已知含 LF 的多行样本，再通过同一真实终端快捷键粘贴到严格接收器。保留原样本、预先定义的 LF/CR 两份传输预期、实际匹配文件、终端模式和退出码；未知内容不回显、不保存。校准期间不经过产品复制。
+2. 产品选择前固定源文本和选区。只有本次通道已证明 LF→CR 时，才从源文本预先生成另一份传输预期，将 LF 替换为 CR，其余字节原样保留。不得 trim、删空格、补缺字或根据实际粘贴修改预期。
+3. 真实复制和粘贴后，逐字节比较原始接收文件与传输预期。保留源文本、传输预期及原始接收文件三者，不将接收文件改写成源文本。该结果证明选区文字、空格及换行结构经已校准通道一致，不证明剪贴板原始字节中的 LF/CR 区别。
+4. 需要复制原始字节完全一致的分支，仍须独立证明整个观察通道未转换字节。不能用校准后的内容一致结果替代 `/copy` 的原始字节要求；缺少该条件就单独保留未验证边界。

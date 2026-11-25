@@ -4,11 +4,10 @@ import { join } from "node:path";
 import type { ExtensionAPI, Theme, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, type Component } from "@earendil-works/pi-tui";
 import { registerCodexTools } from "../src/tools.js";
-import { renderMcpToolCall, renderMcpToolResult } from "../../mcp/src/renderers.js";
 
 type ToolRenderContext = Parameters<NonNullable<ToolDefinition["renderCall"]>>[2];
 
-const glyph = (name: string) => ({ bash: "$", read: "@", edit: "~", write: "~", mcp: "⌁" })[name]!;
+const glyph = (name: string) => ({ bash: "$", read: "@", edit: "~", write: "~" })[name]!;
 const colors = { muted: 245, dim: 240, warning: 220, success: 82, error: 196, text: 252, toolOutput: 244, accent: 81 };
 function theme(offset = 0): Theme {
   return {
@@ -26,12 +25,6 @@ function tools() {
     registerTool: (tool: ToolDefinition) => registered.push(tool),
     on: (event: string, handler: Function) => handlers.set(event, [...(handlers.get(event) ?? []), handler]),
   } as unknown as ExtensionAPI, undefined, { getKeybindings: () => ({ getKeys: () => ["ctrl+o"] }) });
-  registered.push({
-    name: "mcp", label: "MCP", description: "Fixture renderer", parameters: {type: "object", properties: {}},
-    execute: async () => { throw new Error("Unexpected execution"); },
-    renderCall: (args, theme, ctx) => renderMcpToolCall(args, { serverName: "test", toolName: "query" }, theme, ctx),
-    renderResult: renderMcpToolResult,
-  } as ToolDefinition);
   return {
     registered,
     emit: (event: string, value: unknown, ctx: unknown = { mode: "tui" }) => {
@@ -71,8 +64,8 @@ function row(tool: ToolDefinition, id = tool.name, initialTheme = theme()) {
 afterEach(() => vi.useRealTimers());
 
 test("uses one body color per tool without recoloring metadata or unrelated theme roles", () => {
-  const roles = { bash: ["toolOutput", "text"], read: ["toolOutput", "text"], mcp: ["text", "toolOutput"] } as const;
-  for (const tool of tools().registered.filter(tool => ["bash", "read", "mcp"].includes(tool.name))) {
+  const roles = { bash: ["toolOutput", "text"], read: ["toolOutput", "text"] } as const;
+  for (const tool of tools().registered.filter(tool => ["bash", "read"].includes(tool.name))) {
     const [bodyRole, otherRole] = roles[tool.name as keyof typeof roles];
     const item = row(tool);
     item.ctx.executionStarted = true;
@@ -88,10 +81,6 @@ test("uses one body color per tool without recoloring metadata or unrelated them
         expect(body.every(line => line.includes(palette.fg(bodyRole, "").split("m")[0] + "m"))).toBe(true);
         expect(body.join("\n")).not.toContain(palette.fg(otherRole, "").split("m")[0] + "m");
         if (tool.name === "read") expect(lines[0]).toContain(palette.fg("dim", "src/") + palette.fg("accent", "目标.ts"));
-        if (tool.name === "mcp" && !expanded) {
-          expect(lines[1]).toContain(palette.fg("dim", "  └ "));
-          expect(lines.at(-1)).toContain(palette.fg("dim", "..."));
-        }
       }
     }
   }
@@ -99,7 +88,7 @@ test("uses one body color per tool without recoloring metadata or unrelated them
 
 test("recognizes native abort diagnostics without treating arbitrary error prose as cancellation", () => {
   const palette = theme();
-  for (const tool of tools().registered.filter(tool => tool.name !== "mcp")) {
+  for (const tool of tools().registered) {
     const item = row(tool);
     item.ctx.executionStarted = true;
     const interrupted = tool.name === "bash" ? "partial output\n\nCommand aborted" : "Operation aborted";
@@ -118,32 +107,6 @@ test("recognizes native abort diagnostics without treating arbitrary error prose
       expect(item.result(ordinary, true)[0]).toContain(palette.fg("error", glyph(tool.name)));
     }
     expect(item.result(interrupted, false)[0]).toContain(palette.fg("muted", glyph(tool.name)));
-  }
-});
-
-test("recognizes only MCP host cancellation and normalized timeout envelopes", () => {
-  const tool = tools().registered.find(tool => tool.name === "mcp")!;
-  const item = row(tool);
-  item.ctx.executionStarted = true;
-  for (const diagnostic of [
-    'MCP tool "mcp__test__query" was cancelled.',
-    'MCP tool "mcp__test__query" failed: [MCP:test/query] Request cancelled: The operation was aborted',
-    'MCP tool "mcp__test__query" failed: [MCP:test/query] Connection timed out: MCP operation exceeded its 100ms deadline',
-    'MCP connection failed for "test": [MCP:test] Connection timed out after 100ms',
-  ]) {
-    const failed = item.result(diagnostic, true);
-    expect(failed[0]).toContain(theme().fg("warning", "⌁"));
-    expect(failed.join("\n")).toContain(theme().fg("warning", diagnostic.includes("timed out") ? "Timed out" : "Interrupted"));
-    item.ctx.expanded = true;
-    const detailLines = item.paint().slice(2);
-    expect(detailLines.map(line => stripTerminalSequences(line).trim()).join(" ")).toBe(diagnostic);
-    expect(detailLines.every(line => line.startsWith("    \x1b[38;5;220m"))).toBe(true);
-    expect(item.result(diagnostic, false)[0]).toContain(theme().fg("muted", "⌁"));
-    expect(item.result(diagnostic, true, { mcp: true, isError: true })[0]).toContain(theme().fg("error", "⌁"));
-  }
-  for (const diagnostic of ['Request cancelled', 'timeout while parsing data', 'MCP tool "mcp__other__query" was cancelled.',
-    'MCP tool "mcp__test__query" failed: [MCP:test/query] MCP request failed: Request cancelled']) {
-    expect(item.result(diagnostic, true)[0]).toContain(theme().fg("error", "⌁"));
   }
 });
 
@@ -196,7 +159,7 @@ test("preserves native abort and Bash timeout diagnostics through serialization"
   try {
     const h = tools();
     const context = { cwd, sessionManager: { getSessionId: () => "fixture", getSessionFile: () => undefined } } as never;
-    for (const tool of h.registered.filter(tool => tool.name !== "mcp")) {
+    for (const tool of h.registered) {
       const controller = new AbortController();
       controller.abort();
       const args = { path: join(cwd, "unused.txt"), content: "unused", edits: [{ oldText: "old", newText: "new" }], command: "printf unused" };
@@ -219,18 +182,17 @@ test("uses static accent markers from argument generation through execution with
   vi.useFakeTimers();
   const palette = theme();
   for (const tool of tools().registered) {
-    const [pendingTone, runningTone] = tool.name === "mcp" ? ["warning", "warning"] as const : ["accent", "accent"] as const;
     const item = row(tool);
     for (const argsComplete of [false, true]) {
       item.ctx.argsComplete = argsComplete;
       const pending = item.paint();
       if (tool.name === "bash") expect(pending).toEqual([]);
-      else expect(pending[0]).toContain(palette.fg(pendingTone, glyph(tool.name)) + " ");
+      else expect(pending[0]).toContain(palette.fg("accent", glyph(tool.name)) + " ");
       vi.advanceTimersByTime(30_000);
       expect(item.paint()).toEqual(pending);
     }
     item.ctx.executionStarted = true;
-    expect(item.paint()[0]).toContain(palette.fg(runningTone, glyph(tool.name)) + " ");
+    expect(item.paint()[0]).toContain(palette.fg("accent", glyph(tool.name)) + " ");
     expect(item.result("hello")[0]).toContain(palette.fg("muted", glyph(tool.name)) + " ");
     expect(item.result("Permission denied", true)[0]).toContain(palette.fg("error", glyph(tool.name)) + " ");
     expect(visibleWidth(glyph(tool.name))).toBe(1);

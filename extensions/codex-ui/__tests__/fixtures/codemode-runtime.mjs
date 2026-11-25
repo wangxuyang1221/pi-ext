@@ -52,7 +52,7 @@ async function prepare(scenario) {
 }
 const extension = pi => {
   codexUi(pi);
-  pi.registerMcpServer('local', { command: process.execPath, args: [join(repo, 'extensions/mcp/__tests__/fixtures/stdio-mcp-server.mjs')], exposure: 'codemode' });
+  pi.registerMcpServer('local', { command: process.execPath, args: [join(here, 'stdio-echo.mjs')], exposure: 'codemode' });
   pi.registerTool({ name: 'fixture_outer', label: 'Nested fixture', description: 'Real nested tool calls', parameters: { type: 'object', properties: {} },
     execute: async (_id, _args, signal, _update, ctx) => (await ctx.executeTool('read', { path: 'package.json' }, { signal })).result });
   pi.on('tool_call', event => {

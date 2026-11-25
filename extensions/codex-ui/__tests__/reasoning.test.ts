@@ -89,8 +89,7 @@ test("inline thinking remains static while the independent terminal title animat
     for (let index = 0; index < 100; index++) assert.deepEqual(pipeline.assistant.render(120), stable);
     vi.advanceTimersByTime(2000);
     assert.equal(updates.mock.calls.length, 0);
-    if (typeof (pipeline.screen as typeof pipeline.screen & { registerTextRegion?: unknown }).registerTextRegion === "function") assert.equal(pipeline.stats().requests, requests);
-    else assert(pipeline.stats().requests > requests);
+    assert(pipeline.stats().requests > requests);
     assert.equal(vi.getTimerCount(), 2);
     const windowTitles = [...pipeline.titles];
     assert.deepEqual(pipeline.assistant.render(120), stable);
@@ -98,8 +97,7 @@ test("inline thinking remains static while the independent terminal title animat
     assert.deepEqual(pipeline.assistant.render(120), stable);
     assert(pipeline.titles.length > windowTitles.length);
     assert.equal(updates.mock.calls.length, 0);
-    if (typeof (pipeline.screen as typeof pipeline.screen & { registerTextRegion?: unknown }).registerTextRegion === "function") assert.equal(pipeline.stats().requests, requests);
-    else assert(pipeline.stats().requests > requests);
+    assert(pipeline.stats().requests > requests);
     await pipeline.finish();
     assert.deepEqual(pipeline.assistant.render(120), stable);
     assert.equal(vi.getTimerCount(), 0);

@@ -4,7 +4,6 @@ import { join, resolve } from "node:path";
 const allowed = new Set([
   "PATH", "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "LANG", "LC_ALL", "LC_CTYPE", "TZ",
   "TERM", "COLORTERM", "CI", "FORCE_COLOR", "NO_COLOR", "NPM_EXECPATH",
-  "PI_MCP_TEST_PI_ROOT", "PI_MCP_TEST_PI_VERSION", "PI_CODEX_TEST_PI_ROOT",
 ]);
 
 export function createTestEnvironment(prefix, root = process.cwd()) {

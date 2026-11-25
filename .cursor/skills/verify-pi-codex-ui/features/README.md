@@ -14,7 +14,8 @@
 
 ## Features
 
-- [Composer, footer and theme](layout.md)：包含 `ui-header`, `ui-composer`, `ui-status`, `ui-theme`, `ui-resize`, `ui-user-markdown`, `ui-reply-markdown`, `ui-working`, `ui-receive-rate`。后两项复用 [生产 Working 旅程](../../verify-pi-text-regions/features/working.md)。
+- [Composer, footer and theme](layout.md)：包含 `ui-header`, `ui-composer`, `ui-status`, `ui-theme`, `ui-resize`, `ui-user-markdown`, `ui-reply-markdown`。
+- [Working and lifecycle](working.md)：包含 `ui-working` 与 `ui-receive-rate` 的流式输出、工具、取消、重试、会话替换和退出。
 - [Thinking and terminal activity](thinking.md)：包含 `ui-thinking-stream`, `ui-thinking-collapse`, `ui-thinking-resume`, `ui-title`, `ui-title-stop`.
 - [Read, Bash, Edit and Write display](tools.md)：包含 `ui-tool-rendering`, `ui-read-group`, `ui-bash-preview`, `ui-expand`, `ui-write-added`, `ui-write-edited`, `ui-diff`, `ui-error`, `ui-interrupted`.
 - [Codemode tree and inspector](codemode.md)：包含 `ui-codemode-order`, `ui-codemode-failure`, `ui-inspect-tabs`, `ui-inspect-scroll`, `ui-codemode-cache`, `ui-codemode-resume`.

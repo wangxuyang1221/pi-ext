@@ -1,26 +1,21 @@
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { makeScenario, TOOLS, OUTCOMES } from "./scenarios.mjs";
 import { playTimeline } from "./playback.mjs";
 
+const codexUi = (await import("../../../dist/index.js")).default;
 const root = process.env.TOOL_STATUS_ROOT;
 const repo = process.env.TOOL_STATUS_REPO;
 if (!root || !repo) throw new Error("Use pnpm run tool-status:check.");
-const mcpOnly = process.env.TOOL_STATUS_MCP_ONLY === "1";
 const resume = process.env.TOOL_STATUS_RESUME === "1";
 let networkAttempts = 0;
 globalThis.fetch = async () => { networkAttempts++; throw new Error("Network is disabled in the tool status fixture."); };
 const sdk = await import("@earendil-works/pi-coding-agent");
 const ai = await import("@earendil-works/pi-ai");
-const moduleDirectory = "dist";
-const codexUi = mcpOnly ? undefined : (await import(pathToFileURL(join(root, "runtime/codex-ui", moduleDirectory, "index.js")).href)).default;
-const mcp = await import(pathToFileURL(join(root, "runtime/mcp", moduleDirectory, "renderers.js")).href);
 const workspace = join(root, "workspace");
 for (const dir of ["src", "docs"]) await mkdir(join(workspace, dir), { recursive: true });
 const text = value => ({ content: [{ type: "text", text: value }], details: {} });
-const toolName = name => name === "mcp" ? "fixture_mcp_search" : name;
 const outcomes = new Map();
 const waiting = new Map();
 const plans = new Map();
@@ -43,7 +38,7 @@ function wrapTool(tool) {
     execute: async (id, args, signal, onUpdate, ctx) => {
       const plan = plans.get(id);
       assert.ok(plan, "Only scripted fixture calls may execute");
-      assert.equal(tool.name, toolName(plan.tool));
+      assert.equal(tool.name, plan.tool);
       assert.deepEqual(args, plan.args);
       assert.equal(resolve(ctx.cwd), resolve(workspace));
       let outcome = plan.outcome;
@@ -61,10 +56,6 @@ function wrapTool(tool) {
       if (signal?.aborted) outcome = "interrupted";
       outcomes.set(id, outcome);
       if (outcome !== "success") {
-        if (tool.name === "fixture_mcp_search") throw new Error(outcome === "interrupted"
-          ? 'MCP tool "mcp__fixture__search" was cancelled.' : outcome === "timeout"
-          ? 'MCP tool "mcp__fixture__search" failed: [MCP:fixture/search] Connection timed out: MCP operation exceeded its 100ms deadline'
-          : "Fixture failure: operation could not be completed");
         if (outcome === "interrupted" && ["read", "edit", "write"].includes(tool.name)) {
           const controller = new AbortController(); controller.abort();
           return tool.execute(id, args, controller.signal, onUpdate, ctx);
@@ -73,12 +64,11 @@ function wrapTool(tool) {
         throw new Error(outcome === "interrupted" ? "Interrupted (fixture)" : outcome === "timeout" ? "Timed out (fixture)" : "Fixture failure: operation could not be completed");
       }
       if (tool.name === "bash") return text("✓ status.test.ts (4 tests)\nTest Files  1 passed\nTests       4 passed");
-      if (tool.name === "fixture_mcp_search") return text("Found 2 results\n1. Consistent status markers\n2. Static execution indicators");
       return tool.execute(id, args, signal, onUpdate, ctx);
     },
   };
 }
-const instructions = "Tool status acceptance" + "\n\n/play · /play mixed · /play batch · /play stop\n/batch read|bash|edit|write|mcp [success|mixed|hold]\n/demo all success · /demo all hold · /finish success|error|interrupted|timeout\nCtrl+O expands results. /quit exits. Network and shell execution are disabled.";
+const instructions = "Tool status acceptance" + "\n\n/play · /play mixed · /play batch · /play stop\n/batch read|bash|edit|write [success|mixed|hold]\n/demo all success · /demo all hold · /finish success|error|interrupted|timeout\nCtrl+O expands results. /quit exits. Network and shell execution are disabled.";
 function stopPlayback() {
   epoch++;
   playback = false;
@@ -99,7 +89,7 @@ const extension = pi => {
       const blocks = calls.map(call => {
         const id = `fixture-${invocation}-${++serial}`;
         plans.set(id, call);
-        return { type: "toolCall", id, name: toolName(call.tool), arguments: call.args };
+        return { type: "toolCall", id, name: call.tool, arguments: call.args };
       });
       faux.setResponses([
         ai.fauxAssistantMessage(blocks, { stopReason: "toolUse" }),
@@ -123,11 +113,7 @@ const extension = pi => {
     if (key === "registerTool") return tool => pi.registerTool(wrapTool(tool));
     return Reflect.get(target, key);
   } });
-  codexUi?.(proxy);
-  proxy.registerTool({ name: "fixture_mcp_search", label: "MCP search", description: "Offline MCP display fixture", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] }, renderShell: "self", execute: async () => text("unused"),
-    renderCall: (args, theme, context) => mcp.renderMcpToolCall(args, { serverName: "fixture", toolName: "search" }, theme, context),
-    renderResult: (result, options, theme, context) => mcp.renderMcpToolResult(result, options, theme, context),
-  });
+  codexUi(proxy);
   pi.on("agent_start", () => { active = true; });
   pi.on("agent_settled", (_event, ctx) => {
     active = false;
@@ -140,13 +126,13 @@ const extension = pi => {
       void playNext(ctx).catch(error => { stopPlayback(); ctx.ui.notify(String(error), "error"); });
     }, 900);
   });
-  pi.registerCommand("demo", { description: "Show fixture tools: all|bash|read|edit|write|mcp success|error|hold", handler: async (args, ctx) => {
+  pi.registerCommand("demo", { description: "Show fixture tools: all|bash|read|edit|write success|error|hold", handler: async (args, ctx) => {
     if (busy(ctx)) return;
     const [tool = "all", outcome = "success"] = args.trim().split(/\s+/).filter(Boolean);
     if ((tool !== "all" && !TOOLS.includes(tool)) || !OUTCOMES.includes(outcome)) { ctx.ui.notify(instructions, "info"); return; }
     await startScenario({ tool, outcome }, `Fixture: ${tool} / ${outcome}`);
   } });
-  pi.registerCommand("batch", { description: "Show three native calls: read|bash|edit|write|mcp success|mixed|hold", handler: async (args, ctx) => {
+  pi.registerCommand("batch", { description: "Show three native calls: read|bash|edit|write success|mixed|hold", handler: async (args, ctx) => {
     if (busy(ctx)) return;
     const [tool = "read", outcome = "success"] = args.trim().split(/\s+/).filter(Boolean);
     if (!TOOLS.includes(tool) || !OUTCOMES.includes(outcome)) { ctx.ui.notify(instructions, "info"); return; }
@@ -159,7 +145,7 @@ const extension = pi => {
     if (busy(ctx)) return;
     playback = true;
     playbackController = new AbortController();
-    playlist = mode === "batch" ? ["read", "bash", "edit", "write", "mcp"].map(tool => ({ tool, batch: true, outcome: "mixed" }))
+    playlist = mode === "batch" ? ["read", "bash", "edit", "write"].map(tool => ({ tool, batch: true, outcome: "mixed" }))
       : [{ tool: "all", outcome: mode === "mixed" ? "mixed" : "success" }];
     try { await playNext(ctx); }
     catch (error) { stopPlayback(); throw error; }
@@ -189,7 +175,7 @@ const extension = pi => {
 const create = async ({ cwd, sessionManager, sessionStartEvent }) => {
   const services = await sdk.createAgentSessionServices({ cwd, agentDir: join(root, "agent"), modelRuntime,
     settingsManager: sdk.SettingsManager.inMemory({ quietStartup: true, theme: "codex-pi", retry: { enabled: false }, compaction: { enabled: false }, terminal: { showImages: false } }),
-    resourceLoaderOptions: { noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true, additionalThemePaths: [join(root, "runtime/codex-pi.json")], systemPromptOverride: () => "Offline tool status fixture", extensionFactories: [extension] },
+    resourceLoaderOptions: { noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true, additionalThemePaths: [join(repo, "themes/codex-pi.json")], systemPromptOverride: () => "Offline tool status fixture", extensionFactories: [extension] },
   });
   return { ...await sdk.createAgentSessionFromServices({ services, sessionManager, sessionStartEvent, model: faux.getModel(), noTools: "builtin" }), services, diagnostics: services.diagnostics };
 };
@@ -200,7 +186,7 @@ if (!resume) {
 }
 const runtime = await sdk.createAgentSessionRuntime(create, { cwd: workspace, agentDir: join(root, "agent"), sessionManager: sessions });
 try {
-  await new sdk.InteractiveMode(runtime, { migratedProviders: [], initialMessage: resume ? "/fixture-restored" : mcpOnly ? "/demo mcp success" : "/demo all success", tuiMode: process.env.TOOL_STATUS_FULLSCREEN === "1" ? "fullscreen" : "regular" }).run();
+  await new sdk.InteractiveMode(runtime, { migratedProviders: [], initialMessage: resume ? "/fixture-restored" : "/demo all success", tuiMode: process.env.TOOL_STATUS_FULLSCREEN === "1" ? "fullscreen" : "regular" }).run();
 } finally {
   stopPlayback();
   await runtime.session.abort();

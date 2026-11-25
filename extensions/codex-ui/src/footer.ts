@@ -25,7 +25,7 @@ export interface CodexFooterOptions {
   getTheme: () => Theme;
 }
 
-type CodexTone = "model" | "usage" | "mode";
+type CodexTone = "model" | "usage";
 type FooterTone = CodexTone | "muted" | "dim" | "accent" | "warning";
 
 type FooterPart = {
@@ -51,7 +51,6 @@ type FooterItemState = {
   hidden: boolean;
 };
 
-const FAST_STATUS_KEY = "pi-openai-fast-mode";
 const ITEM_SEPARATOR = " · ";
 const SIDE_PADDING = 1;
 const ANSI_FOREGROUND_RESET = "\x1b[39m";
@@ -60,11 +59,10 @@ const ANSI_FOREGROUND_RESET = "\x1b[39m";
 const CODEX_STATUS_RGB = {
   model: [246, 226, 183],
   usage: [242, 181, 144],
-  mode: [200, 169, 238],
 } as const satisfies Record<CodexTone, readonly [number, number, number]>;
 
 export class CodexFooter implements Component {
-  private readonly statusCache = new Map<string, { raw: string; sanitized: string }>();
+  private statusCache?: { raw: string; sanitized: string };
   private unsubscribeBranch: (() => void) | undefined;
   private cachedSnapshot: {
     width: number;
@@ -73,7 +71,6 @@ export class CodexFooter implements Component {
     thinking: string;
     branch: string | null;
     contextPercent: number | null | undefined;
-    fast: string | undefined;
     lines: string[];
   } | undefined;
 
@@ -100,9 +97,9 @@ export class CodexFooter implements Component {
     const rate = this.options.getRate?.();
     const suffix = rate ? ` ${rate.padStart(10)} ` : "";
     const remaining = Math.max(0, safeWidth - visibleWidth(suffix));
-    const base = this.renderBase(remaining, statuses);
+    const base = this.renderBase(remaining);
     const theme = this.options.getTheme();
-    const status = this.readStatus(statuses, "status");
+    const status = this.readStatus(statuses.get("status"));
     const cached = this.reuseCombined(base, safeWidth, status, rate, theme);
     if (cached) return cached.slice();
     const lines = composeFooter(base, safeWidth, remaining, suffix, theme);
@@ -128,7 +125,7 @@ export class CodexFooter implements Component {
       : undefined;
   }
 
-  private renderBase(width: number, statuses: ReadonlyMap<string, string>): string[] {
+  private renderBase(width: number): string[] {
     const safeWidth = normalizeWidth(width);
     if (safeWidth === 0) return [];
 
@@ -137,8 +134,6 @@ export class CodexFooter implements Component {
     const thinking = this.options.getThinkingLevel();
     const branch = this.options.getBranch();
     const contextPercent = this.options.getContextUsage()?.percent;
-    const fastStatus = this.readStatus(statuses, FAST_STATUS_KEY);
-    const fast = fastStatus?.toLowerCase() === "fast" ? "fast" : undefined;
 
     const cached = this.cachedSnapshot;
     if (
@@ -148,7 +143,6 @@ export class CodexFooter implements Component {
       && cached.thinking === thinking
       && cached.branch === branch
       && cached.contextPercent === contextPercent
-      && cached.fast === fast
     ) {
       return cached.lines;
     }
@@ -161,7 +155,6 @@ export class CodexFooter implements Component {
       home: this.options.home,
       branch,
       contextPercent,
-      fast,
       theme,
     };
     const lines = [renderFooter(input)];
@@ -172,7 +165,6 @@ export class CodexFooter implements Component {
       thinking,
       branch,
       contextPercent,
-      fast,
       lines,
     };
     return lines;
@@ -188,18 +180,17 @@ export class CodexFooter implements Component {
     this.unsubscribeBranch = undefined;
   }
 
-  private readStatus(statuses: ReadonlyMap<string, string>, key: string): string | undefined {
-    const raw = statuses.get(key);
+  private readStatus(raw: string | undefined): string | undefined {
     if (raw === undefined) {
-      this.statusCache.delete(key);
+      this.statusCache = undefined;
       return undefined;
     }
 
-    const cached = this.statusCache.get(key);
+    const cached = this.statusCache;
     if (cached?.raw === raw) return cached.sanitized || undefined;
 
     const sanitized = sanitizeStatus(raw);
-    this.statusCache.set(key, { raw, sanitized });
+    this.statusCache = { raw, sanitized };
     return sanitized || undefined;
   }
 }
@@ -220,7 +211,6 @@ type FooterRenderInput = {
   home?: string;
   branch: string | null;
   contextPercent: number | null | undefined;
-  fast: string | undefined;
   theme: Theme;
 };
 
@@ -248,7 +238,6 @@ function renderFooter(input: FooterRenderInput): string {
 
 function buildItems(input: FooterRenderInput): FooterItem[] {
   const items: FooterItem[] = [createModelItem(input.modelId, input.thinking)];
-  if (input.fast) items.push(createFastItem(input.fast));
   items.push(createLocationItem(input.cwd, input.home, input.branch));
 
   const context = createContextItem(input.contextPercent);
@@ -267,15 +256,6 @@ function createModelItem(modelId: string, thinking: string): FooterItem {
       variant(part(modelId, "model")),
       variant(part(truncateToWidth(modelId, 24, "…"), "model")),
     ]),
-  };
-}
-
-function createFastItem(text: string): FooterItem {
-  return {
-    key: "fast",
-    priority: 90,
-    order: 50,
-    variants: [variant(part(text, "mode"))],
   };
 }
 
@@ -399,10 +379,9 @@ function renderVariant(value: FooterVariant, theme: Theme): string {
 
 function paintCodexTone(tone: CodexTone, text: string, theme: Theme): string {
   if (theme.getColorMode() !== "truecolor") {
-    const fallback: Record<CodexTone, "syntaxType" | "syntaxNumber" | "syntaxKeyword"> = {
+    const fallback: Record<CodexTone, "syntaxType" | "syntaxNumber"> = {
       model: "syntaxType",
       usage: "syntaxNumber",
-      mode: "syntaxKeyword",
     };
     return theme.fg(fallback[tone], text);
   }
@@ -412,7 +391,7 @@ function paintCodexTone(tone: CodexTone, text: string, theme: Theme): string {
 }
 
 function isCodexTone(tone: FooterTone): tone is CodexTone {
-  return tone === "model" || tone === "usage" || tone === "mode";
+  return tone === "model" || tone === "usage";
 }
 
 function sanitizeStatus(raw: string): string {

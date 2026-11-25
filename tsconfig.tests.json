@@ -10,6 +10,6 @@
     "allowJs": true,
     "checkJs": false
   },
-  "include": ["extensions/**/__tests__/**/*.ts", "test-support/**/*.ts", "examples/**/*.ts"],
+  "include": ["extensions/**/__tests__/**/*.ts", "test-support/**/*.ts"],
   "exclude": ["node_modules", "extensions/**/dist"]
 }

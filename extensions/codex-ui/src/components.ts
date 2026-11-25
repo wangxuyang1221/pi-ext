@@ -184,21 +184,6 @@ export class CodexEditor extends CustomEditor {
     }
   }
 
-  /** Decorate a source-coordinate editor projection without parsing rendered frame text. */
-  renderProjectedLines(width: number, content: string[], menu: string[], _hiddenAbove: number, _hiddenBelow: number): string[] {
-    const safeWidth = normalizeWidth(width);
-    if (safeWidth === 0) return [];
-    const theme = this.getTheme();
-    const empty = this.isEmptyDraft();
-    const body = [...content];
-    if (body.length) body[0] = addPrompt(body[0], theme, empty);
-    return this.paintFrame(
-      [" ".repeat(safeWidth), ...body, emptyHint(safeWidth, theme, empty && menu.length === 0), ...menu],
-      safeWidth,
-      theme,
-    );
-  }
-
   private sourceFrame(width: number): { lines: string[]; bottomBorderIndex: number; menuHeight: number } {
     this.capturingBottomBorder = true;
     let lines: string[];
@@ -211,15 +196,6 @@ export class CodexEditor extends CustomEditor {
     const bottomBorderIndex = markerIndex >= 0 ? markerIndex : lines.length - 1;
     const menuHeight = Math.max(0, lines.length - 1 - bottomBorderIndex);
     return { lines, bottomBorderIndex, menuHeight };
-  }
-
-  /** Expose source/menu geometry for composed public editor projections. */
-  renderSourceSurface(width: number): { nativeBodyRows: number; menu: string[] } {
-    const { lines, bottomBorderIndex, menuHeight } = this.sourceFrame(width);
-    return {
-      nativeBodyRows: Math.max(0, bottomBorderIndex - 1),
-      menu: menuHeight ? lines.slice(bottomBorderIndex + 1) : [],
-    };
   }
 
   render(width: number): string[] {
