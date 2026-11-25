@@ -184,9 +184,9 @@ export class CodexEditor extends CustomEditor {
     }
   }
 
-  private sourceFrame(width: number): { lines: string[]; bottomBorderIndex: number; menuHeight: number } {
+  private sourceFrame(width: number): { lines: readonly string[]; bottomBorderIndex: number; menuHeight: number } {
     this.capturingBottomBorder = true;
-    let lines: string[];
+    let lines: readonly string[];
     try {
       lines = super.render(width);
     } finally {

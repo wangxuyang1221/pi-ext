@@ -7,10 +7,12 @@
 - `ui-header`：启动显示圆角 header：`pi vX · Codex profile`，`model:` 与 `directory:` 标签对齐，路径过长时省略中段。
 - `ui-composer`：输入框保持实色背景和当前主题的文字色，草稿在终端默认前景不同的情况下仍可读。空草稿显示强调色 `›` 和占位文字；宽度不小于 48 列时底部留白行右侧显示 `/ for commands`，输入文字或打开菜单后隐藏。
 - `ui-status`：footer 首行以 ` · ` 分隔展示模型与思考等级、目录与 git 分支、context，中性状态行另起一行；运行时右侧速率占位，结束后归还宽度。
-- `ui-theme`：已保存的 codex-pi 主题跨会话替换保持。
+- `ui-theme`：Pi 按 `https://pi.dev/schemas/theme.schema.json` 兼容的定义加载 codex-pi，显式外观为 `dark`。已保存的主题跨会话替换保持。
+- `ui-fullscreen-scrollbar`：全屏滚动条的 `scrollbarTrack` 使用 `userBg`（`#2c2c31`），`scrollbarThumb` 使用较亮的 `dim`（`#6c6c74`）。
 - `ui-resize`：窄屏 resize 不破坏内容。
 - `ui-user-markdown`：用户 Markdown 保留原语义。
 - `ui-reply-markdown`：回复沿用原生 Markdown 顶层块排版且不改变模型原文。
+- `ui-copy-fallback`：编辑器执行 `/copy` 时跳过没有非空正文且 `stopReason` 不是 `stop` 的 assistant turn，复制上一条可复制正文。遇到正常结束且无正文的 turn 时显示 `No agent messages to copy yet.`。
 - `ui-working`：输入框上方的生产 Working 动画和计时按任务生命周期显示，等待期间保持，settled 后隐藏。
 - `ui-receive-rate`：footer 右侧显示最近约两秒的估算接收速率，无新数据为 `-- t/s`，任务结束隐藏。
 
@@ -31,7 +33,7 @@ Preconditions:
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-codex-ui/scripts/verify.mjs tui codex-ui`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
 3. 按 [正式旅程](../scripts/README.md#run) 运行 `cli.py regular` 与 `cli.py fullscreen`。驱动通过原生设置菜单选择 light/codex-pi，逐列断言输入行背景及草稿前景，在 40/80/140 列和原生 fork/resume 后复验，并核对 footer 中的模型、目录与 context。Markdown 通过 bracketed paste 进入真正模型请求与 session，同时保存 TUI 渲染画面。主题设置落盘与 composer 的 codex-pi 颜色必须同时成立。
 4. `ui-working`、`ui-receive-rate` 按 [Working and lifecycle](working.md) 执行两个模式完整旅程。十帧/80ms 强调色 spinner、静态粗体 `Working` 文本、80ms 相位对齐共享调度和采样口径以 [生产说明](../../../../docs/codex-working-rate.md) 为准。核对 32/40/100/极窄宽度、中性状态第二行、旧 footer 字段、真实工具文件与取消无副作用。自动帧变化不证明物理像素或精确调度间隔，定时器测试属于补证。
-5. `ui-composer` 的像素与拖选、`ui-reply-markdown` 的系统 `/copy` 仍须执行 [人工边界](../scripts/README.md#manual-boundaries)。未执行时明确写出这些 ID 的自动通过部分及整体 unverified。
+5. 按 [Pi compatibility 旅程](../scripts/README.md#pi-compatibility) 核对全屏滚动条、主题加载与 `/copy` 回退。`ui-composer` 的像素与拖选、`ui-reply-markdown` 的系统 `/copy` 仍须执行 [人工边界](../scripts/README.md#manual-boundaries)。未执行时明确写出这些 ID 的自动通过部分及整体 unverified。
 6. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3、4 的动作、画面和副作用。
 
 ```bash

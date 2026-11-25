@@ -1,6 +1,7 @@
 {
-  "$schema": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
+  "$schema": "https://pi.dev/schemas/theme.schema.json",
   "name": "codex-pi",
+  "appearance": "dark",
   "vars": {
     "foreground": "#d4d4d8",
     "white": "#f0f0f2",
@@ -41,7 +42,8 @@
     "text": "foreground",
     "thinkingText": "muted",
     "selectedBg": "composerBg",
-    "scrollbarThumb": "border",
+    "scrollbarTrack": "userBg",
+    "scrollbarThumb": "dim",
     "searchMatchBg": "composerBg",
     "searchMatchText": "white",
     "userMessageBg": "userBg",

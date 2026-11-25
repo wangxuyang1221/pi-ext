@@ -8,7 +8,7 @@ A Codex-style terminal interface and the `codex-pi` theme for [Pi Coding Agent](
 
 - Linux or macOS. Native Windows is not supported.
 - Node.js `>=22.19.0` and pnpm `11.9.0`.
-- Pi `1.5.2`. Development and peer dependencies pin this version. Other versions need separate validation.
+- Pi `1.6.0`. Development and peer dependencies pin this version. Other versions need separate validation.
 - A terminal with 24-bit color is recommended.
 
 ## Install

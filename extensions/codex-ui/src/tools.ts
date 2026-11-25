@@ -647,7 +647,7 @@ function getEditResultThemeFingerprint(theme: Theme): string {
 
 function getEditSyntaxFingerprint(theme: Theme): string {
   // The host passes the live theme proxy also consumed by highlightCode.
-  return (["syntaxComment", "syntaxKeyword", "syntaxFunction", "syntaxVariable", "syntaxString",
+  return (["text", "syntaxComment", "syntaxKeyword", "syntaxFunction", "syntaxVariable", "syntaxString",
     "syntaxNumber", "syntaxType", "syntaxOperator", "syntaxPunctuation", "mdCodeBlock"] as const)
     .map(color => theme.fg(color, "x")).join("\0");
 }

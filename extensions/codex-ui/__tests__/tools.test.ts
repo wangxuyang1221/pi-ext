@@ -1108,32 +1108,34 @@ test("edit final layout cache follows a mutable theme proxy", () => {
   }
 });
 
-test("edit cache follows syntax-only changes through the same theme proxy", () => {
+test("edit cache follows syntax-only and default text changes through the same theme proxy", () => {
   initTheme("dark", false);
-  const backend = (keyword: number) => ({ ...theme, fg(name: string, text: string) {
-    return name === "syntaxKeyword" ? `\x1b[38;5;${keyword}m${text}\x1b[39m` : theme.fg(name as never, text);
-  } }) as Theme;
-  const mutable = createMutableThemeProxy(backend(196));
-  highlightCodeMock.mockImplementation((text: string) => [mutable.theme.fg("syntaxKeyword", text)]);
-  try {
-    const registered: ToolDefinition[] = [];
-    registerToolsForTest(registered);
-    const edit = registered.find(tool => tool.name === "edit")!;
-    const state = {};
-    const args = { path: "fixture.ts", edits: [] };
-    const result = { content: [], details: { diff: "+1 const flag = true;", patch: "" } };
-    const context = createRenderContext({ args, state });
-    const component = edit.renderResult!(result, { expanded: true, isPartial: false }, mutable.theme, context as never);
-    const initial = component.render(120);
-    mutable.setBackend(backend(82));
-    component.invalidate();
-    const updated = component.render(120);
-    const cold = edit.renderResult!(result, { expanded: true, isPartial: false }, mutable.theme,
-      { ...context, state: {} } as never).render(120);
-    assert.notDeepEqual(cold, initial);
-    assert.deepEqual(updated, cold);
-  } finally {
-    highlightCodeMock.mockReset();
+  for (const token of ["syntaxKeyword", "text"] as const) {
+    const backend = (colorIndex: number) => ({ ...theme, fg(name: string, text: string) {
+      return name === token ? `\x1b[38;5;${colorIndex}m${text}\x1b[39m` : theme.fg(name as never, text);
+    } }) as Theme;
+    const mutable = createMutableThemeProxy(backend(196));
+    highlightCodeMock.mockImplementation((text: string) => [mutable.theme.fg(token, text)]);
+    try {
+      const registered: ToolDefinition[] = [];
+      registerToolsForTest(registered);
+      const edit = registered.find(tool => tool.name === "edit")!;
+      const state = {};
+      const args = { path: "fixture.ts", edits: [] };
+      const result = { content: [], details: { diff: "+1 const flag = true;", patch: "" } };
+      const context = createRenderContext({ args, state });
+      const component = edit.renderResult!(result, { expanded: true, isPartial: false }, mutable.theme, context as never);
+      const initial = component.render(120);
+      mutable.setBackend(backend(82));
+      component.invalidate();
+      const updated = component.render(120);
+      const cold = edit.renderResult!(result, { expanded: true, isPartial: false }, mutable.theme,
+        { ...context, state: {} } as never).render(120);
+      assert.notDeepEqual(cold, initial, token);
+      assert.deepEqual(updated, cold, token);
+    } finally {
+      highlightCodeMock.mockReset();
+    }
   }
 });
 

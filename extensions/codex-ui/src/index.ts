@@ -96,7 +96,7 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
     return markdown;
   });
 
-  // Pi 1.5.2 calls setRegisteredThemes() and then themeController.applyFromSettings()
+  // Pi 1.6.0 calls setRegisteredThemes() and then themeController.applyFromSettings()
   // after session_start and all resources_discover handlers on resume/new/fork/reload,
   // resetting in-memory extension themes back to settings. Detecting the host theme
   // registry refresh distinguishes host applyFromSettings() from earlier sibling theme

@@ -6,7 +6,8 @@ export async function copyLastReply(ctx: ExtensionContext): Promise<void> {
   try {
     const assistant = ctx.sessionManager.buildSessionProjection().messages
       .filter(message => message.role === "assistant")
-      .reverse().find(message => message.stopReason !== "aborted" || message.content.length > 0);
+      .reverse()
+      .find(message => message.stopReason === "stop" || message.content.some(block => block.type === "text" && block.text.trim()));
     const text = assistant?.content.filter(block => block.type === "text").map(block => block.text).join("");
     if (!text?.trim()) {
       ctx.ui.notify("No agent messages to copy yet.", "error");
