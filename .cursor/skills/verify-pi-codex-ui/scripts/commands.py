@@ -123,8 +123,8 @@ def start(extra=None):
 def view():
     return "\n".join(line.rstrip() for line in screen.display)
 
-def records():
-    return read_records(root / "events.jsonl")
+def records(*, final=False):
+    return read_records(root / "events.jsonl", final=final)
 
 def forward_input():
     if not select.select([sys.stdin], [], [], 0)[0]:
@@ -265,7 +265,7 @@ def drive(steps):
                 else:
                     session = confined(root, expand(resume))
                 extra.extend(["--session", str(session)])
-            ready_count = sum(event.get("type") == "ready" for event in records())
+            ready_count = sum(event.get("type") == "ready" for event in records(final=True))
             start(extra)
             actions.append({"restart": value, "pid": pid, "command": launches[-1]})
             wait(lambda: condition(value.get("ready", recipe.get("ready", {"eventType": "ready", "eventCount": ready_count + 1}))), label + "-ready")
@@ -352,8 +352,14 @@ finally:
                 copytree(root / name, evidence / name)
         except Exception as error:
             cleanup_errors.append({"stage": f"archive-{name}", "error": str(error)})
+    try:
+        event_log = records(final=all(stopped))
+    except ValueError as error:
+        passed = False
+        event_log = []
+        cleanup_errors.append({"stage": "event-archive", "error": str(error)})
     (evidence / "journey.json").write_text(json.dumps({"case": case, "passed": passed if not interactive else None, "completed": passed, "pid": pid, "pids": pids, "driverPid": os.getpid(), "processStopped": all(stopped),
-        "command": args, "launches": launches, "actions": actions, "screens": snapshots, "events": records(), "cleanupErrors": cleanup_errors, "archiveSkipped": sorted(set(archive_skipped))}, ensure_ascii=False, indent=2))
+        "command": args, "launches": launches, "actions": actions, "screens": snapshots, "events": event_log, "cleanupErrors": cleanup_errors, "archiveSkipped": sorted(set(archive_skipped))}, ensure_ascii=False, indent=2))
     print(json.dumps({"case": case, "passed": passed, "processStopped": all(stopped), "evidence": str(evidence)}))
     assert all(stopped), "Owned Pi process still exists"
     assert not cleanup_errors, cleanup_errors

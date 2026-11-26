@@ -19,6 +19,8 @@ from types import SimpleNamespace
 from unittest.mock import patch
 import pyte
 
+from event_records import read_records
+
 REPO = Path.cwd()
 DRIVER = REPO / '.cursor/skills/verify-pi-codex-ui/scripts/commands.py'
 
@@ -151,9 +153,7 @@ class InteractiveTerminalTests(unittest.TestCase):
                             sent_reply = True
                             if interrupt:
                                 child.send_signal(signal.SIGTERM)
-                    events = scratch / 'events.jsonl'
-                    ready = events.exists() and any(json.loads(line).get('type') == 'ready'
-                                                    for line in events.read_text().splitlines())
+                    ready = any(event.get('type') == 'ready' for event in read_records(scratch / 'events.jsonl'))
                     if ready and sent_reply and not interrupt and not fail_ready and not quit_sent:
                         os.write(master, b'/quit\r')
                         quit_sent = True

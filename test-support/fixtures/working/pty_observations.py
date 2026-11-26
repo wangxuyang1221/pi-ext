@@ -1,16 +1,9 @@
-import json
+from pathlib import Path
+import sys
 
-
-def records(path, *, final=False):
-    try:
-        data = path.read_bytes()
-    except FileNotFoundError:
-        return []
-    *rows, trailing = data.split(b"\n")
-    complete = [json.loads(row.decode("utf-8")) for row in rows]
-    if final and trailing:
-        raise ValueError("Unterminated event record after the writer stopped")
-    return complete
+SHARED_TERMINAL = Path(__file__).resolve().parents[3] / "test-support/terminal"
+sys.path.insert(0, str(SHARED_TERMINAL))
+from live_event_records import read_records as records
 
 
 def presented_cursor_frame(raw, *, fullscreen):

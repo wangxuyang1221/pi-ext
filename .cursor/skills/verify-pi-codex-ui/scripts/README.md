@@ -16,6 +16,8 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 
 单独执行 preflight 的命令见 [Helpers](../SKILL.md#helpers)。驱动回归入口为 `conda run --no-capture-output -n codex-py312 python -m unittest discover -s .cursor/skills/verify-pi-codex-ui/scripts -p 'test_*.py' -v`，覆盖 preflight、composer 颜色与 Bash 取消就绪断言。颜色回归向真实断言函数输入 pyte 单元格，拒绝默认、不可见、混合或错误的草稿前景；取消回归要求公开 Bash 输出事件，命令参数中的标记不算执行证据。真实 CLI 旅程仍须单独执行。
 
+CLI、Working 与中断回归共用 [实时事件读取器](../../../../test-support/terminal/live_event_records.py)。轮询只消费以 LF 结束的 UTF-8 JSON 行，完整坏行立即报错。确认写入进程停止后用 `final=True` 校验尾字节，完整 JSON 缺少 LF 也会报错。Pi 持久化的 session 文件由各旅程按用途单独检查。
+
 `headless.py` 分别启动原生 `--print --mode json` 和 `--mode rpc`。RPC 通过客户端消息发起 prompt；它不是给 SDK 设置一个 mode 字段。工具返回的 PNG 字节需解析为 4000×40 或 2000×20，实际 shell 输出必须写入并读回文件。
 
 只补验控制字符 diff 时，可运行 `cli.py regular --controls` 和 `cli.py fullscreen --controls`。该聚焦路径实际覆盖已有 CRLF 文件、展开 diff，并检查源文件中的清屏和 OSC 标题指令没有执行；它不能代替完整 CLI 旅程。

@@ -2,6 +2,8 @@
 """Regress outer SIGTERM cleanup through the real shared verification entrypoint."""
 import argparse, errno, json, os, pty, select, signal, sys, time
 from pathlib import Path
+from event_records import read_records
+
 repo = Path(__file__).resolve().parents[4]
 os.chdir(repo)
 parser = argparse.ArgumentParser(description=__doc__)
@@ -35,8 +37,7 @@ try:
                 except (ValueError,KeyError): pass
         if summary_path and summary_path.exists():
             summary=json.loads(summary_path.read_text()); scratch=Path(summary['scratch'])
-            events=scratch/'events.jsonl'
-            if events.exists() and any(json.loads(line).get('type') == 'ready' for line in events.read_text().splitlines()): break
+            if any(event.get('type') == 'ready' for event in read_records(scratch/'events.jsonl')): break
         if status is not None: raise AssertionError('outer process exited before ready')
     else: raise AssertionError('ready timeout')
     import subprocess

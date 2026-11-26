@@ -1,46 +1,12 @@
-import json
-from pathlib import Path
-import tempfile
 import unittest
 
 from pty_observations import presented_cursor_frame, records
+from live_event_records import read_records
 
 
 class RecordsTest(unittest.TestCase):
-    def test_uncommitted_json_and_utf8_wait_for_lf(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "events.jsonl"
-            self.assertEqual(records(path), [])
-            first = b'{"type":"ready"}\n'
-            second = '{"data":"中"}'.encode()
-            for prefix in (b'{', second[:-3], second):
-                with self.subTest(prefix=prefix):
-                    path.write_bytes(first + prefix)
-                    self.assertEqual(records(path), [{"type": "ready"}])
-            with path.open("ab") as stream:
-                stream.write(b"\n")
-            self.assertEqual(records(path), [{"type": "ready"}, {"data": "中"}])
-
-    def test_final_read_rejects_even_valid_unterminated_json(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "events.jsonl"
-            path.write_bytes(b'{"type":"ready"}\n{}')
-            self.assertEqual(records(path), [{"type": "ready"}])
-            with self.assertRaisesRegex(ValueError, "Unterminated event record"):
-                records(path, final=True)
-            with path.open("ab") as stream:
-                stream.write(b"\n")
-            self.assertEqual(records(path, final=True), [{"type": "ready"}, {}])
-
-    def test_complete_corrupt_records_remain_errors(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "events.jsonl"
-            path.write_bytes(b'{}\n{"data":\n')
-            with self.assertRaises(json.JSONDecodeError):
-                records(path)
-            path.write_bytes(b'{"data":"\xff"}\n')
-            with self.assertRaises(UnicodeDecodeError):
-                records(path)
+    def test_working_compatibility_name_uses_the_shared_reader(self):
+        self.assertIs(records, read_records)
 
 
 class CursorFrameTest(unittest.TestCase):
