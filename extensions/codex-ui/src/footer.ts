@@ -95,14 +95,14 @@ export class CodexFooter implements Component {
     if (safeWidth === 0) return [];
     const statuses = this.options.getExtensionStatuses();
     const rate = this.options.getRate?.();
-    const suffix = rate ? ` ${rate.padStart(10)} ` : "";
+    const suffix = rate ? formatRateSlot(rate) : "";
     const remaining = Math.max(0, safeWidth - visibleWidth(suffix));
     const base = this.renderBase(remaining);
     const theme = this.options.getTheme();
     const status = this.readStatus(statuses.get("status"));
     const cached = this.reuseCombined(base, safeWidth, status, rate, theme);
     if (cached) return cached.slice();
-    const lines = composeFooter(base, safeWidth, remaining, suffix, theme);
+    const lines = composeFooter(base, safeWidth, remaining, suffix, rate, theme);
     if (status) lines.push(fitToWidth(theme.fg("muted", ` ${status}`), safeWidth));
     this.combined = { base, width: safeWidth, status, rate, theme, lines };
     return lines.slice();
@@ -195,10 +195,23 @@ export class CodexFooter implements Component {
   }
 }
 
-function composeFooter(base: string[], width: number, remaining: number, suffix: string, theme: Theme): string[] {
+function formatRateSlot(rate: string): string {
+  const padding = " ".repeat(Math.max(0, 10 - visibleWidth(rate)));
+  return ` ${padding}${rate} `;
+}
+
+function composeFooter(
+  base: string[],
+  width: number,
+  remaining: number,
+  suffix: string,
+  rate: string | undefined,
+  theme: Theme,
+): string[] {
   if (!suffix) return [...base];
   const first = base[0] ?? "";
-  const line = first + " ".repeat(Math.max(0, remaining - visibleWidth(first))) + theme.fg("muted", suffix);
+  const tone: FooterTone = rate === "-- t/s" ? "dim" : "muted";
+  const line = first + " ".repeat(Math.max(0, remaining - visibleWidth(first))) + theme.fg(tone, suffix);
   // The base already fits remaining columns and the suffix reserved its exact width.
   return [remaining > 0 ? line : fitToWidth(line, width)];
 }

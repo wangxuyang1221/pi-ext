@@ -28,6 +28,27 @@ def run(driver):
     root, runtime, screen, checks = (driver[name] for name in ["root", "runtime", "screen", "checks"])
 
     status_label = "Status:"
+    rate_pattern = r"≈\d+(?:\.\d+)?[kM]? t/s"
+    metric_pattern = rf"(?:{rate_pattern}|≈(?:<1|\d+(?:\.\d+)?[kM]?) tok|-- t/s)"
+    active_color, idle_color = tone("muted"), tone("dim")
+
+    def footer_metric():
+        lines = screen.display
+        for row in range(len(lines) - 1, 0, -1):
+            if lines[row].lstrip().startswith(status_label):
+                line = lines[row - 1]
+                match = re.search(rf"({metric_pattern})\s*$", line)
+                if match:
+                    label = match[1]
+                    column = wcswidth(line[:match.start()])
+                    assert wcswidth(label) <= 10 and screen.columns - 11 <= column, line
+                    assert column + wcswidth(label) <= screen.columns - 1, line
+                    color = idle_color if label == "-- t/s" else active_color
+                    assert all(screen.buffer[row - 1][x].fg == color
+                               for x in range(column, column + wcswidth(label))), (line, color)
+                    return label
+                break
+        return ""
 
     def command(text):
         send("\x15" + text)
@@ -38,6 +59,9 @@ def run(driver):
 
     def working():
         return re.search(r"[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏] Working \(", view()) is not None
+
+    def idle_footer():
+        return status_label in view() and not working() and not re.search(metric_pattern, view())
 
     def frame():
         for row, line in enumerate(screen.display):
@@ -83,13 +107,13 @@ def run(driver):
         settled = len(events("agent_settled"))
         send("\x1b")
         wait(lambda: len(events("agent_settled")) > settled, "cancellation reaches actual agent_settled")
-        wait(lambda: not working() and not re.search(r"(?:≈[\d.]+|--) t/s", view()), "settled releases Working and rate")
+        wait(idle_footer, "settled releases Working and rate")
 
     wait(lambda: "Trust project folder?" in view() or bool(events("start")), "working CLI startup")
     if "Trust project folder?" in view():
         send("\x1b[B\x1b[B\r")
     wait(lambda: bool(events("start")) and status_label in view(), "production footer and status row loaded")
-    assert not working() and "t/s" not in view(), view()
+    assert idle_footer(), view()
     send("\x1b[19~")
     wait(lambda: "WORKING INPUT" in view(), "idle input dialog")
     settle(0.5)
@@ -100,7 +124,7 @@ def run(driver):
     plan("stream")
     command("Generate visible thinking and text")
     wait(working, "agent_start mounts production Working")
-    wait(lambda: re.search(r"≈[\d.]+ t/s", view()) is not None, "real received fragments produce estimated rate")
+    wait(lambda: re.fullmatch(rate_pattern, footer_metric()), "real received fragments produce estimated rate")
     assert frame()[2] == tone("accent"), frame()
     assert status_label in view()
     advances("ten-frame spinner and steady bold Working label during provider streaming")
@@ -148,10 +172,10 @@ def run(driver):
         fcntl.ioctl(driver["fd"], termios.TIOCSWINSZ, struct.pack("HHHH", 40, width, 0, 0))
         os.kill(driver["pid"], signal.SIGWINCH)
         settle(0.4)
-        assert "Working" in view(), view()
+        assert frame() is not None, view()
+        assert re.fullmatch(rate_pattern, footer_metric()), view()
         if width >= 32:
-            assert re.search(r"≈[\d.]+ t/s", view()), view()
-            assert status_label in view(), view()
+            assert re.search(r" Working \(\d+s\b", view()), view()
         if width < 40:
             assert "esc to interrupt" not in view(), view()
         capture(f"working-width-{width}")
@@ -167,17 +191,31 @@ def run(driver):
 
     # Actual shell execution, and subsequent response.
     plan("tool")
-    command("Run the shell tool")
     before = len(events("agent_settled"))
+    command("Run the shell tool")
+    wait(lambda: footer_metric() == "≈400 tok", "first 500 Chinese characters show the received amount")
+    capture("tool-warmup")
+    wait(lambda: re.fullmatch(rate_pattern, footer_metric()), "second Chinese packet shows a measured rate", seconds=1.6)
+    first, second = events("toolTextPacket")
+    assert first["size"] == second["size"] == 500, (first, second)
+    span_ms = second["receivedAt"] - first["receivedAt"]
+    expected_rate = 400_000 / span_ms
+    label = footer_metric()
+    assert 240 <= span_ms < 2000 and re.fullmatch(r"≈\d+ t/s", label), (span_ms, label)
+    observed_rate = int(label[1:].split()[0])
+    assert abs(observed_rate - expected_rate) <= expected_rate * 0.05, (label, expected_rate, span_ms)
+    capture("tool-stream-rate")
+    driver["screens"]["tool-stream-rate"].update(packetSpanMs=span_ms, expectedRate=expected_rate)
     wait(lambda: bool(events("tool_execution_start")), "shell tool executes through host")
+    tool_started = time.monotonic()
+    wait(lambda: working() and footer_metric() == "-- t/s", "tool start presents the dim placeholder", seconds=0.65)
+    capture("tool-start-rate")
+    driver["screens"]["tool-start-rate"]["msAfterObservedToolStart"] = (time.monotonic() - tool_started) * 1000
     advances("Working continues during actual shell wait")
-    settle(2.2)
-    assert "-- t/s" in view() and working(), view()
-    capture("tool-expired-rate")
+    assert not events("tool_execution_end") and footer_metric() == "-- t/s", view()
     wait(lambda: len(events("agent_settled")) > before, "tool and continuation settle")
-    wait(lambda: not working(), "tool completion hides Working")
+    wait(idle_footer, "tool completion hides Working and restores the neutral footer")
     assert (runtime / "workspace/tool-proof.txt").read_text() == "TOOL-FINISHED"
-    assert "t/s" not in view(), view()
     checks.append("host tool preserves real file side effect and neutral status row")
 
     plan("cancel")
@@ -194,7 +232,7 @@ def run(driver):
     advances("Working continues across agent_end and retry backoff")
     wait(lambda: len(events("agent_settled")) > before, "retry continuation settles")
     assert any(event["kind"] == "retry" and event["attempt"] == 2 for event in events("request"))
-    wait(lambda: not working(), "retry settlement hides Working")
+    wait(idle_footer, "retry settlement hides Working and rate")
 
     plan("compact")
     before = len(events("agent_settled"))
@@ -205,13 +243,13 @@ def run(driver):
     advances("Working continues during actual automatic compaction hook")
     wait(lambda: len(events("agent_settled")) > before, "automatic compaction and recovery settle")
     assert events("session_compact"), events("session_compact_failed")
-    wait(lambda: not working(), "compaction settlement hides Working")
+    wait(idle_footer, "compaction settlement hides Working and rate")
 
     plan("error")
     before = len(events("agent_settled"))
     command("Return a final nonretryable error")
     wait(lambda: len(events("agent_settled")) > before, "final error settles")
-    wait(lambda: not working() and "t/s" not in view(), "final error releases dynamic UI")
+    wait(idle_footer, "final error releases dynamic UI")
 
     # Mode changes while the task is active use the host settings menu.
     plan("stream")
@@ -230,17 +268,17 @@ def run(driver):
     starts = len(events("start"))
     command("/new")
     wait(lambda: len(events("start")) > starts, "real new session")
-    assert not working() and "t/s" not in view()
+    wait(idle_footer, "new session restores the neutral footer")
     starts = len(events("start"))
     command("/fixture-reload")
     wait(lambda: len(events("start")) > starts, "real extension reload")
-    assert not working() and "t/s" not in view()
+    wait(idle_footer, "extension reload restores the neutral footer")
     plan("retry")
     before = len(events("agent_settled"))
     command("Task after reload")
     wait(working, "new timer after reload")
     wait(lambda: len(events("agent_settled")) > before, "reloaded task settles")
-    wait(lambda: not working() and not re.search(r"(?:≈[\d.]+|--) t/s", view()), "reloaded settlement removes Working and rate from the screen")
+    wait(idle_footer, "reloaded settlement removes Working and rate from the screen")
     capture("finished")
     command("/quit")
     wait(lambda: driver["status"] is not None, "native quit exits without retained timer")
