@@ -1,8 +1,8 @@
 import { resolve } from "node:path";
 import type { BashToolDetails, ReadToolDetails, Theme, ToolRenderers } from "@earendil-works/pi-coding-agent";
-import { renderReadGroup } from "./read-group-layout.js";
+import { renderSingleRead } from "./read-group-layout.js";
 import { renderBashGroup } from "./bash-group-layout.js";
-import type { ReadMember } from "./read-groups.js";
+import type { ReadRow } from "./read-groups.js";
 import type { BashMember } from "./bash-groups.js";
 import { getEditSyntaxFingerprint } from "./syntax-palette.js";
 import { ToolRenderCache } from "./render-cache.js";
@@ -76,11 +76,10 @@ export class CodemodePresentation {
       const status = call.status === "running" ? "running" : call.status === "ok" ? "completed" : "failed";
       const result = captured.result;
       if (call.name === "read" && typeof call.args.path === "string") {
-        const member: ReadMember = { id: call.id, cache: this.scope, group: { members: [], version: 0 }, path: clean(call.args.path), fullPath: resolve(cwd, call.args.path),
+        const member: ReadRow = { id: call.id, cache: this.scope, path: clean(call.args.path), fullPath: resolve(cwd, call.args.path),
           offset: typeof call.args.offset === "number" ? call.args.offset : undefined, limit: typeof call.args.limit === "number" ? call.args.limit : undefined,
           status, content: result.content, details: result.details as ReadToolDetails, revision: call.revision };
-        member.group.members.push(member);
-        return renderReadGroup(member, true, theme, width);
+        return renderSingleRead(member, true, theme, width);
       }
       if (call.name === "bash" && typeof call.args.command === "string") {
         const member: BashMember = { id: call.id, cache: this.scope, group: { members: [] }, command: call.args.command, commandRevision: call.revision, outputRevision: captured.revision,

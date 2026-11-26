@@ -3,28 +3,43 @@ import type { RenderCacheScope, ToolRenderCache } from "./render-cache.js";
 
 type RenderContext = Parameters<NonNullable<ToolDefinition["renderCall"]>>[2];
 type SourceMessage = { role: string; content?: unknown };
-export interface ReadGroup { members: ReadMember[]; version: number }
-export interface ReadMember {
+type ReadDetails = Readonly<Omit<ReadToolDetails, "truncation">> & {
+  readonly truncation?: Readonly<NonNullable<ReadToolDetails["truncation"]>>;
+};
+interface ReadFields {
   id: string;
   cache: RenderCacheScope;
-  group: ReadGroup;
   path: string;
   fullPath: string;
   offset?: number;
   limit?: number;
   status: "pending" | "running" | "completed" | "failed";
-  content?: Array<{ type: string; text?: string }>;
-  details?: ReadToolDetails;
+  content?: readonly { readonly type: string; readonly text?: string }[];
+  details?: ReadDetails;
   revision: number;
+}
+
+export type ReadRow = Readonly<ReadFields>;
+export interface ReadMember extends ReadRow {
+  readonly group: { readonly members: readonly ReadMember[]; readonly version: number };
+}
+
+const RESULT_PRIORITY = { row: 0, partial: 1, execution: 2, message: 3 } as const;
+type ResultOrigin = keyof typeof RESULT_PRIORITY;
+type ReadResult = { content?: ReadRow["content"]; details?: unknown };
+interface MutableMember extends ReadFields {
+  group: { members: readonly ReadMember[]; version: number };
+  origin: ResultOrigin;
   hasImage?: boolean;
 }
-type ReadResult = { content?: ReadMember["content"]; details?: unknown };
-const RESULT_PRIORITY = { partial: 1, execution: 2, message: 3 } as const;
-type ResultSource = keyof typeof RESULT_PRIORITY;
 // Source calls without execution/result facts stay standalone, even when a view exists.
-interface ReadRecord extends ReadMember { known: boolean; resultPriority: number }
-export interface ReadView { local: ReadMember; generation: number }
-export interface ReadRowState { readView?: ReadView }
+interface ReadRecord extends MutableMember { known: boolean }
+interface ReadView {
+  current(): ReadMember;
+  updateCall(context: RenderContext): void;
+  updateResult(result: ReadResult, partial: boolean, error: boolean): void;
+}
+interface ReadRowState { readView?: ReadView }
 
 /** Source-owned facts and grouping. Row callbacks only update their own fallback data. */
 export class ReadGroups {
@@ -91,10 +106,10 @@ export class ReadGroups {
         || this.occurrences.get(block.id) !== 1) { current = undefined; continue; }
       let record = this.records.get(block.id);
       if (!record) {
-        record = Object.assign(this.createMember(block.id), { known: false, resultPriority: 0 });
+        record = Object.assign(this.createMember(block.id), { known: false });
         this.records.set(block.id, record);
       }
-      if (record.resultPriority < RESULT_PRIORITY.execution) this.setArgs(record, block.arguments, this.cwd);
+      if (RESULT_PRIORITY[record.origin] < RESULT_PRIORITY.execution) this.setArgs(record, block.arguments, this.cwd);
       if (!current) next.push(current = []);
       current.push(block.id);
     }
@@ -121,31 +136,37 @@ export class ReadGroups {
 
   start(id: string, args: unknown): void {
     const record = this.unique(id);
-    if (!record || record.resultPriority >= RESULT_PRIORITY.execution) return;
+    if (!record || RESULT_PRIORITY[record.origin] >= RESULT_PRIORITY.execution) return;
     this.setArgs(record, args, this.cwd);
     record.known = true;
     if (record.status !== "running") { record.status = "running"; this.changed(record); }
     this.reflowMember(record);
   }
 
-  result(id: string, result: ReadResult, source: ResultSource, error: boolean): void {
+  result(id: string, result: ReadResult, source: Exclude<ResultOrigin, "row">, error: boolean): void {
     const record = this.unique(id);
-    const priority = RESULT_PRIORITY[source];
     // message_end may replace the execution result. Never accept lower-priority replays;
     // settled sources are consumed once, while partial snapshots can keep advancing.
-    if (!record || priority < record.resultPriority || (priority === record.resultPriority && source !== "partial")) return;
+    if (!record || RESULT_PRIORITY[source] < RESULT_PRIORITY[record.origin]) return;
+    if (source === record.origin && source !== "partial") return;
     const wasKnown = record.known, image = record.hasImage;
-    const promoted = priority > record.resultPriority;
-    record.known = true; record.resultPriority = priority;
-    // Final-message hooks may mutate shared content/details in place before promotion.
-    this.setResult(record, result, source === "partial", error, promoted);
+    record.known = true;
+    this.setResult(record, result, source === "partial", error, source);
     if (!wasKnown || image !== record.hasImage) this.reflowMember(record);
   }
 
   bind(context: RenderContext): ReadView {
     const state = context.state as ReadRowState;
     if (state.readView) return state.readView;
-    const view = { local: this.createMember(context.toolCallId), generation: this.generation };
+    const local = this.createMember(context.toolCallId);
+    const generation = this.generation;
+    const view: ReadView = {
+      current: () => this.resolve(local, generation),
+      updateCall: context => this.updateCall(local, context),
+      updateResult: (result, partial, error) => {
+        if (local.cache.active) this.setResult(local, result, partial, error, "row");
+      },
+    };
     state.readView = view;
     if (!this.bound.has(context.toolCallId)) {
       this.bound.add(context.toolCallId);
@@ -155,36 +176,37 @@ export class ReadGroups {
     return view;
   }
 
-  updateCall(view: ReadView, context: RenderContext): void {
-    if (!view.local.cache.active) return;
-    this.setArgs(view.local, context.args, context.cwd);
-    const status = context.isError ? "failed" : !context.isPartial && view.local.content ? "completed"
+  private updateCall(local: MutableMember, context: RenderContext): void {
+    if (!local.cache.active) return;
+    this.setArgs(local, context.args, context.cwd);
+    const status = context.isError ? "failed" : !context.isPartial && local.content ? "completed"
       : context.executionStarted ? "running" : "pending";
-    if (view.local.status !== status) { view.local.status = status; this.changed(view.local); }
+    if (local.status !== status) { local.status = status; this.changed(local); }
   }
 
-  updateResult(view: ReadView, result: ReadResult, partial: boolean, error: boolean): void {
-    if (view.local.cache.active) this.setResult(view.local, result, partial, error);
-  }
-
-  resolve(view: ReadView): ReadMember {
-    if (view.generation !== this.generation || !view.local.cache.active) return view.local;
-    const record = this.unique(view.local.id);
-    const key = this.membership.get(view.local.id);
+  private resolve(local: MutableMember, generation: number): ReadMember {
+    if (generation !== this.generation || !local.cache.active) return local;
+    const record = this.unique(local.id);
+    const key = this.membership.get(local.id);
     if (key !== undefined && this.dirtyGroups.delete(key)) this.refreshGroup(key);
-    return record?.known ? record : view.local;
+    return record?.known ? record : local;
   }
 
   private unique(id: string): ReadRecord | undefined {
     return this.occurrences.get(id) === 1 ? this.records.get(id) : undefined;
   }
 
-  private createMember(id: string): ReadMember {
-    const member: ReadMember = { id, cache: this.cache.scope(), group: undefined!, path: "", fullPath: "", status: "pending", revision: 0 };
-    this.assign([member]); return member;
+  private createMember(id: string): MutableMember {
+    const members: MutableMember[] = [];
+    const member: MutableMember = {
+      id, cache: this.cache.scope(), group: { members, version: 0 }, origin: "row",
+      path: "", fullPath: "", status: "pending", revision: 0,
+    };
+    members.push(member);
+    return member;
   }
 
-  private setArgs(member: ReadMember, input: unknown, cwd: string): void {
+  private setArgs(member: MutableMember, input: unknown, cwd: string): void {
     const args = input as { path?: unknown; offset?: number; limit?: number } | undefined;
     const fullPath = typeof args?.path === "string" ? args.path : "";
     const path = this.formatPath(fullPath, cwd);
@@ -192,16 +214,18 @@ export class ReadGroups {
     Object.assign(member, { path, fullPath, offset: args?.offset, limit: args?.limit }); this.changed(member);
   }
 
-  private setResult(member: ReadMember, result: ReadResult, partial: boolean, error: boolean, forceRefresh = false): void {
+  private setResult(member: MutableMember, result: ReadResult, partial: boolean, error: boolean, origin: ResultOrigin): void {
     const status = partial ? "running" : error ? "failed" : "completed";
     const details = result.details && typeof result.details === "object" ? result.details as ReadToolDetails : undefined;
-    if (!forceRefresh && member.content === result.content && member.details === details && member.status === status) return;
+    // A higher-priority source may have edited the same payload in place.
+    if (member.origin === origin && member.content === result.content && member.details === details && member.status === status) return;
+    member.origin = origin;
     member.content = result.content; member.details = details; member.status = status;
     member.hasImage = result.content?.some(block => block.type === "image") ?? false;
     this.changed(member);
   }
 
-  private reflowMember(member: ReadMember): void {
+  private reflowMember(member: MutableMember): void {
     const key = this.membership.get(member.id);
     if (key !== undefined) this.reflow(key);
   }
@@ -210,7 +234,7 @@ export class ReadGroups {
 
   private refreshGroup(key: number): void {
     // Coalesce source, result and binding changes until the next paint.
-    let segment: ReadMember[] = [];
+    let segment: MutableMember[] = [];
     const flush = () => { if (segment.length) this.assign(segment); segment = []; };
     for (const id of this.candidates.get(key) ?? []) {
       const member = this.records.get(id);
@@ -221,12 +245,12 @@ export class ReadGroups {
     flush();
   }
 
-  private assign(members: ReadMember[]): void {
+  private assign(members: MutableMember[]): void {
     const previous = members[0]?.group;
     if (previous?.members.length === members.length && previous.members.every((member, i) => member === members[i])) return;
     const group = { members, version: 0 };
     for (const member of members) member.group = group;
   }
 
-  private changed(member: ReadMember): void { member.revision++; member.group.version++; }
+  private changed(member: MutableMember): void { member.revision++; member.group.version++; }
 }

@@ -1,6 +1,6 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
-import { ReadGroups, type ReadMember, type ReadView } from "./read-groups.js";
+import type { ReadMember } from "./read-groups.js";
 import { renderReadGroup } from "./read-group-layout.js";
 import { ResponsiveLinesComponent } from "./responsive-lines.js";
 
@@ -13,7 +13,7 @@ export class ReadViewComponent implements Component {
   private expanded = false;
   private theme?: Theme;
 
-  constructor(private readonly groups: ReadGroups, private readonly view: ReadView) {}
+  constructor(private readonly current: () => ReadMember) {}
 
   update(expanded: boolean, theme: Theme): void {
     if (this.expanded !== expanded || this.theme !== theme) this.invalidate();
@@ -21,7 +21,7 @@ export class ReadViewComponent implements Component {
   }
 
   render(width: number): string[] {
-    const member = this.groups.resolve(this.view);
+    const member = this.current();
     if (this.member !== member || this.group !== member.group || this.version !== member.group.version) {
       this.member = member; this.group = member.group; this.version = member.group.version;
       this.lines.setRenderer(columns => renderReadGroup(member, this.expanded, this.theme!, columns), { linesAlreadyFit: true });
