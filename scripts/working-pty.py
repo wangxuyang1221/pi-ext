@@ -27,7 +27,7 @@ parser.add_argument("--extension", type=Path, help="Installed codex-ui entry for
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(repo / "test-support/fixtures/working"))
-from pty_observations import records
+from pty_observations import SYNC_END, SYNC_START, presented_frame_after, records
 
 root = args.evidence.resolve()
 assert root.is_relative_to(repo / ".tmp") and not root.exists(), "Use a new worktree .tmp evidence directory"
@@ -91,17 +91,26 @@ rendering = False
 checks = []
 actions = []
 screens = {}
+lifecycle = []
 
 def events(kind):
-    path = root / "events.jsonl"
-    return [record["data"] for record in records(path) if record["type"] == kind]
+    return [event["data"] for event in lifecycle if event["type"] == kind]
+
+def poll_events():
+    observed = records(root / "events.jsonl")
+    for index in range(len(lifecycle), len(observed)):
+        lifecycle.append({**observed[index], "index": index, "observedAtRawByte": len(raw)})
 
 def view():
     return "\n".join(line.rstrip() for line in screen.display)
 
-def pump():
+def pump(timeout=0.03, *, observe_events=True):
     global status, apc_pending, rendering
-    ready, _, _ = select.select([fd], [], [], 0.03)
+    ready, _, _ = select.select([fd], [], [], timeout)
+    # Sample complete ledger rows before consuming available PTY bytes. The
+    # observation boundary excludes any frame that we already saw begin.
+    if observe_events:
+        poll_events()
     if ready:
         try:
             data = os.read(fd, 65536)
@@ -112,7 +121,7 @@ def pump():
         raw.extend(data)
         # A pipe read can stop halfway through a synchronized frame. Only inspect
         # the screen after its end marker, just as a supporting terminal presents it.
-        rendering = raw.rfind(b"\x1b[?2026h") > raw.rfind(b"\x1b[?2026l")
+        rendering = raw.rfind(SYNC_START) > raw.rfind(SYNC_END)
         # pyte models text cells; retain raw image protocol bytes separately.
         apc_pending += decoder.decode(data)
         while apc_pending:
@@ -153,15 +162,18 @@ def settle(seconds=0.3):
             raise AssertionError("Synchronized frame did not finish")
 
 def send(text):
-    actions.append({"input": text, "time": time.monotonic(), "rawBytes": len(raw)})
+    pump(0)
+    settle(0)
+    action = {"input": text, "time": time.monotonic(), "rawBytes": len(raw), "eventCount": len(lifecycle)}
+    actions.append(action)
     os.write(fd, text.encode())
     settle()
-
-def command(text):
-    send("\x15" + text + "\r")
+    return action
 
 def capture(name):
     screens[name] = {"text": view(), "cursor": {"x": screen.cursor.x, "y": screen.cursor.y}, "synchronizedFrameComplete": not rendering, "rawBytes": len(raw)}
+    if frame := presented_frame_after(raw, 0):
+        screens[name].update(frameStart=frame.start, frameEnd=frame.end)
 
 def terminate(signum, _frame):
     raise SystemExit(128 + signum)
@@ -181,7 +193,7 @@ finally:
             pass
         end = time.monotonic() + 5
         while status is None and time.monotonic() < end:
-            pump()
+            pump(observe_events=False)
         if status is None:
             os.killpg(pid, signal.SIGKILL)
             _, status = os.waitpid(pid, 0)

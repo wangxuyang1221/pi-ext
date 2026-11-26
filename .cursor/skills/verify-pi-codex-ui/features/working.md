@@ -32,9 +32,13 @@ conda run -n codex-py312 python scripts/working-pty.py "$RUN/fullscreen" --mode 
 - **Submit and edit.** 旅程先打开 idle input，确认不启动 Working，再提交 `Generate visible thinking and text`。可见 thinking 和正文经过公开 provider 路径。footer 首行右侧出现速率，spinner 使用 codex-pi 主题的 accent，12 次取样至少五种帧且 `Working` 保持稳定的粗体主题 `text` 前景色（切到 `light` 主题后颜色随主题同步变更）。草稿中间插入 `X` 后 editor 事件准确。32/40/100 列保留速率与计时，12 列安全裁剪；小于 40 列没有中断提示。
 - **Receive Chinese text.** 提交 `Run the shell tool`。工具调用前同一响应先发送中文正文，每个整包 500 个汉字。首包显示 `≈400 tok`；第二包到达时，用新增的 400 tokens 除以两次公开正文事件的实测间隔（秒），核对首个 `≈… t/s`（允许 5% 的计时与取整偏差）。在 `screens.json` 查看 `tool-warmup` 和 `tool-stream-rate`，后者含间隔与期望速率。
 - **Tool wait.** 驱动观察到 `tool_execution_start` 后即检查 footer，给终端 650 ms 呈现 `dim` 色的 `-- t/s`。查看 `tool-start-rate` 画面及观测延迟。工具结束前继续采样 spinner，检查占位符仍在。真实 shell 写入的 `artifacts/workspace/tool-proof.txt` 必须为 `TOOL-FINISHED`。
-- **Cancel executing work.** 提交 `Cancel the running tool`，先观察 `CANCEL-TOOL-ENTERED` 的 tool_execution_update，再发送 Esc。`agent_settled` 之后 Working/rate 消失；`artifacts/workspace/should-not-exist.txt` 不存在，summary 记录取消断言。不能把按键本身当终止。
+- **Cancel executing work.** 提交 `Cancel the running tool ⠋ Working (99s) -- t/s`，先观察对应 Bash 调用的 `CANCEL-TOOL-ENTERED` 事件，再发送 Esc。工具以取消结束，`agent_settled` 报告 `aborted: true`。下一张合格画面里，用户正文仍显示伪 spinner 和速率，输入框上方的 Working 行与 footer 的速率已清空。`artifacts/workspace/should-not-exist.txt` 不存在。
 - **Recover through host.** 429 第一次响应触发真实 retry，第二次请求 attempt=2；overflow 事件为 `reason=overflow, willRetry=true`，存在 session_compact。等待期间动画继续，最终 settled 后隐藏。非 retry 错误也结束动态 UI。
-- **Replace and exit.** 两次设置页切换读回实际 settings，active Working 持续；`/new`、reload 后 idle 不残留，再提交成功。`/quit` 退出码 0，保留 session/settings 副本，按 Cleanup 查进程组/监听并确认 artifacts 仍在。
+- **Replace and exit.** 两次设置页切换读回实际 settings，active Working 持续。`/new` 的启动事件指向新 session，reload 的启动事件指向同一个 session。两次都用新的 idle 画面验证清理，再提交新任务并验证出现和清除 Working。`/quit` 触发 shutdown 并返回退出码 0，保留 session/settings 副本，按 Cleanup 核对进程组、监听与保留的 artifacts。
+
+### Presentation evidence
+
+从输入框和夹具的 footer 状态行定位 Working 行和速率行。全屏状态行在视口最底部，普通模式下方可有空行。输入对话框用其边框定位上方的 Working 行。开始、取消、结束、新会话和 reload 的证据保存在 `screens.json`。每条记录包含动作前的 PTY 字节偏移、对应事件的序号与观测边界、完整同步帧的起止偏移，以及各目标行的坐标和文本。同步帧必须在动作与事件对应的观测边界之后开始。可用 `events.jsonl` 与 `terminal.ansi` 对照事件与画面。
 
 ## Gotchas
 

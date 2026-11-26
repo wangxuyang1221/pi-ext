@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 from wcwidth import wcswidth
 
-from pty_observations import presented_cursor_frame
+from pty_observations import RATE, presented_cursor_frame, presented_frame_after, working_slots
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -23,69 +23,86 @@ def tone(name):
 
 
 def run(driver):
-    wait, send, command = (driver[name] for name in ["wait", "send", "command"])
+    wait, send = (driver[name] for name in ["wait", "send"])
     view, settle, capture, events = (driver[name] for name in ["view", "settle", "capture", "events"])
     root, runtime, screen, checks = (driver[name] for name in ["root", "runtime", "screen", "checks"])
 
-    status_label = "Status:"
-    rate_pattern = r"≈\d+(?:\.\d+)?[kM]? t/s"
-    metric_pattern = rf"(?:{rate_pattern}|≈(?:<1|\d+(?:\.\d+)?[kM]?) tok|-- t/s)"
+    mode = driver["args"].mode
     active_color, idle_color = tone("muted"), tone("dim")
 
+    def slots(*, dialog=False):
+        return working_slots(screen.display, screen.columns, fullscreen=mode == "fullscreen", input_dialog=dialog)
+
     def footer_metric():
-        lines = screen.display
-        for row in range(len(lines) - 1, 0, -1):
-            if lines[row].lstrip().startswith(status_label):
-                line = lines[row - 1]
-                match = re.search(rf"({metric_pattern})\s*$", line)
-                if match:
-                    label = match[1]
-                    column = wcswidth(line[:match.start()])
-                    assert wcswidth(label) <= 10 and screen.columns - 11 <= column, line
-                    assert column + wcswidth(label) <= screen.columns - 1, line
-                    color = idle_color if label == "-- t/s" else active_color
-                    assert all(screen.buffer[row - 1][x].fg == color
-                               for x in range(column, column + wcswidth(label))), (line, color)
-                    return label
-                break
-        return ""
+        layout = slots()
+        if layout is None or layout.metric is None:
+            return ""
+        label, column = layout.metric
+        assert screen.columns - 11 <= column and column + wcswidth(label) == screen.columns - 1, layout
+        color = idle_color if label == "-- t/s" else active_color
+        assert all(screen.buffer[layout.footer_row][x].fg == color
+                   for x in range(column, column + wcswidth(label))), (layout, color)
+        return label
 
     def command(text):
         send("\x15" + text)
-        send("\r")
+        return send("\r")
 
     def plan(kind):
         (root / "plan.json").write_text(json.dumps({"kind": kind, "id": str(time.monotonic_ns())}))
 
-    def working():
-        return re.search(r"[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏] Working \(", view()) is not None
+    def working(*, dialog=False):
+        layout = slots(dialog=dialog)
+        return layout is not None and layout.spinner is not None
 
-    def idle_footer():
-        return status_label in view() and not working() and not re.search(metric_pattern, view())
+    def idle_footer(*, dialog=False):
+        layout = slots(dialog=dialog)
+        return layout is not None and not layout.working_text and layout.metric is None
 
-    def frame():
-        for row, line in enumerate(screen.display):
-            match = re.search(r"([⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]) Working", line)
-            if match:
-                start = match.start()
-                return (
-                    match[1],
-                    tuple(screen.buffer[row][x].fg for x in range(start + 2, start + 9)),
-                    screen.buffer[row][start].fg,
-                    tuple(screen.buffer[row][x].bold for x in range(start + 2, start + 9)),
-                )
-        return None
+    def find_event(after, kind, predicate=lambda _: True):
+        return next((event for event in driver["lifecycle"][after["eventCount"]:]
+                     if event["type"] == kind and predicate(event["data"])), None)
 
-    def advances(label, expect_codex_theme=True):
-        first = frame()
-        assert first is not None, view()
+    def wait_surface(predicate, label, after, *, kind=None, matches=lambda _: True, dialog=False, seconds=20, name=None):
+        event = None
+
+        def ready():
+            nonlocal event
+            offset = after["rawBytes"]
+            if kind is not None:
+                event = find_event(after, kind, matches)
+                if event is None:
+                    return False
+                offset = max(offset, event["observedAtRawByte"])
+            return presented_frame_after(driver["raw"], offset) is not None and predicate()
+
+        wait(ready, label, seconds=seconds)
+        name = name or label
+        capture(name)
+        layout = slots(dialog=dialog)
+        driver["screens"][name].update(
+            after=after, event=event,
+            slots={"workingRow": layout.working_row, "working": layout.working_text,
+                   "footerRow": layout.footer_row, "footer": layout.footer_text,
+                   "statusRow": layout.status_row, "status": layout.status_text},
+        )
+        return event
+
+    def advances(label, expect_codex_theme=True, *, dialog=False):
+        boundary = len(driver["raw"])
         samples = []
         for _ in range(12):
             settle(0.08)
-            value = frame()
-            if value:
-                samples.append(value)
-        assert len({sample[0] for sample in samples}) >= 5, samples
+            presented = presented_frame_after(driver["raw"], boundary)
+            layout = slots(dialog=dialog)
+            if presented and layout and layout.spinner:
+                cells = screen.buffer[layout.working_row]
+                samples.append((
+                    layout.spinner, tuple(cells[x].fg for x in range(3, 10)), cells[1].fg,
+                    tuple(cells[x].bold for x in range(3, 10)), presented.end,
+                ))
+                boundary = presented.end
+        assert len({sample[0] for sample in samples}) >= 5, (samples, view())
         label_colors = {sample[1] for sample in samples}
         assert len(label_colors) == 1, samples
         steady_label = next(iter(label_colors))
@@ -103,38 +120,47 @@ def run(driver):
         checks.append(label)
         driver["screens"][label] = {"text": view(), "frames": samples}
 
-    def cancel():
-        settled = len(events("agent_settled"))
-        send("\x1b")
-        wait(lambda: len(events("agent_settled")) > settled, "cancellation reaches actual agent_settled")
-        wait(idle_footer, "settled releases Working and rate")
+    def wait_idle(label, after, *, aborted=False, name=None):
+        return wait_surface(idle_footer, label, after, kind="agent_settled",
+                            matches=lambda event: event["aborted"] is aborted, name=name)
 
+    def cancel(name, *, transcript=None):
+        action = send("\x1b")
+        settled = wait_idle("Escape aborts the task and a new frame clears Working and rate", action, aborted=True, name=name)
+        ended = find_event(action, "agent_end")
+        assert ended is not None and ended["index"] < settled["index"], settled
+        if transcript is not None:
+            assert transcript in view(), view()
+        return action, settled
+
+    startup = {"rawBytes": 0, "eventCount": 0}
     wait(lambda: "Trust project folder?" in view() or bool(events("start")), "working CLI startup")
     if "Trust project folder?" in view():
         send("\x1b[B\x1b[B\r")
-    wait(lambda: bool(events("start")) and status_label in view(), "production footer and status row loaded")
-    assert idle_footer(), view()
-    send("\x1b[19~")
-    wait(lambda: "WORKING INPUT" in view(), "idle input dialog")
+    session = wait_surface(idle_footer, "startup presents the production footer without Working", startup,
+                           kind="start", matches=lambda event: event["reason"] == "startup")
+    action = send("\x1b[19~")
+    wait_surface(lambda: idle_footer(dialog=True), "idle input dialog presents without Working", action, dialog=True)
     settle(0.5)
-    assert not working(), view()
+    assert idle_footer(dialog=True) and find_event(action, "agent_start") is None, view()
     send("answer\r")
     wait(lambda: bool(events("inputClosed")), "idle dialog closes without starting activity")
 
     plan("stream")
-    command("Generate visible thinking and text")
-    wait(working, "agent_start mounts production Working")
-    wait(lambda: re.fullmatch(rate_pattern, footer_metric()), "real received fragments produce estimated rate")
-    assert frame()[2] == tone("accent"), frame()
-    assert status_label in view()
+    action = command("Generate visible thinking and text")
+    wait_surface(working, "agent_start mounts production Working", action, kind="agent_start")
+    wait_surface(lambda: re.fullmatch(RATE, footer_metric()), "real received fragments produce estimated rate",
+                 action, kind="request", matches=lambda event: event["kind"] == "stream")
     advances("ten-frame spinner and steady bold Working label during provider streaming")
     capture("streaming")
     draft = "draft-中文-abc"
     send(draft)
-    send("\x1b[D\x1b[D")
+    left = send("\x1b[D\x1b[D")
 
     def cursor_frame():
-        return presented_cursor_frame(driver["raw"], fullscreen=driver["args"].mode == "fullscreen")
+        if presented_frame_after(driver["raw"], left["rawBytes"]):
+            return presented_cursor_frame(driver["raw"], fullscreen=mode == "fullscreen")
+        return None
 
     wait(lambda: cursor_frame() is not None, "cursor restore after Left keys", seconds=2)
     before_frame = cursor_frame()
@@ -161,41 +187,48 @@ def run(driver):
     send("\x1b[17~")
     assert events("editor")[-1] == "draft-中文-aXbc"
     send("\x15")
-    send("\x1b[19~")
-    wait(lambda: "WORKING INPUT" in view(), "active input dialog")
-    advances("Working continues while input dialog owns focus")
+    action = send("\x1b[19~")
+    wait_surface(lambda: working(dialog=True), "active input dialog presents over the active Working row",
+                 action, dialog=True)
+    advances("Working continues while input dialog owns focus", dialog=True)
     send("answer\r")
     wait(lambda: len(events("inputClosed")) == 2, "active input closes normally")
 
     for width in [100, 40, 32, 12, 120]:
+        action = {"resizeColumns": width, "rawBytes": len(driver["raw"]), "eventCount": len(driver["lifecycle"])}
+        driver["actions"].append(action)
         screen.resize(lines=40, columns=width)
         fcntl.ioctl(driver["fd"], termios.TIOCSWINSZ, struct.pack("HHHH", 40, width, 0, 0))
         os.kill(driver["pid"], signal.SIGWINCH)
         settle(0.4)
-        assert frame() is not None, view()
-        assert re.fullmatch(rate_pattern, footer_metric()), view()
+        wait_surface(lambda: working() and re.fullmatch(RATE, footer_metric()),
+                     f"resized {width}-column frame retains Working and rate", action, name=f"working-width-{width}")
+        working_text = slots().working_text
         if width >= 32:
-            assert re.search(r" Working \(\d+s\b", view()), view()
+            assert re.search(r" Working \(\d+s\b", working_text), view()
         if width < 40:
-            assert "esc to interrupt" not in view(), view()
-        capture(f"working-width-{width}")
+            assert "esc to interrupt" not in working_text, view()
     checks.append("32/40/100 and extreme widths retain bounded Working and footer layout")
-    send("\x1b[20~")
-    wait(lambda: bool(events("theme")), "theme changes through public UI")
-    assert events("theme")[-1]["success"]
+    action = send("\x1b[20~")
+    wait_surface(working, "theme changes through public UI", action, kind="theme",
+                 matches=lambda event: event["success"])
     advances("animation continues after theme invalidation", expect_codex_theme=False)
     send("\x1b[20~")
     send("\x0f")
     checks.append("native tool expansion key remains usable during animation")
-    cancel()
+    cancel("cancel-stream")
 
     # Actual shell execution, and subsequent response.
     plan("tool")
-    before = len(events("agent_settled"))
-    command("Run the shell tool")
-    wait(lambda: footer_metric() == "≈400 tok", "first 500 Chinese characters show the received amount")
-    capture("tool-warmup")
-    wait(lambda: re.fullmatch(rate_pattern, footer_metric()), "second Chinese packet shows a measured rate", seconds=1.6)
+    action = command("Run the shell tool")
+    wait_surface(lambda: working() and footer_metric() == "≈400 tok",
+                 "first 500 Chinese characters show the received amount", action, kind="toolTextPacket",
+                 name="tool-warmup")
+    first_packet = find_event(action, "toolTextPacket")
+    second_packet_boundary = {**action, "eventCount": first_packet["index"] + 1}
+    wait_surface(lambda: working() and re.fullmatch(RATE, footer_metric()),
+                 "second Chinese packet shows a measured rate", second_packet_boundary,
+                 kind="toolTextPacket", seconds=1.6, name="tool-stream-rate")
     first, second = events("toolTextPacket")
     assert first["size"] == second["size"] == 500, (first, second)
     span_ms = second["receivedAt"] - first["receivedAt"]
@@ -204,82 +237,89 @@ def run(driver):
     assert 240 <= span_ms < 2000 and re.fullmatch(r"≈\d+ t/s", label), (span_ms, label)
     observed_rate = int(label[1:].split()[0])
     assert abs(observed_rate - expected_rate) <= expected_rate * 0.05, (label, expected_rate, span_ms)
-    capture("tool-stream-rate")
     driver["screens"]["tool-stream-rate"].update(packetSpanMs=span_ms, expectedRate=expected_rate)
-    wait(lambda: bool(events("tool_execution_start")), "shell tool executes through host")
+    wait(lambda: find_event(action, "tool_execution_start") is not None, "shell tool executes through host")
     tool_started = time.monotonic()
-    wait(lambda: working() and footer_metric() == "-- t/s", "tool start presents the dim placeholder", seconds=0.65)
-    capture("tool-start-rate")
+    started = wait_surface(lambda: working() and footer_metric() == "-- t/s",
+                           "tool start presents the dim placeholder", action, kind="tool_execution_start",
+                           seconds=0.65, name="tool-start-rate")
     driver["screens"]["tool-start-rate"]["msAfterObservedToolStart"] = (time.monotonic() - tool_started) * 1000
     advances("Working continues during actual shell wait")
-    assert not events("tool_execution_end") and footer_metric() == "-- t/s", view()
-    wait(lambda: len(events("agent_settled")) > before, "tool and continuation settle")
-    wait(idle_footer, "tool completion hides Working and restores the neutral footer")
+    assert find_event(action, "tool_execution_end") is None and footer_metric() == "-- t/s", view()
+    settled = wait_idle("tool and continuation settle before the neutral footer appears", action, name="tool-settled")
+    ended = find_event(action, "tool_execution_end",
+                       lambda event: event["toolCallId"] == started["data"]["toolCallId"] and not event["isError"])
+    assert ended is not None and started["index"] < ended["index"] < settled["index"], settled
     assert (runtime / "workspace/tool-proof.txt").read_text() == "TOOL-FINISHED"
     checks.append("host tool preserves real file side effect and neutral status row")
 
     plan("cancel")
-    command("Cancel the running tool")
-    wait(lambda: any("CANCEL-TOOL-ENTERED" in json.dumps(event) for event in events("tool_execution_update")), "cancel hits executing shell")
-    cancel()
+    transcript = "⠋ Working (99s) -- t/s"
+    action = command(f"Cancel the running tool {transcript}")
+    entered = wait_surface(lambda: working() and footer_metric() == "-- t/s" and transcript in view(),
+                           "cancel hits executing shell while the user transcript imitates Working and rate",
+                           action, kind="tool_execution_update",
+                           matches=lambda event: any(item.get("text") == "CANCEL-TOOL-ENTERED"
+                                                     for item in event["partialResult"]["content"]),
+                           name="cancel-tool-running")
+    action, settled = cancel("cancel-tool-settled", transcript=transcript)
+    aborted_tool = find_event(action, "tool_execution_end",
+                              lambda event: event["isError"] and event["toolCallId"] == entered["data"]["toolCallId"])
+    assert aborted_tool is not None and aborted_tool["index"] < settled["index"], events("tool_execution_end")
     assert not (runtime / "workspace/should-not-exist.txt").exists()
     checks.append("real Escape cancellation stops shell side effect before settlement")
 
     plan("retry")
-    before = len(events("agent_settled"))
-    command("Retry the controlled rate limit")
-    wait(lambda: "Retrying" in view() or "Retry" in view(), "host retries provider rate limit")
+    action = command("Retry the controlled rate limit")
+    wait_surface(working, "host keeps Working through a retryable agent_end", action, kind="agent_end")
     advances("Working continues across agent_end and retry backoff")
-    wait(lambda: len(events("agent_settled")) > before, "retry continuation settles")
-    assert any(event["kind"] == "retry" and event["attempt"] == 2 for event in events("request"))
-    wait(idle_footer, "retry settlement hides Working and rate")
+    wait_idle("retry settlement hides Working and rate", action, name="retry-settled")
+    assert find_event(action, "request", lambda event: event["kind"] == "retry" and event["attempt"] == 2)
 
     plan("compact")
-    before = len(events("agent_settled"))
-    compactions = len(events("compaction"))
-    command("Recover from context overflow")
-    wait(lambda: len(events("compaction")) > compactions, "host overflow enters automatic compaction")
-    assert events("compaction")[-1] == {"reason": "overflow", "willRetry": True}, events("compaction")
+    action = command("Recover from context overflow")
+    wait_surface(working, "host overflow enters automatic compaction", action, kind="compaction",
+                 matches=lambda event: event == {"reason": "overflow", "willRetry": True})
     advances("Working continues during actual automatic compaction hook")
-    wait(lambda: len(events("agent_settled")) > before, "automatic compaction and recovery settle")
-    assert events("session_compact"), events("session_compact_failed")
-    wait(idle_footer, "compaction settlement hides Working and rate")
+    wait_idle("compaction settlement hides Working and rate", action, name="compaction-settled")
+    assert find_event(action, "session_compact"), events("session_compact_failed")
 
     plan("error")
-    before = len(events("agent_settled"))
-    command("Return a final nonretryable error")
-    wait(lambda: len(events("agent_settled")) > before, "final error settles")
-    wait(idle_footer, "final error releases dynamic UI")
+    action = command("Return a final nonretryable error")
+    wait_idle("final error releases dynamic UI", action, name="error-settled")
+    assert find_event(action, "agent_end"), events("agent_end")
 
     # Mode changes while the task is active use the host settings menu.
     plan("stream")
-    command("Stream across renderer changes")
-    wait(working, "second task starts")
+    action = command("Stream across renderer changes")
+    wait_surface(working, "second task starts", action, kind="agent_start")
     for expected in [("fullscreen" if driver["args"].mode == "regular" else "regular"), driver["args"].mode]:
         command("/settings")
         send("TUI mode")
         wait(lambda: "TUI mode" in view(), "native mode selector")
         send("\r")
-        send("\x1b")
+        action = send("\x1b")
+        mode = expected
         settle(0.5)
         assert json.loads((runtime / "agent/settings.json").read_text())["tuiMode"] == expected
+        wait_surface(working, f"{expected} presents Working after leaving settings", action)
         advances(f"Working survives renderer switch to {expected}")
-    cancel()
-    starts = len(events("start"))
-    command("/new")
-    wait(lambda: len(events("start")) > starts, "real new session")
-    wait(idle_footer, "new session restores the neutral footer")
-    starts = len(events("start"))
-    command("/fixture-reload")
-    wait(lambda: len(events("start")) > starts, "real extension reload")
-    wait(idle_footer, "extension reload restores the neutral footer")
+    cancel("cancel-after-mode-switch")
+    action = command("/new")
+    new_session = wait_surface(idle_footer, "new session restores the neutral footer", action, kind="start",
+                               matches=lambda event: event["reason"] == "new", name="new-session")
+    assert new_session["data"]["session"] != session["data"]["session"], new_session
+    assert find_event(action, "session_shutdown", lambda event: event["reason"] == "new")
+    action = command("/fixture-reload")
+    reloaded = wait_surface(idle_footer, "extension reload restores the neutral footer", action, kind="start",
+                            matches=lambda event: event["reason"] == "reload", name="reload")
+    assert reloaded["data"]["session"] == new_session["data"]["session"], reloaded
+    assert find_event(action, "session_shutdown", lambda event: event["reason"] == "reload")
     plan("retry")
-    before = len(events("agent_settled"))
-    command("Task after reload")
-    wait(working, "new timer after reload")
-    wait(lambda: len(events("agent_settled")) > before, "reloaded task settles")
-    wait(idle_footer, "reloaded settlement removes Working and rate from the screen")
-    capture("finished")
-    command("/quit")
+    action = command("Task after reload")
+    wait_surface(working, "new timer after reload", action, kind="agent_start")
+    wait_idle("reloaded settlement removes Working and rate", action, name="finished")
+    action = command("/quit")
     wait(lambda: driver["status"] is not None, "native quit exits without retained timer")
     assert os.waitstatus_to_exitcode(driver["status"]) == 0
+    assert find_event(action, "session_shutdown", lambda event: event["reason"] == "quit")
