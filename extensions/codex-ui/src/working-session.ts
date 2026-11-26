@@ -5,9 +5,11 @@ import { WORKING_FRAME_MS, Working, WorkingActivity, workingFrameKey } from "./w
 type DisposableComponent = Component & { dispose?(): void };
 const WIDGET_KEY = "codex-ui-working";
 
+const FAUX_MODEL_BASE_URL = "http://localhost:0";
+
 /** Own both dynamic components and their single 80ms phase-aligned animation clock for this session. */
 export class WorkingSession {
-  readonly activity = new WorkingActivity();
+  readonly activity: WorkingActivity;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private generation = 0;
   private disposed = false;
@@ -15,7 +17,25 @@ export class WorkingSession {
   private lastRateLabel: string | undefined;
   private readonly bindings = new Map<() => void, TUI>();
 
-  constructor(private readonly ctx: ExtensionContext) {}
+  constructor(private readonly ctx: ExtensionContext) {
+    this.activity = new WorkingActivity(undefined, message => {
+      const model = this.ctx.model;
+      if (!model) return { eligible: true };
+      if (
+        model.api === "pi-virtual"
+        || model.provider === "pi-virtual"
+        || model.baseUrl === FAUX_MODEL_BASE_URL
+        || model.provider === "faux"
+        || model.api?.startsWith("faux")
+      ) {
+        return { eligible: false };
+      }
+      if (model.provider !== message.provider || model.api !== message.api || model.id !== message.model) {
+        return { eligible: false };
+      }
+      return { eligible: true, modelHasReasoning: model.reasoning };
+    });
+  }
 
   bind(component: DisposableComponent, tui: TUI): DisposableComponent {
     let released = false;

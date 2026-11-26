@@ -61,19 +61,23 @@ test("a queued callback from the previous task cannot schedule or render after r
   h.emit("session_shutdown");
 });
 
-test("response events feed the production sampler, while reinstallation releases the old session", () => {
+test("response events feed the production sampler, clear immediately on message_end, and release on reinstallation", () => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
   const h = harness(); h.emit("agent_start");
-  const partial = fauxAssistantMessage("abcdefgh".repeat(10));
+  const chunk = "0123456789" + "abcdefghijklmnopqrst" + "++++";
+  const partial = fauxAssistantMessage(chunk.repeat(4));
   h.emit("message_start", { message: partial });
-  h.emit("message_update", { message: partial, assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: "abcdefgh", partial } });
-  assert.deepEqual(h.footer.render(100), ["≈1 t/s"]);
+  h.emit("message_update", { message: partial, assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: chunk, partial } });
+  assert.deepEqual(h.footer.render(100), ["≈10 tok"]);
+  vi.advanceTimersByTime(300);
+  h.emit("message_update", { message: partial, assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: chunk.repeat(3), partial } });
+  assert.deepEqual(h.footer.render(100), ["≈100 t/s"]);
   h.emit("message_end", { message: partial });
-  assert.deepEqual(h.footer.render(100), ["≈10 t/s"]);
+  assert.deepEqual(h.footer.render(100), ["-- t/s"]);
   h.emit("message_start", { message: { role: "toolResult", content: [] } });
-  assert.deepEqual(h.footer.render(100), ["≈10 t/s"]);
+  assert.deepEqual(h.footer.render(100), ["-- t/s"]);
   vi.advanceTimersByTime(2100); assert.deepEqual(h.footer.render(100), ["-- t/s"]);
-  assert.equal(h.count(), 27, "one mount and 26 deduplicated animation frames");
+  assert.equal(h.count(), 31, "one mount and 30 deduplicated animation frames");
   h.install(h.ctx);
   assert.equal(vi.getTimerCount(), 0); assert.equal(h.widget(), undefined);
   h.emit("message_update", { message: partial, assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: "x".repeat(800), partial } });
@@ -138,4 +142,41 @@ test("phase-aligned 80ms scheduling handles early wake, cross-boundary dual read
   slow.emit("agent_start");
   assert.equal(timers.mock.calls.at(-1)![1], 1, "start() crossing 80ms boundary must schedule 1ms, not defer frame 1 to 160ms");
   slow.emit("session_shutdown");
+});
+
+test("virtual-routed and faux host models never update calibration even with positive reasoning usage", () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  const h = harness();
+  const chunk = "0123456789" + "abcdefghijklmnopqrst" + "++++";
+
+  for (const hostModel of [
+    { provider: "pi-virtual", api: "pi-virtual", id: "auto", baseUrl: "https://api.example.com", reasoning: true },
+    { provider: "custom-faux", api: "custom-api", id: "faux-1", baseUrl: "http://localhost:0", reasoning: false },
+  ]) {
+    (h.ctx as unknown as { model: unknown }).model = hostModel;
+    const session = h.install(h.ctx)!;
+    h.emit("agent_start");
+    const msg = {
+      ...fauxAssistantMessage(chunk.repeat(10)),
+      provider: hostModel.provider === "pi-virtual" ? "openai" : hostModel.provider,
+      api: hostModel.provider === "pi-virtual" ? "openai-responses" : hostModel.api,
+      model: hostModel.provider === "pi-virtual" ? "gpt-real" : hostModel.id,
+      stopReason: "stop" as const,
+      usage: {
+        input: 100,
+        output: 350,
+        reasoning: 200,
+        cacheRead: 0,
+        cacheWrite: 0,
+        totalTokens: 450,
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+      },
+    };
+    h.emit("message_start", { message: msg });
+    h.emit("message_update", { message: msg, assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: chunk.repeat(10), partial: msg } });
+    h.emit("message_end", { message: msg });
+    assert.equal(session.activity.calibration.size(), 0, `expected no calibration for ${hostModel.provider}`);
+    h.emit("agent_settled");
+  }
+  h.emit("session_shutdown");
 });

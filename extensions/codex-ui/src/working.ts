@@ -1,17 +1,24 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
 import { fitToWidth, normalizeWidth } from "./layout.js";
-import { TokenRate } from "./token-rate.js";
+import { ModelCalibration } from "./token-estimator.js";
+import { TokenRate, type ModelCalibrationResolver } from "./token-rate.js";
 
 const FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
 export const WORKING_FRAME_MS = 80;
 
 /** Keep task lifetime independent of the current model response. */
 export class WorkingActivity {
+  readonly calibration = new ModelCalibration();
   readonly rate: TokenRate;
   active = false;
   private started = 0;
-  constructor(private readonly now = () => performance.now()) { this.rate = new TokenRate(now); }
+  constructor(
+    private readonly now = () => performance.now(),
+    resolveCalibration?: ModelCalibrationResolver,
+  ) {
+    this.rate = new TokenRate(now, this.calibration, resolveCalibration);
+  }
   start(): void {
     if (this.active) return;
     this.active = true; this.started = this.now(); this.rate.reset();

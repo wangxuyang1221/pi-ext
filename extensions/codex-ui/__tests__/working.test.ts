@@ -48,17 +48,21 @@ test("rate occupies the first footer row while the status row retains its full w
     getRate: () => rate,
   });
   const before = footer.render(100);
-  rate = "≈1008 t/s";
+  rate = "-- t/s";
+  const waiting = footer.render(100);
+  assert.ok(waiting[0]!.includes(theme.fg("dim", "     -- t/s ")));
+  rate = "≈1.2k t/s";
   const active = footer.render(100);
   assert.equal(active.length, 2);
   assert.equal(active[1], before[1]);
-  assert.match(stripTerminalSequences(active[0]!), /≈1008 t\/s\s*$/u);
+  assert.ok(active[0]!.includes(theme.fg("muted", "  ≈1.2k t/s ")));
+  assert.match(stripTerminalSequences(active[0]!), /≈1\.2k t\/s\s*$/u);
   assert.match(stripTerminalSequences(active[0]!), /gpt-test high/u);
   for (let width = 1; width <= 100; width++) {
     const lines = footer.render(width);
     assert.equal(lines.length, 2);
     assert.ok(lines.every(line => visibleWidth(line) <= width));
-    if ([32, 40, 100].includes(width)) assert.match(stripTerminalSequences(lines[0]!), /≈1008 t\/s/u);
+    if ([32, 40, 100].includes(width)) assert.match(stripTerminalSequences(lines[0]!), /≈1\.2k t\/s/u);
   }
   rate = undefined; assert.deepEqual(footer.render(100), before);
 });

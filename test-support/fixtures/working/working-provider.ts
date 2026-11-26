@@ -11,33 +11,47 @@ export default function workingProvider(pi: ExtensionAPI): void {
   const record = (type: string, data: unknown) => appendFileSync(join(root, "events.jsonl"), JSON.stringify({ type, data, at: performance.now() }) + "\n");
   let attempt = 0;
   let scenario = "";
-  const faux = fauxProvider({ tokensPerSecond: 200, tokenSize: { min: 2, max: 2 }, models: [{ id: "faux-1", reasoning: true, contextWindow: 128000, maxTokens: 2048 }] });
-  faux.setResponses(Array.from({ length: 300 }, () => async context => {
+  const settings = { tokensPerSecond: 200, models: [{ id: "faux-1", reasoning: true, contextWindow: 128000, maxTokens: 2048 }] };
+  const faux = fauxProvider({ ...settings, tokenSize: { min: 2, max: 2 } });
+  // Only the tool-rate probe uses 500-character packets spaced about 625 ms apart.
+  const toolProbe = fauxProvider({ ...settings, api: faux.api, tokenSize: { min: 125, max: 125 } });
+  const packet = "中文".repeat(250);
+  pi.registerProvider({ ...faux.provider, streamSimple(model, context, options) {
     const plan = JSON.parse(readFileSync(join(root, "plan.json"), "utf8")) as { kind: string; id: string };
     if (scenario !== plan.id) { scenario = plan.id; attempt = 0; }
     attempt++;
     record("request", { kind: plan.kind, attempt, last: context.messages.at(-1)?.role });
-    if (plan.kind === "retry" && attempt === 1) return fauxAssistantMessage("", { stopReason: "error", errorMessage: "429 rate limit fixture" });
-    if (plan.kind === "compact" && attempt === 1) return fauxAssistantMessage("", { stopReason: "error", errorMessage: "maximum context length exceeded" });
-    if (plan.kind === "error") return fauxAssistantMessage("FINAL-ERROR", { stopReason: "error", errorMessage: "Nonretryable fixture failure" });
-    if ((plan.kind === "tool" || plan.kind === "cancel") && context.messages.at(-1)?.role === "user") {
-      return fauxAssistantMessage([{ type: "toolCall", id: `working-${plan.id}`, name: "bash", arguments: {
-        command: plan.kind === "cancel" ? "printf CANCEL-TOOL-ENTERED; sleep 30; printf LATE > should-not-exist.txt" : "printf TOOL-ENTERED; sleep 3; printf TOOL-FINISHED > tool-proof.txt",
-      } }], { stopReason: "toolUse" });
-    }
-    if (plan.kind === "stream") return fauxAssistantMessage([
-      { type: "thinking", thinking: "VISIBLE-THINKING " + "reasoning 中文 ".repeat(80) },
-      { type: "text", text: "VISIBLE-TEXT " + "received output 中文. ".repeat(2500) },
-    ]);
-    await delay(2500);
-    return fauxAssistantMessage(`DONE-${plan.kind}`);
-  }));
-  pi.registerProvider(faux.provider);
+    const transport = plan.kind === "tool" ? toolProbe : faux;
+    transport.appendResponses([async () => {
+      if (plan.kind === "retry" && attempt === 1) return fauxAssistantMessage("", { stopReason: "error", errorMessage: "429 rate limit fixture" });
+      if (plan.kind === "compact" && attempt === 1) return fauxAssistantMessage("", { stopReason: "error", errorMessage: "maximum context length exceeded" });
+      if (plan.kind === "error") return fauxAssistantMessage("FINAL-ERROR", { stopReason: "error", errorMessage: "Nonretryable fixture failure" });
+      if ((plan.kind === "tool" || plan.kind === "cancel") && context.messages.at(-1)?.role === "user") {
+        const prelude = plan.kind === "tool" ? [{ type: "text" as const, text: packet.repeat(3) }] : [];
+        return fauxAssistantMessage([...prelude, { type: "toolCall", id: `working-${plan.id}`, name: "bash", arguments: {
+          command: plan.kind === "cancel" ? "printf CANCEL-TOOL-ENTERED; sleep 30; printf LATE > should-not-exist.txt" : "printf TOOL-ENTERED; sleep 3; printf TOOL-FINISHED > tool-proof.txt",
+        } }], { stopReason: "toolUse" });
+      }
+      if (plan.kind === "stream") return fauxAssistantMessage([
+        { type: "thinking", thinking: "VISIBLE-THINKING " + "reasoning 中文 ".repeat(80) },
+        { type: "text", text: "VISIBLE-TEXT " + "received output 中文. ".repeat(2500) },
+      ]);
+      await delay(2500);
+      return fauxAssistantMessage(`DONE-${plan.kind}`);
+    }]);
+    return transport.provider.streamSimple(model, context, options);
+  } });
   pi.on("session_start", (event, ctx) => {
     ctx.ui.setStatus("status", "Status: active | Keep the second footer row intact");
     record("start", { reason: event.reason, pid: process.pid, tty: process.stdin.isTTY, session: ctx.sessionManager.getSessionFile() });
   });
   pi.on("agent_start", event => record("agent_start", event));
+  pi.on("message_update", event => {
+    const delta = event.assistantMessageEvent;
+    if (delta.type === "text_delta" && delta.delta === packet) {
+      record("toolTextPacket", { size: delta.delta.length, receivedAt: performance.now() });
+    }
+  });
   pi.on("agent_end", event => record("agent_end", event));
   pi.on("agent_settled", event => record("agent_settled", event));
   pi.on("ui_prompt_start", event => record("ui_prompt_start", event));
