@@ -10,6 +10,13 @@
 
 ## Agent skills
 
+### Verification decisions
+
+| 修改场景 | 验收依据 |
+| --- | --- |
+| 修改工具渲染缓存时，如何判断主题依赖是否完整？ | 只替换一种相关配色，用同一份内容比较已挂载视图与新建视图。[差异换色回归](extensions/codex-ui/__tests__/codemode-diff-theme.test.ts) |
+| 修改终端任务状态时，如何确认用户看到了这次操作的结果？ | 将本次操作的生命周期事件与随后完整绘制的状态区域配对，覆盖普通和全屏模式。[Working 终端验收](test-support/fixtures/working/working_journey.py) |
+
 ### Repository language policy
 
 Agent 创建、修改或发布 text artifacts 前，必须先读取 `docs/agents/repository-language-policy.md`。
