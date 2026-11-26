@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 from wcwidth import wcswidth
 
-from pty_observations import RATE, presented_cursor_frame, presented_frame_after, working_slots
+from pty_observations import RATE, event_marker_end, presented_cursor_frame, presented_frame_after, working_slots
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -57,7 +57,7 @@ def run(driver):
 
     def idle_footer(*, dialog=False):
         layout = slots(dialog=dialog)
-        return layout is not None and not layout.working_text and layout.metric is None
+        return layout is not None and layout.idle
 
     def find_event(after, kind, predicate=lambda _: True):
         return next((event for event in driver["lifecycle"][after["eventCount"]:]
@@ -65,15 +65,19 @@ def run(driver):
 
     def wait_surface(predicate, label, after, *, kind=None, matches=lambda _: True, dialog=False, seconds=20, name=None):
         event = None
+        marker_end = None
 
         def ready():
-            nonlocal event
+            nonlocal event, marker_end
             offset = after["rawBytes"]
             if kind is not None:
                 event = find_event(after, kind, matches)
                 if event is None:
                     return False
-                offset = max(offset, event["observedAtRawByte"])
+                marker_end = event_marker_end(driver["raw"], event["sequence"], offset)
+                if marker_end is None:
+                    return False
+                offset = marker_end
             return presented_frame_after(driver["raw"], offset) is not None and predicate()
 
         wait(ready, label, seconds=seconds)
@@ -81,7 +85,7 @@ def run(driver):
         capture(name)
         layout = slots(dialog=dialog)
         driver["screens"][name].update(
-            after=after, event=event,
+            after=after, event=event, eventMarkerEnd=marker_end,
             slots={"workingRow": layout.working_row, "working": layout.working_text,
                    "footerRow": layout.footer_row, "footer": layout.footer_text,
                    "statusRow": layout.status_row, "status": layout.status_text},
@@ -128,7 +132,7 @@ def run(driver):
         action = send("\x1b")
         settled = wait_idle("Escape aborts the task and a new frame clears Working and rate", action, aborted=True, name=name)
         ended = find_event(action, "agent_end")
-        assert ended is not None and ended["index"] < settled["index"], settled
+        assert ended is not None and ended["sequence"] < settled["sequence"], settled
         if transcript is not None:
             assert transcript in view(), view()
         return action, settled
@@ -225,7 +229,7 @@ def run(driver):
                  "first 500 Chinese characters show the received amount", action, kind="toolTextPacket",
                  name="tool-warmup")
     first_packet = find_event(action, "toolTextPacket")
-    second_packet_boundary = {**action, "eventCount": first_packet["index"] + 1}
+    second_packet_boundary = {**action, "eventCount": first_packet["sequence"] + 1}
     wait_surface(lambda: working() and re.fullmatch(RATE, footer_metric()),
                  "second Chinese packet shows a measured rate", second_packet_boundary,
                  kind="toolTextPacket", seconds=1.6, name="tool-stream-rate")
@@ -249,7 +253,7 @@ def run(driver):
     settled = wait_idle("tool and continuation settle before the neutral footer appears", action, name="tool-settled")
     ended = find_event(action, "tool_execution_end",
                        lambda event: event["toolCallId"] == started["data"]["toolCallId"] and not event["isError"])
-    assert ended is not None and started["index"] < ended["index"] < settled["index"], settled
+    assert ended is not None and started["sequence"] < ended["sequence"] < settled["sequence"], settled
     assert (runtime / "workspace/tool-proof.txt").read_text() == "TOOL-FINISHED"
     checks.append("host tool preserves real file side effect and neutral status row")
 
@@ -265,7 +269,7 @@ def run(driver):
     action, settled = cancel("cancel-tool-settled", transcript=transcript)
     aborted_tool = find_event(action, "tool_execution_end",
                               lambda event: event["isError"] and event["toolCallId"] == entered["data"]["toolCallId"])
-    assert aborted_tool is not None and aborted_tool["index"] < settled["index"], events("tool_execution_end")
+    assert aborted_tool is not None and aborted_tool["sequence"] < settled["sequence"], events("tool_execution_end")
     assert not (runtime / "workspace/should-not-exist.txt").exists()
     checks.append("real Escape cancellation stops shell side effect before settlement")
 

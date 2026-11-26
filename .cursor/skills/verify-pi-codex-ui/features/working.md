@@ -38,7 +38,9 @@ conda run -n codex-py312 python scripts/working-pty.py "$RUN/fullscreen" --mode 
 
 ### Presentation evidence
 
-从输入框和夹具的 footer 状态行定位 Working 行和速率行。全屏状态行在视口最底部，普通模式下方可有空行。输入对话框用其边框定位上方的 Working 行。开始、取消、结束、新会话和 reload 的证据保存在 `screens.json`。每条记录包含动作前的 PTY 字节偏移、对应事件的序号与观测边界、完整同步帧的起止偏移，以及各目标行的坐标和文本。同步帧必须在动作与事件对应的观测边界之后开始。可用 `events.jsonl` 与 `terminal.ansi` 对照事件与画面。
+从输入框和夹具的 footer 状态行定位 Working 行和速率行。全屏状态行在视口最底部，普通模式下方可有空行。输入对话框用其边框定位上方的 Working 行。活跃速率需出现在首行右侧并符合位置、宽度和颜色要求。进入 idle 后，footer 首行任意位置残留的速率或 token 数都会使校验失败。
+
+夹具把每条 `events.jsonl` 记录的序号写入同一条 PTY 输出流。开始、取消、结束、新会话和 reload 的证据保存在 `screens.json`，包含动作前的 PTY 字节偏移、匹配的事件序号、无视觉标记的结束偏移、完整同步帧的起止偏移，以及各目标行的坐标和文本。同步帧必须在对应标记结束之后开始。可用 `events.jsonl` 与 `terminal.ansi` 对照事件和画面。
 
 ## Gotchas
 

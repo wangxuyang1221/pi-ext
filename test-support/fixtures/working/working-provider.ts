@@ -5,10 +5,19 @@ import { fauxAssistantMessage, fauxProvider } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { matchesKey } from "@earendil-works/pi-tui";
 
+const eventSequenceKey = Symbol.for("pi-ext.working-event-sequence");
+const processState = globalThis as typeof globalThis & { [eventSequenceKey]?: number };
+
 /** Substitute only the remote model/summary, retaining the real session and tool paths. */
 export default function workingProvider(pi: ExtensionAPI): void {
   const root = process.env.WORKING_EVIDENCE!;
-  const record = (type: string, data: unknown) => appendFileSync(join(root, "events.jsonl"), JSON.stringify({ type, data, at: performance.now() }) + "\n");
+  const record = (type: string, data: unknown) => {
+    // Keep the sequence across extension reloads and queue the marker on the renderer's stdout.
+    const sequence = processState[eventSequenceKey] ?? 0;
+    processState[eventSequenceKey] = sequence + 1;
+    appendFileSync(join(root, "events.jsonl"), JSON.stringify({ sequence, type, data, at: performance.now() }) + "\n");
+    process.stdout.write(`\x1b_pi-ext:working-event=${sequence}\x1b\\`);
+  };
   let attempt = 0;
   let scenario = "";
   const settings = { tokensPerSecond: 200, models: [{ id: "faux-1", reasoning: true, contextWindow: 128000, maxTokens: 2048 }] };

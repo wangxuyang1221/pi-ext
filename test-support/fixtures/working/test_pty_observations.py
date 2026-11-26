@@ -1,6 +1,15 @@
+import os
+from pathlib import Path
+import pty
+import select
+import tempfile
+import tty
 import unittest
 
-from pty_observations import Frame, STATUS_TEXT, SYNC_END, SYNC_START, presented_cursor_frame, presented_frame_after, records, working_slots
+from pty_observations import (
+    EVENT_MARKER, Frame, STATUS_TEXT, SYNC_END, SYNC_START, event_marker_end,
+    presented_cursor_frame, presented_frame_after, records, working_slots,
+)
 from live_event_records import read_records
 
 
@@ -26,6 +35,7 @@ class WorkingSlotsTest(unittest.TestCase):
                 self.assertEqual(layout.working_text, "")
                 self.assertIsNone(layout.spinner)
                 self.assertIsNone(layout.metric)
+                self.assertTrue(layout.idle)
 
     def test_detects_only_working_and_right_aligned_footer_slots(self):
         metric = "≈218 t/s"
@@ -39,6 +49,22 @@ class WorkingSlotsTest(unittest.TestCase):
         layout = working_slots(rows, 60, fullscreen=True)
         self.assertIsNone(layout.spinner)
         self.assertIsNone(layout.metric)
+
+    def test_idle_footer_rejects_shifted_clipped_and_capped_metrics(self):
+        for fullscreen in (True, False):
+            for metric in ("-- t/s", "≈218 t/s", "≈999M+ t/s", "≈999M+ tok"):
+                with self.subTest(fullscreen=fullscreen, metric=metric):
+                    left = f" faux-1 {metric}"
+                    edge = (" faux-1 ".ljust(60 - len(metric)) + metric)
+                    aligned = (" faux-1 ".ljust(59 - len(metric)) + metric + " ")
+                    for footer in (left, edge, aligned):
+                        rows = self.rows(footer=footer, fullscreen=fullscreen)
+                        layout = working_slots(rows, 60, fullscreen=fullscreen)
+                        self.assertFalse(layout.idle)
+                        if footer == aligned:
+                            self.assertEqual(layout.metric, (metric, 59 - len(metric)))
+                        else:
+                            self.assertIsNone(layout.metric)
 
     def test_fullscreen_requires_status_at_bottom_of_the_viewport(self):
         self.assertIsNone(working_slots(self.rows(fullscreen=False), 60, fullscreen=True))
@@ -61,6 +87,48 @@ class PresentedFrameTest(unittest.TestCase):
             self.assertIsNone(presented_frame_after(raw, offset))
         raw = started + SYNC_END + new_frame + SYNC_END
         self.assertEqual(presented_frame_after(raw, offset), Frame(offset + len(SYNC_END), len(raw)))
+
+    def test_event_marker_requires_matching_sequence_after_action_and_complete_apc(self):
+        prefix = EVENT_MARKER % 1 + b"action boundary"
+        action_offset = len(prefix)
+        marker = EVENT_MARKER % 10
+        for length in range(len(marker)):
+            with self.subTest(length=length):
+                self.assertIsNone(event_marker_end(prefix + marker[:length], 10, action_offset))
+        self.assertEqual(event_marker_end(prefix + marker, 10, action_offset), action_offset + len(marker))
+        self.assertIsNone(event_marker_end(prefix + marker, 1, action_offset))
+        self.assertIsNone(event_marker_end(prefix + marker, 0, action_offset))
+        self.assertIsNone(event_marker_end(prefix + marker, 10, action_offset + 1))
+
+    def test_queued_idle_frame_cannot_satisfy_reload_ledger_event(self):
+        master, slave = pty.openpty()
+        self.addCleanup(os.close, master)
+        self.addCleanup(os.close, slave)
+        tty.setraw(slave)
+
+        with tempfile.TemporaryDirectory() as scratch:
+            path = Path(scratch) / "events.jsonl"
+            queued = SYNC_START + b"idle before reload" + SYNC_END
+            os.write(slave, queued)
+            path.write_bytes(b'{"sequence":0,"type":"start","data":{"reason":"reload"}}\n')
+            [event] = read_records(path)
+            marker = EVENT_MARKER % event["sequence"]
+            os.write(slave, marker)
+
+            raw = bytearray()
+            while len(raw) < len(queued + marker):
+                self.assertTrue(select.select([master], [], [], 1)[0])
+                raw.extend(os.read(master, 65536))
+            # The action and the ledger observation both preceded this PTY read.
+            self.assertEqual(presented_frame_after(raw, 0), Frame(0, len(queued)))
+            boundary = event_marker_end(raw, event["sequence"], 0)
+            self.assertEqual(boundary, len(queued + marker))
+            self.assertIsNone(presented_frame_after(raw, boundary))
+
+            next_frame = SYNC_START + b"idle after reload" + SYNC_END
+            self.assertIsNone(presented_frame_after(raw + next_frame[:-1], boundary))
+            self.assertEqual(presented_frame_after(raw + next_frame, boundary),
+                             Frame(boundary, boundary + len(next_frame)))
 
 
 class CursorFrameTest(unittest.TestCase):

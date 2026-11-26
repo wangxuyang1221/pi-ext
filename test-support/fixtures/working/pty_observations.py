@@ -11,10 +11,14 @@ from live_event_records import read_records as records
 
 SYNC_START = b"\x1b[?2026h"
 SYNC_END = b"\x1b[?2026l"
+EVENT_MARKER = b"\x1b_pi-ext:working-event=%d\x1b\\"
 STATUS_TEXT = " Status: active | Keep the second footer row intact"
 WORKING = re.compile(r"^ ([⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]) Working \(")
-RATE = r"≈\d+(?:\.\d+)?[kM]? t/s"
-METRIC = re.compile(rf"(?<= )(?:{RATE}|≈(?:<1|\d+(?:\.\d+)?[kM]?) tok|-- t/s) $")
+COUNT = r"(?:999M\+|\d+(?:\.\d+)?[kM]?)"
+RATE = rf"≈{COUNT} t/s"
+METRIC_TEXT = rf"(?:{RATE}|≈(?:<1|{COUNT}) tok|-- t/s)"
+METRIC = re.compile(METRIC_TEXT)
+ALIGNED_METRIC = re.compile(rf"(?<= )({METRIC_TEXT}) $")
 
 
 @dataclass(frozen=True)
@@ -29,6 +33,15 @@ def presented_frame_after(raw, offset):
     if offset <= start < end:
         return Frame(start, end + len(SYNC_END))
     return None
+
+
+def event_marker_end(raw, sequence, offset):
+    """Return the end of a complete PTY marker that began at or after the action boundary."""
+    marker = EVENT_MARKER % sequence
+    start = raw.find(marker)
+    if start < offset:
+        return None
+    return start + len(marker)
 
 
 @dataclass(frozen=True)
@@ -47,13 +60,17 @@ class WorkingSlots:
 
     @property
     def metric(self):
-        match = METRIC.search(self.footer_text)
+        match = ALIGNED_METRIC.search(self.footer_text)
         if not match:
             return None
-        label = match[0].rstrip()
+        label = match[1]
         if wcswidth(label) > 10:
             return None
         return label, wcswidth(self.footer_text[:match.start()])
+
+    @property
+    def idle(self):
+        return not self.working_text and METRIC.search(self.footer_text) is None
 
 
 def working_slots(lines, columns, *, fullscreen, input_dialog=False):

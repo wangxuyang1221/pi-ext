@@ -27,7 +27,7 @@ parser.add_argument("--extension", type=Path, help="Installed codex-ui entry for
 args = parser.parse_args()
 repo = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(repo / "test-support/fixtures/working"))
-from pty_observations import SYNC_END, SYNC_START, presented_frame_after, records
+from pty_observations import SYNC_END, SYNC_START, event_marker_end, presented_frame_after, records
 
 root = args.evidence.resolve()
 assert root.is_relative_to(repo / ".tmp") and not root.exists(), "Use a new worktree .tmp evidence directory"
@@ -99,7 +99,10 @@ def events(kind):
 def poll_events():
     observed = records(root / "events.jsonl")
     for index in range(len(lifecycle), len(observed)):
-        lifecycle.append({**observed[index], "index": index, "observedAtRawByte": len(raw)})
+        event = observed[index]
+        if event.get("sequence") != index:
+            raise ValueError(f"Expected Working event sequence {index}")
+        lifecycle.append(event)
 
 def view():
     return "\n".join(line.rstrip() for line in screen.display)
@@ -107,8 +110,7 @@ def view():
 def pump(timeout=0.03, *, observe_events=True):
     global status, apc_pending, rendering
     ready, _, _ = select.select([fd], [], [], timeout)
-    # Sample complete ledger rows before consuming available PTY bytes. The
-    # observation boundary excludes any frame that we already saw begin.
+    data = b""
     if observe_events:
         poll_events()
     if ready:
@@ -142,6 +144,7 @@ def pump(timeout=0.03, *, observe_events=True):
         done, value = os.waitpid(pid, os.WNOHANG)
         if done:
             status = value
+    return bool(data)
 
 def wait(predicate, label, seconds=20):
     deadline = time.monotonic() + seconds
@@ -197,6 +200,8 @@ finally:
         if status is None:
             os.killpg(pid, signal.SIGKILL)
             _, status = os.waitpid(pid, 0)
+    while pump(0, observe_events=False):
+        pass
     os.close(fd)
     listing = subprocess.run(["ps", "-axo", "pid=,pgid=,stat="], capture_output=True, text=True, check=True).stdout
     survivors = [line for line in listing.splitlines() if len(fields := line.split()) >= 3 and fields[1] == str(pid) and not fields[2].startswith("Z")]
@@ -210,7 +215,12 @@ finally:
     event_archive_error = None
     if not survivors:
         try:
-            records(root / "events.jsonl", final=True)
+            marker_offset = 0
+            for index, event in enumerate(records(root / "events.jsonl", final=True)):
+                marker_end = event_marker_end(raw, index, marker_offset)
+                if event.get("sequence") != index or marker_end is None:
+                    raise ValueError(f"Missing or out-of-order PTY marker for Working event {index}")
+                marker_offset = marker_end
         except ValueError as error:
             passed = False
             event_archive_error = str(error)
