@@ -20,6 +20,7 @@ import {
 } from "@earendil-works/pi-tui";
 
 import { ExecutionSettings, executionDefinitionCache, type CodexExecutionOptions } from "./execution-settings.js";
+import { getEditSyntaxFingerprint } from "./syntax-palette.js";
 import { sanitizeDiffSource } from "./diff-source.js";
 import { BashGroups, type BashGroupRowState } from "./bash-groups.js";
 import { renderBashGroup } from "./bash-group-layout.js";
@@ -643,13 +644,6 @@ function getEditResultThemeFingerprint(theme: Theme): string {
     theme.getBgAnsi("toolSuccessBg"),
     theme.getBgAnsi("toolErrorBg"),
   ].join("\0");
-}
-
-function getEditSyntaxFingerprint(theme: Theme): string {
-  // The host passes the live theme proxy also consumed by highlightCode.
-  return (["text", "syntaxComment", "syntaxKeyword", "syntaxFunction", "syntaxVariable", "syntaxString",
-    "syntaxNumber", "syntaxType", "syntaxOperator", "syntaxPunctuation", "mdCodeBlock"] as const)
-    .map(color => theme.fg(color, "x")).join("\0");
 }
 
 function getEditResultLayout(
