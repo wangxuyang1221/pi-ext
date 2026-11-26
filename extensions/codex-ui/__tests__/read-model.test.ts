@@ -65,16 +65,16 @@ test("result priority preserves final content, status and details without replay
   const b = groups.bind({ state: {}, toolCallId: "b" } as never);
   groups.result("a", result("first partial"), "partial", false);
   groups.result("a", result("next partial"), "partial", false);
-  assert.equal(groups.resolve(a).content?.[0]?.text, "next partial");
+  assert.equal(a.current().content?.[0]?.text, "next partial");
   groups.result("a", result("execution output"), "execution", false);
-  assert.equal(groups.resolve(a).status, "completed");
+  assert.equal(a.current().status, "completed");
   groups.result("a", result("late partial"), "partial", false);
-  assert.equal(groups.resolve(a).content?.[0]?.text, "execution output");
+  assert.equal(a.current().content?.[0]?.text, "execution output");
   const final = { ...result("Operation aborted"), details: { marker: "final details" } };
   groups.result("a", final, "message", true);
   // A final message also works without a preceding execution event.
   groups.result("b", result("message only"), "message", false);
-  const member = groups.resolve(a), revision = member.revision, version = member.group.version;
+  const member = a.current(), revision = member.revision, version = member.group.version;
   assert.equal(member.content, final.content); assert.equal(member.details, final.details);
   assert.equal(member.status, "failed");
   for (let i = 0; i < 3; i++) {
@@ -86,7 +86,7 @@ test("result priority preserves final content, status and details without replay
   assert.equal(member.revision, revision); assert.equal(member.group.version, version);
   assert.equal(member.content, final.content); assert.equal(member.details, final.details);
   assert.equal(member.status, "failed"); assert.equal(member.path, "a.ts");
-  assert.equal(groups.resolve(b).content?.[0]?.text, "message only");
+  assert.equal(b.current().content?.[0]?.text, "message only");
 });
 
 test.each([[false, false], [true, false], [false, true], [true, true]])("final message reflows image=%s with shared content=%s", (initialImage, sharedContent) => {
@@ -263,8 +263,8 @@ test("one streaming update touches only its record and candidate regardless of h
         views.push(groups.bind({ state: {}, toolCallId: id } as never));
       }
     }
-    for (const view of views) groups.resolve(view);
-    const untouched = groups.resolve(views[0]!);
+    for (const view of views) view.current();
+    const untouched = views[0]!.current();
     const version = untouched.group.version;
     let lookups = 0;
     const get = Map.prototype.get;
@@ -273,10 +273,10 @@ test("one streaming update touches only its record and candidate regardless of h
     });
     try {
       groups.result(`cost-${count - 1}`, result("final"), "execution", false);
-      assert.equal(groups.resolve(views[count - 2]!).group.members[1]!.status, "completed");
+      assert.equal(views[count - 2]!.current().group.members[1]!.status, "completed");
     } finally { spy.mockRestore(); }
     assert(lookups < 20, `Expected bounded single-record work, got ${lookups} lookups`);
-    assert.equal(groups.resolve(views[0]!), untouched);
+    assert.equal(views[0]!.current(), untouched);
     assert.equal(untouched.group.version, version);
   }
 });
@@ -297,13 +297,13 @@ test("bulk hydration and binding do not rescan an entire candidate for each reco
         groups.result(block.id, result(block.id), "execution", false);
         views.push(groups.bind({ state: {}, toolCallId: block.id } as never));
       }
-      for (const view of views) groups.resolve(view);
+      for (const view of views) view.current();
     } finally { spy.mockRestore(); }
     assert(lookups < count * 40, `Expected linear bulk work, got ${lookups} lookups for ${count} records`);
-    const first = groups.resolve(views[0]!);
+    const first = views[0]!.current();
     for (let i = 0; i < 10; i++) {
       const replacement = groups.bind({ state: {}, toolCallId: blocks[0]!.id } as never);
-      assert.equal(groups.resolve(replacement), first);
+      assert.equal(replacement.current(), first);
     }
   }
 });

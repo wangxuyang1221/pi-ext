@@ -1,14 +1,7 @@
-import json
+"""Keep the verification drivers' event-reader import available."""
+from pathlib import Path
+import sys
 
-
-def read_records(path, *, final=False):
-    """Read complete LF-delimited events; reject a trailing row once the writer stops."""
-    try:
-        data = path.read_bytes()
-    except FileNotFoundError:
-        return []
-    *rows, trailing = data.split(b"\n")
-    records = [json.loads(row.decode("utf-8")) for row in rows]
-    if final and trailing:
-        raise ValueError("Unterminated event record after the writer stopped")
-    return records
+SHARED_TERMINAL = Path(__file__).resolve().parents[4] / "test-support/terminal"
+sys.path.insert(0, str(SHARED_TERMINAL))
+from live_event_records import read_records

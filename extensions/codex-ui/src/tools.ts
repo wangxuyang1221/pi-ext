@@ -20,10 +20,11 @@ import {
 } from "@earendil-works/pi-tui";
 
 import { ExecutionSettings, executionDefinitionCache, type CodexExecutionOptions } from "./execution-settings.js";
+import { getEditSyntaxFingerprint } from "./syntax-palette.js";
 import { sanitizeDiffSource } from "./diff-source.js";
 import { BashGroups, type BashGroupRowState } from "./bash-groups.js";
 import { renderBashGroup } from "./bash-group-layout.js";
-import { ReadGroups, type ReadRowState } from "./read-groups.js";
+import { ReadGroups } from "./read-groups.js";
 import { ReadViewComponent } from "./read-view.js";
 import {
   fitToWidth,
@@ -65,7 +66,7 @@ export interface DisplayDiffLine {
   highlightedText?: string;
 }
 
-interface CodexReadState extends ReadRowState {
+interface CodexReadState {
   callComponent?: ReadViewComponent;
 }
 
@@ -231,14 +232,13 @@ export function registerCodexTools(
     renderCall(args, theme, context) {
       const state = context.state as unknown as CodexReadState;
       const view = readGroups.bind(context);
-      readGroups.updateCall(view, context);
-      const component = state.callComponent ??= new ReadViewComponent(readGroups, view);
+      view.updateCall(context);
+      const component = state.callComponent ??= new ReadViewComponent(view.current);
       component.update(context.expanded, theme);
       return component;
     },
     renderResult(result, options, theme, context) {
-      const member = readGroups.bind(context);
-      readGroups.updateResult(member, result, options.isPartial, context.isError);
+      readGroups.bind(context).updateResult(result, options.isPartial, context.isError);
       return updateComponent(context.lastComponent, () => []);
     },
   };
@@ -643,13 +643,6 @@ function getEditResultThemeFingerprint(theme: Theme): string {
     theme.getBgAnsi("toolSuccessBg"),
     theme.getBgAnsi("toolErrorBg"),
   ].join("\0");
-}
-
-function getEditSyntaxFingerprint(theme: Theme): string {
-  // The host passes the live theme proxy also consumed by highlightCode.
-  return (["text", "syntaxComment", "syntaxKeyword", "syntaxFunction", "syntaxVariable", "syntaxString",
-    "syntaxNumber", "syntaxType", "syntaxOperator", "syntaxPunctuation", "mdCodeBlock"] as const)
-    .map(color => theme.fg(color, "x")).join("\0");
 }
 
 function getEditResultLayout(

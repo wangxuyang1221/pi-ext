@@ -1,9 +1,10 @@
 import { resolve } from "node:path";
 import type { BashToolDetails, ReadToolDetails, Theme, ToolRenderers } from "@earendil-works/pi-coding-agent";
-import { renderReadGroup } from "./read-group-layout.js";
+import { renderSingleRead } from "./read-group-layout.js";
 import { renderBashGroup } from "./bash-group-layout.js";
-import type { ReadMember } from "./read-groups.js";
+import type { ReadRow } from "./read-groups.js";
 import type { BashMember } from "./bash-groups.js";
+import { getEditSyntaxFingerprint } from "./syntax-palette.js";
 import { ToolRenderCache } from "./render-cache.js";
 import { clean, inline } from "./codemode-data.js";
 import { type CodemodeCall, type CodemodeRow, CodemodeStore } from "./codemode-model.js";
@@ -14,14 +15,15 @@ type ToolRenderContext = Parameters<NonNullable<ToolRenderers["renderCall"]>>[2]
 
 const defaultHints = hostKeybindingHints({});
 
-export const themeKey = (theme: Theme): string => {
+export const themeKey = (theme: Theme, includesDiff = true): string => {
   const fg = (["text", "dim", "accent", "muted", "toolTitle", "toolOutput", "success", "warning", "error", "borderMuted"] as const)
     .map(name => theme.fg(name, "x")).join("");
   const diffFg = typeof theme.getFgAnsi === "function" ? theme.getFgAnsi("toolDiffContext") : "";
   const diffBg = typeof theme.getBgAnsi === "function"
     ? `${theme.getBgAnsi("toolSuccessBg")}\0${theme.getBgAnsi("toolErrorBg")}`
     : "";
-  return `${fg}\0${diffFg}\0${diffBg}`;
+  const syntax = includesDiff ? getEditSyntaxFingerprint(theme) : "";
+  return `${fg}\0${diffFg}\0${diffBg}\0${syntax}`;
 };
 
 /** Bounded derived strings only: native components never retain nested execution results. */
@@ -43,7 +45,7 @@ export class CodemodePresentation {
       expanded,
       cwd,
       expandHint,
-      themeKey(theme),
+      themeKey(theme, expanded),
       this.scope.identity(hints),
     ].join("\0");
     return this.scope.lines(key, () => renderCodemodeTree(row, {
@@ -56,7 +58,7 @@ export class CodemodePresentation {
   }
   child(call: CodemodeCall, width: number, theme: Theme, cwd: string, hints: HostKeybindingHints = defaultHints): string[] {
     const captured = this.store.results.get(call.id);
-    const key = ["child", this.scope.identity(call), call.revision, captured?.revision ?? "missing", width, themeKey(theme), this.scope.identity(hints)].join("\0");
+    const key = ["child", this.scope.identity(call), call.revision, captured?.revision ?? "missing", width, themeKey(theme, call.name === "edit" || call.name === "write"), this.scope.identity(hints)].join("\0");
     return this.scope.lines(key, () => {
       const heading = theme.fg(statusColor(call.status), `${callLabel(call)} · ${call.status}${call.durationMs === undefined ? "" : ` · ${duration(call.durationMs)}`}`);
       const fallback = () => {
@@ -74,11 +76,10 @@ export class CodemodePresentation {
       const status = call.status === "running" ? "running" : call.status === "ok" ? "completed" : "failed";
       const result = captured.result;
       if (call.name === "read" && typeof call.args.path === "string") {
-        const member: ReadMember = { id: call.id, cache: this.scope, group: { members: [], version: 0 }, path: clean(call.args.path), fullPath: resolve(cwd, call.args.path),
+        const member: ReadRow = { id: call.id, cache: this.scope, path: clean(call.args.path), fullPath: resolve(cwd, call.args.path),
           offset: typeof call.args.offset === "number" ? call.args.offset : undefined, limit: typeof call.args.limit === "number" ? call.args.limit : undefined,
           status, content: result.content, details: result.details as ReadToolDetails, revision: call.revision };
-        member.group.members.push(member);
-        return renderReadGroup(member, true, theme, width);
+        return renderSingleRead(member, true, theme, width);
       }
       if (call.name === "bash" && typeof call.args.command === "string") {
         const member: BashMember = { id: call.id, cache: this.scope, group: { members: [] }, command: call.args.command, commandRevision: call.revision, outputRevision: captured.revision,
@@ -102,7 +103,8 @@ export class CodemodePresentation {
   detail(row: CodemodeRow, state: InspectorState, theme: Theme, width: number, cwd: string, hints: HostKeybindingHints = defaultHints): string[] {
     const call = row.calls[state.selected];
     const captured = call && this.store.results.get(call.id);
-    const key = ["inspect", this.scope.identity(row), state.tab, state.tab === "Calls" ? `${call?.id}:${call?.revision}:${captured?.revision}` : row.revision, width, themeKey(theme), this.scope.identity(hints)].join("\0");
+    const includesDiff = state.tab === "Calls" && (call?.name === "edit" || call?.name === "write");
+    const key = ["inspect", this.scope.identity(row), state.tab, state.tab === "Calls" ? `${call?.id}:${call?.revision}:${captured?.revision}` : row.revision, width, themeKey(theme, includesDiff), this.scope.identity(hints)].join("\0");
     return this.scope.lines(key, () => {
       if (state.tab === "Script") return wrapDetail([...(row.code || "Script unavailable").split("\n"), ...(row.code.length >= 65536 ? ["Script preview limited to 64 Ki characters"] : [])], width);
       if (state.tab === "Output") return wrapDetail((row.output || "(No output)").split("\n").concat(row.output.length >= 65536 ? ["Output preview limited to 64 Ki characters"] : [], row.outputPath ? [`Full output: ${row.outputPath}`] : []), width);

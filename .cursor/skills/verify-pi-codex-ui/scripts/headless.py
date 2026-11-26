@@ -50,8 +50,7 @@ try:
                     p.stdin.write(b'{"id":"audit","type":"prompt","message":"Execute audit tools"}\n');p.stdin.flush()
                     deadline=time.monotonic()+30
                     while time.monotonic()<deadline:
-                        path=root/'events.jsonl'
-                        if any(event['type']=='agent_settled' for event in read_records(path)): break
+                        if any(event['type']=='agent_settled' for event in read_records(root/'events.jsonl')): break
                         if p.poll() is not None:break
                         time.sleep(.1)
                     else:raise AssertionError('RPC did not settle')
@@ -89,6 +88,8 @@ try:
                 owned['groupStopped']=group_stopped
                 damaged.chmod(0o600)
                 assert owned['stopped'] and owned['groupStopped']
+                if mode=='rpc':
+                    read_records(root/'events.jsonl', final=True)
     passed=True
 except Exception:
     (EVIDENCE/'failure.txt').write_text(traceback.format_exc());print(traceback.format_exc())

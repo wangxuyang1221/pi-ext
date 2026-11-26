@@ -2,7 +2,7 @@ import { basename, dirname } from "node:path";
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { fitToWidth, normalizeWidth } from "./layout.js";
-import type { ReadMember } from "./read-groups.js";
+import type { ReadMember, ReadRow } from "./read-groups.js";
 import { fileFailureStatus, toolStatusColor, toolStatusMarker } from "./tool-status.js";
 
 const PREVIEW_LINES = 3;
@@ -11,10 +11,10 @@ const PREVIEW_CHARS = 512;
 function clean(text: string): string {
   return stripTerminalSequences(text).replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f\ud800-\udfff\u202a-\u202e\u2066-\u2069\ufff9-\ufffb]/gu, "").replace(/\t/gu, "  ");
 }
-function sourceKey(member: ReadMember): string {
+function sourceKey(member: ReadRow): string {
   return `read-source\0${member.cache.identity(member)}\0${member.revision}\0${member.offset}\0${member.limit}`;
 }
-function source(member: ReadMember): string[] {
+function source(member: ReadRow): string[] {
   return member.cache.lines(sourceKey(member), () => {
     const text = (member.content ?? []).filter(block => block.type === "text").map(block => block.text ?? "").join("\n");
     if (member.status === "failed") return [text, ""];
@@ -36,7 +36,7 @@ function source(member: ReadMember): string[] {
     return [text, ""];
   });
 }
-function count(member: ReadMember, text: string): number {
+function count(member: ReadRow, text: string): number {
   return member.cache.count(`${sourceKey(member)}\0count`, () => {
     if (!text) return 0;
     let count = text.endsWith("\n") ? 0 : 1;
@@ -44,7 +44,7 @@ function count(member: ReadMember, text: string): number {
     return count;
   });
 }
-function prefixes(member: ReadMember, text: string, expanded: boolean, lineCount: number): string[] {
+function prefixes(member: ReadRow, text: string, expanded: boolean, lineCount: number): string[] {
   return member.cache.lines(`${sourceKey(member)}\0prefix\0${expanded}`, () => {
     const lines: string[] = [];
     let start = 0;
@@ -71,7 +71,7 @@ function fitDirectory(dir: string, room: number): string {
   if (visibleWidth(dir) <= room) return dir;
   return room >= 2 ? `${fitToWidth(dir, room - 1, { ellipsis: "…" })}/` : "";
 }
-function renderMember(member: ReadMember, expanded: boolean, grouped: boolean, theme: Theme, width: number): string[] {
+function renderMember(member: ReadRow, expanded: boolean, grouped: boolean, theme: Theme, width: number): string[] {
   const cache = member.cache;
   const colors = (["accent", "toolTitle", "text", "dim", "toolOutput", "success", "warning", "error"] as const)
     .map(color => theme.fg(color, "x")).join("\0");
@@ -126,6 +126,11 @@ function renderMember(member: ReadMember, expanded: boolean, grouped: boolean, t
     }
     return lines;
   });
+}
+
+export function renderSingleRead(row: ReadRow, expanded: boolean, theme: Theme, availableWidth: number): string[] {
+  const width = normalizeWidth(availableWidth);
+  return width ? renderMember(row, expanded, false, theme, width) : [];
 }
 
 /** The source group's first member emits its previews; ambiguous views stay local. */
