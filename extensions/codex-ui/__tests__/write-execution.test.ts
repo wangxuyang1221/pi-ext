@@ -215,8 +215,8 @@ test("real write results survive disk session recovery without reading or recomp
     row.updateResult(restored.message);
     row.setExpanded(false);
     const collapsed = row.render(92).map(stripTerminalSequences).filter(Boolean);
-    assert.equal(collapsed[0], "~ Added file.ts (+20)");
-    assert.equal(collapsed.at(-1), "    … +8 lines");
+    assert.equal(collapsed[0], " ~ Added file.ts (+20)");
+    assert.equal(collapsed.at(-1), "     … +8 lines");
     row.setExpanded(true);
     assert.match(row.render(92).map(stripTerminalSequences).join("\n"), /value19/u);
     for (const width of [1, 8, 16, 24, 40, 60, 92, 160]) {

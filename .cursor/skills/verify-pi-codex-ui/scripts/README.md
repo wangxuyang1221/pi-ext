@@ -41,13 +41,14 @@ pnpm test extensions/codex-ui/__tests__/reply-copy.test.ts extensions/codex-ui/_
 | `ui-header` | 从启动快照人工核对 Pi 标识、实际版本、模型和目录；PTY 驱动保存画面但不直接断言 header。组件断言见 [components.test.ts](../../../../extensions/codex-ui/__tests__/components.test.ts)。 |
 | `ui-composer`, `ui-resize` | 输入时逐列检查整行背景；40/80/140 列；真实设置菜单选择 light 与 codex-pi；fork/resume 后再检查背景。保存 pyte 文本与颜色区间、原始 ANSI。 |
 | `ui-status` | 在真实启动画面核对当前模型、工作目录和 context。不同宽度保存 TUI 画面。 |
-| `ui-theme` | 原生 `/settings` 落盘主题；`/reload`、`/new` 后检查保存值，原生 `/fork` 与 `/resume` 后另检查 composer 颜色。fork 的多行预填须 Ctrl+C 清除。 |
+| `ui-theme` | 原生 `/settings` 落盘主题。`/reload`、`/new` 后检查保存值，原生 `/fork` 与 `/resume` 后另检查 composer 颜色。fork 的多行预填须 Ctrl+C 清除。普通回复段落须保留终端 `default` 前景。用草稿、独立 Read 标题、未标注语言的回复代码围栏正文、展开的 Read/Bash 输出、回复引用、展开的思考和折叠后的 `Thinking...` 核对[主题配色](../features/layout.md#sub-features)。证据保留前景色、斜体和竖线的单元格样式。 |
+| `ui-output-padding` | 隔离设置使用宿主默认 `1`。执行真实 Read、Bash、Edit、Write 和 codemode，按 Ctrl+O 展开。通过原生 `/settings` 切换 `1 → 0 → 1`，检查落盘值、同一批工具标题与用户和回复消息对齐、工具正文保持内部缩进、占满可用宽度的 codemode 输出遵循右边距。两个设置下均缩到两列检验工具贴边及进程存活，再恢复宽度检查边距。 |
 | `ui-user-markdown`, `ui-reply-markdown` | bracketed paste 输入标题、嵌套列表、表格、代码围栏、引用、链接；核对真正模型请求和持久 session 原文，另检查 TUI 内容。`/copy` 的系统剪贴板部分须按下节人工补验。 |
 | `ui-tool-rendering` | 普通/fullscreen 的真实命令清单保留 `/inspect` 且排除 `/lowpower`；Tab 补全 `/inspec` 成功、`/lowp` 保持原输入。reload/new/fork/resume 后重复检查。始终执行真实 write/edit/bash/codemode，保存完整折叠预览与 Ctrl+O 展开结果，核对文件字节及工具成功结果。 |
 | `ui-write-added`, `ui-write-edited`, `ui-diff`, `ui-bash-preview`, `ui-expand`, `ui-error`, `ui-interrupted` | 真实新建、覆盖、Edit、大结果 Diff unavailable、控制字符原始字节、长/多行/截断 Bash；真实 Esc 取消独立 Bash，确认延后文件未生成。Write/Edit 使用短时异步文件操作，无可观察的分阶段进度，取消证据见下方文件修改边界。 |
 | `ui-shell-prefix`, `ui-shell-path`, `ui-project-trust`, `ui-settings-error`, `ui-settings-reload` | shell wrapper 真实输出；未信任项目前缀不生效；可信项目语法错误和不可读文件均阻止 read/bash；修复而未 reload 仍拒绝；reload 后恢复；重启为不信任后再次排除项目前缀。 |
 | `ui-codemode-cache`, `ui-inspect-tabs`, `ui-inspect-scroll`, `ui-codemode-resume` | 真实读取累计超过 4MiB；首项缺失、末项可读；方向键/PgDn/PgUp/Shift+Tab；原生 `/resume`、`/tree` 后发后续模型请求核对已保存结果，并确认 raw cache 不从历史恢复。调用顺序、预览外失败和本地 MCP 仍运行 skill 的 codemode case。 |
-| `ui-thinking-stream`, `ui-thinking-collapse`, `ui-thinking-resume`, `ui-title`, `ui-title-stop` | 实际流式 Thinking、Ctrl+T 隐藏选择、持久重开及后续上下文、原生 `/resume` 恢复取消/错误思考、`/compact` 后保留及开关；流中 OSC 动画、settled/取消后静止。80ms 精度仍由计时器测试验证。 |
+| `ui-thinking-stream`, `ui-thinking-collapse`, `ui-thinking-resume`, `ui-title`, `ui-title-stop` | 实际流中、结束和持久重开时核对独立 Thinking 标题、分块竖线、围栏内带竖线的空行和斜体。流中 Ctrl+T，结束后保持隐藏。fullscreen 用终端发送鼠标点击折叠与展开。后续模型请求含恢复的思考，原生 `/resume` 恢复取消及错误思考，`/compact` 后保留及开关。流中 OSC 动画，settled/Esc 后静止。取消前等待本轮独有的 `CANCEL-THINKING-FIRST`。 |
 | `ui-working`, `ui-receive-rate` | 运行 [Working 旅程](../features/working.md) 的 regular/fullscreen 入口，核对公开事件、工具文件、取消、input/retry/compaction、宽度、状态行、new/reload/quit。 |
 
 ## Manual boundaries
@@ -77,7 +78,7 @@ Write 观察器的 writeFile 回调先取得旧文件 stat/有界快照，再调
 
 ## Evidence and cleanup
 
-每次运行输出 `.tmp/test-results/codex-ui-<kind>-<mode>-<id>/`。CLI 保存每次进程的 `terminal-N.ansi`、`journey.json`、动作字节、pyte 文本/颜色区间、工具事件、配置/session/工作文件副本。headless 保存原始 JSONL、stderr、工具事件、图片尺寸与文件结果。输出 `passed=true` 仅表示脚本内断言通过。
+每次运行输出 `.tmp/test-results/codex-ui-<kind>-<mode>-<id>/`。CLI 保存每次进程的 `terminal-N.ansi`、`journey.json`、动作字节、pyte 文本与颜色/斜体区间、工具事件、配置/session/工作文件副本。headless 保存原始 JSONL、stderr、工具事件、图片尺寸与文件结果。输出 `passed=true` 仅表示脚本内断言通过。
 
 CLI 的每个 PID 和进程组必须停止，headless 的每个 Popen 必须退出；scratch 必须删除。失败保留原始 failure 和证据，修复后新建一次运行，不覆盖失败记录。这些驱动不启动监听服务；真实本地 MCP 的服务清理由 codemode case 负责。SIGKILL 无法执行 finally，按 [Cleanup](../SKILL.md#cleanup) 核对本次 PID。
 

@@ -274,11 +274,13 @@ test("write streams without counts and restores final counts before argsComplete
     { showImages: false }, write, { requestRender() {} } as never, "/repo");
   for (const count of [0, 3, 10, 20]) {
     row.updateArgs({ path: "src/new.ts", content: Array.from({ length: count }, () => "text").join("\n") });
-    assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["~ Writing src/new.ts"]);
+    assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), [" ~ Writing src/new.ts"]);
   }
   row.updateResult({ content: [{ type: "text" as const, text: "Successfully wrote file." }], isError: false });
-  assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["~ Write src/new.ts (20 lines)"]);
+  assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), [" ~ Write src/new.ts (20 lines)"]);
   row.setExpanded(true);
+  assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), [" ~ Write src/new.ts (20 lines)"]);
+  row.setOutputPad(0);
   assert.deepEqual(row.render(80).map(stripTerminalSequences).filter(Boolean), ["~ Write src/new.ts (20 lines)"]);
 });
 

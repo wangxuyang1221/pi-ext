@@ -5,10 +5,11 @@ import { CodemodePresentation } from "./codemode-presentation.js";
 import { renderInspector, type InspectorState } from "./codemode-view.js";
 import { record } from "./codemode-data.js";
 import { hostKeybindingHints, type HostKeybindingHints } from "./keybinding-hints.js";
+import { normalizeOutputPad, padOutputLines, resolveOutputPad } from "./layout.js";
 
 type RenderContext = Parameters<NonNullable<ToolRenderers["renderCall"]>>[2];
 interface RowView extends Component {
-  row: CodemodeRow; generation: number; theme: Theme; expanded: boolean; cwd: string; context: RenderContext; hints: HostKeybindingHints;
+  row: CodemodeRow; generation: number; theme: Theme; expanded: boolean; cwd: string; outputPad: number; context: RenderContext; hints: HostKeybindingHints;
 }
 interface RowState { codemodeView?: RowView }
 export interface CodemodeServices {
@@ -57,7 +58,7 @@ export function registerCodemodeUi(pi: ExtensionAPI, services: CodemodeServices)
       const row = store.ensure(context.toolCallId, record(context.args)?.code);
       let hintContext = context;
       let hintKeys = services.getKeybindings?.();
-      view = { row, generation: store.generation, theme, expanded: context.expanded, cwd: context.cwd, context, hints: hostKeybindingHints(context as RenderContext & Partial<HostKeybindingHints>, hintKeys),
+      view = { row, generation: store.generation, theme, expanded: context.expanded, cwd: context.cwd, outputPad: normalizeOutputPad(context.outputPad), context, hints: hostKeybindingHints(context as RenderContext & Partial<HostKeybindingHints>, hintKeys),
         invalidate() {}, render(width) {
           const keys = services.getKeybindings?.();
           if (hintContext !== this.context || hintKeys !== keys) {
@@ -65,11 +66,16 @@ export function registerCodemodeUi(pi: ExtensionAPI, services: CodemodeServices)
             this.hints = hostKeybindingHints(hintContext as RenderContext & Partial<HostKeybindingHints>, hintKeys);
           }
           const current = store.get(row.id) ?? this.row;
-          return presentation.tree(current, this.theme, width, this.expanded, this.cwd, this.hints.keyHint("app.tools.expand", "to expand"), this.hints);
+          const pad = resolveOutputPad(width, this.outputPad);
+          return padOutputLines(
+            presentation.tree(current, this.theme, width - pad * 2, this.expanded, this.cwd, this.hints.keyHint("app.tools.expand", "to expand"), this.hints),
+            width,
+            pad,
+          );
         } };
       state.codemodeView = view;
     } else if (view.generation === store.generation && !view.row.evicted) store.ensure(context.toolCallId, record(context.args)?.code);
-    view.theme = theme; view.expanded = context.expanded; view.cwd = context.cwd; view.context = context;
+    view.theme = theme; view.expanded = context.expanded; view.cwd = context.cwd; view.outputPad = normalizeOutputPad(context.outputPad); view.context = context;
     if (store.get(context.toolCallId)) invalidators.set(context.toolCallId, context.invalidate);
     return view;
   };

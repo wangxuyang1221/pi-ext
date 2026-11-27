@@ -17,7 +17,7 @@
 
 ## How to get to it (user POV)
 
-模型 read/bash/edit/write；Ctrl+O。
+模型 read/bash/edit/write；Ctrl+O；`/settings` 中切换 [Output padding](layout.md#sub-features)。
 
 ## Driving it with Pi PTY and host fixtures
 
@@ -37,6 +37,8 @@ pnpm test extensions/codex-ui/__tests__/write-execution.test.ts extensions/codex
 ```
 
 证据必须同时写明本次运行实际覆盖哪些 ID，以及剩余 ID 的状态。
+
+`ui-output-padding` 的工具证据来自正式 CLI 旅程中的真实 Read、Bash、Edit、Write 和 codemode。检查展开后的标题列、正文相对缩进及宽度变化，并核对切换前后是同一批工具结果。步骤见 [CLI coverage](../scripts/README.md#cli-coverage)。
 
 ## Gotchas
 

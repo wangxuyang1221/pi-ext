@@ -97,9 +97,8 @@ test("reply blocks, thinking header and native failure labels stay separate", ()
     const row = new AssistantMessageComponent(snapshot, false, undefined, "Thinking...", 0, transformers());
     const lines = plain(row).filter(line => line.trim());
     assert.equal(lines[0]!.trimEnd(), "│ Thinking");
-    assert.ok(lines.some(line => line.trimEnd() === "Reviewing layout"));
-    assert.ok(lines.some(line => line.trimEnd() === "Keep the reasoning body."));
-    assert.ok(!lines.slice(1).some(line => line.startsWith("│")));
+    assert.ok(lines.some(line => line.trimEnd() === "│ Reviewing layout"));
+    assert.ok(lines.some(line => line.trimEnd() === "│ Keep the reasoning body."));
     assert.equal(lines.filter(line => line.startsWith("- ")).length, 0);
     assert(lines.some(line => line.trimEnd() === "First block"));
     assert(lines.some(line => line.trimEnd() === "Second block"));

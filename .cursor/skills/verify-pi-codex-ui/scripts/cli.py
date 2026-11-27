@@ -11,7 +11,8 @@ REPO = BASE.parents[3]
 def tone(name):
     theme = json.loads((REPO / 'themes/codex-pi.json').read_text()); value = theme['colors'][name]
     return theme['vars'].get(value, value).lstrip('#').lower()
-CODEX_BG, CODEX_FG = tone('selectedBg'), tone('text')
+CODEX_BG = tone('selectedBg')
+CODEX_FG, TOOL_FG, THINKING_FG, QUOTE_BORDER_FG = 'd4d4d8', '9a9aa2', '787882', '44444c'
 MODE = sys.argv[1] if len(sys.argv) > 1 else 'regular'
 PI_COMPAT = '--pi-compat' in sys.argv
 EVIDENCE = REPO / '.tmp/test-results' / ('codex-ui-cli-' + MODE + ('-pi-compat' if PI_COMPAT else '') + '-' + str(time.time_ns()))
@@ -78,8 +79,9 @@ def snap(label):
         runs=[]
         for x in range(screen.columns):
             c=screen.buffer[y][x]
-            if runs and runs[-1][2:]==[c.fg,c.bg]: runs[-1][1]=x+1
-            else: runs.append([x,x+1,c.fg,c.bg])
+            style = [c.fg, c.bg, c.italics]
+            if runs and runs[-1][2:]==style: runs[-1][1]=x+1
+            else: runs.append([x,x+1,*style])
         rows.append(runs)
     snapshots[label]={'text':view(),'size':[screen.columns,screen.lines],'styleRuns':rows}
 def pump():
@@ -136,9 +138,9 @@ def composer(label,expected_bg=CODEX_BG):
     check(len(foregrounds)==1 and 'default' not in foregrounds and foregrounds!=colors,label+' paints readable draft text with the selected theme')
     if expected_bg==CODEX_BG:check(foregrounds=={CODEX_FG},label+' uses the codex-pi text color')
     snap(label); keys(b'\x15',label+' clear')
-def resize(width):
-    fcntl.ioctl(fd,termios.TIOCSWINSZ,struct.pack('HHHH',60,width,0,0));screen.resize(60,width);os.kill(pid,signal.SIGWINCH);settle()
-    actions.append({'resize':[width,60]})
+def resize(width, height=60):
+    fcntl.ioctl(fd,termios.TIOCSWINSZ,struct.pack('HHHH',height,width,0,0));screen.resize(height,width);os.kill(pid,signal.SIGWINCH);settle()
+    actions.append({'resize':[width,height]})
 def native_resume(label):
     n=sum(e['type']=='session_start' for e in records()); command('/resume'); settle(.8);snap(label+' selector')
     keys(b'\r',label+' choose first session')
@@ -165,6 +167,135 @@ def select_theme(name):
     else: raise AssertionError('Theme choice not found: '+name+'\n'+view())
     snap('select theme '+name);keys(b'\r','save theme '+name);settle();keys(b'\x1b','close settings');settle()
     check(json.loads((ROOT/'agent/settings.json').read_text())['theme']==name,'Native settings saves '+name)
+
+def locate(text, *, starts=False):
+    for row, line in enumerate(screen.display):
+        if (line.lstrip().startswith(text) if starts else text in line):
+            return row, line.index(text)
+    raise AssertionError(f'Missing terminal text {text!r}\n{view()}')
+
+def check_style(text, foreground, *, italic=False):
+    row, column = locate(text)
+    cells = [screen.buffer[row][x] for x in range(column, column + len(text))]
+    styles = {(cell.fg, cell.italics) for cell in cells if cell.data.strip()}
+    check(styles == {(foreground, italic)}, f'{text!r} has terminal style {(foreground, italic)}, got {styles}')
+
+def toggle_output_pad(before, after):
+    command('/settings'); settle()
+    keys(b'output padding', 'filter settings by Output padding')
+
+    def selected(value):
+        pattern = rf'^\s*→\s+Output padding\s+{value}\s*$'
+        return any(re.match(pattern, line) for line in screen.display)
+
+    wait(lambda: selected(before), f'Output padding shows {before}')
+    keys(b'\r', f'set Output padding to {after}')
+    wait(lambda: selected(after), f'Output padding shows {after}')
+    keys(b'\x1b', 'close Output padding settings'); settle()
+    check(json.loads((ROOT/'agent/settings.json').read_text())['outputPad'] == after,
+          f'Native settings saves outputPad={after}')
+
+def output_padding_case():
+    check('outputPad' not in json.loads((ROOT/'agent/settings.json').read_text()),
+          'Output padding starts with the stock default')
+    (ROOT/'workspace/pad-read.txt').write_text('PAD-READ-BODY\n')
+    (ROOT/'workspace/pad-edit.txt').write_text('before\n')
+    result = request('Padding user message', {'calls': [
+        tool('read', path='pad-read.txt'),
+        tool('bash', command='printf "BX\\n"'),
+        tool('edit', path='pad-edit.txt', edits=[{'oldText': 'before', 'newText': 'PAD-EDIT-BODY'}]),
+        tool('write', path='pad-write.txt', content='PAD-WRITE-BODY\n'),
+        tool('codemode', code='text("P".repeat(160));'),
+    ], 'reply': 'Padding reply body\n\n> Padding reply quote'})
+    check({r['toolName'] for r in result[-5:] if not r['isError']} == {'read', 'bash', 'edit', 'write', 'codemode'},
+          'All five real output padding tools succeed')
+    check('PAD-READ-BODY' not in view(), 'Read body starts collapsed')
+
+    def check_titles(pad, label, disclosure):
+        snap(label)
+        titles = ('Padding user message', 'Padding reply body', '@ Read pad-read.txt', '$ Bash(',
+                  '~ Edited pad-edit.txt', '~ Added pad-write.txt', disclosure + ' Codemode · Script completed')
+        for title in titles:
+            _, column = locate(title, starts=True)
+            check(column == pad, f'{label}: {title} starts at column {pad + 1}, got {column + 1}')
+
+    def columns(pad, label):
+        check_titles(pad, label, '▾')
+        check_style('Padding reply body', 'default')
+        row, column = locate('@ Read pad-read.txt', starts=True)
+        title_foregrounds = {screen.buffer[row][x].fg for x in range(column + len('@ '), column + len('@ Read'))}
+        check(title_foregrounds == {CODEX_FG}, f'Read title uses the codex-pi toolTitle color, got {title_foregrounds}')
+        check_style('Padding reply quote', THINKING_FG, italic=True)
+        row, column = locate('│ Padding reply quote', starts=True)
+        check(screen.buffer[row][column].fg == QUOTE_BORDER_FG, 'Reply blockquote uses the quote border color')
+        check_style('PAD-READ-BODY', TOOL_FG)
+        row, column = locate('└ BX', starts=True)
+        check({screen.buffer[row][column + x].fg for x in (2, 3)} == {TOOL_FG}, 'Bash output uses the muted tool color')
+        row, _ = locate('PPPPPPPP')
+        check(len(screen.display[row].rstrip()) == screen.columns - pad,
+              f'{label}: width-filling Codemode output leaves {pad} right padding cells')
+        markers = ('PAD-READ-BODY', '└ BX', 'PAD-EDIT-BODY', 'PAD-WRITE-BODY', 'PPPPPPPP')
+        return {marker: locate(marker)[1] for marker in markers}
+
+    def narrow(label):
+        # Keep the cards visible while native message text wraps into many rows.
+        resize(2, 140); snap(label)
+        check(status is None, f'{label}: the CLI stays alive at two columns')
+        lines = view().splitlines()
+        check(any(line.startswith('@') for line in lines), f'{label}: narrow Read starts at column one')
+        check(lines.count('BX') == 1, f'{label}: narrow Bash output uses both columns')
+        check(sum(line.startswith('~') for line in lines) >= 2, f'{label}: narrow Edit and Write start at column one')
+        check(any(line.startswith('▾') for line in lines), f'{label}: narrow Codemode starts at column one')
+        resize(140)
+
+    check_titles(1, 'Output padding default 1, collapsed', '▸')
+    keys(b'\x0f', 'expand tools for output padding'); settle()
+    padded = columns(1, 'Output padding default 1, expanded')
+    toggle_output_pad(1, 0)
+    flush = columns(0, 'Output padding toggled to 0, expanded')
+    check(all(padded[marker] == column + 1 for marker, column in flush.items()),
+          'Tool bodies keep their own indentation and shift with Output padding')
+    narrow('Output padding 0 at two columns')
+    toggle_output_pad(0, 1)
+    check(columns(1, 'Output padding toggled back to 1, expanded') == padded,
+          'Restoring Output padding restores all existing tool body columns')
+    narrow('Output padding 1 at two columns')
+    columns(1, 'Output padding 1 after resize recovery')
+    keys(b'\x0f', 'restore collapsed tool view'); settle()
+    command('/new'); settle()
+
+def check_thinking_rails(label, *, complete=False):
+    snap(label)
+    lines = [line.rstrip() for line in screen.display]
+    header, border = locate('│ Thinking', starts=True)
+    first, _ = locate('│ Audit reasoning', starts=True)
+    code_start, code_column = locate('const fenceStart = 1;')
+    code_end, _ = locate('const fenceEnd = 2;')
+    next_block, _ = locate('│ Reasoning remains', starts=True)
+    check(lines[header] == ' ' * border + '│ Thinking' and first == header + 2 and lines[header + 1] == '',
+          f'{label}: the standalone Thinking header is followed by one blank line')
+    check(lines[first + 1] == '' and lines[next_block - 1] == '' and first + 1 < code_start < code_end < next_block,
+          f'{label}: the fence and neighboring paragraphs are separate quoted blocks')
+    rail = ' ' * border + '│'
+    check(code_end == code_start + 2 and lines[code_start + 1] == rail
+          and all(lines[row].startswith(rail) for row in (code_start, code_end)),
+          f'{label}: the fenced code retains its internal blank line within one quote rail')
+    check(screen.buffer[code_start][code_column].fg == tone('syntaxKeyword'),
+          f'{label}: quoted TypeScript retains native keyword highlighting')
+    if complete:
+        last, _ = locate('│ LAST-THINKING-LINE', starts=True)
+        check(lines[last - 1] == '' and all(line.startswith(rail + ' ') for line in lines[next_block:last - 1]),
+              f'{label}: wrapped lines keep the quote rail and the final paragraph starts its own quote')
+    check_style('Audit reasoning', THINKING_FG, italic=True)
+    check_style('Reasoning remains', THINKING_FG, italic=True)
+    check({screen.buffer[row][border].fg for row in (header, first, code_start, code_start + 1, code_end, next_block)}
+          == {QUOTE_BORDER_FG}, f'{label}: Thinking rails use the quote border color')
+
+def click_thinking(marker, label):
+    row, column = locate(marker, starts=True)
+    coordinate = f'{column + 3};{row + 1}'
+    keys(f'\x1b[<0;{coordinate}M\x1b[<0;{coordinate}m'.encode(), label)
+
 def control_case():
     (ROOT/'workspace/controls.txt').write_bytes(b'old\r\n')
     controls='CONTROL-FIRST\x1b[2J\x1b[H\x1b]0;source-must-not-set-title\x07CONTROL-LAST\r\n'
@@ -243,8 +374,10 @@ try:
         resize(width);composer('width-'+str(width))
     select_theme('light');composer('light theme',None)
     select_theme('codex-pi');composer('codex-pi theme')
+    output_padding_case()
     markdown='# USER-HEADING\n\n- user list\n  - nested list\n\n| left | right |\n| --- | --- |\n| A | B |\n\n```ts\nconst literal = "<tag>";\n```\n\n> quoted user text\n\n**bold** _italic_ [link](https://example.invalid)'
-    reply='# REPLY-HEADING\n\n1. first item\n   - child item\n\n```ts\nconst answer = 42;\n```\n\n| left | right |\n| --- | --- |\n| C | D |\n\n> quoted reply text'
+    reply = ('# REPLY-HEADING\n\n1. first item\n   - child item\n\n```ts\nconst answer = 42;\n```\n\n'
+             '```\nREPLY-PLAIN-CODE\n```\n\n| left | right |\n| --- | --- |\n| C | D |\n\n> quoted reply text')
     (ROOT/'plan.json').write_text(json.dumps({'reply':reply}))
     n=sum(e['type']=='agent_settled' for e in records())
     keys(b'\x15\x1b[200~'+markdown.encode()+b'\x1b[201~\r','paste representative Markdown')
@@ -254,6 +387,7 @@ try:
     check(json.dumps(markdown)[1:-1] in sessions_text and json.dumps(reply)[1:-1] in sessions_text,'Session preserves exact user and assistant Markdown')
     check('REPLY-HEADING' in view() and 'const answer = 42;' in view(),'Complex reply Markdown renders in the real TUI')
     snap('Markdown transcript')
+    check_style('REPLY-PLAIN-CODE', CODEX_FG)
     # Native fork and resume selectors replace the active session.
     n=sum(e['type']=='session_start' for e in records());command('/fork');settle();snap('fork selector')
     keys(b'\r','choose native fork message');wait(lambda:sum(e['type']=='session_start' for e in records())>n,'fork session');settle()
@@ -374,14 +508,26 @@ try:
     check('CACHE-BUDGET-DONE' in json.dumps([e for e in records() if e['type']=='request'][-1]),'Native tree followup carries codemode context')
     # Thinking, title and actual keyboard cancellation. No timer internals are called.
     command('/new'); settle(1)
-    thinking='**Audit reasoning**\n\n'+'Reasoning remains visible during streamed output. '*12+'\n\nLAST-THINKING-LINE'
+    thinking = ('Audit reasoning\n\n```ts\nconst fenceStart = 1;\n\nconst fenceEnd = 2;\n```\n\n'
+                + 'Reasoning remains visible during streamed output. ' * 32 + '\n\nLAST-THINKING-LINE')
     (ROOT/'plan.json').write_text(json.dumps({'thinking':thinking,'reply':'THINKING-DONE'}))
     n=sum(e['type']=='agent_settled' for e in records()); start_offset=len(raw); command('Stream reasoning')
     wait(lambda:'Reasoning remains' in view(),'streaming-thinking')
+    check(sum(e['type']=='agent_settled' for e in records()) == n, 'Thinking quote rails are observed during the live stream')
+    check_thinking_rails('streaming Thinking rails')
     keys(b'\x14','Ctrl+T hide during stream')
     wait(lambda:sum(e['type']=='agent_settled' for e in records())>n,'thinking-settled'); settle()
     check('Thinking...' in view() and 'LAST-THINKING-LINE' not in view(),'Completion retains hidden thinking choice')
+    check_style('Thinking...', THINKING_FG, italic=True)
     keys(b'\x14','Ctrl+T expand completed thinking'); wait(lambda:'LAST-THINKING-LINE' in view(),'thinking-expanded')
+    check_thinking_rails('settled Thinking rails', complete=True)
+    if MODE == 'fullscreen':
+        check(b'\x1b[?1006h' in raw, 'Fullscreen enables SGR mouse reporting')
+        click_thinking('│ Audit reasoning', 'click quoted Thinking body')
+        wait(lambda: 'Thinking...' in view() and 'LAST-THINKING-LINE' not in view(), 'mouse collapses Thinking')
+        click_thinking('Thinking...', 'click hidden Thinking label')
+        wait(lambda: 'LAST-THINKING-LINE' in view(), 'mouse expands Thinking')
+        check_thinking_rails('mouse-restored Thinking rails', complete=True)
     all_titles=titles(raw[start_offset:]); animated=[t for t in all_titles if t.decode('utf8').startswith(tuple('⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'))]
     check(len(set(animated))>=2,'OSC title changes during actual streaming')
     check(all_titles and all_titles[-1].decode('utf8').startswith('π'),'Settled title returns to static')
@@ -389,6 +535,7 @@ try:
     session_files=list((ROOT/'sessions').rglob('*.jsonl')); session_file=max(session_files,key=lambda p:p.stat().st_mtime)
     stop(); start(['--session',str(session_file)])
     check('LAST-THINKING-LINE' in view() and 'Thinking' in view(),'Fresh CLI restores thinking text')
+    check_thinking_rails('reopened Thinking rails', complete=True)
     request('Followup after resume',{'reply':'RESUME-FOLLOWUP'})
     check('LAST-THINKING-LINE' in json.dumps([e for e in records() if e['type']=='request'][-1]),'Resumed subsequent request carries thinking history')
     (ROOT/'plan.json').write_text(json.dumps({'thinking':'CANCEL-THINKING-FIRST\n'+thinking*10,'reply':'SHOULD-NOT-FINISH'}))
@@ -407,7 +554,7 @@ try:
     command('/compact');wait(lambda:'Compacted' in view() or 'compacted' in view(),'native compaction');settle()
     check('COMPACTION-THINKING-LAST' in view(),'Compaction keeps recent full thinking')
     keys(b'\x14','hide thinking after compaction');settle();check('COMPACTION-THINKING-LAST' not in view(),'Thinking toggle works after compaction');keys(b'\x14','expand thinking after compaction');settle()
-    stop();passed=True
+    stop();passed=all(assertion['passed'] for assertion in assertions)
 except Exception:
     (EVIDENCE/'failure.txt').write_text(traceback.format_exc())
     print(traceback.format_exc())

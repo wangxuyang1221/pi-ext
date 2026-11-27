@@ -24,7 +24,7 @@ function createTheme(name = CODEX_THEME_NAME): Theme {
   } as unknown as Theme;
 }
 
-test("markdown transformer prepends a Thinking heading without wrapping assistant replies or thinking bodies", () => {
+test("markdown transformer quotes thinking blocks separately without wrapping assistant replies", () => {
   const transformers: Array<(markdown: string, context: Record<string, unknown>) => string> = [];
   const pi = {
     registerTool() {},
@@ -48,7 +48,55 @@ test("markdown transformer prepends a Thinking heading without wrapping assistan
   const thinking = "**First title**\n\nFirst body.\n\n**Last title**\n\nLast body.";
   assert.equal(
     transform(thinking, { messageType: "assistant-thinking", isStreaming: true, availableWidth: 80 }),
-    `> **Thinking**\n\n${thinking}`,
+    "> **Thinking**\n\n> **First title**\n\n> First body.\n\n> **Last title**\n\n> Last body.",
+  );
+  assert.equal(
+    transform("```ts\nconst a = 1;\n\nconst b = 2;\n```\n\nAfter", {
+      messageType: "assistant-thinking",
+      isStreaming: false,
+      availableWidth: 80,
+    }),
+    "> **Thinking**\n\n> ```ts\n> const a = 1;\n>\n> const b = 2;\n> ```\n\n> After",
+  );
+  assert.equal(
+    transform("~~~ts `ok`\nline 1\n\nline 2\n~~~\n\nAfter", {
+      messageType: "assistant-thinking",
+      isStreaming: false,
+      availableWidth: 80,
+    }),
+    "> **Thinking**\n\n> ~~~ts `ok`\n> line 1\n>\n> line 2\n> ~~~\n\n> After",
+  );
+  assert.equal(
+    transform("- step\n    ```ts\n    const a = 1;\n\n    const b = 2;\n    ```\n\nAfter", {
+      messageType: "assistant-thinking",
+      isStreaming: false,
+      availableWidth: 80,
+    }),
+    "> **Thinking**\n\n> - step\n>     ```ts\n>     const a = 1;\n>\n>     const b = 2;\n>     ```\n\n> After",
+  );
+  assert.equal(
+    transform("- step\n\n    ```ts\n    const a = 1;\n\n    const b = 2;\n    ```\n\nAfter", {
+      messageType: "assistant-thinking",
+      isStreaming: false,
+      availableWidth: 80,
+    }),
+    "> **Thinking**\n\n> - step\n>\n>     ```ts\n>     const a = 1;\n>\n>     const b = 2;\n>     ```\n\n> After",
+  );
+  assert.equal(
+    transform("- step\n  ```ts\n  const a = 1;\n\nAfter 1\n\nAfter 2", {
+      messageType: "assistant-thinking",
+      isStreaming: false,
+      availableWidth: 80,
+    }),
+    "> **Thinking**\n\n> - step\n>   ```ts\n>   const a = 1;\n\n> After 1\n\n> After 2",
+  );
+  assert.equal(
+    transform("````md\n``` \n\nstill inside\n````\n\nAfter", {
+      messageType: "assistant-thinking",
+      isStreaming: false,
+      availableWidth: 80,
+    }),
+    "> **Thinking**\n\n> ````md\n> ``` \n>\n> still inside\n> ````\n\n> After",
   );
   for (const text of [
     thinking,
@@ -81,7 +129,8 @@ test("markdown transformer prepends a Thinking heading without wrapping assistan
         if (!text.trim()) {
           assert.equal(result, text);
         } else {
-          assert.equal(result, `> **Thinking**\n\n${text}`);
+          assert.ok(result.startsWith("> **Thinking**\n\n> "));
+          assert.ok(result.split("\n").every(line => line === "" || line.startsWith(">")));
         }
       }
     }
@@ -95,7 +144,7 @@ test("markdown transformer prepends a Thinking heading without wrapping assistan
   const rendered = stripTerminalSequences(component.render(80).join("\n"));
   const nonEmpty = rendered.split("\n").map(line => line.trimEnd()).filter(line => line.trim());
   assert.equal(nonEmpty[0]?.trim(), "│ Thinking");
-  assert.ok(nonEmpty.slice(1).every(line => !line.trimStart().startsWith("│")));
+  assert.ok(nonEmpty.every(line => line.startsWith(" │ ")));
   assert.match(rendered, /First body\./u);
   assert.match(rendered, /Last body\./u);
 });
@@ -149,13 +198,19 @@ test("streaming replies and thinking reuse completed top-level Markdown blocks a
         .map(([, token]) => (token as { type?: string; raw?: string }))
         .filter(token => token.type !== "space");
       assert.equal(nonSpaceBlocks.length, 5, `${kind}: only the mutated trailing block re-renders per delta`);
-      assert.ok(nonSpaceBlocks.every(token => token.type === "paragraph" && token.raw?.startsWith("Tail ")));
+      assert.ok(
+        nonSpaceBlocks.every(token => (
+          kind === "thinking"
+            ? token.type === "blockquote" && token.raw?.startsWith("> Tail ")
+            : token.type === "paragraph" && token.raw?.startsWith("Tail ")
+        )),
+      );
     } finally {
       renderBlockSpy.mockRestore();
     }
   }
 
-  // (b) Single-newline transition after closing fence matches Native Pi step-by-step ([1, 1, 0]).
+  // (b) Single-newline transition after closing fence does not exceed Native Pi highlight calls.
   for (const kind of ["text", "thinking"] as const) {
     const measureSteps = (activeTransformers: typeof transformers) => {
       let calls = 0;
@@ -180,7 +235,13 @@ test("streaming replies and thinking reuse completed top-level Markdown blocks a
       }
       return counts;
     };
-    assert.deepEqual(measureSteps(transformers), measureSteps([]), `${kind}: single-newline fence transition matches native Pi`);
+    const actual = measureSteps(transformers);
+    const native = measureSteps([]);
+    if (kind === "text") {
+      assert.deepEqual(actual, native, `${kind}: single-newline fence transition matches native Pi`);
+    } else {
+      assert.deepEqual(actual, [1, 0, 0], `${kind}: per-block quote keeps closed fence cached across following blocks`);
+    }
   }
 
   // (c) Trailing reference-style link definition disables block reuse and resolves the earlier link.
@@ -192,6 +253,87 @@ test("streaming replies and thinking reuse completed top-level Markdown blocks a
     const rendered = stripTerminalSequences(comp.render(80).join("\n"));
     assert.match(rendered, /Pi Docs/u);
     assert.match(rendered, /https:\/\/pi\.dev/u);
+  }
+
+  // (d) Loose lists, tab-indented list fences, and unclosed list fence exit keep native numbering, highlighting, and streaming cache reuse.
+  {
+    const highlightedLangs: Array<string | undefined> = [];
+    const mdTheme = {
+      ...baseMdTheme,
+      highlightCode(code: string, lang?: string) {
+        highlightedLangs.push(lang);
+        return baseMdTheme.highlightCode ? baseMdTheme.highlightCode(code, lang) : code.split("\n");
+      },
+    };
+    const looseComp = new AssistantMessageComponent(
+      makeMsg("thinking", "- step\n\n    ```ts\n    const a = 1;\n\n    const b = 2;\n    ```\n\nAfter"),
+      false,
+      mdTheme,
+      "Thinking...",
+      1,
+      transformers as never,
+    );
+    looseComp.render(80);
+    assert.deepEqual(highlightedLangs, ["ts"]);
+
+    highlightedLangs.length = 0;
+    const tabFenceComp = new AssistantMessageComponent(
+      makeMsg("thinking", "- step\n  ```ts\n\tconst a = 1;\n\n\tconst b = 2;\n  ```\n\nAfter"),
+      false,
+      mdTheme,
+      "Thinking...",
+      1,
+      transformers as never,
+    );
+    tabFenceComp.render(80);
+    assert.deepEqual(highlightedLangs, ["ts"]);
+
+    const orderedComp = new AssistantMessageComponent(
+      makeMsg("thinking", "1. First\ncontinued\n\n1. Second\n\n1.\n\n1. Fourth\n\nAfter"),
+      false,
+      mdTheme,
+      "Thinking...",
+      0,
+      transformers as never,
+    );
+    const orderedLines = orderedComp.render(60).map(line => stripTerminalSequences(line).trimEnd());
+    assert.ok(orderedLines.includes("│ 1. First"));
+    assert.ok(orderedLines.includes("│ 2. Second"));
+    assert.ok(orderedLines.includes("│ 3."));
+    assert.ok(orderedLines.includes("│ 4. Fourth"));
+    assert.ok(orderedLines.includes("│ After"));
+
+    const emptyBulletComp = new AssistantMessageComponent(
+      makeMsg("thinking", "-\n\n   1. Start\n\n1. Last"),
+      false,
+      mdTheme,
+      "Thinking...",
+      0,
+      transformers as never,
+    );
+    const emptyBulletLines = emptyBulletComp.render(60).map(line => stripTerminalSequences(line).trimEnd());
+    assert.ok(emptyBulletLines.includes("│ 1. Start"));
+    assert.ok(emptyBulletLines.includes("│ 2. Last"));
+
+    const renderBlockSpy = vi.spyOn(Markdown.prototype as unknown as { renderBlock: (...args: unknown[]) => void }, "renderBlock");
+    try {
+      const comp = new AssistantMessageComponent(undefined, false, mdTheme, "Thinking...", 1, transformers as never);
+      const prefix = "- step\n  ```ts\n  const a = 1;\n\nAfter 1\n\n";
+      comp.updateContent(makeMsg("thinking", `${prefix}Tail 0`), true);
+      comp.render(80);
+      renderBlockSpy.mockClear();
+      for (let i = 1; i <= 3; i++) {
+        comp.updateContent(makeMsg("thinking", `${prefix}Tail ${i}`), true);
+        comp.render(80);
+      }
+      const nonSpaceBlocks = renderBlockSpy.mock.calls
+        .map(([, token]) => (token as { type?: string; raw?: string }))
+        .filter(token => token.type !== "space");
+      assert.equal(nonSpaceBlocks.length, 3);
+      assert.ok(nonSpaceBlocks.every(token => token.type === "blockquote" && token.raw?.startsWith("> Tail ")));
+    } finally {
+      renderBlockSpy.mockRestore();
+    }
   }
 });
 

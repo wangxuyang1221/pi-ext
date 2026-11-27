@@ -60,7 +60,7 @@ pnpm run build
 
 `codex-ui` 使用 Pi 品牌，提供实色背景输入框和紧凑的工具显示。状态栏显示模型、思考等级、工作目录、Git 分支及剩余上下文比例。
 
-- 思考文本在原生消息位置以独立 `Thinking` 引用标题显示，正文沿用原生斜体思考样式与顶层块排版。`Ctrl+T` 与启用鼠标的 fullscreen 点击沿用 Pi 的隐藏切换。
+- 思考文本在原生消息位置以独立 `Thinking` 引用标题显示，正文按段落/块分别带柔和左竖线引用排版并降低对比度，同时保持流式顶层块与代码高亮缓存复用。`Ctrl+T` 与启用鼠标的 fullscreen 点击沿用 Pi 的隐藏切换。
 - 连续 Read 按文件分组，折叠时每个文件只占一行，展开后显示带行号的内容。Bash 显示命令及输出的开头和结尾各两行，失败、超时或中断状态写在标题上，可原位展开已捕获内容。
 - Edit 和 Write 显示变更 diff。工具标题用颜色区分执行中、成功、失败及可识别的取消或超时。
 - 运行期间，输入框上方显示 Working 动画和计时，状态栏显示估算接收速率。统计口径见 [Working 与速率说明](docs/codex-working-rate.md)。
@@ -68,7 +68,7 @@ pnpm run build
 
 普通回复与用户消息均沿用原生 Markdown 顶层块排版（不添加外层列表缩进）。显示转换不修改会话原文或模型上下文。`/copy` 复制回复正文；终端选择复制保留显示出的原生排版与换行。
 
-若希望减少消息两侧留白，在 `/settings` 中将 `Output padding` 设为 `0`。主题只控制终端单元格颜色，字体、窗口透明度和模糊效果由终端配置决定。
+所有消息与自绘工具（Read、Bash、Edit、Write、codemode）均遵循 Pi 的 `Output padding` 设置（默认 `1`），保持统一左右边距；若希望贴边显示，可在 `/settings` 中将 `Output padding` 设为 `0`。主题只控制终端单元格颜色，字体、窗口透明度和模糊效果由终端配置决定。
 
 默认 Read 和 Bash 读取 Pi 全局设置及受信任项目的 `.pi/settings.json`，保留 `shellCommandPrefix`、`shellPath` 和 `images.autoResize`。配置损坏或不可读时，这两个工具拒绝执行并提示修复；修复后用 `/reload` 或重启刷新配置。SDK 自定义配置与执行器的接入参数见 [codex-ui 入口](extensions/codex-ui/src/index.ts)。
 

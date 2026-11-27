@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test, vi } from "vitest";
 import type { ExtensionAPI, Theme, ToolRenderers } from "@earendil-works/pi-coding-agent";
 import { registerCodemodeUi } from "../src/codemode.js";
-import { Text } from "@earendil-works/pi-tui";
+import { Text, visibleWidth } from "@earendil-works/pi-tui";
 import { type CodemodeServices } from "../src/codemode.js";
 
 const theme = { bg: (_name: string, value: string) => value, fg: (_name: string, value: string) => value, bold: (value: string) => value } as Theme;
@@ -91,6 +91,33 @@ test("real event-shaped data drives a mounted row, and late callbacks cannot res
   h.emit("session_tree", {});
   h.renderer.renderResult!({ content: [{ type: "text", text: "STALE" }], details: undefined }, { expanded: false, isPartial: false }, theme, context);
   assert.doesNotMatch(call.render(120).join("\n"), /STALE/);
+});
+
+test("codemode applies host outputPad symmetrically and drops padding on narrow widths", () => {
+  const h = harness();
+  const context: any = {
+    toolCallId: "p",
+    args: { code: "text(1)" },
+    state: {},
+    cwd: "/repo",
+    executionStarted: true,
+    argsComplete: true,
+    isPartial: false,
+    expanded: false,
+    showImages: false,
+    isError: false,
+    outputPad: 1,
+    invalidate: vi.fn(),
+  };
+  const call = h.renderer.renderCall!(context.args, theme, context);
+  h.emit("tool_execution_start", { type: "tool_execution_start", toolCallId: "p", toolName: "codemode", args: context.args });
+  h.emit("tool_execution_end", { type: "tool_execution_end", toolCallId: "p", toolName: "codemode", isError: false, result: { content: [{ type: "text", text: "ok" }] } });
+  const padded = call.render(80);
+  assert.ok(padded.length > 0 && padded.every(line => line.startsWith(" ")));
+  assert.ok(call.render(2).every(line => visibleWidth(line) <= 2));
+  h.renderer.renderCall!(context.args, theme, { ...context, outputPad: 0 });
+  const unpadded = call.render(80);
+  assert.ok(unpadded[0]!.startsWith("▸ Codemode"));
 });
 
 test("inspect without current branch history gives a clear message", async () => {

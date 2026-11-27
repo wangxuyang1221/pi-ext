@@ -49,15 +49,15 @@ test("Bash preview hints follow injected bindings and disappear on expansion", (
   const h = harness({ getKeybindings: () => ({ getKeys: () => keys }) });
   try {
     const a = h.row("a"); a.updateResult(result("body\nsecond\nthird\nfourth\nfifth\nsixth"));
-    assert.equal(plain(a).at(-3), "    … +2 lines (ctrl+shift+o to expand)");
-    assert.deepEqual(plain(a).slice(-2), ["    fifth", "    sixth"]);
+    assert.equal(plain(a).at(-3), "     … +2 lines (ctrl+shift+o to expand)");
+    assert.deepEqual(plain(a).slice(-2), ["     fifth", "     sixth"]);
     a.setExpanded(true);
     assert.doesNotMatch(plain(a).join("\n"), /to expand|collapse/u);
-    assert(plain(a).includes("    fourth"));
+    assert(plain(a).includes("     fourth"));
     a.setExpanded(false); keys = ["ctrl+x", "ctrl+y"]; a.invalidate();
-    assert.equal(plain(a).at(-3), "    … +2 lines (ctrl+x/ctrl+y to expand)");
+    assert.equal(plain(a).at(-3), "     … +2 lines (ctrl+x/ctrl+y to expand)");
     keys = []; a.invalidate();
-    assert.equal(plain(a).at(-3), "    … +2 lines");
+    assert.equal(plain(a).at(-3), "     … +2 lines");
   } finally { h.dispose(); }
 });
 
@@ -238,7 +238,7 @@ test("all-success groups keep every command visible and show interior blank line
   try {
     h.declare([call("a"), call("b")]); const a = h.row("a"); const b = h.row("b");
     a.updateResult(result("first\n\nthird\n")); b.updateResult(result(""));
-    const expected = ["", "$ Bash(printf a)", "  └ first", "", "    third", "", "$ Bash(printf b)", "  └ (no output)"];
+    const expected = ["", " $ Bash(printf a)", "   └ first", "", "     third", "", " $ Bash(printf b)", "   └ (no output)"];
     const collapsed = plain(a);
     assert.deepEqual(collapsed, expected);
     [a, b].forEach(row => row.setExpanded(true));
@@ -248,15 +248,18 @@ test("all-success groups keep every command visible and show interior blank line
   } finally { h.dispose(); }
 });
 
-test("Bash aligns with real Read and Edited labels", () => {
+test("Bash aligns with real Read and Edited labels across outputPad settings", () => {
   const h = harness();
   try {
     const a = h.row("a"); a.updateResult(result(""));
-    const column = plain(a).find(line => line.includes("Bash"))!.indexOf("Bash");
-    assert.equal(column, 2);
-    for (const [name, label] of [["read", "Read"], ["edit", "Edited"]]) {
-      const row = h.row(`reference-${name}`, name); row.updateResult(result("fixture")); row.setArgsComplete();
-      assert.equal(plain(row).find(line => line.includes(label!))!.indexOf(label!), column);
+    const readRow = h.row("reference-read", "read"); readRow.updateResult(result("fixture")); readRow.setArgsComplete();
+    const editRow = h.row("reference-edit", "edit"); editRow.updateResult(result("fixture")); editRow.setArgsComplete();
+    for (const [outputPad, expectedColumn] of [[1, 3], [0, 2]] as const) {
+      for (const row of [a, readRow, editRow]) row.setOutputPad(outputPad);
+      const column = plain(a).find(line => line.includes("Bash"))!.indexOf("Bash");
+      assert.equal(column, expectedColumn);
+      assert.equal(plain(readRow).find(line => line.includes("Read"))!.indexOf("Read"), column);
+      assert.equal(plain(editRow).find(line => line.includes("Edited"))!.indexOf("Edited"), column);
     }
   } finally { h.dispose(); }
 });
@@ -295,10 +298,10 @@ test("collapsed command limits use available display columns including the ellip
   const h = harness();
   try {
     const row = h.row("a"); row.updateResult(result(""));
-    for (const command of ["x".repeat(119), "x".repeat(292), "x".repeat(293), "中文👩‍💻é".repeat(40)]) {
-      row.updateArgs({ command }); const preview = plain(row, 300)[1]!.slice(7, -1);
-      assert(visibleWidth(preview) <= 292);
-      if (visibleWidth(command) <= 292) assert.equal(preview, command); else assert.match(preview, /…$/u);
+    for (const command of ["x".repeat(119), "x".repeat(290), "x".repeat(291), "中文👩‍💻é".repeat(40)]) {
+      row.updateArgs({ command }); const preview = plain(row, 300)[1]!.slice(8, -1);
+      assert(visibleWidth(preview) <= 290);
+      if (visibleWidth(command) <= 290) assert.equal(preview, command); else assert.match(preview, /…$/u);
       for (const width of [1, 2, 4, 9, 10, 30, 71]) {
         assert.equal(row.render(width).length, 3);
         assert(row.render(width).every(line => visibleWidth(line) <= width));

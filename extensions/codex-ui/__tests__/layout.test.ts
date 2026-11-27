@@ -16,8 +16,11 @@ import {
   fitToWidth,
   formatContextLeft,
   formatHomePath,
+  normalizeOutputPad,
   normalizeWidth,
+  padOutputLines,
   paintBackground,
+  resolveOutputPad,
   type PrioritizedSegment,
 } from "../src/layout.js";
 
@@ -188,4 +191,17 @@ test("path and context labels use real bounded values", () => {
   assert.equal(formatContextLeft({ percent: 140 }), "Context 0% left");
   assert.equal(formatContextLeft({ percent: null }), undefined);
   assert.equal(formatContextLeft(undefined), undefined);
+});
+
+test("outputPad helpers clamp invalid inputs and drop padding on narrow widths", () => {
+  assert.equal(normalizeOutputPad(undefined), 0);
+  assert.equal(normalizeOutputPad(-2), 0);
+  assert.equal(normalizeOutputPad(Number.NaN), 0);
+  assert.equal(normalizeOutputPad(1.9), 1);
+  assert.equal(resolveOutputPad(0, 1), 0);
+  assert.equal(resolveOutputPad(2, 1), 0);
+  assert.equal(resolveOutputPad(3, 1), 1);
+  assert.deepEqual(padOutputLines(["alpha", "", "beta"], 10, 1), [" alpha", "", " beta"]);
+  assert.deepEqual(padOutputLines(["alpha", "", "beta"], 10, 0), ["alpha", "", "beta"]);
+  assert.deepEqual(padOutputLines(["a"], 2, 1), ["a"]);
 });
