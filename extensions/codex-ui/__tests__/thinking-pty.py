@@ -97,7 +97,7 @@ try:
     assert "Read src/display.ts" in view(), view()
     assert "The complete thinking text" in view(), "Native assistant reply text must remain visible"
     assert "- The complete thinking text" not in view(), "Assistant reply must not add an outer list prefix"
-    assert any("The request is" in line and not line.lstrip().startswith("│") for line in view().splitlines()), view()
+    assert any("The request is" in line and line.lstrip().startswith("│ ") for line in view().splitlines()), view()
     assert_native_italic("The request is")
     os.write(fd, b"\x14")
     wait(lambda: "Thinking..." in view() and "Checking the rendering boundary" not in view(), "native collapse")

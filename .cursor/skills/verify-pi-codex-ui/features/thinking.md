@@ -4,8 +4,8 @@
 
 ## Sub-features
 
-- `ui-thinking-stream`：流式思考完整显示。顶部以独立 `Thinking` 引用标题（`│ Thinking`）后接一空行显示，正文沿用原生 `thinkingText` 斜体与顶层块排版（仅标题及思考内自带引用块带 `│`）。规则与例外见 [reasoning-inline.test.ts](../../../../extensions/codex-ui/__tests__/reasoning-inline.test.ts)。
-- `ui-thinking-collapse`：Ctrl+T 保留隐藏选择。
+- `ui-thinking-stream`：流式思考以独立的 `│ Thinking` 引用标题开头，下一行留空。正文按空行分隔为独立的顶层引用块，每块有自己的 `│ ` 左竖线和原生斜体。代码围栏内的空行保留在同一块内，且仍显示左竖线。
+- `ui-thinking-collapse`：Ctrl+T 保留隐藏选择。启用鼠标的 fullscreen 中，点击引用正文折叠，点击 `Thinking...` 展开。
 - `ui-thinking-resume`：恢复仍采用相同思考规则。
 - `ui-title`：窗口标题展示运行动画。
 - `ui-title-stop`：settled 或取消后标题静止。
@@ -25,7 +25,7 @@ Preconditions:
 
 1. 运行 `pnpm exec node .cursor/skills/verify-pi-codex-ui/scripts/verify.mjs run thinking`。保存返回的 evidence 路径并核对退出码。
 2. 需要交互补充时，在工具 PTY 中运行 `pnpm exec node .cursor/skills/verify-pi-codex-ui/scripts/verify.mjs tui codex-ui`，按上面的真实入口输入命令或按键。该会话使用离线 faux provider；仅支持配置和明示的 WRITE_PROOF 工具场景。需要特定模型响应、历史或网络的步骤按下方 Gotchas 报告前置条件，不把 faux 回复当该功能成功。
-3. 默认 thinking case 仍使用内存 session。持久恢复与 OSC 用 [正式旅程](../scripts/README.md#run) 的 `cli.py regular/fullscreen`：流中 Ctrl+T、结束保留隐藏、退出并以原 session 重开及后续上下文、原生 `/resume` 恢复取消和错误思考、`/compact` 后保留与切换。取消前须看到独有 `CANCEL-THINKING-FIRST`，不能用上一条思考文本充当新流已经开始的证据。检查流中多个不同 OSC 帧，settled/Esc 后静止。80ms 精度由定时器测试补充。
+3. 运行 [正式旅程](../scripts/README.md#run) 的 `cli.py regular/fullscreen`。对照 `streaming Thinking rails`、`settled Thinking rails`、`reopened Thinking rails`，检查标题后空行、每块自己的竖线、围栏内带竖线的空行、原生斜体和 [思考配色](layout.md#sub-features)。fullscreen 另核对折叠和重新展开的鼠标事件及画面。持久恢复、Ctrl+T 和 OSC 的断言范围见 [CLI coverage](../scripts/README.md#cli-coverage)。
 4. 对照以下已有定向测试定位边界。它们是补充证据，不替代步骤 3 的动作、画面和副作用。
 
 ```bash
@@ -36,7 +36,7 @@ pnpm test extensions/codex-ui/__tests__/reasoning.test.ts extensions/codex-ui/__
 
 ## Gotchas
 
-provider 返回思考为固定 fixture。终端标题定时测试是补充，thinking smoke 不证明真实 provider 产生 reasoning。
+provider 返回思考为固定 fixture。缓存复用通过 [宿主组件回归](../scripts/thinking-cache.test.mjs) 验证。用实际 `AssistantMessageComponent` 追加思考正文时只重绘增长中的块，缩放时已结束的围栏继续复用高亮。运行命令见 [Helpers](../SKILL.md#helpers)。80ms 的标题计时精度由定时器测试核对。
 
 正式 CLI 冷重开前先展开思考，因此没有证明保持隐藏状态退出后仍隐藏；该分支需另行留证。OSC 断言覆盖流式、settled 和取消；它的 `/compact` 断言检查 Thinking 保留及开关，不证明压缩期间标题动画。Working 旅程的 retry/自动压缩动画断言也不等于标题已测。需要宣称这些标题分支 live 通过时，须在对应事件区间另读原始 OSC 帧，记录动画及结束后静止。
 

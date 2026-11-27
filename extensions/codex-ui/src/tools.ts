@@ -29,9 +29,12 @@ import { ReadViewComponent } from "./read-view.js";
 import {
   fitToWidth,
   formatHomePath,
+  normalizeOutputPad,
   normalizeWidth,
+  padOutputLines,
   paintFittedBackground,
   paintForeground,
+  resolveOutputPad,
 } from "./layout.js";
 import { ResponsiveLinesComponent } from "./responsive-lines.js";
 import { ToolRenderCache, type RenderCacheScope } from "./render-cache.js";
@@ -234,7 +237,7 @@ export function registerCodexTools(
       const view = readGroups.bind(context);
       view.updateCall(context);
       const component = state.callComponent ??= new ReadViewComponent(view.current);
-      component.update(context.expanded, theme);
+      component.update(context.expanded, theme, context.outputPad);
       return component;
     },
     renderResult(result, options, theme, context) {
@@ -254,6 +257,7 @@ export function registerCodexTools(
     renderCall(args, theme, context) {
       const state = context.state as unknown as CodexEditState;
       const path = formatToolPath(args.path, context.cwd);
+      const outputPad = normalizeOutputPad(context.outputPad);
       if (state.path !== path) {
         state.path = path;
         state.settledTitle = undefined;
@@ -261,9 +265,14 @@ export function registerCodexTools(
       const component = getResponsiveComponent(context.lastComponent ?? state.callComponent);
       state.callComponent = component;
       component.setRenderer(
-        (width) => [state.settledTitle === undefined
-          ? formatPendingMutationTitle("Editing", path, theme, width, context.executionStarted)
-          : fitToWidth(state.settledTitle, width)],
+        (width) => {
+          const pad = resolveOutputPad(width, outputPad);
+          const innerWidth = width - pad * 2;
+          const title = state.settledTitle === undefined
+            ? formatPendingMutationTitle("Editing", path, theme, innerWidth, context.executionStarted)
+            : fitToWidth(state.settledTitle, innerWidth);
+          return padOutputLines([title], width, pad);
+        },
         { linesAlreadyFit: true },
       );
       return component;
@@ -287,23 +296,29 @@ export function registerCodexTools(
     renderCall(args, theme, context) {
       const state = context.state as unknown as CodexWriteState;
       const path = formatToolPath(args.path, context.cwd);
+      const outputPad = normalizeOutputPad(context.outputPad);
       // Throw in the slot callback, never from the deferred component paint.
       if (context.argsComplete && typeof args.content !== "string") throw new TypeError();
       state.callComponent = updateComponent(context.lastComponent, (width) => {
+        const pad = resolveOutputPad(width, outputPad);
+        const innerWidth = width - pad * 2;
         if (!state.status || state.status === "pending") {
-          return [formatPendingMutationTitle("Writing", path, theme, width, context.executionStarted)];
+          return padOutputLines([formatPendingMutationTitle("Writing", path, theme, innerWidth, context.executionStarted)], width, pad);
         }
-        if (state.status === "error") return [fitToWidth(formatMutationFailureTitle("Write failed", path, theme, state.failureStatus), width)];
-        if (state.settledTitle !== undefined) return [fitToWidth(state.settledTitle, width)];
+        if (state.status === "error") {
+          return padOutputLines([fitToWidth(formatMutationFailureTitle("Write failed", path, theme, state.failureStatus), innerWidth)], width, pad);
+        }
+        if (state.settledTitle !== undefined) return padOutputLines([fitToWidth(state.settledTitle, innerWidth)], width, pad);
         const suffix = state.status === "success" && state.metrics
           ? theme.fg("dim", `(${formatLineCount(state.metrics.lineCount)})`)
           : "";
-        return [fitToWidth(formatEditTitle("Write", path, theme, suffix), width)];
+        return padOutputLines([fitToWidth(formatEditTitle("Write", path, theme, suffix), innerWidth)], width, pad);
       });
       return state.callComponent;
     },
     renderResult(result, options, theme, context) {
       const state = context.state as unknown as CodexWriteState;
+      const outputPad = normalizeOutputPad(context.outputPad);
       state.status = options.isPartial ? "pending" : context.isError ? "error" : "success";
       const change = result.details?.codexWrite;
       if (state.status === "success" && change?.version === 1) {
@@ -320,9 +335,11 @@ export function registerCodexTools(
       state.callComponent?.invalidate();
       const error = state.status === "error" ? getMutationFailure(result.content, "Write failed") : undefined;
       state.failureStatus = error?.status;
-      return updateComponent(context.lastComponent, (width) => error === undefined
-        ? []
-        : [fitToWidth(theme.fg(toolStatusColor(error.status), `  ${error.text}`), width)]);
+      return updateComponent(context.lastComponent, (width) => {
+        if (error === undefined) return [];
+        const pad = resolveOutputPad(width, outputPad);
+        return padOutputLines([fitToWidth(theme.fg(toolStatusColor(error.status), `  ${error.text}`), width - pad * 2)], width, pad);
+      });
     },
   };
   pi.registerTool(writeTool);
@@ -341,10 +358,16 @@ export function registerCodexTools(
       state.callComponent = component;
       const member = bashGroups.bind(context as unknown as Parameters<BashGroups["bind"]>[0]);
       bashGroups.updateCall(member, context, component);
-      component.setRenderer((width) => member.group.members[0] === member
-        ? renderBashGroup(member.group, context.expanded, theme, width,
-          formatExpandKeys(services, context))
-        : [], { linesAlreadyFit: true });
+      const outputPad = normalizeOutputPad(context.outputPad);
+      component.setRenderer((width) => {
+        if (member.group.members[0] !== member) return [];
+        const pad = resolveOutputPad(width, outputPad);
+        return padOutputLines(
+          renderBashGroup(member.group, context.expanded, theme, width - pad * 2, formatExpandKeys(services, context)),
+          width,
+          pad,
+        );
+      }, { linesAlreadyFit: true });
       return component;
     },
     renderResult(result, options, theme, context) {
@@ -530,10 +553,11 @@ function renderMutationResult(
   action: string,
   tool: "write" | "edit",
   theme: Theme,
-  context: { isError: boolean; lastComponent?: Component },
+  context: { isError: boolean; lastComponent?: Component; outputPad?: number },
   renderCache: ToolRenderCache,
   expandKeys: string,
 ): ResponsiveLinesComponent {
+  const outputPad = normalizeOutputPad(context.outputPad);
   const setTitle = (title: string | undefined) => {
     if (state.settledTitle !== title) {
       state.settledTitle = title;
@@ -550,7 +574,10 @@ function renderMutationResult(
   if (error !== undefined) {
     setTitle(formatMutationFailureTitle(failure, path, theme, error.status));
     const color = toolStatusColor(error.status);
-    return updateComponent(context.lastComponent, (width) => [fitToWidth(theme.fg(color, `  ${error.text}`), width)]);
+    return updateComponent(context.lastComponent, (width) => {
+      const pad = resolveOutputPad(width, outputPad);
+      return padOutputLines([fitToWidth(theme.fg(color, `  ${error.text}`), width - pad * 2)], width, pad);
+    });
   }
   state.cache ??= renderCache.scope();
   const diff = details && (details.patch || details.diff) ? getPreparedEditDiff(state, details, path, theme) : undefined;
@@ -562,11 +589,19 @@ function renderMutationResult(
   }
   setTitle(title);
   if (tool === "write" && !diff) {
-    return updateComponent(context.lastComponent, (width) => [fitToWidth(theme.fg("dim", "  Diff unavailable"), width)]);
+    return updateComponent(context.lastComponent, (width) => {
+      const pad = resolveOutputPad(width, outputPad);
+      return padOutputLines([fitToWidth(theme.fg("dim", "  Diff unavailable"), width - pad * 2)], width, pad);
+    });
   }
-  return updateComponent(context.lastComponent, (width) => getEditResultLayout(
-    state, result, diff, options, path, theme, false, width, expandKeys,
-  ));
+  return updateComponent(context.lastComponent, (width) => {
+    const pad = resolveOutputPad(width, outputPad);
+    return padOutputLines(
+      getEditResultLayout(state, result, diff, options, path, theme, false, width - pad * 2, expandKeys),
+      width,
+      pad,
+    );
+  });
 }
 
 function getMutationFailure(content: Array<{ type: string; text?: string }>, fallback: string): { text: string; status: ToolFailureStatus } {

@@ -56,6 +56,7 @@ pnpm exec node .cursor/skills/verify-pi-codex-ui/scripts/verify.mjs run tool-sta
 
 ```bash
 pnpm exec node --test .cursor/skills/verify-pi-codex-ui/scripts/runtime-support.test.mjs
+pnpm exec node --test .cursor/skills/verify-pi-codex-ui/scripts/thinking-cache.test.mjs
 conda run -n codex-py312 python -m unittest discover -s .cursor/skills/verify-pi-codex-ui/scripts -p 'test_*.py'
 conda run -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/interrupt-regression.py
 ```

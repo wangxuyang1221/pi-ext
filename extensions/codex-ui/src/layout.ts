@@ -27,6 +27,30 @@ export function normalizeWidth(width: number): number {
   return Math.max(0, Math.floor(width));
 }
 
+export function normalizeOutputPad(outputPad: number | undefined): number {
+  if (typeof outputPad !== "number" || !Number.isFinite(outputPad)) return 0;
+  return Math.max(0, Math.floor(outputPad));
+}
+
+/** Resolve horizontal padding while keeping at least one column for content on narrow widths. */
+export function resolveOutputPad(width: number, outputPad: number | undefined): number {
+  const safeWidth = normalizeWidth(width);
+  const pad = normalizeOutputPad(outputPad);
+  return pad > 0 && safeWidth > pad * 2 ? pad : 0;
+}
+
+/** Prefix non-empty rendered lines with horizontal output padding. */
+export function padOutputLines(
+  lines: readonly string[],
+  width: number,
+  outputPad: number | undefined,
+): string[] {
+  const pad = resolveOutputPad(width, outputPad);
+  if (pad === 0 || lines.length === 0) return [...lines];
+  const left = " ".repeat(pad);
+  return lines.map((line) => (line.length > 0 ? `${left}${line}` : ""));
+}
+
 export function fitToWidth(
   text: string,
   width: number,

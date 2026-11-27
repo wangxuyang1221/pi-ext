@@ -6,10 +6,12 @@ import { Container, stripTerminalSequences } from "@earendil-works/pi-tui";
 import codexUi from "../src/index.js";
 import { reasoningMessage, reasoningPipeline } from "./fixtures/reasoning-pipeline.js";
 
-// Header-only Thinking blockquote reference, independent of production registration.
-const quoteReference: MarkdownTransformer = (text, context) =>
-  context.messageType === "assistant-thinking" && text.trim()
-    ? `> **Thinking**\n\n${text}` : text;
+// Fixed per-block blockquote expectations for non-empty test fixtures (no mirrored fence parser).
+const quoteReference: MarkdownTransformer = (text, context) => {
+  if (context.messageType !== "assistant-thinking" || !text.trim()) return text;
+  const quoted = text.replace(/\r\n/gu, "\n").trim().split("\n").map(line => (line.trim() ? `> ${line}` : "")).join("\n");
+  return `> **Thinking**\n\n${quoted}`;
+};
 
 test("thinking grows inline and retains its contents through tool finalization", async () => {
   const pipeline = await reasoningPipeline(codexUi, process.cwd(), 0, false, 0);
@@ -104,9 +106,9 @@ test("thinking uses native blockquote wrapping, padding and visibility for all p
                 } else {
                   assert.ok(lines.length > 1, "Long reasoning must wrap instead of truncating to one line");
                   assert.match(lines[0]!, /│ Thinking/u);
-                  assert.ok(lines.slice(1).every(line => !line.trimStart().startsWith("│")),
-                    "Unquoted thinking body must not carry blockquote borders");
-                  assert.equal(lines.slice(1).map(line => line.trim()).filter(Boolean).join(" "), text);
+                  assert.ok(lines.slice(1).every(line => line.trimStart().startsWith("│ ")),
+                    "Per-block thinking body lines must carry blockquote borders");
+                  assert.equal(lines.slice(1).map(line => line.trim().replace(/^│\s*/u, "")).filter(Boolean).join(" "), text);
                 }
               }
             }
@@ -118,7 +120,7 @@ test("thinking uses native blockquote wrapping, padding and visibility for all p
   }
 });
 
-test("thinking header is separated by a blank line and leaves body blocks unquoted without backslashes", async () => {
+test("thinking header is separated by a blank line and quotes each body block without backslashes", async () => {
   const pipeline = await reasoningPipeline(codexUi, process.cwd(), 0, false, 0);
   try {
     await pipeline.begin();
@@ -128,17 +130,15 @@ test("thinking header is separated by a blank line and leaves body blocks unquot
       const start = rendered.findIndex(line => line.startsWith("│ Thinking"));
       return start >= 0 ? rendered.slice(start) : rendered;
     };
-    assert.deepEqual(rows("**Plan**\n\nRead the file."), ["│ Thinking", "", "Plan", "", "Read the file."]);
-    assert.deepEqual(rows("Plain body."), ["│ Thinking", "", "Plain body."]);
-    for (const [text, first] of [["- item", "- item"], ["1. step", "1. step"], ["# Heading", "Heading"], ["> nested", "│ nested"],
-      ["```ts\nconst n = 1;\n```", "```ts"], ["Title\n---", "Title"], ["\nAfter a blank line", "After a blank line"]] as const) {
+    assert.deepEqual(rows("**Plan**\n\nRead the file."), ["│ Thinking", "", "│ Plan", "", "│ Read the file."]);
+    assert.deepEqual(rows("Plain body."), ["│ Thinking", "", "│ Plain body."]);
+    for (const [text, first] of [["- item", "│ - item"], ["1. step", "│ 1. step"], ["# Heading", "│ Heading"], ["> nested", "│ │ nested"],
+      ["```ts\nconst n = 1;\n```", "│ ```ts"], ["Title\n---", "│ Title"], ["\nAfter a blank line", "│ After a blank line"]] as const) {
       const visible = rows(text);
       assert.deepEqual(visible.slice(0, 2), ["│ Thinking", ""], text);
       assert.ok(visible.slice(2).some(line => line.startsWith(first)), `${text}: ${visible.join(" / ")}`);
       assert.ok(visible.every(line => !line.includes("\\")), text);
-      if (text !== "> nested") {
-        assert.ok(visible.slice(2).every(line => !line.startsWith("│")), `${text}: ${visible.join(" / ")}`);
-      }
+      assert.ok(visible.slice(2).filter(Boolean).every(line => line.startsWith("│ ")), `${text}: ${visible.join(" / ")}`);
     }
   } finally { await pipeline.dispose(); }
 });

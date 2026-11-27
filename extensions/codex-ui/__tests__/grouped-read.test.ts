@@ -59,10 +59,10 @@ test("real limited Read excludes continuation notices from source counts and pre
     assert.match(actual.content[0]!.type === "text" ? actual.content[0]!.text : "", /Use offset=4/u);
     const row = h.row("limited", args); row.setArgsComplete();
     row.updateResult({ ...actual, isError: false });
-    assert.equal(plain(row), "\n@ Read sample.txt · L2–3 · 2 lines");
+    assert.equal(plain(row), "\n @ Read sample.txt · L2–3 · 2 lines");
     row.setExpanded(true);
-    assert.equal(plain(row), ["", "@ Read sample.txt · L2–3 · 2 lines", "  └ 2  two", "    3  three",
-      "    [3 more lines in file. Use offset=4 to continue.]"].join("\n"));
+    assert.equal(plain(row), ["", " @ Read sample.txt · L2–3 · 2 lines", "   └ 2  two", "     3  three",
+      "     [3 more lines in file. Use offset=4 to continue.]"].join("\n"));
   } finally { h.dispose(); rmSync(dir, { recursive: true, force: true }); }
 });
 
@@ -76,12 +76,12 @@ test("real truncation reports only returned source lines and preserves oversized
       const args = { path: name! };
       const actual = await h.tools.get("read")!.execute(name!, args, undefined, undefined, { cwd: dir } as never);
       const row = h.row(name!, args); row.updateResult({ ...actual, isError: false });
-      assert.equal(plain(row), `\n@ Read ${name} · ${name === "many.txt" ? 2000 : 0} lines · truncated`);
+      assert.equal(plain(row), `\n @ Read ${name} · ${name === "many.txt" ? 2000 : 0} lines · truncated`);
       row.setExpanded(true);
       const text = plain(row);
       if (name === "many.txt") {
-        assert.match(text, /^ {4}40  line$/mu);
-        assert.match(text, /^ {4}… \+1960 lines$/mu);
+        assert.match(text, /^ {5}40  line$/mu);
+        assert.match(text, /^ {5}… \+1960 lines$/mu);
         assert.match(text, /offset=2001/u);
       } else {
         assert.match(text, /0 lines · truncated/u);
@@ -119,15 +119,15 @@ test("image reads show non-vision model warnings when collapsed and expanded", (
     });
     assert.equal(plain(row), [
       "",
-      "@ Read photo.png · Image loaded",
-      "  └ [gpt-text-only does not support images; it saw a placeholder instead]",
+      " @ Read photo.png · Image loaded",
+      "   └ [gpt-text-only does not support images; it saw a placeholder instead]",
     ].join("\n"));
     row.setExpanded(true);
     assert.equal(plain(row), [
       "",
-      "@ Read photo.png · Image loaded",
-      "  └ 1  Read image file [image/png]",
-      "    [gpt-text-only does not support images; it saw a placeholder instead]",
+      " @ Read photo.png · Image loaded",
+      "   └ 1  Read image file [image/png]",
+      "     [gpt-text-only does not support images; it saw a placeholder instead]",
     ].join("\n"));
     for (const width of [16, 30, 40, 80]) {
       const lines = row.render(width);
@@ -143,7 +143,7 @@ test("image reads show non-vision model warnings when collapsed and expanded", (
       const darkTheme = themeModule.getThemeByName("dark");
       assert.ok(warningRows.length >= 2);
       for (const line of warningRows) {
-        const text = stripTerminalSequences(line).replace(/^(?: {2}└ | {4})/u, "").trimEnd();
+        const text = stripTerminalSequences(line).replace(/^ (?: {2}└ | {4})/u, "").trimEnd();
         assert.ok(text.length > 0 && line.includes(darkTheme.fg("warning", text)));
       }
     }
@@ -257,15 +257,15 @@ test("long Reads stay on one heading row, keep the filename at narrow widths and
       assert(lines.every(line => visibleWidth(line) <= width));
     }
     assert.deepEqual(row.render(0), []);
-    assert.equal(plain(row, 30), "\n@ Read dire…/中文.ts · 5 lines");
-    assert.equal(plain(row, 80), `\n@ Read ${"directory/".repeat(5)}dire…/中文.ts · 5 lines`);
-    assert.equal(plain(row, 160), `\n@ Read ${path} · 5 lines`);
+    assert.equal(plain(row, 30), "\n @ Read di…/中文.ts · 5 lines");
+    assert.equal(plain(row, 80), `\n @ Read ${"directory/".repeat(5)}di…/中文.ts · 5 lines`);
+    assert.equal(plain(row, 160), `\n @ Read ${path} · 5 lines`);
     row.setExpanded(true);
     for (const width of [16, 30, 80]) {
       const lines = row.render(width);
       assert.equal(lines.length, 7);
       assert(lines.every(line => visibleWidth(line) <= width));
-      assert.deepEqual(lines.slice(2).map(line => stripTerminalSequences(line).slice(0, 7)), ["  └ 1  ", "    2  ", "    3  ", "    4  ", "    5  "]);
+      assert.deepEqual(lines.slice(2).map(line => stripTerminalSequences(line).slice(0, 8)), ["   └ 1  ", "     2  ", "     3  ", "     4  ", "     5  "]);
     }
     row.setExpanded(false); assert.equal(row.render(30).length, 2);
   } finally { h.dispose(); }
@@ -276,9 +276,9 @@ test("limited Read preserves selected blank lines and empty files do not invent 
   try {
     const row = h.row("blank", { path: "blank.txt", limit: 2 });
     row.updateResult(result("one\n\n\n[3 more lines in file. Use offset=3 to continue.]"));
-    assert.equal(plain(row), "\n@ Read blank.txt · L1–2 · 2 lines");
+    assert.equal(plain(row), "\n @ Read blank.txt · L1–2 · 2 lines");
     row.setExpanded(true);
-    assert.equal(plain(row), ["", "@ Read blank.txt · L1–2 · 2 lines", "  └ 1  one", "    2", "    [3 more lines in file. Use offset=3 to continue.]"].join("\n"));
+    assert.equal(plain(row), ["", " @ Read blank.txt · L1–2 · 2 lines", "   └ 1  one", "     2", "     [3 more lines in file. Use offset=3 to continue.]"].join("\n"));
     const empty = h.row("empty"); empty.updateResult(result(""));
     assert.match(plain(empty), /0 lines/u); assert.equal(empty.render(120).length, 2);
     empty.updateResult(result("Operation aborted", true));
@@ -296,11 +296,11 @@ test("consecutive Read calls share one row and keep source order under out-of-or
     rows[2]!.updateResult(h.publish("c", result("c-first\nc-second\nc-third\nc-fourth")));
     rows[0]!.updateResult(h.publish("a", result("a-first")));
     rows[1]!.updateResult(h.publish("b", result("Permission denied\nstack", true)));
-    assert.equal(plain(rows[0]!), ["", "▸ Read 3 files", "  @ src/a.ts · 1 line", "  @ src/b.ts · Failed", "    └ Permission denied",
-      "  @ src/c.ts · 4 lines"].join("\n"));
+    assert.equal(plain(rows[0]!), ["", " ▸ Read 3 files", "   @ src/a.ts · 1 line", "   @ src/b.ts · Failed", "     └ Permission denied",
+      "   @ src/c.ts · 4 lines"].join("\n"));
     rows[0]!.setExpanded(true);
-    assert.equal(plain(rows[0]!), ["", "▾ Read 3 files", "  @ src/a.ts · 1 line", "    └ 1  a-first", "  @ src/b.ts · Failed",
-      "    └ Permission denied", "  @ src/c.ts · 4 lines", "    └ 1  c-first", "      2  c-second", "      3  c-third", "      4  c-fourth"].join("\n"));
+    assert.equal(plain(rows[0]!), ["", " ▾ Read 3 files", "   @ src/a.ts · 1 line", "     └ 1  a-first", "   @ src/b.ts · Failed",
+      "     └ Permission denied", "   @ src/c.ts · 4 lines", "     └ 1  c-first", "       2  c-second", "       3  c-third", "       4  c-fourth"].join("\n"));
     assert.equal(rows[1]!.render(120).length, 0);
     assert.equal(rows[2]!.render(120).length, 0);
   } finally { h.dispose(); }
