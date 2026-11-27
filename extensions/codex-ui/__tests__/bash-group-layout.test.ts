@@ -210,3 +210,149 @@ test("theme changes restyle the preview without rereading the capture", () => {
     assert.equal(reads, warmedReads);
   }
 });
+
+test("fullOutputError and unsaved truncation footers cover lines, bytes, and lastLinePartial across collapsed and expanded views", () => {
+  const theme = getThemeByName("dark");
+  const output = Array.from({ length: 10 }, (_, i) => `l${i}`).join("\n");
+  const prefixes = [
+    "Showing lines 101-2100 of 2100.",
+    "Showing lines 1800-2100 of 2100 (50.0KB limit).",
+    "Showing last 50.0KB of line 1 (line is 80.0KB).",
+  ];
+  const reason = "ENOSPC: no space left on device, open '/tmp/pi-bash-1.log'";
+
+  for (const prefix of prefixes) {
+    const errorFooter = `[${prefix} Could not save the full output: ${reason}]`;
+    const completed = fixture("completed", "make test");
+    completed.members[0]!.content = [{ type: "text", text: `${output}\n\n${errorFooter}` }];
+    completed.members[0]!.details = { truncation: { truncated: true }, fullOutputError: reason } as never;
+
+    const failedNoDetails = fixture("failed", "make test");
+    failedNoDetails.members[0]!.content = [{ type: "text", text: `${output}\n\n${errorFooter}\n\nCommand exited with code 7` }];
+
+    for (const [group, title] of [[completed, "$ Bash(make test)"], [failedNoDetails, "$ Bash(make test) · exit 7"]] as const) {
+      const collapsed = renderBashGroup(group, false, theme, 140, "").map(stripTerminalSequences);
+      assert.deepEqual(collapsed, [
+        title,
+        "  └ l0",
+        "    l1",
+        "    … +6 lines",
+        "    l8",
+        "    l9",
+        `    Truncated capture · Could not save the full output: ${reason}`,
+      ]);
+      const expanded = renderBashGroup(group, true, theme, 140, "").map(stripTerminalSequences);
+      assert.equal(expanded.filter(line => line.includes("Could not save the full output:")).length, 1);
+      assert.doesNotMatch(expanded.join("\n"), /\[Showing /u);
+    }
+  }
+
+  // Completed with fullOutputError must keep a completed marker (not failed).
+  const okWithError = fixture("completed", "make test");
+  okWithError.members[0]!.details = { fullOutputError: "EACCES: permission denied" } as never;
+  const okLines = renderBashGroup(okWithError, false, theme, 120, "");
+  assert.equal(okLines[0], theme.fg("muted", "$") + " " + theme.bold("Bash") + "(make test)");
+  assert.equal(stripTerminalSequences(okLines.at(-1)!), "    Truncated capture · Could not save the full output: EACCES: permission denied");
+
+  // Path wins over error when both exist; pure-control error falls back to unavailable.
+  const both = fixture("completed");
+  both.members[0]!.details = { truncation: { truncated: true }, fullOutputPath: "/tmp/saved.log", fullOutputError: "ignored" } as never;
+  assert.equal(stripTerminalSequences(renderBashGroup(both, false, theme, 120, "").at(-1)!), "    Truncated capture · /tmp/saved.log");
+
+  const blankError = fixture("completed");
+  blankError.members[0]!.details = { truncation: { truncated: true }, fullOutputError: "\x1b[31m   \n\x1b[0m" } as never;
+  assert.equal(stripTerminalSequences(renderBashGroup(blankError, false, theme, 120, "").at(-1)!), "    Truncated capture · full output unavailable");
+});
+
+test("footer stripping rejects spoofed, mismatched, running, or unseparated footers and preserves extended host diagnostics", () => {
+  const theme = getThemeByName("dark");
+  const spoof = "[Showing lines 1-10 of 3000. Could not save the full output: fake]";
+
+  // Completed without truncation details preserves user stdout verbatim.
+  const completedSpoof = fixture("completed");
+  completedSpoof.members[0]!.content = [{ type: "text", text: `real\n\n${spoof}` }];
+  assert.deepEqual(
+    renderBashGroup(completedSpoof, true, theme, 120, "").map(line => stripTerminalSequences(line).trimEnd()),
+    ["$ Bash(git status --short)", "  └ real", "", `    ${spoof}`],
+  );
+
+  // Running with streaming details never strips live body text.
+  const running = fixture("running");
+  running.members[0]!.content = [{ type: "text", text: `live\n\n[Showing lines 1-10 of 3000. Full output: /tmp/live.log]` }];
+  running.members[0]!.details = { truncation: { truncated: true }, fullOutputPath: "/tmp/live.log" } as never;
+  const runningPlain = renderBashGroup(running, true, theme, 120, "").map(stripTerminalSequences).join("\n");
+  assert.match(runningPlain, /\[Showing lines 1-10 of 3000\. Full output: \/tmp\/live\.log\]/u);
+  assert.match(runningPlain, /Truncated capture · \/tmp\/live\.log/u);
+
+  // Mismatched structured details value or kind must not strip body text.
+  const mismatched = fixture("completed");
+  mismatched.members[0]!.content = [{ type: "text", text: "real\n\n[Showing lines 1-10 of 3000. Full output: /tmp/other.log]" }];
+  mismatched.members[0]!.details = { truncation: { truncated: true }, fullOutputPath: "/tmp/actual.log" } as never;
+  const mismatchedPlain = renderBashGroup(mismatched, true, theme, 120, "").map(stripTerminalSequences).join("\n");
+  assert.match(mismatchedPlain, /\[Showing lines 1-10 of 3000\. Full output: \/tmp\/other\.log\]/u);
+  assert.match(mismatchedPlain, /Truncated capture · \/tmp\/actual\.log/u);
+
+  // Missing blank separator before footer prevents false stripping even on failed calls.
+  const unseparated = fixture("failed");
+  unseparated.members[0]!.content = [{ type: "text", text: `real\n${spoof}\n\nCommand exited with code 2` }];
+  const unsepPlain = renderBashGroup(unseparated, true, theme, 120, "").map(stripTerminalSequences).join("\n");
+  assert.match(unsepPlain, /\[Showing lines 1-10 of 3000\. Could not save the full output: fake\]/u);
+  assert.doesNotMatch(unsepPlain, /Truncated capture/u);
+
+  // Extended timeout explanation is preserved while its preceding truncation footer is stripped.
+  const extTimeout = "Command timed out after 10 seconds. The shell exited with code 0 after 1 seconds, but background processes it started kept writing output until the timeout.";
+  const timedOut = fixture("failed");
+  timedOut.members[0]!.content = [{
+    type: "text",
+    text: `first\nlast-real\n\n[Showing lines 1-2000 of 2500. Could not save the full output: ENOTDIR]\n\n${extTimeout}`,
+  }];
+  const timedOutPlain = renderBashGroup(timedOut, true, theme, 200, "").map(stripTerminalSequences).join("\n");
+  assert.match(timedOutPlain, /last-real/u);
+  assert.match(timedOutPlain, /background processes it started kept writing output until the timeout/u);
+  assert.match(timedOutPlain, /Truncated capture · Could not save the full output: ENOTDIR/u);
+  assert.doesNotMatch(timedOutPlain, /\[Showing lines 1-2000/u);
+});
+
+test("multi-line errors and terminal control sequences in warnings are stripped and fit narrow widths safely", () => {
+  const theme = getThemeByName("dark");
+  const multiError = "line1 [detail]\nline2: \x1b]52;c;ZXZpbA==\x07\x9d52;c;c1payload\x07\u202e\x1b[31mred\x1b[0m";
+  const group = fixture("completed");
+  group.members[0]!.content = [{
+    type: "text",
+    text: `tail-marker\n\n[Showing lines 1-2000 of 3000. Could not save the full output: ${multiError}]`,
+  }];
+  group.members[0]!.details = { truncation: { truncated: true }, fullOutputError: multiError } as never;
+
+  const rendered = renderBashGroup(group, true, theme, 160, "");
+  const raw = rendered.join("\n");
+  const plain = rendered.map(stripTerminalSequences).join("\n");
+  assert.doesNotMatch(raw, /\x1b\]52|\x9d|ZXZpbA|c1payload|\u202e/u);
+  assert.doesNotMatch(plain, /\[Showing lines 1-2000/u);
+  assert.match(plain, /tail-marker/u);
+  assert.match(plain, /Truncated capture · Could not save the full output: line1 \[detail\] line2: red/u);
+
+  // Over-long error messages are bounded and fit narrow widths without overflow.
+  const huge = fixture("completed");
+  huge.members[0]!.details = { truncation: { truncated: true }, fullOutputError: "E".repeat(400) } as never;
+  for (const width of [0, 1, 2, 5, 6, 8, 24, 80]) {
+    const lines = renderBashGroup(huge, false, theme, width, "");
+    assert.ok(lines.every(line => visibleWidth(line) <= width));
+  }
+  const capped = stripTerminalSequences(renderBashGroup(huge, false, theme, 500, "").at(-1)!);
+  assert.equal(capped, `    Truncated capture · Could not save the full output: ${"E".repeat(256)}…`);
+
+  // Multi-line OSC sequences in stdout before the footer must not break diagnostic or footer parsing.
+  const oscReason = "ENOTDIR: not a directory";
+  const oscGroup = fixture("failed", "make test");
+  oscGroup.members[0]!.content = [{
+    type: "text",
+    text: `before\x1b]0;multi\nline\x07after\n\n[Showing lines 1-2000 of 3000. Could not save the full output: ${oscReason}]\n\nCommand exited with code 7`,
+  }];
+  oscGroup.members[0]!.details = { truncation: { truncated: true }, fullOutputError: oscReason } as never;
+  const oscPlain = renderBashGroup(oscGroup, true, theme, 160, "").map(stripTerminalSequences);
+  assert.deepEqual(oscPlain, [
+    "$ Bash(make test) · exit 7",
+    "  └ beforeafter",
+    `    Truncated capture · Could not save the full output: ${oscReason}`,
+  ]);
+});

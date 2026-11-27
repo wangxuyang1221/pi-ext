@@ -306,7 +306,111 @@ def control_case():
     check('CONTROL-FIRSTCONTROL-LAST' in view(),'Real diff displays text surrounding source terminal controls')
     check(all(b'source-must-not-set-title' not in title for title in titles(raw[offset:])),'Source OSC cannot change the terminal title')
     snap('sanitized control diff');keys(b'\x0f','collapse control character diff');settle()
+def bash_capture_case():
+    workspace = ROOT / 'workspace'
+    temp = ROOT / 'tmp'
+    parked = ROOT / 'tmp-before-capture'
+    # A single oversized line is dropped when complete nonblank lines follow it.
+    # The original multibyte output also fits the nested 32 Ki-character budget.
+    tail = 'tail-one\ntail-two\ninner-three\ninner-four\ntail-five\nCAPTURE-END\n'
+    (workspace / 'capture.txt').write_text('界' * 18000 + '\n' + tail)
+    shell = 'cat capture.txt'
+
+    def transcript():
+        # Fullscreen reserves the rightmost column for its always-on scrollbar.
+        width = screen.columns - int(MODE == 'fullscreen')
+        return '\n'.join(line[:width].rstrip() for line in screen.display)
+
+    def card(label, title, reply):
+        snap(label)
+        frame = transcript()
+        start = frame.rfind(title)
+        end = frame.find(reply, start)
+        check(0 <= start < end, label + ' shows the current tool and its following reply')
+        return frame[start:end].strip()
+
+    def failed_preview(label, body, expanded, reason):
+        # Terminal wrapping adds indentation, including in the middle of paths.
+        compact = ''.join(body.split())
+        warning = 'Truncated capture · Could not save the full output: '
+        check(body.count('CAPTURE-END') == 1 and body.index('CAPTURE-END') < body.find('Truncated capture'),
+              label + ' retains the real output tail above its warning')
+        check(compact.count('Truncatedcapture·') == 1 and compact.count('Couldnotsavethefulloutput:') == 1
+              and ''.join((warning + reason).split()) in compact and '[Showing' not in compact,
+              label + ' displays the capture error once and removes the stock footer')
+        check(('inner-three' in body) == expanded, label + ' shows the expected amount of captured output')
+
+    temp.rename(parked)
+    try:
+        temp.touch(exist_ok=False)
+        for code in (0, 7):
+            command_text = shell if code == 0 else shell + ' && exit 7'
+            label = f'Capture save failure exit {code}'
+            reply = f'CAPTURE-DONE-{code}'
+            event = request(label, {'calls': [tool('bash', command=command_text)], 'reply': reply})[-1]
+            result = event['result']
+            reason = result['details']['fullOutputError']
+            check(event['toolName'] == 'bash' and event['isError'] == bool(code)
+                  and 'ENOTDIR' in reason and 'fullOutputPath' not in result['details']
+                  and '[Showing' in result['content'][0]['text'],
+                  label + ' receives the stock truncated result and expected shell status')
+            title = f'$ Bash({command_text})'
+            for expanded in (False, True):
+                if expanded:
+                    keys(b'\x0f', 'expand ' + label); settle()
+                state = label + (' expanded' if expanded else ' collapsed')
+                body = card(state, title, reply)
+                check(body.splitlines()[0].rstrip() == title + (f' · exit {code}' if code else ''),
+                      state + ' keeps the command exit status on the title')
+                failed_preview(state, body, expanded, reason)
+            keys(b'\x0f', 'collapse ' + label); settle()
+
+        label = 'Nested capture save failure'
+        reply = 'NESTED-CAPTURE-DONE'
+        script = 'await tools.bash({command:"cat capture.txt"}); text("child finished");'
+        child_event, event = request(label, {'calls': [tool('codemode', code=script)], 'reply': reply})[-2:]
+        check(event['toolName'] == 'codemode' and not event['isError'], 'Real nested script completes')
+        check(child_event['toolName'] == 'bash' and child_event['toolCallId'] == event['result']['details']['calls'][0]['id']
+              and len(json.dumps(child_event['result'], ensure_ascii=False)) < 32 * 1024,
+              'The nested Bash result fits the capture budget and belongs to this script')
+        reason = child_event['result']['details']['fullOutputError']
+        check('ENOTDIR' in reason, 'Nested Bash reports the failed save')
+        keys(b'\x0f', 'expand nested capture'); settle()
+        body = card(label, '$ Bash(cat capture.txt)', reply)
+        child, _ = body.split('Output to model', 1)
+        failed_preview(label, child, True, reason)
+        keys(b'\x0f', 'collapse nested capture'); settle()
+    finally:
+        temp.unlink(missing_ok=True)
+        parked.rename(temp)
+
+    # Only blank lines follow this oversized line, so Pi must keep its partial tail.
+    original = ('long-part-' * 6000 + 'SINGLE-LINE-END\n\n\n').encode()
+    (workspace / 'long.txt').write_bytes(original)
+    result = request('Save a partial line after recovery', {'calls': [tool('bash', command='cat long.txt')]})[-1]['result']
+    details = result['details']
+    saved = Path(details['fullOutputPath'])
+    check(details['truncation']['lastLinePartial'] and '[Showing last ' in result['content'][0]['text']
+          and 'SINGLE-LINE-END\n\n' in result['content'][0]['text'],
+          'Stock Bash retains the oversized line tail followed by blank lines')
+    check('fullOutputError' not in details and saved.parent == temp and saved.read_bytes() == original,
+          'The restored temp directory contains the exact untruncated output')
+    def check_recovery(body, label):
+        compact = ''.join(body.split())
+        check(compact.count('SINGLE-LINE-END') == 1 and compact.count('Truncatedcapture·') == 1
+              and compact.index('SINGLE-LINE-END') < compact.index('Truncatedcapture·')
+              and ''.join(str(saved).split()) in compact and '[Showing' not in compact and 'Couldnotsave' not in compact,
+              label + ' shows the long line ending followed by its single saved path')
+
+    check_recovery(card('Recovered capture collapsed', '$ Bash(cat long.txt)', 'AUDIT-DONE'), 'Collapsed')
+    keys(b'\x0f', 'expand the recovered long line'); settle()
+    snap('Recovered capture expanded')
+    # The expanded line fills multiple screens; the visible last page contains its tail.
+    check_recovery(transcript().rsplit('AUDIT-DONE', 1)[0], 'Expanded')
+    keys(b'\x0f', 'restore collapsed tool view'); settle()
+
 def pi_compat_case():
+    bash_capture_case()
     # A 1×1 red PNG with no fixture file to stage.
     image = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC')
     (ROOT/'workspace/pixel.png').write_bytes(image)

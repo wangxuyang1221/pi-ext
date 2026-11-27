@@ -111,3 +111,56 @@ test("expanded tree reuses cached output and invalidates on result eviction, wid
   assert.notEqual(afterEvict, beforeEvict);
   assert.match(afterEvict.join("\n"), /Raw result unavailable/);
 });
+
+test("nested Bash reuses fullOutputError rendering across update-to-end transitions and preserves raw inspector", () => {
+  const store = new CodemodeStore();
+  store.event({ type: "tool_execution_start", toolName: "codemode", toolCallId: "p", args: { code: "await tools.bash({ command: 'seq 1 10' })" } });
+  store.event({ type: "tool_execution_start", toolName: "read", toolCallId: "p/0", parentToolCallId: "p", args: { path: "keep.ts" } });
+  store.event({ type: "tool_execution_end", toolName: "read", toolCallId: "p/0", parentToolCallId: "p", result: { content: [{ type: "text", text: "sibling-body" }] } });
+  store.event({ type: "tool_execution_start", toolName: "bash", toolCallId: "p/1", parentToolCallId: "p", args: { command: "seq 1 10" } });
+
+  const presentation = new CodemodePresentation(store, new Map());
+  const row = store.get("p")!;
+  const siblingBefore = presentation.child(row.calls[0]!, 100, theme, "/repo");
+
+  // Streaming update carries a saved path first (small payload stays well within ResultCache 32 Ki char budget).
+  store.event({
+    type: "tool_execution_update",
+    toolName: "bash",
+    toolCallId: "p/1",
+    parentToolCallId: "p",
+    partialResult: {
+      content: [{ type: "text", text: "tail-live" }],
+      details: { truncation: { truncated: true, content: "tail-live" }, fullOutputPath: "/tmp/pi-bash-live.log" },
+    },
+  });
+  assert.equal(store.results.get("p/1")?.complete, true);
+  assert.match(presentation.tree(row, theme, 120, true, "/repo", "ctrl+o").join("\n"), /Truncated capture · \/tmp\/pi-bash-live\.log/);
+
+  // Final result transitions to fullOutputError on flush/close failure.
+  const footer = "[Showing lines 1-10 of 3000. Could not save the full output: ENOTDIR: not a directory]";
+  store.event({
+    type: "tool_execution_end",
+    toolName: "bash",
+    toolCallId: "p/1",
+    parentToolCallId: "p",
+    isError: false,
+    result: {
+      content: [{ type: "text", text: `line-a\ntail-final\n\n${footer}` }],
+      details: { truncation: { truncated: true, content: "line-a\ntail-final" }, fullOutputError: "ENOTDIR: not a directory" },
+    },
+  });
+  assert.equal(store.results.get("p/1")?.complete, true);
+  const tree = presentation.tree(row, theme, 120, true, "/repo", "ctrl+o").join("\n");
+  assert.match(tree, /tail-final/);
+  assert.match(tree, /Truncated capture · Could not save the full output: ENOTDIR: not a directory/);
+  assert.doesNotMatch(tree, /\[Showing lines 1-10 of 3000/);
+  assert.doesNotMatch(tree, /pi-bash-live\.log/);
+  // Unchanged sibling child cache stays intact.
+  assert.equal(presentation.child(row.calls[0]!, 100, theme, "/repo"), siblingBefore);
+
+  // Inspector Raw child output keeps the original unstripped child text.
+  const detail = presentation.detail(row, { tab: "Calls", selected: 1, scroll: 0 }, theme, 120, "/repo").join("\n");
+  assert.match(detail, /Raw child output/);
+  assert.match(detail, /\[Showing lines 1-10 of 3000/);
+});

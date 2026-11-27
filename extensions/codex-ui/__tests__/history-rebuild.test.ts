@@ -12,7 +12,7 @@ test.each(["unchanged", "replacement", "in-place"])("Read groups survive rebuild
   initTheme("dark", false);
   mkdirSync(".tmp", { recursive: true });
   const cwd = mkdtempSync(join(process.cwd(), ".tmp/codex-history-"));
-  const settingsManager = SettingsManager.inMemory({ showCacheMissNotices: false, compaction: { keepRecentTokens: 10 } });
+  const settingsManager = SettingsManager.inMemory({ notices: { cacheMisses: false }, compaction: { keepRecentTokens: 10 } });
   let firstKeptEntryId = "";
   const executed: string[] = [], finalized: string[] = [];
   const text = (content: Array<{ type: string; text?: string }>) => content.filter(block => block.type === "text").map(block => block.text).join("\n");

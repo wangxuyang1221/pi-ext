@@ -34,6 +34,12 @@ pnpm test extensions/codex-ui/__tests__/reply-copy.test.ts extensions/codex-ui/_
 
 定向测试核对编辑器 `/copy` 跳过无正文的取消、工具或错误 turn，以及正常 `stop` 的无正文通知。测试替换了剪贴板写入，因此系统粘贴仍按 [Manual boundaries](#manual-boundaries) 验收。主题测试检查 schema URL、显式 `dark` 和宿主加载结果。工具测试检查 `text` 色变化后，已有 diff 缓存与冷渲染一致。
 
+### Bash capture
+
+两个 `--pi-compat` 入口在宿主就绪后暂时移走各自 scratch 中的 `tmp` 目录，在原位置放入普通文件。Bash 通过 `cat` 输出超过 50 KiB 的首行和六行可辨识的尾部。退出码 0 和 7 的结束事件均须带 `fullOutputError`；分别对照当前工具卡片在 Ctrl+O 前后的标题、真实尾行、中间行的显隐，以及正文下方唯一的保存失败原因。展开原生 codemode 时，通过子调用 ID 关联 Bash 事件，只检查子工具区域中的尾行和警告。多字节夹具使子结果保持在 32 Ki 字符预算内。
+
+驱动在 `finally` 中恢复该进程的临时目录。随后实际输出超长单行和尾随空行，核对宿主保留的长行末尾、显示的保存路径及该路径的完整文件字节。`journey.json` 保存每个状态的终端帧，`events.json` 保存工具结束事件。这里的 `ENOTDIR` 证明创建文件时的 open 失败；写入后期或 close 时发生的错误仍需单独的故障条件。真实 Wayland 选区、系统剪贴板及终端像素按 [Manual boundaries](#manual-boundaries) 单列。
+
 ## CLI coverage
 
 | Feature IDs | Required observations |

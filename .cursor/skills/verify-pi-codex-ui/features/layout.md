@@ -7,7 +7,7 @@
 - `ui-header`：启动显示圆角 header：`pi vX · Codex profile`，`model:` 与 `directory:` 标签对齐，路径过长时省略中段。
 - `ui-composer`：输入框保持实色背景和当前主题的文字色，草稿在终端默认前景不同的情况下仍可读。空草稿显示强调色 `›` 和占位文字；宽度不小于 48 列时底部留白行右侧显示 `/ for commands`，输入文字或打开菜单后隐藏。
 - `ui-status`：footer 首行以 ` · ` 分隔展示模型与思考等级、目录与 git 分支、context，中性状态行另起一行；运行时右侧速率占位，结束后归还宽度。
-- `ui-theme` 验证 Pi 按兼容 `https://pi.dev/schemas/theme.schema.json` 的定义加载 codex-pi，外观为 `dark`。原版 Pi 1.6.0 的普通回复段落沿用终端默认前景。输入草稿（`text`）、独立 Read 标题（`toolTitle`）和未标注语言的回复代码围栏正文（`mdCodeBlock`）使用 `foreground`（`#d4d4d8`）。`toolOutput` 使用 `muted`（`#9a9aa2`），`thinkingText` 与 `mdQuote` 使用 `thinking`（`#787882`），`mdQuoteBorder` 使用 `quoteBorder`（`#44444c`）。已保存的主题跨会话替换保持。
+- `ui-theme` 验证 Pi 按兼容 `https://pi.dev/schemas/theme.schema.json` 的定义加载 codex-pi，外观为 `dark`。原版 Pi 1.6.1 的普通回复段落沿用终端默认前景。输入草稿（`text`）、独立 Read 标题（`toolTitle`）和未标注语言的回复代码围栏正文（`mdCodeBlock`）使用 `foreground`（`#d4d4d8`）。`toolOutput` 使用 `muted`（`#9a9aa2`），`thinkingText` 与 `mdQuote` 使用 `thinking`（`#787882`），`mdQuoteBorder` 使用 `quoteBorder`（`#44444c`）。已保存的主题跨会话替换保持。
 - `ui-output-padding`：用户与回复消息、自绘 Read、Bash、Edit、Write 和 codemode 共用 Pi 的 `Output padding`。默认 `1` 时标题与消息正文从第二列开始，切到 `0` 时从第一列开始。工具正文保留各自的内部缩进，极窄时撤销额外边距。
 - `ui-fullscreen-scrollbar`：全屏滚动条的 `scrollbarTrack` 使用 `userBg`（`#2c2c31`），`scrollbarThumb` 使用较亮的 `dim`（`#6c6c74`）。
 - `ui-resize`：窄屏 resize 不破坏内容。
