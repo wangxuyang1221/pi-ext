@@ -15,7 +15,7 @@
 - `ui-reply-markdown`：回复沿用原生 Markdown 顶层块排版且不改变模型原文。
 - `ui-copy-fallback`：编辑器执行 `/copy` 时跳过没有非空正文且 `stopReason` 不是 `stop` 的 assistant turn，复制上一条可复制正文。遇到正常结束且无正文的 turn 时显示 `No agent messages to copy yet.`。
 - `ui-working`：输入框上方的生产 Working 动画和计时按任务生命周期显示，等待期间保持，settled 后隐藏。
-- `ui-receive-rate`：footer 右侧显示最近约两秒的估算接收速率，无新数据为 `-- t/s`，任务结束隐藏。
+- `ui-receive-rate`：footer 首行右侧先显示已收到的估算量 `≈… tok`；获得跨至少 240 ms 的到达样本后显示按实际到达跨度估算的速率 `≈… t/s`。连续两秒无新内容或当前响应结束时恢复为 `-- t/s`；任务 settled 后隐藏该字段。见 [Working and lifecycle](working.md#sub-features)。
 
 ## How to get to it (user POV)
 
