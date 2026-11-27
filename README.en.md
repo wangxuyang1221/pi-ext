@@ -8,7 +8,7 @@ A Codex-style terminal interface and the `codex-pi` theme for [Pi Coding Agent](
 
 - Linux or macOS. Native Windows is not supported.
 - Node.js `>=22.19.0` and pnpm `11.9.0`.
-- Pi `1.6.0`. Development and peer dependencies pin this version. Other versions need separate validation.
+- Pi `1.6.1`. Development and peer dependencies pin this version. Other versions need separate validation.
 - A terminal with 24-bit color is recommended.
 
 ## Install
@@ -61,7 +61,7 @@ pnpm run build
 `codex-ui` keeps Pi branding and adds a solid-background editor with compact tool output. The status bar shows the model, thinking level, working directory, Git branch, and remaining context percentage.
 
 - Thinking appears in its original message position under a standalone `Thinking` blockquote heading, with each body block rendered in a muted per-block blockquote rail so thinking stays visually distinct while preserving top-level streaming and syntax-highlight caches. `Ctrl+T` and clicks in mouse-enabled fullscreen mode keep Pi's visibility toggle.
-- Consecutive Read calls group by file, one row per file when collapsed and numbered content when expanded. Bash shows the command with the first and last two output lines, and puts failure, timeout or interrupt status in the title. Expand it in place to see captured output.
+- Consecutive Read calls group by file, one row per file when collapsed and numbered content when expanded. Bash shows the command with the first and last two output lines, and puts failure, timeout or interrupt status in the title. Expand it in place to see captured output; truncated captures show the saved output path or why full output could not be saved below the preview.
 - Edit and Write show diffs. Tool titles use colors for running, successful, failed, and recognized cancelled or timed-out calls.
 - During a task, a Working animation and elapsed time appear above the editor. The status bar shows an estimated receive rate. See the [Working and rate notes](docs/codex-working-rate.md) for how it is calculated.
 - codemode shows nested calls. `/inspect` has Calls, Script, and Output tabs for child results and parent script output. After a restart, only host-persisted information can be restored. Missing details are marked explicitly.

@@ -782,7 +782,7 @@ test("restores codex-pi theme once after host post-rebind reset on resume, new, 
     harness.footer?.invalidate();
     harness.setupAutocompleteProvider();
 
-    // Simulate Pi 1.6.0 setRegisteredThemes() -> setupAutocompleteProvider() / applyFromSettings().
+    // Simulate Pi setRegisteredThemes() -> setupAutocompleteProvider() / applyFromSettings().
     const freshProfileTheme = harness.refreshRegisteredThemes();
     if (reason !== "reload") {
       harness.setupAutocompleteProvider();

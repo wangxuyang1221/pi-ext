@@ -104,6 +104,50 @@ test("warning-only revisions and return-to-width reuse captured output layouts",
   } finally { h.dispose(); }
 });
 
+test("details-only transitions update footer stripping without re-reading content and restyle warning color", () => {
+  const h = setup();
+  try {
+    const row = h.row("a");
+    let reads = 0;
+    const footer = "[Showing lines 1-10 of 3000. Could not save the full output: ENOTDIR: not a directory]";
+    const body = `${Array.from({ length: 10 }, (_, i) => `row-${i}`).join("\n")}\n\n${footer}`;
+    const content = [{ type: "text" as const, get text() { reads++; return body; } }];
+
+    // 1. No details: footer remains in body.
+    row.updateResult({ content, isError: false });
+    const withoutDetails = text(row, 120);
+    assert.match(withoutDetails, /\[Showing lines 1-10 of 3000/u);
+    assert.doesNotMatch(withoutDetails, /Truncated capture/u);
+    assert.equal(reads, 1);
+
+    // 2. Same content reference gains matching fullOutputError: footer strips immediately without re-reading content.
+    row.updateResult({ content, isError: false, details: { truncation: { truncated: true }, fullOutputError: "ENOTDIR: not a directory" } } as never);
+    const withError = text(row, 120);
+    assert.doesNotMatch(withError, /\[Showing lines 1-10 of 3000/u);
+    assert.match(withError, /Truncated capture · Could not save the full output: ENOTDIR: not a directory/u);
+    assert.equal(reads, 1);
+
+    // 3. Switching to a non-matching fullOutputPath restores the body and updates the warning without re-reading content.
+    row.updateResult({ content, isError: false, details: { truncation: { truncated: true }, fullOutputPath: "/tmp/other.log" } } as never);
+    const withMismatchedPath = text(row, 120);
+    assert.match(withMismatchedPath, /\[Showing lines 1-10 of 3000/u);
+    assert.match(withMismatchedPath, /Truncated capture · \/tmp\/other\.log/u);
+    assert.equal(reads, 1);
+
+    // 4. Warning-only change on a non-matching body reuses body layout cache and refreshes warning color on theme switch.
+    const missesBefore = h.cache.stats().layouts.misses;
+    row.updateResult({ content, isError: false, details: { truncation: { truncated: true }, fullOutputError: "EACCES: denied" } } as never);
+    assert.match(text(row, 120), /Truncated capture · Could not save the full output: EACCES: denied/u);
+    assert.equal(h.cache.stats().layouts.misses, missesBefore);
+    const darkWarning = row.render(120).at(-1);
+    initTheme("light", false);
+    row.invalidate();
+    const lightWarning = row.render(120).at(-1);
+    assert.notEqual(lightWarning, darkWarning);
+    assert.equal(reads, 1);
+  } finally { h.dispose(); }
+});
+
 test("theme invalidation refreshes output styling without re-reading the capture", () => {
   const h = setup();
   try {
