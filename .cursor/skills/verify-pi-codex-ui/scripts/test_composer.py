@@ -25,7 +25,7 @@ class ComposerAssertions(unittest.TestCase):
             stream.feed('\x1b[2;2H' + ansi('ffffff', 38) + 'O')
         def check(condition, label):
             self.assertTrue(condition, label)
-        scope = dict(screen=screen, keys=lambda *args: None, settle=lambda: None, snap=lambda *args: None, check=check, CODEX_BG=BG, CODEX_FG=FG)
+        scope = dict(journey=type("Journey", (), {"screen": screen})(), keys=lambda *args: None, settle=lambda: None, snap=lambda *args: None, check=check, CODEX_BG=BG, CODEX_FG=FG)
         exec(compile(ast.Module(body=functions[1:], type_ignores=[]), str(path), 'exec'), scope)
         scope['composer']('fixture', expected)
 

@@ -3,8 +3,8 @@ import { test } from "vitest";
 import { fauxAssistantMessage, type AssistantMessage, type ToolCall } from "@earendil-works/pi-ai";
 import { visibleWidth } from "@earendil-works/pi-tui";
 
-import { ModelCalibration } from "../src/token-estimator.js";
-import { TokenRate } from "../src/token-rate.js";
+import { ModelCalibration } from "../../../shared/ui/token-estimator.js";
+import { TokenRate } from "../../../shared/ui/token-rate.js";
 
 function textResponse(text = "", overrides: Partial<AssistantMessage> = {}): AssistantMessage {
   return { ...fauxAssistantMessage(text), ...overrides };

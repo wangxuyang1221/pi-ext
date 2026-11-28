@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import { CodemodeStore } from "../src/codemode-model.js";
-import { ResultCache } from "../src/codemode-data.js";
+import { CodemodeStore } from "../../../shared/ui/codemode-model.js";
+import { ResultCache } from "../../../shared/ui/codemode-data.js";
 
 const start = (id: string, name = "codemode", parentToolCallId?: string) => ({ type: "tool_execution_start", toolCallId: id, toolName: name, parentToolCallId, args: name === "codemode" ? { code: "text(1)" } : { path: "a.ts" } });
 const end = (id: string, name: string, error: boolean, parentToolCallId?: string) => ({ type: "tool_execution_end", toolCallId: id, toolName: name, parentToolCallId, isError: error, result: { content: [{ type: "text", text: error ? "denied" : "ok" }] } });

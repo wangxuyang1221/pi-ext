@@ -1,10 +1,5 @@
 import { userInfo } from "node:os";
-import {
-  keyText,
-  type ContextUsage,
-  type KeybindingsManager,
-  type Theme,
-} from "@earendil-works/pi-coding-agent";
+import { keyText, type ContextUsage, type KeybindingsManager, type Theme } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 
 import {
@@ -13,7 +8,7 @@ import {
   normalizeWidth,
   paintBackground,
   paintForeground,
-} from "./layout.js";
+} from "../../../shared/ui/layout.js";
 import { CLAUDE_RGB, fgRgb, renderShimmerText } from "./claude-palette.js";
 
 const GRAPHEME_SEGMENTER = new Intl.Segmenter(undefined, { granularity: "grapheme" });

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import { ToolRenderCache } from "../src/render-cache.js";
+import { ToolRenderCache } from "../../../shared/ui/render-cache.js";
 
 test("render layouts share one byte budget and evict the least recently used entry", () => {
   const cache = new ToolRenderCache({ layoutBytes: 1000 });

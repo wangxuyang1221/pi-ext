@@ -33,7 +33,7 @@ function doctor() {
   assert.ok(major > 22 || major === 22 && minor >= 19, "Node 22.19+ required");
   const pnpm = execFileSync("pnpm", ["--version"], { encoding: "utf8" }).trim();
   assert.equal(`pnpm@${pnpm}`, manifest.packageManager, "Use the repository pnpm version");
-  for (const path of manifest.pi.extensions) assert.ok(existsSync(path), `Build missing: ${path}`);
+  for (const path of ["extensions/codex-ui/dist/index.js"]) assert.ok(existsSync(path), `Build missing: ${path}`);
   const pythonInfo = inspectPython();
   const gitRoot = realpathSync(execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim());
   const dependencyRoot = realpathSync("node_modules");

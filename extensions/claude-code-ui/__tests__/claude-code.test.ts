@@ -6,16 +6,16 @@ import { test } from "vitest";
 import { initTheme, ToolExecutionComponent, type ExtensionAPI, type KeybindingsManager, type Theme, type ToolRenderers } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, Text, type EditorTheme, type TUI } from "@earendil-works/pi-tui";
 
-import codexUiExtension, { CLAUDE_THEME_NAME, CODEX_THEME_NAME } from "../src/index.js";
-import { CodexEditor, CodexFooter, CodexHeader } from "../src/components.js";
+import claudeUiExtension, { CLAUDE_THEME_NAME } from "../src/index.js";
+import { ClaudeEditor, ClaudeFooter, ClaudeHeader } from "../src/components.js";
 import { Working, WorkingActivity, workingFrameKey } from "../src/working.js";
-import { renderReadGroup } from "../src/read-group-layout.js";
-import { renderBashGroup } from "../src/bash-group-layout.js";
-import { ReadGroups } from "../src/read-groups.js";
-import { BashGroups } from "../src/bash-groups.js";
-import { ToolRenderCache } from "../src/render-cache.js";
+import { renderClaudeReadGroup as renderReadGroup } from "../src/claude-tools.js";
+import { renderClaudeBashGroup as renderBashGroup } from "../src/claude-tools.js";
+import { ReadGroups } from "../../../shared/ui/read-groups.js";
+import { BashGroups } from "../../../shared/ui/bash-groups.js";
+import { ToolRenderCache } from "../../../shared/ui/render-cache.js";
 import { registerClaudeGenericToolRenderer } from "../src/claude-tools.js";
-import { registerCodexTools } from "../src/tools.js";
+import { registerClaudeTools } from "../src/tools.js";
 
 const themeModule = await import(
   pathToFileURL(resolve("node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js")).href
@@ -26,11 +26,7 @@ const schemaModule = await import(
 ) as { validateThemeJson: (label: string, json: unknown) => unknown };
 
 function loadClaudeTheme(mode: "truecolor" | "256color" = "truecolor"): Theme {
-  return themeModule.loadThemeFromPath(resolve("themes/claude-code.json"), mode);
-}
-
-function loadCodexTheme(mode: "truecolor" | "256color" = "truecolor"): Theme {
-  return themeModule.loadThemeFromPath(resolve("themes/codex-pi.json"), mode);
+  return themeModule.loadThemeFromPath(resolve("extensions/claude-code-ui/themes/claude-code.json"), mode);
 }
 
 function createFakeKeybindings(map: Record<string, string[]> = {}): KeybindingsManager {
@@ -60,9 +56,9 @@ function createEditorTheme(): EditorTheme {
   };
 }
 
-test("package publishes valid claude-code theme alongside codex-pi", async () => {
-  const raw = JSON.parse(await readFile(new URL("../../../themes/claude-code.json", import.meta.url), "utf8"));
-  const pkg = JSON.parse(await readFile(new URL("../../../package.json", import.meta.url), "utf8"));
+test("package publishes its own valid claude-code theme", async () => {
+  const raw = JSON.parse(await readFile(new URL("../themes/claude-code.json", import.meta.url), "utf8"));
+  const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
 
   schemaModule.validateThemeJson("claude-code", raw);
   assert.equal(raw.name, CLAUDE_THEME_NAME);
@@ -79,7 +75,7 @@ test("package publishes valid claude-code theme alongside codex-pi", async () =>
 
 test("ClaudeHeader renders 2-column Clawd welcome box on wide widths and 1-column on narrow widths", () => {
   const theme = loadClaudeTheme();
-  const header = new CodexHeader({
+  const header = new ClaudeHeader({
     version: "1.6.1",
     cwd: "/Users/demo/project",
     home: "/Users/demo",
@@ -121,7 +117,7 @@ test("ClaudeHeader renders 2-column Clawd welcome box on wide widths and 1-colum
 test("ClaudeEditor renders transparent hairlines and toggles bash mode on leading !", () => {
   const theme = loadClaudeTheme();
   const bashEvents: boolean[] = [];
-  const editor = new CodexEditor(
+  const editor = new ClaudeEditor(
     createFakeTui(),
     createEditorTheme(),
     createFakeKeybindings(),
@@ -196,7 +192,7 @@ test("ClaudeFooter shows Shift+Tab thinking status, bash mode, branch, context, 
   const theme = loadClaudeTheme();
   let bashMode = false;
   let thinking = "high";
-  const footer = new CodexFooter({
+  const footer = new ClaudeFooter({
     cwd: "/Users/demo/project",
     home: "/Users/demo",
     getModelId: () => "gpt-5.4",
@@ -243,15 +239,14 @@ test("Claude Working shows terracotta shimmer spinner, elapsed time, and streame
   assert.match(plain, /3s/);
   assert.match(plain, /↓ 100 tokens/);
   assert.notEqual(
-    workingFrameKey(3200, theme, 100),
-    workingFrameKey(3200, theme, 120),
+    workingFrameKey(3200, 100),
+    workingFrameKey(3200, 120),
   );
 });
 
 test("Claude tool renderers format Read, Bash, Update/Write, and generic Search/Glob/List", () => {
   initTheme("dark", false);
   const claudeTheme = loadClaudeTheme();
-  const codexTheme = loadCodexTheme();
   const cache = new ToolRenderCache();
 
   // Read single & grouped
@@ -301,7 +296,7 @@ test("Claude tool renderers format Read, Bash, Update/Write, and generic Search/
     on() {},
     registerTool(tool: { name: string } & ToolRenderers) { tools.set(tool.name, tool); },
   } as unknown as ExtensionAPI;
-  registerCodexTools(mockPi);
+  registerClaudeTools(mockPi);
   const editRenderer = tools.get("edit")!;
   const editState = {};
   const callComp = editRenderer.renderCall!(
@@ -363,7 +358,7 @@ test("Claude tool renderers format Read, Bash, Update/Write, and generic Search/
   assert.match(grpOut, /● Read 2 files/);
   assert.match(grpOut, /ENOENT: no such file or directory/);
 
-  // S2, S3, S4: Generic grep/find/ls switches live on the same mounted card, preserves empty messages/match counts, and expands all rows.
+  // Generic search renderers preserve empty messages, match counts and expanded rows.
   let resolver: ((name: string, next: () => ToolRenderers | undefined) => ToolRenderers | undefined) | undefined;
   registerClaudeGenericToolRenderer(
     {
@@ -385,21 +380,6 @@ test("Claude tool renderers format Read, Bash, Update/Write, and generic Search/
     { state: lsState, cwd: "/repo", executionStarted: true, outputPad: 0 } as never,
   );
   assert.match(stripTerminalSequences(lsCallClaude.render(80).join("\n")), /● List\(example\)/);
-  // Same mounted card switched to codex-pi theme immediately uses fallback renderer.
-  const lsCallCodex = lsRender.renderCall!(
-    { path: "example" },
-    codexTheme,
-    { state: lsState, lastComponent: lsCallClaude, cwd: "/repo", executionStarted: true, outputPad: 0 } as never,
-  );
-  assert.equal(stripTerminalSequences(lsCallCodex.render(80).join("\n")).trim(), "ls example");
-  // And switched back to claude-code renders Claude style again.
-  const lsCallBack = lsRender.renderCall!(
-    { path: "example" },
-    claudeTheme,
-    { state: lsState, lastComponent: lsCallCodex, cwd: "/repo", executionStarted: true, outputPad: 0 } as never,
-  );
-  assert.match(stripTerminalSequences(lsCallBack.render(80).join("\n")), /● List\(example\)/);
-
   // Empty directory & No matches found preserve host text (not "1 entry" / "Found 1 match").
   const emptyLs = lsRender.renderResult!(
     { content: [{ type: "text", text: "(empty directory)" }], details: {} },
@@ -445,73 +425,13 @@ test("Claude tool renderers format Read, Bash, Update/Write, and generic Search/
   assert.match(findText, /Found 38 files/);
   assert.match(findText, /src\/file-38\.ts/);
   assert.match(findText, /38 results limit reached/);
-  // S2: Real ToolExecutionComponent preserves native 6-line status-bg box under codex-pi and switches bidirectionally.
-  const lsNativeDef: ToolRenderers = {
-    renderCall(args, th) { return new Text(`${th.bold("ls")} ${(args as { path?: string })?.path ?? "."}`, 0, 0); },
-    renderResult(res, _opts, th) {
-      const text = (res.content[0] as { text?: string })?.text ?? "";
-      return new Text(`\n${text.split("\n").map(l => th.fg("toolOutput", l)).join("\n")}`, 0, 0);
-    },
-  };
-  const wrappedLsDef = resolver("ls", () => lsNativeDef)!;
-  const setGlobalTheme = themeModule.setThemeInstance;
-
-  setGlobalTheme(codexTheme);
-  const nativeCard = new ToolExecutionComponent("ls", "ls-native", { path: "example" }, {}, lsNativeDef as never, createFakeTui(), "/repo");
-  nativeCard.markExecutionStarted();
-  nativeCard.updateResult({ content: [{ type: "text", text: "a.ts\nb.ts" }], isError: false, details: {} });
-  const nativeLines = nativeCard.render(80);
-
-  const wrappedCard = new ToolExecutionComponent("ls", "ls-wrapped", { path: "example" }, {}, wrappedLsDef as never, createFakeTui(), "/repo");
-  wrappedCard.markExecutionStarted();
-  wrappedCard.updateResult({ content: [{ type: "text", text: "a.ts\nb.ts" }], isError: false, details: {} });
-  const codexWrappedLines = wrappedCard.render(80);
-  assert.equal(codexWrappedLines.length, nativeLines.length);
-  assert.ok(codexWrappedLines.some(l => l.includes(codexTheme.getBgAnsi("toolSuccessBg"))));
-  assert.match(stripTerminalSequences(codexWrappedLines.join("\n")), /ls example/);
-
-  // Switch the SAME mounted card to claude-code -> Claude rendering without toolSuccessBg box.
-  setGlobalTheme(claudeTheme);
-  wrappedCard.invalidate();
-  const claudeWrappedLines = wrappedCard.render(80);
-  assert.match(stripTerminalSequences(claudeWrappedLines.join("\n")), /● List\(example\)/);
-  assert.match(stripTerminalSequences(claudeWrappedLines.join("\n")), /⎿  2 entries/);
-  assert.ok(!claudeWrappedLines.some(l => l.includes(claudeTheme.getBgAnsi("toolSuccessBg"))));
-
-  // Switch the SAME mounted card back to codex-pi -> restores 6-line native box + toolSuccessBg.
-  setGlobalTheme(codexTheme);
-  wrappedCard.invalidate();
-  const restoredCodexLines = wrappedCard.render(80);
-  assert.equal(restoredCodexLines.length, nativeLines.length);
-  assert.ok(restoredCodexLines.some(l => l.includes(codexTheme.getBgAnsi("toolSuccessBg"))));
-
-  // S2: With outputPad=0 under codex-pi, wrapped card aligns at column 0 identically to native card.
-  const lsZeroResult = { content: [{ type: "text" as const, text: "a.ts\nb.ts" }], isError: false, details: {} };
-  const nativeZeroPad = new ToolExecutionComponent(
-    "ls",
-    "ls-native-0",
-    { path: "example" },
-    { outputPad: 0 },
-    lsNativeDef as never,
-    createFakeTui(),
-    "/repo",
-  );
-  nativeZeroPad.markExecutionStarted();
-  nativeZeroPad.updateResult(lsZeroResult, false);
-  const wrappedZeroPad = new ToolExecutionComponent(
-    "ls",
-    "ls-wrapped-0",
-    { path: "example" },
-    { outputPad: 0 },
-    wrappedLsDef as never,
-    createFakeTui(),
-    "/repo",
-  );
-  wrappedZeroPad.markExecutionStarted();
-  wrappedZeroPad.updateResult(lsZeroResult, false);
-  const nativeZeroPlain = nativeZeroPad.render(24).map(l => stripTerminalSequences(l).trimEnd());
-  const wrappedZeroPlain = wrappedZeroPad.render(24).map(l => stripTerminalSequences(l).trimEnd());
-  assert.deepEqual(wrappedZeroPlain, nativeZeroPlain);
+  themeModule.setThemeInstance(claudeTheme);
+  const card = new ToolExecutionComponent("ls", "ls-result", { path: "example" }, {}, lsRender as never, createFakeTui(), "/repo");
+  card.markExecutionStarted();
+  card.updateResult({ content: [{ type: "text", text: "a.ts\nb.ts" }], isError: false, details: {} });
+  const rendered = card.render(80);
+  assert.match(stripTerminalSequences(rendered.join("\n")), /● List\(example\)/);
+  assert.match(stripTerminalSequences(rendered.join("\n")), /⎿  2 entries/);
 
   // S3: Directory containing literal filename `[id]` is counted as 1 entry (not empty/warning).
   const bracketFileLs = lsRender.renderResult!(
@@ -544,9 +464,8 @@ test("Claude tool renderers format Read, Bash, Update/Write, and generic Search/
   assert.match(stripTerminalSequences(dateFileGrep.render(80).join("\n")), /⎿  Found 1 match/);
 });
 
-test("extension preserves claude-code theme on session start/reload and switches Markdown and hidden thinking label", async () => {
+test("extension preserves claude-code theme on session start/reload and applies Claude Markdown and hidden thinking label", async () => {
   const claudeTheme = loadClaudeTheme();
-  const codexTheme = loadCodexTheme();
   const darkTheme = { name: "dark" } as Theme;
   const handlers = new Map<string, Array<(...args: unknown[]) => unknown>>();
   const transformers: Array<(md: string, ctx: { messageType: string }) => string> = [];
@@ -567,9 +486,9 @@ test("extension preserves claude-code theme on session start/reload and switches
     getSessionName: () => undefined,
   } as unknown as ExtensionAPI;
 
-  codexUiExtension(pi);
+  claudeUiExtension(pi);
 
-  let currentTheme: Theme = claudeTheme;
+  let currentTheme: Theme = darkTheme;
   let claudeThemeInstance: Theme = claudeTheme;
   const hiddenLabels: Array<string | undefined> = [];
   let footerFactory: ((tui: TUI, theme: Theme, footerData: unknown) => { invalidate(): void; render(w: number): string[] }) | undefined;
@@ -584,7 +503,6 @@ test("extension preserves claude-code theme on session start/reload and switches
       get theme() { return currentTheme; },
       getTheme(name: string) {
         if (name === CLAUDE_THEME_NAME) return claudeThemeInstance;
-        if (name === CODEX_THEME_NAME) return codexTheme;
         return undefined;
       },
       setTheme(next: Theme) { currentTheme = next; return { success: true }; },

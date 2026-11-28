@@ -2,7 +2,7 @@
 
 [简体中文](README.md) | English
 
-A terminal UI extension for [Pi Coding Agent](https://github.com/earendil-works/pi) with paired `codex-pi` and `claude-code` theme profiles.
+Two independently installable terminal UI plugins for [Pi Coding Agent](https://github.com/earendil-works/pi). Each plugin ships its own layout and palette.
 
 ## Requirements
 
@@ -13,41 +13,23 @@ A terminal UI extension for [Pi Coding Agent](https://github.com/earendil-works/
 
 ## Install
 
-Install the requirements above, then clone, build, and install the local package. The repository does not commit `dist/`, so use this source build procedure.
+Build the workspace, then install one UI plugin. Both plugins own the editor, footer and tool renderers, so enable one per Pi session.
 
 ```bash
 git clone https://github.com/wangxuyang1221/pi-theme.git
 cd pi-theme
 pnpm install --frozen-lockfile --ignore-scripts
-pnpm run hooks:install
-pnpm run hooks:check
-pnpm run build
-pi install "$PWD"
-```
-
-`pi install` saves a reference to the local directory in your user settings. It does not copy the files. Keep the directory after installation and restart Pi.
-
-To select a theme profile for this run (`codex-pi` for the Codex layout, `claude-code` for the Claude Code 2.x layout and palette):
-
-```bash
-pi --use-theme codex-pi
-pi --use-theme claude-code
-```
-
-To save a theme as your default, select `codex-pi` or `claude-code` in `/settings`. The choice persists across `/new`, `/resume`, `/fork`, and `/reload`.
-
-To load the package for one run without saving installation settings, run this from the built repository root:
-
-```bash
-pi -e "$PWD"
-```
-
-After updating the source, install the locked dependencies again, rebuild, and restart Pi. Do not rely on `/reload` alone for code upgrades.
-
-```bash
-pnpm install --frozen-lockfile --ignore-scripts
 pnpm run build
 ```
+
+| Plugin | Theme | Install from the repository root |
+| --- | --- | --- |
+| Codex UI | `codex-pi` | `pi install "$PWD/extensions/codex-ui"` |
+| Claude Code UI | `claude-code` | `pi install "$PWD/extensions/claude-code-ui"` |
+
+Restart Pi to use the selected interface. Pi keeps a reference to the installed directory. After pulling changes, rebuild the selected plugin with `pnpm run build:codex-ui` or `pnpm run build:claude-code-ui` and restart Pi.
+
+To switch plugins, use `pi list` to find the installed source, remove it with `pi remove <source>`, then install the other plugin and restart Pi. The theme picker changes colors within the loaded interface.
 
 ## Everyday use
 
@@ -55,11 +37,11 @@ pnpm run build
 | --- | --- |
 | Inspect the latest codemode call | `/inspect` |
 | Expand tool output | `Ctrl+O` by default, following Pi's `app.tools.expand` binding |
-| Copy the latest completed reply's body | Submit `/copy` in the Codex editor |
+| Copy the latest completed reply's body | Submit `/copy` in the editor |
 
 ### Claude Code UI
 
-When the `claude-code` theme is active (`pi --use-theme claude-code` or selected in `/settings`), the extension switches to a Claude Code 2.x terminal interface and dark translucent-safe palette while keeping all stock Pi behavior:
+The `claude-code-ui` plugin provides a Claude Code 2.x terminal layout with a dark palette for translucent terminals.
 
 - **Welcome card**: two-column terracotta rounded box with the pixel-block Clawd mascot, real Pi shortcuts, model/thinking status, working directory, and Git branch; collapses cleanly to one column below 78 columns.
 - **Composer and `!` bash mode**: transparent double-hairline composer with a `❯ ` prompt; typing `!` switches the hairlines, prompt, and footer hint to bash-mode pink in real time.
@@ -83,6 +65,8 @@ Messages and self-rendered tools (Read, Bash, Edit, Write, and codemode) all fol
 The default Read and Bash tools read Pi's global settings and trusted project `.pi/settings.json`, preserving `shellCommandPrefix`, `shellPath`, and `images.autoResize`. If a settings file is invalid or unreadable, these tools refuse execution and report the problem. After fixing the file, use `/reload` or restart Pi. For SDK configuration and custom executors, see the [codex-ui entry point](extensions/codex-ui/src/index.ts).
 
 ## Upgrading
+
+If you previously installed the repository root with `pi install "$PWD"`, run `pi remove "$PWD"` from that same checkout. Build and install your preferred plugin from the table above and restart Pi. To keep the Claude layout, choose `claude-code-ui`.
 
 Rebuild and restart Pi when upgrading from the multi-extension package. If you previously added `"-builtin:mcp"` to the `extensions` setting, remove that entry to enable Pi’s built-in MCP. Use the previous version for sessions that require a retired extension.
 

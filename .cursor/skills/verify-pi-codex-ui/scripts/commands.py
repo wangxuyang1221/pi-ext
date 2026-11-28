@@ -95,7 +95,7 @@ provider = confined(repo, recipe["provider"]) if "provider" in recipe else Path(
 args.extend(["-e", str(provider)])
 args.extend(expand(arg) for arg in recipe.get("cliArgs", []))
 (root / "agent/themes").mkdir(exist_ok=True)
-shutil.copyfile(repo / "themes/codex-pi.json", root / "agent/themes/codex-pi.json")
+shutil.copyfile(repo / "extensions/codex-ui/themes/codex-pi.json", root / "agent/themes/codex-pi.json")
 seed(recipe.get("seed", []))
 if "responses" in recipe:
     (root / "responses.json").write_text(json.dumps(recipe["responses"]))

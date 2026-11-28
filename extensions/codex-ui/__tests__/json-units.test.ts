@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import { JsonUnits, argumentUnits } from "../src/json-units.js";
+import { JsonUnits, argumentUnits } from "../../../shared/ui/json-units.js";
 
 function streamedMilli(json: string): number {
   const counter = new JsonUnits();

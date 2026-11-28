@@ -1,16 +1,17 @@
+import { Working, workingFrameKey } from "../src/working.js";
 import assert from "node:assert/strict";
 import { afterEach, test, vi } from "vitest";
 import type { ExtensionAPI, ExtensionContext, ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 import { fauxAssistantMessage } from "@earendil-works/pi-ai";
 import type { Component, TUI } from "@earendil-works/pi-tui";
 import { createTestUi } from "../../../test-support/pi-ui.js";
-import { registerWorking } from "../src/working-session.js";
+import { registerWorking } from "../../../shared/ui/working-session.js";
 
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
 function harness() {
   const handlers = new Map<string, (event: any, ctx: ExtensionContext) => void>();
   const pi = { on(type: string, handler: (event: any, ctx: ExtensionContext) => void) { handlers.set(type, handler); } } as unknown as ExtensionAPI;
-  const install = registerWorking(pi);
+  const install = registerWorking(pi, { widgetKey: "codex-ui-working", Working, frameKey: workingFrameKey });
   let normal = 0;
   let widget: (Component & { dispose?(): void }) | undefined;
   const tui = { requestRender() { normal++; } } as unknown as TUI;

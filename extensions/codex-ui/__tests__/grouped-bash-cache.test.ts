@@ -3,7 +3,7 @@ import { afterEach, test, vi } from "vitest";
 import { initTheme, ToolExecutionComponent, sessionEntryToContextMessages, type ExtensionAPI, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { registerCodexTools } from "../src/tools.js";
-import { ToolRenderCache } from "../src/render-cache.js";
+import { ToolRenderCache } from "../../../shared/ui/render-cache.js";
 
 function setup(cache = new ToolRenderCache(), start = true) {
   initTheme("dark", false);

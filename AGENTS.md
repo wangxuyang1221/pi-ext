@@ -1,8 +1,8 @@
 # AGENTS.md
 
-- 本仓库维护 Pi 的 `codex-ui` 扩展和配套 `codex-pi`、`claude-code` 主题。
-- 扩展源码位于 `extensions/codex-ui/src/`，对应测试和夹具位于 `extensions/codex-ui/__tests__/`；`extensions/codex-ui/dist/` 是构建产物，不要手动编辑。
-- 项目验证 skills 位于 `.cursor/skills/`；共享运行脚本和测试支持分别位于 `scripts/`、`test-support/`。按实际职责选择修改位置，不将所有变更都放进扩展源码目录。
+- `extensions/codex-ui/` 与 `extensions/claude-code-ui/` 是可独立安装的 Pi 插件。各自在 `src/`、`themes/` 和 `__tests__/` 维护自己的界面、主题与测试。`dist/` 是构建产物。
+- 两个插件复用的宿主生命周期、数据模型和工具执行放在 `shared/ui/`。每个发布包在构建时打入所需的共享代码。
+- 改动某个插件的用户行为，运行对应的 [Codex UI 验收](.cursor/skills/verify-pi-codex-ui/SKILL.md) 或 [Claude Code UI 验收](.cursor/skills/verify-pi-claude-code-ui/SKILL.md)。改动共享行为时覆盖两个插件。
 - Node.js 和 pnpm 版本分别以 `package.json` 的 `engines.node`、`packageManager` 为准。使用 `pnpm install --frozen-lockfile --ignore-scripts` 安装依赖，使用锁定的原版 Pi 宿主。
 - 仓库基础设施统一使用 pnpm。添加或修改脚本、文档和 CI 时使用 `pnpm` 或 `pnpm exec`；Vitest 测试通过 `pnpm test` 运行，以使用仓库的配置与凭据隔离入口。
 - 首次检出并安装依赖后，运行 `pnpm run hooks:install` 和 `pnpm run hooks:check`。提交门禁及误报处理见 [测试说明](docs/testing.md#commit-gates)。

@@ -3,7 +3,7 @@ import { test } from "vitest";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 const { KeybindingsManager } = await import(pathToFileURL(resolve("node_modules/@earendil-works/pi-coding-agent/dist/core/keybindings.js")).href);
-import { hostKeybindingHints } from "../src/keybinding-hints.js";
+import { hostKeybindingHints } from "../../../shared/ui/keybinding-hints.js";
 
 test("legacy hints use the supplied host manager including custom and unbound keys", () => {
   const defaults = hostKeybindingHints({}, new KeybindingsManager());

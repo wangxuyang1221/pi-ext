@@ -7,8 +7,8 @@ const themeModule = await import(pathToFileURL(resolve("node_modules/@earendil-w
 const getThemeByName = (name: string): Theme => themeModule.getThemeByName(name);
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { renderBashGroup } from "../src/bash-group-layout.js";
-import type { BashGroup, BashStatus } from "../src/bash-groups.js";
-import { ToolRenderCache } from "../src/render-cache.js";
+import type { BashGroup, BashStatus } from "../../../shared/ui/bash-groups.js";
+import { ToolRenderCache } from "../../../shared/ui/render-cache.js";
 
 function fixture(status: BashStatus = "completed", command = "git status --short"): BashGroup {
   const group: BashGroup = { members: [] };
@@ -194,7 +194,7 @@ test("theme changes restyle the preview without rereading the capture", () => {
   const group = fixture();
   let reads = 0;
   Object.defineProperty(group.members[0]!, "content", { get() { reads++; return [{ type: "text", text: "output" }]; } });
-  const themes: Theme[] = [getThemeByName("dark"), getThemeByName("light"), themeModule.loadThemeFromPath(resolve("themes/codex-pi.json"), "truecolor")];
+  const themes: Theme[] = [getThemeByName("dark"), getThemeByName("light"), themeModule.loadThemeFromPath(resolve("extensions/codex-ui/themes/codex-pi.json"), "truecolor")];
   for (const theme of themes) {
     const collapsed = renderBashGroup(group, false, theme, 180, "ctrl+x");
     assert.equal(reads, 1);

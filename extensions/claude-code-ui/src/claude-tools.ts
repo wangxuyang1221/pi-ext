@@ -10,22 +10,21 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, wrapTextWithAnsi, type Component } from "@earendil-works/pi-tui";
 
-import type { BashGroup, BashMember } from "./bash-groups.js";
+import type { BashGroup, BashMember } from "../../../shared/ui/bash-groups.js";
 import {
   fitToWidth,
   normalizeOutputPad,
   normalizeWidth,
   padOutputLines,
-  paintBackground,
   paintFittedBackground,
   paintForeground,
   resolveOutputPad,
-} from "./layout.js";
-import type { ReadMember, ReadRow } from "./read-groups.js";
-import { ResponsiveLinesComponent } from "./responsive-lines.js";
-import { fileFailureStatus, toolStatusColor, type ToolStatus } from "./tool-status.js";
-import type { DisplayDiffLine } from "./tools.js";
-import { CLAUDE_RGB, fgRgb, isClaudeTheme } from "./claude-palette.js";
+} from "../../../shared/ui/layout.js";
+import type { ReadMember, ReadRow } from "../../../shared/ui/read-groups.js";
+import { ResponsiveLinesComponent } from "../../../shared/ui/responsive-lines.js";
+import { fileFailureStatus, toolStatusColor, type ToolStatus } from "../../../shared/ui/tool-status.js";
+import type { DisplayDiffLine } from "../../../shared/ui/native-tools.js";
+import { CLAUDE_RGB, fgRgb } from "./claude-palette.js";
 
 const EXPANDED_READ_LINES = 45;
 const BASH_HEAD = 2;
@@ -609,42 +608,13 @@ export function registerClaudeGenericToolRenderer(
     if (toolName !== "grep" && toolName !== "find" && toolName !== "ls") {
       return next();
     }
-    const fallback = next();
     const label = mapToolDisplayName(toolName);
     const compOf = (prev: Component | undefined) => prev instanceof ResponsiveLinesComponent ? prev : new ResponsiveLinesComponent();
 
     interface GenericRendererState {
       status?: ToolStatus;
-      hasResult?: boolean;
-      resultIsPartial?: boolean;
-      resultIsError?: boolean;
       claudeCall?: ResponsiveLinesComponent;
-      fallbackCall?: Component;
-      fallbackResult?: Component;
     }
-
-    const nativeBgAnsi = (state: GenericRendererState, theme: Theme): string => {
-      if (!state.hasResult || state.resultIsPartial) return theme.getBgAnsi("toolPendingBg");
-      return theme.getBgAnsi(state.resultIsError ? "toolErrorBg" : "toolSuccessBg");
-    };
-
-    const paintNativeRows = (
-      lines: readonly string[],
-      width: number,
-      padX: number,
-      bgAnsi: string,
-      topPad: boolean,
-      bottomPad: boolean,
-    ): string[] => {
-      const out: string[] = [];
-      if (topPad) out.push(paintBackground("", width, bgAnsi));
-      const left = " ".repeat(padX);
-      for (const line of lines) {
-        out.push(paintBackground(`${left}${line}`, width, bgAnsi));
-      }
-      if (bottomPad) out.push(paintBackground("", width, bgAnsi));
-      return out;
-    };
 
     return {
       renderShell: "self",
@@ -653,20 +623,6 @@ export function registerClaudeGenericToolRenderer(
         const outputPad = normalizeOutputPad(context.outputPad);
         const comp = compOf(context.lastComponent ?? state.claudeCall);
         state.claudeCall = comp;
-        if (!isClaudeTheme(theme)) {
-          const delegated = fallback?.renderCall?.(args, theme, { ...context, lastComponent: state.fallbackCall });
-          state.fallbackCall = delegated;
-          const nativePad = context.outputPad ?? 1;
-          comp.setRenderer((width) => {
-            const boxPadX = resolveOutputPad(width, nativePad);
-            const inner = Math.max(1, width - boxPadX * 2);
-            const rendered = delegated
-              ? delegated.render(inner)
-              : [fitToWidth(`${theme.fg("toolTitle", theme.bold(toolName))} ${formatGenericArgs(toolName, args as Record<string, unknown>)}`, inner)];
-            return paintNativeRows(rendered, width, boxPadX, nativeBgAnsi(state, theme), true, !state.hasResult);
-          }, { linesAlreadyFit: true });
-          return comp;
-        }
         const argText = formatGenericArgs(toolName, args as Record<string, unknown>);
         comp.setRenderer((width) => {
           const pad = resolveOutputPad(width, outputPad);
@@ -679,24 +635,9 @@ export function registerClaudeGenericToolRenderer(
         const state = context.state as GenericRendererState;
         const outputPad = normalizeOutputPad(context.outputPad);
         const comp = compOf(context.lastComponent);
-        state.hasResult = true;
-        state.resultIsPartial = options.isPartial;
-        state.resultIsError = context.isError;
         state.status = options.isPartial ? "running" : (context.isError ? "failed" : "completed");
         state.claudeCall?.invalidate();
 
-        if (!isClaudeTheme(theme)) {
-          const delegated = fallback?.renderResult?.(result, options, theme, { ...context, lastComponent: state.fallbackResult });
-          state.fallbackResult = delegated;
-          const nativePad = context.outputPad ?? 1;
-          comp.setRenderer((width) => {
-            const boxPadX = resolveOutputPad(width, nativePad);
-            const inner = Math.max(1, width - boxPadX * 2);
-            const rendered = delegated ? delegated.render(inner) : [];
-            return paintNativeRows(rendered, width, boxPadX, nativeBgAnsi(state, theme), false, true);
-          }, { linesAlreadyFit: true });
-          return comp;
-        }
         if (options.isPartial) {
           comp.setRenderer(() => [], { linesAlreadyFit: true });
           return comp;

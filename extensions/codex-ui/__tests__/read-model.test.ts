@@ -3,8 +3,8 @@ import { test, vi } from "vitest";
 import { initTheme, SessionManager, ToolExecutionComponent, type ExtensionAPI, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences } from "@earendil-works/pi-tui";
 import { registerCodexTools } from "../src/tools.js";
-import { ReadGroups } from "../src/read-groups.js";
-import { ToolRenderCache } from "../src/render-cache.js";
+import { ReadGroups } from "../../../shared/ui/read-groups.js";
+import { ToolRenderCache } from "../../../shared/ui/render-cache.js";
 
 const call = (id: string) => ({ type: "toolCall", id, name: "read", arguments: { path: `${id}.ts` } });
 const message = (content: unknown[]) => ({ role: "assistant", content });

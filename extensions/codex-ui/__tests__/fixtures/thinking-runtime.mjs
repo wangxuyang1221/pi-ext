@@ -52,7 +52,7 @@ const create = async ({cwd,sessionManager,sessionStartEvent}) => {
     settingsManager:sdk.SettingsManager.inMemory({quietStartup:true,theme:"codex-pi",hideThinkingBlock:false,
       outputPad:1,retry:{enabled:false},compaction:{enabled:false},terminal:{showImages:false}}),
     resourceLoaderOptions:{noExtensions:true,noSkills:true,noThemes:true,noContextFiles:true,noPromptTemplates:true,
-      additionalThemePaths:[join(repo,"themes/codex-pi.json")],systemPromptOverride:() => "Offline visual fixture",
+      additionalThemePaths:[join(repo,"extensions/codex-ui/themes/codex-pi.json")],systemPromptOverride:() => "Offline visual fixture",
       extensionFactories:[extension]},
   });
   return {...await sdk.createAgentSessionFromServices({services,sessionManager,sessionStartEvent,model:faux.getModel(),noTools:"builtin"}),

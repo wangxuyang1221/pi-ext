@@ -8,7 +8,7 @@ import {
   ModelCalibration,
   scalarMilliTokens,
   ScalarTokenCounter,
-} from "../src/token-estimator.js";
+} from "../../../shared/ui/token-estimator.js";
 
 function assistantMessage(overrides: Partial<AssistantMessage> = {}): AssistantMessage {
   return {

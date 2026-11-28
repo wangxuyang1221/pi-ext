@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 import { SessionManager, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { fauxProvider } from "@earendil-works/pi-ai";
-import { createContextUsageReader } from "../src/context-usage.js";
+import { createContextUsageReader } from "../../../shared/ui/context-usage.js";
 
 test("animation reads reuse persisted context until the branch or model limits change", () => {
   const manager = SessionManager.inMemory();

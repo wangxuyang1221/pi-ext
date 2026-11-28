@@ -1,7 +1,5 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
 
-export const CLAUDE_THEME_NAME = "claude-code";
-
 export const CLAUDE_RGB = {
   terracotta: [222, 127, 93],
   terracottaBright: [246, 178, 144],
@@ -11,10 +9,6 @@ export const CLAUDE_RGB = {
   gitPink: [245, 194, 231],
   brightWhite: [242, 242, 246],
 } as const;
-
-export function isClaudeTheme(theme: Pick<Theme, "name"> | undefined): boolean {
-  return theme?.name === CLAUDE_THEME_NAME;
-}
 
 export function fgRgb(
   rgb: readonly [number, number, number],

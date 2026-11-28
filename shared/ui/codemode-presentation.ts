@@ -1,14 +1,20 @@
 import { resolve } from "node:path";
 import type { BashToolDetails, ReadToolDetails, Theme, ToolRenderers } from "@earendil-works/pi-coding-agent";
-import { renderSingleRead } from "./read-group-layout.js";
-import { renderBashGroup } from "./bash-group-layout.js";
-import type { ReadRow } from "./read-groups.js";
+import type { GroupLayout } from "./native-tools.js";
+import type { ReadMember, ReadRow } from "./read-groups.js";
 import type { BashMember } from "./bash-groups.js";
 import { getEditSyntaxFingerprint } from "./syntax-palette.js";
 import { ToolRenderCache } from "./render-cache.js";
 import { clean, inline } from "./codemode-data.js";
 import { type CodemodeCall, type CodemodeRow, CodemodeStore } from "./codemode-model.js";
-import { callLabel, duration, type InspectorState, renderCodemodeTree, statusColor, wrapDetail } from "./codemode-view.js";
+import {
+  callLabel,
+  duration,
+  type InspectorState,
+  renderCodemodeTree,
+  statusColor,
+  wrapDetail,
+} from "./codemode-view.js";
 import { hostKeybindingHints, type HostKeybindingHints } from "./keybinding-hints.js";
 
 type ToolRenderContext = Parameters<NonNullable<ToolRenderers["renderCall"]>>[2];
@@ -30,7 +36,7 @@ export const themeKey = (theme: Theme, includesDiff = true): string => {
 export class CodemodePresentation {
   private cache = new ToolRenderCache({ layoutBytes: 4 * 1024 * 1024, countBytes: 128 * 1024 });
   private scope = this.cache.scope();
-  constructor(readonly store: CodemodeStore, private readonly natives: ReadonlyMap<string, ToolRenderers>) {}
+  constructor(readonly store: CodemodeStore, private readonly natives: ReadonlyMap<string, ToolRenderers>, private readonly layout: GroupLayout) {}
   clear(): void { this.cache.clear(); this.scope = this.cache.scope(); }
   stats() { return this.cache.stats(); }
   tree(row: CodemodeRow, theme: Theme, width: number, expanded: boolean, cwd: string, expandHint: string, hints: HostKeybindingHints = defaultHints): string[] {
@@ -79,13 +85,16 @@ export class CodemodePresentation {
         const member: ReadRow = { id: call.id, cache: this.scope, path: clean(call.args.path), fullPath: resolve(cwd, call.args.path),
           offset: typeof call.args.offset === "number" ? call.args.offset : undefined, limit: typeof call.args.limit === "number" ? call.args.limit : undefined,
           status, content: result.content, details: result.details as ReadToolDetails, revision: call.revision };
-        return renderSingleRead(member, true, theme, width);
+        const group: { members: ReadMember[]; version: number } = { members: [], version: 0 };
+        const row = { ...member, group };
+        group.members.push(row);
+        return this.layout.read(row, true, theme, width, "");
       }
       if (call.name === "bash" && typeof call.args.command === "string") {
         const member: BashMember = { id: call.id, cache: this.scope, group: { members: [] }, command: call.args.command, commandRevision: call.revision, outputRevision: captured.revision,
           status, content: result.content, details: result.details as BashToolDetails };
         member.group.members.push(member);
-        return renderBashGroup(member.group, true, theme, width, "");
+        return this.layout.bash(member.group, true, theme, width, "");
       }
       if (call.name === "edit" || call.name === "write") {
         const renderer = this.natives.get(call.name);

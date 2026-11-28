@@ -2,7 +2,7 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
 import { normalizeOutputPad, padOutputLines, resolveOutputPad } from "./layout.js";
 import type { ReadMember } from "./read-groups.js";
-import { renderReadGroup } from "./read-group-layout.js";
+import type { GroupLayout } from "./native-tools.js";
 import { ResponsiveLinesComponent } from "./responsive-lines.js";
 
 /** A replaceable row view. Check source versions before any width-only cache. */
@@ -18,7 +18,7 @@ export class ReadViewComponent implements Component {
   private expandKeys = "ctrl+o";
   private renderedExpandKeys = "";
 
-  constructor(private readonly current: () => ReadMember) {}
+  constructor(private readonly current: () => ReadMember, private readonly renderGroup: GroupLayout["read"]) {}
 
   update(expanded: boolean, theme: Theme, outputPad = 0, expandKeys = "ctrl+o"): void {
     const normalizedPad = normalizeOutputPad(outputPad);
@@ -55,7 +55,7 @@ export class ReadViewComponent implements Component {
       this.lines.setRenderer((columns) => {
         const pad = resolveOutputPad(columns, outputPad);
         return padOutputLines(
-          renderReadGroup(member, this.expanded, this.theme!, columns - pad * 2, expandKeys),
+          this.renderGroup(member, this.expanded, this.theme!, columns - pad * 2, expandKeys),
           columns,
           pad,
         );

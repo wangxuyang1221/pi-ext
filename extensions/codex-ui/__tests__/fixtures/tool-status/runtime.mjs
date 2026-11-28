@@ -175,7 +175,7 @@ const extension = pi => {
 const create = async ({ cwd, sessionManager, sessionStartEvent }) => {
   const services = await sdk.createAgentSessionServices({ cwd, agentDir: join(root, "agent"), modelRuntime,
     settingsManager: sdk.SettingsManager.inMemory({ quietStartup: true, theme: "codex-pi", retry: { enabled: false }, compaction: { enabled: false }, terminal: { showImages: false } }),
-    resourceLoaderOptions: { noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true, additionalThemePaths: [join(repo, "themes/codex-pi.json")], systemPromptOverride: () => "Offline tool status fixture", extensionFactories: [extension] },
+    resourceLoaderOptions: { noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true, additionalThemePaths: [join(repo, "extensions/codex-ui/themes/codex-pi.json")], systemPromptOverride: () => "Offline tool status fixture", extensionFactories: [extension] },
   });
   return { ...await sdk.createAgentSessionFromServices({ services, sessionManager, sessionStartEvent, model: faux.getModel(), noTools: "builtin" }), services, diagnostics: services.diagnostics };
 };

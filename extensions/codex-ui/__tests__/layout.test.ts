@@ -22,7 +22,7 @@ import {
   paintBackground,
   resolveOutputPad,
   type PrioritizedSegment,
-} from "../src/layout.js";
+} from "../../../shared/ui/layout.js";
 
 function legacyFitSegments(
   segments: readonly PrioritizedSegment[],

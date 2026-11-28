@@ -3,8 +3,8 @@ import { test, vi } from "vitest";
 import { initTheme, type Theme } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { renderBashGroup } from "../src/bash-group-layout.js";
-import type { BashGroup, BashMember } from "../src/bash-groups.js";
-import { ToolRenderCache } from "../src/render-cache.js";
+import type { BashGroup, BashMember } from "../../../shared/ui/bash-groups.js";
+import { ToolRenderCache } from "../../../shared/ui/render-cache.js";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 

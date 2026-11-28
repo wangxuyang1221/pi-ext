@@ -1,9 +1,21 @@
-import type { ExtensionAPI, ExtensionContext, MessageStartEvent, MessageUpdateEvent, MessageEndEvent } from "@earendil-works/pi-coding-agent";
+import type {
+  Theme,
+  ExtensionAPI,
+  ExtensionContext,
+  MessageStartEvent,
+  MessageUpdateEvent,
+  MessageEndEvent,
+} from "@earendil-works/pi-coding-agent";
 import type { Component, TUI } from "@earendil-works/pi-tui";
-import { WORKING_FRAME_MS, Working, WorkingActivity, workingFrameKey } from "./working.js";
+import { WORKING_FRAME_MS, WorkingActivity } from "./working-activity.js";
+
+export interface WorkingView {
+  widgetKey: string;
+  Working: new (activity: WorkingActivity, getTheme: () => Theme) => Component;
+  frameKey(elapsed: number, tokens: number): string;
+}
 
 type DisposableComponent = Component & { dispose?(): void };
-const WIDGET_KEY = "codex-ui-working";
 
 const FAUX_MODEL_BASE_URL = "http://localhost:0";
 
@@ -17,7 +29,7 @@ export class WorkingSession {
   private lastRateLabel: string | undefined;
   private readonly bindings = new Map<() => void, TUI>();
 
-  constructor(private readonly ctx: ExtensionContext) {
+  constructor(private readonly ctx: ExtensionContext, private readonly view: WorkingView) {
     this.activity = new WorkingActivity(undefined, message => {
       const model = this.ctx.model;
       if (!model) return { eligible: true };
@@ -56,9 +68,9 @@ export class WorkingSession {
     if (this.disposed || this.activity.active) return;
     this.activity.start();
     const startedElapsed = this.activity.elapsed();
-    this.lastWorkingKey = workingFrameKey(startedElapsed, this.ctx.ui.theme, this.activity.estimatedStreamTokens());
+    this.lastWorkingKey = this.view.frameKey(startedElapsed, this.activity.estimatedStreamTokens());
     this.lastRateLabel = this.activity.label();
-    this.ctx.ui.setWidget(WIDGET_KEY, tui => this.bind(new Working(this.activity, () => this.ctx.ui.theme), tui));
+    this.ctx.ui.setWidget(this.view.widgetKey, tui => this.bind(new this.view.Working(this.activity, () => this.ctx.ui.theme), tui));
     this.refresh();
     this.schedule(this.generation, startedElapsed);
   }
@@ -70,7 +82,7 @@ export class WorkingSession {
     this.activity.stop();
     this.lastWorkingKey = undefined;
     this.lastRateLabel = undefined;
-    if (wasActive) { this.ctx.ui.setWidget(WIDGET_KEY, undefined); this.refresh(); }
+    if (wasActive) { this.ctx.ui.setWidget(this.view.widgetKey, undefined); this.refresh(); }
   }
 
   dispose(): void {
@@ -101,7 +113,7 @@ export class WorkingSession {
 
   private tick(): number {
     const elapsed = this.activity.elapsed();
-    const workingKey = workingFrameKey(elapsed, this.ctx.ui.theme, this.activity.estimatedStreamTokens());
+    const workingKey = this.view.frameKey(elapsed, this.activity.estimatedStreamTokens());
     const rateLabel = this.activity.label();
     const workingChanged = workingKey !== this.lastWorkingKey;
     const rateChanged = rateLabel !== this.lastRateLabel;
@@ -124,7 +136,7 @@ export class WorkingSession {
 }
 
 /** Bind only documented task and response events; dialogs never change task activity. */
-export function registerWorking(pi: ExtensionAPI): (ctx: ExtensionContext) => WorkingSession | undefined {
+export function registerWorking(pi: ExtensionAPI, view: WorkingView): (ctx: ExtensionContext) => WorkingSession | undefined {
   let current: WorkingSession | undefined;
   pi.on("agent_start", () => current?.start());
   pi.on("agent_settled", () => current?.stop());
@@ -134,14 +146,14 @@ export function registerWorking(pi: ExtensionAPI): (ctx: ExtensionContext) => Wo
   pi.on("session_shutdown", () => { current?.dispose(); current = undefined; });
   return ctx => {
     current?.dispose(); current = undefined;
-    current = createSession(ctx);
+    current = createSession(ctx, view);
     return current;
   };
 }
 
-function createSession(ctx: ExtensionContext): WorkingSession | undefined {
+function createSession(ctx: ExtensionContext, view: WorkingView): WorkingSession | undefined {
   if (ctx.mode !== "tui") return;
-  const session = new WorkingSession(ctx);
+  const session = new WorkingSession(ctx, view);
   if (!ctx.isIdle()) session.start();
   return session;
 }

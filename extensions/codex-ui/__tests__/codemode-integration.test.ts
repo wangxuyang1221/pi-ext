@@ -1,19 +1,20 @@
+import { codexTools } from "../src/tools.js";
 import assert from "node:assert/strict";
 import { test, vi } from "vitest";
 import type { ExtensionAPI, Theme, ToolRenderers } from "@earendil-works/pi-coding-agent";
-import { registerCodemodeUi } from "../src/codemode.js";
+import { registerCodemodeUi } from "../../../shared/ui/codemode.js";
 import { Text, visibleWidth } from "@earendil-works/pi-tui";
-import { type CodemodeServices } from "../src/codemode.js";
+import { type CodemodeServices } from "../../../shared/ui/codemode.js";
 
 const theme = { bg: (_name: string, value: string) => value, fg: (_name: string, value: string) => value, bold: (value: string) => value } as Theme;
-function harness(services: CodemodeServices = { nativeRenderers: new Map() }) {
+function harness(services: Omit<CodemodeServices, "layout"> = { nativeRenderers: new Map() }) {
   const handlers = new Map<string, Array<(event: any, context: any) => void>>();
   const commands = new Map<string, any>();
   let resolve: (name: string, next: () => ToolRenderers | undefined) => ToolRenderers | undefined;
   const pi = { registerTool: vi.fn(), registerToolRenderer: (resolver: typeof resolve) => { resolve = resolver; }, registerCommand: (name: string, config: any) => commands.set(name, config),
     on: (name: string, handler: any) => { const list = handlers.get(name) ?? []; list.push(handler); handlers.set(name, list); } };
   const ctx = { mode: "tui", cwd: "/repo", sessionManager: { buildContextEntries: () => [] }, ui: { notify: vi.fn() } };
-  registerCodemodeUi(pi as unknown as ExtensionAPI, services);
+  registerCodemodeUi(pi as unknown as ExtensionAPI, { ...services, layout: codexTools });
   const renderer = resolve!("codemode", () => undefined)!;
   const emit = (name: string, event: any) => { for (const handler of handlers.get(name) ?? []) handler(event, ctx); };
   return { pi, ctx, renderer, emit, commands };

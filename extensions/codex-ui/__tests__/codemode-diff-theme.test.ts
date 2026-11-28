@@ -1,3 +1,4 @@
+import { codexTools } from "../src/tools.js";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -5,9 +6,9 @@ import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { test } from "vitest";
 import { initTheme, loadThemeFromPath, setThemeInstance, theme } from "../../../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js";
-import { CodemodeStore } from "../src/codemode-model.js";
-import { CodemodePresentation } from "../src/codemode-presentation.js";
-import { hostKeybindingHints } from "../src/keybinding-hints.js";
+import { CodemodeStore } from "../../../shared/ui/codemode-model.js";
+import { CodemodePresentation } from "../../../shared/ui/codemode-presentation.js";
+import { hostKeybindingHints } from "../../../shared/ui/keybinding-hints.js";
 import { registerCodexTools } from "../src/tools.js";
 
 const samples = [
@@ -19,7 +20,7 @@ const cases = ["edit", "write"].flatMap(name => samples.map(sample => ({ name, .
 test.each(cases)("$name diff follows $token in the tool, tree and inspector", ({ name, path, code, token, fragment }) => {
   const directory = mkdtempSync(join(tmpdir(), "codemode-theme-"));
   const file = join(directory, "theme.json");
-  const palette = JSON.parse(readFileSync("themes/codex-pi.json", "utf8"));
+  const palette = JSON.parse(readFileSync("extensions/codex-ui/themes/codex-pi.json", "utf8"));
   function recolor(color: string) {
     palette.colors[token] = color;
     writeFileSync(file, JSON.stringify(palette));
@@ -39,7 +40,7 @@ test.each(cases)("$name diff follows $token in the tool, tree and inspector", ({
     store.event({ ...call, type: "tool_execution_end", result });
     const row = store.get("p")!;
     function mount() {
-      const view = new CodemodePresentation(store, renderers);
+      const view = new CodemodePresentation(store, renderers, codexTools);
       const context = { ...hostKeybindingHints({}), toolCallId: call.toolCallId, args, state: {}, cwd: directory,
         lastComponent: undefined, executionStarted: true, argsComplete: true, isPartial: false, expanded: true,
         showImages: false, isError: false, durationMs: undefined, outputPad: 0, invalidate() {} };

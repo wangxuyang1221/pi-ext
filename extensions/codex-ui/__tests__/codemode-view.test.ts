@@ -1,10 +1,11 @@
+import { codexTools } from "../src/tools.js";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
-import { CodemodeStore } from "../src/codemode-model.js";
-import { renderCodemodeTree, treeCalls } from "../src/codemode-view.js";
-import { CodemodePresentation } from "../src/codemode-presentation.js";
+import { CodemodeStore } from "../../../shared/ui/codemode-model.js";
+import { renderCodemodeTree, treeCalls } from "../../../shared/ui/codemode-view.js";
+import { CodemodePresentation } from "../../../shared/ui/codemode-presentation.js";
 const theme = { fg: (_name: string, text: string) => text, bold: (text: string) => text } as Theme;
 function fixture() {
   const store = new CodemodeStore(); store.event({ type: "tool_execution_start", toolName: "codemode", toolCallId: "p", args: { code: "SCRIPT_SOURCE" } });
@@ -52,7 +53,7 @@ test("expanded Bash uses the native expanded output rather than its three-line p
   store.event({ type: "tool_execution_start", toolName: "codemode", toolCallId: "p" });
   store.event({ type: "tool_execution_start", toolName: "bash", toolCallId: "p/1", parentToolCallId: "p", args: { command: "printf fixture" } });
   store.event({ type: "tool_execution_end", toolName: "bash", toolCallId: "p/1", parentToolCallId: "p", result: { content: [{ type: "text", text: "first\nsecond\nthird\nfourth\nfifth" }] } });
-  const presentation = new CodemodePresentation(store, new Map());
+  const presentation = new CodemodePresentation(store, new Map(), codexTools);
   assert.match(presentation.tree(store.get("p")!, theme, 80, true, "/repo", "ctrl+o").join("\n"), /fifth/);
 });
 
@@ -60,7 +61,7 @@ test("a child update preserves cached sibling bodies", () => {
   const store = new CodemodeStore();
   store.event({ type: "tool_execution_start", toolName: "codemode", toolCallId: "p" });
   for (const id of ["p/1", "p/2"]) store.event({ type: "tool_execution_start", toolName: "custom", toolCallId: id, parentToolCallId: "p", args: {} });
-  const presentation = new CodemodePresentation(store, new Map());
+  const presentation = new CodemodePresentation(store, new Map(), codexTools);
   const row = store.get("p")!;
   const sibling = presentation.child(row.calls[0], 80, theme, "/repo");
   const changed = presentation.child(row.calls[1], 80, theme, "/repo");
@@ -71,7 +72,7 @@ test("a child update preserves cached sibling bodies", () => {
 
 test("hot child and inspector renders reuse preparation and observe cache eviction", () => {
   const store = fixture();
-  const presentation = new CodemodePresentation(store, new Map());
+  const presentation = new CodemodePresentation(store, new Map(), codexTools);
   const row = store.get("p")!;
   const before = presentation.child(row.calls[0], 80, theme, "/repo");
   assert.equal(presentation.child(row.calls[0], 80, theme, "/repo"), before);
@@ -87,7 +88,7 @@ test("hot child and inspector renders reuse preparation and observe cache evicti
 
 test("expanded tree reuses cached output and invalidates on result eviction, width, cwd, hints, and diff colors", () => {
   const store = fixture();
-  const presentation = new CodemodePresentation(store, new Map());
+  const presentation = new CodemodePresentation(store, new Map(), codexTools);
   const row = store.get("p")!;
   let diffBg = "\x1b[48;5;22m";
   const diffTheme = {
@@ -119,7 +120,7 @@ test("nested Bash reuses fullOutputError rendering across update-to-end transiti
   store.event({ type: "tool_execution_end", toolName: "read", toolCallId: "p/0", parentToolCallId: "p", result: { content: [{ type: "text", text: "sibling-body" }] } });
   store.event({ type: "tool_execution_start", toolName: "bash", toolCallId: "p/1", parentToolCallId: "p", args: { command: "seq 1 10" } });
 
-  const presentation = new CodemodePresentation(store, new Map());
+  const presentation = new CodemodePresentation(store, new Map(), codexTools);
   const row = store.get("p")!;
   const siblingBefore = presentation.child(row.calls[0]!, 100, theme, "/repo");
 
