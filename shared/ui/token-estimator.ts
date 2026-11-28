@@ -107,6 +107,10 @@ export class ModelCalibration {
     if (!isCalibratableIdentity(message)) return;
     if (baseTextMilli < MIN_CALIBRATION_BASE_MILLI) return;
 
+    // Image-bearing completions are outside the text-only calibration contract.
+    const imageOutput = message.usage?.imageOutput;
+    if (imageOutput !== undefined && imageOutput !== 0) return;
+
     const output = message.usage?.output;
     if (typeof output !== "number" || !Number.isInteger(output) || output <= 0) return;
 

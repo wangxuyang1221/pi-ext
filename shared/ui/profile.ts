@@ -7,6 +7,7 @@ import {
   type Theme,
 } from "@earendil-works/pi-coding-agent";
 import { registerCodemodeUi } from "./codemode.js";
+import { bindingText } from "./keybinding-hints.js";
 import { registerTerminalTitleSpinner } from "./terminal-title.js";
 import { registerWorking } from "./working-session.js";
 import { createContextUsageReader } from "./context-usage.js";
@@ -26,7 +27,7 @@ interface Profile {
   working: WorkingView;
   tools: ToolLayout;
   transformMarkdown: Parameters<ExtensionAPI["registerMarkdownTransformer"]>[0];
-  hiddenThinkingLabel?: string;
+  hiddenThinkingLabel?: (toggleKey: string) => string;
   registerToolRenderers?(pi: ExtensionAPI, getKeys: () => KeybindingsManager | undefined): void;
 }
 
@@ -131,6 +132,7 @@ export function registerProfile(pi: ExtensionAPI, profile: Profile, options: UiO
     disarmHandle?: ReturnType<typeof setImmediate>;
   } | undefined;
   let sessionToken = 0;
+  let keybindingSessionToken = 0;
 
   const clearPendingThemeRestore = (): void => {
     if (pendingThemeRestore?.disarmHandle !== undefined) {
@@ -168,6 +170,8 @@ export function registerProfile(pi: ExtensionAPI, profile: Profile, options: UiO
 
   pi.on("session_shutdown", () => {
     sessionToken++;
+    keybindingSessionToken++;
+    currentKeybindings = undefined;
     clearPendingThemeRestore();
     activeHeader = undefined;
     activeEditor = undefined;
@@ -178,12 +182,29 @@ export function registerProfile(pi: ExtensionAPI, profile: Profile, options: UiO
   pi.on("session_start", (event, ctx) => {
     clearPendingThemeRestore();
     sessionToken++;
+    keybindingSessionToken++;
+    currentKeybindings = undefined;
     if (ctx.mode !== "tui") return;
 
     const currentSessionToken = sessionToken;
+    const currentKeybindingToken = keybindingSessionToken;
+    let sessionKeybindings: KeybindingsManager | undefined;
+    let lastHiddenThinkingLabel: string | undefined;
+    const syncHiddenThinkingLabel = (force = false): void => {
+      if (keybindingSessionToken !== currentKeybindingToken) return;
+      if (!profile.hiddenThinkingLabel) {
+        if (force) ctx.ui.setHiddenThinkingLabel?.(undefined);
+        return;
+      }
+      const next = profile.hiddenThinkingLabel(bindingText(sessionKeybindings, "app.thinking.toggle"));
+      if (!force && next === lastHiddenThinkingLabel) return;
+      lastHiddenThinkingLabel = next;
+      ctx.ui.setHiddenThinkingLabel?.(next);
+    };
+
     currentModelId = ctx.model?.id;
     const themeApplied = applyProfileTheme(ctx, true, profile.themeName);
-    ctx.ui.setHiddenThinkingLabel?.(profile.hiddenThinkingLabel);
+    syncHiddenThinkingLabel(true);
 
     if (event.reason !== "startup" && themeApplied) {
       const registeredBefore = ctx.ui.getTheme(profile.themeName);
@@ -193,16 +214,23 @@ export function registerProfile(pi: ExtensionAPI, profile: Profile, options: UiO
           sessionToken: currentSessionToken,
           registeredBefore,
         };
-        ctx.ui.addAutocompleteProvider?.((provider) => {
-          schedulePostRebindDisarm(currentSessionToken);
-          return provider;
-        });
       }
+    }
+
+    // Pi reloads keybindings in place after session_start and before setupAutocompleteProvider().
+    // Keep label synchronization independent of theme restoration state.
+    if (event.reason !== "startup") {
+      ctx.ui.addAutocompleteProvider?.((provider) => {
+        schedulePostRebindDisarm(currentSessionToken);
+        syncHiddenThinkingLabel();
+        return provider;
+      });
     }
 
     const getTheme = () => ctx.ui.theme;
     const getModelId = () => currentModelId;
     const getThinkingLevel = () => pi.getThinkingLevel();
+    const getSessionKeybindings = () => (keybindingSessionToken === currentKeybindingToken ? sessionKeybindings : undefined);
 
     ctx.ui.setHeader(() => {
       activeHeader = new profile.Header({
@@ -212,7 +240,7 @@ export function registerProfile(pi: ExtensionAPI, profile: Profile, options: UiO
         getModelId,
         getThinkingLevel,
         getBranch: () => currentBranch,
-        getKeybindings: () => currentKeybindings,
+        getKeybindings: getSessionKeybindings,
         getTheme,
       });
       return activeHeader;
@@ -220,7 +248,11 @@ export function registerProfile(pi: ExtensionAPI, profile: Profile, options: UiO
 
     ctx.ui.setEditorComponent((tui, editorTheme, keybindings) => {
       activeTui = tui;
-      currentKeybindings = keybindings;
+      if (keybindingSessionToken === currentKeybindingToken) {
+        sessionKeybindings = keybindings;
+        currentKeybindings = keybindings;
+        syncHiddenThinkingLabel();
+      }
       activeHeader?.invalidate();
       activeFooter?.invalidate();
       activeEditor = new profile.Editor(
@@ -237,7 +269,7 @@ export function registerProfile(pi: ExtensionAPI, profile: Profile, options: UiO
       return activeEditor;
     });
 
-    const working = installWorking(ctx);
+    const working = installWorking(ctx, () => bindingText(getSessionKeybindings(), "app.interrupt", { shortEscape: true }));
     ctx.ui.setFooter((tui, _theme, footerData) => {
       activeTui = tui;
       currentBranch = footerData.getGitBranch();
@@ -252,7 +284,7 @@ export function registerProfile(pi: ExtensionAPI, profile: Profile, options: UiO
         getExtensionStatuses: () => footerData.getExtensionStatuses(),
         getRate: () => working?.activity.label(),
         isBashMode: () => activeEditor?.isBashDraft() ?? false,
-        getKeybindings: () => currentKeybindings,
+        getKeybindings: getSessionKeybindings,
         getTheme,
       });
       activeFooter = footer;

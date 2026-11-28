@@ -10,6 +10,8 @@
 - `working-recovery`：429 retry、overflow 自动压缩、最终错误各按宿主边界结束。
 - `working-replacement`：模式/new/reload/quit 不复活旧任务或 timer。
 
+默认 `app.interrupt` 在宽屏显示 `esc to interrupt`。真实重载后将键改为 F4，核对提示、按键产生的取消事件及状态清除；随后解除绑定，确认 Working 只显示耗时且请求能正常结束。
+
 ## How to get to it (user POV)
 
 加载正式 codex-ui，提交 prompt 即出现 Working。对话框中输入，运行中 Esc 取消，`/settings` → `TUI mode` 切换，`/new` 新会话，reload 后再提交，最后 `/quit`。验证中 F7/F8 打开公开 UI overlay/input，F9 切换主题；这些是夹具快捷键，不是产品新增按键。

@@ -7,6 +7,7 @@ BASE = Path(__file__).resolve().parent
 REPO = BASE.parents[3]
 sys.path.insert(0, str(REPO / 'test-support/terminal'))
 from pty_journey import PtyJourney
+from pi_170_journey import verify_pi_170
 from package_health import doctor
 
 def tone(name):
@@ -398,6 +399,7 @@ def run():
         return True
     if PI_COMPAT:
         pi_compat_case(); stop()
+        verify_pi_170(journey, 'Codex profile')
         return True
     command_availability('startup')
     footer = next((line for line in journey.screen.display if 'Context' in line and 'workspace' in line), '')

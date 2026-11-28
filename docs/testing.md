@@ -61,6 +61,8 @@ conda run -n codex-py312 python -m pip install pyte==0.8.2
 
 `pnpm run tool-status:check` 在普通与全屏终端验证 Read、Bash、Edit 和 Write；`pnpm run codemode:check` 验证嵌套调用检查面板。Claude 的安装、布局、工具和会话恢复由[Claude Code UI 验收](../.cursor/skills/verify-pi-claude-code-ui/SKILL.md)覆盖。两条命令均会构建扩展，须串行运行。Working、编辑器、Thinking、print 和 RPC 的入口及证据位置见[验收指引](../.cursor/skills/verify-pi-codex-ui/SKILL.md)。
 
+Pi 1.7.0 已移除安装遥测。两个插件的[宿主边界验收](../.cursor/skills/verify-pi-codex-ui/scripts/README.md#pi-170-host-boundary)覆盖配置目录优先级、OSC 7577、模型配置告警、Bash 上下文估算与 Alt+Enter。普通与全屏分别运行。Codemode 的[自定义按键旅程](../.cursor/skills/verify-pi-codex-ui/features/codemode.md)、Claude 的[改键与重载旅程](../.cursor/skills/verify-pi-claude-code-ui/features/terminal.md)和 [Working 旅程](../.cursor/skills/verify-pi-codex-ui/features/working.md)核对改绑后的提示和实际动作。
+
 ## CI
 
 CI 在 Linux 和 macOS 上执行基础检查及打包检查。Linux 还运行终端验收。汇总检查 `Check` 要求两类任务全部通过。

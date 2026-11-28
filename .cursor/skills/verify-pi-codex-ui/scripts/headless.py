@@ -36,7 +36,7 @@ try:
             if scenario.endswith('unreadable'): damaged.chmod(0)
             (root/'plan.json').write_text(json.dumps({'calls':[{'name':'bash','arguments':{'command':'printf "%s:%s" "$AUDIT_PREFIX" "$AUDIT_SHELL" > headless.txt; cat headless.txt'}},{'name':'read','arguments':{'path':'wide.png'}}],'reply':'HEADLESS-DONE'}))
             env={k:v for k,v in os.environ.items() if k in ['PATH','LANG','LC_ALL','TZ']}
-            env.update(HOME=str(root/'home'),TMPDIR=str(root/'tmp'),PI_CODING_AGENT_DIR=str(root/'agent'),AUDIT_ROOT=str(root),PI_OFFLINE='1',PI_TELEMETRY='0',PI_SKIP_VERSION_CHECK='1')
+            env.update(HOME=str(root/'home'),TMPDIR=str(root/'tmp'),PI_CODING_AGENT_DIR=str(root/'agent'),AUDIT_ROOT=str(root),PI_OFFLINE='1',PI_SKIP_VERSION_CHECK='1')
             for kind in ['CACHE','CONFIG','DATA','STATE']:env['XDG_'+kind+'_HOME']=str(root/kind.lower())
             args=['node',str(REPO/'node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js'),'--offline','--no-extensions','--no-skills','--no-context-files','--no-prompt-templates','--no-themes','--session-dir',str(root/'sessions'),'--provider','faux','--model','faux-1','-e',str(REPO/'extensions/codex-ui/dist/index.js'),'-e',str(BASE/'model-provider.ts'),'--mode','json' if mode=='print' else 'rpc']
             if mode=='print':args+=['--print','Execute audit tools']

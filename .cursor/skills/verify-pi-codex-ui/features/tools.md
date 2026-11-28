@@ -7,7 +7,7 @@
 - `ui-tool-rendering`：工具使用各自的预览与展开规则，命令清单和补全提供 `/inspect`。
 - `ui-read-group`：连续 Read 分组显示，折叠时以文件标题代替文件内容，展开显示带行号的内容。分组和折叠细则见 [grouped-read.test.ts](../../../../extensions/codex-ui/__tests__/grouped-read.test.ts)。
 - `ui-read-image-warning`：模型不支持图片时，Read 在折叠与展开状态都显示 `[<model> does not support images; it saw a placeholder instead]`。
-- `ui-bash-preview`：Bash 折叠时显示命令、输出开头和结尾各两行。Pi 1.6.1 截断输出时保留真实尾行；超长单行后只有空行时，捕获内容仍保留该长行末段。
+- `ui-bash-preview`：Bash 折叠时显示命令、输出开头和结尾各两行。Pi 截断输出时保留真实尾行；超长单行后只有空行时，捕获内容仍保留该长行末段。
 - `ui-expand`：默认 Ctrl+O 展开已捕获内容；Read 展开最多 40 行，Bash 展开后显示已捕获的中间行。两个状态都在正文下方仅显示一次 `Truncated capture ·`，后接完整输出路径或 `Could not save the full output: <reason>`。宿主原始 `[Showing ...]` 尾注不出现在正文中。展开 codemode 时，预算内的 Bash 子调用也应保留真实尾行和单条提示。
 - `ui-write-added`：新建 Write 显示 Added。
 - `ui-write-edited`：覆盖 Write 显示 Edited。

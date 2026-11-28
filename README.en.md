@@ -8,7 +8,7 @@ Two independently installable terminal UI plugins for [Pi Coding Agent](https://
 
 - Linux or macOS. Native Windows is not supported.
 - Node.js `>=22.19.0` and pnpm `11.9.0`.
-- Pi `1.6.1`. Development and peer dependencies pin this version. Other versions need separate validation.
+- Pi `1.7.0`. Development and peer dependencies pin this version. Other versions need separate validation.
 - A terminal with 24-bit color is recommended.
 
 ## Install
@@ -45,8 +45,8 @@ The `claude-code-ui` plugin provides a Claude Code 2.x terminal layout with a da
 
 - **Welcome card**: two-column terracotta rounded box with the pixel-block Clawd mascot, real Pi shortcuts, model/thinking status, working directory, and Git branch; collapses cleanly to one column below 78 columns.
 - **Composer and `!` bash mode**: transparent double-hairline composer with a `❯ ` prompt; typing `!` switches the hairlines, prompt, and footer hint to bash-mode pink in real time.
-- **Working indicator and footer**: terracotta spinner with a left-to-right shimmer verb and `(esc to interrupt · elapsed · ↓ N tokens)` above the editor; footer pairs Pi's real `Shift+Tab` thinking indicator (`⏵⏵ thinking: <level>`) on the left with model, Git branch, remaining context percentage, and live receive rate on the right.
-- **Messages and tools**: user messages start with `❯ `, assistant prose starts with `● `, thinking renders under `∴ Thinking…` in muted italic (with `∴ Thinking… (ctrl+t to expand)` when collapsed), and tools render as `● Read(path)` / `● Read N files`, `● Bash(cmd)`, `● Update(path)` (`Added X lines, removed Y lines` + diff), `● Write(path)` (`Wrote N lines to ...`), and `Search`/`Glob`/`List` with `  ⎿  ` connectors.
+- **Working indicator and footer**: terracotta spinner with a left-to-right shimmer verb and `(esc to interrupt · elapsed · ↓ N tokens)` above the editor (following Pi's `app.interrupt` binding, `esc` by default); footer pairs Pi's `app.thinking.cycle` (`Shift+Tab` by default) thinking indicator (`⏵⏵ thinking: <level>`) and `app.interrupt` bash-cancel hint on the left with model, Git branch, remaining context percentage, and live receive rate on the right.
+- **Messages and tools**: user messages start with `❯ `, assistant prose starts with `● `, thinking renders under `∴ Thinking…` in muted italic (following Pi's `app.thinking.toggle` binding when collapsed, `∴ Thinking… (ctrl+t to expand)` by default), and tools render as `● Read(path)` / `● Read N files`, `● Bash(cmd)`, `● Update(path)` (`Added X lines, removed Y lines` + diff), `● Write(path)` (`Wrote N lines to ...`), and `Search`/`Glob`/`List` with `  ⎿  ` connectors.
 
 ### Codex UI
 

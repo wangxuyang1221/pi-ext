@@ -3,6 +3,7 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 import { ProfileEditor } from "../../../shared/ui/profile-editor.js";
 import type { HeaderOptions } from "../../../shared/ui/ui-options.js";
 import { normalizeWidth } from "../../../shared/ui/layout.js";
+import { bindingText } from "../../../shared/ui/keybinding-hints.js";
 import { renderClaudeEditorFrame, renderClaudeHeader, resolveDisplayUser } from "./claude-components.js";
 export { ClaudeFooter } from "./footer.js";
 
@@ -14,6 +15,8 @@ export class ClaudeHeader implements Component {
     modelId: string;
     thinking: string;
     branch: string | null;
+    expandKey: string;
+    thinkingKey: string;
     lines: string[];
   } | undefined;
 
@@ -29,6 +32,9 @@ export class ClaudeHeader implements Component {
     const modelId = this.options.getModelId() ?? "No model";
     const thinking = this.options.getThinkingLevel();
     const branch = this.options.getBranch?.() ?? null;
+    const keybindings = this.options.getKeybindings?.();
+    const expandKey = bindingText(keybindings, "app.tools.expand");
+    const thinkingKey = bindingText(keybindings, "app.thinking.cycle");
     const cached = this.cached;
     if (
       cached
@@ -37,6 +43,8 @@ export class ClaudeHeader implements Component {
       && cached.modelId === modelId
       && cached.thinking === thinking
       && cached.branch === branch
+      && cached.expandKey === expandKey
+      && cached.thinkingKey === thinkingKey
     ) {
       return cached.lines;
     }
@@ -50,10 +58,12 @@ export class ClaudeHeader implements Component {
       modelId,
       thinking,
       branch,
-      keybindings: this.options.getKeybindings?.(),
+      keybindings,
+      expandKey,
+      thinkingKey,
       theme,
     });
-    this.cached = { width: safeWidth, theme, modelId, thinking, branch, lines };
+    this.cached = { width: safeWidth, theme, modelId, thinking, branch, expandKey, thinkingKey, lines };
     return lines;
   }
 

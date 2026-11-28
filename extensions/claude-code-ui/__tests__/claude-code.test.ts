@@ -76,7 +76,7 @@ test("package publishes its own valid claude-code theme", async () => {
 test("ClaudeHeader renders 2-column Clawd welcome box on wide widths and 1-column on narrow widths", () => {
   const theme = loadClaudeTheme();
   const header = new ClaudeHeader({
-    version: "1.6.1",
+    version: "1.7.0",
     cwd: "/Users/demo/project",
     home: "/Users/demo",
     userName: "demo",
@@ -91,7 +91,7 @@ test("ClaudeHeader renders 2-column Clawd welcome box on wide widths and 1-colum
   });
 
   const wide = header.render(112).map(stripTerminalSequences).join("\n");
-  assert.match(wide, /Claude Code v1\.6\.1/);
+  assert.match(wide, /Claude Code v1\.7\.0/);
   assert.match(wide, /Welcome back demo!/);
   assert.match(wide, /▐▛███▜▌/);
   assert.match(wide, /Tips for getting started/);
@@ -100,16 +100,16 @@ test("ClaudeHeader renders 2-column Clawd welcome box on wide widths and 1-colum
   assert.match(wide, / main/);
 
   const boundaryTwoCol = header.render(78).map(stripTerminalSequences).join("\n");
-  assert.match(boundaryTwoCol, /Claude Code v1\.6\.1/);
+  assert.match(boundaryTwoCol, /Claude Code v1\.7\.0/);
   assert.match(boundaryTwoCol, /Tips for getting started/);
 
   const boundarySingleCol = header.render(77).map(stripTerminalSequences).join("\n");
-  assert.match(boundarySingleCol, /Claude Code v1\.6\.1/);
+  assert.match(boundarySingleCol, /Claude Code v1\.7\.0/);
   assert.match(boundarySingleCol, /▐▛███▜▌/);
   assert.doesNotMatch(boundarySingleCol, /Tips for getting started/);
 
   const narrow = header.render(72).map(stripTerminalSequences).join("\n");
-  assert.match(narrow, /Claude Code v1\.6\.1/);
+  assert.match(narrow, /Claude Code v1\.7\.0/);
   assert.match(narrow, /▐▛███▜▌/);
   assert.doesNotMatch(narrow, /Tips for getting started/);
 });
@@ -231,7 +231,7 @@ test("Claude Working shows terracotta shimmer spinner, elapsed time, and streame
   activity.recordStreamDelta(400);
   now = 4200;
 
-  const working = new Working(activity, () => theme);
+  const working = new Working(activity, () => theme, () => "esc");
   const rendered = working.render(90);
   assert.equal(rendered.length, 1);
   const plain = stripTerminalSequences(rendered[0]!);
@@ -523,7 +523,8 @@ test("extension preserves claude-code theme on session start/reload and applies 
   }
 
   assert.equal(currentTheme.name, CLAUDE_THEME_NAME);
-  assert.equal(hiddenLabels.at(-1), "∴ Thinking… (ctrl+t to expand)");
+  // Without an editor factory supplying host keybindings, hidden thinking label stays at the honest base text.
+  assert.equal(hiddenLabels.at(-1), "∴ Thinking…");
 
   const transform = transformers[0]!;
   assert.equal(transform("fix retry", { messageType: "user" }), "❯ fix retry");
@@ -550,4 +551,249 @@ test("extension preserves claude-code theme on session start/reload and applies 
   footer.invalidate();
   await new Promise(resolveTick => queueMicrotask(() => resolveTick(undefined)));
   assert.equal(currentTheme.name, CLAUDE_THEME_NAME);
+});
+
+test("Claude UI dynamically reflects remapped, unbound, and in-place reloaded keybindings across header, footer, working, tools, and hidden thinking", () => {
+  const theme = loadClaudeTheme();
+
+  // 1. ClaudeHeader invalidates cache when the SAME manager changes in place, and omits unbound shortcut phrases.
+  const headerBindings: Record<string, string[]> = { "app.tools.expand": ["ctrl+o"], "app.thinking.cycle": ["shift+tab"] };
+  const mutableKeys = { getKeys: (id: string) => headerBindings[id] ?? [] } as unknown as KeybindingsManager;
+  const header = new ClaudeHeader({
+    version: "1.7.0",
+    cwd: "/Users/demo/project",
+    home: "/Users/demo",
+    userName: "demo",
+    getModelId: () => "gpt-5.4",
+    getThinkingLevel: () => "high",
+    getBranch: () => "main",
+    getKeybindings: () => mutableKeys,
+    getTheme: () => theme,
+  });
+  const firstHeader = header.render(112);
+  assert.equal(header.render(112), firstHeader);
+  assert.match(stripTerminalSequences(firstHeader.join("\n")), /shift\+tab for thinking/);
+  assert.match(stripTerminalSequences(firstHeader.join("\n")), /Press ctrl\+o to expand tools/);
+
+  headerBindings["app.tools.expand"] = ["f3"];
+  headerBindings["app.thinking.cycle"] = ["f4"];
+  const remappedHeader = header.render(112);
+  assert.notEqual(remappedHeader, firstHeader);
+  assert.match(stripTerminalSequences(remappedHeader.join("\n")), /f4 for thinking/);
+  assert.match(stripTerminalSequences(remappedHeader.join("\n")), /Press f3 to expand tools/);
+
+  headerBindings["app.tools.expand"] = [];
+  headerBindings["app.thinking.cycle"] = [];
+  const unboundHeader = stripTerminalSequences(header.render(112).join("\n"));
+  assert.doesNotMatch(unboundHeader, /for thinking|to expand tools/);
+  assert.match(unboundHeader, /Use \/model to switch/);
+  assert.match(unboundHeader, /Use ! for bash/);
+
+  // 2. Claude Working & Footer follow app.interrupt and app.thinking.cycle including unbinding and width cutoffs.
+  let now = 1000;
+  const activity = new WorkingActivity(() => now);
+  activity.start();
+  now = 4000;
+  let interrupt = "f8";
+  const working = new Working(activity, () => theme, () => interrupt);
+  assert.match(stripTerminalSequences(working.render(90)[0]!), /f8 to interrupt/);
+  assert.doesNotMatch(stripTerminalSequences(working.render(45)[0]!), /interrupt/);
+  assert.match(stripTerminalSequences(working.render(46)[0]!), /f8 to interrupt/);
+  interrupt = "";
+  const unboundWorking = stripTerminalSequences(working.render(90)[0]!);
+  assert.doesNotMatch(unboundWorking, /interrupt/);
+  assert.match(unboundWorking, /\(3s · thinking\)/);
+
+  const footerBindings: Record<string, string[]> = { "app.interrupt": ["f8"], "app.thinking.cycle": ["f4"] };
+  const footerKeys = { getKeys: (id: string) => footerBindings[id] ?? [] } as unknown as KeybindingsManager;
+  let bashMode = true;
+  let thinking = "high";
+  const footer = new ClaudeFooter({
+    cwd: "/Users/demo/project",
+    home: "/Users/demo",
+    getModelId: () => "gpt-5.4",
+    getThinkingLevel: () => thinking,
+    getContextUsage: () => ({ percent: 20 }),
+    getBranch: () => "main",
+    getExtensionStatuses: () => new Map(),
+    isBashMode: () => bashMode,
+    getKeybindings: () => footerKeys,
+    getTheme: () => theme,
+  });
+  assert.match(stripTerminalSequences(footer.render(112).join("\n")), /! for bash mode · f8 to cancel/);
+  footerBindings["app.interrupt"] = [];
+  const unboundBashFooter = stripTerminalSequences(footer.render(112).join("\n"));
+  assert.match(unboundBashFooter, /! for bash mode/);
+  assert.doesNotMatch(unboundBashFooter, /to cancel/);
+
+  bashMode = false;
+  assert.match(stripTerminalSequences(footer.render(112).join("\n")), /⏵⏵ thinking: high \(f4 to cycle\)/);
+  footerBindings["app.thinking.cycle"] = [];
+  const unboundThinkingFooter = stripTerminalSequences(footer.render(112).join("\n"));
+  assert.match(unboundThinkingFooter, /⏵⏵ thinking: high/);
+  assert.doesNotMatch(unboundThinkingFooter, /to cycle/);
+  thinking = "off";
+  assert.match(stripTerminalSequences(footer.render(112).join("\n")), /\? for shortcuts · thinking off/);
+
+  // 3. Generic Search/Glob/List tool renderer omits empty parens when unbound and updates after in-place key change.
+  const genericRenderers = new Map<string, ToolRenderers>();
+  const toolBindings: Record<string, string[]> = { "app.tools.expand": [] };
+  const toolKeys = { getKeys: (id: string) => toolBindings[id] ?? [] } as unknown as KeybindingsManager;
+  registerClaudeGenericToolRenderer({
+    registerToolRenderer(fn: (name: string, next: () => ToolRenderers | undefined) => ToolRenderers | undefined) {
+      for (const name of ["grep", "find", "ls"]) {
+        const r = fn(name, () => undefined);
+        if (r) genericRenderers.set(name, r);
+      }
+    },
+  } as unknown as ExtensionAPI, () => toolKeys);
+  const grepComp = genericRenderers.get("grep")!.renderResult!(
+    { content: [{ type: "text", text: "a.ts:1: hit\nb.ts:2: hit" }], details: {} },
+    { expanded: false, isPartial: false },
+    theme,
+    { state: {}, cwd: "/repo", isError: false, outputPad: 0 } as never,
+  );
+  const unboundGrep = stripTerminalSequences(grepComp.render(90).join("\n"));
+  assert.match(unboundGrep, /Found 2 matches/);
+  assert.doesNotMatch(unboundGrep, /\( to expand\)|to expand/);
+  toolBindings["app.tools.expand"] = ["f3"];
+  grepComp.invalidate();
+  assert.match(stripTerminalSequences(grepComp.render(90).join("\n")), /Found 2 matches \(f3 to expand\)/);
+
+  // 4. Hidden thinking label syncs on editor mount and on /reload even when theme restoration did not arm.
+  const handlers = new Map<string, Array<(...args: unknown[]) => unknown>>();
+  claudeUiExtension({
+    on(name: string, fn: (...args: unknown[]) => unknown) { handlers.set(name, [...(handlers.get(name) ?? []), fn]); },
+    registerTool() {},
+    registerToolRenderer() {},
+    registerCommand() {},
+    registerMarkdownTransformer() {},
+    getThinkingLevel: () => "high",
+    getSessionName: () => undefined,
+  } as unknown as ExtensionAPI);
+
+  const reloadBindings: Record<string, string[]> = { "app.thinking.toggle": ["ctrl+t"] };
+  const reloadKeys = { getKeys: (id: string) => reloadBindings[id] ?? [] } as unknown as KeybindingsManager;
+  const labels: Array<string | undefined> = [];
+  let editorFactory: ((tui: TUI, edTheme: unknown, kb: KeybindingsManager) => unknown) | undefined;
+  const autocompleteWrappers: Array<(provider: unknown) => unknown> = [];
+  const ctx = {
+    mode: "tui",
+    cwd: "/repo",
+    model: { id: "gpt-5.4" },
+    isIdle: () => true,
+    sessionManager: { buildContextEntries: () => [] },
+    ui: {
+      theme: { name: "dark" } as Theme,
+      getTheme: () => undefined, // Theme unavailable -> themeApplied is false, verifying reload sync is independent.
+      setTheme: () => ({ success: false }),
+      notify() {},
+      setHeader() {},
+      setEditorComponent(factory: typeof editorFactory) { editorFactory = factory; },
+      setFooter() {},
+      setWidget() {},
+      setTitle() {},
+      setWorkingVisible() {},
+      setHiddenThinkingLabel(label?: string) { labels.push(label); },
+      addAutocompleteProvider(wrapper: (provider: unknown) => unknown) { autocompleteWrappers.push(wrapper); },
+    },
+  };
+
+  for (const fn of handlers.get("session_start") ?? []) fn({ reason: "startup" }, ctx);
+  assert.equal(labels.at(-1), "∴ Thinking…");
+  editorFactory!(createFakeTui(), { borderColor: (t: string) => t, selectList: {} }, reloadKeys);
+  assert.equal(labels.at(-1), "∴ Thinking… (ctrl+t to expand)");
+
+  // Simulate /reload: session_start fires BEFORE host mutates reloadKeys in place and calls setupAutocompleteProvider().
+  const countBeforeReload = labels.length;
+  for (const fn of handlers.get("session_start") ?? []) fn({ reason: "reload" }, ctx);
+  editorFactory!(createFakeTui(), { borderColor: (t: string) => t, selectList: {} }, reloadKeys);
+  assert.equal(labels.at(-1), "∴ Thinking… (ctrl+t to expand)");
+  reloadBindings["app.thinking.toggle"] = ["f2"];
+  for (const wrap of autocompleteWrappers) wrap({});
+  assert.equal(labels.at(-1), "∴ Thinking… (f2 to expand)");
+
+  // Calling the wrapper again without another keybinding change must deduplicate (no extra setter calls).
+  const afterSyncCount = labels.length;
+  for (const wrap of autocompleteWrappers) wrap({});
+  assert.equal(labels.length, afterSyncCount);
+  assert.ok(afterSyncCount > countBeforeReload);
+
+  // Unbinding app.thinking.toggle removes the key hint cleanly on next reload.
+  reloadBindings["app.thinking.toggle"] = [];
+  for (const wrap of autocompleteWrappers) wrap({});
+  assert.equal(labels.at(-1), "∴ Thinking…");
+});
+
+test("replacing the footer mid-session does not drop header, working, or hidden thinking keybindings", () => {
+  const theme = loadClaudeTheme();
+  const handlers = new Map<string, Array<(...args: unknown[]) => unknown>>();
+  claudeUiExtension({
+    on(name: string, fn: (...args: unknown[]) => unknown) { handlers.set(name, [...(handlers.get(name) ?? []), fn]); },
+    registerTool() {},
+    registerToolRenderer() {},
+    registerCommand() {},
+    registerMarkdownTransformer() {},
+    getThinkingLevel: () => "high",
+    getSessionName: () => undefined,
+  } as unknown as ExtensionAPI);
+
+  const bindings: Record<string, string[]> = {
+    "app.tools.expand": ["f3"],
+    "app.interrupt": ["f4"],
+    "app.thinking.cycle": ["f5"],
+    "app.thinking.toggle": ["f2"],
+  };
+  const manager = { getKeys: (id: string) => bindings[id] ?? [] } as unknown as KeybindingsManager;
+  let headerComp: { render(w: number): string[] } | undefined;
+  let footerComp: { dispose?(): void } | undefined;
+  let workingComp: { render(w: number): string[] } | undefined;
+  let editorFactory: ((tui: TUI, edTheme: unknown, kb: KeybindingsManager) => unknown) | undefined;
+  const labels: Array<string | undefined> = [];
+  const ctx = {
+    mode: "tui",
+    cwd: "/repo",
+    model: { id: "gpt-5.4" },
+    isIdle: () => true,
+    sessionManager: { buildContextEntries: () => [] },
+    ui: {
+      theme,
+      getTheme: () => theme,
+      setTheme: () => ({ success: true }),
+      notify() {},
+      setHeader(factory: () => { render(w: number): string[] }) { headerComp = factory(); },
+      setEditorComponent(factory: typeof editorFactory) { editorFactory = factory; },
+      setFooter(factory: (tui: TUI, t: Theme, data: unknown) => { dispose?(): void }) {
+        footerComp = factory(createFakeTui(), theme, {
+          getGitBranch: () => "main",
+          getExtensionStatuses: () => new Map(),
+          onBranchChange: () => () => {},
+        });
+      },
+      setWidget(_k: string, factory?: (tui: TUI, t: Theme) => { render(w: number): string[] }) {
+        workingComp = factory ? factory(createFakeTui(), theme) : undefined;
+      },
+      setTitle() {},
+      setWorkingVisible() {},
+      setHiddenThinkingLabel(label?: string) { labels.push(label); },
+      addAutocompleteProvider() {},
+    },
+  };
+
+  for (const fn of handlers.get("session_start") ?? []) fn({ reason: "startup" }, ctx);
+  editorFactory!(createFakeTui(), { borderColor: (t: string) => t, selectList: {} }, manager);
+
+  // Another extension replaces our footer mid-session -> disposes trackedFooter.
+  footerComp?.dispose?.();
+
+  // Header and Working must retain the active session's keybindings until session_shutdown / next session_start.
+  const headerAfterDispose = stripTerminalSequences(headerComp!.render(112).join("\n"));
+  assert.match(headerAfterDispose, /Press f3 to expand tools/);
+  assert.match(headerAfterDispose, /f5 for thinking/);
+  for (const fn of handlers.get("agent_start") ?? []) fn({}, ctx);
+  assert.match(stripTerminalSequences(workingComp!.render(90)[0]!), /f4 to interrupt/);
+  assert.equal(labels.at(-1), "∴ Thinking… (f2 to expand)");
+
+  for (const fn of handlers.get("agent_settled") ?? []) fn({}, ctx);
+  for (const fn of handlers.get("session_shutdown") ?? []) fn({}, ctx);
 });

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { afterEach, test, vi } from "vitest";
 import type { ExtensionAPI, ExtensionContext, ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 import { fauxAssistantMessage } from "@earendil-works/pi-ai";
-import type { Component, TUI } from "@earendil-works/pi-tui";
+import { stripTerminalSequences, type Component, type TUI } from "@earendil-works/pi-tui";
 import { createTestUi } from "../../../test-support/pi-ui.js";
 import { registerWorking } from "../../../shared/ui/working-session.js";
 
@@ -179,5 +179,17 @@ test("virtual-routed and faux host models never update calibration even with pos
     assert.equal(session.activity.calibration.size(), 0, `expected no calibration for ${hostModel.provider}`);
     h.emit("agent_settled");
   }
+  h.emit("session_shutdown");
+});
+
+test("install forwards dynamic interrupt key getter to the mounted working widget", () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  const h = harness();
+  let key = "f8";
+  h.install(h.ctx, () => key);
+  h.emit("agent_start");
+  assert.match(stripTerminalSequences(h.widget()!.render(100)[0]!), /f8 to interrupt/u);
+  key = "";
+  assert.doesNotMatch(stripTerminalSequences(h.widget()!.render(100)[0]!), /interrupt/u);
   h.emit("session_shutdown");
 });

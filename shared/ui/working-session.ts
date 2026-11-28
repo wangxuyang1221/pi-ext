@@ -11,7 +11,7 @@ import { WORKING_FRAME_MS, WorkingActivity } from "./working-activity.js";
 
 export interface WorkingView {
   widgetKey: string;
-  Working: new (activity: WorkingActivity, getTheme: () => Theme) => Component;
+  Working: new (activity: WorkingActivity, getTheme: () => Theme, getInterruptKey?: () => string) => Component;
   frameKey(elapsed: number, tokens: number): string;
 }
 
@@ -29,7 +29,11 @@ export class WorkingSession {
   private lastRateLabel: string | undefined;
   private readonly bindings = new Map<() => void, TUI>();
 
-  constructor(private readonly ctx: ExtensionContext, private readonly view: WorkingView) {
+  constructor(
+    private readonly ctx: ExtensionContext,
+    private readonly view: WorkingView,
+    private readonly getInterruptKey: () => string = () => "",
+  ) {
     this.activity = new WorkingActivity(undefined, message => {
       const model = this.ctx.model;
       if (!model) return { eligible: true };
@@ -70,7 +74,7 @@ export class WorkingSession {
     const startedElapsed = this.activity.elapsed();
     this.lastWorkingKey = this.view.frameKey(startedElapsed, this.activity.estimatedStreamTokens());
     this.lastRateLabel = this.activity.label();
-    this.ctx.ui.setWidget(this.view.widgetKey, tui => this.bind(new this.view.Working(this.activity, () => this.ctx.ui.theme), tui));
+    this.ctx.ui.setWidget(this.view.widgetKey, tui => this.bind(new this.view.Working(this.activity, () => this.ctx.ui.theme, this.getInterruptKey), tui));
     this.refresh();
     this.schedule(this.generation, startedElapsed);
   }
@@ -136,7 +140,10 @@ export class WorkingSession {
 }
 
 /** Bind only documented task and response events; dialogs never change task activity. */
-export function registerWorking(pi: ExtensionAPI, view: WorkingView): (ctx: ExtensionContext) => WorkingSession | undefined {
+export function registerWorking(
+  pi: ExtensionAPI,
+  view: WorkingView,
+): (ctx: ExtensionContext, getInterruptKey?: () => string) => WorkingSession | undefined {
   let current: WorkingSession | undefined;
   pi.on("agent_start", () => current?.start());
   pi.on("agent_settled", () => current?.stop());
@@ -144,16 +151,20 @@ export function registerWorking(pi: ExtensionAPI, view: WorkingView): (ctx: Exte
   pi.on("message_update", event => current?.messageUpdate(event));
   pi.on("message_end", event => current?.messageEnd(event));
   pi.on("session_shutdown", () => { current?.dispose(); current = undefined; });
-  return ctx => {
+  return (ctx, getInterruptKey) => {
     current?.dispose(); current = undefined;
-    current = createSession(ctx, view);
+    current = createSession(ctx, view, getInterruptKey);
     return current;
   };
 }
 
-function createSession(ctx: ExtensionContext, view: WorkingView): WorkingSession | undefined {
+function createSession(
+  ctx: ExtensionContext,
+  view: WorkingView,
+  getInterruptKey?: () => string,
+): WorkingSession | undefined {
   if (ctx.mode !== "tui") return;
-  const session = new WorkingSession(ctx, view);
+  const session = new WorkingSession(ctx, view, getInterruptKey);
   if (!ctx.isIdle()) session.start();
   return session;
 }

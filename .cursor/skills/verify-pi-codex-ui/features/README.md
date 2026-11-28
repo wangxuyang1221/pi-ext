@@ -19,4 +19,4 @@
 - [Thinking and terminal activity](thinking.md)：包含 `ui-thinking-stream`, `ui-thinking-collapse`, `ui-thinking-resume`, `ui-title`, `ui-title-stop`.
 - [Read, Bash, Edit and Write display](tools.md)：包含 `ui-tool-rendering`, `ui-read-group`, `ui-read-image-warning`, `ui-bash-preview`, `ui-expand`, `ui-write-added`, `ui-write-edited`, `ui-diff`, `ui-error`, `ui-interrupted`。
 - [Codemode tree and inspector](codemode.md)：包含 `ui-codemode-order`, `ui-codemode-failure`, `ui-inspect-tabs`, `ui-inspect-scroll`, `ui-codemode-cache`, `ui-codemode-resume`.
-- [Execution settings and fail-closed configuration](execution.md)：包含 `ui-shell-prefix`, `ui-shell-path`, `ui-image-resize`, `ui-project-trust`, `ui-settings-error`, `ui-settings-reload`, `ui-headless`.
+- [Execution settings and fail-closed configuration](execution.md)：包含 `ui-shell-prefix`, `ui-shell-path`, `ui-image-resize`, `ui-project-trust`, `ui-settings-error`, `ui-settings-reload`, `ui-headless`, `ui-pi-host`.

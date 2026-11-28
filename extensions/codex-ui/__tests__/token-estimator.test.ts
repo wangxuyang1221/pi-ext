@@ -171,3 +171,62 @@ test("ModelCalibration clamps factors to [0.67, 1.5] and evicts beyond 16 models
   assert.equal(cal.factor(hi), 1);
   assert.equal(cal.factor(assistantMessage({ model: "lru-19" })), Math.pow(1.5, 0.2));
 });
+
+test("ModelCalibration accepts undefined or zero imageOutput and skips image-bearing or malformed imageOutput", () => {
+  const cal = new ModelCalibration();
+  const baseTextMilli = 100 * MILLI_TOKENS_PER_TOKEN;
+  const expected = Math.pow(1.5, 0.2);
+
+  // imageOutput: 0 on a non-reasoning model still calibrates normally.
+  const zeroImg = assistantMessage({
+    model: "zero-img",
+    usage: { ...assistantMessage().usage, output: 150, imageOutput: 0 },
+  });
+  cal.observe({
+    message: zeroImg,
+    baseTextMilli,
+    hasTools: false,
+    hasThinking: false,
+    hasRedaction: false,
+    hasReplacement: false,
+    modelHasReasoning: false,
+  });
+  assert.ok(Math.abs(cal.factor(zeroImg) - expected) < 1e-12);
+  assert.equal(cal.size(), 1);
+
+  // imageOutput: 0 cannot bypass the existing reasoning guard on unknown-reasoning models.
+  const zeroImgUnknownReason = assistantMessage({
+    model: "zero-img-unknown-reason",
+    usage: { ...assistantMessage().usage, output: 150, imageOutput: 0 },
+  });
+  cal.observe({
+    message: zeroImgUnknownReason,
+    baseTextMilli,
+    hasTools: false,
+    hasThinking: false,
+    hasRedaction: false,
+    hasReplacement: false,
+    modelHasReasoning: undefined,
+  });
+  assert.equal(cal.factor(zeroImgUnknownReason), 1);
+  assert.equal(cal.size(), 1);
+
+  const rejectedImageOutputs: Array<unknown> = [1, 100, 500, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, null];
+  for (const [idx, imageOutput] of rejectedImageOutputs.entries()) {
+    const msg = assistantMessage({
+      model: `img-reject-${idx}`,
+      usage: { ...assistantMessage().usage, output: 350, reasoning: 100, imageOutput: imageOutput as number },
+    });
+    cal.observe({
+      message: msg,
+      baseTextMilli,
+      hasTools: false,
+      hasThinking: false,
+      hasRedaction: false,
+      hasReplacement: false,
+      modelHasReasoning: false,
+    });
+    assert.equal(cal.factor(msg), 1, `expected skip for imageOutput=${String(imageOutput)}`);
+  }
+  assert.equal(cal.size(), 1);
+});

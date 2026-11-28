@@ -1,5 +1,5 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
-import type { Component } from "@earendil-works/pi-tui";
+import { visibleWidth, type Component } from "@earendil-works/pi-tui";
 import { fitToWidth, normalizeWidth } from "../../../shared/ui/layout.js";
 import { WORKING_FRAME_MS, WorkingActivity } from "../../../shared/ui/working-activity.js";
 export { WORKING_FRAME_MS, WorkingActivity };
@@ -12,21 +12,25 @@ export function workingFrameKey(elapsed: number): string {
 }
 
 export class Working implements Component {
-  constructor(private readonly activity: WorkingActivity, private readonly getTheme: () => Theme) {}
+  constructor(
+    private readonly activity: WorkingActivity,
+    private readonly getTheme: () => Theme,
+    private readonly getInterruptKey: () => string = () => "",
+  ) {}
   render(width: number): string[] {
     const safeWidth = normalizeWidth(width);
     if (!this.activity.active || safeWidth === 0) return [];
     const elapsed = this.activity.elapsed(), theme = this.getTheme();
     const spinner = theme.fg("accent", FRAMES[Math.floor(elapsed / WORKING_FRAME_MS) % FRAMES.length]!);
-    const hint = safeWidth >= 40;
-    const timing = `(${elapsedLabel(elapsed)}${hint ? " · esc to interrupt" : ""})`;
-    const styled = hint
-      ? theme.fg("dim", `(${elapsedLabel(elapsed)} · `) + theme.fg("muted", "esc") + theme.fg("dim", " to interrupt)")
+    const interruptKey = safeWidth >= 40 ? this.getInterruptKey() : "";
+    const timing = `(${elapsedLabel(elapsed)}${interruptKey ? ` · ${interruptKey} to interrupt` : ""})`;
+    const styled = interruptKey
+      ? theme.fg("dim", `(${elapsedLabel(elapsed)} · `) + theme.fg("muted", interruptKey) + theme.fg("dim", " to interrupt)")
       : theme.fg("dim", timing);
     const label = theme.bold(theme.fg("text", "Working"));
     const line = ` ${spinner} ${label} ${styled}`;
-    // The fixed prefix and timing use single-cell glyphs; only narrow layouts need clipping.
-    return [11 + timing.length <= safeWidth ? line : fitToWidth(line, safeWidth)];
+    // The fixed prefix uses single-cell glyphs; check visibleWidth for custom multi-key bindings.
+    return [11 + visibleWidth(timing) <= safeWidth ? line : fitToWidth(line, safeWidth)];
   }
   invalidate(): void {}
 }

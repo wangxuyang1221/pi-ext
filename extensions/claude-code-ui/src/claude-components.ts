@@ -1,7 +1,8 @@
 import { userInfo } from "node:os";
-import { keyText, type ContextUsage, type KeybindingsManager, type Theme } from "@earendil-works/pi-coding-agent";
+import type { ContextUsage, KeybindingsManager, Theme } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 
+import { bindingText } from "../../../shared/ui/keybinding-hints.js";
 import {
   fitToWidth,
   formatHomePath,
@@ -80,21 +81,6 @@ function splitRow(left: string, right: string, width: number, minGap = 2): strin
   return fitToWidth(left, width, { ellipsis: "…" });
 }
 
-function formatKey(bindings: Pick<KeybindingsManager, "getKeys"> | undefined, id: string, fallback: string): string {
-  if (!bindings) {
-    try {
-      return keyText(id as Parameters<typeof keyText>[0]) || fallback;
-    } catch {
-      return fallback;
-    }
-  }
-  const keys = bindings.getKeys(id as Parameters<KeybindingsManager["getKeys"]>[0]);
-  if (!keys?.length) return fallback;
-  return keys
-    .map(k => String(k).split("+").map(p => process.platform === "darwin" && p.toLowerCase() === "alt" ? "option" : p).join("+"))
-    .join("/");
-}
-
 export function resolveDisplayUser(): string | undefined {
   try {
     const name = userInfo().username?.trim();
@@ -114,6 +100,8 @@ export interface ClaudeHeaderInput {
   thinking: string;
   branch: string | null;
   keybindings?: Pick<KeybindingsManager, "getKeys">;
+  expandKey?: string;
+  thinkingKey?: string;
   theme: Theme;
 }
 
@@ -122,8 +110,8 @@ export function renderClaudeHeader(input: ClaudeHeaderInput): string[] {
   if (safeWidth === 0) return [];
 
   const { theme, modelId, thinking, branch } = input;
-  const expandKey = formatKey(input.keybindings, "app.tools.expand", "ctrl+o");
-  const thinkingKey = formatKey(input.keybindings, "app.thinking.cycle", "shift+tab");
+  const expandKey = input.expandKey ?? bindingText(input.keybindings, "app.tools.expand");
+  const thinkingKey = input.thinkingKey ?? bindingText(input.keybindings, "app.thinking.cycle");
 
   const pad = " ".repeat(SIDE_INSET);
   const boxWidth = Math.min(Math.max(0, safeWidth - SIDE_INSET * 2), 104);
@@ -186,10 +174,17 @@ export function renderClaudeHeader(input: ClaudeHeaderInput): string[] {
     : theme.fg("dim", "no git branch");
   const cwdBrief = `${theme.fg("dim", "cwd ")}${theme.fg("muted", middleEllipsis(dir, Math.max(10, rightW - 6)))}`;
 
+  const modelTip = thinkingKey
+    ? `${theme.fg("muted", "Use ")}${theme.fg("text", "/model")}${theme.fg("muted", " to switch, ")}${theme.fg("text", thinkingKey)}${theme.fg("muted", " for thinking")}`
+    : `${theme.fg("muted", "Use ")}${theme.fg("text", "/model")}${theme.fg("muted", " to switch")}`;
+  const toolsTip = expandKey
+    ? `${theme.fg("muted", "Press ")}${theme.fg("text", expandKey)}${theme.fg("muted", " to expand tools, ")}${theme.fg("text", "!")}${theme.fg("muted", " for bash")}`
+    : `${theme.fg("muted", "Use ")}${theme.fg("text", "!")}${theme.fg("muted", " for bash")}`;
+
   const rightRows = [
     tipTitle,
-    `${theme.fg("muted", "Use ")}${theme.fg("text", "/model")}${theme.fg("muted", " to switch, ")}${theme.fg("text", thinkingKey)}${theme.fg("muted", " for thinking")}`,
-    `${theme.fg("muted", "Press ")}${theme.fg("text", expandKey)}${theme.fg("muted", " to expand tools, ")}${theme.fg("text", "!")}${theme.fg("muted", " for bash")}`,
+    modelTip,
+    toolsTip,
     divider,
     sessionTitle,
     cwdBrief,
@@ -276,6 +271,7 @@ export function renderClaudeWorking(
   frameMs: number,
   theme: Theme,
   width: number,
+  interruptKey = "",
 ): string[] {
   const safeWidth = normalizeWidth(width);
   if (safeWidth === 0) return [];
@@ -288,7 +284,7 @@ export function renderClaudeWorking(
 
   const timeText = elapsedLabel(elapsed);
   const detailParts: string[] = [];
-  if (safeWidth >= 46) detailParts.push(`${theme.fg("muted", "esc")}${theme.fg("dim", " to interrupt")}`);
+  if (safeWidth >= 46 && interruptKey) detailParts.push(`${theme.fg("muted", interruptKey)}${theme.fg("dim", " to interrupt")}`);
   detailParts.push(theme.fg("dim", timeText));
   if (tokens > 0 && safeWidth >= 56) {
     detailParts.push(theme.fg("dim", `↓ ${formatTokenCount(tokens)} tokens`));
@@ -324,7 +320,8 @@ export function renderClaudeFooter(input: ClaudeFooterInput): string[] {
   if (safeWidth === 0) return [];
 
   const { theme, modelId, thinking, branch, contextPercent, rate, bashMode } = input;
-  const thinkingKey = formatKey(input.keybindings, "app.thinking.cycle", "shift+tab");
+  const thinkingKey = bindingText(input.keybindings, "app.thinking.cycle");
+  const interruptKey = bindingText(input.keybindings, "app.interrupt", { shortEscape: true });
   const status = input.status ? stripTerminalSequences(input.status).replace(/\s+/gu, " ").trim() : undefined;
 
   const inner = Math.max(1, safeWidth - SIDE_INSET * 2);
@@ -334,11 +331,11 @@ export function renderClaudeFooter(input: ClaudeFooterInput): string[] {
 
   let left: string;
   if (bashMode) {
-    left = ` ${fgRgb(CLAUDE_RGB.bashPink, "! for bash mode", theme, "bashMode")}${compact ? "" : theme.fg("dim", " · esc to cancel")}`;
+    left = ` ${fgRgb(CLAUDE_RGB.bashPink, "! for bash mode", theme, "bashMode")}${compact || !interruptKey ? "" : theme.fg("dim", ` · ${interruptKey} to cancel`)}`;
   } else if (thinking === "off") {
-    left = ` ${theme.fg("dim", `? for shortcuts · ${thinkingKey} thinking off`)}`;
+    left = ` ${theme.fg("dim", thinkingKey ? `? for shortcuts · ${thinkingKey} thinking off` : "? for shortcuts · thinking off")}`;
   } else {
-    const modeText = compact
+    const modeText = compact || !thinkingKey
       ? `⏵⏵ thinking: ${thinking}`
       : `⏵⏵ thinking: ${thinking} (${thinkingKey} to cycle)`;
     left = ` ${fgRgb(CLAUDE_RGB.modePurple, modeText, theme, "accent")}`;

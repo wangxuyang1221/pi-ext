@@ -43,7 +43,9 @@ const scriptFor = scenario => {
 };
 async function prepare(scenario) {
   assert.ok(scenarios.includes(scenario));
-  await writeFile(join(cwd, 'package.json'), '{"name":"acceptance"}\n');
+  const manifest = { name: 'acceptance' };
+  if (process.argv.includes('--custom-keys')) manifest.pages = Array.from({ length: 60 }, (_, i) => `inspector-line-${i}`);
+  await writeFile(join(cwd, 'package.json'), JSON.stringify(manifest, null, manifest.pages ? 2 : undefined) + '\n');
   await writeFile(join(cwd, '配置.ts'), 'export const enabled = false;\n');
   code = scriptFor(scenario);
   const id = `production-${++serial}-${Date.now()}`;
@@ -75,6 +77,12 @@ const extension = pi => {
     const scenario = args.trim() || 'partial';
     if (busy || !ctx.isIdle() || !scenarios.includes(scenario)) return;
     busy = true; try { await prepare(scenario); pi.sendUserMessage(`Acceptance fixture: ${scenario}`); } finally { busy = false; }
+  } });
+  if (process.argv.includes('--custom-keys')) pi.registerCommand('fixture-remap', { description: 'Change inspector bindings on disk', async handler(_args, ctx) {
+    const file = join(root, 'agent/keybindings.json');
+    const keys = JSON.parse(await readFile(file, 'utf8'));
+    await writeFile(file, JSON.stringify({ ...keys, 'app.tools.expand': 'f9', 'tui.select.down': 'shift+tab', 'app.thinking.cycle': [] }));
+    ctx.ui.notify('FIXTURE-KEYS-SAVED', 'info');
   } });
   pi.registerCommand('stop', { description: 'Abort real execution', handler: async (_args, ctx) => ctx.abort() });
   pi.registerCommand('fixture-tree', { description: 'Switch real history branches', async handler(args, ctx) {

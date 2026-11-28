@@ -10,7 +10,7 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/headless.py
 ```
 
-`cli.py` 启动仓库固定版本的原生 CLI。`model-provider.ts` 只提供离线模型响应、记录公开事件、注册宿主原有 codemode 工具，并为 `/compact` 提供确定摘要。工具、QuickJS、文件、配置、session、选择器和生产 renderer 均实际运行。该路径不证明真实远程模型会生成相同响应。
+`cli.py` 启动仓库固定版本的原生 CLI。`model-provider.ts` 只提供离线模型响应、记录公开事件、通过验收命令读取公开上下文估算，注册宿主原有 codemode 工具，并为 `/compact` 提供确定摘要。工具、QuickJS、文件、配置、session、选择器和生产 renderer 均实际运行。该路径不证明真实远程模型会生成相同响应。
 
 CLI 驱动将 `extensions/codex-ui` 的发布 tarball 解包到隔离目录，再用真实 `pi install` 注册，核对启动画面与主题发现。到故意破坏全局配置的场景时，另启进程并用 `-e` 直接加载同一份解包产物，以便配置损坏时仍可调用工具。每次安装与启动前运行 `package_health.py` 并归档 preflight。headless 驱动使用 [health.py](health.py) 检查版本、构建和验证锁。失败后核对证据及清理状态，再启动新进程重试。
 
@@ -33,6 +33,15 @@ pnpm test extensions/codex-ui/__tests__/reply-copy.test.ts extensions/codex-ui/_
 ```
 
 定向测试核对编辑器 `/copy` 跳过无正文的取消、工具或错误 turn，以及正常 `stop` 的无正文通知。测试替换了剪贴板写入，因此系统粘贴仍按 [Manual boundaries](#manual-boundaries) 验收。主题测试检查 schema URL、显式 `dark` 和宿主加载结果。工具测试检查 `text` 色变化后，已有 diff 缓存与冷渲染一致。
+
+### Pi 1.7.0 host boundary
+
+Codex 的两个 `--pi-compat` 入口和 Claude 的两个 CLI 入口使用[同一组 PTY 断言](../../../../test-support/terminal/pi_170_journey.py)。两个插件都从独立安装包启动。验证配置目录、原生按键、模型请求和协议时分别保留以下证据。
+
+- 用 `--agent-dir` 指向安装目录，并将环境变量指向含哨兵配置的另一个目录。启动画面须显示目标插件，错误的 `models.json` 须产生可见警告，离线模型仍完成真实 Bash 请求。退出后复查哨兵和目录内容。用同一文件系统的对照文件校准访问时间；支持时另断言宿主没有读取哨兵或枚举目录。
+- 在未设置令牌的进程从启动到退出检查 OSC 7577 缺席。在使用合成令牌的新进程中校验签名，解码参数并比对实际会话 ID、配置与会话目录、资源和限制参数。子 Bash 将收到的环境状态写入工作区，原生 `/quit` 后检查清除报文。终端模拟器是否信任并重启命令需在对应终端另测。
+- 分别用 `!!` 与 `!` 执行相同的文件读取命令。通过夹具命令 `/audit-context` 记录 Pi 的公开上下文估算与会话 Bash 记录，在相同输入和输出下比对估算与排除标记。
+- 在空会话中用 Alt+Enter 完成 `/cop`，核对复制处理器的空历史提示。文件补全应保留完整草稿；流式回复中排队的文本须先在待发送区可见，再出现在下一次实际模型请求中。物理剪贴板字节另行验证。
 
 ### Bash capture
 

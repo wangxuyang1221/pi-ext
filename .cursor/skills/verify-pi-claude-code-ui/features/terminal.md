@@ -12,6 +12,8 @@
 | `claude-messages` | 提交消息的 `❯ ` 和助手正文的 `● ` 位于首行。思考块标题为 `∴ Thinking…`，正文为淡灰斜体，Ctrl+T 在正文与 `∴ Thinking… (ctrl+t to expand)` 之间切换。 |
 | `claude-tools` | 执行真实工具并对照工具结束事件、文件字节和终端帧。核对独立与分组 Read、Bash 失败及截断、Write 行数、Update 增删行数与红绿 diff，以及 grep/find/ls 的 Search/Glob/List 标题和连接符。Ctrl+O 展开并再次折叠，同一工具结果的内容显隐随之变化。 |
 | `claude-lifecycle` | 安装记录只包含 Claude 包，主题发现只有该包主题。重启同一配置，并结合 `session_start` 的原因、设置文件、header 和 composer，核对 `/reload`、`/fork`、`/new`、`/resume` 后的界面。 |
+| `claude-keybindings` | 默认、改键和解除绑定三种配置。按新键循环思考、隐藏思考、展开搜索结果和中断活动流。修改磁盘配置后执行 `/reload`，对照同一条历史中的折叠思考与三类工具摘要，以及欢迎卡和宽底栏；解除绑定时检查空括号和残余按键短语。 |
+| `claude-pi-host` | 在独立安装包执行[宿主边界旅程](../../verify-pi-codex-ui/scripts/README.md#pi-170-host-boundary)，保存会话、令牌协议和跟进输入的证据。 |
 
 ## How to get to it (user POV)
 

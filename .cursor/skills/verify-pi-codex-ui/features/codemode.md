@@ -15,6 +15,8 @@
 
 codemode 工具；默认 Ctrl+O 展开；/inspect；Tab/Shift+Tab；方向键/翻页。展开键遵循 `app.tools.expand`，fixture 的 `--custom-keys` 使用 F3。
 
+使用 `--custom-keys` 时，F2 前进、Shift+Tab 后退、F5/F6 选择调用、F7/F8 翻页、F4 关闭。按 F3 展开后，驱动写入新配置并重载，核对同一历史行显示 F9；当向下选择改绑到 Shift+Tab 时，该键应在 Calls 中选中下一行。嵌套子渲染器及详情缓存的同对象失效由下方 integration 定向测试覆盖。
+
 ## Driving it with Pi PTY and host fixtures
 
 Preconditions:

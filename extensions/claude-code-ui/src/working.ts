@@ -10,7 +10,11 @@ export function workingFrameKey(elapsed: number, streamTokens: number): string {
 }
 
 export class Working implements Component {
-  constructor(private readonly activity: WorkingActivity, private readonly getTheme: () => Theme) {}
+  constructor(
+    private readonly activity: WorkingActivity,
+    private readonly getTheme: () => Theme,
+    private readonly getInterruptKey: () => string = () => "",
+  ) {}
   render(width: number): string[] {
     const safeWidth = normalizeWidth(width);
     if (!this.activity.active || safeWidth === 0) return [];
@@ -22,6 +26,7 @@ export class Working implements Component {
       WORKING_FRAME_MS,
       theme,
       safeWidth,
+      this.getInterruptKey(),
     );
   }
   invalidate(): void {}

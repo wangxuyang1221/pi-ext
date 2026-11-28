@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { test, vi } from "vitest";
 import { SessionManager, type ExtensionAPI, type ExtensionContext, type KeybindingsManager } from "@earendil-works/pi-coding-agent";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
-import { type TUI, getKeybindings } from "@earendil-works/pi-tui";
+import { type AutocompleteProvider, type TUI, getKeybindings } from "@earendil-works/pi-tui";
 import { createTestUi } from "../../../test-support/pi-ui.js";
+import { TestKeybindingsManager } from "../../../test-support/keybindings.js";
 import codexUi from "../src/index.js";
 import type { CodexEditor } from "../src/components.js";
 
@@ -22,7 +23,7 @@ function reply(text: string): AssistantMessage {
   };
 }
 
-async function setup() {
+async function setup(keybindings?: KeybindingsManager) {
   copy.mockReset().mockResolvedValue(undefined);
   const handlers = new Map<string, Array<(event: unknown, ctx: ExtensionContext) => unknown>>();
   const manager = SessionManager.inMemory(process.cwd());
@@ -31,7 +32,7 @@ async function setup() {
   const nativeSubmit = vi.fn();
   const ui = createTestUi({ notify, setEditorComponent(factory) {
     editor = factory!({ terminal: { rows: 40, columns: 80 }, requestRender() {} } as unknown as TUI,
-      { borderColor: (text: string) => text, selectList: {} } as never, getKeybindings() as KeybindingsManager) as CodexEditor;
+      { borderColor: (text: string) => text, selectList: {} } as never, keybindings ?? (getKeybindings() as KeybindingsManager)) as CodexEditor;
     editor.onSubmit = nativeSubmit;
   } });
   const ctx = { mode: "tui", cwd: process.cwd(), ui, sessionManager: manager,
@@ -149,4 +150,81 @@ test("copy handling preserves native paste, submit disabling, ordinary commands 
   assert.equal(fixture.editor.onSubmit, undefined);
   fixture.editor.setText(" /copy "); fixture.editor.handleInput("\r");
   await vi.waitFor(() => assert.deepEqual(copy.mock.calls, [["Reply\n"]]));
+});
+
+test("app.message.followUp with autocomplete applies path drafts without submitting and routes idle /copy completion to copy", async () => {
+  const hostKeys = new TestKeybindingsManager();
+  const fixture = await setup(hostKeys as unknown as KeybindingsManager);
+  const original = "Exact **Markdown** body\n";
+  fixture.manager.appendMessage(reply(original));
+
+  const provider: AutocompleteProvider = {
+    async getSuggestions(lines, cursorLine, cursorCol) {
+      const before = (lines[cursorLine] ?? "").slice(0, cursorCol);
+      if (before === "/cop") {
+        return { prefix: "/cop", items: [{ value: "copy", label: "/copy" }] };
+      }
+      if (before.endsWith("@src/f")) {
+        return { prefix: "@src/f", items: [{ value: "@src/file.ts", label: "src/file.ts" }] };
+      }
+      return null;
+    },
+    applyCompletion(lines, cursorLine, cursorCol, item, prefix) {
+      const line = lines[cursorLine] ?? "";
+      const replacement = prefix.startsWith("/") ? `/${item.value} ` : `${item.value} `;
+      const start = cursorCol - prefix.length;
+      const next = line.slice(0, start) + replacement + line.slice(cursorCol);
+      const nextLines = [...lines];
+      nextLines[cursorLine] = next;
+      return { lines: nextLines, cursorLine, cursorCol: start + replacement.length };
+    },
+  };
+  fixture.editor.setAutocompleteProvider(provider);
+
+  let streaming = false;
+  const queued: string[] = [];
+  fixture.editor.actionHandlers.set("app.message.followUp", () => {
+    const text = fixture.editor.getText().trim();
+    if (!text) return;
+    if (streaming) {
+      queued.push(text);
+      fixture.editor.setText("");
+      return;
+    }
+    fixture.editor.setText("");
+    fixture.editor.onSubmit?.(text);
+  });
+
+  // 1. Path completion + Alt+Enter inserts draft without submitting or copying.
+  for (const ch of "open @src/f") fixture.editor.handleInput(ch);
+  await vi.waitFor(() => assert.equal(fixture.editor.isShowingAutocomplete(), true));
+  fixture.editor.handleInput("\x1b\r"); // Alt+Enter
+  assert.equal(fixture.editor.getText(), "open @src/file.ts ");
+  assert.equal(copy.mock.calls.length, 0);
+  assert.equal(fixture.nativeSubmit.mock.calls.length, 0);
+
+  // 2. Slash-command completion /cop -> /copy + Alt+Enter in idle mode routes to copyLastReply.
+  fixture.editor.setText("");
+  for (const ch of "/cop") fixture.editor.handleInput(ch);
+  await vi.waitFor(() => assert.equal(fixture.editor.isShowingAutocomplete(), true));
+  fixture.editor.handleInput("\x1b\r");
+  await vi.waitFor(() => assert.equal(copy.mock.calls.length, 1));
+  assert.deepEqual(copy.mock.calls[0], [original]);
+  assert.equal(fixture.nativeSubmit.mock.calls.length, 0);
+
+  // 3. Remapped followUp key in streaming mode queues follow-up instead of copying locally.
+  hostKeys.setUserBindings({ "app.message.followUp": "f6" });
+  streaming = true;
+  fixture.editor.setText("queued follow-up");
+  fixture.editor.handleInput("\x1b[17~"); // F6
+  assert.deepEqual(queued, ["queued follow-up"]);
+  assert.equal(copy.mock.calls.length, 1);
+
+  // 4. Error in followUpHandler still restores editor.onSubmit and global keybindings.
+  const globalBefore = getKeybindings();
+  fixture.editor.actionHandlers.set("app.message.followUp", () => { throw new Error("Follow-up failed"); });
+  fixture.editor.setText("hello");
+  assert.throws(() => fixture.editor.handleInput("\x1b[17~"), /Follow-up failed/u);
+  assert.equal(fixture.editor.onSubmit, fixture.nativeSubmit);
+  assert.equal(getKeybindings(), globalBefore);
 });

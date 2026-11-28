@@ -19,7 +19,7 @@ try {
   Object.assign(env, {
     HOME:join(root,"home"), TMPDIR:join(root,"tmp"), PI_CODING_AGENT_DIR:join(root,"agent"),
     XDG_CACHE_HOME:join(root,"cache"), XDG_CONFIG_HOME:join(root,"config"), XDG_DATA_HOME:join(root,"data"),
-    XDG_STATE_HOME:join(root,"state"), PI_OFFLINE:"1", PI_TELEMETRY:"0", PI_SKIP_VERSION_CHECK:"1",
+    XDG_STATE_HOME:join(root,"state"), PI_OFFLINE:"1", PI_SKIP_VERSION_CHECK:"1",
     THINKING_TEST_ROOT:root, THINKING_TEST_REPO:repo,
   });
   child = spawn(process.execPath, [join(here,"thinking-runtime.mjs"), ...process.argv.slice(2)],

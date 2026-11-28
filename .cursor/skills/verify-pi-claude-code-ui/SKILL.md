@@ -31,6 +31,8 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cla
 
 每种模式都将 Claude Code UI 的发布 tarball 解包到隔离目录，再通过原生 `pi install` 注册该目录。安装清单、欢迎卡、composer 与可发现主题共同证明加载了目标插件。原生按键和斜杠命令驱动 [行为索引](features/README.md)。模型响应来自离线夹具，文件、Bash 和会话由真实 Pi 执行。
 
+两种模式都验证 Pi 1.7.0 的[宿主边界](../verify-pi-codex-ui/scripts/README.md#pi-170-host-boundary)。同一进程更改 `keybindings.json` 并运行 `/reload`，检查欢迎卡、宽底栏、折叠思考和工具提示，并用改绑后的按键驱动实际动作。
+
 ## Evidence and cleanup
 
 输出目录在 `.tmp/test-results/claude-code-ui-cli-<mode>-<id>/`。核对 `pack.stdout`、`pack.stderr`、`install.stdout`、`install.stderr`、`journey.json` 内的安装命令与断言、各次启动的 `terminal-*.ansi`、`events.json` 与归档文件。核对每个 Pi 进程的 `stopped`、`groupStopped` 和本次 `scratchRemoved`。报告普通及全屏各自结果，并列出未验证的前置条件。

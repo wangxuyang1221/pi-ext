@@ -64,7 +64,8 @@ export class CodemodePresentation {
   }
   child(call: CodemodeCall, width: number, theme: Theme, cwd: string, hints: HostKeybindingHints = defaultHints): string[] {
     const captured = this.store.results.get(call.id);
-    const key = ["child", this.scope.identity(call), call.revision, captured?.revision ?? "missing", width, themeKey(theme, call.name === "edit" || call.name === "write"), this.scope.identity(hints)].join("\0");
+    const expandKey = hints.keyText("app.tools.expand");
+    const key = ["child", this.scope.identity(call), call.revision, captured?.revision ?? "missing", width, themeKey(theme, call.name === "edit" || call.name === "write"), expandKey, this.scope.identity(hints)].join("\0");
     return this.scope.lines(key, () => {
       const heading = theme.fg(statusColor(call.status), `${callLabel(call)} · ${call.status}${call.durationMs === undefined ? "" : ` · ${duration(call.durationMs)}`}`);
       const fallback = () => {
@@ -113,7 +114,8 @@ export class CodemodePresentation {
     const call = row.calls[state.selected];
     const captured = call && this.store.results.get(call.id);
     const includesDiff = state.tab === "Calls" && (call?.name === "edit" || call?.name === "write");
-    const key = ["inspect", this.scope.identity(row), state.tab, state.tab === "Calls" ? `${call?.id}:${call?.revision}:${captured?.revision}` : row.revision, width, themeKey(theme, includesDiff), this.scope.identity(hints)].join("\0");
+    const expandKey = hints.keyText("app.tools.expand");
+    const key = ["inspect", this.scope.identity(row), state.tab, state.tab === "Calls" ? `${call?.id}:${call?.revision}:${captured?.revision}` : row.revision, width, themeKey(theme, includesDiff), expandKey, this.scope.identity(hints)].join("\0");
     return this.scope.lines(key, () => {
       if (state.tab === "Script") return wrapDetail([...(row.code || "Script unavailable").split("\n"), ...(row.code.length >= 65536 ? ["Script preview limited to 64 Ki characters"] : [])], width);
       if (state.tab === "Output") return wrapDetail((row.output || "(No output)").split("\n").concat(row.output.length >= 65536 ? ["Output preview limited to 64 Ki characters"] : [], row.outputPath ? [`Full output: ${row.outputPath}`] : []), width);

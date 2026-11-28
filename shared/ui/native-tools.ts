@@ -6,7 +6,6 @@ import {
   createWriteToolDefinition,
   getLanguageFromPath,
   highlightCode,
-  keyText,
   type EditToolDetails,
   type ExtensionAPI,
   type ExtensionContext,
@@ -22,6 +21,7 @@ import {
   type CodexExecutionOptions,
 } from "./execution-settings.js";
 import { getEditSyntaxFingerprint } from "./syntax-palette.js";
+import { hostKeybindingHints, type HostKeybindingHints } from "./keybinding-hints.js";
 import { sanitizeDiffSource } from "./diff-source.js";
 import { BashGroups, type BashGroupRowState } from "./bash-groups.js";
 import { ReadGroups } from "./read-groups.js";
@@ -654,15 +654,7 @@ function renderEditResult(
 }
 
 function formatExpandKeys(services: ToolRenderServices, context: object): string {
-  const hints = context as { keyText?: typeof keyText };
-  if (hints.keyText) return hints.keyText("app.tools.expand");
-  const bindings = services.getKeybindings?.();
-  if (!bindings) return keyText("app.tools.expand");
-  return bindings.getKeys("app.tools.expand")
-    .map(key => String(key).split("+")
-      .map(part => process.platform === "darwin" && part.toLowerCase() === "alt" ? "option" : part)
-      .join("+"))
-    .join("/");
+  return hostKeybindingHints(context as Partial<HostKeybindingHints>, services.getKeybindings?.()).keyText("app.tools.expand");
 }
 
 function parseEditDiff(details: MutationDiffDetails): DisplayDiffLine[] {
