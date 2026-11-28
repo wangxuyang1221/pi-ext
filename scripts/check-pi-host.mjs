@@ -13,7 +13,7 @@ try {
     XDG_CACHE_HOME: join(directory, "cache"), XDG_CONFIG_HOME: join(directory, "config"),
     XDG_DATA_HOME: join(directory, "data"), XDG_STATE_HOME: join(directory, "state"),
     APPDATA: join(directory, "config"), LOCALAPPDATA: join(directory, "cache"),
-    TMPDIR: directory, TMP: directory, TEMP: directory, PI_OFFLINE: "1", PI_TELEMETRY: "0" });
+    TMPDIR: directory, TMP: directory, TEMP: directory, PI_OFFLINE: "1" });
   const { DefaultResourceLoader, SettingsManager } = await import("@earendil-works/pi-coding-agent");
   const { builtInExtensions } = await import(pathToFileURL(join(host.root, "dist/extensions/index.js")).href);
   for (const plugin of ["codex-ui", "claude-code-ui"]) {

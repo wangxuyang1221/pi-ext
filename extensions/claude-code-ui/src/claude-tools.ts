@@ -2,7 +2,6 @@ import { basename, dirname } from "node:path";
 import {
   getLanguageFromPath,
   highlightCode,
-  keyText,
   type ExtensionAPI,
   type KeybindingsManager,
   type Theme,
@@ -11,6 +10,7 @@ import {
 import { stripTerminalSequences, visibleWidth, wrapTextWithAnsi, type Component } from "@earendil-works/pi-tui";
 
 import type { BashGroup, BashMember } from "../../../shared/ui/bash-groups.js";
+import { hostKeybindingHints, type HostKeybindingHints } from "../../../shared/ui/keybinding-hints.js";
 import {
   fitToWidth,
   normalizeOutputPad,
@@ -487,13 +487,7 @@ function mapToolDisplayName(toolName: string): string {
 }
 
 function resolveExpandKeys(getKeybindings: () => Pick<KeybindingsManager, "getKeys"> | undefined, context: object): string {
-  const hints = context as { keyText?: typeof keyText };
-  if (hints.keyText) return hints.keyText("app.tools.expand");
-  const bindings = getKeybindings();
-  if (!bindings) return keyText("app.tools.expand");
-  return bindings.getKeys("app.tools.expand")
-    .map(key => String(key).split("+").map(part => process.platform === "darwin" && part.toLowerCase() === "alt" ? "option" : part).join("+"))
-    .join("/");
+  return hostKeybindingHints(context as Partial<HostKeybindingHints>, getKeybindings()).keyText("app.tools.expand");
 }
 
 const EMPTY_TOOL_MESSAGES: Record<"grep" | "find" | "ls", ReadonlySet<string>> = {
@@ -645,7 +639,6 @@ export function registerClaudeGenericToolRenderer(
         const rawText = result.content.filter(b => b.type === "text").map(b => clean(b.text ?? "")).join("\n");
         const { bodyLines, notices } = splitGenericOutput(rawText, result.details);
         const detailWarning = formatGenericTruncationDetails(result.details);
-        const expandKeys = resolveExpandKeys(getKeybindings, context);
         comp.setRenderer((width) => {
           const pad = resolveOutputPad(width, outputPad);
           const inner = width - pad * 2;
@@ -653,7 +646,8 @@ export function registerClaudeGenericToolRenderer(
             return padOutputLines([renderClaudeConnectorLine(bodyLines[0] ?? notices[0] ?? "Failed", "error", theme, inner)], width, pad);
           }
           const { summary, expandable } = summarizeGenericOutput(toolName, bodyLines);
-          const hint = options.expanded || !expandable ? "" : theme.fg("dim", ` (${expandKeys} to expand)`);
+          const expandKeys = resolveExpandKeys(getKeybindings, context);
+          const hint = options.expanded || !expandable || !expandKeys ? "" : theme.fg("dim", ` (${expandKeys} to expand)`);
           const out = [fitToWidth(`${theme.fg("dim", CONNECTOR)}${theme.fg("muted", summary)}${hint}`, inner)];
           if (options.expanded && expandable) {
             for (const line of bodyLines) {

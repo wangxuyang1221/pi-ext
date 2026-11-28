@@ -156,6 +156,7 @@ def run(driver):
     wait_surface(lambda: re.fullmatch(RATE, footer_metric()), "real received fragments produce estimated rate",
                  action, kind="request", matches=lambda event: event["kind"] == "stream")
     advances("ten-frame spinner and steady bold Working label during provider streaming")
+    assert "esc to interrupt)" in slots().working_text, view()
     capture("streaming")
     draft = "draft-中文-abc"
     send(draft)
@@ -314,6 +315,8 @@ def run(driver):
                                matches=lambda event: event["reason"] == "new", name="new-session")
     assert new_session["data"]["session"] != session["data"]["session"], new_session
     assert find_event(action, "session_shutdown", lambda event: event["reason"] == "new")
+    bindings = runtime / "agent/keybindings.json"
+    bindings.write_text(json.dumps({"app.interrupt": "f4"}))
     action = command("/fixture-reload")
     reloaded = wait_surface(idle_footer, "extension reload restores the neutral footer", action, kind="start",
                             matches=lambda event: event["reason"] == "reload", name="reload")
@@ -323,6 +326,20 @@ def run(driver):
     action = command("Task after reload")
     wait_surface(working, "new timer after reload", action, kind="agent_start")
     wait_idle("reloaded settlement removes Working and rate", action, name="finished")
+    plan("stream")
+    action = command("Interrupt with the new binding")
+    wait_surface(lambda: working() and "f4 to interrupt)" in slots().working_text, "Working advertises F4", action, kind="agent_start")
+    action = send("\x1bOS")
+    wait_idle("F4 cancels this stream", action, aborted=True)
+    bindings.write_text(json.dumps({"app.interrupt": []}))
+    action = command("/reload")
+    wait_surface(idle_footer, "unbound interrupt configuration reloaded", action, kind="start",
+                 matches=lambda event: event["reason"] == "reload")
+    plan("retry")
+    action = command("Complete with interrupt unbound")
+    wait_surface(lambda: working() and re.search(r" Working \(\d+s\)$", slots().working_text),
+                 "unbound Working shows only elapsed time", action, kind="agent_start")
+    wait_idle("unbound task finishes normally", action)
     action = command("/quit")
     wait(lambda: driver["status"] is not None, "native quit exits without retained timer")
     assert os.waitstatus_to_exitcode(driver["status"]) == 0

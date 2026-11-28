@@ -19,6 +19,6 @@ export default function claudeUiExtension(pi: ExtensionAPI, options: UiOptions =
     working: { widgetKey: "claude-code-ui-working", Working, frameKey: workingFrameKey },
     registerToolRenderers: registerClaudeGenericToolRenderer,
     transformMarkdown: formatMarkdown,
-    hiddenThinkingLabel: "∴ Thinking… (ctrl+t to expand)",
+    hiddenThinkingLabel: toggleKey => (toggleKey ? `∴ Thinking… (${toggleKey} to expand)` : "∴ Thinking…"),
   }, options);
 }

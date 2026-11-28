@@ -77,7 +77,15 @@ export type InspectorTab = "Calls" | "Script" | "Output";
 export interface InspectorState { tab: InspectorTab; selected: number; scroll: number }
 
 /** Already-prepared detail lines are supplied by the bounded presentation cache. */
-export function renderInspector(row: CodemodeRow, state: InspectorState, theme: Theme, width: number, height: number, detail: readonly string[]): string[] {
+export function renderInspector(
+  row: CodemodeRow,
+  state: InspectorState,
+  theme: Theme,
+  width: number,
+  height: number,
+  detail: readonly string[],
+  footer: readonly [string, string] = ["Tab: view · ↑↓: call · PgUp/PgDn: scroll", "Esc: close"],
+): string[] {
   const fit = (line: string) => truncateToWidth(line, Math.max(0, width), "…");
   const lines = [theme.bold(`Codemode inspector · ${scriptLabels[row.status]}`), (["Calls", "Script", "Output"] as const).map(tab => tab === state.tab ? `[${tab}]` : tab).join("  ")];
   const bodyHeight = Math.max(1, height - 4);
@@ -91,7 +99,7 @@ export function renderInspector(row: CodemodeRow, state: InspectorState, theme: 
       lines.push(left + " ".repeat(Math.max(0, leftWidth - visibleWidth(left))) + " │ " + (body[i] ?? ""));
     }
   } else lines.push(...body);
-  lines.push(theme.fg("dim", "Tab: view · ↑↓: call · PgUp/PgDn: scroll"), theme.fg("dim", "Esc: close"));
+  lines.push(theme.fg("dim", footer[0]), theme.fg("dim", footer[1]));
   return lines.slice(0, Math.max(0, height)).map(fit);
 }
 export function wrapDetail(lines: readonly string[], width: number): string[] {

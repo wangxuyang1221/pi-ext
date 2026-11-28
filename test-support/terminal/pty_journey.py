@@ -42,7 +42,7 @@ class PtyJourney:
         self.env.update(
             HOME=str(self.root / 'home'), TMPDIR=str(self.root / 'tmp'),
             PI_CODING_AGENT_DIR=str(self.root / 'agent'), AUDIT_ROOT=str(self.root),
-            TERM='xterm-256color', COLORTERM='truecolor', PI_OFFLINE='1', PI_TELEMETRY='0',
+            TERM='xterm-256color', COLORTERM='truecolor', PI_OFFLINE='1',
             PI_SKIP_VERSION_CHECK='1', PYTHONDONTWRITEBYTECODE='1',
         )
         for kind in ('cache', 'config', 'data', 'state'):
@@ -191,6 +191,10 @@ class PtyJourney:
         self.command('/reload')
         self.wait(lambda: any(event['type'] == 'session_start' for event in self.records()[before:]), 'reloaded')
         self.settle()
+
+    def save_keybindings(self, bindings):
+        (self.root / 'agent/keybindings.json').write_text(json.dumps(bindings))
+        self.actions.append({'keybindingsSeed': bindings})
 
     def save_settings(self, settings):
         (self.root / 'agent/settings.json').write_text(json.dumps(settings))

@@ -36,6 +36,10 @@ screens = {}
 raw = bytearray()
 expand_key = b"\x1bOR" if "--custom-keys" in sys.argv else b"\x0f"
 
+custom = '--custom-keys' in sys.argv
+next_tab = b'\x1bOQ' if custom else b'\t'
+close_key = b'\x1bOS' if custom else b'\x1b'
+
 def view():
     return '\n'.join(line.rstrip() for line in screen.display)
 
@@ -92,16 +96,30 @@ try:
     os.write(fd, expand_key)
     settle()
     inspect()
-    os.write(fd, b'\t')
+    if custom:
+        assert 'f2/shift+tab: view' in view() and 'f4: close' in view(), view()
+        os.write(fd, b'\x1b[Z')
+        wait(lambda: '[Output]' in view(), 'local reverse tab')
+        os.write(fd, next_tab)
+        wait(lambda: '[Calls]' in view() and 'inspector-line-0"' in view(), 'first call before paging')
+        os.write(fd, b'\x1b[19~' * 4)
+        wait(lambda: 'inspector-line-0"' not in view() and 'inspector-line-25"' in view(), 'F8 scrolls detail down')
+        os.write(fd, b'\x1b[18~' * 4)
+        wait(lambda: 'inspector-line-0"' in view(), 'F7 scrolls detail back')
+        os.write(fd, b'\x1b[17~')
+        wait(lambda: '> read 配置.ts' in view(), 'F6 selects the second call')
+        os.write(fd, b'\x1b[15~')
+        wait(lambda: '> read package.json' in view(), 'F5 restores first call')
+    os.write(fd, next_tab)
     wait(lambda: '[Script]' in view(), 'script tab')
     settle()
     assert 'Promise.allSettled' in view(), view()
-    os.write(fd, b'\t')
+    os.write(fd, next_tab)
     wait(lambda: '[Output]' in view(), 'output tab')
     settle()
     assert 'PAYLOAD-FROM-SCRIPT' in view(), view()
     screens['inspect'] = view()
-    os.write(fd, b'\x1b')
+    os.write(fd, close_key)
     settle()
     command('/fixture-tree cut')
     wait(lambda: 'TREE-CUT' in view(), 'tree cut')
@@ -114,7 +132,7 @@ try:
     inspect()
     wait(lambda: 'Raw result unavailable' in view(), 'metadata-only history')
     screens['tree-history'] = view()
-    os.write(fd, b'\x1b')
+    os.write(fd, close_key)
     settle()
     if '--custom-keys' in sys.argv:
         command('/play many')
@@ -126,15 +144,33 @@ try:
         screens['reload-custom-keys'] = view()
     inspect()
     wait(lambda: 'Raw result unavailable' in view(), 'reload metadata')
-    os.write(fd, b'\x1b')
+    os.write(fd, close_key)
     settle()
+    if custom:
+        command('/fixture-remap')
+        wait(lambda: 'FIXTURE-KEYS-SAVED' in view(), 'write changed bindings')
+        command('/reload')
+        wait(lambda: '19 more calls · f9 to expand' in view(), 'mounted history reflects changed expand key')
+        expand_key = b'\x1b[20~'
+        inspect()
+        assert 'f2: view' in view() and 'f5/shift+tab: call' in view(), view()
+        def selected_call_row():
+            return next((i for i, row in enumerate(screen.display) if '│ > read package.json' in row), None)
+
+        first_row = selected_call_row()
+        assert first_row is not None, view()
+        os.write(fd, b'\x1b[Z')
+        wait(lambda: '[Calls]' in view() and selected_call_row() == first_row + 1,
+             'configured Shift+Tab moves to the second call')
+        os.write(fd, close_key)
+        settle()
     for scenario, expected in [('timeout', 'Timed out'), ('permission', 'Fixture permission denied'), ('nested', 'fixture_outer'), ('mcp', 'LOCAL-MCP-RESULT'), ('error', 'Script failed'), ('many', '19 more calls'), ('hiddenfail', 'HIDDEN-FAILURE-DONE'), ('empty', 'No calls required')]:
         command(f'/play {scenario}')
         wait(lambda: f'ACCEPTANCE-DONE: {scenario}' in view(), scenario)
         settle()
         assert expected in view(), (scenario, view())
         if scenario == 'many' and '--custom-keys' in sys.argv:
-            assert 'f3' in view(), view()
+            assert '19 more calls · f9 to expand' in view(), view()
         if scenario == 'hiddenfail':
             assert 'Script completed' in view() and '1 failed' in view() and 'missing.txt' in view(), view()
         screens[scenario] = view()
@@ -172,14 +208,14 @@ try:
     settle()
     inspect()
     wait(lambda: 'Raw result unavailable' in view(), 'compaction cleared live evidence')
-    os.write(fd, b'\x1b')
+    os.write(fd, close_key)
     settle()
     command('/quit')
     wait(lambda: 'PRODUCTION-RESTORED' in view(), 'fresh process resume')
     inspect()
     wait(lambda: 'Raw result unavailable' in view(), 'restart does not fabricate raw output')
     screens['resumed'] = view()
-    os.write(fd, b'\x1b')
+    os.write(fd, close_key)
     settle()
     command('/quit')
     wait(lambda: status is not None, 'clean exit')

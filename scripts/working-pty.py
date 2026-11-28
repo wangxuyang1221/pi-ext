@@ -38,7 +38,7 @@ for name in ["home", "agent", "workspace", "tmp", "cache"]:
 env = {key: os.environ[key] for key in ["PATH", "LANG", "LC_ALL"] if key in os.environ}
 env.update(HOME=str(runtime / "home"), TMPDIR=str(runtime / "tmp"), XDG_CACHE_HOME=str(runtime / "cache"),
            PI_CODING_AGENT_DIR=str(runtime / "agent"), PI_OFFLINE="1", PI_SKIP_VERSION_CHECK="1",
-           PI_TELEMETRY="0", TERM="xterm-256color", COLORTERM="truecolor", WORKING_EVIDENCE=str(root))
+           TERM="xterm-256color", COLORTERM="truecolor", WORKING_EVIDENCE=str(root))
 (runtime / "agent/themes").mkdir()
 shutil.copyfile(repo / "extensions/codex-ui/themes/codex-pi.json", runtime / "agent/themes/codex-pi.json")
 (runtime / "agent/settings.json").write_text(json.dumps({

@@ -88,3 +88,65 @@ test("only host codemode diagnostic framing classifies timeout and interruption"
     assert.equal(store.get(id)!.status, status);
   }
 });
+
+test("models.generateImages tracks public model-ref metadata and rebuilds scripts with third options arg", () => {
+  const store = new CodemodeStore();
+  store.event({
+    type: "tool_execution_start",
+    toolName: "codemode",
+    toolCallId: "img-live",
+    args: { code: 'await models.generateImages({ provider: "radius", id: "image-1" }, { input: [{ type: "text", text: "logo" }] }, { aspectRatio: "16:9", size: "2K" })' },
+  });
+  store.event({
+    type: "tool_execution_update",
+    toolName: "codemode",
+    toolCallId: "img-live",
+    partialResult: { details: { calls: [{ id: "img-live/models.generateImages/1", name: "models.generateImages", args: "radius/image-1", status: "running" }] } },
+  });
+  assert.equal(store.get("img-live")!.calls[0]!.model, true);
+  assert.equal(store.get("img-live")!.calls[0]!.args.preview, "radius/image-1");
+
+  store.event({
+    type: "tool_execution_end",
+    toolName: "codemode",
+    toolCallId: "img-live",
+    isError: false,
+    result: {
+      content: [{ type: "text", text: "Script completed\nWall time 0.4s\nOutput:\ngenerated 1 image" }],
+      details: {
+        calls: [
+          { id: "img-live/models.generateImages/1", name: "models.generateImages", args: "radius/image-1", status: "ok", durationMs: 320 },
+          { id: "img-live/models.generateImages/2", name: "models.generateImages", args: "openrouter/img-fail", status: "error", error: "provider error" },
+        ],
+      },
+    },
+  });
+  const live = store.get("img-live")!;
+  assert.equal(live.counts.ok, 1);
+  assert.equal(live.counts.error, 1);
+  assert.equal(live.calls[1]!.error, "provider error");
+
+  store.rebuild([
+    {
+      role: "assistant",
+      content: [{
+        type: "toolCall",
+        id: "img-hist",
+        name: "codemode",
+        arguments: { code: 'await models.generateImages({ provider: "radius", id: "image-1" }, { input: [{ type: "text", text: "logo" }] }, { aspectRatio: "1:1", size: "1K" })' },
+      }],
+    },
+    {
+      role: "toolResult",
+      toolCallId: "img-hist",
+      toolName: "codemode",
+      isError: false,
+      content: [{ type: "text", text: "ok" }],
+      details: { calls: [{ id: "img-hist/models.generateImages/1", name: "models.generateImages", args: "radius/image-1", status: "ok" }] },
+    },
+  ]);
+  const rebuilt = store.get("img-hist")!;
+  assert.equal(rebuilt.calls.length, 1);
+  assert.equal(rebuilt.calls[0]!.model, true);
+  assert.match(rebuilt.code, /aspectRatio/);
+});

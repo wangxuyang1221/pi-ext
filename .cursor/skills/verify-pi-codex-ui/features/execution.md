@@ -12,6 +12,8 @@
 - `ui-settings-reload`：修复后 reload 更新快照。
 - `ui-headless`：print/RPC 也应用工具覆盖。
 
+- `ui-pi-host` 覆盖 Pi 1.7.0 配置目录优先级、恢复报文、模型配置告警、用户 Bash 上下文和跟进输入。运行[两个 compatibility 入口](../scripts/README.md#pi-170-host-boundary)。
+
 ## How to get to it (user POV)
 
 settings.json 的 shellCommandPrefix/shellPath/images.autoResize；read/bash；/reload。

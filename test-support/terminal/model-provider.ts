@@ -29,6 +29,17 @@ export default function (pi: ExtensionAPI) {
     if (ctx.hasUI) record('themes', ctx.ui.getAllThemes().filter(theme => theme.path));
     record(event.type, event);
   });
+  pi.registerCommand('audit-context', {
+    description: 'Record the host context estimate and Bash history',
+    async handler(_args, ctx) {
+      const bash = ctx.sessionManager.getBranch().flatMap(entry => {
+        if (entry.type !== 'message' || entry.message.role !== 'bashExecution') return [];
+        const { command, excludeFromContext, output } = entry.message;
+        return [{ command, excluded: excludeFromContext === true, length: output.length }];
+      });
+      record('audit_context', { usage: ctx.getContextUsage(), sessionId: ctx.sessionManager.getSessionId(), bash });
+    },
+  });
   pi.on('resources_discover', event => record(event.type, event));
   pi.on('agent_start', event => record(event.type, event));
   pi.on('tool_execution_update', event => record(event.type, event));

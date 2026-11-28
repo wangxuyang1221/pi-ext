@@ -126,7 +126,7 @@ class InteractiveTerminalTests(unittest.TestCase):
             env = dict(PATH=os.environ['PATH'], LANG='en_US.UTF-8', TERM='xterm-256color',
                        HOME=str(scratch / 'home'), PI_CODING_AGENT_DIR=str(scratch / 'agent'),
                        TMPDIR=str(scratch / 'tmp'), PI_OFFLINE='1', PI_SKIP_VERSION_CHECK='1',
-                       PI_TELEMETRY='0', NODE_COMPILE_CACHE=str(scratch / 'cache'))
+                       NODE_COMPILE_CACHE=str(scratch / 'cache'))
             master, slave = pty.openpty()
             previous = termios.tcgetattr(slave)
             python = [sys.executable]

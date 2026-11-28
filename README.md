@@ -8,7 +8,7 @@
 
 - Linux 或 macOS。原生 Windows 不在支持范围内。
 - Node.js `>=22.19.0`，pnpm `11.9.0`。
-- Pi `1.6.1`。开发依赖与 peer dependencies 均固定为此版本，其他版本需另行验证。
+- Pi `1.7.0`。开发依赖与 peer dependencies 均固定为此版本，其他版本需另行验证。
 - 建议使用支持 24-bit color 的终端。
 
 ## Install
@@ -45,8 +45,8 @@ pnpm run build
 
 - **欢迎卡片**：双栏陶土色圆角框与像素方块 Clawd 图标，展示当前模型、思考等级、快捷提示与工作目录/Git 分支；窗口窄于 78 列时自动收拢为单栏。
 - **输入框与 `!` Bash 模式**：透明背景双细线输入框与 `❯ ` 提示符；输入 `!` 时边框、提示符和底栏即时切换为粉红 Bash 态提示。
-- **工作状态与底栏**：输入框上方显示陶土色闪烁图标、流光动词与 `(esc to interrupt · 计时 · ↓ N tokens)`；底栏左侧展示与 Pi 真实 `Shift+Tab` 联动的 `⏵⏵ thinking: <level>`，右侧展示模型、Git 分支、剩余上下文比例及实时接收速率。
-- **消息与工具流**：用户消息带 `❯ ` 前缀，助手正文首段带 `● `，思考块以 `∴ Thinking…` 淡灰斜体显示（`Ctrl+T` 折叠后显示 `∴ Thinking… (ctrl+t to expand)`）；工具按 `● Read(path)` / `● Read N files`、`● Bash(cmd)`、`● Update(path)`（附 `Added X lines, removed Y lines` 与红绿 Diff）、`● Write(path)`（附 `Wrote N lines to ...`）以及 `Search`/`Glob`/`List` 渲染，并使用 `  ⎿  ` 分支连接符。
+- **工作状态与底栏**：输入框上方显示陶土色闪烁图标、流光动词与 `(esc to interrupt · 计时 · ↓ N tokens)`（中断提示默认 `esc`，跟随 Pi 的 `app.interrupt` 绑定）；底栏左侧展示与 Pi 真实 `app.thinking.cycle`（默认 `Shift+Tab`）联动的 `⏵⏵ thinking: <level>`（Bash 模式下提示遵循 `app.interrupt`），右侧展示模型、Git 分支、剩余上下文比例及实时接收速率。
+- **消息与工具流**：用户消息带 `❯ ` 前缀，助手正文首段带 `● `，思考块以 `∴ Thinking…` 淡灰斜体显示（折叠后遵循 Pi 的 `app.thinking.toggle` 绑定，默认显示 `∴ Thinking… (ctrl+t to expand)`）；工具按 `● Read(path)` / `● Read N files`、`● Bash(cmd)`、`● Update(path)`（附 `Added X lines, removed Y lines` 与红绿 Diff）、`● Write(path)`（附 `Wrote N lines to ...`）以及 `Search`/`Glob`/`List` 渲染，并使用 `  ⎿  ` 分支连接符。
 
 ### Codex UI
 

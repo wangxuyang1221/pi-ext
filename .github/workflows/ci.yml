@@ -130,6 +130,8 @@ jobs:
           conda run -n codex-py312 python -m unittest discover -s test-support/fixtures/working
           pnpm run tool-status:check 2>&1 | tee .tmp/test-results/host.log
           pnpm run codemode:check
+          conda run -n codex-py312 python extensions/codex-ui/__tests__/codemode-pty.py --custom-keys
+          conda run -n codex-py312 python extensions/codex-ui/__tests__/codemode-pty.py --custom-keys --fullscreen
           for mode in regular fullscreen; do
             conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/cli.py "$mode"
             conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/cli.py "$mode" --pi-compat

@@ -19,6 +19,6 @@ export function createTestEnvironment(prefix, root = process.cwd()) {
     XDG_DATA_HOME: join(directory, "data"), XDG_STATE_HOME: join(directory, "state"),
     // Dependencies are installed before testing. A different HOME must not trigger pnpm to reinstall them.
     pnpm_config_verify_deps_before_run: "false",
-    PI_OFFLINE: "1", PI_TELEMETRY: "0", PYTHONDONTWRITEBYTECODE: "1", PI_TEST_ISOLATED: "1",
+    PI_OFFLINE: "1", PYTHONDONTWRITEBYTECODE: "1", PI_TEST_ISOLATED: "1",
   } };
 }

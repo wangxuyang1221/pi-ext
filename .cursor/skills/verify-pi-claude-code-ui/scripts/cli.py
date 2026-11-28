@@ -7,6 +7,7 @@ BASE = Path(__file__).resolve().parent
 REPO = BASE.parents[3]
 sys.path.insert(0, str(REPO / 'test-support/terminal'))
 from pty_journey import PtyJourney
+from pi_170_journey import verify_pi_170
 from package_health import doctor
 
 MODE = sys.argv[1] if len(sys.argv) > 1 else 'regular'
@@ -109,7 +110,7 @@ def claude_code_case():
             observe('composer', False, f'{label} shows a separate ❯ prompt and the expected draft')
         prompt_fg = foreground('❯', r'^\s*❯ ' + re.escape(draft) + r'\s*$')
         normal = '⏵⏵ thinking:' in footer() and '! for bash mode' not in footer()
-        active = '! for bash mode' in footer() and foreground('! for bash mode', r'Context left:') == color('bashPink')
+        active = '! for bash mode · esc to cancel' in footer() and foreground('! for bash mode', r'Context left:') == color('bashPink')
         observe('composer', prompt_fg == (color('bashPink') if bash else {'f2f2f6'}) and (active if bash else normal),
                 f'{label} shows the matching prompt and footer hint')
 
@@ -293,9 +294,77 @@ def claude_code_case():
     stop()
 
 
+def keybinding_case():
+    custom = {'app.interrupt': 'f4', 'app.tools.expand': 'f3', 'app.thinking.toggle': 'f2', 'app.thinking.cycle': 'f5'}
+    journey.save_keybindings(custom)
+    start(['--thinking', 'low'])
+    resize(140, 100)
+
+    def hints(expand, cycle, interrupt):
+        frame = view()
+        header = '\n'.join(row for row in frame.splitlines() if '│' in row)
+        footer = next(row for row in frame.splitlines() if 'Context left:' in row)
+        check('Use /model to switch' in header and '! for bash' in header, 'Welcome card shows the shortcut area')
+        check((f'{cycle} for thinking' in header if cycle else 'for thinking' not in header)
+              and (f'{expand} to expand tools' in header if expand else 'to expand tools' not in header),
+              'Header matches configured thinking and tool bindings')
+        check((f'({cycle} to cycle)' in footer if cycle else 'to cycle' not in footer) and '()' not in footer,
+              'Wide footer matches the active thinking binding')
+        keys(b'!', 'enter Bash mode'); settle()
+        bash = next(row for row in view().splitlines() if 'Context left:' in row)
+        check('! for bash mode' in bash and (f'{interrupt} to cancel' in bash if interrupt else 'to cancel' not in bash),
+              'Bash footer matches the configured interrupt key')
+        keys(b'\x7f', 'leave Bash mode'); settle()
+
+    hints('f3', 'f5', 'f4')
+    keys(b'\x1b[15~', 'F5 cycles thinking')
+    wait(lambda: 'thinking: medium (f5 to cycle)' in view(), 'remapped cycle changes level')
+    request('Keybinding thinking probe', {'thinking': 'HIDDEN-BODY-170', 'reply': 'THOUGHT-DONE'})
+    keys(b'\x1bOQ', 'F2 hides thinking')
+    wait(lambda: '∴ Thinking… (f2 to expand)' in view() and 'HIDDEN-BODY-170' not in view(), 'mounted hidden Thinking uses F2')
+    request('Keybinding tools probe', {'calls': [
+        tool('grep', pattern='SEARCH-NEEDLE', path='probe'), tool('find', pattern='*.txt', path='probe'), tool('ls', path='probe')
+    ], 'reply': 'TOOLS-DONE'})
+
+    def generic(expand):
+        frame = view().rsplit('Keybinding tools probe', 1)[-1].split('TOOLS-DONE', 1)[0]
+        summaries = [row for row in frame.splitlines() if '⎿' in row]
+        check(len(summaries) == 3 and all(f'({expand} to expand)' in row if expand else '(' not in row for row in summaries),
+              'Search, Glob and List summaries match the expand binding')
+    generic('f3')
+    keys(b'\x1bOR', 'F3 expands tools')
+    wait(lambda: 'SEARCH-NEEDLE exact-match' in view(), 'remapped expand reveals Search result')
+    keys(b'\x1bOR', 'F3 collapses tools'); settle()
+    (ROOT / 'plan.json').write_text(json.dumps({'reply': 'CANCEL-STREAM ' * 2000}))
+    before = len(records())
+    command('Cancel with F4')
+    wait(lambda: re.search(r'^\s*\S \S+… \(f4 to interrupt · \d+s', view(), re.M), 'Working advertises F4')
+    keys(b'\x1bOS', 'F4 interrupts')
+    wait(lambda: any(e['type'] == 'agent_settled' and e['data']['aborted'] for e in records()[before:]), 'remapped interrupt aborts stream')
+    journey.save_keybindings({**custom, 'app.thinking.toggle': 'f6', 'app.tools.expand': 'f7'})
+    journey.reload()
+    wait(lambda: '∴ Thinking… (f6 to expand)' in view(), 'hidden Thinking updates after reload')
+    hints('f7', 'f5', 'f4')
+    generic('f7')
+    journey.save_keybindings({binding: [] for binding in custom})
+    journey.reload()
+    hints('', '', '')
+    generic('')
+    check(re.search(r'^\s*∴ Thinking…\s*$', view(), re.M) and 'HIDDEN-BODY-170' not in view(), 'Unbound hidden Thinking has only its label')
+    (ROOT / 'plan.json').write_text(json.dumps({'reply': 'Finite unbound stream. ' * 120}))
+    before = len(records())
+    command('Observe unbound Working')
+    wait(lambda: re.search(r'^\s*\S \S+… \(\d+s · (?:thinking|↓ [\d.k]+ tokens)\)', view(), re.M), 'unbound Working retains time and omits interrupt hint')
+    wait(lambda: any(e['type'] == 'agent_settled' for e in records()[before:]), 'unbound stream settles')
+    stop()
+    journey.save_keybindings({})
+
+
 passed = False
 try:
     claude_code_case()
+    keybinding_case()
+    verify_pi_170(journey, 'Claude Code v')
     passed = all(assertion['passed'] for assertion in assertions)
 except Exception:
     (EVIDENCE/'failure.txt').write_text(traceback.format_exc())

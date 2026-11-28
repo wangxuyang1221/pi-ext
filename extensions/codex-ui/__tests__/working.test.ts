@@ -4,12 +4,15 @@ import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { getThemeByName } from "../../../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js";
 import { WORKING_FRAME_MS, Working, WorkingActivity, workingFrameKey } from "../src/working.js";
 import { CodexFooter } from "../src/footer.js";
+import { bindingText } from "../../../shared/ui/keybinding-hints.js";
+import { TestKeybindingsManager } from "../../../test-support/keybindings.js";
 
 const theme = getThemeByName("dark")!;
+const defaultInterruptKey = () => bindingText(new TestKeybindingsManager(), "app.interrupt", { shortEscape: true });
 test("working keeps ten 80ms frames, a static bold label and elapsed time until settlement", () => {
   let now = 0;
   const activity = new WorkingActivity(() => now);
-  const working = new Working(activity, () => theme);
+  const working = new Working(activity, () => theme, defaultInterruptKey);
   assert.deepEqual(working.render(100), []);
   activity.start();
   const expectedLabel = theme.bold(theme.fg("text", "Working"));
@@ -70,7 +73,7 @@ test("rate occupies the first footer row while the status row retains its full w
 test("static bold label, workingFrameKey and time boundaries remain stable over long tasks", () => {
   let now = 0;
   const activity = new WorkingActivity(() => now); activity.start();
-  const working = new Working(activity, () => theme);
+  const working = new Working(activity, () => theme, defaultInterruptKey);
   for (const [time, label] of [[59000, "59s"], [60000, "1m 00s"], [3599000, "59m 59s"], [3600000, "1h 00m 00s"], [3661000, "1h 01m 01s"]] as const) {
     now = time; assert.ok(stripTerminalSequences(working.render(120)[0]!).includes(`(${label} · esc to interrupt)`));
   }
@@ -95,4 +98,32 @@ test("static bold label, workingFrameKey and time boundaries remain stable over 
   activity.stop(); now = 5000; activity.start(); now = 6000;
   assert.equal(activity.elapsed(), 1000);
   assert.match(stripTerminalSequences(working.render(40)[0]!), /esc to interrupt/u);
+});
+
+test("working follows remapped, multi-key, unbound, and missing interrupt bindings without overflow", () => {
+  let now = 0;
+  const activity = new WorkingActivity(() => now);
+  activity.start();
+
+  // Without a key source, Working omits the interrupt hint instead of assuming esc.
+  const withoutSource = new Working(activity, () => theme);
+  const bare = stripTerminalSequences(withoutSource.render(100)[0]!);
+  assert.match(bare, /Working \(0s\)/u);
+  assert.doesNotMatch(bare, /interrupt|·/u);
+
+  const manager = new TestKeybindingsManager({ "app.interrupt": "f8" });
+  const working = new Working(activity, () => theme, () => bindingText(manager, "app.interrupt", { shortEscape: true }));
+  assert.match(stripTerminalSequences(working.render(100)[0]!), /Working \(0s · f8 to interrupt\)/u);
+  assert.doesNotMatch(stripTerminalSequences(working.render(39)[0]!), /interrupt/u);
+
+  // In-place manager updates (such as /reload) apply on the very next render.
+  manager.setUserBindings({ "app.interrupt": ["escape", "ctrl+shift+backspace"] });
+  const multi = working.render(40)[0]!;
+  assert.ok(visibleWidth(multi) <= 40);
+  assert.match(stripTerminalSequences(working.render(100)[0]!), /Working \(0s · esc\/ctrl\+shift\+backspace to interrupt\)/u);
+
+  manager.setUserBindings({ "app.interrupt": [] });
+  const unbound = stripTerminalSequences(working.render(100)[0]!);
+  assert.match(unbound, /Working \(0s\)/u);
+  assert.doesNotMatch(unbound, /interrupt|·/u);
 });

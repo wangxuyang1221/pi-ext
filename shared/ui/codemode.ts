@@ -77,8 +77,10 @@ export function registerCodemodeUi(pi: ExtensionAPI, services: CodemodeServices)
           }
           const current = store.get(row.id) ?? this.row;
           const pad = resolveOutputPad(width, this.outputPad);
+          const expandKey = this.hints.keyText("app.tools.expand");
+          const expandHint = expandKey ? this.hints.keyHint("app.tools.expand", "to expand") : "";
           return padOutputLines(
-            presentation.tree(current, this.theme, width - pad * 2, this.expanded, this.cwd, this.hints.keyHint("app.tools.expand", "to expand"), this.hints),
+            presentation.tree(current, this.theme, width - pad * 2, this.expanded, this.cwd, expandHint, this.hints),
             width,
             pad,
           );
@@ -109,9 +111,37 @@ export function registerCodemodeUi(pi: ExtensionAPI, services: CodemodeServices)
       if (ctx.mode !== "tui") { ctx.ui.notify("Codemode inspection requires the terminal UI.", "info"); return; }
       const row = store.latest();
       if (!row) { ctx.ui.notify("No codemode execution on this branch.", "info"); return; }
+      const activeKeys = services.getKeybindings?.();
+      if (activeKeys && activeKeys.getKeys("tui.select.cancel").length === 0) {
+        ctx.ui.notify("Configure a tui.select.cancel keybinding before opening /inspect.", "warning");
+        return;
+      }
       const generation = store.generation;
       await ctx.ui.custom<void>((tui, initialTheme, keys, done) => {
         const hints = hostKeybindingHints({}, keys);
+        const inspectorActions = [
+          "tui.select.cancel",
+          "tui.input.tab",
+          "tui.select.down",
+          "tui.select.up",
+          "tui.select.pageDown",
+          "tui.select.pageUp",
+        ] as const;
+        const formatFooter = (): readonly [string, string] => {
+          const shiftTabOccupied = inspectorActions.some(action => keys.getKeys(action).some(key => String(key).toLowerCase() === "shift+tab"));
+          const tabKey = hints.keyText("tui.input.tab");
+          const viewKeys = [tabKey, shiftTabOccupied ? "" : "shift+tab"].filter(Boolean).join("/");
+          const callKeys = [hints.keyText("tui.select.up"), hints.keyText("tui.select.down")].filter(Boolean).join("/");
+          const scrollKeys = [hints.keyText("tui.select.pageUp"), hints.keyText("tui.select.pageDown")].filter(Boolean).join("/");
+          const nav = [
+            viewKeys ? `${viewKeys}: view` : "",
+            callKeys ? `${callKeys}: call` : "",
+            scrollKeys ? `${scrollKeys}: scroll` : "",
+          ].filter(Boolean).join(" · ");
+          const cancelKey = hints.keyText("tui.select.cancel");
+          const closeLine = cancelKey ? `${cancelKey}: close` : "";
+          return [nav, closeLine];
+        };
         const state: InspectorState = { tab: "Calls", selected: 0, scroll: 0 };
         let closed = false;
         const close = () => { if (closed) return; closed = true; store.listeners.delete(update); done(); };
@@ -129,23 +159,29 @@ export function registerCodemodeUi(pi: ExtensionAPI, services: CodemodeServices)
             state.selected = Math.max(0, Math.min(state.selected, row.calls.length - 1));
             const detailWidth = state.tab === "Calls" && inner >= 90 ? inner - Math.floor(inner * 0.4) - 3 : inner;
             const detail = presentation.detail(row, state, theme, detailWidth, ctx.cwd, hints);
-            const body = renderInspector(row, state, theme, inner, height, detail);
-            if (body.length >= 2) body[body.length - 2] = truncateToWidth(theme.fg("dim", `Tab: view · ${keys.getKeys("tui.select.up").join("/")}/${keys.getKeys("tui.select.down").join("/")}: call · ${keys.getKeys("tui.select.pageDown").join("/")}: scroll`), inner);
-            if (body.length) body[body.length - 1] = truncateToWidth(theme.fg("dim", `${keys.getKeys("tui.select.cancel").join("/")}: close`), inner);
+            const body = renderInspector(row, state, theme, inner, height, detail, formatFooter());
             return [theme.fg("borderMuted", `┌${"─".repeat(Math.max(0, width - 2))}┐`),
               ...body.map(line => theme.bg("toolPendingBg", `│ ${line}${" ".repeat(Math.max(0, inner - visibleWidth(line)))} │`)),
               theme.fg("borderMuted", `└${"─".repeat(Math.max(0, width - 2))}┘`)].map(line => truncateToWidth(line, width));
           },
           handleInput(data) {
             if (keys.matches(data, "tui.select.cancel")) { close(); return; }
-            if (matchesKey(data, "tab") || matchesKey(data, "shift+tab")) {
-              const tabs = ["Calls", "Script", "Output"] as const;
-              state.tab = tabs[(tabs.indexOf(state.tab) + (matchesKey(data, "shift+tab") ? 2 : 1)) % 3]!; state.scroll = 0;
+            const tabs = ["Calls", "Script", "Output"] as const;
+            if (keys.matches(data, "tui.input.tab")) {
+              state.tab = tabs[(tabs.indexOf(state.tab) + 1) % 3]!; state.scroll = 0;
+            } else if (keys.matches(data, "tui.select.down")) {
+              state.selected = Math.min(row.calls.length - 1, state.selected + 1); state.scroll = 0;
+            } else if (keys.matches(data, "tui.select.up")) {
+              state.selected = Math.max(0, state.selected - 1); state.scroll = 0;
+            } else if (keys.matches(data, "tui.select.pageDown")) {
+              state.scroll += 5;
+            } else if (keys.matches(data, "tui.select.pageUp")) {
+              state.scroll = Math.max(0, state.scroll - 5);
+            } else if (matchesKey(data, "shift+tab")) {
+              state.tab = tabs[(tabs.indexOf(state.tab) + 2) % 3]!; state.scroll = 0;
+            } else {
+              return;
             }
-            if (keys.matches(data, "tui.select.down")) { state.selected = Math.min(row.calls.length - 1, state.selected + 1); state.scroll = 0; }
-            if (keys.matches(data, "tui.select.up")) { state.selected = Math.max(0, state.selected - 1); state.scroll = 0; }
-            if (keys.matches(data, "tui.select.pageDown")) state.scroll += 5;
-            if (keys.matches(data, "tui.select.pageUp")) state.scroll = Math.max(0, state.scroll - 5);
             tui.requestRender();
           },
         };

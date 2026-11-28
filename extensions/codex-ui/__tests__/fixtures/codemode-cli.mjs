@@ -11,9 +11,12 @@ const handlers = new Map();
 let child, stopping = false;
 try {
   for (const dir of ['workspace', 'home', 'tmp', 'agent', 'sessions']) await mkdir(join(root, dir));
-  if (process.argv.includes('--custom-keys')) await writeFile(join(root, 'agent/keybindings.json'), JSON.stringify({ 'app.tools.expand': 'f3' }));
+  if (process.argv.includes('--custom-keys')) await writeFile(join(root, 'agent/keybindings.json'), JSON.stringify({
+    'app.tools.expand': 'f3', 'tui.input.tab': 'f2', 'tui.select.cancel': 'f4',
+    'tui.select.up': 'f5', 'tui.select.down': 'f6', 'tui.select.pageUp': 'f7', 'tui.select.pageDown': 'f8',
+  }));
   const env = Object.fromEntries(['PATH', 'TERM', 'COLORTERM', 'LANG', 'LC_ALL'].flatMap(key => process.env[key] ? [[key, process.env[key]]] : []));
-  Object.assign(env, { HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'), PI_CODING_AGENT_DIR: join(root, 'agent'), PI_CODING_AGENT_SESSION_DIR: join(root, 'sessions'), PI_OFFLINE: '1', PI_SKIP_VERSION_CHECK: '1', PI_TELEMETRY: '0', CODEMODE_UI_ROOT: root });
+  Object.assign(env, { HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'), PI_CODING_AGENT_DIR: join(root, 'agent'), PI_CODING_AGENT_SESSION_DIR: join(root, 'sessions'), PI_OFFLINE: '1', PI_SKIP_VERSION_CHECK: '1', CODEMODE_UI_ROOT: root });
   for (const signal of ['SIGTERM', 'SIGHUP', 'SIGINT']) {
     const handler = () => { stopping = true; child?.kill(signal); }; handlers.set(signal, handler); process.on(signal, handler);
   }
