@@ -65,10 +65,10 @@ const REQUIRED_COLORS = [
 
 test("package publishes the complete codex-pi theme and compiled extension", async () => {
   const theme = JSON.parse(
-    await readFile(new URL("../../../themes/codex-pi.json", import.meta.url), "utf8"),
+    await readFile(new URL("../themes/codex-pi.json", import.meta.url), "utf8"),
   );
   const packageJson = JSON.parse(
-    await readFile(new URL("../../../package.json", import.meta.url), "utf8"),
+    await readFile(new URL("../package.json", import.meta.url), "utf8"),
   );
 
   assert.equal(theme.$schema, "https://pi.dev/schemas/theme.schema.json");
@@ -118,12 +118,12 @@ test("package publishes the complete codex-pi theme and compiled extension", asy
     ],
   );
   assert.equal(theme.colors.toolDiffContext, "syntaxText");
-  assert.ok(packageJson.pi.extensions.includes("./extensions/codex-ui/dist/index.js"));
+  assert.ok(packageJson.pi.extensions.includes("./dist/index.js"));
   assert.ok(packageJson.pi.themes.includes("./themes/codex-pi.json"));
-  assert.ok(packageJson.files.includes("extensions/codex-ui/dist"));
+  assert.ok(packageJson.files.includes("dist/index.js"));
   assert.ok(packageJson.files.includes("themes/codex-pi.json"));
 
-  const loaded = themeModule.loadThemeFromPath(resolve("themes/codex-pi.json"), "truecolor");
+  const loaded = themeModule.loadThemeFromPath(resolve("extensions/codex-ui/themes/codex-pi.json"), "truecolor");
   assert.equal(loaded.name, "codex-pi");
   assert.equal(loaded.appearance, "dark");
   assert.notEqual(loaded.getFgAnsi("scrollbarTrack"), loaded.getFgAnsi("scrollbarThumb"));

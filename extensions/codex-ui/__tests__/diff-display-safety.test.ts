@@ -6,8 +6,8 @@ import { test, vi } from "vitest";
 import { initTheme, ToolExecutionComponent, type ExtensionAPI, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { parseDisplayDiff, parseUnifiedPatch, registerCodexTools } from "../src/tools.js";
-import { sanitizeDiffSource } from "../src/diff-source.js";
-import * as diffSource from "../src/diff-source.js";
+import { sanitizeDiffSource } from "../../../shared/ui/diff-source.js";
+import * as diffSource from "../../../shared/ui/diff-source.js";
 
 // Interpret CR after removing only renderer SGR, not arbitrary terminal controls.
 function paintRow(line: string): string {

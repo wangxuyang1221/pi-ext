@@ -1,0 +1,46 @@
+{
+  "name": "claude-code-ui",
+  "description": "Claude Code-style terminal UI for Pi Coding Agent",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "author": "Wang Xuyang",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wangxuyang1221/pi-theme.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wangxuyang1221/pi-theme/issues"
+  },
+  "homepage": "https://github.com/wangxuyang1221/pi-theme#readme",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "1.6.1",
+    "@earendil-works/pi-coding-agent": "1.6.1",
+    "@earendil-works/pi-tui": "1.6.1"
+  },
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "tui",
+    "theme"
+  ],
+  "files": [
+    "dist/index.js",
+    "themes/claude-code.json"
+  ],
+  "pi": {
+    "extensions": [
+      "./dist/index.js"
+    ],
+    "themes": [
+      "./themes/claude-code.json"
+    ]
+  },
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --packages=external --target=node22 --outfile=dist/index.js",
+    "prepack": "pnpm run build"
+  }
+}

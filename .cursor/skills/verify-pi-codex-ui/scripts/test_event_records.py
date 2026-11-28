@@ -61,7 +61,12 @@ class EventRecordsTest(unittest.TestCase):
         def event_path(node):
             return any(isinstance(part, ast.Constant) and part.value == "events.jsonl" for part in ast.walk(node))
 
-        paths = [*SCRIPTS.glob("*.py"), *WORKING_FIXTURE.glob("*.py"), REPO / "scripts/working-pty.py"]
+        paths = [
+            *SCRIPTS.glob("*.py"),
+            REPO / "test-support/terminal/pty_journey.py",
+            *WORKING_FIXTURE.glob("*.py"),
+            REPO / "scripts/working-pty.py",
+        ]
         for path in paths:
             if path.name in {"test_event_records.py", "test_pty_observations.py"}:
                 continue

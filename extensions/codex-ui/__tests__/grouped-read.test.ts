@@ -6,7 +6,7 @@ import { test } from "vitest";
 import { initTheme, SessionManager, ToolExecutionComponent, type ExtensionAPI, type Theme, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { registerCodexTools } from "../src/tools.js";
-import { ToolRenderCache } from "../src/render-cache.js";
+import { ToolRenderCache } from "../../../shared/ui/render-cache.js";
 
 const themeModule = await import(
   pathToFileURL(resolve("node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/theme.js")).href

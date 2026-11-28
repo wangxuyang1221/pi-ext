@@ -59,8 +59,8 @@ import {
   renderDisplayDiff,
   type CodexToolFactories,
 } from "../src/tools.js";
-import { fitToWidth } from "../src/layout.js";
-import { ToolRenderCache } from "../src/render-cache.js";
+import { fitToWidth } from "../../../shared/ui/layout.js";
+import { ToolRenderCache } from "../../../shared/ui/render-cache.js";
 
 function createTheme(codeOffset = 0): Theme {
   const getBgCode = (name: string) => (name === "toolErrorBg"

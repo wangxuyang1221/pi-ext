@@ -1,4 +1,11 @@
-import { sessionEntryToContextMessages, type ExtensionAPI, type ExtensionContext, type KeybindingsManager, type Theme, type ToolRenderers } from "@earendil-works/pi-coding-agent";
+import {
+  sessionEntryToContextMessages,
+  type ExtensionAPI,
+  type ExtensionContext,
+  type KeybindingsManager,
+  type Theme,
+  type ToolRenderers,
+} from "@earendil-works/pi-coding-agent";
 import { matchesKey, truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 import { CodemodeStore, type CodemodeRow } from "./codemode-model.js";
 import { CodemodePresentation } from "./codemode-presentation.js";
@@ -6,13 +13,16 @@ import { renderInspector, type InspectorState } from "./codemode-view.js";
 import { record } from "./codemode-data.js";
 import { hostKeybindingHints, type HostKeybindingHints } from "./keybinding-hints.js";
 import { normalizeOutputPad, padOutputLines, resolveOutputPad } from "./layout.js";
+import type { GroupLayout } from "./native-tools.js";
 
 type RenderContext = Parameters<NonNullable<ToolRenderers["renderCall"]>>[2];
 interface RowView extends Component {
   row: CodemodeRow; generation: number; theme: Theme; expanded: boolean; cwd: string; outputPad: number; context: RenderContext; hints: HostKeybindingHints;
 }
 interface RowState { codemodeView?: RowView }
+
 export interface CodemodeServices {
+  layout: GroupLayout;
   nativeRenderers: ReadonlyMap<string, ToolRenderers>;
   getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
   readContextMessages?: (event: unknown, ctx: ExtensionContext) => Iterable<unknown>;
@@ -23,7 +33,7 @@ export function registerCodemodeUi(pi: ExtensionAPI, services: CodemodeServices)
   // Older hosts keep their own renderer. Test/SDK hosts may omit renderer registration too.
   if (typeof pi.registerToolRenderer !== "function") return;
   const store = new CodemodeStore();
-  const presentation = new CodemodePresentation(store, services.nativeRenderers);
+  const presentation = new CodemodePresentation(store, services.nativeRenderers, services.layout);
   const invalidators = new Map<string, () => void>();
   store.listeners.add(row => {
     if (row) { invalidators.get(row.id)?.(); if (row.evicted) invalidators.delete(row.id); }

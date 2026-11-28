@@ -1,34 +1,10 @@
+import type { FooterOptions } from "../../../shared/ui/ui-options.js";
+import { sanitizeStatus } from "../../../shared/ui/footer-status.js";
 import { basename } from "node:path";
-import type { ContextUsage, KeybindingsManager, Theme } from "@earendil-works/pi-coding-agent";
-import {
-  stripTerminalSequences,
-  truncateToWidth,
-  visibleWidth,
-  type Component,
-} from "@earendil-works/pi-tui";
+import type { Theme } from "@earendil-works/pi-coding-agent";
+import { truncateToWidth, visibleWidth, type Component } from "@earendil-works/pi-tui";
 
-import {
-  fitToWidth,
-  formatHomePath,
-  normalizeWidth,
-} from "./layout.js";
-import { renderClaudeFooter } from "./claude-components.js";
-import { isClaudeTheme } from "./claude-palette.js";
-
-export interface CodexFooterOptions {
-  getRate?: () => string | undefined;
-  cwd: string;
-  home?: string;
-  getModelId: () => string | undefined;
-  getThinkingLevel: () => string;
-  getContextUsage: () => Pick<ContextUsage, "percent"> | undefined;
-  getBranch: () => string | null;
-  getExtensionStatuses: () => ReadonlyMap<string, string>;
-  isBashMode?: () => boolean;
-  getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
-  getTheme: () => Theme;
-}
-
+import { fitToWidth, formatHomePath, normalizeWidth } from "../../../shared/ui/layout.js";
 type CodexTone = "model" | "usage";
 type FooterTone = CodexTone | "muted" | "dim" | "accent" | "warning";
 
@@ -87,7 +63,7 @@ export class CodexFooter implements Component {
     lines: string[];
   } | undefined;
 
-  constructor(private readonly options: CodexFooterOptions) {}
+  constructor(private readonly options: FooterOptions) {}
 
   setBranchSubscription(unsubscribe: () => void): void {
     this.unsubscribeBranch?.();
@@ -101,20 +77,6 @@ export class CodexFooter implements Component {
     const statuses = this.options.getExtensionStatuses();
     const rate = this.options.getRate?.();
     const status = this.readStatus(statuses.get("status"));
-    if (isClaudeTheme(theme)) {
-      return renderClaudeFooter({
-        width: safeWidth,
-        modelId: this.options.getModelId() ?? "No model",
-        thinking: this.options.getThinkingLevel(),
-        branch: this.options.getBranch(),
-        contextPercent: this.options.getContextUsage()?.percent,
-        rate,
-        bashMode: this.options.isBashMode?.() ?? false,
-        status,
-        keybindings: this.options.getKeybindings?.(),
-        theme,
-      });
-    }
     const suffix = rate ? formatRateSlot(rate) : "";
     const remaining = Math.max(0, safeWidth - visibleWidth(suffix));
     const base = this.renderBase(remaining);
@@ -425,13 +387,6 @@ function isCodexTone(tone: FooterTone): tone is CodexTone {
   return tone === "model" || tone === "usage";
 }
 
-function sanitizeStatus(raw: string): string {
-  return stripTerminalSequences(raw)
-    .replace(/[\r\n\t]+/gu, " ")
-    .replace(/\s+/gu, " ")
-    .trim()
-    .replace(/^(?:[.·⋅∙│|]\s*)+/u, "");
-}
 
 function uniqueVariants(values: readonly FooterVariant[]): FooterVariant[] {
   const seen = new Set<string>();

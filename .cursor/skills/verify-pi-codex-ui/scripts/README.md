@@ -12,7 +12,7 @@ conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-cod
 
 `cli.py` 启动仓库固定版本的原生 CLI。`model-provider.ts` 只提供离线模型响应、记录公开事件、注册宿主原有 codemode 工具，并为 `/compact` 提供确定摘要。工具、QuickJS、文件、配置、session、选择器和生产 renderer 均实际运行。该路径不证明真实远程模型会生成相同响应。
 
-两条驱动在每次新 CLI 进程前调用 [health.py](health.py)，保存 `doctor-*.json/.stderr`，对应进程条目的 `doctor` 字段指向它。它复用共享只读 doctor，非零退出、无效输出或验证锁占用时拒绝继续。失败后重新 doctor 并检查该次证据/cleanup，UI 卡住则重启已知状态。所有 pnpm 命令使用 `pnpm_config_verify_deps_before_run=false`，不要并发构建与 PTY。
+CLI 驱动将 `extensions/codex-ui` 的发布 tarball 解包到隔离目录，再用真实 `pi install` 注册，核对启动画面与主题发现。到故意破坏全局配置的场景时，另启进程并用 `-e` 直接加载同一份解包产物，以便配置损坏时仍可调用工具。每次安装与启动前运行 `package_health.py` 并归档 preflight。headless 驱动使用 [health.py](health.py) 检查版本、构建和验证锁。失败后核对证据及清理状态，再启动新进程重试。
 
 单独执行 preflight 的命令见 [Helpers](../SKILL.md#helpers)。驱动回归入口为 `conda run --no-capture-output -n codex-py312 python -m unittest discover -s .cursor/skills/verify-pi-codex-ui/scripts -p 'test_*.py' -v`，覆盖 preflight、composer 颜色与 Bash 取消就绪断言。颜色回归向真实断言函数输入 pyte 单元格，拒绝默认、不可见、混合或错误的草稿前景；取消回归要求公开 Bash 输出事件，命令参数中的标记不算执行证据。真实 CLI 旅程仍须单独执行。
 
@@ -21,19 +21,6 @@ CLI、Working 与中断回归共用 [实时事件读取器](../../../../test-sup
 `headless.py` 分别启动原生 `--print --mode json` 和 `--mode rpc`。RPC 通过客户端消息发起 prompt；它不是给 SDK 设置一个 mode 字段。工具返回的 PNG 字节需解析为 4000×40 或 2000×20，实际 shell 输出必须写入并读回文件。
 
 只补验控制字符 diff 时，可运行 `cli.py regular --controls` 和 `cli.py fullscreen --controls`。该聚焦路径实际覆盖已有 CRLF 文件、展开 diff，并检查源文件中的清屏和 OSC 标题指令没有执行；它不能代替完整 CLI 旅程。
-
-## Claude Code profile
-
-在构建后串行运行两种模式。PATH 需提供真实 `git`、`rg` 和 `fd`。
-
-```bash
-conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/cli.py regular --claude-code
-conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/cli.py fullscreen --claude-code
-```
-
-驱动通过 `-e "$PWD"` 发现 package 中的主题与构建入口。首个 Pi 进程使用 `--use-theme claude-code`，第二个进程从 codex-pi 启动，以原生设置菜单验证保存与切换。离线推理模型让流式画面可重复观察，实际 Bash、Read、Write、Edit、grep/find/ls 与会话操作走原生入口。
-
-[行为规格](../features/claude-code.md)列出断言范围。证据在 `.tmp/test-results/codex-ui-cli-<mode>-claude-code-<id>/`。其中 `journey.json` 记录 feature ID、单元格颜色、按键和帧的 ANSI 偏移，`terminal-1.ansi` 和 `terminal-2.ansi` 对应两次启动。对照 `events.json`、归档的设置、会话与文件核实结果。检查 `scratchRemoved` 及每个进程的 `stopped`、`groupStopped`。
 
 ## Pi compatibility
 
@@ -57,7 +44,7 @@ pnpm test extensions/codex-ui/__tests__/reply-copy.test.ts extensions/codex-ui/_
 
 | Feature IDs | Required observations |
 | --- | --- |
-| `ui-header` | 从启动快照人工核对 Pi 标识、实际版本、模型和目录；PTY 驱动保存画面但不直接断言 header。组件断言见 [components.test.ts](../../../../extensions/codex-ui/__tests__/components.test.ts)。 |
+| `ui-header` | PTY 断言 Codex header，并保存启动快照供核对版本、模型和目录。组件断言见 [components.test.ts](../../../../extensions/codex-ui/__tests__/components.test.ts)。 |
 | `ui-composer`, `ui-resize` | 输入时逐列检查整行背景；40/80/140 列；真实设置菜单选择 light 与 codex-pi；fork/resume 后再检查背景。保存 pyte 文本与颜色区间、原始 ANSI。 |
 | `ui-status` | 在真实启动画面核对当前模型、工作目录和 context。不同宽度保存 TUI 画面。 |
 | `ui-theme` | 原生 `/settings` 落盘主题。`/reload`、`/new` 后检查保存值，原生 `/fork` 与 `/resume` 后另检查 composer 颜色。fork 的多行预填须 Ctrl+C 清除。普通回复段落须保留终端 `default` 前景。用草稿、独立 Read 标题、未标注语言的回复代码围栏正文、展开的 Read/Bash 输出、回复引用、展开的思考和折叠后的 `Thinking...` 核对[主题配色](../features/layout.md#sub-features)。证据保留前景色、斜体和竖线的单元格样式。 |
@@ -93,7 +80,7 @@ Write 观察器的 writeFile 回调先取得旧文件 stat/有界快照，再调
 
 证据分开记录：真实 CLI 的独立 Bash 已证明 Esc 传播、标题后缀 `· interrupted`、实际 abort 结果及延后文件未生成。`write-execution.test.ts` 的预先取消用例证明拒绝且不生成成功 patch；其受控晚取消用例实际写入 `new` 后拒绝、保留字节且不生成成功 patch，下一次写入以这些现存字节为基线。`tool-status.test.ts` 包含 Read/Edit/Write/Bash 的真实预先取消及序列化后黄色中断渲染。测试源码位置为执行边界证据，只有本次确实运行过的测试才能写入通过记录。
 
-本次没有证明“真实 Esc 恰在 Write/Edit 的某次 await 期间到达”。需要这一端到端断言时，`ui-interrupted` 保留该分支 unverified，写明缺少可观察、可控制的取消阶段。源码依据是宿主 `core/tools/write.js`、`edit.js`、`file-mutation-queue.js`，以及插件 [write-changes.ts](../../../../extensions/codex-ui/src/write-changes.ts)、[tool-status.ts](../../../../extensions/codex-ui/src/tool-status.ts)；调度器的串行中止和并行 signal 检查属于宿主职责。
+本次没有证明“真实 Esc 恰在 Write/Edit 的某次 await 期间到达”。需要这一端到端断言时，`ui-interrupted` 保留该分支 unverified，写明缺少可观察、可控制的取消阶段。源码依据是宿主 `core/tools/write.js`、`edit.js`、`file-mutation-queue.js`，以及插件 [write-changes.ts](../../../../shared/ui/write-changes.ts)、[tool-status.ts](../../../../shared/ui/tool-status.ts)；调度器的串行中止和并行 signal 检查属于宿主职责。
 
 ## Evidence and cleanup
 

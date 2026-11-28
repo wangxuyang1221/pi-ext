@@ -1,7 +1,7 @@
 import { visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 
-import { fitToWidth, normalizeWidth } from "./layout.js";
-import type { RenderCacheScope } from "./render-cache.js";
+import { fitToWidth, normalizeWidth } from "../../../shared/ui/layout.js";
+import type { RenderCacheScope } from "../../../shared/ui/render-cache.js";
 
 export interface ExactVisualTail {
   visualLines: string[];

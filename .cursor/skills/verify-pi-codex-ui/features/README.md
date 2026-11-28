@@ -15,7 +15,6 @@
 ## Features
 
 - [Composer, footer and theme](layout.md)：包含 `ui-header`, `ui-composer`, `ui-status`, `ui-theme`, `ui-output-padding`, `ui-fullscreen-scrollbar`, `ui-resize`, `ui-user-markdown`, `ui-reply-markdown`, `ui-copy-fallback`。
-- [Claude Code profile](claude-code.md) 覆盖 `claude-welcome`、`claude-composer`、`claude-working`、`claude-footer`、`claude-messages`、`claude-tools` 和 `claude-switch`。
 - [Working and lifecycle](working.md)：包含 `ui-working` 与 `ui-receive-rate` 的暖机量、流式速率、工具启动复位、取消、重试、会话替换和退出。
 - [Thinking and terminal activity](thinking.md)：包含 `ui-thinking-stream`, `ui-thinking-collapse`, `ui-thinking-resume`, `ui-title`, `ui-title-stop`.
 - [Read, Bash, Edit and Write display](tools.md)：包含 `ui-tool-rendering`, `ui-read-group`, `ui-read-image-warning`, `ui-bash-preview`, `ui-expand`, `ui-write-added`, `ui-write-edited`, `ui-diff`, `ui-error`, `ui-interrupted`。

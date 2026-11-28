@@ -1,11 +1,9 @@
 import { basename, dirname } from "node:path";
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
-import { fitToWidth, normalizeWidth } from "./layout.js";
-import type { ReadMember, ReadRow } from "./read-groups.js";
-import { fileFailureStatus, toolStatusColor, toolStatusMarker } from "./tool-status.js";
-import { isClaudeTheme } from "./claude-palette.js";
-import { renderClaudeReadGroup } from "./claude-tools.js";
+import { fitToWidth, normalizeWidth } from "../../../shared/ui/layout.js";
+import type { ReadMember, ReadRow } from "../../../shared/ui/read-groups.js";
+import { fileFailureStatus, toolStatusColor, toolStatusMarker } from "../../../shared/ui/tool-status.js";
 
 const PREVIEW_LINES = 3;
 const EXPANDED_LINES = 40;
@@ -130,24 +128,10 @@ function renderMember(member: ReadRow, expanded: boolean, grouped: boolean, them
   });
 }
 
-export function renderSingleRead(row: ReadRow, expanded: boolean, theme: Theme, availableWidth: number): string[] {
-  const width = normalizeWidth(availableWidth);
-  return width ? renderMember(row, expanded, false, theme, width) : [];
-}
-
 /** The source group's first member emits its previews; ambiguous views stay local. */
-export function renderReadGroup(
-  member: ReadMember,
-  expanded: boolean,
-  theme: Theme,
-  availableWidth: number,
-  expandKeys = "ctrl+o",
-): string[] {
+export function renderReadGroup(member: ReadMember, expanded: boolean, theme: Theme, availableWidth: number): string[] {
   const width = normalizeWidth(availableWidth);
   if (!width || member.group.members[0] !== member) return [];
-  if (isClaudeTheme(theme)) {
-    return renderClaudeReadGroup(member, expanded, theme, width, expandKeys);
-  }
   const grouped = member.group.members.length > 1;
   const inset = grouped && width > 2 ? "  " : "";
   const lines = grouped ? [fitToWidth(`${theme.fg("dim", expanded ? "▾" : "▸")} ${theme.fg("toolTitle", theme.bold("Read"))} ${theme.fg("muted", `${member.group.members.length} files`)}`, width)] : [];

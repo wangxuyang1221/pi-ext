@@ -13,16 +13,17 @@ description: "Verify codex-ui on stock Pi in regular and fullscreen TUI, print a
 
 ```bash
 pnpm install --frozen-lockfile --ignore-scripts
-pnpm run build
+pnpm run build:codex-ui
 ```
 
 ## Doctor
 
 ```bash
 pnpm exec node .cursor/skills/verify-pi-codex-ui/scripts/verify.mjs doctor
+conda run -n codex-py312 python test-support/terminal/package_health.py extensions/codex-ui
 ```
 
-核对 Node、pnpm、Pi 版本、构建产物、Conda 环境 codex-py312 和 pyte。若返回 `lockPresent: true`，读取 `.tmp/verify-pi-codex-ui.lock` 核对正在运行的驱动 PID，等待它退出。失败后重新 doctor，检查本次错误和清理结果，再从新进程重试。CLI 与 headless 驱动会在每次启动前将 doctor 输出保存到证据目录。
+核对 Node、pnpm、Pi 版本、构建产物、Conda 环境 codex-py312 和 pyte。若返回 `lockPresent: true`，读取 `.tmp/verify-pi-codex-ui.lock` 核对正在运行的驱动 PID，等待它退出。失败后重新 doctor，检查本次错误和清理结果，再从新进程重试。CLI 驱动在安装及每次启动前检查包入口，headless 驱动检查验证锁。两者都会将 preflight 输出保存到证据目录。
 
 ## Drive
 
@@ -36,7 +37,6 @@ pnpm exec node .cursor/skills/verify-pi-codex-ui/scripts/verify.mjs run tool-sta
 ```
 
 - [CLI 和 headless 旅程](scripts/README.md#run)验证真实编辑、配置拒绝与恢复、会话切换、模型上下文、缓存压力，以及 print/RPC 的文件与图片副作用。
-- [Claude Code profile 旅程](features/claude-code.md)在普通和全屏 TUI 验证主题发现、欢迎卡、输入框与 Bash 态、流式状态和消息、真实文件工具及主题持久化。
 - [Pi compatibility 旅程](scripts/README.md#pi-compatibility)验证 Pi 1.6 起支持的非视觉模型图片提示、diff 文字色、全屏滚动条配色与 `/copy` 回退规则，并核对 Pi 1.6.1 的 Bash 截断、保存失败提示和恢复后的文件。
 - [Working 旅程](features/working.md)通过普通和全屏 CLI 驱动真实工具、取消、输入等待、重试及自动压缩，核对 spinner 和 footer 速率。
 - [JSON recipe](RECIPES.md)提供 F3 展开、原生 codemode 工具、文件写入和 inspector 标签页的独立旅程。交互补验使用 `pnpm exec node .cursor/skills/verify-pi-codex-ui/scripts/verify.mjs tui codex-ui`，退出输入 `/quit`。

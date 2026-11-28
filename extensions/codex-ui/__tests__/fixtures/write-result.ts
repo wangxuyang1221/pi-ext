@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import type { CodexWriteChange } from "../../src/write-changes.js";
+import type { CodexWriteChange } from "../../../../shared/ui/write-changes.js";
 
 export function hasWriteChange(result: { details: unknown }): boolean {
   return typeof result.details === "object" && result.details !== null && "codexWrite" in result.details;

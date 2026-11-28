@@ -43,7 +43,7 @@ export async function reasoningPipeline(register: (pi: ExtensionAPI) => void, ro
   const palette = await import(new URL("modes/interactive/theme/theme.js", host).href);
   const { KeybindingsManager } = await import(new URL("core/keybindings.js", host).href);
   initTheme("dark", false);
-  palette.setThemeInstance(palette.loadThemeFromPath(join(root, "themes/codex-pi.json"), "truecolor"));
+  palette.setThemeInstance(palette.loadThemeFromPath(join(root, "extensions/codex-ui/themes/codex-pi.json"), "truecolor"));
   const { theme, getEditorTheme } = palette;
   const terminal = new CaptureTerminal();
   const screen = new TuiMainScreen(terminal as unknown as Terminal, false, join(root, ".tmp"));

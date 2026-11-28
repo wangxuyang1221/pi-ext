@@ -1,52 +1,22 @@
-import {
-  CustomEditor,
-  type KeybindingsManager,
-  type Theme,
-} from "@earendil-works/pi-coding-agent";
-import {
-  getKeybindings,
-  setKeybindings,
-  visibleWidth,
-  type Component,
-  type EditorTheme,
-  type TUI,
-  type TuiMouseEvent,
-  type TuiMouseEventResult,
-} from "@earendil-works/pi-tui";
-
+import { visibleWidth, type Component } from "@earendil-works/pi-tui";
+import type { Theme } from "@earendil-works/pi-coding-agent";
+import { ProfileEditor } from "../../../shared/ui/profile-editor.js";
+import type { HeaderOptions } from "../../../shared/ui/ui-options.js";
 import {
   fitToWidth,
   formatHomePath,
   normalizeWidth,
   paintBackground,
   paintForeground,
-} from "./layout.js";
-import { renderClaudeEditorFrame, renderClaudeHeader, resolveDisplayUser } from "./claude-components.js";
-import { isClaudeTheme } from "./claude-palette.js";
+} from "../../../shared/ui/layout.js";
 
-export { CodexFooter, type CodexFooterOptions } from "./footer.js";
-
-export interface CodexHeaderOptions {
-  version: string;
-  cwd: string;
-  home?: string;
-  userName?: string;
-  getModelId: () => string | undefined;
-  getThinkingLevel: () => string;
-  getBranch?: () => string | null;
-  getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
-  getTheme: () => Theme;
-}
-
+export { CodexFooter } from "./footer.js";
 const MAX_CARD_WIDTH = 84;
 const CARD_CHROME = "│  │".length;
 const LABEL_WIDTH = "directory: ".length;
 const MIN_CARD_INNER = 46;
 const GRAPHEME_SEGMENTER = new Intl.Segmenter(undefined, { granularity: "grapheme" });
-const BOTTOM_BORDER_SENTINEL = "\x1b_pi:codex-editor-bottom-border\x07";
-
 export class CodexHeader implements Component {
-  private readonly userName: string | undefined;
   private cached: {
     width: number;
     theme: Theme;
@@ -56,9 +26,7 @@ export class CodexHeader implements Component {
     lines: string[];
   } | undefined;
 
-  constructor(private readonly options: CodexHeaderOptions) {
-    this.userName = options.userName ?? resolveDisplayUser();
-  }
+  constructor(private readonly options: HeaderOptions) {}
 
   render(width: number): string[] {
     const safeWidth = normalizeWidth(width);
@@ -78,23 +46,6 @@ export class CodexHeader implements Component {
       && cached.branch === branch
     ) {
       return cached.lines;
-    }
-
-    if (isClaudeTheme(theme)) {
-      const lines = renderClaudeHeader({
-        width: safeWidth,
-        version: this.options.version,
-        cwd: this.options.cwd,
-        home: this.options.home,
-        userName: this.userName,
-        modelId,
-        thinking,
-        branch,
-        keybindings: this.options.getKeybindings?.(),
-        theme,
-      });
-      this.cached = { width: safeWidth, theme, modelId, thinking, branch, lines };
-      return lines;
     }
 
     const brand = `${theme.bold(theme.fg("accent", "pi"))}${theme.fg("dim", ` v${this.options.version} · `)}${theme.fg("muted", "Codex profile")}`;
@@ -141,10 +92,7 @@ export class CodexHeader implements Component {
 
 const PLACEHOLDER = "Ask Pi to do anything";
 
-export class CodexEditor extends CustomEditor {
-  private capturingBottomBorder = false;
-  private lastClaudeReservedCols = 0;
-  private lastClaudeBottomBorderIndex = 0;
+export class CodexEditor extends ProfileEditor {
   private paintedCache: {
     width: number;
     foreground: string;
@@ -152,41 +100,9 @@ export class CodexEditor extends CustomEditor {
     lines: Map<string, string>;
   } | undefined;
 
-  constructor(
-    tui: TUI,
-    editorTheme: EditorTheme,
-    private readonly hostKeybindings: KeybindingsManager,
-    private readonly getTheme: () => Theme,
-    private readonly onCopy?: () => void,
-    private readonly onBashModeChange?: (bashMode: boolean) => void,
-  ) {
-    super(tui, editorTheme, hostKeybindings, { paddingX: 1 });
-  }
-
-  isBashDraft(): boolean {
-    return this.getText().trimStart().startsWith("!");
-  }
-
-  override setText(text: string): void {
-    const beforeBash = this.isBashDraft();
-    super.setText(text);
-    const afterBash = this.isBashDraft();
-    if (afterBash !== beforeBash) this.onBashModeChange?.(afterBash);
-  }
-
-  private isEmptyDraft(): boolean {
-    const nativeIsEmpty = (this as unknown as { isEditorEmpty?: () => boolean }).isEditorEmpty;
-    return typeof nativeIsEmpty === "function" ? nativeIsEmpty.call(this) : this.getText() === "";
-  }
-
   override invalidate(): void {
     this.paintedCache = undefined;
     super.invalidate();
-  }
-
-  protected override renderBottomBorder(width: number, hiddenLineCount: number): string {
-    if (this.capturingBottomBorder) return BOTTOM_BORDER_SENTINEL;
-    return super.renderBottomBorder(width, hiddenLineCount);
   }
 
   private paintFrame(lines: readonly string[], width: number, theme: Theme): string[] {
@@ -212,83 +128,12 @@ export class CodexEditor extends CustomEditor {
     return painted;
   }
 
-  handleInput(data: string): void {
-    const previousKeys = getKeybindings();
-    setKeybindings(this.hostKeybindings);
-    const submit = this.onSubmit;
-    const beforeBash = this.isBashDraft();
-    this.onSubmit = text => {
-      if (text === "/copy" && this.onCopy) this.onCopy();
-      else submit?.(text);
-    };
-    try {
-      super.handleInput(data);
-    } finally {
-      this.onSubmit = submit;
-      setKeybindings(previousKeys);
-      const afterBash = this.isBashDraft();
-      if (afterBash !== beforeBash) this.onBashModeChange?.(afterBash);
-    }
-  }
-
-  private sourceFrame(width: number): { lines: readonly string[]; bottomBorderIndex: number; menuHeight: number } {
-    this.capturingBottomBorder = true;
-    let lines: readonly string[];
-    try {
-      lines = super.render(width);
-    } finally {
-      this.capturingBottomBorder = false;
-    }
-    const markerIndex = lines.lastIndexOf(BOTTOM_BORDER_SENTINEL);
-    const bottomBorderIndex = markerIndex >= 0 ? markerIndex : lines.length - 1;
-    const menuHeight = Math.max(0, lines.length - 1 - bottomBorderIndex);
-    return { lines, bottomBorderIndex, menuHeight };
-  }
-
-  override handleMouse(event: TuiMouseEvent): TuiMouseEventResult | undefined {
-    const reserved = this.lastClaudeReservedCols;
-    if (reserved > 0 && isClaudeTheme(this.getTheme())) {
-      const innerWidth = Math.max(1, event.width - reserved);
-      if (event.y >= 1 && event.y < this.lastClaudeBottomBorderIndex) {
-        return super.handleMouse({
-          ...event,
-          x: Math.max(0, event.x - reserved),
-          width: innerWidth,
-        });
-      }
-      if (event.y > this.lastClaudeBottomBorderIndex) {
-        return super.handleMouse({ ...event, width: innerWidth });
-      }
-    }
-    return super.handleMouse(event);
-  }
-
   render(width: number): string[] {
     const safeWidth = normalizeWidth(width);
     if (safeWidth === 0) return [];
 
     const theme = this.getTheme();
     const empty = this.isEmptyDraft();
-    if (isClaudeTheme(theme)) {
-      const editorPaddingX = typeof (this as unknown as { getPaddingX?: () => number }).getPaddingX === "function"
-        ? (this as unknown as { getPaddingX: () => number }).getPaddingX()
-        : 1;
-      const reservedLeftCols = safeWidth > 6 ? (editorPaddingX === 0 ? 3 : 2) : 0;
-      const { lines, bottomBorderIndex } = this.sourceFrame(Math.max(1, safeWidth - reservedLeftCols));
-      this.lastClaudeReservedCols = reservedLeftCols;
-      this.lastClaudeBottomBorderIndex = bottomBorderIndex;
-      return renderClaudeEditorFrame(
-        lines,
-        bottomBorderIndex,
-        safeWidth,
-        theme,
-        empty,
-        this.isBashDraft(),
-        reservedLeftCols,
-      );
-    }
-    this.lastClaudeReservedCols = 0;
-    this.lastClaudeBottomBorderIndex = 0;
     const { lines, bottomBorderIndex, menuHeight } = this.sourceFrame(safeWidth);
     const output = [...lines];
     // Native Editor always supplies two borders and at least one body row.

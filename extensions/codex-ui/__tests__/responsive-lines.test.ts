@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test, vi } from "vitest";
 import { visibleWidth } from "@earendil-works/pi-tui";
 
-import { ResponsiveLinesComponent } from "../src/responsive-lines.js";
+import { ResponsiveLinesComponent } from "../../../shared/ui/responsive-lines.js";
 
 test("responsive lines can reuse renderer-owned fitted output", () => {
   const lines = ["already fitted"];

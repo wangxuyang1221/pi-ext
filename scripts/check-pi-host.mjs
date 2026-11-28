@@ -16,25 +16,28 @@ try {
     TMPDIR: directory, TMP: directory, TEMP: directory, PI_OFFLINE: "1", PI_TELEMETRY: "0" });
   const { DefaultResourceLoader, SettingsManager } = await import("@earendil-works/pi-coding-agent");
   const { builtInExtensions } = await import(pathToFileURL(join(host.root, "dist/extensions/index.js")).href);
-  const manifest = JSON.parse(readFileSync("package.json", "utf8"));
-  assert.equal(manifest.pi.extensions.length, 1, "Published extension set changed");
-  for (const variant of ["source", "dist"]) {
-    const paths = manifest.pi.extensions.map(entry => resolve(variant === "source"
-      ? entry.replace("/dist/", "/src/").replace(/\.js$/, ".ts") : entry));
-    const loader = new DefaultResourceLoader({ cwd: directory, agentDir: join(directory, "agent"),
-      settingsManager: SettingsManager.inMemory(), noExtensions: true, noSkills: true, noThemes: true,
-      noContextFiles: true, noPromptTemplates: true,
-      additionalExtensionPaths: ["builtin:mcp", "builtin:codemode", "builtin:tool-search", ...paths],
-      extensionFactories: builtInExtensions });
-    await loader.reload();
-    const result = loader.getExtensions();
-    assert.deepEqual(result.errors, []);
-    for (const entry of paths) assert.equal(result.extensions.filter(extension => extension.path === entry).length, 1);
-    for (const name of ["builtin:mcp", "builtin:codemode", "builtin:tool-search"]) {
-      assert.equal(result.extensions.filter(extension => extension.path === name).length, 1);
+  for (const plugin of ["codex-ui", "claude-code-ui"]) {
+    const root = resolve("extensions", plugin);
+    const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+    assert.equal(manifest.pi.extensions.length, 1);
+    for (const variant of ["source", "dist"]) {
+      const paths = manifest.pi.extensions.map(entry => resolve(root, variant === "source"
+        ? entry.replace("/dist/", "/src/").replace(/\.js$/, ".ts") : entry));
+      const loader = new DefaultResourceLoader({ cwd: directory, agentDir: join(directory, "agent"),
+        settingsManager: SettingsManager.inMemory(), noExtensions: true, noSkills: true, noThemes: true,
+        noContextFiles: true, noPromptTemplates: true,
+        additionalExtensionPaths: ["builtin:mcp", "builtin:codemode", "builtin:tool-search", ...paths],
+        extensionFactories: builtInExtensions });
+      await loader.reload();
+      const result = loader.getExtensions();
+      assert.deepEqual(result.errors, []);
+      for (const entry of paths) assert.equal(result.extensions.filter(extension => extension.path === entry).length, 1);
+      for (const name of ["builtin:mcp", "builtin:codemode", "builtin:tool-search"]) {
+        assert.equal(result.extensions.filter(extension => extension.path === name).length, 1);
+      }
+      assert.deepEqual(result.warnings, []);
+      console.log(JSON.stringify({ ...host, plugin, variant, extensions: paths.length, loadErrors: 0 }));
     }
-    assert.deepEqual(result.warnings, []);
-    console.log(JSON.stringify({ ...host, variant, extensions: paths.length, loadErrors: 0 }));
   }
 } finally {
   for (const key of Object.keys(process.env)) if (!(key in inherited)) delete process.env[key];

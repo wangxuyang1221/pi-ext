@@ -40,7 +40,7 @@ pnpm exec node .cursor/skills/verify-pi-codex-ui/scripts/verify.mjs tui codex-ui
   "seed": [
     {"path": "home/.pi/example.json", "json": {"enabled": false}},
     {"path": "agent/skills/demo/SKILL.md", "text": "---\nname: demo\ndescription: Local fixture\n---\nDEMO_BODY\n"},
-    {"path": "workspace/theme.json", "source": "themes/codex-pi.json"}
+    {"path": "workspace/theme.json", "source": "extensions/codex-ui/themes/codex-pi.json"}
   ],
   "responses": [
     {"toolCalls": [{"name": "write", "arguments": {"path": "proof.txt", "content": "expected\n"}}]},

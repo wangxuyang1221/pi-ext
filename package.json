@@ -1,7 +1,7 @@
 {
   "name": "pi-ext",
   "version": "0.1.0",
-  "description": "Codex-style terminal UI and theme for Pi Coding Agent",
+  "description": "Workspace for the Codex and Claude Code Pi UI plugins",
   "type": "module",
   "packageManager": "pnpm@11.9.0",
   "license": "MIT",
@@ -14,39 +14,19 @@
     "url": "https://github.com/wangxuyang1221/pi-theme/issues"
   },
   "homepage": "https://github.com/wangxuyang1221/pi-theme#readme",
-  "keywords": [
-    "pi-package",
-    "pi-extension",
-    "codex",
-    "tui",
-    "theme"
-  ],
   "engines": {
     "node": ">=22.19.0"
   },
-  "files": [
-    "extensions/codex-ui/dist",
-    "themes/codex-pi.json",
-    "themes/claude-code.json",
-    "README.md",
-    "README.en.md",
-    "LICENSE"
-  ],
   "pi": {
-    "extensions": [
-      "./extensions/codex-ui/dist/index.js"
-    ],
-    "themes": [
-      "./themes/codex-pi.json",
-      "./themes/claude-code.json"
-    ]
+    "extensions": [],
+    "themes": []
   },
   "scripts": {
     "clean": "node ./scripts/clean.mjs",
-    "build": "pnpm run clean && pnpm run build:codex-ui",
-    "build:codex-ui": "tsc -p ./extensions/codex-ui/tsconfig.json",
-    "typecheck": "tsc -p ./extensions/codex-ui/tsconfig.json --noEmit",
-    "test": "pnpm run build:codex-ui && node ./scripts/test.mjs",
+    "build": "pnpm run clean && pnpm -r --filter \"./extensions/*\" run build",
+    "build:codex-ui": "pnpm --filter codex-ui run build",
+    "typecheck": "tsc -p extensions/codex-ui/tsconfig.json && tsc -p extensions/claude-code-ui/tsconfig.json",
+    "test": "node ./scripts/test.mjs",
     "check": "pnpm run repository:check && pnpm run secrets:check && pnpm run build && pnpm run typecheck && pnpm run typecheck:tests && pnpm test && pnpm run package:check && pnpm run host:check",
     "check:staged": "node ./scripts/check-commit.mjs",
     "secrets:check": "node ./scripts/check-secrets.mjs",
@@ -55,17 +35,14 @@
     "hooks:check": "node ./scripts/hooks.mjs check",
     "package:check": "node ./scripts/check-package.mjs",
     "host:check": "node ./scripts/check-pi-host.mjs",
-    "codemode:check": "pnpm run build:codex-ui && pnpm test extensions/codex-ui/__tests__/codemode*.test.ts && node extensions/codex-ui/__tests__/fixtures/codemode-cli.mjs --smoke && node extensions/codex-ui/__tests__/fixtures/codemode-benchmark.mjs && conda run -n codex-py312 python extensions/codex-ui/__tests__/codemode-pty.py && conda run -n codex-py312 python extensions/codex-ui/__tests__/codemode-pty.py --fullscreen",
-    "tool-status:check": "pnpm run build && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --play --restart && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --play --fullscreen --restart",
-    "prepack": "pnpm run build",
+    "codemode:check": "pnpm run build:codex-ui && pnpm test extensions/codex-ui/__tests__/codemode*.test.ts && node extensions/codex-ui/__tests__/fixtures/codemode-cli.mjs --smoke && conda run -n codex-py312 python extensions/codex-ui/__tests__/codemode-pty.py && conda run -n codex-py312 python extensions/codex-ui/__tests__/codemode-pty.py --fullscreen",
+    "tool-status:check": "pnpm run build:codex-ui && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --play --restart && conda run -n codex-py312 python extensions/codex-ui/__tests__/fixtures/tool-status/smoke.py --play --fullscreen --restart",
     "test:offline": "pnpm test",
     "typecheck:tests": "tsc -p tsconfig.tests.json",
-    "repository:check": "node ./scripts/check-repository.mjs"
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-ai": "1.6.1",
-    "@earendil-works/pi-coding-agent": "1.6.1",
-    "@earendil-works/pi-tui": "1.6.1"
+    "repository:check": "node ./scripts/check-repository.mjs",
+    "build:claude-code-ui": "pnpm --filter claude-code-ui run build",
+    "test:codex-ui": "pnpm test extensions/codex-ui/__tests__",
+    "test:claude-code-ui": "pnpm test extensions/claude-code-ui/__tests__"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
@@ -78,6 +55,8 @@
     "@vitest/coverage-v8": "3.2.4",
     "ignore": "7.0.14",
     "typescript": "5.9.3",
-    "vitest": "3.2.4"
-  }
+    "vitest": "3.2.4",
+    "esbuild": "0.28.2"
+  },
+  "private": true
 }

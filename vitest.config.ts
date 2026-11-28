@@ -8,7 +8,7 @@ export default defineConfig({
   test: {
     environment: "node",
     projects: [
-      { extends: true, test: { name: "offline", include: ["extensions/**/__tests__/**/*.test.ts", "test-support/__tests__/**/*.test.ts"] } },
+      { extends: true, test: { name: "offline", include: ["extensions/**/__tests__/**/*.test.{ts,js}", "test-support/__tests__/**/*.test.ts"] } },
     ],
     mockReset: true,
     testTimeout: 15_000,

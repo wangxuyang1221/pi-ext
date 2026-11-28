@@ -1,11 +1,9 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
-import type { BashGroup, BashMember } from "./bash-groups.js";
-import { sanitizeDiffSource } from "./diff-source.js";
-import { fitToWidth, normalizeWidth } from "./layout.js";
-import { toolStatusMarker } from "./tool-status.js";
-import { isClaudeTheme } from "./claude-palette.js";
-import { renderClaudeBashGroup } from "./claude-tools.js";
+import type { BashGroup, BashMember } from "../../../shared/ui/bash-groups.js";
+import { sanitizeDiffSource } from "../../../shared/ui/diff-source.js";
+import { fitToWidth, normalizeWidth } from "../../../shared/ui/layout.js";
+import { toolStatusMarker } from "../../../shared/ui/tool-status.js";
 
 const HEAD = 2, TAIL = 2;
 const MAX_WARNING_ERROR_CODEPOINTS = 256;
@@ -287,9 +285,6 @@ function commandLines(member: BashMember, analysis: MemberAnalysis, expanded: bo
 export function renderBashGroup(group: BashGroup, expanded: boolean, theme: Theme, availableWidth: number, toggleKeys: string): string[] {
   const width = normalizeWidth(availableWidth);
   if (!width) return [];
-  if (isClaudeTheme(theme)) {
-    return renderClaudeBashGroup(group, expanded, theme, width, toggleKeys);
-  }
   const lines: string[] = [];
   for (const member of group.members) {
     if (member.status === "pending") continue;

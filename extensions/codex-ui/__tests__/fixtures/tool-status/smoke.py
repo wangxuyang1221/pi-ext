@@ -30,7 +30,7 @@ status = None
 output = bytearray()
 screens = {}
 held_frames = {}
-theme = json.loads((repo / 'themes' / 'codex-pi.json').read_text())
+theme = json.loads((repo / 'extensions/codex-ui/themes/codex-pi.json').read_text())
 def tone(name):
     value = theme['colors'].get(name, name)
     value = theme['vars'].get(value, value)

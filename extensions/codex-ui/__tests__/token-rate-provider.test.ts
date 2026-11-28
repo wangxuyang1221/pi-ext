@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 import { createAssistantMessageEventStream, fauxAssistantMessage, fauxProvider, type AssistantMessage } from "@earendil-works/pi-ai";
 import { processResponsesStream } from "../../../node_modules/@earendil-works/pi-ai/dist/api/openai-responses-shared.js";
-import { ModelCalibration } from "../src/token-estimator.js";
-import { TokenRate } from "../src/token-rate.js";
+import { ModelCalibration } from "../../../shared/ui/token-estimator.js";
+import { TokenRate } from "../../../shared/ui/token-rate.js";
 
 const TEN_TOKENS = "0123456789" + "abcdefghijklmnopqrst" + "++++";
 

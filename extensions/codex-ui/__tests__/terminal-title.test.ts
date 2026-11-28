@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, test, vi } from "vitest";
 import { createExtensionRuntime, ExtensionRunner, SessionManager, type ExtensionAPI, type ExtensionContext, type Extension } from "@earendil-works/pi-coding-agent";
-import { registerTerminalTitleSpinner, TerminalTitleSpinner } from "../src/terminal-title.js";
+import { registerTerminalTitleSpinner, TerminalTitleSpinner } from "../../../shared/ui/terminal-title.js";
 
 function harness(mode = "tui") {
   const handlers = new Map<string, Array<(event: any, ctx: ExtensionContext) => void>>();

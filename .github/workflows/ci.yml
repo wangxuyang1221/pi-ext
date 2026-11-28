@@ -65,7 +65,7 @@ jobs:
           fi
 
       - name: Inspect package contents
-        run: pnpm pack --dry-run
+        run: pnpm -r --filter "./extensions/*" pack --dry-run
 
       - name: Upload check evidence
         if: always()
@@ -96,7 +96,7 @@ jobs:
         run: pnpm exec node scripts/check-ci.mjs
 
   unix-host:
-    name: Codex UI terminal acceptance
+    name: Pi plugin terminal acceptance
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -113,6 +113,10 @@ jobs:
           miniforge-version: latest
           activate-environment: codex-py312
           python-version: '3.12'
+      - name: Install offline search tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep fd-find
       - name: Install terminal emulator
         run: conda run -n codex-py312 python -m pip install pyte==0.8.2
       - name: Run offline host acceptance
@@ -127,6 +131,9 @@ jobs:
           pnpm run tool-status:check 2>&1 | tee .tmp/test-results/host.log
           pnpm run codemode:check
           for mode in regular fullscreen; do
+            conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/cli.py "$mode"
+            conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/cli.py "$mode" --pi-compat
+            conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-claude-code-ui/scripts/cli.py "$mode"
             conda run -n codex-py312 python scripts/working-pty.py ".tmp/test-results/working-$mode" --mode "$mode"
           done
       - name: Upload host evidence

@@ -20,7 +20,7 @@ REPO_ROOT = repo
 
 def tone(name):
     """Expected cell color for a codex-pi theme token, so palette changes do not desync PTY checks."""
-    theme = json.loads((REPO_ROOT / "themes" / "codex-pi.json").read_text())
+    theme = json.loads((REPO_ROOT / "extensions/codex-ui/themes/codex-pi.json").read_text())
     value = theme["colors"].get(name, name)
     return theme["vars"].get(value, value).lstrip("#").lower()
 pid, fd = pty.fork()

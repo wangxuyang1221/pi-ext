@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import type { Theme } from "@earendil-works/pi-coding-agent";
-import { toolStatusMarker, type ToolStatus } from "../src/tool-status.js";
+import { toolStatusMarker, type ToolStatus } from "../../../shared/ui/tool-status.js";
 
 const theme = { fg: (tone: string, text: string) => `<${tone}>${text}</${tone}>`, bold: (text: string) => text } as Theme;
 

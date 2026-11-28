@@ -11,7 +11,7 @@ pnpm run hooks:check
 pnpm run check
 ```
 
-`check` 校验脚本与文档链接、密钥、编译产物、源码和夹具类型、离线测试与发布清单，并分别用宿主加载源码和 dist 入口。全新检出时先构建，再单独执行 `typecheck:tests` 或 `host:check`。
+`check` 校验脚本与文档链接、密钥、编译产物、源码和夹具类型、离线测试与发布清单，并用宿主分别加载两个插件的源码和 dist 入口。全新检出时先构建，再单独执行 `typecheck:tests` 或 `host:check`。
 
 ## Commit gates
 
@@ -46,7 +46,8 @@ Git 允许用户跳过本地 hooks；CI 会独立执行暂存快照检查。只�
 
 ```bash
 pnpm test extensions/codex-ui/__tests__/components.test.ts
-pnpm test extensions/codex-ui/__tests__/working-session.test.ts
+pnpm run test:codex-ui
+pnpm run test:claude-code-ui
 ```
 
 ## Terminal acceptance
@@ -58,7 +59,7 @@ conda create -n codex-py312 python=3.12
 conda run -n codex-py312 python -m pip install pyte==0.8.2
 ```
 
-`pnpm run tool-status:check` 在普通与全屏终端验证 Read、Bash、Edit 和 Write；`pnpm run codemode:check` 验证嵌套调用检查面板。两条命令均会构建扩展，须串行运行。Working、编辑器、Thinking、print 和 RPC 的入口及证据位置见[验收指引](../.cursor/skills/verify-pi-codex-ui/SKILL.md)。
+`pnpm run tool-status:check` 在普通与全屏终端验证 Read、Bash、Edit 和 Write；`pnpm run codemode:check` 验证嵌套调用检查面板。Claude 的安装、布局、工具和会话恢复由[Claude Code UI 验收](../.cursor/skills/verify-pi-claude-code-ui/SKILL.md)覆盖。两条命令均会构建扩展，须串行运行。Working、编辑器、Thinking、print 和 RPC 的入口及证据位置见[验收指引](../.cursor/skills/verify-pi-codex-ui/SKILL.md)。
 
 ## CI
 

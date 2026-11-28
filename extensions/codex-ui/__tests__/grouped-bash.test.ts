@@ -3,8 +3,8 @@ import { afterEach, test, vi } from "vitest";
 import { initTheme, SessionManager, ToolExecutionComponent, type ExtensionAPI, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { getKeybindings, setKeybindings, stripTerminalSequences, visibleWidth } from "@earendil-works/pi-tui";
 import { registerCodexTools } from "../src/tools.js";
-import { ToolRenderCache } from "../src/render-cache.js";
-import { BashGroups } from "../src/bash-groups.js";
+import { ToolRenderCache } from "../../../shared/ui/render-cache.js";
+import { BashGroups } from "../../../shared/ui/bash-groups.js";
 
 const { KeybindingsManager } = await import("../../../node_modules/@earendil-works/pi-coding-agent/dist/core/keybindings.js");
 
