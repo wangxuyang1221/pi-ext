@@ -5,12 +5,14 @@ import { createCodemodeExtension } from '@earendil-works/pi-coding-agent';
 
 // This audit substitutes only the model boundary and observes public events.
 export default function (pi: any) {
-  createCodemodeExtension({ models: false })(pi);
+  const reasoning = process.env.AUDIT_REASONING === '1';
+  if (!reasoning) createCodemodeExtension({ models: false })(pi);
   const root = process.env.AUDIT_ROOT!;
   const record = (type: string, data: unknown) => appendFileSync(join(root, 'events.jsonl'), JSON.stringify({ type, data }) + '\n');
   const faux = fauxProvider({
     api: 'verification-faux', tokensPerSecond: 400, tokenSize: { min: 12, max: 12 },
-    ...(process.env.AUDIT_TEXT_ONLY === '1' ? { models: [{ id: 'faux-text-only', input: ['text'] }] } : {}),
+    ...(reasoning ? { models: [{ id: 'faux-reasoning', reasoning: true }], tokensPerSecond: 160 }
+      : process.env.AUDIT_TEXT_ONLY === '1' ? { models: [{ id: 'faux-text-only', input: ['text'] }] } : {}),
   });
   faux.setResponses(Array.from({ length: 500 }, () => async context => {
     record('request', context.messages);
@@ -24,7 +26,7 @@ export default function (pi: any) {
   }));
   pi.registerProvider(faux.provider);
   pi.on('session_start', () => {
-    pi.setActiveTools([...new Set([...pi.getActiveTools(), 'codemode'])]);
+    if (!reasoning) pi.setActiveTools([...new Set([...pi.getActiveTools(), 'codemode'])]);
     record('commands', pi.getCommands());
   });
   for (const type of ['resources_discover', 'session_start', 'agent_start', 'tool_execution_update', 'tool_execution_end', 'agent_settled']) {

@@ -3,6 +3,8 @@ import type { Component } from "@earendil-works/pi-tui";
 import { fitToWidth, normalizeWidth } from "./layout.js";
 import { ModelCalibration } from "./token-estimator.js";
 import { TokenRate, type ModelCalibrationResolver } from "./token-rate.js";
+import { claudeWorkingFrameKey, renderClaudeWorking } from "./claude-components.js";
+import { isClaudeTheme } from "./claude-palette.js";
 
 const FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
 export const WORKING_FRAME_MS = 80;
@@ -12,7 +14,9 @@ export class WorkingActivity {
   readonly calibration = new ModelCalibration();
   readonly rate: TokenRate;
   active = false;
+  turnCount = 0;
   private started = 0;
+  private streamedChars = 0;
   constructor(
     private readonly now = () => performance.now(),
     resolveCalibration?: ModelCalibrationResolver,
@@ -21,15 +25,32 @@ export class WorkingActivity {
   }
   start(): void {
     if (this.active) return;
-    this.active = true; this.started = this.now(); this.rate.reset();
+    this.active = true;
+    this.started = this.now();
+    this.streamedChars = 0;
+    this.turnCount += 1;
+    this.rate.reset();
   }
-  stop(): void { this.active = false; this.rate.reset(); }
+  stop(): void {
+    this.active = false;
+    this.streamedChars = 0;
+    this.rate.reset();
+  }
+  recordStreamDelta(chars: number): void {
+    if (this.active && chars > 0) this.streamedChars += chars;
+  }
+  estimatedStreamTokens(): number {
+    return Math.round(this.streamedChars / 4);
+  }
   elapsed(): number { return Math.max(0, this.now() - this.started); }
   label(): string | undefined { return this.active ? this.rate.label() : undefined; }
 }
 
 /** Discrete visual state key covering every time-dependent element of Working. */
-export function workingFrameKey(elapsed: number): string {
+export function workingFrameKey(elapsed: number, theme?: Pick<Theme, "name">, streamTokens = 0): string {
+  if (isClaudeTheme(theme)) {
+    return claudeWorkingFrameKey(elapsed, WORKING_FRAME_MS, streamTokens);
+  }
   const spinner = Math.floor(elapsed / WORKING_FRAME_MS) % FRAMES.length;
   const seconds = Math.floor(elapsed / 1000);
   return `${spinner}:${seconds}`;
@@ -41,6 +62,16 @@ export class Working implements Component {
     const safeWidth = normalizeWidth(width);
     if (!this.activity.active || safeWidth === 0) return [];
     const elapsed = this.activity.elapsed(), theme = this.getTheme();
+    if (isClaudeTheme(theme)) {
+      return renderClaudeWorking(
+        elapsed,
+        this.activity.estimatedStreamTokens(),
+        Math.max(0, this.activity.turnCount - 1),
+        WORKING_FRAME_MS,
+        theme,
+        safeWidth,
+      );
+    }
     const spinner = theme.fg("accent", FRAMES[Math.floor(elapsed / WORKING_FRAME_MS) % FRAMES.length]!);
     const hint = safeWidth >= 40;
     const timing = `(${elapsedLabel(elapsed)}${hint ? " · esc to interrupt" : ""})`;

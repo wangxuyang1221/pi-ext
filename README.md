@@ -2,7 +2,7 @@
 
 简体中文 | [English](README.en.md)
 
-为 [Pi Coding Agent](https://github.com/earendil-works/pi) 提供 `codex-ui` 终端界面和 `codex-pi` 主题。
+为 [Pi Coding Agent](https://github.com/earendil-works/pi) 提供 `codex-ui` 终端界面以及配套的 `codex-pi`、`claude-code` 两套主题界面配置。
 
 ## Requirements
 
@@ -27,13 +27,14 @@ pi install "$PWD"
 
 `pi install` 将本地目录记入用户设置，不复制文件。安装后请保留该目录，并重启 Pi。
 
-选择本次会话的主题：
+选择本次会话的主题（`codex-pi` 为 Codex 风格，`claude-code` 切换为 Claude Code 2.x 风格界面与配色）：
 
 ```bash
 pi --use-theme codex-pi
+pi --use-theme claude-code
 ```
 
-要持久使用此主题，在 `/settings` 中选择 `codex-pi`。它会在 `/new`、`/resume`、`/fork` 和 `/reload` 后继续生效。
+要持久使用某套主题，在 `/settings` 中选择 `codex-pi` 或 `claude-code`。所选主题会在 `/new`、`/resume`、`/fork` 和 `/reload` 后继续生效。
 
 要临时加载 package 而不保存安装设置，在构建后的仓库根目录运行：
 
@@ -55,6 +56,15 @@ pnpm run build
 | 检查最近一次 codemode 调用 | `/inspect` |
 | 展开工具输出 | 默认 `Ctrl+O`，遵循 Pi 的 `app.tools.expand` 绑定 |
 | 复制最近一条已完成回复的正文 | 在 Codex 输入框提交 `/copy` |
+
+### Claude Code UI
+
+当激活 `claude-code` 主题（`pi --use-theme claude-code` 或在 `/settings` 中选择 `claude-code`）时，扩展在保持原版 Pi 能力的前提下切换为 Claude Code 2.x 终端界面与配色（针对深色半透明终端高对比度调校）：
+
+- **欢迎卡片**：双栏陶土色圆角框与像素方块 Clawd 图标，展示当前模型、思考等级、快捷提示与工作目录/Git 分支；窗口窄于 78 列时自动收拢为单栏。
+- **输入框与 `!` Bash 模式**：透明背景双细线输入框与 `❯ ` 提示符；输入 `!` 时边框、提示符和底栏即时切换为粉红 Bash 态提示。
+- **工作状态与底栏**：输入框上方显示陶土色闪烁图标、流光动词与 `(esc to interrupt · 计时 · ↓ N tokens)`；底栏左侧展示与 Pi 真实 `Shift+Tab` 联动的 `⏵⏵ thinking: <level>`，右侧展示模型、Git 分支、剩余上下文比例及实时接收速率。
+- **消息与工具流**：用户消息带 `❯ ` 前缀，助手正文首段带 `● `，思考块以 `∴ Thinking…` 淡灰斜体显示（`Ctrl+T` 折叠后显示 `∴ Thinking… (ctrl+t to expand)`）；工具按 `● Read(path)` / `● Read N files`、`● Bash(cmd)`、`● Update(path)`（附 `Added X lines, removed Y lines` 与红绿 Diff）、`● Write(path)`（附 `Wrote N lines to ...`）以及 `Search`/`Glob`/`List` 渲染，并使用 `  ⎿  ` 分支连接符。
 
 ### Codex UI
 

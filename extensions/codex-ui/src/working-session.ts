@@ -56,7 +56,7 @@ export class WorkingSession {
     if (this.disposed || this.activity.active) return;
     this.activity.start();
     const startedElapsed = this.activity.elapsed();
-    this.lastWorkingKey = workingFrameKey(startedElapsed);
+    this.lastWorkingKey = workingFrameKey(startedElapsed, this.ctx.ui.theme, this.activity.estimatedStreamTokens());
     this.lastRateLabel = this.activity.label();
     this.ctx.ui.setWidget(WIDGET_KEY, tui => this.bind(new Working(this.activity, () => this.ctx.ui.theme), tui));
     this.refresh();
@@ -83,7 +83,12 @@ export class WorkingSession {
   }
 
   messageUpdate(event: MessageUpdateEvent): void {
-    if (this.activity.active) this.activity.rate.update(event.assistantMessageEvent);
+    if (!this.activity.active) return;
+    this.activity.rate.update(event.assistantMessageEvent);
+    const sub = event.assistantMessageEvent;
+    if (sub && "delta" in sub && typeof sub.delta === "string") {
+      this.activity.recordStreamDelta(sub.delta.length);
+    }
   }
 
   messageEnd(event: MessageEndEvent): void {
@@ -96,7 +101,7 @@ export class WorkingSession {
 
   private tick(): number {
     const elapsed = this.activity.elapsed();
-    const workingKey = workingFrameKey(elapsed);
+    const workingKey = workingFrameKey(elapsed, this.ctx.ui.theme, this.activity.estimatedStreamTokens());
     const rateLabel = this.activity.label();
     const workingChanged = workingKey !== this.lastWorkingKey;
     const rateChanged = rateLabel !== this.lastRateLabel;

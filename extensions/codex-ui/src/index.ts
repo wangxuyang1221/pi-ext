@@ -15,26 +15,76 @@ import { registerTerminalTitleSpinner } from "./terminal-title.js";
 import { registerWorking } from "./working-session.js";
 import { createContextUsageReader } from "./context-usage.js";
 import { copyLastReply } from "./reply-copy.js";
+import { CLAUDE_THEME_NAME, isClaudeTheme } from "./claude-palette.js";
+import { registerClaudeGenericToolRenderer } from "./claude-tools.js";
 
 export const CODEX_THEME_NAME = "codex-pi";
+export { CLAUDE_THEME_NAME };
 
-function applyProfileTheme(ctx: ExtensionContext, notifyUnavailable: boolean): boolean {
-  if (ctx.ui.theme.name === CODEX_THEME_NAME) return true;
-  const profileTheme = ctx.ui.getTheme(CODEX_THEME_NAME);
+const PROFILE_THEME_NAMES = new Set([CODEX_THEME_NAME, CLAUDE_THEME_NAME]);
+const CLAUDE_BLOCK_SYNTAX_START = /^(?: {4}|\t|[ \t]*(?:#{1,6}(?:[ \t]|$)|>|`{3,}|~{3,}|[-+*][ \t]+|\d{1,9}[.)][ \t]+|\|))/u;
+const CLAUDE_SETEXT_HEADING = /^[^\r\n]+\r?\n[ \t]*(?:=+|-+)[ \t]*(?:\r?\n|$)/u;
+const CLAUDE_HIDDEN_THINKING_LABEL = "∴ Thinking… (ctrl+t to expand)";
+
+function applyProfileTheme(
+  ctx: ExtensionContext,
+  notifyUnavailable: boolean,
+  preferredThemeName?: string,
+): string | undefined {
+  const currentName = ctx.ui.theme.name;
+  if (currentName && PROFILE_THEME_NAMES.has(currentName)) {
+    return currentName;
+  }
+  const targetName = preferredThemeName && PROFILE_THEME_NAMES.has(preferredThemeName)
+    ? preferredThemeName
+    : CODEX_THEME_NAME;
+  const profileTheme = ctx.ui.getTheme(targetName);
   if (!profileTheme) {
     if (notifyUnavailable) {
-      ctx.ui.notify(`Codex profile theme unavailable: ${CODEX_THEME_NAME}`, "warning");
+      ctx.ui.notify(`Profile theme unavailable: ${targetName}`, "warning");
     }
-    return false;
+    return undefined;
   }
   const themeResult = ctx.ui.setTheme(profileTheme);
   if (!themeResult.success) {
     if (notifyUnavailable) {
-      ctx.ui.notify(`Codex profile theme unavailable: ${themeResult.error ?? "unknown error"}`, "warning");
+      ctx.ui.notify(`Profile theme unavailable: ${themeResult.error ?? "unknown error"}`, "warning");
     }
-    return false;
+    return undefined;
   }
-  return true;
+  return targetName;
+}
+
+function startsWithMarkdownBlock(text: string): boolean {
+  if (CLAUDE_BLOCK_SYNTAX_START.test(text) || CLAUDE_SETEXT_HEADING.test(text)) {
+    return true;
+  }
+  const firstLine = text.split(/\r?\n/u, 1)[0] ?? "";
+  return leadingIndent(firstLine) >= 4 || THEMATIC_BREAK.test(firstLine);
+}
+
+function formatClaudeUserMarkdown(markdown: string): string {
+  if (!markdown.trim()) return markdown;
+  const trimmedStart = markdown.replace(/^(?:\r?\n)+/u, "");
+  if (trimmedStart.startsWith("❯ ") || trimmedStart.startsWith("❯\n")) return markdown;
+  if (startsWithMarkdownBlock(trimmedStart)) {
+    return `❯\n\n${trimmedStart}`;
+  }
+  return `❯ ${trimmedStart}`;
+}
+
+function formatClaudeAssistantMarkdown(markdown: string): string {
+  if (!markdown.trim()) return markdown;
+  const trimmedStart = markdown.replace(/^(?:\r?\n)+/u, "");
+  if (trimmedStart.startsWith("● ") || startsWithMarkdownBlock(trimmedStart)) {
+    return markdown;
+  }
+  return `● ${trimmedStart}`;
+}
+
+function formatClaudeThinkingMarkdown(markdown: string): string {
+  if (!markdown.trim()) return markdown;
+  return `∴ Thinking…\n\n${markdown.replace(/^\r?\n+/u, "")}`;
 }
 
 function hideInlineWorkingRow(ui: ExtensionUIContext): void {
@@ -253,11 +303,48 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
   });
 
   let currentModelId: string | undefined;
+  let activeCtx: ExtensionContext | undefined;
+  let lastProfileThemeName: string | undefined;
+  let lastHiddenThinkingIsClaude: boolean | undefined;
+  let activeHeader: CodexHeader | undefined;
+  let activeEditor: CodexEditor | undefined;
+  let activeFooter: CodexFooter | undefined;
+  let activeTui: { requestRender(): void } | undefined;
+  let currentBranch: string | null = null;
+
+  const syncHiddenThinkingLabel = (ctx: ExtensionContext | undefined): void => {
+    if (!ctx || typeof ctx.ui.setHiddenThinkingLabel !== "function") return;
+    const claude = isClaudeTheme(ctx.ui.theme);
+    if (claude === lastHiddenThinkingIsClaude) return;
+    lastHiddenThinkingIsClaude = claude;
+    ctx.ui.setHiddenThinkingLabel(claude ? CLAUDE_HIDDEN_THINKING_LABEL : undefined);
+  };
+
+  registerClaudeGenericToolRenderer(
+    pi,
+    () => currentKeybindings,
+  );
+
   pi.on("model_select", (event) => {
     currentModelId = event.model.id;
+    activeHeader?.invalidate();
+    activeFooter?.invalidate();
+    activeTui?.requestRender();
+  });
+
+  pi.on("thinking_level_select", () => {
+    activeHeader?.invalidate();
+    activeFooter?.invalidate();
+    activeTui?.requestRender();
   });
 
   pi.registerMarkdownTransformer((markdown, context) => {
+    if (isClaudeTheme(activeCtx?.ui.theme)) {
+      if (context.messageType === "user") return formatClaudeUserMarkdown(markdown);
+      if (context.messageType === "assistant") return formatClaudeAssistantMarkdown(markdown);
+      if (context.messageType === "assistant-thinking") return formatClaudeThinkingMarkdown(markdown);
+      return markdown;
+    }
     if (context.messageType === "assistant-thinking") {
       return formatThinkingBlocks(markdown);
     }
@@ -272,6 +359,7 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
   let pendingThemeRestore: {
     ctx: ExtensionContext;
     sessionToken: number;
+    targetThemeName: string;
     registeredBefore: Theme;
     disarmHandle?: ReturnType<typeof setImmediate>;
   } | undefined;
@@ -285,7 +373,7 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
   };
 
   const hasHostRefreshedThemes = (pending: NonNullable<typeof pendingThemeRestore>): boolean => (
-    pending.ctx.ui.getTheme(CODEX_THEME_NAME) !== pending.registeredBefore
+    pending.ctx.ui.getTheme(pending.targetThemeName) !== pending.registeredBefore
   );
 
   const schedulePostRebindDisarm = (targetToken: number): void => {
@@ -299,7 +387,7 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
     ) {
       return;
     }
-    if (pending.ctx.ui.theme.name !== CODEX_THEME_NAME) {
+    if (pending.ctx.ui.theme.name !== pending.targetThemeName) {
       clearPendingThemeRestore();
       return;
     }
@@ -314,6 +402,12 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
   pi.on("session_shutdown", () => {
     sessionToken++;
     clearPendingThemeRestore();
+    activeCtx = undefined;
+    activeHeader = undefined;
+    activeEditor = undefined;
+    activeFooter = undefined;
+    activeTui = undefined;
+    lastHiddenThinkingIsClaude = undefined;
   });
 
   pi.on("session_start", (event, ctx) => {
@@ -322,14 +416,20 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
     if (ctx.mode !== "tui") return;
 
     const currentSessionToken = sessionToken;
+    activeCtx = ctx;
     currentModelId = ctx.model?.id;
-    const themeApplied = applyProfileTheme(ctx, true);
-    if (event.reason !== "startup" && themeApplied) {
-      const registeredBefore = ctx.ui.getTheme(CODEX_THEME_NAME);
-      if (registeredBefore && ctx.ui.getTheme(CODEX_THEME_NAME) === registeredBefore) {
+    lastHiddenThinkingIsClaude = undefined;
+    const appliedThemeName = applyProfileTheme(ctx, true, lastProfileThemeName);
+    if (appliedThemeName) lastProfileThemeName = appliedThemeName;
+    syncHiddenThinkingLabel(ctx);
+
+    if (event.reason !== "startup" && appliedThemeName) {
+      const registeredBefore = ctx.ui.getTheme(appliedThemeName);
+      if (registeredBefore && ctx.ui.getTheme(appliedThemeName) === registeredBefore) {
         pendingThemeRestore = {
           ctx,
           sessionToken: currentSessionToken,
+          targetThemeName: appliedThemeName,
           registeredBefore,
         };
         ctx.ui.addAutocompleteProvider?.((provider) => {
@@ -339,26 +439,55 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
       }
     }
 
-    const getTheme = () => ctx.ui.theme;
+    const getTheme = () => {
+      const theme = ctx.ui.theme;
+      if (theme.name && PROFILE_THEME_NAMES.has(theme.name)) {
+        lastProfileThemeName = theme.name;
+      }
+      syncHiddenThinkingLabel(ctx);
+      return theme;
+    };
     const getModelId = () => currentModelId;
     const getThinkingLevel = () => pi.getThinkingLevel();
 
-    ctx.ui.setHeader(() => new CodexHeader({
-      version: VERSION,
-      cwd: ctx.cwd,
-      home: process.env.HOME,
-      getModelId,
-      getThinkingLevel,
-      getTheme,
-    }));
+    ctx.ui.setHeader(() => {
+      activeHeader = new CodexHeader({
+        version: VERSION,
+        cwd: ctx.cwd,
+        home: process.env.HOME,
+        getModelId,
+        getThinkingLevel,
+        getBranch: () => currentBranch,
+        getKeybindings: () => currentKeybindings,
+        getTheme,
+      });
+      return activeHeader;
+    });
 
     ctx.ui.setEditorComponent((tui, editorTheme, keybindings) => {
+      activeTui = tui;
       currentKeybindings = keybindings;
-      return new CodexEditor(tui, editorTheme, keybindings, getTheme, () => { void copyLastReply(ctx); });
+      activeHeader?.invalidate();
+      activeFooter?.invalidate();
+      activeEditor = new CodexEditor(
+        tui,
+        editorTheme,
+        keybindings,
+        getTheme,
+        () => { void copyLastReply(ctx); },
+        () => {
+          activeFooter?.invalidate();
+          tui.requestRender();
+        },
+      );
+      return activeEditor;
     });
 
     const working = installWorking(ctx);
     ctx.ui.setFooter((tui, _theme, footerData) => {
+      activeTui = tui;
+      currentBranch = footerData.getGitBranch();
+      activeHeader?.invalidate();
       const footer = new CodexFooter({
         cwd: ctx.cwd,
         home: process.env.HOME,
@@ -368,9 +497,14 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
         getBranch: () => footerData.getGitBranch(),
         getExtensionStatuses: () => footerData.getExtensionStatuses(),
         getRate: () => working?.activity.label(),
+        isBashMode: () => activeEditor?.isBashDraft() ?? false,
+        getKeybindings: () => currentKeybindings,
         getTheme,
       });
+      activeFooter = footer;
       footer.setBranchSubscription(footerData.onBranchChange(() => {
+        currentBranch = footerData.getGitBranch();
+        activeHeader?.invalidate();
         footer.invalidate();
         tui.requestRender();
       }));
@@ -388,17 +522,20 @@ export default function codexUiExtension(pi: ExtensionAPI, options: CodexUiOptio
           }
           const refreshed = hasHostRefreshedThemes(pending);
           if (!refreshed) {
-            if (pending.ctx.ui.theme.name !== CODEX_THEME_NAME) {
+            if (pending.ctx.ui.theme.name !== pending.targetThemeName) {
               clearPendingThemeRestore();
             }
             return;
           }
           const targetCtx = pending.ctx;
+          const targetThemeName = pending.targetThemeName;
           clearPendingThemeRestore();
-          if (targetCtx.ui.theme.name === CODEX_THEME_NAME) return;
+          if (targetCtx.ui.theme.name === targetThemeName) return;
           queueMicrotask(() => {
             if (sessionToken !== currentSessionToken) return;
-            applyProfileTheme(targetCtx, false);
+            const restored = applyProfileTheme(targetCtx, false, targetThemeName);
+            if (restored) lastProfileThemeName = restored;
+            syncHiddenThinkingLabel(targetCtx);
           });
         },
         dispose: () => {

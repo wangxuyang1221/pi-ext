@@ -10,6 +10,8 @@ import {
   type Component,
   type EditorTheme,
   type TUI,
+  type TuiMouseEvent,
+  type TuiMouseEventResult,
 } from "@earendil-works/pi-tui";
 
 import {
@@ -19,6 +21,8 @@ import {
   paintBackground,
   paintForeground,
 } from "./layout.js";
+import { renderClaudeEditorFrame, renderClaudeHeader, resolveDisplayUser } from "./claude-components.js";
+import { isClaudeTheme } from "./claude-palette.js";
 
 export { CodexFooter, type CodexFooterOptions } from "./footer.js";
 
@@ -26,8 +30,11 @@ export interface CodexHeaderOptions {
   version: string;
   cwd: string;
   home?: string;
+  userName?: string;
   getModelId: () => string | undefined;
   getThinkingLevel: () => string;
+  getBranch?: () => string | null;
+  getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
   getTheme: () => Theme;
 }
 
@@ -39,15 +46,19 @@ const GRAPHEME_SEGMENTER = new Intl.Segmenter(undefined, { granularity: "graphem
 const BOTTOM_BORDER_SENTINEL = "\x1b_pi:codex-editor-bottom-border\x07";
 
 export class CodexHeader implements Component {
+  private readonly userName: string | undefined;
   private cached: {
     width: number;
     theme: Theme;
     modelId: string;
     thinking: string;
+    branch: string | null;
     lines: string[];
   } | undefined;
 
-  constructor(private readonly options: CodexHeaderOptions) {}
+  constructor(private readonly options: CodexHeaderOptions) {
+    this.userName = options.userName ?? resolveDisplayUser();
+  }
 
   render(width: number): string[] {
     const safeWidth = normalizeWidth(width);
@@ -56,6 +67,7 @@ export class CodexHeader implements Component {
     const theme = this.options.getTheme();
     const modelId = this.options.getModelId() ?? "No model";
     const thinking = this.options.getThinkingLevel();
+    const branch = this.options.getBranch?.() ?? null;
     const cached = this.cached;
     if (
       cached
@@ -63,14 +75,32 @@ export class CodexHeader implements Component {
       && cached.theme === theme
       && cached.modelId === modelId
       && cached.thinking === thinking
+      && cached.branch === branch
     ) {
       return cached.lines;
+    }
+
+    if (isClaudeTheme(theme)) {
+      const lines = renderClaudeHeader({
+        width: safeWidth,
+        version: this.options.version,
+        cwd: this.options.cwd,
+        home: this.options.home,
+        userName: this.userName,
+        modelId,
+        thinking,
+        branch,
+        keybindings: this.options.getKeybindings?.(),
+        theme,
+      });
+      this.cached = { width: safeWidth, theme, modelId, thinking, branch, lines };
+      return lines;
     }
 
     const brand = `${theme.bold(theme.fg("accent", "pi"))}${theme.fg("dim", ` v${this.options.version} · `)}${theme.fg("muted", "Codex profile")}`;
     if (safeWidth < 12) {
       const lines = [fitToWidth(brand, safeWidth)];
-      this.cached = { width: safeWidth, theme, modelId, thinking, lines };
+      this.cached = { width: safeWidth, theme, modelId, thinking, branch, lines };
       return lines;
     }
 
@@ -100,7 +130,7 @@ export class CodexHeader implements Component {
       border(`╰${"─".repeat(innerWidth + 2)}╯`),
       "",
     ];
-    this.cached = { width: safeWidth, theme, modelId, thinking, lines };
+    this.cached = { width: safeWidth, theme, modelId, thinking, branch, lines };
     return lines;
   }
 
@@ -113,6 +143,8 @@ const PLACEHOLDER = "Ask Pi to do anything";
 
 export class CodexEditor extends CustomEditor {
   private capturingBottomBorder = false;
+  private lastClaudeReservedCols = 0;
+  private lastClaudeBottomBorderIndex = 0;
   private paintedCache: {
     width: number;
     foreground: string;
@@ -126,8 +158,20 @@ export class CodexEditor extends CustomEditor {
     private readonly hostKeybindings: KeybindingsManager,
     private readonly getTheme: () => Theme,
     private readonly onCopy?: () => void,
+    private readonly onBashModeChange?: (bashMode: boolean) => void,
   ) {
     super(tui, editorTheme, hostKeybindings, { paddingX: 1 });
+  }
+
+  isBashDraft(): boolean {
+    return this.getText().trimStart().startsWith("!");
+  }
+
+  override setText(text: string): void {
+    const beforeBash = this.isBashDraft();
+    super.setText(text);
+    const afterBash = this.isBashDraft();
+    if (afterBash !== beforeBash) this.onBashModeChange?.(afterBash);
   }
 
   private isEmptyDraft(): boolean {
@@ -172,6 +216,7 @@ export class CodexEditor extends CustomEditor {
     const previousKeys = getKeybindings();
     setKeybindings(this.hostKeybindings);
     const submit = this.onSubmit;
+    const beforeBash = this.isBashDraft();
     this.onSubmit = text => {
       if (text === "/copy" && this.onCopy) this.onCopy();
       else submit?.(text);
@@ -181,6 +226,8 @@ export class CodexEditor extends CustomEditor {
     } finally {
       this.onSubmit = submit;
       setKeybindings(previousKeys);
+      const afterBash = this.isBashDraft();
+      if (afterBash !== beforeBash) this.onBashModeChange?.(afterBash);
     }
   }
 
@@ -198,13 +245,51 @@ export class CodexEditor extends CustomEditor {
     return { lines, bottomBorderIndex, menuHeight };
   }
 
+  override handleMouse(event: TuiMouseEvent): TuiMouseEventResult | undefined {
+    const reserved = this.lastClaudeReservedCols;
+    if (reserved > 0 && isClaudeTheme(this.getTheme())) {
+      const innerWidth = Math.max(1, event.width - reserved);
+      if (event.y >= 1 && event.y < this.lastClaudeBottomBorderIndex) {
+        return super.handleMouse({
+          ...event,
+          x: Math.max(0, event.x - reserved),
+          width: innerWidth,
+        });
+      }
+      if (event.y > this.lastClaudeBottomBorderIndex) {
+        return super.handleMouse({ ...event, width: innerWidth });
+      }
+    }
+    return super.handleMouse(event);
+  }
+
   render(width: number): string[] {
     const safeWidth = normalizeWidth(width);
     if (safeWidth === 0) return [];
 
-    const { lines, bottomBorderIndex, menuHeight } = this.sourceFrame(safeWidth);
     const theme = this.getTheme();
     const empty = this.isEmptyDraft();
+    if (isClaudeTheme(theme)) {
+      const editorPaddingX = typeof (this as unknown as { getPaddingX?: () => number }).getPaddingX === "function"
+        ? (this as unknown as { getPaddingX: () => number }).getPaddingX()
+        : 1;
+      const reservedLeftCols = safeWidth > 6 ? (editorPaddingX === 0 ? 3 : 2) : 0;
+      const { lines, bottomBorderIndex } = this.sourceFrame(Math.max(1, safeWidth - reservedLeftCols));
+      this.lastClaudeReservedCols = reservedLeftCols;
+      this.lastClaudeBottomBorderIndex = bottomBorderIndex;
+      return renderClaudeEditorFrame(
+        lines,
+        bottomBorderIndex,
+        safeWidth,
+        theme,
+        empty,
+        this.isBashDraft(),
+        reservedLeftCols,
+      );
+    }
+    this.lastClaudeReservedCols = 0;
+    this.lastClaudeBottomBorderIndex = 0;
+    const { lines, bottomBorderIndex, menuHeight } = this.sourceFrame(safeWidth);
     const output = [...lines];
     // Native Editor always supplies two borders and at least one body row.
     output[0] = " ".repeat(safeWidth);

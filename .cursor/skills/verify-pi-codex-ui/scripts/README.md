@@ -22,6 +22,19 @@ CLI、Working 与中断回归共用 [实时事件读取器](../../../../test-sup
 
 只补验控制字符 diff 时，可运行 `cli.py regular --controls` 和 `cli.py fullscreen --controls`。该聚焦路径实际覆盖已有 CRLF 文件、展开 diff，并检查源文件中的清屏和 OSC 标题指令没有执行；它不能代替完整 CLI 旅程。
 
+## Claude Code profile
+
+在构建后串行运行两种模式。PATH 需提供真实 `git`、`rg` 和 `fd`。
+
+```bash
+conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/cli.py regular --claude-code
+conda run --no-capture-output -n codex-py312 python .cursor/skills/verify-pi-codex-ui/scripts/cli.py fullscreen --claude-code
+```
+
+驱动通过 `-e "$PWD"` 发现 package 中的主题与构建入口。首个 Pi 进程使用 `--use-theme claude-code`，第二个进程从 codex-pi 启动，以原生设置菜单验证保存与切换。离线推理模型让流式画面可重复观察，实际 Bash、Read、Write、Edit、grep/find/ls 与会话操作走原生入口。
+
+[行为规格](../features/claude-code.md)列出断言范围。证据在 `.tmp/test-results/codex-ui-cli-<mode>-claude-code-<id>/`。其中 `journey.json` 记录 feature ID、单元格颜色、按键和帧的 ANSI 偏移，`terminal-1.ansi` 和 `terminal-2.ansi` 对应两次启动。对照 `events.json`、归档的设置、会话与文件核实结果。检查 `scratchRemoved` 及每个进程的 `stopped`、`groupStopped`。
+
 ## Pi compatibility
 
 串行运行以下入口。PTY 使用只接收文本的离线模型，触发真实图片 Read 并核对 `imageUnsupportedByModel` 和 Ctrl+O 前后的提示。两种 TUI 均执行 TypeScript Edit/Write 并断言已分类关键字与无分类字元的实际 ANSI 前景。全屏旅程将 `fullscreenScrollbar` 设为 `always`，填满聊天区后，分别核对最右列的 track 和 thumb 颜色。

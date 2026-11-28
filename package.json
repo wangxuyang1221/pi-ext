@@ -27,6 +27,7 @@
   "files": [
     "extensions/codex-ui/dist",
     "themes/codex-pi.json",
+    "themes/claude-code.json",
     "README.md",
     "README.en.md",
     "LICENSE"
@@ -36,7 +37,8 @@
       "./extensions/codex-ui/dist/index.js"
     ],
     "themes": [
-      "./themes/codex-pi.json"
+      "./themes/codex-pi.json",
+      "./themes/claude-code.json"
     ]
   },
   "scripts": {
