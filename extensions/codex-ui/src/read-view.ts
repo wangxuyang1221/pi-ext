@@ -15,17 +15,25 @@ export class ReadViewComponent implements Component {
   private theme?: Theme;
   private outputPad = 0;
   private renderedPad = -1;
+  private expandKeys = "ctrl+o";
+  private renderedExpandKeys = "";
 
   constructor(private readonly current: () => ReadMember) {}
 
-  update(expanded: boolean, theme: Theme, outputPad = 0): void {
+  update(expanded: boolean, theme: Theme, outputPad = 0, expandKeys = "ctrl+o"): void {
     const normalizedPad = normalizeOutputPad(outputPad);
-    if (this.expanded !== expanded || this.theme !== theme || this.outputPad !== normalizedPad) {
+    if (
+      this.expanded !== expanded
+      || this.theme !== theme
+      || this.outputPad !== normalizedPad
+      || this.expandKeys !== expandKeys
+    ) {
       this.invalidate();
     }
     this.expanded = expanded;
     this.theme = theme;
     this.outputPad = normalizedPad;
+    this.expandKeys = expandKeys;
   }
 
   render(width: number): string[] {
@@ -35,16 +43,19 @@ export class ReadViewComponent implements Component {
       || this.group !== member.group
       || this.version !== member.group.version
       || this.renderedPad !== this.outputPad
+      || this.renderedExpandKeys !== this.expandKeys
     ) {
       this.member = member;
       this.group = member.group;
       this.version = member.group.version;
       this.renderedPad = this.outputPad;
+      this.renderedExpandKeys = this.expandKeys;
       const outputPad = this.outputPad;
+      const expandKeys = this.expandKeys;
       this.lines.setRenderer((columns) => {
         const pad = resolveOutputPad(columns, outputPad);
         return padOutputLines(
-          renderReadGroup(member, this.expanded, this.theme!, columns - pad * 2),
+          renderReadGroup(member, this.expanded, this.theme!, columns - pad * 2, expandKeys),
           columns,
           pad,
         );

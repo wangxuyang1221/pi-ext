@@ -39,9 +39,19 @@ import {
 import { ResponsiveLinesComponent } from "./responsive-lines.js";
 import { ToolRenderCache, type RenderCacheScope } from "./render-cache.js";
 import { createObservedWriteDefinition } from "./write-changes.js";
-import { fileFailureStatus, toolStatusColor, toolStatusMarker, type ToolFailureStatus } from "./tool-status.js";
+import { fileFailureStatus, toolStatusColor, toolStatusMarker, type ToolFailureStatus, type ToolStatus } from "./tool-status.js";
+import { isClaudeTheme } from "./claude-palette.js";
+import {
+  claudeCallHeading,
+  renderClaudeConnectorLine,
+  renderClaudeDiff,
+  renderClaudeDiffTruncation,
+  renderClaudeMutationSummary,
+} from "./claude-tools.js";
 
 const COLLAPSED_DIFF_LINES = 12;
+const CLAUDE_COLLAPSED_DIFF_LINES = 14;
+const CLAUDE_COLLAPSED_WRITE_LINES = 10;
 const MAX_DIFF_HIGHLIGHT_CHARS = 4096;
 const DIFF_INDENT = "    ";
 const ANSI_DEFAULT_FOREGROUND = "\x1b[39m";
@@ -88,6 +98,7 @@ type MutationDiffDetails = Partial<EditToolDetails>;
 
 interface CodexEditState {
   failureStatus?: ToolFailureStatus;
+  settledStatus?: ToolStatus;
   cache?: RenderCacheScope;
   path?: string;
   settledTitle?: string;
@@ -237,7 +248,7 @@ export function registerCodexTools(
       const view = readGroups.bind(context);
       view.updateCall(context);
       const component = state.callComponent ??= new ReadViewComponent(view.current);
-      component.update(context.expanded, theme, context.outputPad);
+      component.update(context.expanded, theme, context.outputPad, formatExpandKeys(services, context));
       return component;
     },
     renderResult(result, options, theme, context) {
@@ -268,6 +279,10 @@ export function registerCodexTools(
         (width) => {
           const pad = resolveOutputPad(width, outputPad);
           const innerWidth = width - pad * 2;
+          if (isClaudeTheme(theme)) {
+            const status: ToolStatus = state.settledStatus ?? (context.executionStarted ? "running" : "pending");
+            return padOutputLines([claudeCallHeading(theme, status, "Update", path || "(unknown)", innerWidth)], width, pad);
+          }
           const title = state.settledTitle === undefined
             ? formatPendingMutationTitle("Editing", path, theme, innerWidth, context.executionStarted)
             : fitToWidth(state.settledTitle, innerWidth);
@@ -302,6 +317,15 @@ export function registerCodexTools(
       state.callComponent = updateComponent(context.lastComponent, (width) => {
         const pad = resolveOutputPad(width, outputPad);
         const innerWidth = width - pad * 2;
+        if (isClaudeTheme(theme)) {
+          const status: ToolStatus = state.settledStatus
+            ?? (state.status === "error"
+              ? (state.failureStatus ?? "failed")
+              : state.status === "success"
+                ? "completed"
+                : (context.executionStarted ? "running" : "pending"));
+          return padOutputLines([claudeCallHeading(theme, status, "Write", path || "(unknown)", innerWidth)], width, pad);
+        }
         if (!state.status || state.status === "pending") {
           return padOutputLines([formatPendingMutationTitle("Writing", path, theme, innerWidth, context.executionStarted)], width, pad);
         }
@@ -335,10 +359,24 @@ export function registerCodexTools(
       state.callComponent?.invalidate();
       const error = state.status === "error" ? getMutationFailure(result.content, "Write failed") : undefined;
       state.failureStatus = error?.status;
+      state.settledStatus = state.status === "error" ? (error?.status ?? "failed") : state.status === "success" ? "completed" : undefined;
       return updateComponent(context.lastComponent, (width) => {
-        if (error === undefined) return [];
         const pad = resolveOutputPad(width, outputPad);
-        return padOutputLines([fitToWidth(theme.fg(toolStatusColor(error.status), `  ${error.text}`), width - pad * 2)], width, pad);
+        const inner = width - pad * 2;
+        if (error !== undefined) {
+          if (isClaudeTheme(theme)) {
+            return padOutputLines([renderClaudeConnectorLine(error.text, toolStatusColor(error.status), theme, inner)], width, pad);
+          }
+          return padOutputLines([fitToWidth(theme.fg(toolStatusColor(error.status), `  ${error.text}`), inner)], width, pad);
+        }
+        if (isClaudeTheme(theme) && state.status === "success" && state.metrics) {
+          return padOutputLines(
+            [renderClaudeMutationSummary("write", formatToolPath(context.args.path, context.cwd), { added: state.metrics.lineCount, removed: 0 }, true, theme, inner)],
+            width,
+            pad,
+          );
+        }
+        return [];
       });
     },
   };
@@ -565,6 +603,7 @@ function renderMutationResult(
     }
   };
   if (options.isPartial) {
+    state.settledStatus = undefined;
     setTitle(undefined);
     return updateComponent(context.lastComponent, () => []);
   }
@@ -572,13 +611,19 @@ function renderMutationResult(
   const error = context.isError ? getMutationFailure(result.content, failure) : undefined;
   state.failureStatus = error?.status;
   if (error !== undefined) {
+    state.settledStatus = error.status;
     setTitle(formatMutationFailureTitle(failure, path, theme, error.status));
     const color = toolStatusColor(error.status);
     return updateComponent(context.lastComponent, (width) => {
       const pad = resolveOutputPad(width, outputPad);
-      return padOutputLines([fitToWidth(theme.fg(color, `  ${error.text}`), width - pad * 2)], width, pad);
+      const inner = width - pad * 2;
+      if (isClaudeTheme(theme)) {
+        return padOutputLines([renderClaudeConnectorLine(error.text, color, theme, inner)], width, pad);
+      }
+      return padOutputLines([fitToWidth(theme.fg(color, `  ${error.text}`), inner)], width, pad);
     });
   }
+  state.settledStatus = "completed";
   state.cache ??= renderCache.scope();
   const diff = details && (details.patch || details.diff) ? getPreparedEditDiff(state, details, path, theme) : undefined;
   let title = formatEditTitle(action, path, theme);
@@ -591,13 +636,17 @@ function renderMutationResult(
   if (tool === "write" && !diff) {
     return updateComponent(context.lastComponent, (width) => {
       const pad = resolveOutputPad(width, outputPad);
-      return padOutputLines([fitToWidth(theme.fg("dim", "  Diff unavailable"), width - pad * 2)], width, pad);
+      const inner = width - pad * 2;
+      if (isClaudeTheme(theme)) {
+        return padOutputLines([renderClaudeConnectorLine("Diff unavailable", "dim", theme, inner)], width, pad);
+      }
+      return padOutputLines([fitToWidth(theme.fg("dim", "  Diff unavailable"), inner)], width, pad);
     });
   }
   return updateComponent(context.lastComponent, (width) => {
     const pad = resolveOutputPad(width, outputPad);
     return padOutputLines(
-      getEditResultLayout(state, result, diff, options, path, theme, false, width - pad * 2, expandKeys),
+      getEditResultLayout(state, result, diff, options, path, theme, false, width - pad * 2, expandKeys, tool),
       width,
       pad,
     );
@@ -690,12 +739,13 @@ function getEditResultLayout(
   isError: boolean,
   width: number,
   expandKeys: string,
+  tool: "write" | "edit" = "edit",
 ): string[] {
   const cache = state.cache!;
   const syntaxFingerprint = getEditSyntaxFingerprint(theme);
   const key = ["edit-layout", cache.identity(diffLines ?? result.content), width, options.expanded,
-    options.isPartial, isError, path, cache.identity(theme), getEditResultThemeFingerprint(theme), syntaxFingerprint, expandKeys].join("\0");
-  return cache.lines(key, () => renderEditResult(result, diffLines, options, path, theme, isError, width, cache, syntaxFingerprint, expandKeys));
+    options.isPartial, isError, path, tool, theme.name ?? "", cache.identity(theme), getEditResultThemeFingerprint(theme), syntaxFingerprint, expandKeys].join("\0");
+  return cache.lines(key, () => renderEditResult(result, diffLines, options, path, theme, isError, width, cache, syntaxFingerprint, expandKeys, tool));
 }
 
 function renderEditResult(
@@ -709,25 +759,47 @@ function renderEditResult(
   cache: RenderCacheScope,
   syntaxFingerprint: string,
   expandKeys: string,
+  tool: "write" | "edit" = "edit",
 ): string[] {
   if (options.isPartial) {
     return [fitToWidth(theme.fg("warning", "  … Editing"), width)];
   }
   if (isError) {
     const error = firstLine(extractText(result.content)) || "Edit failed";
-    return [fitToWidth(theme.fg("error", `  ${error}`), width)];
+    return isClaudeTheme(theme)
+      ? [renderClaudeConnectorLine(error, "error", theme, width)]
+      : [fitToWidth(theme.fg("error", `  ${error}`), width)];
   }
   if (!diffLines) {
-    return [fitToWidth(theme.fg("success", "  └ Applied"), width)];
+    return isClaudeTheme(theme)
+      ? [renderClaudeConnectorLine("Updated file", "muted", theme, width)]
+      : [fitToWidth(theme.fg("success", "  └ Applied"), width)];
   }
 
-  const maximum = options.expanded ? diffLines.length : COLLAPSED_DIFF_LINES;
+  const claude = isClaudeTheme(theme);
+  const pureAddition = diffLines.every(line => line.kind === "added" || line.kind === "hunk");
+  const collapsedLimit = claude
+    ? (tool === "write" && pureAddition ? CLAUDE_COLLAPSED_WRITE_LINES : CLAUDE_COLLAPSED_DIFF_LINES)
+    : COLLAPSED_DIFF_LINES;
+  const maximum = options.expanded ? diffLines.length : collapsedLimit;
   const visible = diffLines.slice(0, maximum);
   const language = getLanguageFromPath(path);
   const highlighted = cache.prefix(["edit-syntax", cache.identity(diffLines), path, syntaxFingerprint].join("\0"), visible.length, (index) => {
     const line = visible[index]!;
     return line.kind !== "hunk" && language ? highlightDiffLine(line.text, language) : line.text;
   });
+
+  if (claude) {
+    const stats = countDiffStats(diffLines);
+    const lines = [
+      renderClaudeMutationSummary(tool, path, stats, pureAddition, theme, width),
+      ...renderClaudeDiff(visible, theme, width, path, getDisplayLineNumberWidth(visible), tool === "write" && pureAddition, highlighted),
+    ];
+    const remaining = diffLines.length - visible.length;
+    if (remaining > 0) lines.push(renderClaudeDiffTruncation(remaining, theme, width, expandKeys));
+    return lines;
+  }
+
   const lines = renderDisplayDiff(visible, theme, width, path, highlighted);
   const remaining = diffLines.length - visible.length;
   if (remaining > 0) {

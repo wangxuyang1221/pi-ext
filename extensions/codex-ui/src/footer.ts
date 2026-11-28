@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import type { ContextUsage, Theme } from "@earendil-works/pi-coding-agent";
+import type { ContextUsage, KeybindingsManager, Theme } from "@earendil-works/pi-coding-agent";
 import {
   stripTerminalSequences,
   truncateToWidth,
@@ -12,6 +12,8 @@ import {
   formatHomePath,
   normalizeWidth,
 } from "./layout.js";
+import { renderClaudeFooter } from "./claude-components.js";
+import { isClaudeTheme } from "./claude-palette.js";
 
 export interface CodexFooterOptions {
   getRate?: () => string | undefined;
@@ -22,6 +24,8 @@ export interface CodexFooterOptions {
   getContextUsage: () => Pick<ContextUsage, "percent"> | undefined;
   getBranch: () => string | null;
   getExtensionStatuses: () => ReadonlyMap<string, string>;
+  isBashMode?: () => boolean;
+  getKeybindings?: () => Pick<KeybindingsManager, "getKeys"> | undefined;
   getTheme: () => Theme;
 }
 
@@ -93,13 +97,27 @@ export class CodexFooter implements Component {
   render(width: number): string[] {
     const safeWidth = normalizeWidth(width);
     if (safeWidth === 0) return [];
+    const theme = this.options.getTheme();
     const statuses = this.options.getExtensionStatuses();
     const rate = this.options.getRate?.();
+    const status = this.readStatus(statuses.get("status"));
+    if (isClaudeTheme(theme)) {
+      return renderClaudeFooter({
+        width: safeWidth,
+        modelId: this.options.getModelId() ?? "No model",
+        thinking: this.options.getThinkingLevel(),
+        branch: this.options.getBranch(),
+        contextPercent: this.options.getContextUsage()?.percent,
+        rate,
+        bashMode: this.options.isBashMode?.() ?? false,
+        status,
+        keybindings: this.options.getKeybindings?.(),
+        theme,
+      });
+    }
     const suffix = rate ? formatRateSlot(rate) : "";
     const remaining = Math.max(0, safeWidth - visibleWidth(suffix));
     const base = this.renderBase(remaining);
-    const theme = this.options.getTheme();
-    const status = this.readStatus(statuses.get("status"));
     const cached = this.reuseCombined(base, safeWidth, status, rate, theme);
     if (cached) return cached.slice();
     const lines = composeFooter(base, safeWidth, remaining, suffix, rate, theme);

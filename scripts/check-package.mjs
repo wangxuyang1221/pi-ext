@@ -49,9 +49,13 @@ async function assertPublishedTreeIsSafe(entry) {
 }
 
 assertExactEntries(extensionEntries, ["./extensions/codex-ui/dist/index.js"], "Pi extension entries");
-assertExactEntries(themeEntries, ["./themes/codex-pi.json"], "Pi theme entries");
+assertExactEntries(themeEntries, ["./themes/codex-pi.json", "./themes/claude-code.json"], "Pi theme entries");
 
-assertExactEntries(publishedEntries, ["extensions/codex-ui/dist", "themes/codex-pi.json", "README.md", "README.en.md", "LICENSE"], "package files");
+assertExactEntries(
+  publishedEntries,
+  ["extensions/codex-ui/dist", "themes/codex-pi.json", "themes/claude-code.json", "README.md", "README.en.md", "LICENSE"],
+  "package files",
+);
 
 for (const entry of publishedEntries) {
   await assertPathExists(join(repositoryRoot, entry), "Published package path is missing");

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-- 本仓库维护 Pi 的 `codex-ui` 扩展和配套 `codex-pi` 主题。
+- 本仓库维护 Pi 的 `codex-ui` 扩展和配套 `codex-pi`、`claude-code` 主题。
 - 扩展源码位于 `extensions/codex-ui/src/`，对应测试和夹具位于 `extensions/codex-ui/__tests__/`；`extensions/codex-ui/dist/` 是构建产物，不要手动编辑。
 - 项目验证 skills 位于 `.cursor/skills/`；共享运行脚本和测试支持分别位于 `scripts/`、`test-support/`。按实际职责选择修改位置，不将所有变更都放进扩展源码目录。
 - Node.js 和 pnpm 版本分别以 `package.json` 的 `engines.node`、`packageManager` 为准。使用 `pnpm install --frozen-lockfile --ignore-scripts` 安装依赖，使用锁定的原版 Pi 宿主。

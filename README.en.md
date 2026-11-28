@@ -2,7 +2,7 @@
 
 [简体中文](README.md) | English
 
-A Codex-style terminal interface and the `codex-pi` theme for [Pi Coding Agent](https://github.com/earendil-works/pi).
+A terminal UI extension for [Pi Coding Agent](https://github.com/earendil-works/pi) with paired `codex-pi` and `claude-code` theme profiles.
 
 ## Requirements
 
@@ -27,13 +27,14 @@ pi install "$PWD"
 
 `pi install` saves a reference to the local directory in your user settings. It does not copy the files. Keep the directory after installation and restart Pi.
 
-To select the theme for this run:
+To select a theme profile for this run (`codex-pi` for the Codex layout, `claude-code` for the Claude Code 2.x layout and palette):
 
 ```bash
 pi --use-theme codex-pi
+pi --use-theme claude-code
 ```
 
-To save the theme as your default, select `codex-pi` in `/settings`. The choice persists across `/new`, `/resume`, `/fork`, and `/reload`.
+To save a theme as your default, select `codex-pi` or `claude-code` in `/settings`. The choice persists across `/new`, `/resume`, `/fork`, and `/reload`.
 
 To load the package for one run without saving installation settings, run this from the built repository root:
 
@@ -55,6 +56,15 @@ pnpm run build
 | Inspect the latest codemode call | `/inspect` |
 | Expand tool output | `Ctrl+O` by default, following Pi's `app.tools.expand` binding |
 | Copy the latest completed reply's body | Submit `/copy` in the Codex editor |
+
+### Claude Code UI
+
+When the `claude-code` theme is active (`pi --use-theme claude-code` or selected in `/settings`), the extension switches to a Claude Code 2.x terminal interface and dark translucent-safe palette while keeping all stock Pi behavior:
+
+- **Welcome card**: two-column terracotta rounded box with the pixel-block Clawd mascot, real Pi shortcuts, model/thinking status, working directory, and Git branch; collapses cleanly to one column below 78 columns.
+- **Composer and `!` bash mode**: transparent double-hairline composer with a `❯ ` prompt; typing `!` switches the hairlines, prompt, and footer hint to bash-mode pink in real time.
+- **Working indicator and footer**: terracotta spinner with a left-to-right shimmer verb and `(esc to interrupt · elapsed · ↓ N tokens)` above the editor; footer pairs Pi's real `Shift+Tab` thinking indicator (`⏵⏵ thinking: <level>`) on the left with model, Git branch, remaining context percentage, and live receive rate on the right.
+- **Messages and tools**: user messages start with `❯ `, assistant prose starts with `● `, thinking renders under `∴ Thinking…` in muted italic (with `∴ Thinking… (ctrl+t to expand)` when collapsed), and tools render as `● Read(path)` / `● Read N files`, `● Bash(cmd)`, `● Update(path)` (`Added X lines, removed Y lines` + diff), `● Write(path)` (`Wrote N lines to ...`), and `Search`/`Glob`/`List` with `  ⎿  ` connectors.
 
 ### Codex UI
 
